@@ -65,6 +65,9 @@ socket's path, sends `hello` with its load's id, the session's id and the harnes
 and keeps the answer; outside a rewake run it reports to nobody. `modhost` answers on the
 socket, checking each request by its peer (SP4), and writes the admitted hello to
 `<run dir>/hello.json`, what a person or a live check reads of the load while the run lives.
+Its handlers count among the run's workers ([design-api.md](design-api.md#handlers-that-write-the-room)):
+a closed server begins no record, and a hello's binding and record share one lock, so the
+record holds the load `Load` answers.
 Three tests hold the files: the embedded copy equals the source and every file of the source
 is embedded or named as not shipped (its tests and the schema); the written mod passes
 `claude plugin validate --strict`; the module's own tests pass in `claude plugin test` with

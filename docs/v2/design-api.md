@@ -70,6 +70,19 @@ not that process, alive with that start, is refused. A launch through `--command
 wrapper script it started, so a harness the script runs as a child is not the named process
 and is refused: such a run's mod is never admitted.
 
+### Handlers that write the room
+
+A service whose request handlers write the room — a record in the run's directory —
+implements `WorkerCounter`: before it starts, the host hands it the run's `Workers`, and
+each handler is admitted among the run's workers and dismissed when it returns. Admission
+fails once the run begins to end, and the request is refused. The service's close is
+bounded: it stops admission, waits for the handlers in flight within its bound and then cuts
+the rest, and a handler that outlasts it — stalled in the filesystem, say — stays counted,
+so the run's end holds the room's lease and its directory until that handler's last write
+rather than the close holding the wrapper's exit
+([stage3-rundir.md](stage3-rundir.md#where-it-is-and-when-it-goes)). Built in S4-5's review
+fix, October 13, 2026.
+
 ### Wake
 
 Given a notice — its kind line, preview and members — and the run, it delivers and

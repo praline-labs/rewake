@@ -80,6 +80,12 @@ func (l *lifetime) admit() bool {
 // dismiss ends what admit counted.
 func (l *lifetime) dismiss() { l.workers.Done() }
 
+// runWorkers is the run's lifetime as a service counts its handlers in it.
+type runWorkers struct{ life *lifetime }
+
+func (w runWorkers) Admit() bool { return w.life.admit() }
+func (w runWorkers) Dismiss()    { w.life.dismiss() }
+
 // closeAdmission stops admit taking more, from the moment the run begins to
 // end; end calls it too, before it waits.
 func (l *lifetime) closeAdmission() {

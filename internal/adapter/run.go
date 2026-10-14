@@ -45,6 +45,22 @@ type HarnessWatcher interface {
 	HarnessStarted(RunProcess)
 }
 
+// Workers counts work a service does on a request of its own among the run's
+// workers, so the room's lease and the run's directory outlast its last
+// write (docs/v2/stage3-rundir.md). Admit says whether the run still takes
+// work; each admitted piece ends with one Dismiss.
+type Workers interface {
+	Admit() bool
+	Dismiss()
+}
+
+// WorkerCounter is a service whose request handlers write the room: the host
+// hands it the run's workers before it starts. A handler that outlasts the
+// service's bounded close stays counted, and the run's end waits for it.
+type WorkerCounter interface {
+	CountWorkers(Workers)
+}
+
 // Wake brings a notice to the running session and says what happened: it
 // delivers, or answers held with the harness's reason, or failed
 // (docs/v2/design-api.md#wake). The host's delivery loop decides what to send

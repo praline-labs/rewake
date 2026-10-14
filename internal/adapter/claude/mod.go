@@ -101,6 +101,8 @@ func (r *modRun) Close() {
 
 func (r *modRun) HarnessStarted(harness adapter.RunProcess) { r.server.HarnessStarted(harness) }
 
+func (r *modRun) CountWorkers(workers adapter.Workers) { r.server.CountWorkers(workers) }
+
 // withEnv is env with name set to value, whatever it held before.
 func withEnv(env []string, name, value string) []string {
 	out := make([]string, 0, len(env)+1)

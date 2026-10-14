@@ -47,6 +47,16 @@ type Server struct {
 	load    *HelloRequest
 	known   chan struct{}
 	named   sync.Once
+	// closed stops admission and every write a handler has not begun; stop
+	// is closed with it, so a request waiting for the harness gives up.
+	closed bool
+	stop   chan struct{}
+	// workers counts each admitted handler among the run's workers, so the
+	// room's lease outlasts a handler that outlasts Close.
+	workers adapter.Workers
+	// bindMu orders a hello's binding with its record: of two hellos at once,
+	// the record holds the one Load holds.
+	bindMu sync.Mutex
 
 	listener *state.Listener
 	http     *http.Server
@@ -60,7 +70,21 @@ type Server struct {
 
 // New is a run's mod endpoint, listening once Start binds it.
 func New(cfg Config) *Server {
-	return &Server{cfg: cfg, known: make(chan struct{}), served: make(chan struct{})}
+	return &Server{cfg: cfg, known: make(chan struct{}), stop: make(chan struct{}), served: make(chan struct{})}
+}
+
+// closeWait bounds how long Close waits for the handlers in flight. One that
+// outlasts it, stalled in the filesystem say, is cut off from the socket and
+// stays counted among the run's workers until it returns: the run's end holds
+// the lease for it rather than the close holding the wrapper's exit.
+const closeWait = time.Second
+
+// CountWorkers counts every handler from its admission to its return among
+// the run's workers; called before Start.
+func (s *Server) CountWorkers(workers adapter.Workers) {
+	s.mu.Lock()
+	s.workers = workers
+	s.mu.Unlock()
 }
 
 // peerKey carries the connection's peer through the request's context.
@@ -124,17 +148,43 @@ func (s *Server) Load() (HelloRequest, bool) {
 	return *s.load, true
 }
 
-// Close stops serving and removes the socket. Requests in flight are cut:
-// the harness they would answer is gone or going.
+// Close stops admission and every write not yet begun, waits for the
+// handlers in flight within closeWait, then cuts what is left and removes the
+// socket. A handler still running after it is counted among the run's
+// workers (CountWorkers).
 func (s *Server) Close() {
 	s.closing.Do(func() {
+		s.mu.Lock()
+		s.closed = true
+		s.mu.Unlock()
+		close(s.stop)
 		if s.http == nil {
 			return
 		}
-		_ = s.http.Close()
+		ctx, cancel := context.WithTimeout(context.Background(), closeWait)
+		defer cancel()
+		if s.http.Shutdown(ctx) != nil {
+			_ = s.http.Close()
+		}
 		<-s.served
 		_ = s.listener.Close()
 	})
+}
+
+// admit takes a handler in unless the server or the run is closing.
+func (s *Server) admit() bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.closed {
+		return false
+	}
+	return s.workers == nil || s.workers.Admit()
+}
+
+func (s *Server) dismiss() {
+	if s.workers != nil {
+		s.workers.Dismiss()
+	}
 }
 
 func peerOf(conn net.Conn) peer {
@@ -188,12 +238,26 @@ func (s *Server) awaitHarness(ctx context.Context) error {
 		return nil
 	case <-timer.C:
 		return errors.New("the harness's process is not known to this run yet; nothing is served")
+	case <-s.stop:
+		return errClosing
 	case <-ctx.Done():
 		return ctx.Err()
 	}
 }
 
+// errClosing refuses what comes or waits while the run ends.
+var errClosing = errors.New("the run is ending; nothing is served")
+
 func (s *Server) serve(w http.ResponseWriter, r *http.Request) {
+	if !s.admit() {
+		refuse(w, http.StatusServiceUnavailable, errClosing.Error())
+		return
+	}
+	defer s.dismiss()
+	s.handle(w, r)
+}
+
+func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 	if err := s.awaitHarness(r.Context()); err != nil {
 		refuse(w, http.StatusServiceUnavailable, err.Error())
 		return
@@ -225,10 +289,10 @@ func (s *Server) serve(w http.ResponseWriter, r *http.Request) {
 		refuse(w, http.StatusBadRequest, "a hello names its load, its session and the harness's version")
 		return
 	}
-	s.mu.Lock()
-	s.load = &hello
-	s.mu.Unlock()
-	s.record(hello)
+	if !s.bind(hello) {
+		refuse(w, http.StatusServiceUnavailable, errClosing.Error())
+		return
+	}
 	answer := HelloAnswer{Role: s.cfg.Role, HostsSpaces: false}
 	if s.answering != nil {
 		s.answering()
@@ -240,6 +304,23 @@ func (s *Server) serve(w http.ResponseWriter, r *http.Request) {
 		panic(http.ErrAbortHandler)
 	}
 	reply(w, http.StatusOK, answer)
+}
+
+// bind makes hello the run's load and writes its record, unless the server
+// closed first: the check comes right before the write, so a handler that
+// outlasted Close's wait writes nothing it had not begun.
+func (s *Server) bind(hello HelloRequest) bool {
+	s.bindMu.Lock()
+	defer s.bindMu.Unlock()
+	s.mu.Lock()
+	if s.closed {
+		s.mu.Unlock()
+		return false
+	}
+	s.load = &hello
+	s.mu.Unlock()
+	s.record(hello)
+	return true
 }
 
 // record writes the admitted hello where the run keeps it, whole: a

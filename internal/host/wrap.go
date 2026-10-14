@@ -235,6 +235,11 @@ func Run(ctx context.Context, request Request) (int, error) {
 	signals, restore := catchSignals()
 	defer restore()
 
+	// A service whose handlers write the room counts them among the run's
+	// workers: its close is bounded, and what outlasts it holds the lease.
+	if counter, ok := plan.Service.(adapter.WorkerCounter); ok {
+		counter.CountWorkers(runWorkers{life: life})
+	}
 	stopServing, err := startServing(ctx, request, session, name, epoch, plan, tool, live, closeService)
 	if err != nil {
 		return 0, err

@@ -38,6 +38,9 @@ What rewake adds to a harness's launch, in the full wording of
   - `internal/host/rundir_reclaim_test.go` `TestOldRunCleanupPreservesNewOwner`
   - `internal/host/rundir_reclaim_test.go` `TestCrashedRunIsReclaimedOnlyAfterProvenDeath`
   - `internal/host/rundir_test.go` `TestRunSocketsFitAtMaximumNames`
+  - `internal/host/harness_watcher_test.go` `TestTheWrapperCountsAServicesHandlersAmongTheRunsWorkers`
+  - `internal/adapter/claude/modhost/lifetime_test.go` `TestAWriteStalledAtCloseKeepsTheLeaseUntilItEnds`
+  - `internal/adapter/claude/modhost/lifetime_test.go` `TestAHandlerPastTheCloseWritesNothing`
 
 ## What returns with the Codex adapter
 

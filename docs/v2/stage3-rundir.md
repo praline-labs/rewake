@@ -10,7 +10,8 @@ the room (`state.RunPath`) is created by the wrapper after the claim and before 
 adapter prepares the launch, and handed to the adapter as `LaunchRequest.RunDir`, an input
 of its own rather than a path it derives; a launch that cannot make it does not start.
 It is removed — that epoch's directory only, everything in it — after the services,
-children, sockets and mappings stop and every worker the run counts has returned, on
+children, sockets and mappings stop and every worker the run counts has returned — a
+service's request handlers among them when it counts them (`adapter.WorkerCounter`) — on
 every path out, a failed launch included. The removal is not an ordinary deferred call: a
 stop may return before its work has stopped, so it is a last cleanup of the run's lifetime
 (`host/lifetime.go`), run once the run's workers have stopped and before the run's own hold
