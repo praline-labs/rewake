@@ -119,9 +119,10 @@
       "properties": {
         "loadId": {"type": "string", "description": "names this load of the mod; a reload is a new load, and every later request carries the id its hello gave."},
         "sessionId": {"type": "string", "description": "is the harness's id of the conversation the load runs in."},
-        "harnessVersion": {"type": "string", "description": "is the harness's version as the mod reads it."}
+        "harnessVersion": {"type": "string", "description": "is the harness's version as the mod reads it."},
+        "loadSeq": {"type": "integer", "description": "orders the run's loads: each load takes the next number of a counter the harness's store keeps for the run, so a later load's is higher; a hello is bound only with a number above the run's current load's, the same number is that load's retry, and a lower one is refused 410 as superseded."}
       },
-      "required": ["loadId", "sessionId", "harnessVersion"],
+      "required": ["loadId", "sessionId", "harnessVersion", "loadSeq"],
       "additionalProperties": false
     },
     "HelloAnswer": {

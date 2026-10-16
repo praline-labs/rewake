@@ -88,6 +88,12 @@ type HelloRequest struct {
 
 	// HarnessVersion is the harness's version as the mod reads it.
 	HarnessVersion string `json:"harnessVersion"`
+
+	// LoadSeq orders the run's loads: each load takes the next number of a counter the harness's
+	// store keeps for the run, so a later load's is higher; a hello is bound only with a number
+	// above the run's current load's, the same number is that load's retry, and a lower one is
+	// refused 410 as superseded.
+	LoadSeq int `json:"loadSeq"`
 }
 
 // HelloAnswer is what the run is, for this load.

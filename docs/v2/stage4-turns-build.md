@@ -63,17 +63,20 @@ its one sender, retry chain, cut and the store's cleanup by proof. Tests it adds
   a 503 and a 200 that is not the end's receipt are retried, a 409 and a 410 dropped; a long
   answer is cut with its line at the exact bound, for quotes, backslashes and characters outside
   ASCII; the outbox survives another session's start and its own reload, and a reload during
-  the store's cleanup loses no end; only the keys of runs the hello names ended are removed.
+  the store's cleanup loses no end; only the keys of runs `mod/ended` answers ended are removed.
 
 **Part B — the heartbeat.** `mod/alive`, loads and generations, the lapse watch and the
 withdrawal. Tests it adds: a lapse withdraws TurnBoundary, and Spaces on main, leaving Wake; a
-new hello restores them; load A's hello held before it binds while B's hello binds is refused
-410 when released, and B stays current; a hello retried after its answer was lost keeps the
+new hello restores them; load A's hello, held before it binds while B's hello with a higher
+`loadSeq` binds, is refused 410 when released, and so is A's first hello arriving only after B's,
+and B stays current; a hello of another load id with the current number is bound as the later; a hello retried after its answer was lost keeps the
 generation and reports nothing; a poll delayed across a new hello of the same load is refused
 409 and its chain ends; a poll of a superseded load is refused 410; a lapse timer and a live
 report of an earlier transition do nothing after a later one; an end after a lapse is taken and
 makes nothing live; a lapse after the close reports nothing; the mod's chain follows the
-heartbeat's table of answers.
+heartbeat's table of answers, each load takes the next `loadSeq` of its run's counter and keeps
+it across its hello's retries, and a load refused 410 that holds the highest number it can read
+takes the next and says hello once more.
 
 **Part C — live**, on the installed Claude Code, by main, in a separate `REWAKE_DIR`: main sends
 a task to a worker started by hand with `rewake claude --write` and reads its report; the same

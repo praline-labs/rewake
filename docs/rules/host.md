@@ -118,9 +118,11 @@ the run proves only once its harness runs (`AfterStart`, Claude Code's mod from 
 awaited before the start: the harness starts, the set is Wake alone until the proof, and the
 run's availability waits for the boundary up to its own bound, past which availability goes
 ahead with the boundary not live. What a mod proved is withdrawn when its heartbeat lapses and
-made live again by a later admitted hello; a hello of a load a later one superseded, or that
-arrived before the current load's, is refused and changes nothing, and each report carries the
-number of the transition it follows, so a report of an earlier one changes nothing. An end that arrives after a
+made live again by a later admitted hello; a hello of a load a later one superseded, or with a
+lower load number than the current load's — the number each load takes from its run's counter
+before its first hello — is refused and changes nothing, however late it arrives, and each
+report carries the number of the transition it follows, so a report of an earlier one changes
+nothing. An end that arrives after a
 withdrawal is still taken: a withdrawn boundary refuses new tasks, it drops no report
 ([stage4-turns.md](../v2/stage4-turns.md#the-live-set)). Known limit, recorded on October 16,
 2026: no test holds these yet; S4-6's build adds them, the start and availability in part A,

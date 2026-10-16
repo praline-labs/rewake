@@ -35,6 +35,9 @@ By the owner and main, October 16, 2026:
 9. **After the design's readiness check** (main, the same day): a long answer is cut at 1 MiB of
    the whole JSON body with a line saying so; every role's mod sends its own turns, main's
    included; an end of a run proven gone gets no receipt.
+10. **The mod orders its own loads** (main, the same day, after the check of the fixes): each
+   load takes the next number of a counter the run keeps in `$.store` and sends it in its hello;
+   the host orders hellos by that number, not by when they arrive.
 
 ## The mod's side
 
@@ -83,11 +86,12 @@ store, only on its receipt or on a terminal refusal ([the retry](#the-mods-side)
 removes it, whoever starts or reloads in the meantime.
 
 The ends of a run that was killed go only once that run is proven ended. The store keeps an
-index, `rewake/outboxes`, of the epochs whose key holds an end. Once its hello is admitted, a
+index, `rewake/outboxes`, of the epochs that have a key of the run's: an outbox, or the load
+counter ([the hello, again](#the-mods-side)). Once its hello is admitted, a
 load asks `mod/ended` with up to 32 epochs of the index other than its own, and the host answers
 those whose wrapper `registry.ObserveRun` proves ended — of another boot, or its process gone
 with its start time; one alive or that cannot be told stays. The question changes nothing on
-the host. The load removes their keys and
+the host. The load removes both keys of each and
 their lines of the index. It is the proof a later launch takes before it removes a killed run's
 directory (L3), asked of the host because the mod reads no processes. Two sessions writing the
 index at once may lose a line of it; that leaks a key, never an end, since a run's own load reads
@@ -134,12 +138,18 @@ generation and, when it is answered, schedules the next. The host holds each pol
 | a throw, 500, 503 | sends again after 1 s, doubling up to 10 s |
 
 **The hello, again.** The hello of S4-5 stays the first act of `session.start`, and its
-`loadId`, random per load, names its retries. A hello whose fetch threw, or that was answered
-500 or 503, is sent again under the same `loadId` from a timer of the same kind, after 1 s up
-to 10 s, until it is answered; a 410 says the load was superseded and ends it, and any other
-refusal is final for the load. So a hello lost on the way does not leave a mod that runs and is
-never admitted, and a hello sent twice is one load's ([loads and
-generations](#the-live-set)).
+`loadId`, random per load, names its retries. Before its first hello a load takes its number:
+it reads the run's counter, `rewake/load/<epoch>` in `$.store`, adds one, writes it back and
+sends it as `loadSeq`. Loads of one run follow one another — a reload ends the old copy before
+the new one registers — so the read and the write have no rival. A hello whose fetch threw, or
+that was answered 500 or 503, is sent again under the same `loadId` and `loadSeq` from a timer
+of the same kind, after 1 s up to 10 s, until it is answered; any refusal but 410 is final for
+the load. A 410 says a load with a higher number holds the run. A load that reads no number in
+the store above its own — a store cleared under it, say — takes the next number once and says
+hello once more, so a live load is not left silent by a counter it cannot see; a second 410
+ends it. So a hello lost on the way does not leave a mod that runs and is never admitted, a
+hello sent twice is one load's, and a hello of an older load, however late it arrives, cannot
+take the run from a newer one ([loads and generations](#the-live-set)).
 
 ## The host's side
 
@@ -210,24 +220,26 @@ fixture's program — answer `ErrRunGone` as they answered the nil, so nothing c
 hosts them. Wake stays the inbox lane's, live from the service's start.
 
 **Loads and generations.** The host keeps, per run, the current load — its `loadId`, its
-heartbeat's generation, live or lapsed — and the load ids it has seen superseded. Every request
-is stamped with a sequence under the server's lock when it is admitted, before its body is read,
-and a hello binds under the same lock:
+`loadSeq`, its heartbeat's generation, live or lapsed — and the load ids it has seen superseded.
+A hello binds under the server's lock, ordered by its `loadSeq` alone, never by when it was
+accepted or read:
 
 - of the current load while its generation is live: a retry of a lost answer, answered with the
   same generation, nothing reported;
 - of the current load after its generation lapsed: a new generation of the same load, and the
   set reported with what the mod proves;
-- of a load not seen before, stamped after the current load's hello: it becomes the current
-  load with a new generation, and the previous load is superseded;
-- of a superseded load, or of a new load stamped before the current load's hello: refused 410,
-  with no effect.
+- with a `loadSeq` above the current load's: it becomes the current load with a new
+  generation, and the previous load is superseded;
+- with a `loadSeq` below the current load's, or of a load id superseded: refused 410, with no
+  effect.
 
-So a hello of load A delayed while its body is read, as B's hello binds, cannot take the run
-back: its stamp is earlier, and it is refused. The stamp is the connection's acceptance; a hello
-of an old load accepted after a new load's would need the engine to hold a fetch's connect
-across a reload, which cancels the old copy's work, and no probe has seen it. A poll of the
-current load and generation renews it; one of the current load and another or a lapsed
+The order exists before any request is sent: a load has its number before its first hello, and
+a later load's is higher. So a hello of load A that arrives after B's — delayed while its body
+is read, or a fetch issued before the reload and accepted after — is refused, and B stays
+current. A hello of another load id with the current load's number means a counter that did not
+advance — a store that refused the write — and is bound as the later load: there, and only
+there, the order falls back to arrival, a known limit. A poll of the current load and generation
+renews it; one of the current load and another or a lapsed
 generation is answered 409; one of a superseded load, 410. An end of any load the run admitted,
 superseded or not, is taken ([the host's side](#the-hosts-side)) and renews nothing.
 

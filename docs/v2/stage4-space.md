@@ -101,7 +101,7 @@ characters, the room a key surface's props allow less a margin.
 
 | Path | Caller | Asks | Answers |
 |---|---|---|---|
-| `hello` | every mod load | the session id, the harness version, the load's id | the run's role and whether it hosts spaces |
+| `hello` | every mod load | the session id, the harness version, the load's id and number | the run's role, whether it hosts spaces, the heartbeat's generation; 410 to a load a higher-numbered one superseded |
 | `turn/start`, `turn/end` | every load's mod, for its own conversation's turns | the turn's id; at its end the end's id, the reason and the answer | a receipt once the core took it ([section 5](#5-reports)) |
 | `mod/alive` | every admitted load, in a loop | the load | within 15 s, done; 409 once its generation lapsed or is not the current one, and the mod says hello again; 410 once a later load superseded it ([the live set](stage4-turns.md#the-live-set)) |
 | `mod/ended` | every admitted load, at its start | the epochs of other runs whose ends the store keeps | those rewake proves ended ([the outbox](stage4-turns.md#the-mods-side)) |
