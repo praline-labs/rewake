@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 	"testing"
@@ -89,7 +90,7 @@ func TestTheWrittenModPassesTheValidator(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
 	out, err := exec.CommandContext(ctx, program, "plugin", "validate", "--strict", dir).CombinedOutput()
-	if err != nil || !strings.Contains(string(out), "env reads: "+modSocketEnv) {
+	if err != nil || !regexp.MustCompile(`env reads: .*\b`+modSocketEnv+`\b`).Match(out) {
 		t.Fatalf("the validator: %v\n%s", err, out)
 	}
 }
@@ -178,7 +179,7 @@ func TestARunWritesItsModAndServesItsSocket(t *testing.T) {
 	if err := plan.Service.Start(context.Background(), func(string) {}); err != nil {
 		t.Fatal(err)
 	}
-	for _, name := range []string{".claude-plugin/plugin.json", "hooks/hooks.json", "hooks/rewake.ts", "protocol.gen.ts"} {
+	for _, name := range []string{".claude-plugin/plugin.json", "hooks/hooks.json", "hooks/rewake.ts", "hooks/outbox.ts", "protocol.gen.ts"} {
 		if _, err := os.Stat(filepath.Join(modDir(request.RunDir), name)); err != nil {
 			t.Errorf("the run's mod lacks %s: %v", name, err)
 		}

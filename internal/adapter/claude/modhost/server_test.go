@@ -96,7 +96,7 @@ func TestTheHarnessesHelloBindsItsLoad(t *testing.T) {
 		t.Fatalf("the harness's hello: %d %s %v", status, text, err)
 	}
 	var answer HelloAnswer
-	if err := json.Unmarshal([]byte(text), &answer); err != nil || answer != (HelloAnswer{Role: "main"}) {
+	if err := json.Unmarshal([]byte(text), &answer); err != nil || answer != (HelloAnswer{Role: "main", Generation: 1}) {
 		t.Fatalf("the answer: %s", text)
 	}
 	if _, _, err := post(socket, PathHello, validHello("second")); err != nil {

@@ -23,7 +23,7 @@ import (
 // dot, and the manifest's directory is one, while the tests and the schema
 // are no part of what a run loads.
 //
-//go:embed mod/.claude-plugin/plugin.json mod/hooks/hooks.json mod/hooks/rewake.ts mod/protocol.gen.ts
+//go:embed mod/.claude-plugin/plugin.json mod/hooks/hooks.json mod/hooks/rewake.ts mod/hooks/outbox.ts mod/protocol.gen.ts
 var modFiles embed.FS
 
 // pluginDirFlag loads a plugin from a directory for one launch.
@@ -74,7 +74,8 @@ func writeMod(dir string) error {
 }
 
 // modRun is the service of a run that loads the mod: the run's mod endpoint
-// beside the inbox lane, the mod written before either starts.
+// beside the inbox lane, the mod written before either starts. Its turns
+// reach the core through the endpoint (docs/v2/stage4-turns.md).
 type modRun struct {
 	*lane
 	dir    string
@@ -88,52 +89,80 @@ type modRun struct {
 	// hello's, so the set reported last is the run's.
 	reporting sync.Mutex
 	live      func([]adapter.Capability)
-	spaces    bool
+	proven    bool
+	// withheld is why the mod will not be heard, once Start found it.
+	withheld []adapter.Withheld
 }
 
 // ReportLive: the inbox lane is live once it starts, as a run that reports
-// nothing would have it; spaces join it with the first admitted hello of a
-// run that hosts them (docs/v2/design-api.md#spaces).
+// nothing would have it; the turn boundary joins it with the first admitted
+// hello, and spaces with it on a run that hosts them
+// (docs/v2/design-api.md#spaces). Withdrawing them when the mod is lost is
+// the heartbeat's (docs/v2/stage4-turns.md#the-live-set), not built yet: an
+// admitted hello keeps them for the run's life.
 func (r *modRun) ReportLive(live func([]adapter.Capability)) { r.live = live }
 
-func (r *modRun) report(spaces bool) {
+func (r *modRun) report(proven bool) {
 	r.reporting.Lock()
 	defer r.reporting.Unlock()
 	if r.live == nil {
 		return
 	}
-	r.spaces = r.spaces || spaces
+	r.proven = r.proven || proven
 	set := []adapter.Capability{adapter.WakeCapability}
-	if r.spaces {
-		set = append(set, adapter.SpacesCapability)
+	if r.proven {
+		set = append(set, adapter.TurnBoundaryCapability)
+		if r.hostsSpaces {
+			set = append(set, adapter.SpacesCapability)
+		}
 	}
 	r.live(set)
 }
 
-// admitted hears a hello the endpoint bound: from then the mod is loaded,
-// and a run that hosts spaces has them live. A later load's hello keeps them.
-func (r *modRun) admitted(modhost.HelloRequest) {
-	if r.hostsSpaces {
-		r.report(true)
-	}
-}
+// admitted hears a hello the endpoint bound: from then the mod is loaded, the
+// run's turns reach the core, and a run that hosts spaces has them.
+func (r *modRun) admitted(modhost.HelloRequest) { r.report(true) }
+
+// ReportTurns hands the endpoint where the run's turns go.
+func (r *modRun) ReportTurns(handler adapter.TurnHandler) { r.server.ReportTurns(handler) }
+
+// Withheld is why the mod of this run will not be heard, if Start found a
+// reason: a role that owes reports is then refused before the harness starts.
+func (r *modRun) Withheld() []adapter.Withheld { return r.withheld }
 
 func (r *modRun) Start(ctx context.Context, note func(string)) error {
 	if err := writeMod(r.dir); err != nil {
-		return fmt.Errorf("could not write the rewake mod for this run: %w", err)
+		r.withhold("its files could not be written into the run's directory: " + err.Error())
+	} else if err := r.server.Start(); err != nil {
+		// The mod would load and find nobody: it reports nothing.
+		r.withhold("its endpoint is not listening: " + err.Error())
 	}
 	sweepReplies(filepath.Dir(r.socket))
-	if err := r.server.Start(); err != nil && note != nil {
-		// The mod loads and finds nobody: it reports nothing, and the run
-		// goes on as one whose mod never reported in.
-		note("the rewake mod will not be heard: " + err.Error())
-	}
 	if err := r.lane.Start(ctx, note); err != nil {
 		return err
 	}
 	r.report(false)
 	return nil
 }
+
+func (r *modRun) withhold(cause string) {
+	r.withheld = append(r.withheld, withheldMod(cause))
+}
+
+// withheldMod is the turn boundary withheld because the mod will not load or
+// be heard: everything the mod proves goes with it.
+func withheldMod(cause string) adapter.Withheld {
+	return adapter.Withheld{Capability: adapter.TurnBoundaryCapability, Cause: "the rewake mod will not be heard in this run: " + cause}
+}
+
+// modless is the service of a run that loads no mod: its inbox lane, and why
+// there is no mod.
+type modless struct {
+	*lane
+	cause string
+}
+
+func (m modless) Withheld() []adapter.Withheld { return []adapter.Withheld{withheldMod(m.cause)} }
 
 func (r *modRun) Close() {
 	r.lane.Close()

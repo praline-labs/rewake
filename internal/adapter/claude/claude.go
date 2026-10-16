@@ -10,7 +10,9 @@ import (
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/adapter/claude/modhost"
 	"github.com/praline-labs/rewake/internal/core/brief"
+	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/core/role"
+	"github.com/praline-labs/rewake/internal/infra/proc"
 )
 
 // ID is the launch command and the harness field of a session record.
@@ -80,7 +82,8 @@ func (claudeHarness) Summary() string {
 func (claudeHarness) Examples() []string {
 	return []string{
 		"rewake --main claude",
-		"rewake --main --name api claude --continue",
+		"rewake --write --name api claude",
+		"rewake --main --name lead claude --continue",
 		"rewake --main claude --worktree=fix-login",
 	}
 }
@@ -125,7 +128,9 @@ func claudeDefaults() []adapter.Default {
 func (claudeHarness) Notes() []string {
 	return []string{
 		"Messages arrive through the session's inbox socket within seconds and wake an idle session.",
-		"This rewake is not told when a Claude Code turn ends, so Claude Code runs a main session only: a role that owes reports refuses to start on it, and a task or question to it fails, until stage 4 gives it a turn boundary.",
+		"Each turn's end reaches rewake through the rewake mod, which rewake writes into the run's directory and loads for that launch alone; a task or question to the session fails until the mod's hello is admitted, and a role that owes reports refuses to start when rewake knows the mod will not load.",
+		"A turn's end is not held open: a turn that ends after rewake pending without a new mark closes the task as answered.",
+		"A launch through --command reaches the mod only when the command ends by exec-ing claude: a wrapper that runs it as a child is never admitted, and the session takes no tasks.",
 		"Arguments after claude reach it as written, beside the flags rewake adds for delivery, except: a --help first asks rewake for this page; --worktree is rewake's, below; and a typed flag replaces an alias's copy of it.",
 		"Claude Code takes no grant in this rewake: not a directory, since the permission hook it took them through is gone until stage 6, and not Git metadata, so a write session commits within its own permissions. A directory a session needs, the owner adds: --add-dir at the launch or /add-dir in its terminal.",
 		"--worktree starts the session in a new checkout of HEAD on a new branch under rewake's worktree directory, at the same place within the repository; --worktree=<name> names both, and a name after a space is refused, since it would reach claude as the prompt. rewake worktree --help says how to land and remove it. It starts a new conversation only: --continue or -c, --resume or -r, --from-pr, --teleport, --fork-session, the attach and respawn commands, Claude Code's own -w and --tmux, --cloud and --environment are refused beside it. -w alone stays Claude Code's own worktree, inside the repository.",
@@ -159,18 +164,21 @@ func (claudeHarness) SingleUseFlags() []adapter.Flag {
 	}
 }
 
-// Offers: Launch and Wake only in stage 3, with no turn boundary until the
-// mod brings one in stage 4 (docs/v2/stage3-steps-adapters.md, S9). Claude
-// Code runs its commands without a sandbox of its own, so `rewake send`
-// reaches the wrapper's socket to register a grant.
+// Offers: Wake, and a turn boundary that the run's mod proves with its hello
+// from inside the harness, so only after the harness starts; it reports every
+// end and holds none open (docs/v2/stage4-turns.md). Claude Code runs its
+// commands without a sandbox of its own, so `rewake send` reaches the
+// wrapper's socket to register a grant.
 //
 // Spaces: a main run hosts them once its mod's hello is admitted; a run whose
 // mod did not load has none. Conversation: --session-id <uuid> starts the new
 // conversation under rewake's id (`claude --help`, 2.1.296).
 func (claudeHarness) Offers() adapter.Offer {
 	return adapter.Offer{
-		Wake: true, Permissions: adapter.PermissionsOffer{ReachesWrapper: true},
-		Spaces: true, Conversation: adapter.ConversationOffer{Flag: sessionIDFlag},
+		Wake:         true,
+		TurnBoundary: adapter.TurnBoundaryOffer{Reports: true, AfterStart: true},
+		Permissions:  adapter.PermissionsOffer{ReachesWrapper: true},
+		Spaces:       true, Conversation: adapter.ConversationOffer{Flag: sessionIDFlag},
 	}
 }
 
@@ -245,11 +253,15 @@ func (claudeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, 
 	wake.room = request.RoomDir
 	var service adapter.Service = wake
 	var live adapter.LiveReporter
+	var turns adapter.TurnBoundary
 	env := request.Env
 	modSocket := modSocketPath(request)
-	if len(modSocket) > maxSocketPath {
-		notes = append(notes, "not loading the rewake mod: its socket path "+modSocket+" is longer than a unix socket allows")
-	} else if request.RunDir != "" && request.Socket != "" {
+	switch {
+	case len(modSocket) > maxSocketPath:
+		service = modless{lane: wake, cause: "its socket path " + modSocket + " is longer than a unix socket allows; start it with a shorter session name or REWAKE_DIR"}
+	case request.RunDir == "" || request.Socket == "":
+		service = modless{lane: wake, cause: "the launch has no run directory or inbox socket of rewake's to load it from"}
+	default:
 		// The mod is this run's alone: written into its directory, loaded
 		// by this launch's flag, its socket named in this launch's
 		// environment.
@@ -258,22 +270,28 @@ func (claudeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, 
 		run := &modRun{lane: wake, dir: modDir(request.RunDir), socket: modSocket, hostsSpaces: request.Role.Spaces}
 		run.server = modhost.New(modhost.Config{
 			Socket: modSocket, Role: request.Role.ID, Record: filepath.Join(request.RunDir, "hello.json"), Wait: harnessWait,
-			HostsSpaces: request.Role.Spaces, Admitted: run.admitted,
+			HostsSpaces: request.Role.Spaces, Admitted: run.admitted, Ended: runEnded,
 		})
-		service, live = run, run
+		service, live, turns = run, run, run
 	}
 	return adapter.LaunchPlan{
-		Command:    request.Program("claude"),
-		Args:       args,
-		Env:        env,
-		Socket:     socket,
-		OwnsSocket: owns,
-		Notes:      notes,
-		Service:    service,
-		Wake:       wake,
-		Live:       live,
+		Command:      request.Program("claude"),
+		Args:         args,
+		Env:          env,
+		Socket:       socket,
+		OwnsSocket:   owns,
+		Notes:        notes,
+		Service:      service,
+		Wake:         wake,
+		Live:         live,
+		TurnBoundary: turns,
 	}, nil
 }
+
+// runEnded says a run is proven ended, for the mod's question about the
+// runs whose ends the harness's store keeps: of another boot, or its wrapper
+// gone with its start time. One alive or that cannot be told is not.
+func runEnded(epoch string) bool { return registry.ObserveRun(epoch) == proc.IdentityEnded }
 
 // flagValue reads the value of a flag the caller passed. Only before "--": what
 // follows is input for the harness, where a flag-looking word is text.

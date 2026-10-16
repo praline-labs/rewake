@@ -39,6 +39,9 @@ type Config struct {
 	// before it is answered, so what the run proves by it is in the live
 	// set by the time the mod acts on the answer; nil hears nothing.
 	Admitted func(HelloRequest)
+	// Ended says a run, by its epoch, is proven ended — of another boot, or
+	// its wrapper gone — for mod/ended; nil proves none ended.
+	Ended func(epoch string) bool
 }
 
 // Server is the wrapper's end of the mod's protocol for one run. Every
@@ -52,8 +55,16 @@ type Server struct {
 	mu      sync.Mutex
 	harness adapter.RunProcess
 	load    *HelloRequest
-	known   chan struct{}
-	named   sync.Once
+	// loads are the loads the run admitted a hello of: a turn's start or end
+	// of any of them is taken, a later load's hello or none.
+	loads      map[string]bool
+	generation int
+	// turns is where the run's turns go, and ends each end's first capture by
+	// its id, kept for the run's life (turns.go).
+	turns adapter.TurnHandler
+	ends  map[string]*capture
+	known chan struct{}
+	named sync.Once
 	// closed stops admission and every write a handler has not begun; stop
 	// is closed with it, so a request waiting for the harness gives up.
 	closed bool
@@ -71,13 +82,19 @@ type Server struct {
 	closing  sync.Once
 
 	// answering runs between an answer's making and its writing, a seam for
-	// the test of the second peer check.
+	// the test of the second peer check; deciding runs before a turn's
+	// effect is decided, a seam for the tests of a request delayed across
+	// Close.
 	answering func()
+	deciding  func()
 }
 
 // New is a run's mod endpoint, listening once Start binds it.
 func New(cfg Config) *Server {
-	return &Server{cfg: cfg, known: make(chan struct{}), stop: make(chan struct{}), served: make(chan struct{})}
+	return &Server{
+		cfg: cfg, known: make(chan struct{}), stop: make(chan struct{}), served: make(chan struct{}),
+		loads: map[string]bool{}, ends: map[string]*capture{},
+	}
 }
 
 // closeWait bounds how long Close waits for the handlers in flight. One that
@@ -273,13 +290,13 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 		refuse(w, http.StatusForbidden, err.Error())
 		return
 	}
-	switch r.URL.Path {
-	case PathHello:
-	case PathTurnStart, PathTurnEnd, PathEvents, PathSpaceHold, PathSpaceScreen, PathSpaceKeys, PathSpaceResize, PathSessionClosing:
-		refuse(w, http.StatusNotImplemented, r.URL.Path+" is not in this build")
-		return
-	default:
+	endpoint, known := s.endpoints()[r.URL.Path]
+	if !known {
 		refuse(w, http.StatusNotFound, "no endpoint "+r.URL.Path)
+		return
+	}
+	if endpoint == nil {
+		refuse(w, http.StatusNotImplemented, r.URL.Path+" is not in this build")
 		return
 	}
 	if r.Method != http.MethodPost {
@@ -287,98 +304,57 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 		refuse(w, http.StatusMethodNotAllowed, "every endpoint is a POST")
 		return
 	}
-	var hello HelloRequest
-	if status, err := decode(w, r, &hello); err != nil {
-		refuse(w, status, err.Error())
-		return
+	endpoint(w, r)
+}
+
+// endpoints is the protocol's paths and what serves each; nil for one a later
+// step brings.
+func (s *Server) endpoints() map[string]http.HandlerFunc {
+	return map[string]http.HandlerFunc{
+		PathHello:          s.hello,
+		PathTurnStart:      s.turnStart,
+		PathTurnEnd:        s.turnEnd,
+		PathModEnded:       s.ended,
+		PathModAlive:       nil,
+		PathEvents:         nil,
+		PathSpaceHold:      nil,
+		PathSpaceScreen:    nil,
+		PathSpaceKeys:      nil,
+		PathSpaceResize:    nil,
+		PathSessionClosing: nil,
 	}
-	if hello.LoadID == "" || hello.SessionID == "" || hello.HarnessVersion == "" {
-		refuse(w, http.StatusBadRequest, "a hello names its load, its session and the harness's version")
-		return
-	}
-	if err := s.bind(r.Context(), hello); errors.Is(err, errClosing) {
-		refuse(w, http.StatusServiceUnavailable, err.Error())
-		return
-	} else if err != nil {
-		// The harness was replaced while the body was read: the hello
-		// proves nothing, and nobody is there to take a refusal.
-		panic(http.ErrAbortHandler)
-	}
-	answer := HelloAnswer{Role: s.cfg.Role, HostsSpaces: s.cfg.HostsSpaces}
+}
+
+// answer writes v once the request's peer is checked a third time: a harness
+// replaced since the request's effect is not the one that asked, and nobody
+// is there to take the answer, so the connection is cut with none.
+func (s *Server) answer(w http.ResponseWriter, r *http.Request, v any) {
 	if s.answering != nil {
 		s.answering()
 	}
-	// The peer is checked again before the answer: a harness replaced since
-	// the hello was bound is not the one that asked, and nobody is there to
-	// take the answer, so the connection is cut with none.
 	if s.fromHarness(r.Context()) != nil {
 		panic(http.ErrAbortHandler)
 	}
-	reply(w, http.StatusOK, answer)
+	reply(w, http.StatusOK, v)
 }
 
-// bind makes hello the run's load, writes its record and tells the run, once
-// the request's peer is checked again and the server is still open, all under
-// one lock: a harness replaced while the body was read gets no effect of its
-// hello — no load, no record, no capability made live — and a handler that
-// outlasted Close's wait writes nothing it had not begun.
-func (s *Server) bind(ctx context.Context, hello HelloRequest) error {
-	s.bindMu.Lock()
-	defer s.bindMu.Unlock()
-	if err := s.fromHarness(ctx); err != nil {
-		return err
-	}
-	s.mu.Lock()
-	if s.closed {
-		s.mu.Unlock()
-		return errClosing
-	}
-	s.load = &hello
-	s.mu.Unlock()
-	s.record(hello)
-	if s.cfg.Admitted != nil {
-		s.cfg.Admitted(hello)
-	}
-	return nil
-}
-
-// record writes the admitted hello where the run keeps it, whole: a
-// temporary file moved over the last one.
-func (s *Server) record(hello HelloRequest) {
-	if s.cfg.Record == "" {
-		return
-	}
-	data, err := json.Marshal(hello)
-	if err != nil {
-		return
-	}
-	temporary := s.cfg.Record + ".new"
-	if state.WriteFile(temporary, append(data, '\n'), 0o600) != nil {
-		_ = state.Discard(temporary)
-		return
-	}
-	if state.Move(temporary, s.cfg.Record) != nil {
-		_ = state.Discard(temporary)
-	}
-}
-
-// decode reads a body within the protocol's bound into v, refusing a field
-// the schema does not name and anything after the one value.
-func decode(w http.ResponseWriter, r *http.Request, v any) (int, error) {
-	body := http.MaxBytesReader(w, r.Body, MaxBodyBytes)
+// decode reads a body within limit bytes into v, refusing a field the schema
+// does not name and anything after the one value.
+func decode(w http.ResponseWriter, r *http.Request, v any, limit int64) (int, error) {
+	body := http.MaxBytesReader(w, r.Body, limit)
 	decoder := json.NewDecoder(body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(v); err != nil {
 		var tooLarge *http.MaxBytesError
 		if errors.As(err, &tooLarge) {
-			return http.StatusRequestEntityTooLarge, fmt.Errorf("a body is at most %d bytes", MaxBodyBytes)
+			return http.StatusRequestEntityTooLarge, fmt.Errorf("a body is at most %d bytes", limit)
 		}
 		return http.StatusBadRequest, fmt.Errorf("the body is not the request this endpoint takes: %w", err)
 	}
 	if _, err := decoder.Token(); !errors.Is(err, io.EOF) {
 		var tooLarge *http.MaxBytesError
 		if errors.As(err, &tooLarge) {
-			return http.StatusRequestEntityTooLarge, fmt.Errorf("a body is at most %d bytes", MaxBodyBytes)
+			return http.StatusRequestEntityTooLarge, fmt.Errorf("a body is at most %d bytes", limit)
 		}
 		return http.StatusBadRequest, errors.New("the body carries more than one value")
 	}

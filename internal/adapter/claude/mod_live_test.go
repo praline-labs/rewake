@@ -43,10 +43,10 @@ func helloFrom(t *testing.T, socket string) modhost.HelloAnswer {
 	return hello
 }
 
-// A run's inbox lane is live from its start; spaces join it once the mod's
-// hello is admitted, and only on a run whose role opens them, which the
-// hello's answer tells the mod.
-func TestAMainRunHasItsSpacesLiveOnceItsModSaysHello(t *testing.T) {
+// A run's inbox lane is live from its start, alone until the mod's hello is
+// admitted; the turn boundary joins it then, and spaces with it only on a run
+// whose role opens them, which the hello's answer tells the mod.
+func TestTheSetIsWakeUntilTheHelloThenTheBoundaryAndSpacesOnMain(t *testing.T) {
 	for _, test := range []struct {
 		role  role.Role
 		hosts bool
@@ -88,10 +88,11 @@ func TestAMainRunHasItsSpacesLiveOnceItsModSaysHello(t *testing.T) {
 			if answer := helloFrom(t, modSocketPath(request)); answer.HostsSpaces != test.hosts {
 				t.Fatalf("the hello was answered hostsSpaces %v, the role opens spaces: %v", answer.HostsSpaces, test.hosts)
 			}
-			want := [][]adapter.Capability{{adapter.WakeCapability}}
+			proven := []adapter.Capability{adapter.WakeCapability, adapter.TurnBoundaryCapability}
 			if test.hosts {
-				want = append(want, []adapter.Capability{adapter.WakeCapability, adapter.SpacesCapability})
+				proven = append(proven, adapter.SpacesCapability)
 			}
+			want := [][]adapter.Capability{{adapter.WakeCapability}, proven}
 			mu.Lock()
 			defer mu.Unlock()
 			if !slices.EqualFunc(reports, want, slices.Equal) {
