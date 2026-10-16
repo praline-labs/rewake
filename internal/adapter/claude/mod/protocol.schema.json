@@ -180,7 +180,7 @@
       "type": "object",
       "description": "is a turn's end of the session's own conversation, sent again with the same end id until its receipt comes.",
       "properties": {
-        "loadId": {"type": "string", "description": "is the load that saw the end."},
+        "loadId": {"type": "string", "description": "is the admitted load sending the end, which need not be the load that saw it: a later load of the run sends what an earlier one stored, and the end stays its end id and its content."},
         "conversation": {"type": "string", "description": "is the conversation the turn ran in."},
         "turnId": {"type": "string", "description": "names the turn."},
         "endId": {"type": "string", "description": "names this end once and for good: the same end sent again carries the same id and is taken once."},

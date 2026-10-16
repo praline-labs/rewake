@@ -154,7 +154,9 @@ export interface TurnStartRequest {
 // TurnEndRequest is a turn's end of the session's own conversation, sent again with the same
 // end id until its receipt comes.
 export interface TurnEndRequest {
-  // loadId is the load that saw the end.
+  // loadId is the admitted load sending the end, which need not be the load that saw it: a
+  // later load of the run sends what an earlier one stored, and the end stays its end id and
+  // its content.
   loadId: string
   // conversation is the conversation the turn ran in.
   conversation: string

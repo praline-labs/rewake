@@ -1,8 +1,8 @@
 // The ends of the run's turns not yet answered for good, and their one sender
 // (docs/v2/stage4-turns.md#the-mods-side). An end is frozen when it is made:
 // written to the harness's store under the run's key before anything is sent,
-// and every attempt sends the same body until a receipt or a refusal that
-// says it can never be taken.
+// and every attempt sends the same end until a receipt or a refusal that says
+// it can never be taken.
 import { bounds, paths } from '../protocol.gen.ts'
 import type { EndedAnswer, Receipt, TurnEndRequest } from '../protocol.gen.ts'
 
@@ -23,6 +23,18 @@ export interface Host {
 export const outboxKey = (epoch: string) => 'rewake/outbox/' + epoch
 export const loadKey = (epoch: string) => 'rewake/load/' + epoch
 export const indexKey = 'rewake/outboxes'
+
+// Every id the mod makes has this length, so an end sent under the id of a
+// load other than the one that cut it keeps the size its cut measured.
+const idLength = 24
+
+export function newId(): string {
+  let id = ''
+  while (id.length < idLength) {
+    id += Math.random().toString(36).slice(2)
+  }
+  return id.slice(0, idLength)
+}
 
 // The most epochs one mod/ended asks of.
 const maxEndedEpochs = 32
@@ -127,14 +139,57 @@ export class Outbox {
   // busy is an attempt in flight or one scheduled: the outbox's one sender.
   private busy = false
   private delay = 0
+  // known is the run's stored queue read into ends. Until then nothing is
+  // written under the run's key, since a write replaces the whole key and
+  // would drop what an earlier load stored, and nothing is sent, since an
+  // older end may still be in the store.
+  private known = false
   private admitted = false
   private warned = false
+  private unread = false
+  // writes chains the store's writes, so each writes the queue as it is when
+  // it runs and a slower one never lands over a later one.
+  private writes: Promise<void> = Promise.resolve()
 
   constructor(
     private readonly host: Host,
     private readonly epoch: string,
     private readonly loadId: string,
   ) {}
+
+  // open reads what the store holds for the run, at the load's start and
+  // whatever its hello's fate: those ends go first, oldest first, then the
+  // ones this load made meanwhile. A read that fails leaves the queue unknown
+  // and is tried again after 1 s up to 10 s; it never counts as empty.
+  async open(delay = 0) {
+    if (this.epoch === '') {
+      this.known = true
+      return
+    }
+    let stored: TurnEndRequest[]
+    try {
+      const value = await this.host.get(outboxKey(this.epoch))
+      stored = Array.isArray(value) ? (value as TurnEndRequest[]) : []
+    } catch (err) {
+      if (!this.unread) {
+        this.unread = true
+        this.host.log(`rewake: the harness's store could not be read, so this run's turn ends wait until it can: ${err}`)
+      }
+      const next = nextDelay(delay)
+      this.host.after(next, () => {
+        void this.open(next)
+      })
+      return
+    }
+    const seen = new Set(stored.map((end) => end.endId))
+    const made = this.ends.filter((end) => !seen.has(end.endId))
+    this.ends = [...stored, ...made]
+    this.known = true
+    if (made.length > 0) {
+      await this.persist()
+    }
+    this.kick()
+  }
 
   // add writes a new end to the outbox. When it is the head and nothing is
   // under way the caller's hook is the sender of its first attempt and
@@ -143,30 +198,23 @@ export class Outbox {
   async add(end: TurnEndRequest) {
     this.ends.push(end)
     await this.persist()
-    if (this.admitted && !this.busy && this.ends[0] === end) {
+    if (this.known && this.admitted && !this.busy && this.ends[0] === end) {
       await this.attempt()
     }
   }
 
-  // admit runs once the load's hello is admitted: the ends the store holds
-  // for the run go first, oldest first, under the end ids they were made
-  // with, then the ones this load made before; then the keys of the runs
-  // rewake proves ended are removed.
+  // admit runs once the load's hello is admitted: the queue goes out once it
+  // is known, and the keys of the runs rewake proves ended are removed.
   async admit() {
-    let stored: TurnEndRequest[] = []
-    try {
-      const value = await this.host.get(outboxKey(this.epoch))
-      stored = Array.isArray(value) ? (value as TurnEndRequest[]) : []
-    } catch {
-      // An unreadable store leaves this load's own ends in memory.
-    }
-    const known = new Set(stored.map((end) => end.endId))
-    this.ends = [...stored, ...this.ends.filter((end) => !known.has(end.endId))]
     this.admitted = true
-    if (this.ends.length > 0 && !this.busy) {
+    this.kick()
+    await this.sweep()
+  }
+
+  private kick() {
+    if (this.known && this.admitted && this.ends.length > 0 && !this.busy) {
       this.schedule(0)
     }
-    await this.sweep()
   }
 
   private schedule(ms: number) {
@@ -176,8 +224,11 @@ export class Outbox {
     })
   }
 
-  // attempt sends the head once. A receipt or a final refusal removes it and
-  // the chain goes on at once; a failure keeps it and sends it again later.
+  // attempt sends the head once, under this load's id: the end is its end id
+  // and its content, and the load id names who sends it, so an end a load
+  // stored before its hello was ever admitted goes under the load admitted
+  // now. A receipt or a final refusal removes it and the chain goes on at
+  // once; a failure keeps it and sends it again later.
   private async attempt() {
     const end = this.ends[0]
     if (end === undefined) {
@@ -187,7 +238,7 @@ export class Outbox {
     this.busy = true
     let final = ''
     try {
-      const answer = await this.host.post(paths.turnEnd, end)
+      const answer = await this.host.post(paths.turnEnd, { ...end, loadId: this.loadId })
       if (answer.status === 200 ? !isReceipt(answer.text, end) : answer.status === 500 || answer.status === 503) {
         return this.retry()
       }
@@ -217,12 +268,17 @@ export class Outbox {
     this.schedule(this.delay)
   }
 
-  // persist writes the outbox under the run's key; the end leaves the store
-  // only when it leaves the outbox.
-  private async persist() {
-    if (this.epoch === '') {
-      return
+  // persist writes the outbox under the run's key once the stored queue is
+  // known; the end leaves the store only when it leaves the outbox.
+  private persist(): Promise<void> {
+    if (this.epoch === '' || !this.known) {
+      return Promise.resolve()
     }
+    this.writes = this.writes.then(() => this.write())
+    return this.writes
+  }
+
+  private async write() {
     try {
       if (this.ends.length > 0) {
         await this.host.set(outboxKey(this.epoch), [...this.ends])

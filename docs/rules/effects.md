@@ -196,7 +196,9 @@ decision settles the stop without being evidence.
   - An adapter whose ends come over a protocol and are retried — Claude Code's mod, from
     S4-6 — hands the core every copy of one end as its first capture: the event, the read
     boundary and both times fixed on its first arrival, kept when the core's attempt fails;
-    a copy whose content differs from the first is refused and hands the core nothing. An end
+    a copy whose content differs from the first is refused and hands the core nothing. A copy
+    is its end id and content, whichever admitted load of the run sends it, so an end stored
+    by a load that was reloaded or never admitted is sent and taken under a later one. An end
     whose harness gives no start time has a window opening at the latest earlier end a
     journal records, so a pending mark of a turn whose end never reached the core falls into
     the next end's window ([stage4-turns.md](../v2/stage4-turns.md#the-start-time)). The core
@@ -207,6 +209,8 @@ decision settles the stop without being evidence.
   - `internal/adapter/claude/modhost/turns_test.go` `TestARetriedEndHandsTheCoreItsFirstCapture`
   - `internal/adapter/claude/modhost/turns_test.go` `TestTwoCopiesOfAnEndAtOnceAreCapturedOnce`
   - `internal/adapter/claude/modhost/turns_test.go` `TestAKnownEndWithOtherContentIsRefused`
+  - `internal/adapter/claude/modhost/turns_test.go` `TestAnEndSentByALaterLoadIsTheSameEnd`
+  - `internal/adapter/claude/mod_test.go` `TestTheModsTestsPass`
   - `internal/adapter/claude/modhost/turns_test.go` `TestAnEndOfARunGoneIsAnswered410WithNoReceipt`
   - `internal/adapter/claude/turns_test.go` `TestARunsEndReachesTheCoreThroughItsMod`
   - `internal/core/mail/pending_test.go` `TestTheWindowOpensAfterTheRunsLatestEarlierEnd`

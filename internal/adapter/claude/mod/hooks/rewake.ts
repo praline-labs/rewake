@@ -7,12 +7,8 @@
 import type { Register } from 'claude-code'
 import { paths } from '../protocol.gen.ts'
 import type { EndReason, HelloAnswer, HelloRequest, TurnEndRequest, TurnStartRequest } from '../protocol.gen.ts'
-import { Outbox, cut, listed, loadKey, nextDelay } from './outbox.ts'
+import { Outbox, cut, listed, loadKey, newId, nextDelay } from './outbox.ts'
 import type { Host } from './outbox.ts'
-
-function randomId(): string {
-  return Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2)
-}
 
 // The harness's reasons, mapped to the protocol's.
 const reasons: Record<string, EndReason> = {
@@ -78,7 +74,7 @@ export const register: Register = (on) => {
   // A load is this module's life: module state resets on every reload, and
   // register and session.start run again, so a reload is a new load with a
   // hello of its own.
-  const loadId = randomId()
+  const loadId = newId()
   let load: Load | undefined
 
   on('session.start', async ($, e, next) => {
@@ -106,6 +102,9 @@ export const register: Register = (on) => {
       log: (text) => $.ui.log(text),
     }
     load = { host, outbox: new Outbox(host, epoch, loadId) }
+    // The run's stored ends are read before this load writes any, whether or
+    // not its hello is ever answered.
+    await load.outbox.open()
     try {
       const request: HelloRequest = {
         loadId,
@@ -150,7 +149,7 @@ export const register: Register = (on) => {
       loadId,
       conversation: await $.session.id(),
       turnId: e.turnId,
-      endId: randomId(),
+      endId: newId(),
       reason: reasons[e.reason] ?? 'failed',
     }
     if (answer !== '') {

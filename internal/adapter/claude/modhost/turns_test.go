@@ -204,6 +204,35 @@ func TestAKnownEndWithOtherContentIsRefused(t *testing.T) {
 	}
 }
 
+// An end is its end id and its content, not the load that sends it: a later
+// load of the run sends an end a reloaded load stored, under its own id, and
+// gets the first capture's receipt.
+func TestAnEndSentByALaterLoadIsTheSameEnd(t *testing.T) {
+	_, socket, c := turning(t)
+	sendEnd(t, socket, endBody("end-1", "answered", "done"))
+	if status, _, err := post(socket, PathHello, validHello("load-2")); err != nil || status != http.StatusOK {
+		t.Fatalf("the later load's hello: %d %v", status, err)
+	}
+	var end TurnEndRequest
+	if err := json.Unmarshal(endBody("end-1", "answered", "done"), &end); err != nil {
+		t.Fatal(err)
+	}
+	end.LoadID = "load-2"
+	body, _ := json.Marshal(end)
+	if status, receipt := sendEnd(t, socket, body); status != http.StatusOK || receipt == nil || receipt.EndID == nil || *receipt.EndID != "end-1" {
+		t.Fatalf("the end under the later load: %d %+v", status, receipt)
+	}
+	ends := c.published()
+	if len(ends) != 2 || ends[1].Event != ends[0].Event || *ends[1].Boundary != *ends[0].Boundary || ends[1].Ended != ends[0].Ended {
+		t.Fatalf("the end under the later load was captured again: %+v", ends)
+	}
+	end.LoadID = "load-never"
+	body, _ = json.Marshal(end)
+	if status, _ := sendEnd(t, socket, body); status != http.StatusBadRequest {
+		t.Fatalf("the end under a load never admitted: %d", status)
+	}
+}
+
 // An end of a run proven gone is answered 410 with no receipt.
 func TestAnEndOfARunGoneIsAnswered410WithNoReceipt(t *testing.T) {
 	_, socket, c := turning(t)

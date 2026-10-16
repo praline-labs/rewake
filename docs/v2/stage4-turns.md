@@ -68,7 +68,8 @@ start time and no mail tool on Claude Code yet, a lost start costs nothing
 **The end.** At `turn.complete` the mod makes the end — a fresh random `endId`, the
 conversation, the turn id, the reason, the answer cut to its bound ([the size](#the-mods-side))
 — and writes it to its outbox before anything is sent; from then on the end is frozen, and
-every attempt sends the same body. The outbox has one sender. When the new end is its head and
+every attempt sends the same end id and content, under the id of the load sending it
+([the outbox](#the-mods-side)). The outbox has one sender. When the new end is its head and
 nothing is in flight, the hook is that sender for the first attempt: it sends the end once and
 awaits it before it returns. The wait is inside `$.http.fetch`, which the hook's 10 s budget
 does not count (the skill, gotchas); the host answers within 20 s. When an older end is still
@@ -87,6 +88,22 @@ reloads), and `$.store` is shared by every session on the machine. An epoch name
 session, so no other run's mod sends the entry. An end leaves the outbox, in memory and in the
 store, only on its receipt or on a terminal refusal ([the retry](#the-mods-side)); its age never
 removes it, whoever starts or reloads in the meantime.
+
+A load reads its run's key at `session.start`, before it writes the key and whatever becomes of
+its hello, and the ends it holds go ahead of any this load makes. A write replaces the whole key,
+so nothing is written under it until that read succeeds: a read that fails leaves the queue
+unknown, never empty, and is tried again after 1 s up to 10 s, said once with `$.ui.log`; the
+ends this load makes meanwhile wait in memory, and none is sent, since an older one may still be
+in the store.
+
+An end is its end id and its content; the load id a `turn/end` carries names the admitted load
+sending it. A load sends what the store holds for its run under its own load id, so an end
+stored by a load whose hello never arrived, or by one since reloaded, is taken under the load
+admitted now; the host checks that load's admission and the harness's peer as for any request,
+and leaves the load id out of the capture's digest, so the end under a later load meets its
+first capture. Decided while building part A, October 16, 2026, after its review found that
+such an end, sent under the id it was stored with, was refused 400 and dropped: an end is
+stamped by the load that sends it, not taken under a load the run never admitted.
 
 The ends of a run that was killed go only once that run is proven ended. The store keeps an
 index, `rewake/outboxes`, of the epochs that have a key of the run's: an outbox, or the load
@@ -116,7 +133,8 @@ its record removed — so no attempt has a destination: the end leaves the outbo
 receipt, logged once with `$.ui.log`; it did not arrive, and nothing counts it as arrived. Any
 other refusal — 400, 403, 409, 413 — says the end can never be taken as it is, and goes the
 same way; a refusal repeated forever is not a retry. A new load sends what the store holds for
-its run after its hello is admitted, oldest first, under the end ids they were made with.
+its run after its hello is admitted, oldest first, under the end ids they were made with and its
+own load id.
 
 **The size.** A request body is at most 64 KiB, and a turn's answer can be longer. `turn/end`
 has a bound of its own, `maxEndBodyBytes`, 1 MiB, counted in the UTF-8 bytes of the whole JSON
@@ -125,7 +143,8 @@ marker included. An answer that would carry the body past it is cut at the last 
 that keeps the body within the bound with a line appended saying how many characters of the
 answer were left out. The cut is made once, before the end is written to the outbox. The tail
 of such an answer is lost on purpose: the report is bounded, says so, and is never refused for
-its size (main's decision, October 16, 2026).
+its size (main's decision, October 16, 2026). Every id the mod makes is 24 characters, so an end
+sent under a later load's id keeps the size its cut measured.
 
 **The heartbeat.** An admitted hello answers the load's heartbeat `generation`, and the load
 starts a timer chain for it: each callback sends `mod/alive` with the load id and that
@@ -363,4 +382,6 @@ store for the last.
   record whose write keeps failing leaves other sessions reading the set before. An accepted
   task stays owed; a withdrawal retracts nothing.
 - **An end lost with its load.** An end the store could not keep is lost if the mod reloads
-  before its receipt; the session's task stays owed and main sees it unanswered.
+  before its receipt; the session's task stays owed and main sees it unanswered. So is one made
+  while the store could not be read, and a store that is never read again holds every later
+  end of the load in memory unsent.

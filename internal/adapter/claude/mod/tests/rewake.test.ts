@@ -22,8 +22,16 @@ interface Sent {
 // test says otherwise.
 function world(
   on: any,
-  given: { replies?: Record<string, Reply[]>; store?: Record<string, unknown>; env?: Record<string, string>; refused?: string } = {},
+  given: {
+    replies?: Record<string, Reply[]>
+    store?: Record<string, unknown>
+    env?: Record<string, string>
+    refused?: string
+    // unreadable is how many reads of the run's outbox the store refuses.
+    unreadable?: number
+  } = {},
 ) {
+  let unreadable = given.unreadable ?? 0
   const sent: Sent[] = []
   const logs: string[] = []
   const store = new Map<string, unknown>(Object.entries(given.store ?? {}))
@@ -36,7 +44,13 @@ function world(
   }
   mock.env(on, given.env ?? { REWAKE_MOD_SOCKET: socket, REWAKE_EPOCH: epoch })
   const clock = mock.clock(on)
-  on('store.get', (_: any, e: any) => ({ value: store.get(e.key) }))
+  on('store.get', (_: any, e: any) => {
+    if (e.key === own && unreadable > 0) {
+      unreadable--
+      return { deny: 'the store is busy' }
+    }
+    return { value: store.get(e.key) }
+  })
   on('store.set', (_: any, e: any) => {
     store.set(e.key, JSON.parse(JSON.stringify(e.value)))
     return { value: undefined }
@@ -92,7 +106,7 @@ test('a load says hello to its run over the socket the run names, with the next 
   expect(hello.socket).toBe(socket)
   expect(hello.body.sessionId).toBe('conversation-1')
   expect(hello.body.harnessVersion).toBe('2.1.296')
-  expect(hello.body.loadId).toMatch(/^[a-z0-9]{8,}$/)
+  expect(hello.body.loadId).toMatch(/^[a-z0-9]{24}$/)
   expect(hello.body.loadSeq).toBe(5)
   expect(run.store.get('rewake/load/' + epoch)).toBe(5)
   expect(run.store.get('rewake/outboxes')).toEqual([epoch])
@@ -262,7 +276,7 @@ for (const [name, unit] of [
   })
 }
 
-test("the store's ends of the run go first after a new load's hello, under their own ids; another run's stay", async ($, on) => {
+test("the store's ends of the run go first after a new load's hello, under their own end ids and the new load's id; another run's stay", async ($, on) => {
   const other = '9.200.boot'
   const kept = { loadId: 'old', conversation: 'conversation-1', turnId: 't0', endId: 'end-old', reason: 'answered', answer: 'before the reload' }
   const theirs = { loadId: 'theirs', conversation: 'conversation-9', turnId: 'x', endId: 'end-theirs', reason: 'answered' }
@@ -272,7 +286,7 @@ test("the store's ends of the run go first after a new load's hello, under their
   await complete($, 't1')
   await run.clock.settle()
   expect(run.ends().map((one) => one.body.endId)).toEqual(['end-old', run.ends()[1].body.endId])
-  expect(run.ends()[0].body).toEqual(kept)
+  expect(run.ends()[0].body).toEqual({ ...kept, loadId: run.sent[0].body.loadId })
   expect(run.ends()[1].body.turnId).toBe('t1')
   expect(run.sent.find((one) => one.path === '/v1/mod/ended')!.body.epochs).toEqual([other])
   expect(run.store.get('rewake/outbox/' + other)).toEqual([theirs])
@@ -312,4 +326,58 @@ test("a cleanup cut short loses no end of the run's own", async ($, on) => {
   expect(run.ends().map((one) => one.body.endId)).toEqual(['end-old'])
   expect(run.store.has(own)).toBe(false)
   expect(run.store.get('rewake/outboxes')).toEqual([gone, epoch])
+})
+
+test('review: a new end before a retried hello preserves the older durable end', async ($, on) => {
+  const kept = { loadId: 'old', conversation: 'conversation-1', turnId: 't0', endId: 'end-old', reason: 'answered', answer: 'old report' }
+  const run = world(on, {
+    replies: { '/v1/hello': ['throw', admitted] },
+    store: { [own]: [kept] },
+  })
+  await start($)
+  await complete($, 't1')
+  await run.clock.advance(1000)
+  await run.clock.settle()
+  expect(run.ends().map((one) => one.body.turnId)).toEqual(['t0', 't1'])
+})
+
+test('review: a restored end from a load whose hello never arrived remains retryable', async ($, on) => {
+  const kept = { loadId: 'never-admitted', conversation: 'conversation-1', turnId: 't0', endId: 'end-old', reason: 'answered', answer: 'old report' }
+  const run = world(on, {
+    replies: {
+      '/v1/turn/end': [async (body) => body.loadId === 'never-admitted'
+        ? { status: 400, text: '{"error":"no hello of this load was admitted in this run, so its turns are not taken"}' }
+        : 'receipt'],
+    },
+    store: { [own]: [kept] },
+  })
+  await start($)
+  await run.clock.settle()
+  const delivered = run.ends().some((one) => one.body.endId === 'end-old' && one.body.loadId !== 'never-admitted')
+  const retained = (run.store.get(own) as any[] | undefined)?.some((one) => one.endId === 'end-old') ?? false
+  expect(delivered || retained).toBe(true)
+})
+
+test('a read of the store that fails leaves the stored ends in place, and they go first once it reads', async ($, on) => {
+  const kept = { loadId: 'old', conversation: 'conversation-1', turnId: 't0', endId: 'end-old', reason: 'answered', answer: 'old report' }
+  const run = world(on, { store: { [own]: [kept] }, unreadable: 2 })
+  await start($)
+  await complete($, 't1')
+  // A reload now would find the store as the earlier load left it.
+  expect(run.store.get(own)).toEqual([kept])
+  expect(run.ends().length).toBe(0)
+  expect(run.logs.filter((line) => line.includes('could not be read')).length).toBe(1)
+  await run.clock.advance(1000)
+  await run.clock.advance(2000)
+  await run.clock.settle()
+  expect(run.ends().map((one) => one.body.turnId)).toEqual(['t0', 't1'])
+  expect(run.store.has(own)).toBe(false)
+})
+
+test('every id the mod makes has one length, so an end sent under a later load keeps its measured size', async ($, on) => {
+  const run = world(on)
+  await start($)
+  await complete($, 't1')
+  expect(run.ends()[0].body.endId).toMatch(/^[a-z0-9]{24}$/)
+  expect(run.ends()[0].body.loadId).toMatch(/^[a-z0-9]{24}$/)
 })

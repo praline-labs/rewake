@@ -151,7 +151,9 @@ type TurnStartRequest struct {
 // TurnEndRequest is a turn's end of the session's own conversation, sent again with the same
 // end id until its receipt comes.
 type TurnEndRequest struct {
-	// LoadID is the load that saw the end.
+	// LoadID is the admitted load sending the end, which need not be the load that saw it: a later
+	// load of the run sends what an earlier one stored, and the end stays its end id and its
+	// content.
 	LoadID string `json:"loadId"`
 
 	// Conversation is the conversation the turn ran in.
