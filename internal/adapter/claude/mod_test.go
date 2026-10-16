@@ -179,7 +179,7 @@ func TestARunWritesItsModAndServesItsSocket(t *testing.T) {
 	if err := plan.Service.Start(context.Background(), func(string) {}); err != nil {
 		t.Fatal(err)
 	}
-	for _, name := range []string{".claude-plugin/plugin.json", "hooks/hooks.json", "hooks/rewake.ts", "hooks/outbox.ts", "protocol.gen.ts"} {
+	for _, name := range []string{".claude-plugin/plugin.json", "hooks/hooks.json", "hooks/rewake.ts", "hooks/outbox.ts", "hooks/heartbeat.ts", "protocol.gen.ts"} {
 		if _, err := os.Stat(filepath.Join(modDir(request.RunDir), name)); err != nil {
 			t.Errorf("the run's mod lacks %s: %v", name, err)
 		}

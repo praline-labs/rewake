@@ -7,6 +7,7 @@
 import type { Register } from 'claude-code'
 import { paths } from '../protocol.gen.ts'
 import type { EndReason, HelloAnswer, HelloRequest, TurnEndRequest, TurnStartRequest } from '../protocol.gen.ts'
+import { Heartbeat } from './heartbeat.ts'
 import { Outbox, cut, listed, loadKey, newId, nextDelay } from './outbox.ts'
 import type { Host } from './outbox.ts'
 
@@ -18,43 +19,103 @@ const reasons: Record<string, EndReason> = {
   error: 'failed',
 }
 
+// counted is a number the store keeps, 0 for none.
+function counted(value: unknown): number {
+  const held = Number(value)
+  return Number.isFinite(held) ? held : 0
+}
+
 // takeLoadSeq takes the next number of the run's counter in the store: loads
-// of one run follow one another, so the read and the write have no rival.
+// of one run follow one another, so the read and the write have no rival. A
+// write that fails still leaves the number taken: the host binds a hello of
+// another load with the current number as the later one. A counter that
+// cannot be read gives 1, and a 410 then names the number to go above.
 async function takeLoadSeq(host: Host, epoch: string): Promise<number> {
   if (epoch === '') {
     return 1
   }
+  let seq: number
   try {
-    const held = Number(await host.get(loadKey(epoch)))
-    const seq = (Number.isFinite(held) ? held : 0) + 1
-    await host.set(loadKey(epoch), seq)
-    await listed(host, epoch)
-    return seq
+    seq = counted(await host.get(loadKey(epoch))) + 1
   } catch {
     return 1
   }
+  try {
+    await host.set(loadKey(epoch), seq)
+    await listed(host, epoch)
+  } catch {
+    // The number stands; the counter did not advance.
+  }
+  return seq
+}
+
+// renumber is the number of the one second hello after a 410: the next above
+// the store's counter, this load's number and the one the refusal names —
+// unless the store shows a load numbered above this one, which holds the run,
+// or cannot be read, which cannot tell.
+async function renumber(host: Host, epoch: string, own: number, refusal: string): Promise<number | undefined> {
+  let held = 0
+  if (epoch !== '') {
+    try {
+      held = counted(await host.get(loadKey(epoch)))
+    } catch {
+      return undefined
+    }
+  }
+  if (held > own) {
+    return undefined
+  }
+  let holder = 0
+  try {
+    holder = counted((JSON.parse(refusal) as { loadSeq?: number }).loadSeq)
+  } catch {
+    // A refusal that names no number: the store's and this load's decide.
+  }
+  const seq = Math.max(held, own, holder) + 1
+  if (epoch !== '') {
+    try {
+      await host.set(loadKey(epoch), seq)
+    } catch {
+      // As takeLoadSeq: the number stands.
+    }
+  }
+  return seq
 }
 
 // Load is what a load learned at session.start.
 interface Load {
   host: Host
+  epoch: string
   outbox: Outbox
+  heartbeat: Heartbeat
   // run is the wrapper's answer to this load's hello: undefined until it
   // comes, and when no wrapper answered, which later steps read as "not live".
   run?: HelloAnswer
 }
 
 // hello is sent until it is answered, under the same load id and number: a
-// fetch that threw, a 500 or a 503 sends it again after 1 s up to 10 s. Any
-// other refusal is final for the load: the wrapper refused it and knows why,
-// and the mod serves nothing it did not admit. A 410's second hello under a
-// higher number, and the heartbeat, are part B's.
-async function hello(load: Load, request: HelloRequest, delay: number) {
+// fetch that threw, a 500 or a 503 sends it again after 1 s up to 10 s. An
+// admitted hello starts the heartbeat for the generation it answered. A 410
+// says a load numbered higher holds the run: a load that sees no such number
+// in the store says hello once more under the next number, and a second 410
+// ends it. Any other refusal is final for the load: the wrapper refused it
+// and knows why, and the mod serves nothing it did not admit.
+async function hello(load: Load, request: HelloRequest, delay: number, renumbered = false) {
   try {
     const answer = await load.host.post(paths.hello, request)
     if (answer.ok) {
       load.run = JSON.parse(answer.text) as HelloAnswer
+      load.heartbeat.begin(load.run.generation)
       await load.outbox.admit()
+      return
+    }
+    if (answer.status === 410) {
+      const seq = renumbered ? undefined : await renumber(load.host, load.epoch, request.loadSeq, answer.text)
+      if (seq === undefined) {
+        load.heartbeat.superseded = true
+        return
+      }
+      await hello(load, { ...request, loadSeq: seq }, 0, true)
       return
     }
     if (answer.status !== 500 && answer.status !== 503) {
@@ -66,7 +127,7 @@ async function hello(load: Load, request: HelloRequest, delay: number) {
   }
   const next = nextDelay(delay)
   load.host.after(next, () => {
-    void hello(load, request, next)
+    void hello(load, request, next, renumbered)
   })
 }
 
@@ -101,18 +162,30 @@ export const register: Register = (on) => {
       },
       log: (text) => $.ui.log(text),
     }
-    load = { host, outbox: new Outbox(host, epoch, loadId) }
+    const current: Load = {
+      host,
+      epoch,
+      outbox: new Outbox(host, epoch, loadId),
+      // A lapsed generation's chain says the load's latest hello again.
+      heartbeat: new Heartbeat(host, loadId, () => {
+        if (latest !== undefined) {
+          void hello(current, latest, 0, true)
+        }
+      }),
+    }
+    let latest: HelloRequest | undefined
+    load = current
     // The run's stored ends are read before this load writes any, whether or
     // not its hello is ever answered.
     await load.outbox.open()
     try {
-      const request: HelloRequest = {
+      latest = {
         loadId,
         sessionId: await $.session.id(),
         harnessVersion: (await $.session.version()).version,
         loadSeq: await takeLoadSeq(host, epoch),
       }
-      await hello(load, request, 0)
+      await hello(load, latest, 0)
     } catch {
       // What the harness would not tell leaves the load unadmitted.
     }
