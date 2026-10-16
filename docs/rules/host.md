@@ -125,8 +125,9 @@ report carries the number of the transition it follows, so a report of an earlie
 nothing. An end that arrives after a
 withdrawal is still taken: a withdrawn boundary refuses new tasks, it drops no report
 ([stage4-turns.md](../v2/stage4-turns.md#the-live-set)). Known limit, recorded on October 16,
-2026: no test holds these yet; S4-6's build adds them, the start and availability in part A,
-the heartbeat, the generations and the late end in part B (stage 4).
+2026: the start and availability are held since S4-6's part A; no test holds the withdrawal, the
+load numbers, the reports' transitions or the late end yet, since the heartbeat and the
+generations are S4-6's part B (stage 4).
 
 Tests:
 - `internal/core/registry/live_test.go` `TestModifyChangesTheRecordAsItStands`
@@ -135,6 +136,9 @@ Tests:
 - `internal/host/live_test.go` `TestAWithdrawalThatFailsToLandIsWrittenAgain`
 - `internal/host/live_test.go` `TestAReportingRoleWaitsForItsBoundary`
 - `internal/host/live_test.go` `TestABoundaryNeverReportedIsRefusedAtTheBound`
+- `internal/host/after_start_test.go` `TestABoundaryProvenAfterTheStartStartsTheHarnessAndAvailabilityWaitsForIt`
+- `internal/host/after_start_test.go` `TestAvailabilityGoesAheadPastTheBoundWithTheBoundaryNotLive`
+- `internal/adapter/claude/mod_live_test.go` `TestTheSetIsWakeUntilTheHelloThenTheBoundaryAndSpacesOnMain`
 - `internal/host/live_test.go` `TestARunThatReportsNoneHasItsPlanLive`
 - `internal/host/live_test.go` `TestADeliveryWithoutALiveWakeWaits`
 - `internal/host/live_test.go` `TestWithoutALiveWakeNothingIsReservedOrPinned`

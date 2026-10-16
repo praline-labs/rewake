@@ -39,8 +39,8 @@ starts, exit 1, naming the cause by where it is, and leaves a silent role going 
 launch through `--command` whose script runs the harness as its child rather than by `exec` is
 never admitted, so its run takes no tasks; that is a documented limit, not a refusal
 ([stage4-turns.md](../v2/stage4-turns.md#readiness-and-admission)). Known limit, recorded on
-October 16, 2026: no test holds these yet; S4-6's build, part A, adds them, and its part C
-runs the `--command` cases live (stage 4).
+October 16, 2026: no test holds the `--command` cases, which S4-6's part C runs live with the
+installed harness (stage 4).
 
 Tests:
 - `internal/host/live_test.go` `TestARunThatReportsNoneHasItsPlanLive`
@@ -50,7 +50,10 @@ Tests:
 - `internal/cli/steer_test.go` `TestAVerbTheHarnessDoesNotOfferIsAWrongCall`
 - `internal/cli/send_dir_test.go` `TestASessionThatTakesNoDirectoryIsSentNoGrant`
 - `internal/cli/space_refusal_test.go` `TestASpaceIsRefusedByTheMissingCapability`
-- `internal/adapter/claude/mod_live_test.go` `TestAMainRunHasItsSpacesLiveOnceItsModSaysHello`
+- `internal/adapter/claude/mod_live_test.go` `TestTheSetIsWakeUntilTheHelloThenTheBoundaryAndSpacesOnMain`
+- `internal/adapter/claude/turns_test.go` `TestTheOfferReportsTurnsAfterTheStartAndHoldsNone`
+- `internal/adapter/claude/turns_test.go` `TestAKnownCauseWithholdsTheBoundary`
+- `internal/host/after_start_test.go` `TestAKnownCauseRefusesAReportingRoleBeforeTheStart`
 - `internal/cli/registry_words_test.go` `TestADecliningClauseAgreesWithHowManyDecline`
 - `internal/cli/turn_end_api_test.go` `TestATurnEndWithoutItsEventOrAKnownReasonIsRefused`
 - `internal/cli/turn_end_api_test.go` `TestEachEndReasonReportsItsOutcome`

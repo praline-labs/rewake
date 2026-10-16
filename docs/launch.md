@@ -132,10 +132,11 @@ rewake --main --name lead --command my-claude claude
   and have the overview say which rule to add to settings once.
 - A caller's `--settings` reaches the harness as given: rewake neither reads nor merges
   it.
-- Only main launches here. Claude Code has no turn boundary in this build, so a role
-  that owes reports — general, write, and a launch with no role flag — is refused before
-  anything is claimed, exit 1, naming the missing turn boundary and that the role is
-  available on Claude Code from stage 4.
+- Every role launches here since S4-6: the run's mod reports each turn's end once its
+  hello is admitted, after the harness starts, and a task to the run fails until then
+  ([stage4-turns.md](v2/stage4-turns.md#readiness-and-admission)). A cause the adapter knows
+  will keep the mod from loading refuses a role that owes reports before anything is
+  started, exit 1, naming the cause; a silent role starts with the cause printed as a note.
 
 ### Claude Code telemetry
 

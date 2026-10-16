@@ -69,9 +69,12 @@ that they are checked like the rest ([stage3-tests.md](../v2/stage3-tests.md#how
   On Claude Code, from S4-6, the event is `turn.complete` of the session's own conversation:
   its reasons `answer`, `aborted`, `refusal` and `error` report as answered, aborted, refused
   and failed, and a subagent's turn, which carries `agentId`, reports nothing
-  ([stage4-turns.md](../v2/stage4-turns.md#the-mods-side)). Known limit, October 16, 2026: no
-  test holds the mapping or the subagent's turn yet; S4-6's build, part A, adds them (stage 4).
+  ([stage4-turns.md](../v2/stage4-turns.md#the-mods-side)); the mod's own tests hold that in the
+  harness's test kit (`internal/adapter/claude/mod/tests/rewake.test.ts`, "each reason reaches
+  the run as its end reason, and a subagent's turn is not sent").
   Tests:
+  - `internal/adapter/claude/modhost/turns_test.go` `TestEachReasonReachesTheCoreAsItsEndReason`
+  - `internal/adapter/claude/mod_test.go` `TestTheModsTestsPass`
   - `internal/cli/stopped_test.go` `TestStoppedKeepsWorkForTheHumanContinuation`
   - `internal/cli/stopped_test.go` `TestStoppedWithNobodyWaitingSendsNothing`
   - `internal/cli/stopped_test.go` `TestAStoppedQuestionReturnsAndLeavesTheLaterResultReadable`

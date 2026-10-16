@@ -62,6 +62,16 @@ with its load's id, the session's id and `harnessVersion` 2.1.296, and `hello.js
 directory carried it. A model's Bash child sending the same request with `curl` was answered
 403, naming its process as not the harness's own.
 
+### rewake's own mod, its module checked before it loads (S4-6)
+
+October 16, 2026, Claude Code 2.1.296, in `claude plugin test`: every test failed with `hooks
+module did not load: ... $ itself is passed as an argument (bound, passed, spread, returned or
+read); $ is always spelled $.noun.event(...) at the call site`, once the module handed a hook's
+`$` to its outbox. The engine checks a module before it loads it: `$` may only be called
+through. The outbox takes closures a hook makes over its own `$`, each a `$.noun.event(...)`
+call, and its timers call those; a closure called from a `$.clock.after` callback after the
+hook returned works. The `mods` skill taken from 2.1.296 does not state the rule.
+
 ## P11: a process the mod starts
 
 ### `$.process.run`, the child detaching (`nugmw7`)

@@ -202,10 +202,18 @@ decision settles the stop without being evidence.
     the next end's window ([stage4-turns.md](../v2/stage4-turns.md#the-start-time)). The core
     answers a receipt only for an end it took: a run whose name is proven to have passed on
     gets no receipt and its end is not sent again, and one whose record could not be read is
-    sent again until it can ([stage4-turns.md](../v2/stage4-turns.md#the-hosts-side)). Known
-    limit, October 16, 2026: no test of the mod's endpoint holds these clauses yet; S4-6's
-    build, part A, adds them (stage 4).
+    sent again until it can ([stage4-turns.md](../v2/stage4-turns.md#the-hosts-side)).
   Tests:
+  - `internal/adapter/claude/modhost/turns_test.go` `TestARetriedEndHandsTheCoreItsFirstCapture`
+  - `internal/adapter/claude/modhost/turns_test.go` `TestTwoCopiesOfAnEndAtOnceAreCapturedOnce`
+  - `internal/adapter/claude/modhost/turns_test.go` `TestAKnownEndWithOtherContentIsRefused`
+  - `internal/adapter/claude/modhost/turns_test.go` `TestAnEndOfARunGoneIsAnswered410WithNoReceipt`
+  - `internal/adapter/claude/turns_test.go` `TestARunsEndReachesTheCoreThroughItsMod`
+  - `internal/core/mail/pending_test.go` `TestTheWindowOpensAfterTheRunsLatestEarlierEnd`
+  - `internal/core/registry/ownership_test.go` `TestOwnershipIsReadAsOwnedProvenNotOwnedOrUnknown`
+  - `internal/cli/completion_owner_test.go` `TestAnEndOfARunWhoseNamePassedOnIsGoneAndTakesNothing`
+  - `internal/cli/completion_owner_test.go` `TestAnEndWhoseRecordCannotBeReadIsRetriedAndPublishedOnce`
+  - `internal/cli/completion_owner_test.go` `TestAnEndTakenWhoseReceiptWasLostIsAnsweredFromTheJournal`
   - `internal/cli/turn_journal_retry_test.go` `TestALateRetryAfterTheSweepPublishesNothing`
   - `internal/cli/turn_journal_retry_test.go` `TestARetryAnswersOnlyWhatItsFirstAttemptSaw`
   - `internal/cli/turn_test.go` `TestARetriedReadReportsOnce`

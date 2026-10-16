@@ -48,8 +48,8 @@ The wrapper writes the mod into the run's directory and passes `--plugin-dir <di
 launch only. Nothing in the person's settings changes (L1); the directory goes with the run
 (L3) and is one of the adapter's protected directories, so no grant reaches it.
 
-The mod's files — a manifest named `rewake`, the hooks file, `hooks/rewake.ts` and the
-generated `protocol.gen.ts`, each named in the `embed` line, since a pattern skips the
+The mod's files — a manifest named `rewake`, the hooks file, `hooks/rewake.ts`, its outbox in
+`hooks/outbox.ts` and the generated `protocol.gen.ts`, each named in the `embed` line, since a pattern skips the
 manifest's dot directory — are embedded from `internal/adapter/claude/mod/` and written by
 the run's service into `<run dir>/mod` before the harness starts; the launch names the run's
 mod socket in `REWAKE_MOD_SOCKET`, replacing any inherited one, which the adapter also lists

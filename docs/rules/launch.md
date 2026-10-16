@@ -24,12 +24,17 @@ What rewake adds to a harness's launch, in the full wording of
 - **L3. Nothing persists past the run**: what a launch writes lives in the run's
   directory and goes with it; after a kill, a later launch removes it once the run is
   proven dead ([the qualified guarantee](../v2/stage3-rundir.md#the-qualified-guarantee)).
-  (Rule 8.) Known limit, recorded on October 16, 2026, owned by S4-6's build, part A: on
+  (Rule 8.) Known limit, recorded on October 16, 2026, accepted with S4-6's design: on
   Claude Code the mod keeps the ends its host has not acknowledged in the harness's own store,
   outside the run's directory, and removes those of a killed run only once a later load's
   hello has the host prove that run ended, so they outlive it until a later run on the same
-  machine ([stage4-turns.md](../v2/stage4-turns.md#the-mods-side)); no test holds this yet.
+  machine ([stage4-turns.md](../v2/stage4-turns.md#the-mods-side)). The removal by proof is
+  held by the tests below and by the mod's own in the harness's test kit ("only the keys of
+  runs mod/ended answers ended are removed").
   Tests:
+  - `internal/adapter/claude/modhost/turns_test.go` `TestModEndedAnswersOnlyRunsProvenEnded`
+  - `internal/adapter/claude/turns_test.go` `TestARunIsProvenEndedOnlyOnProof`
+  - `internal/adapter/claude/mod_test.go` `TestTheModsTestsPass`
   - `internal/host/control_test.go` `TestTheControlDirectoryLivesAsLongAsTheSession`
   - `internal/host/control_test.go` `TestAHarnessThatServesNoRequestsGetsNoDirectory`
   - `internal/host/wrap_test.go` `TestSessionIsPublishedWhileRunningAndRemovedAfter`

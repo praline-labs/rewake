@@ -38,7 +38,7 @@ internal/core/space/                          the record of each space a main op
 internal/adapter/                             the adapter API: the Harness interface, the catalogue value, launch plans, version gates, flags, defaults, settings
 internal/adapter/catalog/                     the one constructor of the catalogue, which cmd/rewake builds and hands to the CLI
 internal/adapter/claude/                      launch arguments, environment, socket delivery, the mod embedded from its mod/ directory and written per run
-internal/adapter/claude/modhost/              the wrapper's end of the mod's protocol: the HTTP server on the run's mod socket, each request checked by its peer, hello; the types tools/protogen writes from internal/adapter/claude/mod/protocol.schema.json
+internal/adapter/claude/modhost/              the wrapper's end of the mod's protocol: the HTTP server on the run's mod socket, each request checked by its peer, hello, a turn's start and end, mod/ended; the types tools/protogen writes from internal/adapter/claude/mod/protocol.schema.json
 internal/adapter/fixture/                     the test harness behind rewakefixture: a scripted program over a socket, every contract interface
 internal/host/                                wrapper: launch, signals, lifecycle
 internal/host/launch/                         a launch's host side: the run's environment, the version read before the claim, the bounded probe, the aliases a short name expands to

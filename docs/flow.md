@@ -89,10 +89,10 @@ with exit 2 before any step below ([launch.md](launch.md#no-session-inside-a-ses
    room or after main exits. Only explicit `--main` creates main, and it refuses
    under the room lock if a live main already occupies the room. Explicit
    `--general` and `--write` remain unchanged; a --name prefix never selects a
-   role. Main stays silent; write reports like general. A role that owes reports, on a
-   harness whose contract reports no turn's end — Claude Code in this build — is refused
-   before the worktree and the version read, exit 1, naming the missing turn boundary
-   and that the role is available there from stage 4 ([launch.md](launch.md)).
+   role. Main stays silent; write reports like general. A role that owes reports is refused,
+   exit 1, on a harness whose contract reports no turn's end — none of a release since S4-6 —
+   and on Claude Code when a cause known to keep the mod from loading stands; the mod proves
+   the boundary after the start ([stage4-turns.md](v2/stage4-turns.md#readiness-and-admission)).
    A write session on Codex is the
    one recipient of an explicit Git metadata grant requested by main — Claude Code takes
    none, and main cannot send to itself — and every role of a directory grant
