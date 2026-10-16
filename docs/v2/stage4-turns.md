@@ -38,6 +38,9 @@ By the owner and main, October 16, 2026:
 10. **The mod orders its own loads** (main, the same day, after the check of the fixes): each
    load takes the next number of a counter the run keeps in `$.store` and sends it in its hello;
    the host orders hellos by that number, not by when they arrive.
+11. **Generated files and the 400-line rule** (main, the same day, during the build): the files
+   `tools/protogen` writes, `protocol.gen.ts` and `protocol_gen.go`, are exempt from the rule, and
+   `docs/rules/effects.md` is not split for the clauses this step names in it.
 
 ## The mod's side
 
