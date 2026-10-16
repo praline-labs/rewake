@@ -124,10 +124,9 @@ before its first hello — is refused and changes nothing, however late it arriv
 report carries the number of the transition it follows, so a report of an earlier one changes
 nothing. An end that arrives after a
 withdrawal is still taken: a withdrawn boundary refuses new tasks, it drops no report
-([stage4-turns.md](../v2/stage4-turns.md#the-live-set)). Known limit, recorded on October 16,
-2026: the start and availability are held since S4-6's part A; no test holds the withdrawal, the
-load numbers, the reports' transitions or the late end yet, since the heartbeat and the
-generations are S4-6's part B (stage 4).
+([stage4-turns.md](../v2/stage4-turns.md#the-live-set)). Held since S4-6, October 16, 2026:
+the start and availability since its part A, the withdrawal, the load numbers, the
+generations, the reports' transitions and the late end since its part B.
 
 Tests:
 - `internal/core/registry/live_test.go` `TestModifyChangesTheRecordAsItStands`
@@ -139,6 +138,18 @@ Tests:
 - `internal/host/after_start_test.go` `TestABoundaryProvenAfterTheStartStartsTheHarnessAndAvailabilityWaitsForIt`
 - `internal/host/after_start_test.go` `TestAvailabilityGoesAheadPastTheBoundWithTheBoundaryNotLive`
 - `internal/adapter/claude/mod_live_test.go` `TestTheSetIsWakeUntilTheHelloThenTheBoundaryAndSpacesOnMain`
+- `internal/adapter/claude/mod_live_test.go` `TestALapseLeavesWakeAndANewHelloRestoresTheSet`
+- `internal/host/after_start_test.go` `TestABoundaryWithdrawnAfterAvailabilityLeavesWakeUntilProvenAgain`
+- `internal/adapter/claude/modhost/alive_test.go` `TestALapseWithdrawsWhatTheModProvedAndANewHelloRestoresIt`
+- `internal/adapter/claude/modhost/alive_test.go` `TestAHelloRetriedAfterItsAnswerWasLostKeepsItsGeneration`
+- `internal/adapter/claude/modhost/alive_test.go` `TestAnEarlierLoadsHelloAfterALaterOnesIsRefused`
+- `internal/adapter/claude/modhost/alive_test.go` `TestAHelloOfAnotherLoadWithTheCurrentNumberBindsAsTheLater`
+- `internal/adapter/claude/modhost/alive_test.go` `TestAPollDelayedAcrossANewHelloOfTheSameLoadIsRefused`
+- `internal/adapter/claude/modhost/alive_test.go` `TestALapseTimerOfAnEarlierTransitionDoesNothing`
+- `internal/adapter/claude/modhost/alive_test.go` `TestAnEndAfterALapseIsTakenAndMakesNothingLive`
+- `internal/adapter/claude/modhost/alive_test.go` `TestALapseAfterTheCloseReportsNothing`
+- `internal/adapter/claude/modhost/alive_test.go` `TestAHeldPollHoldsNoLock`
+- `internal/adapter/claude/mod_test.go` `TestTheModsTestsPass`
 - `internal/host/live_test.go` `TestARunThatReportsNoneHasItsPlanLive`
 - `internal/host/live_test.go` `TestADeliveryWithoutALiveWakeWaits`
 - `internal/host/live_test.go` `TestWithoutALiveWakeNothingIsReservedOrPinned`

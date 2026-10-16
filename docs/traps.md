@@ -30,6 +30,23 @@ mailbox. That is not a fault: it is how rewake keeps main's error without waking
 
 *September 16, 2026.*
 
+### A task sent from a main in print mode (`claude -p`) gets no report
+
+A live run whose main was a print-mode Claude Code sent a worker a plain task; the worker
+read it, answered on its screen and ended its turn, and nothing came back to main — no
+report and no error. It looked like a turn boundary that never fired.
+
+The main's run ends with its one turn, before the worker's turn does, and a report to an
+ended run reaches nobody by rule: the worker's end skips a waiter whose run is no longer
+the one holding its name (`internal/core/mail/turn_reports.go`; step 2 of
+[reconciliation](turn-end-recovery.md#reconciliation)).
+
+From a main in print mode send a `--question` with `--wait` within the shell tool's bound,
+which keeps the run alive until the answer, or run main interactively. Before suspecting the
+boundary, compare when main's run ended with when the worker read the task.
+
+*October 16, 2026.*
+
 ### An interrupted Claude Code task is reported finished with an unrelated answer
 
 A sender got `finished` for its task with a text that had nothing to do with it —

@@ -12,6 +12,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/praline-labs/rewake/internal/adapter"
 )
 
 // timers stands in for the lapse watch's clock: each timer waits until the
@@ -329,5 +331,50 @@ func TestAHeldPollHoldsNoLock(t *testing.T) {
 	}
 	if status := <-answered; status != http.StatusOK || time.Since(began) < hold {
 		t.Fatalf("the poll was answered %d after %v", status, time.Since(began))
+	}
+}
+
+// A poll whose harness was replaced after its first peer check is cut off
+// before its effect and renews nothing.
+func TestAPollFromAReplacedHarnessRenewsNothing(t *testing.T) {
+	server, socket, clock, _ := heartbeating(t, time.Millisecond)
+	_, generation, _ := sayHello(t, socket, "load-1", 1)
+	armed := clock.latest()
+	server.deciding = func() {
+		server.HarnessStarted(adapter.RunProcess{PID: os.Getpid(), Start: 1})
+	}
+	data, _ := json.Marshal(AliveRequest{LoadID: "load-1", Generation: generation})
+	if status, text, err := post(socket, PathModAlive, data); err == nil {
+		t.Fatalf("a poll from a replaced harness was answered: %d %s", status, text)
+	}
+	if clock.latest() != armed {
+		t.Fatal("a poll from a replaced harness renewed the heartbeat")
+	}
+}
+
+// A poll held before its decision while the run closes renews nothing.
+func TestAPollPastTheCloseRenewsNothing(t *testing.T) {
+	server, socket, clock, _ := heartbeating(t, time.Millisecond)
+	_, generation, _ := sayHello(t, socket, "load-1", 1)
+	armed := clock.latest()
+	data, _ := json.Marshal(AliveRequest{LoadID: "load-1", Generation: generation})
+	entered, release := make(chan struct{}), make(chan struct{})
+	server.deciding = func() {
+		close(entered)
+		<-release
+	}
+	answered := make(chan int)
+	go func() {
+		status, _, _ := post(socket, PathModAlive, data)
+		answered <- status
+	}()
+	<-entered
+	server.Close()
+	close(release)
+	if status := <-answered; status == http.StatusOK {
+		t.Fatal("a poll past the close was answered 200")
+	}
+	if clock.latest() != armed {
+		t.Fatal("a poll past the close renewed the heartbeat")
 	}
 }

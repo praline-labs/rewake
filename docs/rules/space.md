@@ -68,9 +68,8 @@ S4-7, SP6 with S4-8, SP1 and SP8 with S4-9.
   for the endpoint's tool transport.
   The turn's endpoints and the heartbeat follow the same check: the peer is checked again before
   each effect of a start, an end and a poll, and again before the answer
-  ([stage4-turns.md](../v2/stage4-turns.md#the-hosts-side)). Known limit, recorded on October
-  16, 2026: the start and the end are held since S4-6's part A; the poll is not built and no
-  test holds it yet, since the heartbeat is S4-6's part B (stage 4).
+  ([stage4-turns.md](../v2/stage4-turns.md#the-hosts-side)). Held since S4-6, October 16,
+  2026: the start and the end since its part A, the poll since its part B.
   Tests:
   - `internal/adapter/claude/modhost/server_test.go` `TestOnlyTheHarnessesOwnProcessIsServed`
   - `internal/adapter/claude/modhost/server_test.go` `TestAReplacedHarnessIsNotServed`
@@ -79,6 +78,8 @@ S4-7, SP6 with S4-8, SP1 and SP8 with S4-9.
   - `internal/adapter/claude/modhost/admission_test.go` `TestAHelloFromAReplacedHarnessHasNoEffect`
   - `internal/adapter/claude/modhost/turns_test.go` `TestATurnFromAReplacedHarnessHasNoEffect`
   - `internal/adapter/claude/modhost/turns_test.go` `TestARequestDelayedAcrossCloseTakesNoEffect`
+  - `internal/adapter/claude/modhost/alive_test.go` `TestAPollFromAReplacedHarnessRenewsNothing`
+  - `internal/adapter/claude/modhost/alive_test.go` `TestAPollPastTheCloseRenewsNothing`
   - `internal/host/endpoint/transport_test.go` `TestOnlyTheTransportsOwnProcessIsServed`
   - `internal/host/endpoint/transport_test.go` `TestAnAnswerGoesOnlyToTheTransportThatAsked`
 

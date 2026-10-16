@@ -162,14 +162,18 @@ generation and, when it is answered, schedules the next. The host holds each pol
 **The hello, again.** The hello of S4-5 stays the first act of `session.start`, and its
 `loadId`, random per load, names its retries. Before its first hello a load takes its number:
 it reads the run's counter, `rewake/load/<epoch>` in `$.store`, adds one, writes it back and
-sends it as `loadSeq`. Loads of one run follow one another — a reload ends the old copy before
+sends it as `loadSeq`; a write that fails leaves the number taken, and a counter that cannot be
+read gives 1. Loads of one run follow one another — a reload ends the old copy before
 the new one registers — so the read and the write have no rival. A hello whose fetch threw, or
 that was answered 500 or 503, is sent again under the same `loadId` and `loadSeq` from a timer
 of the same kind, after 1 s up to 10 s, until it is answered; any refusal but 410 is final for
-the load. A 410 says a load with a higher number holds the run. A load that reads no number in
-the store above its own — a store cleared under it, say — takes the next number once and says
-hello once more, so a live load is not left silent by a counter it cannot see; a second 410
-ends it. So a hello lost on the way does not leave a mod that runs and is never admitted, a
+the load. A 410 says a load with a higher number holds the run, and the refusal names that
+number (`loadSeq` of the refusal, added while building part B, October 16, 2026: without it a
+load whose store lost the counter could only guess the number to go above). A load that reads
+no number in the store above its own — a store cleared under it, say — takes the next above its
+own, the store's and the refused one's, once, and says hello once more under the same `loadId`,
+so a live load is not left silent by a counter it cannot see; a second 410 ends it, and so
+does a store that cannot be read then. So a hello lost on the way does not leave a mod that runs and is never admitted, a
 hello sent twice is one load's, and a hello of an older load, however late it arrives, cannot
 take the run from a newer one ([loads and generations](#the-live-set)).
 
@@ -252,8 +256,8 @@ accepted or read:
   set reported with what the mod proves;
 - with a `loadSeq` above the current load's: it becomes the current load with a new
   generation, and the previous load is superseded;
-- with a `loadSeq` below the current load's, or of a load id superseded: refused 410, with no
-  effect.
+- with a `loadSeq` below the current load's, or of a load id superseded: refused 410, naming
+  the current load's number, with no effect.
 
 The order exists before any request is sent: a load has its number before its first hello, and
 a later load's is higher. So a hello of load A that arrives after B's — delayed while its body
@@ -265,10 +269,10 @@ renews it; one of the current load and another or a lapsed
 generation is answered 409; one of a superseded load, 410. An end of any load the run admitted,
 superseded or not, is taken ([the host's side](#the-hosts-side)) and renews nothing.
 
-**The lapse and the reports.** The server stamps each poll's arrival. A lapse is no poll of the
-current generation arriving within `aliveLapseSeconds` of its last arrival, the hello counting
-as the first; the watch is one timer per generation, and a timer that fires for a generation no
-longer current does nothing. On a lapse the generation ends, and the run reports its whole set
+**The lapse and the reports.** A lapse is no poll of the current generation arriving within
+`aliveLapseSeconds` of its last arrival, the hello counting as the first. The watch is one timer
+per generation, re-armed by each poll's arrival under a number of its own, and a timer that
+fires for a generation or an arm no longer current does nothing. On a lapse the generation ends, and the run reports its whole set
 without what the mod proved: Wake alone. Every transition — a hello bound, a lapse, the close —
 takes the next number of one sequence per run under the server's lock, and its report carries
 it; `modRun` drops a report whose number is not above the last it reported, so no late timer,
