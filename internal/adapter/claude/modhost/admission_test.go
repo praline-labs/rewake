@@ -39,7 +39,7 @@ func TestAHelloFromAReplacedHarnessHasNoEffect(t *testing.T) {
 		t.Fatal(err)
 	}
 	admissions := 0
-	server := New(Config{Wait: time.Second, Admitted: func(HelloRequest) { admissions++ }})
+	server := New(Config{Wait: time.Second, Live: func(uint64, bool) { admissions++ }})
 	server.HarnessStarted(adapter.RunProcess{PID: os.Getpid(), Start: start})
 	body := &replacingBody{
 		Reader: bytes.NewReader(validHello("replaced-before-binding")),

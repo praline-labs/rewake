@@ -86,31 +86,28 @@ type modRun struct {
 	hostsSpaces bool
 
 	// reporting orders the live set's reports, the start's and each
-	// hello's, so the set reported last is the run's.
+	// transition's the endpoint hears, so the set reported last is the
+	// run's: a transition numbered at or below the last reported, or heard
+	// after the close, is dropped.
 	reporting sync.Mutex
 	live      func([]adapter.Capability)
-	proven    bool
+	reported  uint64
+	closed    bool
 	// withheld is why the mod will not be heard, once Start found it.
 	withheld []adapter.Withheld
 }
 
 // ReportLive: the inbox lane is live once it starts, as a run that reports
-// nothing would have it; the turn boundary joins it with the first admitted
-// hello, and spaces with it on a run that hosts them
-// (docs/v2/design-api.md#spaces). Withdrawing them when the mod is lost is
-// the heartbeat's (docs/v2/stage4-turns.md#the-live-set), not built yet: an
-// admitted hello keeps them for the run's life.
+// nothing would have it; the turn boundary joins it with an admitted hello,
+// and spaces with it on a run that hosts them
+// (docs/v2/design-api.md#spaces), and both go together when the mod's
+// heartbeat lapses, until a hello opens a generation again
+// (docs/v2/stage4-turns.md#the-live-set). Each report is the whole set.
 func (r *modRun) ReportLive(live func([]adapter.Capability)) { r.live = live }
 
 func (r *modRun) report(proven bool) {
-	r.reporting.Lock()
-	defer r.reporting.Unlock()
-	if r.live == nil {
-		return
-	}
-	r.proven = r.proven || proven
 	set := []adapter.Capability{adapter.WakeCapability}
-	if r.proven {
+	if proven {
 		set = append(set, adapter.TurnBoundaryCapability)
 		if r.hostsSpaces {
 			set = append(set, adapter.SpacesCapability)
@@ -119,9 +116,16 @@ func (r *modRun) report(proven bool) {
 	r.live(set)
 }
 
-// admitted hears a hello the endpoint bound: from then the mod is loaded, the
-// run's turns reach the core, and a run that hosts spaces has them.
-func (r *modRun) admitted(modhost.HelloRequest) { r.report(true) }
+// transition hears what the mod proves as the endpoint numbered it.
+func (r *modRun) transition(number uint64, proven bool) {
+	r.reporting.Lock()
+	defer r.reporting.Unlock()
+	if r.live == nil || r.closed || number <= r.reported {
+		return
+	}
+	r.reported = number
+	r.report(proven)
+}
 
 // ReportTurns hands the endpoint where the run's turns go.
 func (r *modRun) ReportTurns(handler adapter.TurnHandler) { r.server.ReportTurns(handler) }
@@ -141,7 +145,11 @@ func (r *modRun) Start(ctx context.Context, note func(string)) error {
 	if err := r.lane.Start(ctx, note); err != nil {
 		return err
 	}
-	r.report(false)
+	r.reporting.Lock()
+	defer r.reporting.Unlock()
+	if r.live != nil {
+		r.report(false)
+	}
 	return nil
 }
 
@@ -167,6 +175,9 @@ func (m modless) Withheld() []adapter.Withheld { return []adapter.Withheld{withh
 func (r *modRun) Close() {
 	r.lane.Close()
 	r.server.Close()
+	r.reporting.Lock()
+	r.closed = true
+	r.reporting.Unlock()
 }
 
 func (r *modRun) HarnessStarted(harness adapter.RunProcess) { r.server.HarnessStarted(harness) }

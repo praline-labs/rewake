@@ -270,7 +270,7 @@ func (claudeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, 
 		run := &modRun{lane: wake, dir: modDir(request.RunDir), socket: modSocket, hostsSpaces: request.Role.Spaces}
 		run.server = modhost.New(modhost.Config{
 			Socket: modSocket, Role: request.Role.ID, Record: filepath.Join(request.RunDir, "hello.json"), Wait: harnessWait,
-			HostsSpaces: request.Role.Spaces, Admitted: run.admitted, Ended: runEnded,
+			HostsSpaces: request.Role.Spaces, Live: run.transition, Ended: runEnded,
 		})
 		service, live, turns = run, run, run
 	}

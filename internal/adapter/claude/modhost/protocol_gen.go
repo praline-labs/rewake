@@ -72,6 +72,11 @@ const (
 type Refusal struct {
 	// Error says why, in words for a person.
 	Error string `json:"error"`
+
+	// LoadSeq is, on a hello refused 410 for a number below the current load's, that load's
+	// number: a load whose store shows no number above its own takes the next above this one and
+	// says hello once more.
+	LoadSeq *int `json:"loadSeq,omitempty"`
 }
 
 // Done is the answer of an endpoint that did what was asked and has nothing to say.

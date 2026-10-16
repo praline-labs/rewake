@@ -21,10 +21,16 @@ func (s *Server) hello(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	generation, err := s.bind(r.Context(), hello)
-	if errors.Is(err, errClosing) {
+	var superseded errSuperseded
+	switch {
+	case errors.Is(err, errClosing):
 		refuse(w, http.StatusServiceUnavailable, err.Error())
 		return
-	} else if err != nil {
+	case errors.As(err, &superseded):
+		holder := superseded.holder
+		reply(w, http.StatusGone, Refusal{Error: err.Error(), LoadSeq: &holder})
+		return
+	case err != nil:
 		// The harness was replaced while the body was read: the hello
 		// proves nothing, and nobody is there to take a refusal.
 		panic(http.ErrAbortHandler)
@@ -32,15 +38,12 @@ func (s *Server) hello(w http.ResponseWriter, r *http.Request) {
 	s.answer(w, r, HelloAnswer{Role: s.cfg.Role, HostsSpaces: s.cfg.HostsSpaces, Generation: generation})
 }
 
-// bind makes hello the run's load, writes its record and tells the run, once
-// the request's peer is checked again and the server is still open, all under
-// one lock: a harness replaced while the body was read gets no effect of its
-// hello — no load, no record, no capability made live — and a handler that
-// outlasted Close's wait writes nothing it had not begun. It answers the
-// load's generation: the current one for the current load's hello sent again,
-// a new one otherwise. Ordering loads by their number and a generation's lapse
-// are the heartbeat's (docs/v2/stage4-turns.md#the-live-set), which this
-// build does not have yet.
+// bind orders hello among the run's loads, writes its record and tells the
+// run, once the request's peer is checked again and the server is still
+// open, all under one lock: a harness replaced while the body was read gets
+// no effect of its hello — no load, no record, no capability made live — and
+// a handler that outlasted Close's wait writes nothing it had not begun. It
+// answers the load's generation (alive.go, admitLoad).
 func (s *Server) bind(ctx context.Context, hello HelloRequest) (int, error) {
 	s.bindMu.Lock()
 	defer s.bindMu.Unlock()
@@ -52,16 +55,14 @@ func (s *Server) bind(ctx context.Context, hello HelloRequest) (int, error) {
 		s.mu.Unlock()
 		return 0, errClosing
 	}
-	if s.load == nil || s.load.LoadID != hello.LoadID {
-		s.generation++
-	}
-	s.load = &hello
-	s.loads[hello.LoadID] = true
-	generation := s.generation
+	generation, transition, err := s.admitLoad(hello)
 	s.mu.Unlock()
-	s.record(hello)
-	if s.cfg.Admitted != nil {
-		s.cfg.Admitted(hello)
+	if err != nil {
+		return 0, err
+	}
+	if transition != 0 {
+		s.record(hello)
+		s.report(transition, true)
 	}
 	return generation, nil
 }

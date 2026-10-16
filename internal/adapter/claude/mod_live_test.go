@@ -101,3 +101,36 @@ func TestTheSetIsWakeUntilTheHelloThenTheBoundaryAndSpacesOnMain(t *testing.T) {
 		})
 	}
 }
+
+// A lapse withdraws the turn boundary, and spaces on main, leaving the inbox
+// lane live, and a new hello restores them; a report of an earlier
+// transition heard after a later one changes nothing, and nothing is heard
+// after the close.
+func TestALapseLeavesWakeAndANewHelloRestoresTheSet(t *testing.T) {
+	for _, test := range []struct {
+		role  role.Role
+		hosts bool
+	}{{role.Main, true}, {role.Write, false}} {
+		t.Run(test.role.ID, func(t *testing.T) {
+			run := &modRun{lane: newLane("", "", false), server: modhost.New(modhost.Config{}), hostsSpaces: test.hosts}
+			var reports [][]adapter.Capability
+			run.ReportLive(func(set []adapter.Capability) { reports = append(reports, slices.Clone(set)) })
+			proven := []adapter.Capability{adapter.WakeCapability, adapter.TurnBoundaryCapability}
+			if test.hosts {
+				proven = append(proven, adapter.SpacesCapability)
+			}
+			wake := []adapter.Capability{adapter.WakeCapability}
+			run.transition(1, true)
+			run.transition(2, false)
+			run.transition(3, true)
+			run.transition(2, false)
+			run.transition(3, false)
+			run.Close()
+			run.transition(4, false)
+			want := [][]adapter.Capability{proven, wake, proven}
+			if !slices.EqualFunc(reports, want, slices.Equal) {
+				t.Fatalf("the run reported %v, want %v", reports, want)
+			}
+		})
+	}
+}

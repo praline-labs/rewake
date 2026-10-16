@@ -201,3 +201,31 @@ func TestAKnownCauseRefusesAReportingRoleBeforeTheStart(t *testing.T) {
 		})
 	}
 }
+
+// A boundary withdrawn after the run became available — the mod's heartbeat
+// lapsed — leaves the run running and available with Wake alone, so a task
+// to it is refused, and a proof again restores it.
+func TestABoundaryWithdrawnAfterAvailabilityLeavesWakeUntilProvenAgain(t *testing.T) {
+	dir := stateDir(t)
+	h := &afterStartHarness{run: &afterStartRun{}}
+	release := launchAfterStart(t, dir, h)
+	if !waitUntil(5*time.Second, func() bool { return record(dir).HarnessPID != 0 }) {
+		t.Fatal("the harness was not started")
+	}
+	h.run.prove()
+	if !waitUntil(5*time.Second, func() bool { return record(dir).MessagingReadyAt != nil }) {
+		t.Fatal("the run is not available once its boundary is proven")
+	}
+	h.run.report(adapter.WakeCapability)
+	withdrawn := record(dir)
+	if !slices.Equal(withdrawn.Live, []string{string(adapter.WakeCapability)}) || withdrawn.MessagingReadyAt == nil || withdrawn.HarnessPID == 0 {
+		t.Fatalf("after the withdrawal the record has %v, available %v, harness %d", withdrawn.Live, withdrawn.MessagingReadyAt != nil, withdrawn.HarnessPID)
+	}
+	h.run.prove()
+	if live := record(dir).Live; !slices.Contains(live, string(adapter.TurnBoundaryCapability)) {
+		t.Fatalf("after the proof again the record has %v", live)
+	}
+	if err := release(); err != nil {
+		t.Fatal(err)
+	}
+}

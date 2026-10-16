@@ -63,6 +63,12 @@ func post(socket, path string, body []byte) (int, string, error) {
 // this test process unless the test names another.
 func serving(t *testing.T) (*Server, string) {
 	t.Helper()
+	return servingWith(t, nil)
+}
+
+// servingWith is serving with the server set up by setup before it starts.
+func servingWith(t *testing.T, setup func(*Server)) (*Server, string) {
+	t.Helper()
 	base, err := os.MkdirTemp("", "mh")
 	if err != nil {
 		t.Fatal(err)
@@ -75,6 +81,9 @@ func serving(t *testing.T) (*Server, string) {
 	}
 	socket := filepath.Join(room, "sock", "main.1.mod.sock")
 	server := New(Config{Socket: socket, Role: "main", Record: filepath.Join(run, "hello.json"), Wait: 2 * time.Second})
+	if setup != nil {
+		setup(server)
+	}
 	if err := server.Start(); err != nil {
 		t.Fatal(err)
 	}

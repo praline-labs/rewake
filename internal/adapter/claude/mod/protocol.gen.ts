@@ -84,6 +84,10 @@ export const bounds = {
 export interface Refusal {
   // error says why, in words for a person.
   error: string
+  // loadSeq is, on a hello refused 410 for a number below the current load's, that load's
+  // number: a load whose store shows no number above its own takes the next above this one and
+  // says hello once more.
+  loadSeq?: number
 }
 
 // Done is the answer of an endpoint that did what was asked and has nothing to say.

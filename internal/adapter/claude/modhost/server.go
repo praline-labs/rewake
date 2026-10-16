@@ -35,10 +35,16 @@ type Config struct {
 	// HostsSpaces is the run's role opening spaces, which a hello is
 	// answered with: the mod then serves the spaces' side of the protocol.
 	HostsSpaces bool
-	// Admitted hears each admitted hello once it is bound and recorded,
-	// before it is answered, so what the run proves by it is in the live
-	// set by the time the mod acts on the answer; nil hears nothing.
-	Admitted func(HelloRequest)
+	// Live hears each transition of what the mod proves: a hello that opens
+	// a generation, once it is bound and recorded and before it is
+	// answered, so the set is live by the time the mod acts on the answer;
+	// and a lapse. Each carries the next number of the run's one sequence,
+	// so a report heard after a later one is known for what it is
+	// (alive.go); nil hears nothing.
+	Live func(transition uint64, proven bool)
+	// Hold and Lapse are the heartbeat's bounds, the protocol's
+	// aliveHoldSeconds and aliveLapseSeconds when zero.
+	Hold, Lapse time.Duration
 	// Ended says a run, by its epoch, is proven ended — of another boot, or
 	// its wrapper gone — for mod/ended; nil proves none ended.
 	Ended func(epoch string) bool
@@ -54,11 +60,16 @@ type Server struct {
 
 	mu      sync.Mutex
 	harness adapter.RunProcess
-	load    *HelloRequest
+	// current is the load the run's hellos are ordered against, with its
+	// heartbeat; superseded are the loads a later one replaced, whose hello
+	// and polls are refused (alive.go).
+	current    *loadState
+	superseded map[string]bool
+	generation int
+	transition uint64
 	// loads are the loads the run admitted a hello of: a turn's start or end
 	// of any of them is taken, a later load's hello or none.
-	loads      map[string]bool
-	generation int
+	loads map[string]bool
 	// turns is where the run's turns go, and ends each end's first capture by
 	// its id, kept for the run's life (turns.go).
 	turns adapter.TurnHandler
@@ -84,16 +95,18 @@ type Server struct {
 	// answering runs between an answer's making and its writing, a seam for
 	// the test of the second peer check; deciding runs before a turn's
 	// effect is decided, a seam for the tests of a request delayed across
-	// Close.
+	// Close; after starts the lapse watch's timers, a seam for the tests of
+	// a timer that fires late.
 	answering func()
 	deciding  func()
+	after     func(time.Duration, func()) func() bool
 }
 
 // New is a run's mod endpoint, listening once Start binds it.
 func New(cfg Config) *Server {
 	return &Server{
 		cfg: cfg, known: make(chan struct{}), stop: make(chan struct{}), served: make(chan struct{}),
-		loads: map[string]bool{}, ends: map[string]*capture{},
+		loads: map[string]bool{}, superseded: map[string]bool{}, ends: map[string]*capture{},
 	}
 }
 
@@ -166,20 +179,25 @@ func (s *Server) HarnessStarted(harness adapter.RunProcess) {
 func (s *Server) Load() (HelloRequest, bool) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.load == nil {
+	if s.current == nil {
 		return HelloRequest{}, false
 	}
-	return *s.load, true
+	return s.current.hello, true
 }
 
-// Close stops admission and every write not yet begun, waits for the
-// handlers in flight within closeWait, then cuts what is left and removes the
-// socket. A handler still running after it is counted among the run's
-// workers (CountWorkers).
+// Close stops admission and every write not yet begun, and the lapse watch,
+// waits for the handlers in flight within closeWait, then cuts what is left
+// and removes the socket. A handler still running after it is counted among
+// the run's workers (CountWorkers). The close is the run's last transition:
+// it takes a number and reports nothing.
 func (s *Server) Close() {
 	s.closing.Do(func() {
 		s.mu.Lock()
 		s.closed = true
+		s.transition++
+		if s.current != nil {
+			s.current.disarm()
+		}
 		s.mu.Unlock()
 		close(s.stop)
 		if s.http == nil {
@@ -315,7 +333,7 @@ func (s *Server) endpoints() map[string]http.HandlerFunc {
 		PathTurnStart:      s.turnStart,
 		PathTurnEnd:        s.turnEnd,
 		PathModEnded:       s.ended,
-		PathModAlive:       nil,
+		PathModAlive:       s.alive,
 		PathEvents:         nil,
 		PathSpaceHold:      nil,
 		PathSpaceScreen:    nil,

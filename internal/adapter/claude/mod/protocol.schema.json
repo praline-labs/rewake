@@ -101,7 +101,8 @@
       "type": "object",
       "description": "is the answer of an endpoint that did not do what was asked, with a status other than 200.",
       "properties": {
-        "error": {"type": "string", "description": "says why, in words for a person."}
+        "error": {"type": "string", "description": "says why, in words for a person."},
+        "loadSeq": {"type": "integer", "description": "is, on a hello refused 410 for a number below the current load's, that load's number: a load whose store shows no number above its own takes the next above this one and says hello once more."}
       },
       "required": ["error"],
       "additionalProperties": false
