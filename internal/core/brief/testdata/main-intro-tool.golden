@@ -50,7 +50,7 @@ OWNER DECISIONS
 
 MAIL
 - Start every message and every final reply with one line stating its point.
-- Mail is announced as "Rewake: <sender> <kind>, N new message(s)", with a preview of the author's first line.
+- Mail is announced as "Rewake: <sender> <kind>, N new message(s)", with a preview of the author's first line; a task's or a question's preview ends by saying it is only a preview.
 - Each notice has fixed members. Ready mail is submitted promptly: active work is steered, idle work is woken. Nothing waits for a peek or a finished turn, and old unread mail is not announced again.
 
 Run `rewake <words>` through the `rewake` tool when you have it, otherwise in the shell. A call the tool answered "nothing ran" may be made again in the shell. A call the harness refused for permission is not made another way; main is told. A call whose outcome is unknown is never repeated in the shell: continue it with `rewake retry <token>`, or with the same words through the tool in the same turn; with neither, leave it and say in your report which call it was.
