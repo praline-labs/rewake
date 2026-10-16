@@ -213,9 +213,9 @@ a refusal names the one that is missing:
 On Claude Code the proof is the mod's hello: an admitted hello on a main run makes Spaces live,
 and its answer says `hostsSpaces`, so the mod serves the spaces' side of the protocol. A mod
 that is lost takes them out of the live set when the host sees the loss — the lapse of its
-heartbeat, the signal that withdraws its turn boundary, designed in S4-6
-([the live set](stage4-turns.md#the-live-set)); until it is built the run's end is the only loss
-observed. A run whose mod did not load never has them. The fixture offers none until S4-7 gives
+heartbeat, the signal that withdraws its turn boundary, built in S4-6
+([the live set](stage4-turns.md#the-live-set)). A run whose mod did not load never has them.
+The fixture offers none until S4-7 gives
 it spaces through the host's neutral seam, never through another adapter's mod. The refusal is
 `spacesRefusal` in `internal/cli`, which `rewake space open` asks before anything is written;
 the command itself is S4-7's. Built in S4-5, October 13, 2026.

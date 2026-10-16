@@ -150,7 +150,8 @@ Stage 4, Claude Code's adapter as one mod:
 - [stage4-space-steps.md](stage4-space-steps.md) — its second half: what the tests and the
   workflow suite can hold and what only a live check shows, the rules SP1–SP9 and the step each
   enters `docs/rules/` in, the build steps S4-1 to S4-10 with their acceptance, and the open questions.
-- [stage4-turns.md](stage4-turns.md) — the design of S4-6, October 16, 2026: a Claude Code
+- [stage4-turns.md](stage4-turns.md) — the design of S4-6, built and accepted October 16, 2026
+  ([the record](../roadmap/2026-10-16-stage4-s4-6.md)): a Claude Code
   worker's turns reported through the mod without holding, the end retried under its id and
   taken once as its first capture, the heartbeat whose lapse withdraws what the mod proved, a
   boundary proven after the harness starts, the known causes that refuse a reporting role, the

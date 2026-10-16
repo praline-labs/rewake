@@ -257,8 +257,10 @@ everything else.
   subagent with worktree isolation held by a mod tool and what happens to its checkout at
   its end and at main's exit, a background session refused in an untrusted directory, a
   cell grid and a key surface in the subagent's own tool row, which keys reach it, and the
-  largest grid tried. Open it before designing the space, the keeper or the mod's join, and
-  re-check it after a harness update.
+  largest grid tried; a worker acting on a notice's preview; S4-6's live acceptance — the
+  hello's time after the start, a lapse and a reload, a `--command` wrapper with and without
+  `exec`, an interrupt, a subagent. Open it before designing the space, the keeper or the
+  mod's join, and re-check it after a harness update.
 - [research-codex.md](research-codex.md) — what only a running Codex session shows,
   split from research.md by subject: `codex queue`, thread identity and terminal events,
   the sandbox as a running session meets it, why `--worktree` cannot go with a remote

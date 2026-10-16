@@ -284,3 +284,73 @@ the model past a preview that already held the task.
 What followed: a task's or a question's preview now ends by saying it is only a preview,
 and the worker's playbook says a preview is never the task
 ([delivery.md](delivery.md#the-notice)).
+
+### After the fix
+
+October 16, 2026, Claude Code 2.1.296, main's live run of part A on the fixed build
+(`.scratch/v2-s4-build/live-evidence/run-pass/`). **[live]** The worker ran `rewake inbox`,
+read the question and answered it; the answer came back to main through the mod's
+`turn/end`.
+
+## S4-6: a worker's turns through the mod
+
+October 16, 2026, Claude Code 2.1.296, the worker on the cheapest model, each run in a private
+`REWAKE_DIR` and a fresh repository under `/tmp`, the worker an interactive session in a
+pseudo-terminal whose keys the script wrote. Main's runs: part A
+(`.scratch/v2-s4-build/live-evidence/run-pass/`) and part C
+(`.scratch/v2-s4-build/live-s4-6c.sh`, `.scratch/v2-s4-build/live-evidence/c-main/`); the
+writer's run of part C's `hello`, `lapse` and `reload`
+(`.scratch/v2-s4-build/live-evidence/c-lapse-reload/`). **[live]**
+
+### The hello after the harness starts
+
+Measured from the harness's start ticks in the session record to the first moment the record
+listed `turn-boundary`, polled every 0.2 s: 1.6 s in a folder already trusted, five launches
+between 1.6 and 2.0 s; 3.1 and 3.3 s in launches whose folder-trust prompt the script answered,
+which the time includes; 4 s in main's part A run.
+
+### A print-mode main and a plain task
+
+A main started with `claude -p` sent a plain task; the worker read it and answered on its
+screen, and no report reached main: main's run had ended with its one turn before the
+worker's ended, and a report to an ended run is moot by rule
+([traps.md](traps.md#a-task-sent-from-a-main-in-print-mode-claude--p-gets-no-report)). The
+same run with a `--question --wait 100` in main's one shell call got its answer.
+
+### A mod that stops polling, and a reload
+
+The run's module, `<run directory>/mod/hooks/rewake.ts`, was replaced by one that registers
+nothing and `/reload-plugins` typed. Saving the file under `--plugin-dir` reloaded the mod by
+itself before the command was typed: the screen showed `rewake: reloaded (0 hooks)`, then the
+command's own `Reloaded: 1 plugin`. The boundary left the record 29 s after the reload, and a
+task sent then was refused, exit 1, "worker-claude's turn boundary is not live". With the
+module restored the screen showed `rewake: reloaded (3 hooks: session.start, turn.start,
+turn.complete)`, the boundary was back within the script's half-second poll, and a task was
+taken. Rewriting the unchanged module with one newline added reloaded it the same way, and the
+boundary stayed live through 45 s of watching.
+
+### Between turns
+
+After a report, the worker sat idle for 45 s, past the 30 s lapse: the boundary stayed live, so
+the heartbeat's chain kept polling between turns.
+
+### A `--command` wrapper
+
+A wrapper script ending in `exec claude "$@"` was admitted, its boundary live 1.6 s after the
+start, and a question's answer came back. One running `claude "$@"` as its child was never
+admitted: no boundary in 45 s, and a task to it refused, exit 1.
+
+### An interrupt
+
+Escape typed into the worker about 8 s after it read a question asking it to run `sleep 60`:
+main's `--question --wait` printed `stopped from worker-claude:` and exited 1.
+
+### A subagent
+
+The worker was asked to have a subagent read the file and then to answer with `DONE` and the
+word. Main's answer was `DONE <word>`, the main loop's; the worker marked its turn pending while
+its subagent ran, and one finished report followed — one report per task, none for the
+subagent's turn.
+
+**Not seen**: whether the engine runs `turn.complete`'s hooks before the next turn starts; it
+is not observable from outside the harness.

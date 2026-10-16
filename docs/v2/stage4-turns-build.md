@@ -90,6 +90,11 @@ hooks before the next turn starts; that the heartbeat's chain keeps polling betw
 through a reload; how long the hello takes after the harness starts, which sets
 `AfterStartBound`.
 
+Part C passed on October 16, 2026, on Claude Code 2.1.296, by main and the writer, with
+`.scratch/v2-s4-build/live-s4-6c.sh`; what it saw is recorded in
+[research-claude-mod.md](../research-claude-mod.md#s4-6-a-workers-turns-through-the-mod), and
+the hooks' order at a turn's end stayed unobserved.
+
 The workflow suite's columns stay the fixture's alone (`test/workflow/column_test.go`), and the
 confirmation scenarios keep the fixture, which holds an end; Claude Code's turns are held by
 the tests above and by part C.

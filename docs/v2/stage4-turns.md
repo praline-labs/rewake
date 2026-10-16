@@ -41,6 +41,9 @@ By the owner and main, October 16, 2026:
 11. **Generated files and the 400-line rule** (main, the same day, during the build): the files
    `tools/protogen` writes, `protocol.gen.ts` and `protocol_gen.go`, are exempt from the rule, and
    `docs/rules/effects.md` is not split for the clauses this step names in it.
+12. **`AfterStartBound` stays 30 s** (main, the same day, after part C): the hello was measured
+   1.6–3.3 s after the harness started, which leaves room for a slow start or a trust prompt
+   answered late; a longer bound only delays a launch's availability notice, never refuses one.
 
 ## The mod's side
 
@@ -299,8 +302,9 @@ the module again, its `session.start` runs, and its hello opens a new generation
 hello and gone with the load. On the host the arrival stamp, the table of loads and generations
 and the lapse watch are one piece, `modhost/alive.go`, which S4-7 feeds from `events` polls as
 well; nothing of `events` is built
-here. The skill answers the first half of Q8 — a timer's callback runs between hooks; the live
-check of part C answers the rest for this chain.
+here. The skill answers the first half of Q8 — a timer's callback runs between hooks; part C saw
+the chain keep the boundary live through 45 s idle between turns and through a reload
+([the record](../research-claude-mod.md#between-turns)).
 
 ## Readiness and admission
 
@@ -332,9 +336,9 @@ run fails, exit 1, through `refuseUnreported` with its words for a run that "has
 has lost" its boundary. Main learns that the worker is available through the availability
 notice; for a reporting role whose boundary is proven after the start, availability waits for
 TurnBoundary to be live, up to `adapter.AfterStartBound`, 30 s from the harness's start, so
-the first task main sends is not refused for a hello still on its way. The bound is a first
-guess, not a measurement: part C records how long the hello takes after the start, and the
-bound is set from it. Past the bound the
+the first task main sends is not refused for a hello still on its way. Part C measured the
+hello 1.6–3.3 s after the start, and the bound stays 30 s ([decision 12](#decided)). Past the
+bound the
 availability goes ahead and the record says the boundary is not live; the wrapper writes
 nothing on the terminal the harness holds. A hello that comes later makes it live, as any
 hello does.
@@ -342,8 +346,9 @@ hello does.
 **A launch through `--command`.** The peer check is equality with the process the wrapper
 started, not ancestry (`modhost/server.go`, `fromHarness`). A wrapper script that ends in `exec
 claude …` keeps its pid and its start time across the exec, so the mod's requests come from
-the named process and are admitted — read from the check and the kernel's process semantics,
-not yet seen live; part C runs it. A script that runs Claude Code as its child is never
+the named process and are admitted — seen live in part C, October 16, 2026
+([the record](../research-claude-mod.md#a---command-wrapper)). A script that runs Claude Code
+as its child is never
 admitted: the run starts, its boundary is never live and it takes no tasks. rewake cannot tell
 the two apart before the start, so that is a documented limit and not a refusal; a person's
 wrapper for a reporting role ends with `exec`. This corrects S4-5's open item that such a run's

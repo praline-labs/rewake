@@ -412,6 +412,11 @@ only where 2.0's plan names it.
 
 ## Also queued, not scheduled
 
+**Three more documents over 400 lines.** Recorded October 16, 2026, at S4-6's acceptance:
+[rules/effects.md](rules/effects.md) has 502 lines, [delivery.md](delivery.md) 443 and
+[traps.md](traps.md) 410. Each is to be split by subject; `effects.md` was left whole for
+S4-6's clauses by main's decision ([stage4-turns.md](v2/stage4-turns.md#decided)).
+
 **A faster plan test in `core/mail`.** Recorded October 16, 2026, when the test runs of the
 five checks took `-timeout 20m`: `TestEveryReadOfThePlanStopsBeforeTheFirstEffect`
 (`internal/core/mail/plan_faults_test.go`) takes about 290 s alone and about 450 s under
