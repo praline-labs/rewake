@@ -177,10 +177,27 @@ func Remove(dir, name string) error {
 }
 
 // OwnsName reports whether the record of this name still describes the session
-// with this epoch.
+// with this epoch. A record that could not be read answers no, as one that
+// names another run does; Ownership tells the two apart.
 func OwnsName(dir, name, epoch string) bool {
+	owned, err := Ownership(dir, name, epoch)
+	return err == nil && owned
+}
+
+// Ownership reads whether the record of this name still describes the session
+// with this epoch, three ways: owned; proven not owned — no record, or one of
+// another run — answered false and nil; or unknown, a read that failed,
+// answered with its error. A caller that drops what it holds on "not owned"
+// drops it only on proof.
+func Ownership(dir, name, epoch string) (bool, error) {
 	existing, err := Load(dir, name)
-	return err == nil && existing.Epoch() == epoch
+	if errors.Is(err, ErrNotFound) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return existing.Epoch() == epoch, nil
 }
 
 // RemoveOwned deletes a record only while it still describes this session, and

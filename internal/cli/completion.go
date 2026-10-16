@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/praline-labs/rewake/internal/adapter"
@@ -17,7 +18,7 @@ func ReportCompletion(ctx context.Context, dir string, self registry.Session, en
 	if err := end.Check(); err != nil {
 		return fmt.Errorf("%w; report remains pending", err)
 	}
-	return mail.CompleteTurn(ctx, dir, self, turnEndOf(end), end.Thread, mail.TurnEndOptions{BeforeReports: beforeReports})
+	return runGone(mail.CompleteTurn(ctx, dir, self, turnEndOf(end), end.Thread, mail.TurnEndOptions{BeforeReports: beforeReports}))
 }
 
 // ConfirmCompletion runs an end the adapter can hold open: it publishes it and
@@ -29,7 +30,18 @@ func ConfirmCompletion(ctx context.Context, dir string, self registry.Session, e
 	if err := end.Check(); err != nil {
 		return "", fmt.Errorf("%w; report remains pending", err)
 	}
-	return mail.EndTurn(ctx, dir, self, turnEndOf(end), true, end.Thread, mail.TurnEndOptions{BeforeReports: beforeReports})
+	reason, err := mail.EndTurn(ctx, dir, self, turnEndOf(end), true, end.Thread, mail.TurnEndOptions{BeforeReports: beforeReports})
+	return reason, runGone(err)
+}
+
+// runGone is the adapter's word for an end of a run proven no longer to own
+// its name, so the adapter drops it; a read of the record that failed stays
+// an error the adapter retries (docs/rules/effects.md, E7).
+func runGone(err error) error {
+	if errors.Is(err, mail.ErrNameLost) {
+		return adapter.ErrRunGone
+	}
+	return err
 }
 
 // turnEndOf is the core's end for an adapter's: what the end reports follows

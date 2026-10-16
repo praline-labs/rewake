@@ -217,16 +217,26 @@ func (b *backend) settle(l *link, completion adapter.TurnEnd, holdable bool) (st
 	return "", fmt.Errorf("the end was not taken after %d attempts: %w", endAttempts, last)
 }
 
+// attempt hands the end to the core once. An end of a run proven gone is
+// answered as taken, as the program was answered before the core told it
+// apart from an end it took: the program has nobody to retry for.
 func (b *backend) attempt(completion adapter.TurnEnd, holdable bool) (string, error) {
 	ctx, cancel := context.WithTimeout(b.ctx, b.endWait)
 	defer cancel()
-	if holdable && b.handler.Confirm != nil {
-		return b.handler.Confirm(ctx, completion)
-	}
-	if b.handler.Publish == nil {
+	var reason string
+	var err error
+	switch {
+	case holdable && b.handler.Confirm != nil:
+		reason, err = b.handler.Confirm(ctx, completion)
+	case b.handler.Publish == nil:
 		return "", errors.New("the wrapper takes no ends")
+	default:
+		err = b.handler.Publish(ctx, completion)
 	}
-	return "", b.handler.Publish(ctx, completion)
+	if errors.Is(err, adapter.ErrRunGone) {
+		return "", nil
+	}
+	return reason, err
 }
 
 // activity takes a reported state while Telemetry is live on the connection

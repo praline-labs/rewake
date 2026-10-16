@@ -3,6 +3,7 @@ package mail
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/praline-labs/rewake/internal/core/registry"
@@ -33,8 +34,12 @@ type TurnEndOptions struct {
 // the model. holdable says the end may be held at all, which only the
 // harness that reported it can say.
 func EndTurn(parent context.Context, dir string, self registry.Session, event TurnEnd, holdable bool, currentThread string, options TurnEndOptions) (string, error) {
-	if !registry.OwnsName(dir, self.Name, self.Epoch()) {
-		return "", nil
+	// Only a proof that the name passed on drops the end; a record that
+	// could not be read leaves it to be sent again.
+	if owned, err := registry.Ownership(dir, self.Name, self.Epoch()); err != nil {
+		return "", fmt.Errorf("could not read whether this run still owns its name, so the end was not taken: %w", err)
+	} else if !owned {
+		return "", ErrNameLost
 	}
 	if event.ID != "" && event.Boundary == nil {
 		// Its scope could come only from a record written at its first
@@ -96,6 +101,11 @@ func EndTurn(parent context.Context, dir string, self registry.Session, event Tu
 	})
 	return reason, err
 }
+
+// ErrNameLost is a turn end of a run proven no longer to own its name — the
+// record gone, or a later run's: nothing was taken, and no attempt of the
+// same end has anywhere to go.
+var ErrNameLost = errors.New("this run no longer owns its name, so its turn end has nowhere to go")
 
 // turnMark finds the pending mark that decides a turn end: this run's latest
 // in the end's window (docs/turn-end-recovery.md#pending-marks). Only a

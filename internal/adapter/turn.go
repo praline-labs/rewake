@@ -2,6 +2,7 @@ package adapter
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/praline-labs/rewake/internal/core/mail"
@@ -72,6 +73,12 @@ func (e TurnEnd) Check() error {
 	}
 	return nil
 }
+
+// ErrRunGone is Publish's or Confirm's answer to an end of a run proven no
+// longer to own its name: the core took nothing, and the same end sent again
+// has nowhere to go, so the adapter drops it rather than retry. It is never a
+// receipt (docs/v2/stage4-turns.md#the-hosts-side).
+var ErrRunGone = errors.New("the run this end belongs to is gone; nothing was taken")
 
 // TurnHandler is what the host gives a TurnBoundary before the run starts:
 // where a turn's start goes, how to capture an end's scope without blocking,
