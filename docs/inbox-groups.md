@@ -107,7 +107,10 @@ A failed partial publication retains the existing per-epoch receipts for retry.
 Owner presentation correction, September 19: keep the short group-count header and
 one indented first-line preview of the latest member, prefixed with sender and kind.
 The existing preview sanitizer/budget applies to that whole line. No instructions or
-multi-message digest appear in the notice; usage stays in guide/help and briefing.
+multi-message digest appear in the notice; usage stays in guide/help and briefing. The
+exception, by the owner's decision of October 16, 2026: a task's or a question's preview,
+alone or as the latest member, ends with ` (a preview only: run rewake inbox)`, which the
+budget keeps whole by cutting the text first ([delivery.md](delivery.md#the-notice)).
 A single member keeps its own first-line notice.
 The multi-message notice's transport identity is a digest of its fixed member IDs, stable
 for the same group. Transport-only membership is not serialized into stored messages

@@ -213,11 +213,11 @@ in one notice. A task or a question does not wait, and takes whatever is waiting
    about mail may run `rewake inbox` at once, so the text is there before the
    notice goes out.
 2. **The notice.** A single member uses `Rewake: lead-claude task, 1 new message`
-   and its first-line preview. A group uses `Rewake: <n> new messages` and one bounded
-   indented preview of its latest member, including sender and kind; every correcting letter
-   in the group — a recall or an edit's replacement — gets a line of its own before it
-   ([delivery-sent.md](delivery-sent.md)). The count covers exactly this group, not older accepted
-   unread mail or later arrivals. Messages arriving during destination acquisition join the group.
+   and its first-line preview, ending `(a preview only: run rewake inbox)` for a task or a
+   question. A group uses `Rewake: <n> new messages` and one bounded indented preview of its
+   latest member, with sender and kind; each correcting letter in it — a recall, an edit's
+   replacement — gets a line before it ([delivery-sent.md](delivery-sent.md)). The count covers
+   this group alone, not older unread mail or later arrivals; mail arriving meanwhile joins it.
 3. **The adapter**, outside the lock because it can take seconds:
    - Claude Code: connect to the session's socket and write one JSON line
      whose content is a `<task-notification>` block with that summary. The

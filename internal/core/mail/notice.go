@@ -29,7 +29,7 @@ func Notice(message Message) string {
 		line := fmt.Sprintf("Rewake: %d new messages", len(message.Batch))
 		line += correctionLines(corrections)
 		if latest != nil {
-			line += "\n  ↳ " + preview(fmt.Sprintf("%s %s: %s", latest.From, KindOf(*latest), firstLine(*latest)))
+			line += "\n  ↳ " + shownPreview(fmt.Sprintf("%s %s: %s", latest.From, KindOf(*latest), firstLine(*latest)), KindOf(*latest))
 		}
 		return line
 	}
@@ -49,10 +49,30 @@ func Notice(message Message) string {
 	if correcting(message) && shown.ID != message.ID {
 		line += correctionLines([]Message{message})
 	}
-	if first := preview(firstLine(shown)); first != "" {
+	if first := shownPreview(firstLine(shown), KindOf(shown)); first != "" {
 		line += "\n  ↳ " + first
 	}
 	return line
+}
+
+// previewOnly ends the preview of a letter that asks for work. A short task's
+// first line is the whole task, and an agent shown it acted on it and never
+// took the letter, so the task stayed unread and its report went to nobody
+// (the owner, October 16, 2026; docs/delivery.md#the-notice).
+const previewOnly = " (a preview only: run rewake inbox)"
+
+// shownPreview is the preview line of the letter a notice shows. A task's or
+// a question's ends with previewOnly, which the bound never cuts: the
+// author's text is cut first.
+func shownPreview(text string, kind Kind) string {
+	if kind != Task && kind != Question {
+		return preview(text)
+	}
+	first := previewWithin(text, previewCells-textCells(previewOnly))
+	if first == "" {
+		return ""
+	}
+	return first + previewOnly
 }
 
 // correcting reports whether a letter changes what the recipient should do

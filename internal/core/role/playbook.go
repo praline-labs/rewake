@@ -49,7 +49,7 @@ var Mail = Section{
 	Title: "MAIL",
 	Lines: []string{
 		"Start every message and every final reply with one line stating its point.",
-		"Mail is announced as \"Rewake: <sender> <kind>, N new message(s)\", with a preview of the author's first line.",
+		"Mail is announced as \"Rewake: <sender> <kind>, N new message(s)\", with a preview of the author's first line; a task's or a question's preview ends by saying it is only a preview.",
 		"Each notice has fixed members. Ready mail is submitted promptly: active work is steered, idle work is woken. Nothing waits for a peek or a finished turn, and old unread mail is not announced again.",
 	},
 }
@@ -75,6 +75,7 @@ var executorSteps = []Step{
 func executorSections(git string) []Section {
 	return []Section{
 		{Title: "WORKING", Lines: []string{
+			"A notice's preview is never the task: read the message with rewake inbox before working on it. A task done from its preview stays unread, and its report goes to nobody.",
 			"Keep to the brief. If missing information blocks part of it, ask main with --notify and go on with what does not depend on the answer; report partial work as final only when main has accepted the reduced scope.",
 			"Follow the project's own rules — its AGENTS.md or the instruction file its harness reads: the checks before a commit, who reviews, the commit style.",
 			"Other sessions may work in the same repository: change only the files your task is about, and when you commit, stage only your own.",

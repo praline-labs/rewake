@@ -295,6 +295,17 @@ Rewake: <sender> <kind>, 1 new message
   ↳ <first line>
 ```
 
+**A task's preview says it is one.** The preview of a `task` or a `question` — alone, or
+the latest member of a group — ends with ` (a preview only: run rewake inbox)`; a note's
+and a report's do not. The bound of the line counts those words and never cuts them: the
+author's text is cut first, to the cells they leave (`shownPreview` in
+`internal/core/mail/notice.go`). The owner's decision of October 16, 2026, after a live
+run in which a worker shown a short task's whole first line did the task from the notice
+and never ran `rewake inbox`: the letter stayed unread, the turn's end answered nothing,
+and main got no report ([research-claude-mod.md](research-claude-mod.md#a-worker-acts-on-the-notices-preview)).
+Leaving the text out of a task's preview, or counting a seen preview as a read, were
+rejected. The worker's playbook says the same in its working rules.
+
 Each notice has fixed members. At the next ready delivery opportunity, accumulated
 eligible mail gets its own notice through native start-or-steer: active work accepts
 steering, idle work starts. No peek, terminal event or model-seen acknowledgement
@@ -352,7 +363,8 @@ edit's replacement, which previews as `Replaces <short id> (withdrawn): <first l
 is never that latest member: each one in the notice gets an indented line of its own,
 before the preview, oldest first, and a single one is shown the same way when its notice
 previews a newer unread letter ([delivery-sent.md](delivery-sent.md)). Usage instructions
-remain in guide/help and briefing, outside the notification itself. Old accepted
+remain in guide/help and briefing, outside the notification itself, but for the few words
+that end a task's or a question's preview. Old accepted
 unread messages are not announced again. The [grouped inbox contract](inbox-groups.md)
 describes readiness, fixed membership, destination reservation and native ACK limits.
 Every stored message, receipt and obligation remains independent.

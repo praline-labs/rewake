@@ -70,7 +70,7 @@ func TestALongRecallKeepsItsInstruction(t *testing.T) {
 // replaces, in the one line a notice has for it.
 func TestAReplacementNamesTheMessageItReplaces(t *testing.T) {
 	replacement := mail.Message{ID: "r", From: "main", Kind: mail.Task, Replaces: "100-5ca1ab1e0001", Text: "rerun the lint and the vet\ndetails"}
-	want := "\n  ↳ Replaces 5ca1ab1e0001 (withdrawn): rerun the lint and the vet"
+	want := "\n  ↳ Replaces 5ca1ab1e0001 (withdrawn): rerun the lint and the vet" + previewOnly
 	if got := mail.Notice(replacement); !strings.HasSuffix(got, want) {
 		t.Fatalf("notice = %q", got)
 	}

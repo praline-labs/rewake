@@ -267,3 +267,20 @@ start one. The largest grid with fullscreen on stays unmeasured.
 
 **Not seen**: which Ctrl keys reach the Client beyond A and B; paste through the Client; the
 cause of the keeper's second call; fullscreen; the pane and the band.
+
+## A worker acts on the notice's preview
+
+October 16, 2026, Claude Code 2.1.296, main's live runs of S4-6 part A
+(`.scratch/v2-s4-build/live-s4-6.sh`), the worker on haiku and on sonnet alike. **[live]**
+
+The worker's Claude Code showed the notice as `● Rewake: lead-claude task, 1 new message`
+with `↳ <the task's whole first line>` under it. The task was short, so its first line was
+the whole of it. The model read `word.txt` and answered, and never ran `rewake inbox`: the
+message stayed in the worker's `unread/`, the turn's end (the journal's `.done`) answered
+nothing, and main got no report. Claude Code frames the notice as a teammate's request, and
+the worker's playbook line "rewake inbox: read the mail a notice announced" did not carry
+the model past a preview that already held the task.
+
+What followed: a task's or a question's preview now ends by saying it is only a preview,
+and the worker's playbook says a preview is never the task
+([delivery.md](delivery.md#the-notice)).
