@@ -251,7 +251,7 @@ func (claudeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, 
 
 	wake := newLane(socket, reply, owns)
 	wake.room = request.RoomDir
-	var service adapter.Service = wake
+	var service adapter.Service
 	var live adapter.LiveReporter
 	var turns adapter.TurnBoundary
 	env := request.Env
