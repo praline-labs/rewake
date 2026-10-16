@@ -19,6 +19,10 @@ that they are checked like the rest ([stage3-tests.md](../v2/stage3-tests.md#how
   known by its event: confirmed again, it gets the same reason and nothing is published
   or kept again, and once its continuation took the kept answer it is answered as
   published, never published as its own continuation.
+  Known limit, October 16, 2026, owned by stage 4's step of the confirmation with P3:
+  Claude Code reports its turns without holding an end (S4-6, `HoldsEnd` false), so there
+  an interim end without a new mark publishes its answer as final and closes the task early
+  ([stage4-turns.md](../v2/stage4-turns.md#what-not-holding-costs)).
   Tests:
   - `internal/core/mail/confirm_test.go` `TestTheInterimRecordKeepsTheLastWord`
   - `internal/core/mail/confirm_test.go` `TestAnInterimTieDoesNotDependOnOrder`
@@ -62,6 +66,11 @@ that they are checked like the rest ([stage3-tests.md](../v2/stage3-tests.md#how
 
 - **O2. Failed and interrupted turns** report as in 1.x (`docs/turn-outcomes.md`, "Failed
   turns", "Interim turn ends"), with the reason taken from the adapter's end event.
+  On Claude Code, from S4-6, the event is `turn.complete` of the session's own conversation:
+  its reasons `answer`, `aborted`, `refusal` and `error` report as answered, aborted, refused
+  and failed, and a subagent's turn, which carries `agentId`, reports nothing
+  ([stage4-turns.md](../v2/stage4-turns.md#the-mods-side)). Known limit, October 16, 2026: no
+  test holds the mapping or the subagent's turn yet; S4-6's build, part A, adds them (stage 4).
   Tests:
   - `internal/cli/stopped_test.go` `TestStoppedKeepsWorkForTheHumanContinuation`
   - `internal/cli/stopped_test.go` `TestStoppedWithNobodyWaitingSendsNothing`

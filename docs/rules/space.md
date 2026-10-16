@@ -66,6 +66,11 @@ S4-7, SP6 with S4-8, SP1 and SP8 with S4-9.
   whatever it asks, a request before the host names the harness waits within a bound, and the
   peer is checked again before any effect of a hello and again before the answer. Held as well
   for the endpoint's tool transport.
+  The turn's endpoints and the heartbeat follow the same check: the peer is checked again before
+  each effect of a start, an end and a poll, and again before the answer
+  ([stage4-turns.md](../v2/stage4-turns.md#the-hosts-side)). Known limit, recorded on October
+  16, 2026: the endpoints are not built and no test holds this for them yet; S4-6's build adds
+  them, the start and the end in part A, the poll in part B (stage 4).
   Tests:
   - `internal/adapter/claude/modhost/server_test.go` `TestOnlyTheHarnessesOwnProcessIsServed`
   - `internal/adapter/claude/modhost/server_test.go` `TestAReplacedHarnessIsNotServed`

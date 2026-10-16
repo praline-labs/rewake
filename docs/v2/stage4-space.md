@@ -93,15 +93,17 @@ harness process is P4, answered positive by the first build step on October 13, 
 respawned after a crash and a shell child started before a reload stay open.
 
 **Bounds.** `$.http.fetch` gave up after 30 s in every probe run, so no request is held
-longer than 20 s; a wait is a loop of polls. A request body is at most 64 KiB, a screen
-answer at most 96 000 characters, the room a key surface's props allow less a margin.
+longer than 20 s; a wait is a loop of polls. A request body is at most 64 KiB — a turn's end
+1 MiB, its answer cut by the mod past that and saying so — a screen answer at most 96 000
+characters, the room a key surface's props allow less a margin.
 
 **Endpoints.** Every one a `POST` with a JSON body, versioned under `/v1/`:
 
 | Path | Caller | Asks | Answers |
 |---|---|---|---|
 | `hello` | every mod load | the session id, the harness version, the load's id | the run's role and whether it hosts spaces |
-| `turn/start`, `turn/end` | a worker's mod | the turn's id; at its end the reason and the answer | a receipt once the core took it ([section 5](#5-reports)) |
+| `turn/start`, `turn/end` | every load's mod, for its own conversation's turns | the turn's id; at its end the end's id, the reason and the answer | a receipt once the core took it ([section 5](#5-reports)) |
+| `mod/alive` | every admitted load, in a loop | the load | within 15 s, done; 409 once the load's heartbeat lapsed, and the mod says hello again ([the live set](stage4-turns.md#the-live-set)) |
 | `events` | main's mod, in a loop | the last event it saw | within 20 s, the next space to open, whose keeper the mod spawns; the spawn's `agentId` comes back with the next poll |
 | `space/hold` | main's mod, for the keeper's call | the space, the call's `agentId` and `tool_use_id` | within 20 s: `held`, `released`, or at once `duplicate` |
 | `space/screen` | main's mod, while the keeper's row is drawn | the space, the last screen sequence it has | within 20 s, the rows changed since, as styled runs; the size, the cursor, whether the worker lives and its exit |
@@ -269,19 +271,13 @@ existing proof holds unchanged.
 
 Stage 3 refuses a reporting role on Claude Code, since its adapter has no turn boundary
 (`internal/cli/turn_reporting.go`). A role that does not report gives no report, which the
-target needs. **Decided: the worker's mod serves TurnBoundary, reporting without holding.**
-`turn.start` goes to the host as the turn's start and `turn.complete` as its end — the reason
-mapped to answered, aborted, refused or failed, and its `answer` as the report — each through
-`turn/start` and `turn/end`; events carrying `agentId` are a subagent's and are not sent.
-Claude Code's offer becomes `TurnBoundary{Reports: true, HoldsEnd: false}`, live once the
-run's mod said hello; the core already handles a boundary that cannot hold an end. The
-confirmation through `classic.Stop` with `block` (O1) is a later step of stage 4, with P3.
-
-What reporting without holding costs, accepted for this step: an interim end the worker did not
-mark is not continued by force, and an end lost before the host took it leaves no final answer
-the core can recover. So a `turn/end` is retried with the same end id and boundary until the
-receipt comes; the live capability is withdrawn, as the API contract says, when the mod is lost
-or unloaded — a hello promises reporting for that load only.
+target needs. **Decided: the worker's mod serves TurnBoundary, reporting without holding**,
+`TurnBoundary{Reports: true, HoldsEnd: false}`, live once the run's mod said hello: `turn.start`
+and `turn.complete` of the session's own conversation go to the host as `turn/start` and
+`turn/end`, the answer as the report, an end retried under its id until its receipt comes; a
+heartbeat whose lapse withdraws what the mod proved. The confirmation through `classic.Stop`
+with `block` (O1) is a later step of stage 4, with P3. The design, what not holding costs and
+the build are [stage4-turns.md](stage4-turns.md), written for S4-6 on October 16, 2026.
 
 Wake stays Claude Code's inbox socket of stage 3; a worker's notices reach it as they reach
 any Claude Code session.

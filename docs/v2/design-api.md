@@ -27,7 +27,11 @@ offers ToolTransport and TurnBoundary, but a run whose mod did not load has neit
 ([design-claude.md](design-claude.md#when-the-mod-does-not-load)). The host records the
 live set in the session record, next to the channel record it extends, and every
 decision another session makes about this one — may a task be sent to it, may it be
-compacted — reads the live set, not the offered one.
+compacted — reads the live set, not the offered one. Some proofs come only from the running
+harness — Claude Code's mod says hello once its harness runs — so an offer says when its
+boundary is proven after the start (`TurnBoundaryOffer.AfterStart`), and a launch then does
+not wait for it before starting the harness
+([stage4-turns.md](stage4-turns.md#readiness-and-admission)).
 
 Rests on: the channel record's rules (a tool can fail to load, `mail-bridge-channel.md`
 rules 1–4), now applied to every capability.
@@ -158,8 +162,10 @@ owner decided (answer 3 of [design.md](design.md#the-owners-answers)): a launch 
 role that must report refuses when the boundary cannot be live — a known cause, named;
 once running, the session record says the boundary is not live, so a task or question
 sent to it exits 1, naming why; no new word `report` is added. A boundary that was live
-and is lost — the mod unloaded, its stream gone — is withdrawn from the live set at
-once, so a stale record never promises a report. Notifies and reads still work through
+and is lost — the mod unloaded, its stream gone — is withdrawn from the live set as soon as
+the host sees the loss; on Claude Code that is the lapse of the mod's heartbeat, within 30 s
+of its last poll ([the live set](stage4-turns.md#the-live-set)). A withdrawal refuses new
+tasks; an end the harness still sends is taken. Notifies and reads still work through
 the shell; the shell never stands in for the boundary. On Claude Code the boundary
 reaches the host by the same checked requests as the tools, so it depends on P4 as they
 do ([design-claude.md](design-claude.md#how-a-tool-call-runs)).
@@ -206,8 +212,9 @@ a refusal names the one that is missing:
 
 On Claude Code the proof is the mod's hello: an admitted hello on a main run makes Spaces live,
 and its answer says `hostsSpaces`, so the mod serves the spaces' side of the protocol. A mod
-that is lost takes them out of the live set when the host sees the loss — the same signal that
-withdraws its turn boundary, which S4-6 builds; until then the run's end is the only loss
+that is lost takes them out of the live set when the host sees the loss — the lapse of its
+heartbeat, the signal that withdraws its turn boundary, designed in S4-6
+([the live set](stage4-turns.md#the-live-set)); until it is built the run's end is the only loss
 observed. A run whose mod did not load never has them. The fixture offers none until S4-7 gives
 it spaces through the host's neutral seam, never through another adapter's mod. The refusal is
 `spacesRefusal` in `internal/cli`, which `rewake space open` asks before anything is written;

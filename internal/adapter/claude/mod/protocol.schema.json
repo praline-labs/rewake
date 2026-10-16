@@ -14,6 +14,18 @@
     "maxWaitSeconds": {
       "value": 20,
       "description": "is the longest the endpoint holds a request before it answers, since the mod's fetch gives up after 30 seconds; a longer wait is a loop of polls."
+    },
+    "maxEndBodyBytes": {
+      "value": 1048576,
+      "description": "is the largest turn/end body the endpoint reads, in place of maxBodyBytes: a turn's answer can be longer than the other requests, and the mod cuts one that would pass it, saying how much it left out."
+    },
+    "aliveHoldSeconds": {
+      "value": 15,
+      "description": "is how long the endpoint holds a mod/alive poll before it answers; the mod sends the next at once."
+    },
+    "aliveLapseSeconds": {
+      "value": 30,
+      "description": "is how long the endpoint waits for the next mod/alive poll, from the last one's arrival or the hello's, before the load's heartbeat lapses and what the mod proved is withdrawn."
     }
   },
   "x-endpoints": [
@@ -34,6 +46,12 @@
       "description": "reports a turn's end, from a worker's mod, retried with the same end id until its receipt comes.",
       "request": {"$ref": "#/$defs/TurnEndRequest"},
       "answer": {"$ref": "#/$defs/Receipt"}
+    },
+    {
+      "path": "mod/alive",
+      "description": "is the heartbeat of an admitted load: a poll held for aliveHoldSeconds and sent again as soon as it is answered; a load whose heartbeat lapsed is refused with 409 and says hello again.",
+      "request": {"$ref": "#/$defs/AliveRequest"},
+      "answer": {"$ref": "#/$defs/Done"}
     },
     {
       "path": "events",
@@ -108,6 +126,15 @@
         "hostsSpaces": {"type": "boolean", "description": "says whether the run's wrapper hosts spaces, so the mod registers the keeper and polls events."}
       },
       "required": ["role", "hostsSpaces"],
+      "additionalProperties": false
+    },
+    "AliveRequest": {
+      "type": "object",
+      "description": "is one poll of a load's heartbeat.",
+      "properties": {
+        "loadId": {"type": "string", "description": "is the load polling, the one its admitted hello named."}
+      },
+      "required": ["loadId"],
       "additionalProperties": false
     },
     "TurnStartRequest": {

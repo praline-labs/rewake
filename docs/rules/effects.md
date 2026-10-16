@@ -193,6 +193,15 @@ decision settles the stop without being evidence.
   - What the operation will do is written down first (the journal), and nothing but the
     journal publishes. A stop after an interruption goes on taking its held answer (the
     owner, September 30, 2026).
+  - An adapter whose ends come over a protocol and are retried — Claude Code's mod, from
+    S4-6 — hands the core every copy of one end as its first capture: the event, the read
+    boundary and both times fixed on its first arrival, kept when the core's attempt fails;
+    a copy whose content differs from the first is refused and hands the core nothing. An end
+    whose harness gives no start time has a window opening at the latest earlier end a
+    journal records, so a pending mark of a turn whose end never reached the core falls into
+    the next end's window ([stage4-turns.md](../v2/stage4-turns.md#the-start-time)). Known
+    limit, October 16, 2026: no test of the mod's endpoint holds these clauses yet; S4-6's
+    build, part A, adds them (stage 4).
   Tests:
   - `internal/cli/turn_journal_retry_test.go` `TestALateRetryAfterTheSweepPublishesNothing`
   - `internal/cli/turn_journal_retry_test.go` `TestARetryAnswersOnlyWhatItsFirstAttemptSaw`

@@ -15,6 +15,10 @@ export const paths = {
   // turnEnd reports a turn's end, from a worker's mod, retried with the same end id until its
   // receipt comes.
   turnEnd: "/v1/turn/end",
+  // modAlive is the heartbeat of an admitted load: a poll held for aliveHoldSeconds and sent
+  // again as soon as it is answered; a load whose heartbeat lapsed is refused with 409 and says
+  // hello again.
+  modAlive: "/v1/mod/alive",
   // events is main's mod's loop of polls for the spaces to open.
   events: "/v1/events",
   // spaceHold is the keeper's held call, polled until the space is released.
@@ -35,6 +39,7 @@ export interface Endpoints {
   "/v1/hello": { request: HelloRequest; answer: HelloAnswer }
   "/v1/turn/start": { request: TurnStartRequest; answer: Receipt }
   "/v1/turn/end": { request: TurnEndRequest; answer: Receipt }
+  "/v1/mod/alive": { request: AliveRequest; answer: Done }
   "/v1/events": { request: EventsRequest; answer: EventsAnswer }
   "/v1/space/hold": { request: HoldRequest; answer: HoldAnswer }
   "/v1/space/screen": { request: ScreenRequest; answer: ScreenAnswer }
@@ -54,6 +59,17 @@ export const bounds = {
   // maxWaitSeconds is the longest the endpoint holds a request before it answers, since the
   // mod's fetch gives up after 30 seconds; a longer wait is a loop of polls.
   maxWaitSeconds: 20,
+  // maxEndBodyBytes is the largest turn/end body the endpoint reads, in place of maxBodyBytes:
+  // a turn's answer can be longer than the other requests, and the mod cuts one that would pass
+  // it, saying how much it left out.
+  maxEndBodyBytes: 1048576,
+  // aliveHoldSeconds is how long the endpoint holds a mod/alive poll before it answers; the mod
+  // sends the next at once.
+  aliveHoldSeconds: 15,
+  // aliveLapseSeconds is how long the endpoint waits for the next mod/alive poll, from the last
+  // one's arrival or the hello's, before the load's heartbeat lapses and what the mod proved is
+  // withdrawn.
+  aliveLapseSeconds: 30,
 } as const
 
 // Refusal is the answer of an endpoint that did not do what was asked, with a status other than
@@ -84,6 +100,12 @@ export interface HelloAnswer {
   // hostsSpaces says whether the run's wrapper hosts spaces, so the mod registers the keeper
   // and polls events.
   hostsSpaces: boolean
+}
+
+// AliveRequest is one poll of a load's heartbeat.
+export interface AliveRequest {
+  // loadId is the load polling, the one its admitted hello named.
+  loadId: string
 }
 
 // TurnStartRequest is a turn's start of the session's own conversation; a subagent's turn is

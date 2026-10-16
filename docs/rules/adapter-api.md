@@ -30,6 +30,18 @@ a boundary reports names its event, with its reason; an end with neither an even
 known reason is refused, each reason reports its own outcome, and a turn's start is
 recorded once, opening the turn where the run has a tool.
 
+Claude Code reports its turns from S4-6: it offers a turn boundary that reports and does not
+hold an end, proven by its run's mod after the harness starts, so a role that owes reports
+launches on it. A cause the adapter knows will keep the mod from loading — today the mod
+socket's path past what a unix socket allows, no run directory or inbox socket, the mod's
+files not written, its endpoint not listening — refuses such a launch before the harness
+starts, exit 1, naming the cause by where it is, and leaves a silent role going with a note. A
+launch through `--command` whose script runs the harness as its child rather than by `exec` is
+never admitted, so its run takes no tasks; that is a documented limit, not a refusal
+([stage4-turns.md](../v2/stage4-turns.md#readiness-and-admission)). Known limit, recorded on
+October 16, 2026: no test holds these yet; S4-6's build, part A, adds them, and its part C
+runs the `--command` cases live (stage 4).
+
 Tests:
 - `internal/host/live_test.go` `TestARunThatReportsNoneHasItsPlanLive`
 - `internal/cli/live_set_test.go` `TestTheLiveBoundaryDecidesNotTheOffer`

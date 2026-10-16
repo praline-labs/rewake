@@ -20,7 +20,7 @@ version history are the skill's ([where the API facts live](#where-the-api-facts
 | Launch | `claude` with one `--plugin-dir` | interactive first launch in an untrusted directory |
 | Wake | one of three candidates | P1 decides |
 | ToolTransport | `$.tool.register` + `tool.call` answered by the mod | P2, P4, P8 |
-| TurnBoundary | `turn.start`, `classic.Stop` with `block`, `turn.complete` | P3 |
+| TurnBoundary | `turn.start` and `turn.complete`, reported without holding (S4-6); `classic.Stop` with `block` later | P3, for the hold |
 | Telemetry | `session.measure`, `$.session.usage()` | P6 |
 | Control | `$.session.compact`, `$.turn.abort`, clear by `$.command.run` | P7 |
 | Permissions | stage 6: `classic.PermissionRequest`, `classic.PreToolUse` | stage 6 |
@@ -82,28 +82,27 @@ a person's plugin named `rewake` is a cause of not loading, named below.
 ## When the mod does not load
 
 The skill lists the causes and how each shows (flags, settings keys, managed policy, an
-untrusted directory, the remote switch, a worker that crashed). rewake finds out in two
+untrusted directory, the remote switch, a worker that crashed). rewake finds out in three
 ways:
 
-1. **Before the launch**, from what it can read without editing: the person's own flags
-   and the settings files Claude Code reads for the keys the skill names. A known cause
-   is named in the refusal or note (L2: where, never what). Whether to also run
-   `claude plugin test` from a directory with no mod as a no-session preflight is for
-   stage 4 to try; the skill says it prints the state.
-2. **At the start**, by the mod's hello: `session.start` is awaited before the first
-   prompt, and the mod's first act there is a hello to the endpoint. No hello is not
-   proof of failure (C3); the host says what it has not observed — "the rewake mod has
-   not reported in; mail runs through the shell" — once, to the person and in the run's
-   record.
+1. **Before the harness starts**, from what the launch itself knows: the mod socket's path
+   past what a unix socket allows, a run without its directory, the mod's files not written,
+   its endpoint not listening. A known cause is named (L2: where, never what), and refuses
+   the launch of a role that owes reports ([readiness](stage4-turns.md#readiness-and-admission)).
+   Reading the person's flags and settings files for the keys the skill names is not built;
+   whether to run `claude plugin test` from a directory with no mod as a preflight is for
+   stage 4 to try.
+2. **At the start**, by the mod's hello: `session.start` is awaited before the first prompt,
+   and the mod's first act there is a hello to the endpoint. No hello is not proof of failure
+   (C3): the run's record shows the boundary not live, and the wrapper writes nothing on the
+   terminal the harness holds.
+3. **While it runs**, by the heartbeat: Claude Code unloads a mod that crashed the hooks
+   worker, and every non-built-in mod after three crashes, and tells rewake nothing; the lapse
+   of the mod's held poll withdraws what it proved ([the live set](stage4-turns.md#the-live-set)).
 
 Until a hello arrives, ToolTransport, TurnBoundary, Telemetry and Control are not live
-([design-api.md](design-api.md#two-levels-offered-and-live)). For a role that owes
-reports the owner's answer 3 applies ([design.md](design.md#the-owners-answers)): a
-known cause refuses the launch; a session running without its mod takes no tasks. A mod
-that loaded and is later lost takes its capabilities out of the live set when the host
-sees the loss. The loss can be of the whole mod set, not of rewake's mod alone: the
-skill says Claude Code unloads every non-built-in mod after repeated worker crashes. P5
-includes that case, and the host treats any lost mod the same way.
+([design-api.md](design-api.md#two-levels-offered-and-live)), and a session running without
+its mod takes no tasks ([answer 3](design.md#the-owners-answers)). P5 includes the losses.
 
 ## The mail tools
 
@@ -216,20 +215,20 @@ fetches the request and posts the answer itself.
 
 | Event | The mod does | The host does |
 |---|---|---|
-| `turn.start` (`turnId`) | remembers `turnId`; tells the host | records the start in the core (replaces the boot-clock files of `obs.turn/`) |
-| `classic.Stop` | asks the host whether this end may close | runs the confirmation check ([design-rules.md](design-rules.md#turn-outcomes)); the mod returns `{ block: reason }` when it says go on |
-| `classic.StopFailure` | tells the host | marks the turn failed; the report waits for the same turn's `turn.complete`, so one E7 event publishes once |
-| `turn.complete` (`turnId`, `reason`, `isAborted`, `answer`) | tells the host and waits for its receipt | the turn end operation (E7), named by run and `turnId` |
+| `turn.start` (`turnId`) | sends `turn/start` once | `Started` with `at = 0`: no timed start ([the start time](stage4-turns.md#the-start-time)) |
+| `turn.complete` (`turnId`, `reason`, `answer`) | sends `turn/end` under a fresh end id until its receipt; `answer`, `aborted`, `refusal`, `error` mapped to answered, aborted, refused, failed | the turn end operation (E7), every retry handed on as its first capture |
+| `classic.Stop` | later, with P3: asks the host whether this end may close | the confirmation check ([design-rules.md](design-rules.md#turn-outcomes)); the mod returns `{ block: reason }` when it says go on |
+| `classic.StopFailure` | not hooked: `turn.complete` with `error` is the failed end | — |
 
-Events with `agentId` are a subagent's and are ignored. An interrupted turn gives
-`turn.complete` with reason `aborted` and no Stop (records of 2.1.280 in
-[research-claude-control.md](../research-claude-control.md)).
+Events with `agentId` are a subagent's and are not sent. An interrupted turn gives
+`turn.complete` with `aborted` and no Stop (2.1.280, [research-claude-control.md](../research-claude-control.md)).
+S4-6 reports without holding ([stage4-turns.md](stage4-turns.md)). Corrected October 16,
+2026: `classic.StopFailure` no longer marks a turn failed; `turn.complete`'s `error` does.
 
 The confirmation moves from the settings Stop hook to `classic.Stop`: it fires where the
 hook would, without one configured, and may answer `block` with a reason; a repeated
 stop is marked. The skill's types allow it; that the chain works live — the order of
-`classic.Stop` and `turn.complete`, `StopFailure` followed by `turn.complete`, the block
-continuing the turn — is P3 (*to verify*).
+`classic.Stop` and `turn.complete`, the block continuing the turn — is P3 (*to verify*).
 
 ## Telemetry
 
@@ -383,7 +382,7 @@ part; what it leaves open is named in the row.
 |---|---|---|
 | P1 | Wake: each candidate idle and busy, under `-p` and interactive, after `/clear` and a compaction; steering; how the person and the model see it; identical-text suppression; a held line's outcome | the Wake mechanism, and the fate of the lane and `held.go` |
 | P2 | Does `classic.PostToolUse` or `classic.PostToolBatch` carry the **final** result for a mod-answered call, and does `classic.PostToolUse` fire at all for one the mod answered without passing it on: with a settings hook that replaces a short result after the mod; with a large result turned into a preview; with the event or the host's answer lost; with the turn aborted between the result and the next request. Each case compared with what a stand-in model API received | whether reading tools are live, and the effective bound (T6); the observed order goes into the fixture |
-| P3 | `classic.Stop` with `block`: the turn continues; a second Stop with the repeat mark; one `turn.complete` at the end; an aborted turn; `StopFailure` then `turn.complete` as one end; does a main-loop `tool.call` ever fall outside its turn's start and complete | the confirmation, and the turn a call belongs to |
+| P3 | `classic.Stop` with `block`: the turn continues; a second Stop with the repeat mark; one `turn.complete` at the end; an aborted turn; does a main-loop `tool.call` ever fall outside its turn's start and complete | the confirmation, and the turn a call belongs to |
 | P4 | Which process or thread `$.http.fetch` with `socketPath` connects from (the skill says one shared worker thread, the 2.1.280 record a process per plugin): is it the harness process itself, by `SO_PEERCRED`, on every request; the same after a reload, a worker respawn, a repeated hello, a repeated native call; a shell child started before the reload tries the endpoint and is refused | whether any capability that reaches the host through the mod — ToolTransport, TurnBoundary, Telemetry, Control — can be live; negative, reporting roles refuse to launch and stage 4's pair is blocked. **Answered positive, October 13, 2026** ([the record](../research-claude-mod.md#p4-the-peer-of-the-mods-requests)): every request the probe's mod made was the harness process itself, through a reload, the keeper's hold and its polls, and a model's shell child was refused; still open: a hooks worker respawned after a crash, a shell child started before a reload |
 | P5 | What each cause the skill lists shows when the mod does not load, interactive and `-p`; a same-named installed plugin; does the remote switch reach `--plugin-dir`; what the host sees when a loaded mod is unloaded later, when the whole mod set is unloaded after worker crashes, or when its stream child dies | the preflight, the notice, the withdrawal of a lost capability |
 | P6 | Cadence of `session.measure`; is the breakdown call, which measures against the compaction window, acceptable (the skill says `percent` is not against it) | whether the window parser goes |

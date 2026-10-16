@@ -150,6 +150,12 @@ Stage 4, Claude Code's adapter as one mod:
 - [stage4-space-steps.md](stage4-space-steps.md) — its second half: what the tests and the
   workflow suite can hold and what only a live check shows, the rules SP1–SP9 and the step each
   enters `docs/rules/` in, the build steps S4-1 to S4-10 with their acceptance, and the open questions.
+- [stage4-turns.md](stage4-turns.md) — the design of S4-6, October 16, 2026: a Claude Code
+  worker's turns reported through the mod without holding, the end retried under its id and
+  taken once as its first capture, the heartbeat whose lapse withdraws what the mod proved, a
+  boundary proven after the harness starts, the known causes that refuse a reporting role, the
+  known limits, and the build's three parts. Open it before changing how a turn of a Claude
+  Code session reaches the core.
 - [stage4-space-record.md](stage4-space-record.md) — the space record and `rewake space list` as
   S4-3 built them: where a record lives, its fields, its states and the steps between them,
   what a close must observe, the kept checkouts' reminder. Open it before writing a space's

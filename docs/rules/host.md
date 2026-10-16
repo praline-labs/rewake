@@ -113,6 +113,18 @@ recorded: the run's own view takes it at once, and the record is written again, 
 once and then with retries, until it lands or the run ends — never once the record has
 become a later run's. Since S11.
 
+The wait before the start holds for a boundary the run proves before its harness starts. One
+the run proves only once its harness runs (`AfterStart`, Claude Code's mod from S4-6) is not
+awaited before the start: the harness starts, the set is Wake alone until the proof, and the
+run's availability waits for the boundary up to its own bound, past which availability goes
+ahead with the boundary not live. What a mod proved is withdrawn when its heartbeat lapses and
+made live again by a later admitted hello; each report carries the generation of the hello it
+follows, and a report of an earlier generation changes nothing. An end that arrives after a
+withdrawal is still taken: a withdrawn boundary refuses new tasks, it drops no report
+([stage4-turns.md](../v2/stage4-turns.md#the-live-set)). Known limit, recorded on October 16,
+2026: no test holds these yet; S4-6's build adds them, the start and availability in part A,
+the heartbeat, the generations and the late end in part B (stage 4).
+
 Tests:
 - `internal/core/registry/live_test.go` `TestModifyChangesTheRecordAsItStands`
 - `internal/host/live_test.go` `TestTheLiveSetIsRecordedAndADropLeavesTheRun`
