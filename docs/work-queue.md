@@ -412,6 +412,13 @@ only where 2.0's plan names it.
 
 ## Also queued, not scheduled
 
+**A faster plan test in `core/mail`.** Recorded October 16, 2026, when the test runs of the
+five checks took `-timeout 20m`: `TestEveryReadOfThePlanStopsBeforeTheFirstEffect`
+(`internal/core/mail/plan_faults_test.go`) takes about 290 s alone and about 450 s under
+`-race` beside other work, and alone it carries its package past `go test`'s default ten
+minutes under load. Speeding it up — fewer reads per case, or its cases in parallel — would
+let the checks drop the flag; nothing else depends on it.
+
 **An orchestrator starts a worker in the background.** The owner's idea for later,
 recorded September 23, 2026, after honest delivery status for Claude Code landed:
 an orchestrating session starts its worker itself, without a terminal of its own.
