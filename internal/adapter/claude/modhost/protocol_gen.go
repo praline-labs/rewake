@@ -7,16 +7,22 @@ const (
 	// PathHello is the first request of every load of the mod. Asked HelloRequest, answered
 	// HelloAnswer.
 	PathHello = "/v1/hello"
-	// PathTurnStart reports a turn's start, from a worker's mod. Asked TurnStartRequest, answered
-	// Receipt.
+	// PathTurnStart reports a turn's start of the session's own conversation, from the mod of
+	// every role. Asked TurnStartRequest, answered Receipt.
 	PathTurnStart = "/v1/turn/start"
-	// PathTurnEnd reports a turn's end, from a worker's mod, retried with the same end id until
-	// its receipt comes. Asked TurnEndRequest, answered Receipt.
+	// PathTurnEnd reports a turn's end of the session's own conversation, from the mod of every
+	// role, retried with the same end id until its receipt comes; 410 says the run is proven gone,
+	// so the end has no destination and is not sent again. Asked TurnEndRequest, answered Receipt.
 	PathTurnEnd = "/v1/turn/end"
 	// PathModAlive is the heartbeat of an admitted load: a poll held for aliveHoldSeconds and sent
-	// again as soon as it is answered; a load whose heartbeat lapsed is refused with 409 and says
-	// hello again. Asked AliveRequest, answered Done.
+	// again as soon as it is answered; a poll of a lapsed or older generation of the current load
+	// is refused with 409, on which the newest generation's chain says hello again, and a poll of
+	// a superseded load with 410, on which it stops. Asked AliveRequest, answered Done.
 	PathModAlive = "/v1/mod/alive"
+	// PathModEnded asks which of the runs whose unacknowledged ends the harness's store keeps
+	// rewake proves ended, so an admitted load may remove their entries; it changes nothing on the
+	// host. Asked EndedRequest, answered EndedAnswer.
+	PathModEnded = "/v1/mod/ended"
 	// PathEvents is main's mod's loop of polls for the spaces to open. Asked EventsRequest,
 	// answered EventsAnswer.
 	PathEvents = "/v1/events"
@@ -48,9 +54,9 @@ const (
 	// MaxWaitSeconds is the longest the endpoint holds a request before it answers, since the
 	// mod's fetch gives up after 30 seconds; a longer wait is a loop of polls.
 	MaxWaitSeconds = 20
-	// MaxEndBodyBytes is the largest turn/end body the endpoint reads, in place of maxBodyBytes: a
-	// turn's answer can be longer than the other requests, and the mod cuts one that would pass
-	// it, saying how much it left out.
+	// MaxEndBodyBytes is the largest turn/end body the endpoint reads, in place of maxBodyBytes,
+	// counted in the UTF-8 bytes of the whole JSON body: a turn's answer can be longer than the
+	// other requests, and the mod cuts one that would pass it, saying how much it left out.
 	MaxEndBodyBytes = 1048576
 	// AliveHoldSeconds is how long the endpoint holds a mod/alive poll before it answers; the mod
 	// sends the next at once.
@@ -92,12 +98,35 @@ type HelloAnswer struct {
 	// HostsSpaces says whether the run's wrapper hosts spaces, so the mod registers the keeper and
 	// polls events.
 	HostsSpaces bool `json:"hostsSpaces"`
+
+	// Generation is the load's heartbeat generation, which every mod/alive poll of this hello
+	// carries; a retried hello of a live generation gets the same one.
+	Generation int `json:"generation"`
 }
 
 // AliveRequest is one poll of a load's heartbeat.
 type AliveRequest struct {
 	// LoadID is the load polling, the one its admitted hello named.
 	LoadID string `json:"loadId"`
+
+	// Generation is the heartbeat generation the hello answered.
+	Generation int `json:"generation"`
+}
+
+// EndedRequest names the other runs whose ends the harness's store keeps.
+type EndedRequest struct {
+	// LoadID is the admitted load asking.
+	LoadID string `json:"loadId"`
+
+	// Epochs are up to 32 epochs of other runs, as the store's index names them.
+	Epochs []string `json:"epochs"`
+}
+
+// EndedAnswer says which of the asked runs rewake proves ended: of another boot, or their
+// wrapper gone with its start time.
+type EndedAnswer struct {
+	// Ended are the epochs proven ended; one alive or that cannot be told is left out.
+	Ended []string `json:"ended"`
 }
 
 // TurnStartRequest is a turn's start of the session's own conversation; a subagent's turn is
@@ -132,8 +161,9 @@ type TurnEndRequest struct {
 	// Reason is why the turn ended.
 	Reason EndReason `json:"reason"`
 
-	// Answer is the turn's final text, or what the harness said of its failure, unchanged; absent
-	// when the turn gave none.
+	// Answer is the turn's final text, or what the harness said of its failure; cut by the mod at
+	// the last whole character that keeps the body within maxEndBodyBytes, with a line saying how
+	// many characters were left out; absent when the turn gave none.
 	Answer *string `json:"answer,omitempty"`
 }
 

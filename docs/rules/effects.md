@@ -199,7 +199,10 @@ decision settles the stop without being evidence.
     a copy whose content differs from the first is refused and hands the core nothing. An end
     whose harness gives no start time has a window opening at the latest earlier end a
     journal records, so a pending mark of a turn whose end never reached the core falls into
-    the next end's window ([stage4-turns.md](../v2/stage4-turns.md#the-start-time)). Known
+    the next end's window ([stage4-turns.md](../v2/stage4-turns.md#the-start-time)). The core
+    answers a receipt only for an end it took: a run whose name is proven to have passed on
+    gets no receipt and its end is not sent again, and one whose record could not be read is
+    sent again until it can ([stage4-turns.md](../v2/stage4-turns.md#the-hosts-side)). Known
     limit, October 16, 2026: no test of the mod's endpoint holds these clauses yet; S4-6's
     build, part A, adds them (stage 4).
   Tests:

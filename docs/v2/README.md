@@ -154,8 +154,10 @@ Stage 4, Claude Code's adapter as one mod:
   worker's turns reported through the mod without holding, the end retried under its id and
   taken once as its first capture, the heartbeat whose lapse withdraws what the mod proved, a
   boundary proven after the harness starts, the known causes that refuse a reporting role, the
-  known limits, and the build's three parts. Open it before changing how a turn of a Claude
-  Code session reaches the core.
+  known limits. Open it before changing how a turn of a Claude Code session reaches the core.
+- [stage4-turns-build.md](stage4-turns-build.md) — S4-6's second half: the clauses it brings
+  into `docs/rules/` and its build in three parts, the tests each adds and what the live
+  acceptance runs. Open it to build a part of S4-6 or to check one closed.
 - [stage4-space-record.md](stage4-space-record.md) — the space record and `rewake space list` as
   S4-3 built them: where a record lives, its fields, its states and the steps between them,
   what a close must observe, the kept checkouts' reminder. Open it before writing a space's

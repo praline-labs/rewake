@@ -8,8 +8,8 @@ It rests on the decisions of the owner and main of October 16, 2026, recorded be
 [stage4-space.md](stage4-space.md#5-reports) and on the `mods` skill taken from Claude Code
 2.1.296, the installed version that day. A call, event or field of the mod API is named only
 to say what rewake does with it; its shape and limits are the skill's
-([design-claude.md](design-claude.md#where-the-api-facts-live)). Its rules are in
-[the rules](#the-rules), its tests and live acceptance in [the build](#the-build).
+([design-claude.md](design-claude.md#where-the-api-facts-live)). Its rules, its tests and
+its live acceptance are in [stage4-turns-build.md](stage4-turns-build.md).
 
 ## Decided
 
@@ -32,6 +32,9 @@ By the owner and main, October 16, 2026:
 8. **Readiness after the start** (main, the same day, from the Codex side's reading): a
    boundary that only the running harness can prove is designed for, not awaited before the
    harness starts.
+9. **After the design's readiness check** (main, the same day): a long answer is cut at 1 MiB of
+   the whole JSON body with a line saying so; every role's mod sends its own turns, main's
+   included; an end of a run proven gone gets no receipt.
 
 ## The mod's side
 
@@ -57,51 +60,86 @@ start time and no mail tool on Claude Code yet, a lost start costs nothing
 ([the start time](#the-start-time)).
 
 **The end.** At `turn.complete` the mod makes the end — a fresh random `endId`, the
-conversation, the turn id, the reason, the answer — writes it to its outbox and sends it once,
-awaited in the hook, before the hook returns. The wait is inside `$.http.fetch`, which the
-hook's 10 s budget does not count (the skill, gotchas); the host answers within 20 s. Awaiting
-the first attempt keeps the end ahead of the next turn wherever the engine runs the hooks of
+conversation, the turn id, the reason, the answer cut to its bound ([the size](#the-mods-side))
+— and writes it to its outbox before anything is sent; from then on the end is frozen, and
+every attempt sends the same body. The outbox has one sender. When the new end is its head and
+nothing is in flight, the hook is that sender for the first attempt: it sends the end once and
+awaits it before it returns. The wait is inside `$.http.fetch`, which the hook's 10 s budget
+does not count (the skill, gotchas); the host answers within 20 s. When an older end is still
+queued or in flight, the hook only appends: a later end never passes an earlier one, and the
+hook does not wait on the chain, whose promise would count against its budget. Awaiting the
+first attempt keeps the end ahead of the next turn wherever the engine runs the hooks of
 `turn.complete` before it starts another turn; whether it does is not in the skill and is
-checked live in part C. An end not acknowledged by then stays in the outbox, and the outbox is
-sent again from a timer.
+checked live in part C. An end not acknowledged by then stays in the outbox, and the chain sends
+it again.
 
-**The outbox.** The ends not yet acknowledged, in order, one in flight at a time. Kept in two
-places: the module's memory, and `$.store` under a key naming the run's mod socket and the end
-id, since a reload of the mod resets the module's variables and cancels its timers (the skill,
-gotchas, on module state across reloads), and `$.store` is shared by every session on the
-machine. The socket's path names one run of one session, so no other run's mod reads
-the entry. Each entry carries when it was written; an entry of any run older than 24 hours is
-removed at `session.start`, which keeps the 4 MiB store from filling with the ends of runs that
-were killed. A store that refuses a write — full, say — leaves the end in memory alone, and the
-mod says so once with `$.ui.log`; a reload then loses it
+**The outbox.** The ends not yet answered for good, in order, one in flight at a time. Kept in
+two places: the module's memory, and `$.store` under one key per run, `rewake/outbox/<epoch>`,
+the run's epoch read from its environment as the socket's path is — since a reload of the mod
+resets the module's variables and cancels its timers (the skill, gotchas, on module state across
+reloads), and `$.store` is shared by every session on the machine. An epoch names one run of one
+session, so no other run's mod sends the entry. An end leaves the outbox, in memory and in the
+store, only on its receipt or on a terminal refusal ([the retry](#the-mods-side)); its age never
+removes it, whoever starts or reloads in the meantime.
+
+The ends of a run that was killed go only once that run is proven ended. The store keeps an
+index, `rewake/outboxes`, of the epochs whose key holds an end. Once its hello is admitted, a
+load asks `mod/ended` with up to 32 epochs of the index other than its own, and the host answers
+those whose wrapper `registry.ObserveRun` proves ended — of another boot, or its process gone
+with its start time; one alive or that cannot be told stays. The question changes nothing on
+the host. The load removes their keys and
+their lines of the index. It is the proof a later launch takes before it removes a killed run's
+directory (L3), asked of the host because the mod reads no processes. Two sessions writing the
+index at once may lose a line of it; that leaks a key, never an end, since a run's own load reads
+its key by its epoch and not through the index. What the store keeps of a killed run outlives
+the run until a later run of rewake on Claude Code says hello on the same machine: a known limit
+against L3, stated there. A store that refuses a write — full, say — leaves the end in memory
+alone, and the mod says so once with `$.ui.log`; a reload then loses it
 ([what not holding costs](#what-not-holding-costs)).
 
 **The retry.** A chain of `$.clock.after` callbacks, the documented way to run work between
 events: a timer's callback runs outside any event and keeps running between turns (the skill,
 `official/api.md`, "Run work in the background"), and a reload cancels it with the old copy.
 Each callback sends the head of the outbox once and schedules the next: at once after a
-receipt, after 1 s, 2 s, 4 s up to 10 s after a failure. What counts as a failure is narrow: a
-fetch that threw, a status 500 or 503. Any other refusal — 400, 403, 409, 413 — says the end
-can never be taken as it is, so it leaves the outbox and the mod logs it once with `$.ui.log`;
-a refusal repeated forever is not a retry. A new load sends what the store holds for its run
-after its hello is admitted, oldest first, under the end ids they were made with.
+receipt, after 1 s, 2 s, 4 s up to 10 s after a failure. A receipt is a 200 whose body decodes
+to a `Receipt` naming the end's turn and end id; a 200 that is not is a failure. What counts as
+a failure is narrow: a fetch that threw, a 200 that is not the end's receipt, a status 500 or
+503. A 410 says the run the end belongs to is proven gone — its name passed to a later run, or
+its record removed — so no attempt has a destination: the end leaves the outbox without a
+receipt, logged once with `$.ui.log`; it did not arrive, and nothing counts it as arrived. Any
+other refusal — 400, 403, 409, 413 — says the end can never be taken as it is, and goes the
+same way; a refusal repeated forever is not a retry. A new load sends what the store holds for
+its run after its hello is admitted, oldest first, under the end ids they were made with.
 
 **The size.** A request body is at most 64 KiB, and a turn's answer can be longer. `turn/end`
-has a bound of its own, `maxEndBodyBytes`, 1 MiB; an answer that would carry the request past
-it is cut by the mod at the last whole character that fits a margin under it, and a line is
-appended saying how many characters of the answer were left out. The cut is never silent, and
-no request is refused for its size.
+has a bound of its own, `maxEndBodyBytes`, 1 MiB, counted in the UTF-8 bytes of the whole JSON
+body as sent: the escaping of quotes, backslashes and control characters, the ids and the
+marker included. An answer that would carry the body past it is cut at the last whole character
+that keeps the body within the bound with a line appended saying how many characters of the
+answer were left out. The cut is made once, before the end is written to the outbox. The tail
+of such an answer is lost on purpose: the report is bounded, says so, and is never refused for
+its size (main's decision, October 16, 2026).
 
-**The heartbeat.** After its hello is admitted the load starts a second timer chain: each
-callback sends `mod/alive` and, when it is answered, schedules the next at once; after a
-failure, after 1 s. The host holds each poll up to `aliveHoldSeconds`. A refusal 409 says the
-load's heartbeat lapsed: the load says hello again and starts the chain anew. A refusal 403
-ends the chain.
+**The heartbeat.** An admitted hello answers the load's heartbeat `generation`, and the load
+starts a timer chain for it: each callback sends `mod/alive` with the load id and that
+generation and, when it is answered, schedules the next. The host holds each poll up to
+`aliveHoldSeconds`. One chain runs per load at a time, and a reload cancels it with the old copy.
 
-**The hello, again.** The hello of S4-5 stays the first act of `session.start`. One change: a
-hello whose fetch threw is tried again from a timer of the same kind, after 1 s up to 10 s,
-until it is answered; a refusal other than 503 is final for the load. So a hello lost on the way does not
-leave a mod that runs and is never admitted.
+| Answer | What the chain does |
+|---|---|
+| 200 | sends the next poll at once |
+| 409: the generation lapsed or is not the load's current one | if it is the newest generation the load was given, says hello again and runs a chain for the generation that hello answers; otherwise ends, since a newer chain of the load runs |
+| 410: a later load superseded this one, or the run is gone | ends; the load says no hello again |
+| 400, 403 | ends, logged once |
+| a throw, 500, 503 | sends again after 1 s, doubling up to 10 s |
+
+**The hello, again.** The hello of S4-5 stays the first act of `session.start`, and its
+`loadId`, random per load, names its retries. A hello whose fetch threw, or that was answered
+500 or 503, is sent again under the same `loadId` from a timer of the same kind, after 1 s up
+to 10 s, until it is answered; a 410 says the load was superseded and ends it, and any other
+refusal is final for the load. So a hello lost on the way does not leave a mod that runs and is
+never admitted, and a hello sent twice is one load's ([loads and
+generations](#the-live-set)).
 
 ## The host's side
 
@@ -144,33 +182,64 @@ lost the boundary (`adapter/fixture/turns.go`); that fits its program, whose con
 proof, and is not copied here.
 
 **What refuses an end.** The peer (403); a body that is not the request, or no hello ever
-admitted in this run (400); a known `endId` with another digest (409); a server closing (503).
-Once the run begins to end, admission among its workers fails and the request is refused; the
-harness has exited by then, so no mod is there to send. A handler admitted before the close
-that has not captured its end captures nothing (the `closed` check above), so no capture runs
-after the read clock closes (`core/mail/read_boundary.go`); one that began its `Publish` holds
-the run's lease until it returns.
+admitted in this run (400); a known `endId` with another digest (409); the run proven gone
+(410, below); a server closing (503). Once the run begins to end, admission among its workers
+fails and the request is refused; the harness has exited by then, so no mod is there to send.
+The `closed` check and the start of `Publish` are one decision under the lock, for a capture
+already cached as for a new one: a handler admitted before the close that has not reached it
+captures and publishes nothing, so no capture runs after the read clock closes
+(`core/mail/read_boundary.go`), and one that began its `Publish` holds the run's lease until it
+returns. No lock is held across a poll's wait, so a held poll never delays an end.
 
-**A run that no longer owns its name.** `EndTurn` answers success with no effect when the name
-has passed to a later run (`core/mail/turn_end.go`). The handler answers that with a receipt:
-the end has no mailbox it could ever reach, and a retry would gain nothing. The decision stays
-the core's; the adapter adds no check of its own.
+**A run that no longer owns its name.** `EndTurn` answers success with no effect when the run's
+name has passed to a later run (`core/mail/turn_end.go`), and the same when the read of its
+record failed: `registry.OwnsName` is false on either. That nil is never a receipt, since the
+core took nothing. The build separates the two. Ownership is read as owned, proven not owned —
+the record gone, or another epoch's — or unknown, a read that failed. Unknown returns the read's
+error: the handler answers 503, the end is sent again and taken once the read succeeds. Proven
+not owned returns `mail.ErrNameLost`, which `cli/completion.go` hands the adapter as
+`adapter.ErrRunGone`; the handler answers it 410 with no receipt, and the mod drops the end
+([the retry](#the-mods-side)). The adapter adds no check of its own: the core's answer, read
+under the core's own order, decides. An end already taken whose receipt was lost is answered
+from the journal while the run owns its name, and 410 after. The wrapper's other callers — the
+fixture's program — answer `ErrRunGone` as they answered the nil, so nothing changes for them.
 
 ## The live set
 
 **What the mod proves.** An admitted hello makes TurnBoundary live, and Spaces on a run that
 hosts them. Wake stays the inbox lane's, live from the service's start.
 
-**Generations.** Each admitted hello opens a generation of the run's mod. The heartbeat's polls
-belong to the generation of their load; a poll of an older load or of a lapsed generation is
-answered 409 at once. The server stamps each poll's arrival. A lapse is no poll arriving within
-`aliveLapseSeconds` of the generation's last arrival, the hello counting as the first; the
-watch is one timer per generation, and a timer that fires for a generation no longer current
-does nothing. On a lapse the generation ends, and the run reports its whole set without what
-the mod proved: Wake alone. A later admitted hello opens a new generation and reports the set
-with them again. Every report carries its generation, and `modRun` drops a report older than
-the last it reported, so a timer or a poll of an earlier generation never changes the set of a
-later one. The watch stops with the server's close; a lapse that fires after it reports
+**Loads and generations.** The host keeps, per run, the current load — its `loadId`, its
+heartbeat's generation, live or lapsed — and the load ids it has seen superseded. Every request
+is stamped with a sequence under the server's lock when it is admitted, before its body is read,
+and a hello binds under the same lock:
+
+- of the current load while its generation is live: a retry of a lost answer, answered with the
+  same generation, nothing reported;
+- of the current load after its generation lapsed: a new generation of the same load, and the
+  set reported with what the mod proves;
+- of a load not seen before, stamped after the current load's hello: it becomes the current
+  load with a new generation, and the previous load is superseded;
+- of a superseded load, or of a new load stamped before the current load's hello: refused 410,
+  with no effect.
+
+So a hello of load A delayed while its body is read, as B's hello binds, cannot take the run
+back: its stamp is earlier, and it is refused. The stamp is the connection's acceptance; a hello
+of an old load accepted after a new load's would need the engine to hold a fetch's connect
+across a reload, which cancels the old copy's work, and no probe has seen it. A poll of the
+current load and generation renews it; one of the current load and another or a lapsed
+generation is answered 409; one of a superseded load, 410. An end of any load the run admitted,
+superseded or not, is taken ([the host's side](#the-hosts-side)) and renews nothing.
+
+**The lapse and the reports.** The server stamps each poll's arrival. A lapse is no poll of the
+current generation arriving within `aliveLapseSeconds` of its last arrival, the hello counting
+as the first; the watch is one timer per generation, and a timer that fires for a generation no
+longer current does nothing. On a lapse the generation ends, and the run reports its whole set
+without what the mod proved: Wake alone. Every transition — a hello bound, a lapse, the close —
+takes the next number of one sequence per run under the server's lock, and its report carries
+it; `modRun` drops a report whose number is not above the last it reported, so no late timer,
+poll or report changes a later set, within one generation or across them. The watch is counted
+among the run's workers and stops with the server's close; a lapse after the close reports
 nothing.
 
 **The bounds.** `aliveHoldSeconds` is 15: under the protocol's 20 s wait, and well under the
@@ -189,8 +258,9 @@ the module again, its `session.start` runs, and its hello opens a new generation
 
 **The shared part with S4-7.** Main's `events` loop is the same shape: a chain of
 `$.clock.after` callbacks, each one held request, renewed on its answer, started after the
-hello and gone with the load. On the host the arrival stamp and the lapse watch are one piece,
-`modhost/alive.go`, which S4-7 feeds from `events` polls as well; nothing of `events` is built
+hello and gone with the load. On the host the arrival stamp, the table of loads and generations
+and the lapse watch are one piece, `modhost/alive.go`, which S4-7 feeds from `events` polls as
+well; nothing of `events` is built
 here. The skill answers the first half of Q8 — a timer's callback runs between hooks; the live
 check of part C answers the rest for this chain.
 
@@ -279,72 +349,3 @@ store for the last.
   task stays owed; a withdrawal retracts nothing.
 - **An end lost with its load.** An end the store could not keep is lost if the mod reloads
   before its receipt; the session's task stays owed and main sees it unanswered.
-
-## The rules
-
-What S4-6 brings into `docs/rules/`, each clause in the group it belongs to; a clause no test
-holds yet is stated in its rule's text as a known limit, dated, owned by S4-6's build, since
-the rules test refuses a `Gap:` line and a named test that does not exist. The build moves
-each into its rule's `Tests:` list with the test that holds it.
-
-- **O1** (`turns.md`): the limit of an unheld interim end on Claude Code.
-- **O2** (`turns.md`): the reasons mapped from `turn.complete`, a subagent's turn not sent.
-- **E7** (`effects.md`): a retried end reuses its first capture; one with the same id and
-  another digest is refused.
-- **The live set** (`host.md`): a boundary proven after the start is not awaited before it;
-  availability waits for it within its bound; a lapse withdraws what the mod proved, a new hello
-  restores it, an older generation changes nothing; an end after a lapse is taken.
-- **The capabilities** (`adapter-api.md`): a reporting role launches on Claude Code; a known
-  cause refuses it; a launch through `--command` that does not exec is never admitted.
-- **SP4** (`space.md`): the peer checked before each effect of a start, an end and a poll.
-
-## The build
-
-Three parts, each closed by its acceptance; the steps' table carries them
-([stage4-space-steps.md](stage4-space-steps.md#the-build-steps)).
-
-**Part A — the turns.** The schema's endpoints and bounds; `modhost/turns.go`, the dispatch
-table and `modhost/hello.go`; `modRun` as `TurnBoundary`; the offer and `AfterStart`; the known
-causes and the launch's refusal; availability waiting for a boundary proven after the start;
-the mod's `turn.start`, `turn.complete`, outbox, retry chain and cut. Tests it adds:
-
-- `modhost`: each reason maps to its end reason; an end without an admitted hello is refused;
-  a failed `Publish` answers 503 and the retry under the same `endId` hands the core the same
-  capture — boundary, `Started`, `Ended`, event; a lost receipt and a retry after later reads
-  and marks answer only what the first capture saw; two copies of one end at once capture once;
-  a known `endId` with another digest is refused; a request delayed across `Close` captures
-  nothing; a begun `Publish` holds the lease; a body past `maxEndBodyBytes` is refused 413; a
-  start records no timed start.
-- `adapter/claude`: the offer reports turns and does not hold; the known causes refuse a
-  reporting role and leave a silent role with a note; the set is Wake until the hello and Wake
-  with TurnBoundary after it, and with Spaces on main.
-- `host`: a reporting role on a boundary proven after the start starts its harness, and a task
-  to it fails until the hello; availability waits for the boundary within its bound; the
-  fixture's wait before the start is unchanged, with its negative control.
-- `cli`: the refusal of a reporting role still covered by a test harness that reports none, now
-  that no catalog harness lacks a boundary.
-- The mod's own tests in `claude plugin test`: a subagent's `turn.complete` is not sent; the
-  first attempt is awaited; a 503 is retried and a 409 is dropped; a long answer is cut with
-  its line; the outbox is written to the store and sent again by a new load.
-
-**Part B — the heartbeat.** `mod/alive`, generations, the lapse watch and the withdrawal. Tests
-it adds: a lapse withdraws TurnBoundary, and Spaces on main, leaving Wake; a new hello restores
-them; a poll of a lapsed generation or an older load is refused 409 and changes nothing; a lapse
-timer of an earlier generation does nothing after a new hello; an end after a lapse is taken
-and makes nothing live; a lapse after the close reports nothing; the mod's chain says hello again
-on 409.
-
-**Part C — live**, on the installed Claude Code, by main, in a separate `REWAKE_DIR`: main sends
-a task to a worker started by hand with `rewake claude --write` and reads its report; the same
-through a wrapper script given with `--command` that ends in `exec`, and one that does not,
-whose worker refuses the task; a worker whose mod stops polling — its module in the run's directory
-replaced by one that registers nothing, which an interactive session's hot reload of a
-`--plugin-dir` loads (the skill, `official/troubleshoot.md`) — has its boundary withdrawn within
-30 s and a task to it refused, and has it back once the module is restored; an interrupted
-turn reported as stopped; a subagent's turn not reported; whether
-the engine runs `turn.complete`'s hooks before the next turn starts; that the heartbeat's chain
-keeps polling between turns and through a reload.
-
-The workflow suite's columns stay the fixture's alone (`test/workflow/column_test.go`), and the
-confirmation scenarios keep the fixture, which holds an end; Claude Code's turns are held by
-the tests above and by part C.

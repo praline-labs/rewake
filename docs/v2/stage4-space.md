@@ -103,7 +103,8 @@ characters, the room a key surface's props allow less a margin.
 |---|---|---|---|
 | `hello` | every mod load | the session id, the harness version, the load's id | the run's role and whether it hosts spaces |
 | `turn/start`, `turn/end` | every load's mod, for its own conversation's turns | the turn's id; at its end the end's id, the reason and the answer | a receipt once the core took it ([section 5](#5-reports)) |
-| `mod/alive` | every admitted load, in a loop | the load | within 15 s, done; 409 once the load's heartbeat lapsed, and the mod says hello again ([the live set](stage4-turns.md#the-live-set)) |
+| `mod/alive` | every admitted load, in a loop | the load | within 15 s, done; 409 once its generation lapsed or is not the current one, and the mod says hello again; 410 once a later load superseded it ([the live set](stage4-turns.md#the-live-set)) |
+| `mod/ended` | every admitted load, at its start | the epochs of other runs whose ends the store keeps | those rewake proves ended ([the outbox](stage4-turns.md#the-mods-side)) |
 | `events` | main's mod, in a loop | the last event it saw | within 20 s, the next space to open, whose keeper the mod spawns; the spawn's `agentId` comes back with the next poll |
 | `space/hold` | main's mod, for the keeper's call | the space, the call's `agentId` and `tool_use_id` | within 20 s: `held`, `released`, or at once `duplicate` |
 | `space/screen` | main's mod, while the keeper's row is drawn | the space, the last screen sequence it has | within 20 s, the rows changed since, as styled runs; the size, the cursor, whether the worker lives and its exit |

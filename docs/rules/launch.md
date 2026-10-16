@@ -24,7 +24,11 @@ What rewake adds to a harness's launch, in the full wording of
 - **L3. Nothing persists past the run**: what a launch writes lives in the run's
   directory and goes with it; after a kill, a later launch removes it once the run is
   proven dead ([the qualified guarantee](../v2/stage3-rundir.md#the-qualified-guarantee)).
-  (Rule 8.)
+  (Rule 8.) Known limit, recorded on October 16, 2026, owned by S4-6's build, part A: on
+  Claude Code the mod keeps the ends its host has not acknowledged in the harness's own store,
+  outside the run's directory, and removes those of a killed run only once a later load's
+  hello has the host prove that run ended, so they outlive it until a later run on the same
+  machine ([stage4-turns.md](../v2/stage4-turns.md#the-mods-side)); no test holds this yet.
   Tests:
   - `internal/host/control_test.go` `TestTheControlDirectoryLivesAsLongAsTheSession`
   - `internal/host/control_test.go` `TestAHarnessThatServesNoRequestsGetsNoDirectory`

@@ -17,7 +17,7 @@
     },
     "maxEndBodyBytes": {
       "value": 1048576,
-      "description": "is the largest turn/end body the endpoint reads, in place of maxBodyBytes: a turn's answer can be longer than the other requests, and the mod cuts one that would pass it, saying how much it left out."
+      "description": "is the largest turn/end body the endpoint reads, in place of maxBodyBytes, counted in the UTF-8 bytes of the whole JSON body: a turn's answer can be longer than the other requests, and the mod cuts one that would pass it, saying how much it left out."
     },
     "aliveHoldSeconds": {
       "value": 15,
@@ -37,21 +37,27 @@
     },
     {
       "path": "turn/start",
-      "description": "reports a turn's start, from a worker's mod.",
+      "description": "reports a turn's start of the session's own conversation, from the mod of every role.",
       "request": {"$ref": "#/$defs/TurnStartRequest"},
       "answer": {"$ref": "#/$defs/Receipt"}
     },
     {
       "path": "turn/end",
-      "description": "reports a turn's end, from a worker's mod, retried with the same end id until its receipt comes.",
+      "description": "reports a turn's end of the session's own conversation, from the mod of every role, retried with the same end id until its receipt comes; 410 says the run is proven gone, so the end has no destination and is not sent again.",
       "request": {"$ref": "#/$defs/TurnEndRequest"},
       "answer": {"$ref": "#/$defs/Receipt"}
     },
     {
       "path": "mod/alive",
-      "description": "is the heartbeat of an admitted load: a poll held for aliveHoldSeconds and sent again as soon as it is answered; a load whose heartbeat lapsed is refused with 409 and says hello again.",
+      "description": "is the heartbeat of an admitted load: a poll held for aliveHoldSeconds and sent again as soon as it is answered; a poll of a lapsed or older generation of the current load is refused with 409, on which the newest generation's chain says hello again, and a poll of a superseded load with 410, on which it stops.",
       "request": {"$ref": "#/$defs/AliveRequest"},
       "answer": {"$ref": "#/$defs/Done"}
+    },
+    {
+      "path": "mod/ended",
+      "description": "asks which of the runs whose unacknowledged ends the harness's store keeps rewake proves ended, so an admitted load may remove their entries; it changes nothing on the host.",
+      "request": {"$ref": "#/$defs/EndedRequest"},
+      "answer": {"$ref": "#/$defs/EndedAnswer"}
     },
     {
       "path": "events",
@@ -123,18 +129,39 @@
       "description": "is what the run is, for this load.",
       "properties": {
         "role": {"type": "string", "description": "is the run's role, as rewake's role catalogue names it."},
-        "hostsSpaces": {"type": "boolean", "description": "says whether the run's wrapper hosts spaces, so the mod registers the keeper and polls events."}
+        "hostsSpaces": {"type": "boolean", "description": "says whether the run's wrapper hosts spaces, so the mod registers the keeper and polls events."},
+        "generation": {"type": "integer", "description": "is the load's heartbeat generation, which every mod/alive poll of this hello carries; a retried hello of a live generation gets the same one."}
       },
-      "required": ["role", "hostsSpaces"],
+      "required": ["role", "hostsSpaces", "generation"],
       "additionalProperties": false
     },
     "AliveRequest": {
       "type": "object",
       "description": "is one poll of a load's heartbeat.",
       "properties": {
-        "loadId": {"type": "string", "description": "is the load polling, the one its admitted hello named."}
+        "loadId": {"type": "string", "description": "is the load polling, the one its admitted hello named."},
+        "generation": {"type": "integer", "description": "is the heartbeat generation the hello answered."}
       },
-      "required": ["loadId"],
+      "required": ["loadId", "generation"],
+      "additionalProperties": false
+    },
+    "EndedRequest": {
+      "type": "object",
+      "description": "names the other runs whose ends the harness's store keeps.",
+      "properties": {
+        "loadId": {"type": "string", "description": "is the admitted load asking."},
+        "epochs": {"type": "array", "items": {"type": "string"}, "description": "are up to 32 epochs of other runs, as the store's index names them."}
+      },
+      "required": ["loadId", "epochs"],
+      "additionalProperties": false
+    },
+    "EndedAnswer": {
+      "type": "object",
+      "description": "says which of the asked runs rewake proves ended: of another boot, or their wrapper gone with its start time.",
+      "properties": {
+        "ended": {"type": "array", "items": {"type": "string"}, "description": "are the epochs proven ended; one alive or that cannot be told is left out."}
+      },
+      "required": ["ended"],
       "additionalProperties": false
     },
     "TurnStartRequest": {
@@ -157,7 +184,7 @@
         "turnId": {"type": "string", "description": "names the turn."},
         "endId": {"type": "string", "description": "names this end once and for good: the same end sent again carries the same id and is taken once."},
         "reason": {"$ref": "#/$defs/EndReason", "description": "is why the turn ended."},
-        "answer": {"type": "string", "description": "is the turn's final text, or what the harness said of its failure, unchanged; absent when the turn gave none."}
+        "answer": {"type": "string", "description": "is the turn's final text, or what the harness said of its failure; cut by the mod at the last whole character that keeps the body within maxEndBodyBytes, with a line saying how many characters were left out; absent when the turn gave none."}
       },
       "required": ["loadId", "conversation", "turnId", "endId", "reason"],
       "additionalProperties": false
