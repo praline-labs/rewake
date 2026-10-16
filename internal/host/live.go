@@ -305,10 +305,13 @@ func plannedLive(offer adapter.Offer, plan adapter.LaunchPlan, controlDir string
 // hold (docs/v2/design-api.md#turnboundary). Before the harness starts, so a
 // refusal starts nothing. A harness that offers no boundary has none to wait
 // for: its launch of such a role was refused at once, before the claim
-// (S9's rule, cli/turn_reporting.go).
+// (S9's rule, cli/turn_reporting.go). A boundary the run proves only once
+// its harness runs is not awaited here: its availability waits for it
+// (after_start.go).
 func awaitBoundary(ctx context.Context, session registry.Session, h adapter.Harness, live *liveSet) error {
 	part := role.Of(session.Role)
-	if part.Silent || !h.Offers().TurnBoundary.Reports || live.await(ctx, adapter.TurnBoundaryCapability, adapter.ReadinessBound) {
+	offer := h.Offers().TurnBoundary
+	if part.Silent || !offer.Reports || offer.AfterStart || live.await(ctx, adapter.TurnBoundaryCapability, adapter.ReadinessBound) {
 		return nil
 	}
 	return fmt.Errorf("a %s session owes a report at each turn's end, and this run of %s did not make its turn boundary live within %s, so the end of its turns would reach nobody; nothing was started. Start it again, or start it with --main",

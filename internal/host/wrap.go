@@ -245,6 +245,9 @@ func Run(ctx context.Context, request Request) (int, error) {
 		return 0, err
 	}
 	defer stopServing()
+	if err := refuseWithheld(session, request.Harness, plan); err != nil {
+		return 0, err
+	}
 	if err := awaitBoundary(ctx, session, request.Harness, live); err != nil {
 		return 0, err
 	}
@@ -294,8 +297,9 @@ func Run(ctx context.Context, request Request) (int, error) {
 	defer stopServing()
 	served := make(chan struct{})
 	serviceReady := make(chan struct{})
+	boundaryProven := availableAfterStart(session, request.Harness, live)
 	stopAvailability := startAvailability(serveCtx, request.Dir, session, serviceReady, func() bool {
-		if !proc.Alive(command.Process.Pid, harnessStart) {
+		if !proc.Alive(command.Process.Pid, harnessStart) || !boundaryProven() {
 			return false
 		}
 		// A process that speaks for the harness makes it available once it

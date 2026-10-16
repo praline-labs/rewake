@@ -122,6 +122,29 @@ type LiveReporter interface {
 // become live waits this long at most.
 const ReadinessBound = 8 * time.Second
 
+// AfterStartBound is how long a run's availability waits, from its harness's
+// start, for a boundary proven only after the start (TurnBoundaryOffer's
+// AfterStart): past it the run is available with its boundary not live, and
+// a later proof makes it live. A first guess, until a live run measures how
+// long the proof takes.
+const AfterStartBound = 30 * time.Second
+
+// Withholder is a service that knows, once it started and before the harness
+// starts, a capability its adapter offers that this run will not prove, and
+// why. A launch of a role that owes reports is refused on a withheld turn
+// boundary, naming the cause; any other launch goes on, the cause said as a
+// note (docs/v2/stage4-turns.md#readiness-and-admission).
+type Withholder interface {
+	Withheld() []Withheld
+}
+
+// Withheld is one capability a run will not prove, and the cause, in words
+// that say where it lies and how to start the run so it does.
+type Withheld struct {
+	Capability Capability
+	Cause      string
+}
+
 // Resumer is a harness whose launch arguments can name the conversation a
 // launch resumes, so that the grants it had can be confirmed again and given
 // at launch (docs/grants.md#after-a-cold-resume): for one that also offers

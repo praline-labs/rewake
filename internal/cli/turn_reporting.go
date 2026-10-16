@@ -9,8 +9,8 @@ import (
 	"github.com/praline-labs/rewake/internal/core/role"
 )
 
-// A harness whose contract reports no turn's end — in stage 3, one that offers
-// Launch and Wake only — cannot carry what a turn's end owes: a
+// A harness whose contract reports no turn's end — since S4-6 no harness of a
+// release, only a test's — cannot carry what a turn's end owes: a
 // session of a reporting role there would owe reports nobody sends, and a task
 // or a question to any session there would wait for an answer that never
 // comes. So both are refused before anything is claimed or written, exit 1
@@ -38,8 +38,8 @@ func refuseReportingRole(h adapter.Harness, part role.Role) error {
 		name = role.Default().ID
 	}
 	return &FailedError{Message: fmt.Sprintf(
-		"a %s session owes a report at each turn's end, and %s has no turn boundary in this rewake: it is told when a notice arrives, never when a turn ends. The %s role is available on %s from stage 4; start this session with --main, or run the %s role on another harness.",
-		name, h.Title(), name, h.Title(), name)}
+		"a %s session owes a report at each turn's end, and %s has no turn boundary in this rewake: it is told when a notice arrives, never when a turn ends. Start this session with --main, or run the %s role on a harness that reports its turns.",
+		name, h.Title(), name)}
 }
 
 // refuseUnreported refuses a task or a question to a session whose turn
@@ -62,8 +62,8 @@ func refuseUnreported(catalog adapter.Catalog, session registry.Session, kind ma
 	title := harnessTitle(found, session.Harness)
 	if !reportsTurns(found) {
 		return &FailedError{Message: fmt.Sprintf(
-			"%s runs %s, which has no turn boundary in this rewake, so the end of its turn reaches nobody and a %s to it would never be answered; nothing was sent. Send it a note with --notify, or the %s to a session on another harness; %s reports its turns from stage 4.",
-			session.Name, title, what, what, title)}
+			"%s runs %s, which has no turn boundary in this rewake, so the end of its turn reaches nobody and a %s to it would never be answered; nothing was sent. Send it a note with --notify, or the %s to a session on a harness that reports its turns.",
+			session.Name, title, what, what)}
 	}
 	return &FailedError{Message: fmt.Sprintf(
 		"%s's turn boundary is not live: its run has not proven, or has lost, the report of its turns' ends, so the end of its turn reaches nobody and a %s to it would never be answered; nothing was sent. Send it a note with --notify, or the %s to another session; rewake list --json shows what each run has live.",

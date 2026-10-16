@@ -21,8 +21,9 @@ func realReporting(t *testing.T) {
 	t.Cleanup(func() { reportsTurns = saved })
 }
 
-// unreported is a harness of the catalog whose contract reports no turn's
-// end; the test has nothing to show where every one reports.
+// unreported is the test catalog's harness, whose contract reports no turn's
+// end. Since S4-6 every harness of a release reports, so the refusals are held
+// on this one; a test catalog that loses it fails rather than skipping them.
 func unreported(t *testing.T) adapter.Harness {
 	t.Helper()
 	for _, h := range testCatalog().All() {
@@ -30,7 +31,7 @@ func unreported(t *testing.T) adapter.Harness {
 			return h
 		}
 	}
-	t.Skip("every harness of this build reports its turns")
+	t.Fatal("the test catalog has no harness that reports no turns, so the refusals go untested")
 	return nil
 }
 
@@ -49,7 +50,7 @@ func TestAReportingRoleDoesNotLaunchOnAHarnessThatReportsNoTurns(t *testing.T) {
 	for _, flags := range [][]string{{silent.ID()}, {"--general", silent.ID()}, {"--write", silent.ID()}} {
 		code, out, errOut := run(flags...)
 		if code != ExitFailed || out != "" || !strings.Contains(errOut, "has no turn boundary in this rewake") ||
-			!strings.Contains(errOut, "available on "+silent.Title()+" from stage 4") || !strings.Contains(errOut, "--main") {
+			!strings.Contains(errOut, "on a harness that reports its turns") || !strings.Contains(errOut, "--main") {
 			t.Errorf("%v: exit %d, %q, %q", flags, code, out, errOut)
 		}
 	}

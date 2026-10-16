@@ -75,6 +75,11 @@ type TurnBoundaryOffer struct {
 	// reports without it says so here rather than leave the limit to be
 	// discovered (docs/v2/design-api.md#turnboundary).
 	HoldsEnd bool
+	// AfterStart says the run proves its boundary only once its harness
+	// runs — the harness's own process says so — so a launch does not wait
+	// for it before the start; the run's availability waits for it instead,
+	// up to AfterStartBound (docs/v2/stage4-turns.md#readiness-and-admission).
+	AfterStart bool
 }
 
 // ControlOffer is the verbs a main may send a running session, each offered on
