@@ -122,7 +122,7 @@ func (s *Server) captured(ctx context.Context, end TurnEndRequest, reason adapte
 	}
 	// The load id is left out: it names the load that sends the end, and a
 	// later load of the run sends what an earlier one stored.
-	digest :=sha256.Sum256([]byte(end.Conversation + "\x00" + end.TurnID + "\x00" + string(end.Reason) + "\x00" + answer))
+	digest := sha256.Sum256([]byte(end.Conversation + "\x00" + end.TurnID + "\x00" + string(end.Reason) + "\x00" + answer))
 	if s.deciding != nil {
 		s.deciding()
 	}
