@@ -1,20 +1,15 @@
-// Package internal holds the test of the layout of rewake 2.0: the three rules of
-// docs/v2/design.md#the-test-that-holds-it, held from stage 3's first step on
-// the 1.x tree through a transition table and an exception table
-// (docs/v2/stage3-steps.md#s1-the-tests-first), and records the file groups in
-// transit inside a package (docs/v2/stage3-moves.md#s13-core-moves). It judges the packages under
-// internal/ and cmd/; test/ and tools/ are drivers outside the layers, and so is
-// this package, which imports the catalog only to learn the harness names.
+// Package internal holds the test of the layout of rewake 2.0: the import rule
+// and the rule against a registry of adapters (docs/v2/design.md#the-test-that-holds-it,
+// docs/rules/layout.md), and the callers of the mailbox's locked entry points.
+// It judges the packages under internal/ and cmd/; test/ and tools/ are drivers
+// outside the layers, and so is this package.
 package internal
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
 	"testing"
-
-	adapters "github.com/praline-labs/rewake/internal/adapter/catalog"
 )
 
 const (
@@ -22,115 +17,38 @@ const (
 	moduleRoot = ".."
 )
 
-// buildTags are the tags production code exists under. The import rule runs
-// over the graph of every combination of them, so an edge that only a tagged
-// build compiles is judged like any other.
+// buildTags are the tags production code exists under. The rules run over
+// every combination of them, so an edge or a registry that only a tagged build
+// compiles is judged like any other.
 var buildTags = []string{"rewakefault", "rewakefixture"}
 
-// testOnlyHarnesses are the catalog's harnesses built only for tests, by id;
-// layout_fixture_test.go adds the fixture under its tag. nameWords says what
-// rule 2 looks for of them.
-var testOnlyHarnesses []string
-
-// ownWords belong to one harness without being its id or title. The list grows
-// when a review finds a word.
-var ownWords = []string{"mcp__", "CLAUDE_", "app-server", ".claude", ".codex", ".agents"}
-
-// adapterInterfaces are the contract an adapter implements; rule 3 looks for
-// variables holding values of it.
+// adapterInterfaces are the contract an adapter implements; the registry rule
+// looks for variables holding values of it.
 var adapterInterfaces = []string{"internal/adapter.Harness"}
 
 func TestImportsFollowTheLayers(t *testing.T) {
-	for _, problem := range importProblems(t, transition, importExceptions) {
-		t.Error(problem)
-	}
-}
-
-func TestNoHarnessIsNamedOutsideTheAdapters(t *testing.T) {
-	var names [][2]string
-	for _, h := range adapters.New().All() {
-		names = append(names, [2]string{h.ID(), h.Title()})
-	}
-	words, literals := nameWords(names, testOnlyHarnesses)
-	for _, problem := range nameProblems(t, words, nameExceptions, literals...) {
+	for _, problem := range importProblems(t) {
 		t.Error(problem)
 	}
 }
 
 func TestNoAdapterIsRegistered(t *testing.T) {
-	for _, problem := range registryProblems(t, registryExceptions) {
-		t.Error(problem)
+	for _, r := range registrations(t) {
+		t.Error(r)
 	}
 }
 
-// TestTheTablesShrinkWithTheMoves fails on a transition entry whose package is
-// at its 2.0 path or gone, on a file group with a file gone, and on an
-// exception without a reason or a step of the build order, so the tables empty
-// as stage 3 goes rather than outliving what they excuse.
-func TestTheTablesShrinkWithTheMoves(t *testing.T) {
-	steps := buildSteps(t)
-	dirs := packageDirs(t, nil)
-	for _, problem := range staleTransitions(transition, dirs, steps) {
-		t.Error(problem)
-	}
-	var files []string
-	for _, group := range fileGroups {
-		if slices.Contains(dirs, group.dir) {
-			files = append(files, goFiles(t, group.dir)...)
-		}
-	}
-	for _, problem := range staleGroups(fileGroups, files, steps) {
-		t.Error(problem)
-	}
-	for _, problem := range unexplained(steps) {
-		t.Error(problem)
-	}
-}
-
-// The three rules run over whatever module lies at moduleRoot, so the cases
-// that prove them can put a synthetic module there and go through the same
+// The rules run over whatever module lies at moduleRoot, so the cases that
+// prove them can put a synthetic module there and go through the same
 // discovery as the real run.
 
-func importProblems(t *testing.T, table map[string]transit, exceptions []importException) []string {
+func importProblems(t *testing.T) []string {
 	t.Helper()
-	found, problems := judgeImports(variants(t), table)
+	found, problems := judgeImports(variants(t))
 	for _, e := range found {
-		if !slices.ContainsFunc(exceptions, func(x importException) bool { return x.excuses(e) }) {
-			problems = append(problems, e.String())
-		}
+		problems = append(problems, e.String())
 	}
-	return append(problems, unmatchedImports(exceptions, found)...)
-}
-
-// nameProblems answers the mentions rule 2 finds that the table does not
-// excuse: of words anywhere, and of literals as a whole string literal.
-func nameProblems(t *testing.T, words []string, table map[nameException]excuse, literals ...string) []string {
-	t.Helper()
-	return excused(mentions(t, words, literals), nameKey, table)
-}
-
-func mentions(t *testing.T, words, literals []string) []mention {
-	t.Helper()
-	var found []mention
-	for _, dir := range packageDirs(t, named) {
-		for _, name := range goFiles(t, dir) {
-			src, err := os.ReadFile(filepath.Join(moduleRoot, name))
-			if err != nil {
-				t.Fatal(err)
-			}
-			mentions, err := findMentions(name, src, words, literals...)
-			if err != nil {
-				t.Fatal(err)
-			}
-			found = append(found, mentions...)
-		}
-	}
-	return found
-}
-
-func registryProblems(t *testing.T, table map[registryException]excuse) []string {
-	t.Helper()
-	return excused(registrations(t), registryKey, table)
+	return problems
 }
 
 // registrations reads the inits of every file under adapter, whatever its
@@ -146,9 +64,9 @@ func registrations(t *testing.T) []registration {
 			found = append(found, r)
 		}
 	}
-	for _, dir := range packageDirs(t, nil) {
-		p, err := placeOf(dir, transition)
-		if err != nil || !underAdapter(p.layer) {
+	for _, dir := range packageDirs(t) {
+		layer, ok := layerOfPath(dir)
+		if !ok || !underAdapter(layer) {
 			continue
 		}
 		for _, name := range goFiles(t, dir) {
@@ -173,9 +91,9 @@ func registrations(t *testing.T) []registration {
 	return found
 }
 
-// builds are what rules 1 and 3 read the module under: every combination of
-// the production tags, each plain and with -race, which the five checks' go
-// test compiles with and which selects files of its own (//go:build race).
+// builds are what the rules read the module under: every combination of the
+// production tags, each plain and with -race, which go test compiles with and
+// which selects files of its own (//go:build race).
 func builds() []build {
 	var all []build
 	for _, race := range []bool{false, true} {
@@ -194,33 +112,4 @@ func tagSets() [][]string {
 		}
 	}
 	return sets
-}
-
-// buildSteps are the steps of the build order in docs/v2/stage3.md, the only
-// steps a table may name.
-func buildSteps(t *testing.T) []string {
-	t.Helper()
-	steps, err := readSteps()
-	if err != nil {
-		t.Fatal(err)
-	}
-	return steps
-}
-
-func readSteps() ([]string, error) {
-	text, err := os.ReadFile(filepath.Join(moduleRoot, "docs", "v2", "stage3.md"))
-	if err != nil {
-		return nil, err
-	}
-	steps, err := buildOrder(string(text))
-	if err != nil {
-		return nil, fmt.Errorf("docs/v2/stage3.md: %w", err)
-	}
-	return steps, nil
-}
-
-func validStep(step string, steps []string) bool { return slices.Contains(steps, step) }
-
-func stepProblem(what, step string) string {
-	return fmt.Sprintf("%s names the step %q, which is no step of docs/v2/stage3.md#the-build-order", what, step)
 }

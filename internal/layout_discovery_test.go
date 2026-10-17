@@ -14,7 +14,7 @@ import (
 // as a fault the rule judged.
 
 // syntheticModule writes a module with this module's path, the adapter
-// interface rule 3 looks for and a command, plus the given files, and makes it
+// interface the registry rule looks for and a command, plus the given files, and makes it
 // the module the rules read. It returns a writer for later edits.
 func syntheticModule(t *testing.T, files map[string]string) func(name, src string) {
 	t.Helper()
@@ -44,18 +44,14 @@ func syntheticModuleIn(t *testing.T, root string, files map[string]string) func(
 	return write
 }
 
-// snapshot records findings as an exception table would on its first run.
-func snapshot[F finding, K comparable](found []F, key func(F) K) map[K]excuse {
-	groups := map[K][]F{}
-	for _, f := range found {
-		groups[key(f)] = append(groups[key(f)], f)
+// registrationProblems are the registry rule's findings as the test reports them.
+func registrationProblems(t *testing.T) []string {
+	t.Helper()
+	var problems []string
+	for _, r := range registrations(t) {
+		problems = append(problems, r.String())
 	}
-	table := map[K]excuse{}
-	for k, group := range groups {
-		count, sum := fingerprint(group)
-		table[k] = excuse{reason: "recorded", step: "S8", count: count, sum: sum}
-	}
-	return table
+	return problems
 }
 
 func oneContaining(t *testing.T, got []string, want ...string) {
@@ -77,77 +73,23 @@ func TestAStrayGitAboveTheModuleIsNotRead(t *testing.T) {
 		"internal/core/mail/mail.go":    "package mail\n",
 		"internal/infra/state/state.go": "package state\n\nimport _ \"" + module + "/internal/core/mail\"\n",
 	})
-	oneContaining(t, importProblems(t, transition, nil),
+	oneContaining(t, importProblems(t),
 		"internal/infra/state/state.go: internal/infra/state (infra) imports internal/core/mail (core)")
 }
 
-func TestANameExceptionAdmitsNoNewMention(t *testing.T) {
-	const name = "internal/core/mail/mail.go"
-	const before = "package mail\n\n// wait as relay does\n\n// and relay again\nvar mode int\n"
-	write := syntheticModule(t, map[string]string{name: before})
-	words := []string{"relay"}
-	table := snapshot(mentions(t, words, nil), nameKey)
-	if got := nameProblems(t, words, table); len(got) > 0 {
-		t.Fatalf("the recorded file fails: %q", got)
-	}
-	for _, c := range []struct{ what, src, want string }{
-		{"a new identifier beside an excepted comment", before + "var relayMode int\n", "and the file now has 3"},
-		{"a new string beside an excepted comment", before + "var mode2 = \"on relay\"\n", "and the file now has 3"},
-		{"a new escaped string", before + "var mode2 = \"\\x72elay\"\n", "and the file now has 3"},
-		{"a partial deletion", "package mail\n\n// wait as relay does\nvar mode int\n", "and the file now has 1"},
-		{"an old mention replaced by another", strings.Replace(before, "and relay again", "or relay once", 1), "and the file now has 2"},
-	} {
-		write(name, c.src)
-		oneContaining(t, nameProblems(t, words, table), `the name exception for "relay" in internal/core/mail/mail.go records 2`, c.want)
-	}
-	write(name, "package mail\n")
-	oneContaining(t, nameProblems(t, words, table), "matches nothing any more")
-}
-
-func TestAnInitExceptionAdmitsNoSecondInit(t *testing.T) {
-	const name = "internal/adapter/fake/fake.go"
-	const before = "package fake\n\nfunc init() { setup() }\n\nfunc setup() {}\n"
-	write := syntheticModule(t, map[string]string{name: before})
-	table := snapshot(registrations(t), registryKey)
-	if got := registryProblems(t, table); len(got) > 0 {
-		t.Fatalf("the recorded file fails: %q", got)
-	}
-	for _, c := range []struct{ what, src, want string }{
-		{"a second init", before + "\nfunc init() { setup() }\n", "and the file now has 2"},
-		{"a new body", strings.Replace(before, "{ setup() }", "{ setup(); setup() }", 1), "and the file now has 1"},
-	} {
-		write(name, c.src)
-		oneContaining(t, registryProblems(t, table), `the registry exception "func init in a package under adapter" in internal/adapter/fake/fake.go records 1`, c.want)
-	}
-}
-
-// TestEveryFileIsReadWhateverItsConstraint: a package only a tag builds, or one
-// no build ever reads, is still read by rules 2 and 3 and still exists for the
-// transition table.
+// TestEveryFileIsReadWhateverItsConstraint: a package only a tag builds, or a
+// file no build ever reads, is still read by the registry rule.
 func TestEveryFileIsReadWhateverItsConstraint(t *testing.T) {
-	write := syntheticModule(t, map[string]string{
-		"internal/core/tagonly/name.go":  "//go:build rewakefault\n\npackage tagonly\n\nvar mode = \"relay\"\n",
-		"internal/core/never/name.go":    "//go:build ignore\n\npackage never\n\nvar mode = \"relay\"\n",
+	syntheticModule(t, map[string]string{
 		"internal/adapter/fake/fault.go": "//go:build rewakefault\n\npackage fake\n\nimport \"" + module + "/internal/adapter\"\n\nvar all []adapter.Harness\n",
 		"internal/adapter/fake/never.go": "//go:build ignore\n\npackage fake\n\nfunc init() {}\n",
 		"internal/adapter/fake/plain.go": "package fake\n",
 	})
-	got := nameProblems(t, []string{"relay"}, nil)
-	slices.Sort(got)
-	if len(got) != 2 || !strings.HasPrefix(got[0], "internal/core/never/name.go:5: the string") ||
-		!strings.HasPrefix(got[1], "internal/core/tagonly/name.go:5: the string") {
-		t.Fatalf("got %q, want the strings of both constrained packages", got)
-	}
-	got = registryProblems(t, nil)
+	got := registrationProblems(t)
 	slices.Sort(got)
 	if len(got) != 2 || !strings.HasPrefix(got[0], "internal/adapter/fake/fault.go:7: package-level variable all holds adapters") ||
 		!strings.HasPrefix(got[1], "internal/adapter/fake/never.go:5: func init") {
 		t.Fatalf("got %q, want the tagged variable and the ignored init", got)
-	}
-	write("internal/tagonly/a.go", "//go:build rewakefault\n\npackage tagonly\n")
-	table := map[string]transit{"internal/tagonly": {layer: core, step: "S13"}}
-	if got := staleTransitions(table, packageDirs(t, nil), []string{"S13"}); len(got) > 0 {
-		t.Fatalf("a package only a tag builds is not gone: %q", got)
 	}
 }
 
@@ -157,7 +99,7 @@ func TestARegistryInATestFileFails(t *testing.T) {
 		"internal/adapter/fake/fake.go":     "package fake\n",
 		"internal/adapter/fake/x_test.go":   "package fake_test\n\nimport \"" + module + "/internal/adapter\"\n\nvar byName map[string]adapter.Harness\n",
 	})
-	got := registryProblems(t, nil)
+	got := registrationProblems(t)
 	slices.Sort(got)
 	if len(got) != 2 || !strings.HasPrefix(got[0], "internal/adapter/fake/x_test.go:5: package-level variable byName holds adapters") ||
 		!strings.HasPrefix(got[1], "internal/adapter/registry_test.go:3: package-level variable hidden holds adapters") {
@@ -175,7 +117,7 @@ func TestEveryImportReachesTheRule(t *testing.T) {
 		"internal/infra/state/a.go":      "package state\n\nimport (\n\t_ \"example.org/external\"\n\t\"os\"\n)\n\nvar _ = os.Getpid\n",
 		"internal/infra/state/a_test.go": "package state\n\nimport \"testing\"\n\nfunc TestA(t *testing.T) {}\n",
 	})
-	got := importProblems(t, transition, nil)
+	got := importProblems(t)
 	slices.Sort(got)
 	want := []string{
 		"internal/core/mail/mail.go: internal/core/mail (core) imports internal/host (host), which the import rule forbids",
@@ -192,29 +134,30 @@ func TestEveryImportReachesTheRule(t *testing.T) {
 }
 
 // TestTwoDeclarationsOnOneLineAreTwo: a registration is known by its byte
-// offset, so a second name in an excepted var spec, or a second init on its
-// line, is a finding of its own.
+// offset, so a second name in a var spec, or a second init on its line, is a
+// finding of its own, and a //line directive moves neither.
 func TestTwoDeclarationsOnOneLineAreTwo(t *testing.T) {
 	const registry = "internal/adapter/registry.go"
 	const adapter = "internal/adapter/fake/fake.go"
 	write := syntheticModule(t, map[string]string{
-		registry: "package adapter\n\nvar registered []Harness\n",
-		adapter:  "package fake\n\nfunc init() {}\n",
+		registry: "package adapter\n\nvar registered, additional []Harness\n",
+		adapter:  "package fake\n",
 	})
-	table := snapshot(registrations(t), registryKey)
-	if got := registryProblems(t, table); len(got) > 0 {
-		t.Fatalf("the recorded files fail: %q", got)
+	if got := registrationProblems(t); len(got) != 2 {
+		t.Fatalf("got %q, want both names of the var spec", got)
 	}
-	write(registry, "package adapter\n\nvar registered, additional []Harness\n")
-	oneContaining(t, registryProblems(t, table), "internal/adapter/registry.go:3: package-level variable additional holds adapters")
-	write(registry, "package adapter\n\nvar registered []Harness\n")
+	write(registry, "package adapter\n")
 	write(adapter, "package fake\n\nfunc init() {}; func init() {}\n")
-	oneContaining(t, registryProblems(t, table), `the registry exception "func init in a package under adapter" in internal/adapter/fake/fake.go records 1`, "and the file now has 2")
+	if got := registrationProblems(t); len(got) != 2 {
+		t.Fatalf("got %q, want both inits on the line", got)
+	}
 	write(adapter, "package fake\n\n//line elsewhere.go:40\nfunc init() {}\n\n//line elsewhere.go:40\nfunc init() {}\n")
-	oneContaining(t, registryProblems(t, table), "and the file now has 2")
+	if got := registrationProblems(t); len(got) != 2 {
+		t.Fatalf("got %q, want both inits under one //line", got)
+	}
 }
 
-// TestARaceOnlyFileIsJudged: the five checks build with -race, which selects
+// TestARaceOnlyFileIsJudged: go test builds with -race, which selects
 // files of its own; their imports and registries are judged like any other.
 func TestARaceOnlyFileIsJudged(t *testing.T) {
 	syntheticModule(t, map[string]string{
@@ -224,58 +167,13 @@ func TestARaceOnlyFileIsJudged(t *testing.T) {
 		"internal/adapter/race.go":     "//go:build race\n\npackage adapter\n\nvar raced []Harness\n",
 		"internal/adapter/norace.go":   "//go:build !race\n\npackage adapter\n\nvar plain []Harness\n",
 	})
-	oneContaining(t, importProblems(t, transition, nil),
+	oneContaining(t, importProblems(t),
 		"internal/infra/state/race.go: internal/infra/state (infra) imports internal/core/mail (core)", "(only under -race; -race -tags rewakefault; -race -tags rewakefixture; -race -tags rewakefault,rewakefixture)")
-	got := registryProblems(t, nil)
+	got := registrationProblems(t)
 	slices.Sort(got)
 	if len(got) != 2 || !strings.HasPrefix(got[0], "internal/adapter/norace.go:5: package-level variable plain") ||
 		!strings.HasPrefix(got[1], "internal/adapter/race.go:5: package-level variable raced") {
 		t.Fatalf("got %q, want the registries of the plain and the race build", got)
-	}
-}
-
-func TestOnlyTheBuildOrderNamesSteps(t *testing.T) {
-	write := syntheticModule(t, nil)
-	const order = "## The build order\n\n```markdown\n| S41 | an example |\n```\n\n| Step | What |\n|---|---|\n| S1 | tests |\n| S2 | moves |\n"
-	write("docs/v2/stage3.md", "# Stage\n\n"+order+"\n| S42 | after the table |\n\n## An unrelated example\n\n| Step | What |\n|---|---|\n| S40 | not a step |\n\n```markdown\n| S43 | fenced |\n```\n")
-	if got := buildSteps(t); !slices.Equal(got, []string{"S1", "S2"}) {
-		t.Fatalf("got %q, want the build order's own rows", got)
-	}
-	for text, want := range map[string]string{
-		"## Elsewhere\n\n| Step | What |\n|---|---|\n| S1 | tests |\n":                           "no table of steps under the heading The build order",
-		"## The build order\n\nNo table.\n\n## Next\n\n| Step | What |\n|---|---|\n| S1 | x |\n": "no table of steps under the heading The build order",
-		"## The build order\n\n| Name | What |\n|---|---|\n| S1 | x |\n":                         "no table of steps",
-		"## The build order\n\n| Step | What |\n| S1 | x |\n":                                    "has no divider row",
-		"## The build order\n\n| Step | What |\n|---|---|\n| X1 | x |\n":                         "names no step",
-		"## The build order\n\n| Step | What |\n|---|---|\n| S1 | x |\n| S1 | y |\n":             "names S1 twice",
-		// A second heading of the same title does not reopen the section.
-		"## The build order\n\nNo table.\n\n## Later\n\n## The build order\n\n" + table40: "no table of steps under the heading The build order",
-		"## The build order\n\n~~~markdown\n| S40 | an example |\n":                       "the fence of line 3 is never closed",
-	} {
-		write("docs/v2/stage3.md", text)
-		if _, err := readSteps(); err == nil || !strings.Contains(err.Error(), want) {
-			t.Fatalf("%q: got %v, want %q", text, err, want)
-		}
-	}
-}
-
-const table40 = "| Step | What |\n|---|---|\n| S40 | an example |\n"
-
-// TestAnExampleInAnyFenceNamesNoStep: a fence is closed only by a run of its
-// own character at least as long, so a tilde fence, or a longer backtick fence
-// holding a shorter one, keeps its example out of the build order.
-func TestAnExampleInAnyFenceNamesNoStep(t *testing.T) {
-	write := syntheticModule(t, nil)
-	for _, example := range []string{
-		"~~~markdown\n" + table40 + "~~~\n",
-		"````markdown\n```\n" + table40 + "```\n````\n",
-		"~~~\n```\n" + table40 + "```\n~~~\n",
-		"```\n```go\n" + table40 + "```\n",
-	} {
-		write("docs/v2/stage3.md", "# Stage\n\n## The build order\n\n"+example+"\n| Step | What |\n|---|---|\n| S1 | tests |\n")
-		if got := buildSteps(t); !slices.Equal(got, []string{"S1"}) {
-			t.Fatalf("%q: got %q, want only S1", example, got)
-		}
 	}
 }
 
@@ -288,7 +186,7 @@ func TestADirectoryWithItsOwnModuleIsNoPackage(t *testing.T) {
 		"internal/old/relay/old.go":  "package relay\n",
 		"internal/core/mail/mail.go": "package mail\n",
 	})
-	got := packageDirs(t, nil)
+	got := packageDirs(t)
 	if !slices.Contains(got, "internal/core/mail") || slices.ContainsFunc(got, func(dir string) bool { return strings.HasPrefix(dir, "internal/old") }) {
 		t.Fatalf("got %q, want internal/core/mail and nothing under the nested module internal/old", got)
 	}

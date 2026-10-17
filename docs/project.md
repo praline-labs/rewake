@@ -82,26 +82,31 @@ Each principle names where it comes from.
   as that session and serves only it: there is nothing to start, stop or
   recover, and no state where the sessions exist but a service has died.
   ([design.md](design.md#processes), [v2/design.md](v2/design.md#what-does-not-change).)
-- **An outcome that cannot be proven is never guessed.** Every effect is proven done,
-  proven not done, or unknown; an unknown is kept and stated as such, never discarded or
-  stepped around, and only evidence — or a decision recorded as a decision — settles it.
+- **An outcome that cannot be proven is never guessed — in what is built.** Every effect of
+  the mailbox is proven done, proven not done, or unknown; an unknown is kept and stated as
+  such, and only evidence — or a decision recorded as a decision — settles it.
   ([v2/design-rules.md](v2/design-rules.md#effects-e1e8); the owner's decision, recorded
   in [v2/design-rules.md](v2/design-rules.md#an-operator-decision-on-an-unknown-outcome).)
-- **Rules before code; every rule names its tests.** Behaviour is written down as
-  numbered rules, reviewed, and only then built; each rule names the tests that hold it,
-  and a test fails when a rule names none or names one that does not exist. (The owner's
-  plan, recorded in [v2/design.md](v2/design.md#the-stage-plan-from-here);
-  [v2/design-docs-tests.md](v2/design-docs-tests.md#each-rule-names-its-tests).)
-- **Complete by construction, not by care.** Where something must be whole — a harness
-  fully described or absent, every command with a machine-readable form, every rule with
-  its tests, every layer importing only what it may — the structure makes the gap
-  impossible or a test makes it fail, rather than a reviewer having to notice.
-  (`AGENTS.md`, "Adding a harness"; [design.md](design.md#output);
-  [v2/design.md](v2/design.md#the-test-that-holds-it).)
-- **The documentation is the memory of the project.** What is not written down has to be
-  recovered from the code next time, slower and less reliably, so a change of behaviour
-  and its documents land together, and stale text is corrected in the same change.
-  (`AGENTS.md`, "Keeping the documentation true".)
+  Decided by the owner, October 17, 2026: this mechanics — `decide`, stops, the turn-end
+  journals, the build lease, epochs — is frozen as built; a new feature is not bound by it,
+  and a report lost in a rare case is asked for again by main.
+- **A working product over guarantees and process.** Decided by the owner, October 17, 2026:
+  a step is done when it works live and breaks no existing test. A test is written where a
+  breakage would not be seen live or would be seen too late, where it already happened, for a
+  contract between processes, or for pure logic cheaper to test than to try by hand; a rule is
+  written down where behaviour is not obvious, as a reference, without naming its tests.
+  (`AGENTS.md`, "Which tests to write"; the analysis the owner accepted that day replaced the
+  earlier principle "rules before code; every rule names its tests".)
+- **Complete by construction, not by care — where it pays.** Where something must be whole — a
+  harness fully described or absent, every command with a machine-readable form, every layer
+  importing only what it may — the structure makes the gap impossible or a test makes it fail,
+  rather than a reviewer having to notice. Since October 17, 2026, by the owner's decision, it
+  no longer covers rules and documents. (`AGENTS.md`, "Adding a harness";
+  [design.md](design.md#output).)
+- **The documentation is the memory of the project, in proportion.** What is not written down
+  has to be recovered from the code next time, slower and less reliably, so a change of
+  behaviour an agent or the owner sees lands with its documents; the depth matches the change,
+  and stale text is corrected when met. (`AGENTS.md`, "Keeping the documentation true".)
 - **Provider-agnostic.** No model or provider is named in code, configuration or text
   that explains how the system works. (`AGENTS.md`, "Keeping the documentation true".)
 

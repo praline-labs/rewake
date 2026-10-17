@@ -22,18 +22,11 @@ type registration struct {
 	line   int
 	offset int // the byte offset in file, which tells apart two on one line
 	what   string
-	body   string // an init's body, spacing folded; a variable is known by what
 }
 
 func (r registration) String() string {
-	return fmt.Sprintf("%s:%d: %s: an adapter is a value cmd/rewake builds and passes down, never registered (docs/v2/design.md#the-test-that-holds-it, rule 3)",
+	return fmt.Sprintf("%s:%d: %s: an adapter is a value cmd/rewake builds and passes down, never registered (docs/v2/design.md#the-test-that-holds-it)",
 		r.file, r.line, r.what)
-}
-
-// identity is what an exception records of a registration: an init by its
-// body, so a second init or a new body in an excepted file is a new finding.
-func (r registration) identity() string {
-	return strings.TrimSpace(r.what + " " + r.body)
 }
 
 // findInits reports every func init of a file; the caller passes only files of
@@ -47,14 +40,12 @@ func findInits(name string, src []byte) ([]registration, error) {
 	var found []registration
 	for _, decl := range file.Decls {
 		if fn, ok := decl.(*ast.FuncDecl); ok && fn.Recv == nil && fn.Name.Name == "init" && fn.Body != nil {
-			body := src[fset.Position(fn.Body.Lbrace).Offset : fset.Position(fn.Body.Rbrace).Offset+1]
 			pos := fset.PositionFor(fn.Pos(), false)
 			found = append(found, registration{
 				file:   name,
 				line:   pos.Line,
 				offset: pos.Offset,
 				what:   "func init in a package under adapter",
-				body:   strings.Join(strings.Fields(string(body)), " "),
 			})
 		}
 	}

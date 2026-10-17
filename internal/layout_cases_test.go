@@ -1,12 +1,10 @@
 package internal
 
 import (
-	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
 	"go/types"
-	"slices"
 	"strings"
 	"testing"
 )
@@ -45,7 +43,7 @@ func TestAForbiddenEdgeFailsNamingBothPackagesAndTheFile(t *testing.T) {
 		pkgImporting("internal/host", "host.go", "internal/core/mail"),
 		{path: "internal/infra/state"},
 	}}}
-	found, unplaced := judgeImports(graph, nil)
+	found, unplaced := judgeImports(graph)
 	if len(unplaced) > 0 {
 		t.Fatal(unplaced)
 	}
@@ -57,15 +55,8 @@ func TestAnEdgeOnlyATagBuildsFailsNamingTheTag(t *testing.T) {
 		{packages: []goPackage{pkgImporting("internal/infra/state", "fault.go"), {path: "internal/core/mail"}}},
 		{build: build{tags: []string{"rewakefault"}}, packages: []goPackage{pkgImporting("internal/infra/state", "fault.go", "internal/core/mail"), {path: "internal/core/mail"}}},
 	}
-	found, _ := judgeImports(graph, nil)
+	found, _ := judgeImports(graph)
 	oneMessage(t, edgeMessages(found), "internal/infra/state/fault.go: internal/infra/state (infra) imports internal/core/mail (core), which the import rule forbids (docs/v2/design.md#the-import-rule) (only under -tags rewakefault)")
-}
-
-func TestAPackageThatStaysImportsNothingAStepRemoves(t *testing.T) {
-	table := map[string]transit{"internal/old": {layer: core, step: "S2", goes: true}}
-	graph := []variant{{packages: []goPackage{pkgImporting("internal/core/mail", "mail.go", "internal/old"), {path: "internal/old"}}}}
-	found, _ := judgeImports(graph, table)
-	oneMessage(t, edgeMessages(found), "imports internal/old (core, goes in S2)")
 }
 
 func TestAConfinedLibraryIsImportedByItsPackageAlone(t *testing.T) {
@@ -75,79 +66,18 @@ func TestAConfinedLibraryIsImportedByItsPackageAlone(t *testing.T) {
 		{path: "internal/host/keeper", files: []goFile{{name: "internal/host/keeper/screen.go", imports: []string{library}}}},
 		{path: "internal/core/mail", files: []goFile{{name: "internal/core/mail/mail.go", imports: []string{"github.com/pelletier/go-toml/v2"}}}},
 	}}}
-	found, _ := judgeImports(graph, nil)
+	found, _ := judgeImports(graph)
 	oneMessage(t, edgeMessages(found), "internal/host/keeper/screen.go: internal/host/keeper imports github.com/charmbracelet/x/vt, which only internal/host/terminal may import")
 }
 
 func TestAPackageInNoPlaceFails(t *testing.T) {
-	_, unplaced := judgeImports([]variant{{packages: []goPackage{{path: "internal/elsewhere"}}}}, nil)
-	oneMessage(t, unplaced, "internal/elsewhere is neither at a 2.0 path nor in the transition table")
+	_, unplaced := judgeImports([]variant{{packages: []goPackage{{path: "internal/elsewhere"}}}})
+	oneMessage(t, unplaced, "internal/elsewhere is at no 2.0 path")
 }
 
 func TestOneAdapterMayNotImportAnother(t *testing.T) {
 	if allowed(api+"/one", api+"/two") || !allowed(api+"/one", api+"/one") || !allowed(catalog, api+"/two") {
 		t.Fatal("an adapter imports only itself among the adapters; the catalog imports them all")
-	}
-}
-
-func TestANameFailsInACommentAStringAndAnIdentifier(t *testing.T) {
-	src := `package mail
-
-import "example.com/relay"
-
-// wait as Relay does
-var relayMode = "on relay"
-
-var _ = relay.X
-`
-	found, err := findMentions("internal/core/mail/mail.go", []byte(src), []string{"relay"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	var got []string
-	for _, m := range found {
-		got = append(got, m.String())
-	}
-	slices.Sort(got)
-	want := []string{
-		`internal/core/mail/mail.go:5: the comment names the harness word "relay"`,
-		`internal/core/mail/mail.go:6: the identifier names the harness word "relay"`,
-		`internal/core/mail/mail.go:6: the string names the harness word "relay"`,
-		`internal/core/mail/mail.go:8: the identifier names the harness word "relay"`,
-	}
-	if len(got) != len(want) {
-		t.Fatalf("got %q, want %q: the import path is rule 1's and is not a mention", got, want)
-	}
-	for i := range want {
-		if !strings.HasPrefix(got[i], want[i]) {
-			t.Fatalf("got %q, want %q", got[i], want[i])
-		}
-	}
-}
-
-// TestAStringIsReadByItsValue: an escape spells the same name, a decoded
-// newline is not a line of the source, and a raw string's lines are.
-func TestAStringIsReadByItsValue(t *testing.T) {
-	src := "package mail\n\nvar a = \"\\x72elay\"\n\nvar b = \"one\\nrelay\"\n\nvar c = `one\ntwo relay`\n"
-	found, err := findMentions("internal/core/mail/mail.go", []byte(src), []string{"relay"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	var got []string
-	for _, m := range found {
-		got = append(got, fmt.Sprintf("%d %s %q", m.line, m.kind, m.text))
-	}
-	want := []string{`3 string "relay"`, `5 string "one\nrelay"`, `8 string "one\ntwo relay"`}
-	if !slices.Equal(got, want) {
-		t.Fatalf("got %q, want %q", got, want)
-	}
-}
-
-func TestAWordContainingAnotherFailsOnce(t *testing.T) {
-	got := harnessWords([]string{"claude", "Claude Code", "relay", "Relay"}, ownWords)
-	want := []string{".agents", ".codex", "app-server", "claude", "mcp__", "relay"}
-	if !slices.Equal(got, want) {
-		t.Fatalf("got %q, want %q", got, want)
 	}
 }
 
@@ -209,60 +139,5 @@ var list node
 		!strings.HasPrefix(got[1], "fake.go:11: package-level variable byName holds adapters") ||
 		!strings.HasPrefix(got[2], "fake.go:22: package-level variable kept holds adapters") {
 		t.Fatalf("got %q", got)
-	}
-}
-
-func TestAnExceptionNothingMatchesFails(t *testing.T) {
-	x := importException{from: "internal/cli", to: "internal/adapter/claude", files: []string{"internal/cli/a.go", "internal/cli/b.go"}}
-	found := []edge{{file: "internal/cli/a.go", from: "internal/cli", to: "internal/adapter/claude"}}
-	oneMessage(t, unmatchedImports([]importException{x}, found), "the import exception internal/cli -> internal/adapter/claude for internal/cli/b.go matches nothing any more")
-
-	names := map[nameException]excuse{{file: "internal/cli/a.go", word: "relay"}: {"why", "S8", 1, "000000000000"}}
-	oneMessage(t, excused([]mention{}, nameKey, names), `the name exception for "relay" in internal/cli/a.go matches nothing any more`)
-
-	left := excused([]mention{{file: "internal/cli/b.go", line: 3, word: "relay", kind: "comment"}}, nameKey, map[nameException]excuse{})
-	oneMessage(t, left, `internal/cli/b.go:3: the comment names the harness word "relay"`)
-}
-
-// TestATransitionEntryAtItsPlaceOrGoneFails takes its steps from the real build
-// order, so a step that looks like one but is not, S40, fails like "later".
-func TestATransitionEntryAtItsPlaceOrGoneFails(t *testing.T) {
-	table := map[string]transit{
-		"internal/core/mail": {layer: core, step: "S13"},
-		"internal/vanished":  {layer: core, step: "S13"},
-		"internal/inbox":     {layer: core, step: "later"},
-		"internal/receipt":   {layer: core, step: "S40"},
-	}
-	got := staleTransitions(table, []string{"internal/core/mail", "internal/inbox", "internal/receipt"}, buildSteps(t))
-	want := []string{
-		`the transition entry of internal/inbox names the step "later", which is no step of docs/v2/stage3.md#the-build-order`,
-		`the transition entry of internal/receipt names the step "S40", which is no step of docs/v2/stage3.md#the-build-order`,
-		"the transition table maps internal/core/mail, which is at its 2.0 path: remove the entry",
-		"the transition table maps internal/vanished, which is gone: remove the entry",
-	}
-	if !slices.Equal(got, want) {
-		t.Fatalf("got %q, want %q", got, want)
-	}
-}
-
-// TestAFileGroupWithAFileGoneFails takes its steps from the real build order,
-// as the transition entries' case does.
-func TestAFileGroupWithAFileGoneFails(t *testing.T) {
-	groups := []fileGroup{
-		{dir: "internal/core/mail", files: []string{"serve.go", "held.go"}, to: "internal/host/delivery", step: "S15"},
-		{dir: "internal/core/mail", to: "internal/delivery", step: "S40"},
-	}
-	got := staleGroups(groups, []string{"internal/core/mail/serve.go", "internal/core/mail/mail.go"}, buildSteps(t))
-	want := []string{
-		`the file group of internal/core/mail goes to internal/delivery, which is no 2.0 path`,
-		`the file group of internal/core/mail names held.go, which is gone: remove it, or the entry once the group has moved`,
-		`the file group of internal/core/mail names no file: remove the entry`,
-		`the file group of internal/core/mail names the step "S40", which is no step of docs/v2/stage3.md#the-build-order`,
-	}
-	if !slices.Equal(got, want) {
-		t.Fatalf("got %q, want %q", got, want)
-	}
-	if got := staleGroups(groups[:1], []string{"internal/core/mail/serve.go", "internal/core/mail/held.go"}, buildSteps(t)); len(got) != 0 {
-		t.Fatalf("a group whose files are all there: %q", got)
 	}
 }

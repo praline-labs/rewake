@@ -1,5 +1,7 @@
 # Design: documents and tests of 2.0
 
+The tests in `docs/` this design describes were removed by the owner's decision of October 17, 2026; the rest stands as a record.
+
 How the documentation and the tests are laid out, and how a rule stays tied to the tests
 that hold it. What happens to each 1.x document and test is in
 [revision-docs.md](revision-docs.md) and [revision-tests.md](revision-tests.md). The

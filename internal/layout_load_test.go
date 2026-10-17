@@ -82,8 +82,8 @@ func (b build) String() string { return strings.Join(b.flags(), " ") }
 
 // loadModule lists the judged packages of one build with everything they and
 // their tests depend on, compiled: the standard library is told apart by the
-// go command's own answer, and the test variants carry export data rule 3
-// type-checks against.
+// go command's own answer, and the test variants carry export data the
+// registry rule type-checks against.
 func loadModule(t *testing.T, b build) []listed {
 	t.Helper()
 	args := append([]string{"-deps", "-test", "-export"}, b.flags()...)
@@ -154,9 +154,8 @@ func importsOf(t *testing.T, name string) []string {
 // packageDirs are the package directories under internal/ and cmd/ that a
 // ./... pattern reaches, found on disk rather than by the go command: go list
 // leaves out a directory whose every file a build constraint excludes, and
-// rules 2 and 3 read every file whatever its constraint. Restricted to the
-// given layers when any.
-func packageDirs(t *testing.T, layers []string) []string {
+// the registry rule reads every file whatever its constraint.
+func packageDirs(t *testing.T) []string {
 	t.Helper()
 	var dirs []string
 	for _, top := range []string{"internal", "cmd"} {
@@ -183,12 +182,6 @@ func packageDirs(t *testing.T, layers []string) []string {
 			rel = filepath.ToSlash(rel)
 			if rel == "internal" || len(goFiles(t, rel)) == 0 {
 				return nil
-			}
-			if layers != nil {
-				p, err := placeOf(rel, transition)
-				if err != nil || !slices.Contains(layers, p.layer) {
-					return nil
-				}
 			}
 			dirs = append(dirs, rel)
 			return nil

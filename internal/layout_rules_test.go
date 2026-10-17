@@ -2,11 +2,7 @@ package internal
 
 import (
 	"fmt"
-	"go/ast"
-	"go/parser"
-	"go/token"
 	"slices"
-	"strconv"
 	"strings"
 )
 
@@ -63,10 +59,6 @@ func confinedTo(path string) (string, bool) {
 	return "", false
 }
 
-// named marks the layers whose files rule 2 reads: everything but the
-// adapters, the catalog and the command, which are where harness names live.
-var named = []string{core, tool, host, cli, infra}
-
 func isAdapter(layer string) bool {
 	return layer != catalog && strings.HasPrefix(layer, api+"/")
 }
@@ -93,35 +85,6 @@ func layerKey(layer string) string {
 		return "adapter/*"
 	}
 	return layer
-}
-
-// transit is a package not yet at its 2.0 path: the layer it is judged in and
-// the step that moves it there, or removes it.
-type transit struct {
-	layer string
-	step  string
-	goes  bool
-}
-
-// place is where the layout test judges a package from.
-type place struct {
-	layer string
-	goes  string // the step that removes it; empty for a package that stays
-}
-
-// placeOf finds a package's layer: the transition table first, then its 2.0
-// path. A package in neither is a new place nobody decided, and fails.
-func placeOf(path string, table map[string]transit) (place, error) {
-	if entry, ok := table[path]; ok {
-		if entry.goes {
-			return place{layer: entry.layer, goes: entry.step}, nil
-		}
-		return place{layer: entry.layer}, nil
-	}
-	if layer, ok := layerOfPath(path); ok {
-		return place{layer: layer}, nil
-	}
-	return place{}, fmt.Errorf("%s is neither at a 2.0 path nor in the transition table: give it a layer and the step that moves it, or move it to its place", path)
 }
 
 // layerOfPath is the layer a 2.0 path names.
@@ -167,9 +130,9 @@ type variant struct {
 
 // edge is one forbidden import, found in a file under some variants.
 type edge struct {
-	file, from, to string
-	fromAt, toAt   place
-	builds         []build
+	file, from, to     string
+	fromLayer, toLayer string
+	builds             []build
 	// owner is set for a confined module's import: the package that alone may
 	// import it.
 	owner string
@@ -180,8 +143,8 @@ func (e edge) String() string {
 		return fmt.Sprintf("%s: %s imports %s, which only %s may import (docs/rules/layout.md#the-import-rule)%s",
 			e.file, e.from, e.to, e.owner, underBuilds(e.builds))
 	}
-	return fmt.Sprintf("%s: %s (%s) imports %s (%s%s), which the import rule forbids (docs/v2/design.md#the-import-rule)%s",
-		e.file, e.from, e.fromAt.layer, e.to, e.toAt.layer, describeGoing(e.toAt), underBuilds(e.builds))
+	return fmt.Sprintf("%s: %s (%s) imports %s (%s), which the import rule forbids (docs/v2/design.md#the-import-rule)%s",
+		e.file, e.from, e.fromLayer, e.to, e.toLayer, underBuilds(e.builds))
 }
 
 // underBuilds says which builds an edge exists in when the plain one is not
@@ -198,15 +161,15 @@ func underBuilds(builds []build) string {
 }
 
 // judgeImports checks every edge of every variant against the import rule; the
-// placement errors are packages the tables do not place.
-func judgeImports(variants []variant, table map[string]transit) ([]edge, []string) {
+// placement errors are packages at no 2.0 path.
+func judgeImports(variants []variant) ([]edge, []string) {
 	var found []edge
 	var unplaced []string
 	for _, v := range variants {
 		for _, pkg := range v.packages {
-			from, err := placeOf(pkg.path, table)
-			if err != nil {
-				unplaced = appendNew(unplaced, err.Error())
+			from, ok := layerOfPath(pkg.path)
+			if !ok {
+				unplaced = appendNew(unplaced, unplacedProblem(pkg.path))
 				continue
 			}
 			for _, file := range pkg.files {
@@ -214,16 +177,16 @@ func judgeImports(variants []variant, table map[string]transit) ([]edge, []strin
 					if v.standard[path] {
 						continue
 					}
-					imported, to := path, place{layer: external}
+					imported, to := path, external
 					if within, ok := strings.CutPrefix(path, module+"/"); ok {
 						imported = within
-						if to, err = placeOf(imported, table); err != nil {
-							unplaced = appendNew(unplaced, err.Error())
+						if to, ok = layerOfPath(imported); !ok {
+							unplaced = appendNew(unplaced, unplacedProblem(imported))
 							continue
 						}
 					}
-					if forbidden(from, to) {
-						found = addEdge(found, edge{file: file.name, from: pkg.path, to: imported, fromAt: from, toAt: to}, v.build)
+					if !allowed(from, to) {
+						found = addEdge(found, edge{file: file.name, from: pkg.path, to: imported, fromLayer: from, toLayer: to}, v.build)
 					} else if owner, ok := confinedTo(path); ok && pkg.path != owner {
 						found = addEdge(found, edge{file: file.name, from: pkg.path, to: imported, owner: owner}, v.build)
 					}
@@ -234,20 +197,8 @@ func judgeImports(variants []variant, table map[string]transit) ([]edge, []strin
 	return found, unplaced
 }
 
-// forbidden adds one condition to the table: a package that stays imports
-// nothing a step removes, since the removal would otherwise break it.
-func forbidden(from, to place) bool {
-	if !allowed(from.layer, to.layer) {
-		return true
-	}
-	return to.goes != "" && (from.goes == "" || stepNumber(from.goes) > stepNumber(to.goes))
-}
-
-func describeGoing(p place) string {
-	if p.goes == "" {
-		return ""
-	}
-	return ", goes in " + p.goes
+func unplacedProblem(path string) string {
+	return fmt.Sprintf("%s is at no 2.0 path: move it under a layer of docs/v2/design.md#the-layout", path)
 }
 
 func addEdge(found []edge, e edge, b build) []edge {
@@ -266,136 +217,4 @@ func appendNew(list []string, item string) []string {
 		return list
 	}
 	return append(list, item)
-}
-
-func stepNumber(step string) int {
-	n, err := strconv.Atoi(strings.TrimPrefix(step, "S"))
-	if err != nil || !strings.HasPrefix(step, "S") {
-		return -1
-	}
-	return n
-}
-
-// mention is a harness word found in a file outside the adapters.
-type mention struct {
-	file string
-	line int
-	word string
-	kind string // identifier, string or comment
-	text string // the identifier, the string's value or the comment
-}
-
-// identity is what an exception records of a mention: its kind and its text
-// with the spacing folded, not its line, which moves with every edit above it.
-func (m mention) identity() string {
-	return m.kind + " " + strings.Join(strings.Fields(m.text), " ")
-}
-
-func (m mention) String() string {
-	return fmt.Sprintf("%s:%d: the %s names the harness word %q: the core knows no harness, so the text belongs in the adapter",
-		m.file, m.line, m.kind, m.word)
-}
-
-// harnessWords are the words rule 2 looks for: the catalog's ids and titles
-// and the test's own list, lower case. A word containing another is dropped,
-// because every place it matches the shorter one matches too, and one mention
-// should fail once.
-func harnessWords(catalog, own []string) []string {
-	var all []string
-	for _, word := range append(slices.Clone(catalog), own...) {
-		all = appendNew(all, strings.ToLower(word))
-	}
-	var words []string
-	for _, word := range all {
-		if !slices.ContainsFunc(all, func(other string) bool { return other != word && strings.Contains(word, other) }) {
-			words = append(words, word)
-		}
-	}
-	slices.Sort(words)
-	return words
-}
-
-// nameWords splits the catalog into what rule 2 looks for. A harness the
-// product ships is looked for by its id and title in any text. A harness built
-// only for tests is looked for by its title in any text, and by its id only as
-// a whole string literal: the fixture's id is the plain noun the core's own
-// tests use in its ordinary sense — a fake, a canned frame — while a literal
-// equal to the id is how code would select that harness. The policy is that
-// narrow on purpose: the title still names it anywhere, the import rule still
-// keeps its package out of the core, and every shipped harness keeps the
-// whole rule (layout_names_policy_test.go holds both).
-func nameWords(catalog [][2]string, testOnly []string) (words, literals []string) {
-	var names []string
-	for _, entry := range catalog {
-		id, title := entry[0], entry[1]
-		if slices.Contains(testOnly, id) {
-			names = append(names, title)
-			literals = append(literals, id)
-			continue
-		}
-		names = append(names, id, title)
-	}
-	return harnessWords(names, ownWords), literals
-}
-
-// findMentions parses one file and reports every identifier, string literal
-// and comment naming a harness word, and every string literal whose whole
-// value is one of literals. Import paths are left to rule 1, which judges
-// them with their layers.
-func findMentions(name string, src []byte, words []string, literals ...string) ([]mention, error) {
-	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, name, src, parser.ParseComments|parser.SkipObjectResolution)
-	if err != nil {
-		return nil, err
-	}
-	var found []mention
-	// spans says the text is the source's own lines, so a newline in it moves
-	// the line; a decoded escape does not.
-	note := func(pos token.Pos, text, kind string, spans bool) {
-		lower := strings.ToLower(text)
-		for _, word := range words {
-			for offset := 0; ; {
-				at := strings.Index(lower[offset:], word)
-				if at < 0 {
-					break
-				}
-				line := fset.Position(pos).Line
-				if spans {
-					line += strings.Count(lower[:offset+at], "\n")
-				}
-				found = append(found, mention{file: name, line: line, word: word, kind: kind, text: text})
-				offset += at + len(word)
-			}
-		}
-	}
-	imports := map[*ast.BasicLit]bool{}
-	for _, spec := range file.Imports {
-		imports[spec.Path] = true
-	}
-	ast.Inspect(file, func(node ast.Node) bool {
-		switch n := node.(type) {
-		case *ast.Ident:
-			note(n.Pos(), n.Name, "identifier", false)
-		case *ast.BasicLit:
-			// The value, not the spelling: "\x63laude" names the harness as
-			// surely as "claude". Only a raw string's newlines are the source's.
-			if n.Kind == token.STRING && !imports[n] {
-				value, err := strconv.Unquote(n.Value)
-				if err != nil {
-					value = n.Value
-				}
-				note(n.Pos(), value, "string", strings.HasPrefix(n.Value, "`"))
-				if slices.Contains(literals, value) {
-					found = append(found, mention{file: name, line: fset.Position(n.Pos()).Line, word: value, kind: "string", text: value})
-				}
-			}
-		}
-		return true
-	})
-	for _, group := range file.Comments {
-		for _, comment := range group.List {
-			note(comment.Pos(), comment.Text, "comment", true)
-		}
-	}
-	return found, nil
 }

@@ -13,7 +13,7 @@ and controls, and the roadmap records named below for how each piece was built.
 
 | Tier | Runs | Proves | Does not prove | Costs |
 | --- | --- | --- | --- | --- |
-| The five checks | formatting, vet, two linters, `go test -race -shuffle=on ./...` | unit invariants: parsing, publishing races, liveness, inbox order and expiry, the context endpoint's framing, the map of `docs/`; the suite's own classifier and summarizer | anything end to end: every workflow scenario skips itself | about half an hour at `-p 4` on an idle machine, nearly all of it the three `-race` test runs; no network, no harness, no container. Each test run carries `-timeout 20m`: `core/mail`'s `TestEveryReadOfThePlanStopsBeforeTheFirstEffect` takes about 290 s alone and about 450 s under `-race` beside other work, and `go test`'s default ten minutes killed the untagged run at `-p 4` on October 16, 2026 |
+| The step's checks | `gofumpt`, golangci-lint, one `go test -race -shuffle=on ./...` | unit invariants: parsing, publishing races, liveness, inbox order and expiry, the context endpoint's framing, the import rule; the suite's own classifier and summarizer | anything end to end: every workflow scenario skips itself | about ten minutes at `-p 4` on an idle machine — 9m50s on October 17, 2026 — nearly all of it the `-race` test run; no network, no harness, no container. The full set before a publication adds vet and staticcheck over the four build variants and two more `-race` runs with the tags, about half an hour. Each test run carries `-timeout 20m`: `core/mail`'s `TestEveryReadOfThePlanStopsBeforeTheFirstEffect` takes about 290 s alone and about 450 s under `-race` beside other work, and `go test`'s default ten minutes killed the untagged run at `-p 4` on October 16, 2026 |
 | Workflow suite (**F**) | a built rewake end to end against a fixture harness, in one column since S9, with negative controls: some mutate the product, the others change the fixture's world | that the shared service code delivers, groups, steers and reports as each scenario claims, and that each claim can fail | that the real harness parses, renders or behaves as its fixture does | about three minutes — 3m06s and 3m10s on September 25, 2026, 102 cases six at a time, against 19m22s one after another the same evening; 2m23s eight at a time. The longest cases then were `claude-steered`'s controls, about 30 s each. It fits in `go test`'s default ten minutes, which the documented commands name; no network |
 
 Two tiers are planned and not built. **P**, a real harness of a named version against a
@@ -26,10 +26,10 @@ the cheapest model only, as [check-runner.md](check-runner.md) requires. The ful
 including the owner's own eye on a terminal, is in
 [check-runner.md](check-runner.md#evidence-tiers-and-matrix).
 
-### The fault build inside the five checks
+### The fault build inside the test run
 
 The neutral rig's tests (`test/toolrig`) build rewake themselves, with the `rewakefault`
-tag, while the five checks run. A binary of that build reads `REWAKE_FAULT`
+tag, while `go test` runs. A binary of that build reads `REWAKE_FAULT`
 (`internal/infra/state/fault_build.go`) and logs, ends, fails or holds its process at a durable
 step, or leaves behind a process that keeps its output open past a kill, so the fault
 tests take their cases from the logged steps of clean runs rather than from a list kept
@@ -40,7 +40,7 @@ The lease rig (`test/leaserig`) builds rewake twice the same way, the second wit
 time passed in, so the two builds share a version and differ in content, and races the
 room's build lease between them and a byte-identical copy: each process held at a named
 step of the lease ([stage3-state.md](v2/stage3-state.md#one-build-per-room)), released or
-killed by the test. It runs in every test run of the five checks, untagged, since a launch
+killed by the test. It runs in every test run, untagged, since a launch
 it starts never gets past its lease.
 
 The upgrade rig (`test/upgraderig`) builds rewake with the tag and with the clearing's
@@ -49,7 +49,7 @@ and commands are processes of their own ([stage3-upgrade.md](v2/stage3-upgrade.m
 Each launch is held at the clearing's named steps and at its leave to go on, where the
 test kills it, so no harness starts. The crash matrix kills the clearing before each
 durable step a clean run of the same world logged; the concurrency matrix pauses it at a
-named step while a second launch runs. The five checks run the worlds that cover every
+named step while a second launch runs. An ordinary test run takes the worlds that cover every
 pair of values; `REWAKE_UPGRADE_MATRIX=full` runs every feasible world, and the log names
 how many of how many ran and how many pairs they cover. A world of process data that
 cannot be read or does not parse gives its launches a `/proc`-shaped tree of its own
@@ -104,22 +104,28 @@ decision, recorded in [harness-features.md](harness-features.md).
 ## Running it
 
 The commands live in one place, the [Checks section of AGENTS.md](../AGENTS.md#checks),
-which every agent session loads and whose five checks are the condition for the commit
-that lands a step; the commits before it need only build.
+which every agent session loads. Three levels, by the owner's decision of October 17, 2026:
+a commit while a step goes on builds, vets and passes the tests of the packages it touched;
+the last commit of a step, before it lands on `v2`, passes `gofumpt`, golangci-lint, one
+`go test -race` over the whole tree and the workflow scenarios the change touches; the full
+set — every build variant, vet and staticcheck over each, the tagged `-race` runs, the whole
+workflow suite and the crosswise check — runs only before a publication to npm. A step is
+done when it works live and breaks no existing test.
 What follows is what their variables and flags do, and when each run is the right one.
 
-**The five checks** clear `REWAKE_SESSION`, `REWAKE_EPOCH`, `REWAKE_DIR` and
-`REWAKE_ROOM`, because a test that inherits them reads the live session's state as its
-own. They start no harness, no container and no network request, whatever else the
-environment says: every real-harness step is behind the suite switch. Run them on the
-commit that lands a step, and once before a fix after review is accepted.
+**Every `go test`** clears `REWAKE_SESSION`, `REWAKE_EPOCH`, `REWAKE_DIR` and
+`REWAKE_ROOM`, the workflow suite's included, because a test that inherits them reads the
+live session's state as its own. The unit tests start no harness, no container and no
+network request, whatever else the environment says: every real-harness step is behind the
+suite switch.
 
 **The workflow suite** is switched on by `REWAKE_WORKFLOW=1`; without it every scenario
 skips itself. Run it through `tools/checksummary` to read a result, which prints a few
 lines and writes the rest to a file; run it with `go test -v` to watch it, and keep the
 `-v`: `go test` prints nothing a passing package printed, so without it the line naming
 how many scenarios ran is invisible. `-count=1` keeps a cached pass from standing in for
-a run. Run it after any change to delivery, reading, reporting or a fixture.
+a run. On the last commit of a step, run the scenarios the change touches, selected with
+`-run`; the whole suite runs after a change to the fixture and before a publication.
 
 **Cases run side by side**, six at a time unless `-parallel` says otherwise, and the
 suite's binary runs seven of the product's waits shorter than a release.
@@ -132,7 +138,7 @@ control's observations are run again in every other control's world — under th
 product mutants and under the other fixture switches — and each must stand, so a control
 that breaks on somebody else's change is caught. Each pair is a case of its own in the
 pool, so its 75 cases take about a minute and a quarter — 1m17s on September 25, 2026,
-against 7m02s one pair after another. Run it after adding or changing a control.
+against 7m02s one pair after another. It runs before a publication, not on every step.
 
 `REWAKE_WORKFLOW_SELFCHECK` is not for people: the suite sets it on a child of itself
 to prove that a scenario missing an observation turns the run red.
@@ -219,18 +225,19 @@ only another column has. Waits are anchored on a condition the case can observe 
 never on a sleep: a sleep makes a slow machine look like a defect and a lost wakeup look
 like slowness.
 
-**A control** proves the scenario can fail. It breaks one claim, in one of two ways: a
+**A control** proves the scenario can fail. The existing controls stay while they do not
+get in the way; a new scenario does not need one per observation (the owner's decision of
+October 17, 2026). A control breaks one claim, in one of two ways: a
 product mutant, built by `buildMutant` in `mutant_test.go` with its edits through the
 toolchain's overlay, inside a started case, refusing an edit that does not match exactly
 once; or a switch that changes the fixture's world. A mutant is preferred wherever one
 can be built, because it shows the scenario catching a broken rewake rather than a
 misbehaving peer, and most controls are mutants. Which control belongs to which
-scenario is the table in [testing-cases.md](testing-cases.md#every-control), which
-`docs/controls_test.go` keeps equal to the suite; a count written here would go stale
-with the next mutant, as the list that stood here did. A control names the
-observation it must break; the crosswise check then runs every control's observations in
-every other control's world and requires them to stand, so a control that breaks on
-somebody else's change is caught. Each control answers in three values — broken, not
+scenario is the table in [testing-cases.md](testing-cases.md#every-control), kept by
+hand; a count written here would go stale with the next mutant, as the list that stood
+here did. A control names the observation it must break; the crosswise check, before a
+publication, runs every control's observations in every other control's world and
+requires them to stand, so a control that breaks on somebody else's change is caught. Each control answers in three values — broken, not
 broken, cannot judge — and a record that is unreadable or empty is "cannot judge", never
 "not broken".
 

@@ -104,10 +104,12 @@ An import check alone misses what the revision found most: a harness named in a 
 (`channel/selection.go:57` compares the harness id with `Codex`; the role texts say "on
 Codex" and "on Claude Code" in `role/playbook_main.go:16,41,45,46,49`,
 `role/playbook.go:101`, `role/role.go:51`). Comparing a string needs no import. So one
-test, `internal/layout_test.go`, runs with the five checks and holds three things:
+test, `internal/layout_test.go`, runs with `go test` and holds three things — since the
+owner's decision of October 17, 2026, the first and the third; the second is held by
+review:
 
 1. **Imports.** It loads every package of the module with its test imports
-   (`go list -deps -test -json`, as `docs/layout_test.go` already asks the module) and
+   (`go list -deps -test -json`) and
    checks each edge against the table above. A forbidden edge fails with both packages
    and the file that imports.
 2. **Harness names outside the adapters.** It parses every Go file under `core`,

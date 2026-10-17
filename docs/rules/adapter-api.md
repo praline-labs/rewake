@@ -5,8 +5,7 @@ every adapter is named in, and the version a launch requires. The design is
 [design-api.md](../v2/design-api.md), and how to add a harness is `AGENTS.md`, "Adding a
 harness". What one run has proven of its adapter's offer — the live set every other
 session's decision reads — is the host's rule "The live set" in [host.md](host.md). The
-rules have no numbers: each section below is one rule, ends with the tests that hold it,
-and is known to the rules test by its heading.
+rules have no numbers: each section below is one rule, with the tests that hold it.
 
 ## The capabilities
 

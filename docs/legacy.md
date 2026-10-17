@@ -44,10 +44,9 @@ rewritten in the current form as part of the same clean-up.
 grep -rn '// legacy(' --include=*.go .
 ```
 
-`docs/legacy_test.go` runs with the five checks and holds every mark to the form
-above: a comment that holds the mark's word but not in this form fails it, so a
-misspelled mark cannot drop out of the search. It also keeps the table below equal to
-the code, and fails once a harness mark is due.
+A mark keeps to the form above so the search finds it, and the table below is kept equal
+to the code by hand; the test that held both was removed by the owner's decision of
+October 17, 2026.
 
 ## When a mark is due
 

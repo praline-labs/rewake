@@ -6,8 +6,7 @@ state and through what, and how the state of 1.x is cleared. The design is
 every write it routes, is [stage3-state.md](../v2/stage3-state.md), the clearing's
 protocol [stage3-upgrade.md](../v2/stage3-upgrade.md), and the run directory, which goes
 with its run, is L3 in [launch.md](launch.md). The rules have no numbers: each section
-below is one rule, ends with the tests that hold it, and is known to the rules test by
-its heading. That a tool call keeps the same build is T10 in [tools.md](tools.md).
+below is one rule, with the tests that hold it. That a tool call keeps the same build is T10 in [tools.md](tools.md).
 
 ## The state root
 

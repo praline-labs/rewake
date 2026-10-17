@@ -1,7 +1,7 @@
 # The rules of 2.0
 
-The numbered rules rewake 2.0 keeps, each in its full wording and each naming the tests
-that hold it. The wording is the one fixed in [design-rules.md](../v2/design-rules.md);
+The numbered rules rewake 2.0 keeps, each in its full wording, as a reference of
+behaviour. The wording is the one fixed in [design-rules.md](../v2/design-rules.md);
 which 1.x rule each comes from is in [revision-rules.md](../v2/revision-rules.md). A rule
 here is stated independently of the code: what the system guarantees, not how one file
 does it. Created in stage 3's first step, S1 ([stage3.md](../v2/stage3.md#documents)).
@@ -27,25 +27,22 @@ does it. Created in stage 3's first step, S1 ([stage3.md](../v2/stage3.md#docume
   launch behaves.
 - [host.md](host.md) — the host's tests and the grant scheme, rules without a number.
 - [layout.md](layout.md) — the layout, rules without a number: what each layer may
-  import, no harness named outside the adapters, no registry, the exception tables.
+  import and no registry of adapters.
 - [adapter-api.md](adapter-api.md) — the adapter API, rules without a number: the
   capabilities and what the core does without one, the catalogue, minimum versions.
 - [state.md](state.md) — state and builds, rules without a number: the state root, the
   build's identity, the room's lease, views and changes through the write seam, clearing
   the state of 1.x.
 
-## How a rule names its tests
+## How a rule is written
 
 A rule is a list item opening with its number in bold — `- **E4.` — and runs to the next
-rule or heading. It ends with a `Tests:` line and one item per test: the file, from the
-module root, and the function, each in backticks, optionally followed by a dash and what
-happens to the test in a later step. During stage 3 a clause no test held yet was a
-`Gap:` item naming the step that closed it, `closed in S<n>`; since S19 closed the stage, a
-gap fails, and a clause no test can hold yet is stated in the rule's text as a known
-limit, dated, with the stage that owns it. The rules without a number — the host's, the
-layout's, the adapter API's and the state's — use the same `Tests:` block; each is a
-section the rules test knows by its heading, so a section or its block cannot disappear
-unnoticed.
+rule or heading. Since the owner's decision of October 17, 2026 this group is a reference
+of behaviour: a rule is written down where behaviour is not obvious, and it is not required
+to name tests. A rule may still end with a `Tests:` line and one item per test — the file,
+from the module root, and the function, each in backticks — as a pointer to where the
+behaviour is held; no check reads these lists, so a pointer found stale is corrected when
+met. A clause the code does not hold is stated in the rule's text as a known limit, dated.
 
 ```markdown
 - **E4. A read's completion is one durable fact every channel shares.** ...
@@ -57,48 +54,3 @@ unnoticed.
 A move rewrites the paths in the same commit. Tests that hold only the 1.x migration,
 `settle` or a removed harness mechanism are not named; which those are, and why, is in
 [stage3-tests.md](../v2/stage3-tests.md) and [stage3-tests-tcl.md](../v2/stage3-tests-tcl.md).
-
-## What checks them
-
-`docs/rules_test.go` runs with the five checks of `AGENTS.md`. It parses these documents
-and the Go files they name, and runs nothing. It fails when:
-
-- a number of E1–E8, D1–D8, T1–T11, C1–C8, L1–L3, O1–O2 or the SP rules in force, or a
-  section of the rules without a number, is missing from these documents, or appears twice, or a number no group
-  has appears;
-- a rule has no `Tests:` block, or names no test and no gap, or a `Tests:` block belongs
-  to no rule;
-- a named test does not exist: the path is not inside the module, or the file declares no
-  `Test`, `Fuzz` or `Example` function of that name — a file under a build tag is parsed,
-  not built;
-- `go test` would not run it: a lower-case letter after the prefix, a signature other
-  than `func(*testing.T)` or `func(*testing.F)`, an example without an output comment;
-- no `go test` command of `AGENTS.md`'s five checks reaches its package (`./...` skips a
-  directory named with a leading `.` or `_`, `testdata` and another module) and builds
-  its file with that command's own tags and `-race` mode;
-- a `go test` command of the five checks uses a flag that may leave tests out, such as
-  `-run`, ends with a `-count` below one, or names packages other than by directory
-  patterns; or runs other than as `go test`, optionally behind `env -u NAME`: a prefix
-  that sets a variable, such as `GOFLAGS=-count=0`, or wraps the command fails rather
-  than being read past;
-- a rule has a `Gap:` item, whatever step it names; the build order under
-  [the build order](../v2/stage3.md#the-build-order) is still read, a table or fenced
-  example elsewhere names no step, and a build order that cannot be read fails.
-
-These documents, `AGENTS.md`'s checks, the build order and the map's links are read by
-one Markdown reader (`docs/markdown_test.go`, the same text as
-`internal/layout_markdown_test.go`, which the layout test reads the build order with). A
-fence opens with three or more backticks or tildes and closes only with a run of the same
-character at least as long and no trailing text. Fenced examples supply no rules or steps.
-Test commands are read only from the first fenced block under Checks in AGENTS.md. What
-the reader cannot place without modeling the lists around it fails: a fence indented four
-or more or closed at another indentation, a line less indented than its fence, a backtick
-in a backtick fence's info string, a tab before a fence, a fence never closed, an HTML
-comment in a rule document, AGENTS.md or the build order, a setext heading, an indented
-build-order table, a Tests line indented four or more.
-
-The map blanks HTML comments before using the reader, preserving its existing treatment of
-hidden links and headings.
-
-From S19, any gap fails: that is how the stage's acceptance, "every carried rule names its
-tests and they exist", is checked rather than read.

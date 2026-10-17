@@ -3,8 +3,7 @@
 Where each part of rewake lives, and the one interface every harness adapter
 implements. Split out of [design.md](design.md), which keeps what the system is and why;
 this file is what to open when looking for where something is in the tree. `go list
-./...` names every Go package below; a new one is added here in the same change, and
-`docs/layout_test.go` fails until it is.
+./...` names every Go package below; a new one is added here in the same change.
 
 ```
 cmd/rewake/                                   entry point, top-level parsing

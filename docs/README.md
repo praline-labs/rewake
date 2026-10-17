@@ -4,11 +4,9 @@ New to the project: read [project.md](project.md) first.
 
 Every document in this directory, grouped by what a reader wants from it, with what it
 holds and when to open it. A subdirectory has an index of its own, linked here rather
-than repeated: today that is the roadmap. `map_test.go` beside this file fails when a
-document is on neither this map nor its directory's index, when an index is not linked
-here, or when any link in `docs/` names a missing file or a heading its target does not
-have. A change that adds, removes or renames a document, or changes what one is for,
-updates this file in the same commit.
+than repeated: today that is the roadmap. The map is kept by hand: a change that adds,
+removes or renames a document, or changes what one is for, updates this file in the same
+commit; no test checks it.
 
 The order to start a session in is in `AGENTS.md`; this file is where to look for
 everything else.
@@ -46,20 +44,18 @@ everything else.
   prefix and harness. Open it when a launch picks the wrong
   role or name.
 - [rules/README.md](rules/README.md) — the numbered rules of 2.0 in their full wording,
-  each naming the tests that hold it: the effects E1–E8, the operator decision D1–D8,
+  a reference of behaviour: the effects E1–E8, the operator decision D1–D8,
   the turn outcomes O1–O2, every tool transport T1–T11, the channel record C1–C8, what a
   launch adds L1–L3, the first working space SP1–SP9 as each enters with its test, the
   host's tests with the grant scheme, and the rules without a number of the layout, the
-  adapter API and state and builds; and how
-  `docs/rules_test.go` checks that every named test exists and runs. Open it before
-  changing a rule's behaviour or the test that holds it.
+  adapter API and state and builds. Open it before changing a rule's behaviour or the
+  test that holds it.
 - [code.md](code.md) — the source tree, package by package, with the harness interface
   every adapter implements. Open it to find where something lives, or before adding a
   package.
 - [legacy.md](legacy.md) — the mark on code kept for an old harness version or for
   records an earlier rewake wrote: its form, the search, when a mark is due, the order of
-  clearing one, the oldest supported versions and the table of current marks that
-  `legacy_test.go` keeps equal to the code. Open it before keeping something for an old
+  clearing one, the oldest supported versions and the table of current marks. Open it before keeping something for an old
   version, or when raising the oldest supported one.
 - [launch.md](launch.md) — starting a harness: the wrapper's launch sequence, signals
   and following a stopped harness, which flags choose a room and a role (the rules
@@ -333,7 +329,7 @@ everything else.
   depth behind it.
 - [testing-cases.md](testing-cases.md) — what each end-to-end case claims, with its
   sessions, what the fixture plays and its controls, with a table of every control by
-  scenario that `controls_test.go` keeps equal to the suite: the Claude Code column retired
+  scenario: the Claude Code column retired
   in S9 and the unit tests that hold its kept code until stage 4, launching through a wrapper, pending and owed reports, the
   worktrees, a directory granted with a task, the awaited view, withdrawing, editing and adding to a sent message, a changed
   conversation, a stop and steering a session. Open it before changing one of those cases or the

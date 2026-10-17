@@ -352,11 +352,8 @@ not prove: that a real harness's sandbox refuses as the filter does.
 Each scenario's controls by name: the product mutants, built from a `mutation` value in
 `test/workflow`, and the switches that change the fixture's world instead
 ([testing.md](testing.md#extending-the-suite) says why a mutant is preferred).
-`docs/controls_test.go` keeps the mutants column equal to the `mutation` values in the
-suite and requires every listed switch to be a name the suite spells, so a mutant added
-or renamed, or a listed switch renamed, without this table turns the five checks red. It
-checks neither that a new switch is listed nor that a control sits in its scenario's row:
-switches have no single form in the code to find them by, and the row is kept by review.
+The table is kept by hand: the test that held its mutants column equal to the suite was
+removed by the owner's decision of October 17, 2026.
 
 | Scenario | Mutants | Fixture switches |
 |---|---|---|
