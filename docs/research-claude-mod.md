@@ -391,3 +391,17 @@ report `references/reports/2.1.296-to-2.1.302.md`, with a reading on the Codex s
 - **Blockable actions refused when a hook is unreachable** (2.1.299) **[read]**: the mod's three
   hooks observe and block nothing; the rest of the report is nothing the mod hooks or calls.
 - `claude plugin validate --strict` and `claude plugin test`, 32 tests, passed **[kit]**.
+
+**Live on 2.1.302** (October 17, 2026, main's run of `.scratch/v2-s4-build/live-s4-6c.sh` on the
+branch's build, a haiku worker; `.scratch/v2-s4-build/live-evidence/302/`) **[live]**: a report
+came back and the heartbeat kept the boundary live through 45 s idle; an `exec` wrapper was
+admitted and a child one refused a task; a module that stopped polling lost its boundary 30 s
+after the reload and got it back at once when restored; the reload by a comment line kept the
+boundary; the hello went live 1.4–3.1 s after the start; a subagent the worker started (seen on
+its screen) left one report, the main loop's. Two scenarios needed new wording first. A
+standalone `sleep 60` is refused in the foreground on this build ("Blocked: standalone sleep
+60 … use Monitor … or run_in_background"); the worker ran it in the background, marked the task
+`rewake pending`, and answered once it ended, so there was no turn to interrupt — with a Python
+sleep in its place an Escape typed 17 s in reached main as `stopped`. And on the first run the
+worker read the file itself instead of starting a subagent, which the script's answer check
+could not tell; it now asks for the Agent tool and checks the screen for its call.
