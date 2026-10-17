@@ -72,6 +72,11 @@ through. The outbox takes closures a hook makes over its own `$`, each a `$.noun
 call, and its timers call those; a closure called from a `$.clock.after` callback after the
 hook returned works. The `mods` skill taken from 2.1.296 does not state the rule.
 
+Since its republication on October 16, 2026 the `mods` skill states the rule, finer than this
+record: `$` may also be passed to a function declared at the top of the same file, never across
+an import, into a method or a class, or kept in a variable (`background.md`, its section on
+where `$` may go, 24 variants checked on 2.1.296).
+
 ## P11: a process the mod starts
 
 ### `$.process.run`, the child detaching (`nugmw7`)

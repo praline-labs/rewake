@@ -291,11 +291,13 @@ worker (the skill, gotchas), and room for one failed poll and its retry after 1 
 is noticed within 30 s of its last poll. A worker held longer than that, by another mod's
 stall, lapses and comes back with a new hello; a lapse is loss of proof, not of the run.
 
-**Loss the host sees no other way.** Claude Code unloads a mod that crashed the hooks worker,
-and every non-built-in mod after three crashes, until `/reload-plugins` or a new session (the
-skill, `official/admin.md` and `official/troubleshoot.md`), and tells rewake nothing. The
-heartbeat is how that loss is seen. `/reload-plugins` and a worker replaced after a crash load
-the module again, its `session.start` runs, and its hello opens a new generation.
+**Loss the host sees no other way.** Claude Code unloads the mod a hooks worker's missed
+heartbeat names on its first crash, and every non-built-in mod after three crashes it cannot
+pin on one (the skill, `background.md` and `official/troubleshoot.md`), and tells rewake
+nothing. The heartbeat is how that loss is seen. A change to the module's files or a new
+session loads it again — `/reload-plugins` with nothing changed keeps the loaded copy (the
+skill, `background.md`, checked on 2.1.296) — its `session.start` runs, and its hello opens a
+new generation.
 
 **The shared part with S4-7.** Main's `events` loop is the same shape: a chain of
 `$.clock.after` callbacks, each one held request, renewed on its answer, started after the

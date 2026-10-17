@@ -366,6 +366,20 @@ compaction counted.
 
 *September 26, 2026.*
 
+### A Claude Code session idle between tasks came back compacted
+
+Main in this room ended its turn after a handoff and waited for the person; when it was
+next woken, its conversation had been compacted, with no `rewake compact` and no `/compact`
+typed. Claude Code compacts an idle session on its own unless the user's settings turn it
+off: `"idleCompaction": false` in `~/.claude/settings.json`. A worker idle between tasks is
+exposed the same way, and its context in `rewake list` drops without anyone having asked.
+
+When a session's context falls while it was idle, look at that setting before suspecting
+rewake. A session started before the setting changed keeps the old behaviour until it is
+restarted. Reported by the person and read from their settings on Claude Code 2.1.296.
+
+*October 17, 2026.*
+
 ### A resumed Codex worker got its task in a new, empty conversation
 
 The owner relaunched a worker with a resume of a conversation a plain Codex held through
