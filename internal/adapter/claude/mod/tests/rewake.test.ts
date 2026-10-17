@@ -60,6 +60,21 @@ test('a turn start is sent once, and not before the hello is admitted', async ($
   expect(starts[0].body).toMatchObject({ conversation: 'conversation-1', turnId: 't1' })
 })
 
+test("a subagent's turn sends neither its start nor its end, an empty agent id included, while the main loop's pair goes", async ($, on) => {
+  const run = world(on)
+  await start($)
+  await run.clock.settle()
+  for (const agentId of ['agent-1', '']) {
+    await $.turn.start({ text: 'read the file', turnId: 'child-' + agentId, agentId } as any)
+    await complete($, 'child-' + agentId, { agentId })
+  }
+  await $.turn.start({ text: 'go', turnId: 't1' } as any)
+  await complete($, 't1')
+  await run.clock.settle()
+  expect(run.sent.filter((one) => one.path === '/v1/turn/start').map((one) => one.body.turnId)).toEqual(['t1'])
+  expect(run.ends().map((one) => one.body.turnId)).toEqual(['t1'])
+})
+
 test("each reason reaches the run as its end reason, and a subagent's turn is not sent", async ($, on) => {
   const run = world(on)
   await start($)

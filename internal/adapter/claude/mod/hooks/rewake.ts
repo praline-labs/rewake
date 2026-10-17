@@ -192,11 +192,13 @@ export const register: Register = (on) => {
     return started
   })
 
-  // A turn's start is sent once and not retried: no start time rides on it,
-  // so a lost one costs nothing (docs/v2/stage4-turns.md#the-start-time).
+  // A turn's start of the main loop is sent once and not retried: no start
+  // time rides on it, so a lost one costs nothing
+  // (docs/v2/stage4-turns.md#the-start-time). A subagent's, which carries its
+  // agent id, is not the session's turn and is not sent, as its end is not.
   on('turn.start', async ($, e, next) => {
     const started = await next(e)
-    if (load?.run) {
+    if (load?.run && e.agentId === undefined) {
       try {
         const request: TurnStartRequest = { loadId, conversation: await $.session.id(), turnId: e.turnId }
         await load.host.post(paths.turnStart, request)

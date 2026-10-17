@@ -259,7 +259,8 @@ everything else.
   cell grid and a key surface in the subagent's own tool row, which keys reach it, and the
   largest grid tried; a worker acting on a notice's preview; S4-6's live acceptance — the
   hello's time after the start, a lapse and a reload, a `--command` wrapper with and without
-  `exec`, an interrupt, a subagent. Open it before designing the space, the keeper or the
+  `exec`, an interrupt, a subagent; the mod re-checked on 2.1.302 in the test kit and against
+  the release's report. Open it before designing the space, the keeper or the
   mod's join, and re-check it after a harness update.
 - [research-codex.md](research-codex.md) — what only a running Codex session shows,
   split from research.md by subject: `codex queue`, thread identity and terminal events,

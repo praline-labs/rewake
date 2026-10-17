@@ -58,7 +58,9 @@ its one sender, retry chain, cut and the store's cleanup by proof. Tests it adds
   fixture's wait before the start is unchanged, with its negative control.
 - `cli`: the refusal of a reporting role still covered by a test harness that reports none, now
   that no catalog harness lacks a boundary.
-- The mod's own tests in `claude plugin test`: a subagent's `turn.complete` is not sent; the
+- The mod's own tests in `claude plugin test`: a subagent's `turn.complete` is not sent, nor,
+  since October 17, 2026, its `turn.start` (an empty agent id included), while the main loop's
+  pair goes; the
   first attempt is awaited; an end that comes while an older one is in flight queues behind it;
   a 503 and a 200 that is not the end's receipt are retried, a 409 and a 410 dropped; a long
   answer is cut with its line at the exact bound, for quotes, backslashes and characters outside

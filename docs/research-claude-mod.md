@@ -359,3 +359,35 @@ subagent's turn.
 
 **Not seen**: whether the engine runs `turn.complete`'s hooks before the next turn starts; it
 is not observable from outside the harness.
+
+## The mod on Claude Code 2.1.302
+
+October 17, 2026, Claude Code 2.1.302, the `mods` skill republished from it that day: the
+writer's check on branch `mod-302` against the skill's changelog "2.1.296 → 2.1.302" and its
+report `references/reports/2.1.296-to-2.1.302.md`, with a reading on the Codex side
+(`.scratch/v2-s4-build/read-mod-302.md`). Not live; that is main's. **[kit]** marks what ran in
+`claude plugin test`, **[read]** what was read in the report, the types or rewake's source.
+
+- **A subagent's `turn.start`** (2.1.299): raised for subagents' and teammates' turns too, the
+  main loop's without `agentId` **[read]**. The mod's hook did not filter it, so each subagent
+  turn reached the host as a `turn/start` of the session. Harmless: the host passes a start on
+  with no time, the core records only a timed one, and no mail tool opens turns on Claude Code;
+  it cost an awaited request **[read]**. S4-6's part C ran on 2.1.296, before the change. Fixed:
+  only a start without `agentId` is sent; a child's start and end, under an id and an empty one,
+  beside a main pair, send only the main pair, and the test fails without the filter **[kit]**.
+- **`$` into an imported `function`** (2.1.299) **[read]**: the helpers keep a `Host` of
+  closures. `Outbox` and `Heartbeat` are classes, which `$` reaches on no build; the heartbeat's
+  tests drive a hand-made `Host`; and such an import does not load on 2.1.287–2.1.298.
+- **`.catch` not asked on re-entry** (2.1.301) **[read]**: the mod has no `.catch`.
+- **The test kit** (2.1.299): a served `$` method's ten seconds are real time, not
+  `mock.clock`'s — a fetch held 12 s of it was in flight at 11.5 s and answered at 12 s, so the
+  heartbeat tests' 15 s holds mean what they did; the 31 earlier tests pass unchanged **[kit]**.
+  The mod renders nothing and serves no method, so `part: { plugin }` and the budget change
+  touch nothing **[read]**.
+- **A save of the same bytes no longer reloads** (2.1.299) **[read]**. The reload scenario of
+  `.scratch/v2-s4-build/live-s4-6c.sh` wrote back `$(cat <module>)` plus a newline, which is
+  the file's own bytes: the record above shows 2.1.296 reloading on such a save. The script
+  now adds a comment line.
+- **Blockable actions refused when a hook is unreachable** (2.1.299) **[read]**: the mod's three
+  hooks observe and block nothing; the rest of the report is nothing the mod hooks or calls.
+- `claude plugin validate --strict` and `claude plugin test`, 32 tests, passed **[kit]**.

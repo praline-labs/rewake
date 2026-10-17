@@ -142,7 +142,8 @@ Decided: **through the host's endpoint, not by a `rewake` process the mod starts
    from a subagent carries `agentId` and is refused — subagents use the shell.
 2. The mod sends the call to the endpoint with `$.http.fetch` over the run's Unix socket:
    the tool, the arguments, `tool_use_id`, `$.session.id()`, and the turn the call
-   belongs to. `tool.call` carries no turn id, so the turn is the one whose `turn.start`
+   belongs to. `tool.call` carries no turn id, so the turn is the one whose main-loop
+   `turn.start` (the one without `agentId`: from 2.1.299 a subagent's turns raise it too)
    the mod has seen and whose `turn.complete` it has not; a call outside an open turn
    has no proven turn, and its pending mark or read is unproven (T7). That the mod sees
    a main-loop `tool.call` only between its turn's start and complete, and that turn ids
@@ -215,7 +216,7 @@ fetches the request and posts the answer itself.
 
 | Event | The mod does | The host does |
 |---|---|---|
-| `turn.start` (`turnId`) | sends `turn/start` once | `Started` with `at = 0`: no timed start ([the start time](stage4-turns.md#the-start-time)) |
+| `turn.start` (`turnId`) | sends `turn/start` once, for the main loop alone: a subagent's, with `agentId`, is not sent | `Started` with `at = 0`: no timed start ([the start time](stage4-turns.md#the-start-time)) |
 | `turn.complete` (`turnId`, `reason`, `answer`) | sends `turn/end` under a fresh end id until its receipt; `answer`, `aborted`, `refusal`, `error` mapped to answered, aborted, refused, failed | the turn end operation (E7), every retry handed on as its first capture |
 | `classic.Stop` | later, with P3: asks the host whether this end may close | the confirmation check ([design-rules.md](design-rules.md#turn-outcomes)); the mod returns `{ block: reason }` when it says go on |
 | `classic.StopFailure` | not hooked: `turn.complete` with `error` is the failed end | — |

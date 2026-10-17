@@ -68,10 +68,12 @@ that they are checked like the rest ([stage3-tests.md](../v2/stage3-tests.md#how
   turns", "Interim turn ends"), with the reason taken from the adapter's end event.
   On Claude Code, from S4-6, the event is `turn.complete` of the session's own conversation:
   its reasons `answer`, `aborted`, `refusal` and `error` report as answered, aborted, refused
-  and failed, and a subagent's turn, which carries `agentId`, reports nothing
+  and failed, and a subagent's turn, which carries `agentId`, reports nothing — neither its end
+  nor its `turn.start`, which the harness raises for a subagent's turns too from 2.1.299
   ([stage4-turns.md](../v2/stage4-turns.md#the-mods-side)); the mod's own tests hold that in the
   harness's test kit (`internal/adapter/claude/mod/tests/rewake.test.ts`, "each reason reaches
-  the run as its end reason, and a subagent's turn is not sent").
+  the run as its end reason, and a subagent's turn is not sent", and "a subagent's turn sends
+  neither its start nor its end, an empty agent id included, while the main loop's pair goes").
   Tests:
   - `internal/adapter/claude/modhost/turns_test.go` `TestEachReasonReachesTheCoreAsItsEndReason`
   - `internal/adapter/claude/mod_test.go` `TestTheModsTestsPass`

@@ -47,10 +47,11 @@ By the owner and main, October 16, 2026:
 
 ## The mod's side
 
-**Which events.** `turn.start` and `turn.complete` of the main loop. A `turn.complete` that
-carries `agentId` is a subagent's — main's keeper of S4-7, a workflow's agent, an engine's
-fork — and is not sent; a subagent's run raises no `turn.start` (the skill, `TurnStartInput`,
-`TurnCompleteFields`). Every role's mod sends them: main's turns report what a silent role
+**Which events.** `turn.start` and `turn.complete` of the main loop. Either one that carries
+`agentId` is a subagent's — main's keeper of S4-7, a workflow's agent, an engine's fork — and
+is not sent; the main loop's is told by the field's absence, not by an empty value (the skill,
+`TurnStartInput`, `TurnCompleteInput`). From 2.1.299 a subagent's turns raise `turn.start` too,
+and the mod filters starts since October 17, 2026 ([the record](../research-claude-mod.md#the-mod-on-claude-code-21302)). Every role's mod sends them: main's turns report what a silent role
 reports, its failures (`core/mail/turn_reports.go`), and the core decides that, not the mod.
 
 **The reasons.** `turn.complete`'s `reason` is one of `answer`, `aborted`, `refusal`, `error`
@@ -295,9 +296,9 @@ stall, lapses and comes back with a new hello; a lapse is loss of proof, not of 
 heartbeat names on its first crash, and every non-built-in mod after three crashes it cannot
 pin on one (the skill, `background.md` and `official/troubleshoot.md`), and tells rewake
 nothing. The heartbeat is how that loss is seen. A change to the module's files or a new
-session loads it again — `/reload-plugins` with nothing changed keeps the loaded copy (the
-skill, `background.md`, checked on 2.1.296) — its `session.start` runs, and its hello opens a
-new generation.
+session loads it again — `/reload-plugins` with nothing changed keeps the loaded copy, as from
+2.1.299 does a save of the same bytes (the skill, `background.md`, re-checked on 2.1.302) — its
+`session.start` runs, and its hello opens a new generation.
 
 **The shared part with S4-7.** Main's `events` loop is the same shape: a chain of
 `$.clock.after` callbacks, each one held request, renewed on its answer, started after the
