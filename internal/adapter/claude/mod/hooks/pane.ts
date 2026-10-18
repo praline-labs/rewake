@@ -97,7 +97,7 @@ function lineControls($: any, elements: any, workers: Workers, name: string) {
       submitLabel: 'send',
       ...(clear ? { value: '' } : {}),
       onSubmit: (value: string) => {
-        workers.type(value + '\r')
+        workers.typeLine(value)
         workers.clearLine = true
         $.ui.invalidate('ui.render')
       },
