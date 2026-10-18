@@ -16,6 +16,9 @@ export const listOpenMs = 2000
 export const listClosedMs = 5000
 // A blit refused because the pane is not drawn waits this long.
 const unmountedMs = 1000
+// The Enter after a line waits this long behind it: a line and its Enter in
+// one write reach a Claude Code worker as a paste, the Enter a newline in it.
+export const enterMs = 50
 // A worker is never sized below this: a narrower pane shows its screen
 // cropped rather than squeeze the program into a few columns.
 export const minColumns = 100
@@ -263,6 +266,13 @@ export class Workers {
 
   chosenName(): string {
     return this.workers.find((one) => one.space === this.chosen)?.name ?? ''
+  }
+
+  // typeLine sends a line, then its Enter on its own.
+  typeLine(line: string) {
+    this.type(line)
+    if (line === '') this.type('\r')
+    else this.host.after(enterMs, () => { this.type('\r') })
   }
 
   // type sends keys to the chosen worker, one post after another, so they

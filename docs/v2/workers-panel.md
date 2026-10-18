@@ -107,7 +107,10 @@ keyboard Ctrl+X reaches nobody.
 
 **Line mode.** Off fullscreen (`viewport.isFullscreen` false) a click gives the key surface no
 keyboard, so the pane draws no key surface: under the screen an `Input` with `autoFocus` takes the
-pane's focus after `/workers`, and Enter sends its line and Enter to the worker and empties it;
+pane's focus after `/workers`, and Enter sends its line to the worker, then the Enter 50 ms later
+as a write of its own, and empties it — a line and its Enter in one write reached a Claude Code
+worker as a paste, the Enter a newline in its prompt and the line never sent (seen live on October
+18, 2026, 2.1.302);
 under it, plain `Button`s `e: Esc`, `c: ^C`, `z: size` and `q: close`. While the field has the
 focus every printable key is its own, so the hotkeys — theirs and the workers' digits — work once
 Tab has moved the focus off the field (the owner, October 18, 2026).

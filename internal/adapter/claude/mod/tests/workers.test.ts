@@ -148,7 +148,7 @@ test('the prefix chooses a worker by its digit and closes the pane, with no Esca
   expect(ui.closed.map((one) => one.id)).toEqual(['rewake-workers'])
 })
 
-test('off fullscreen the pane takes a line at a time, and its buttons send ^C and close it', async ($, on) => {
+test('off fullscreen the pane takes a line at a time, its Enter on its own, and its buttons send ^C and close it', async ($, on) => {
   const run = world(on, {
     replies: {
       '/v1/hello': [main],
@@ -170,11 +170,12 @@ test('off fullscreen the pane takes a line at a time, and its buttons send ^C an
   const drawn = await $.ui.mount(pane(6, false))
   expect(await drawn.find({ key: 'keys' })).toBeUndefined()
   await drawn.input({ key: 'line', text: 'ls', kind: 'submit' })
+  await run.clock.advance(50)
   await drawn.press({ key: 'send-interrupt' })
   await drawn.press({ key: 'close' })
   await run.clock.settle()
   const typed = run.sent.filter((one) => one.path === '/v1/workers/keys').map((one) => one.body.keys)
-  expect(typed).toEqual(['ls\r', '\x03'])
+  expect(typed).toEqual(['ls', '\r', '\x03'])
   expect(ui.closed.map((one) => one.id)).toEqual(['rewake-workers'])
 })
 
