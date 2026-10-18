@@ -18,6 +18,8 @@ models the same way nor take the reasoning effort the same way:
 | --- | --- |
 | `REWAKE_CLAUDE_MODEL` | the model for a Claude Code launch |
 | `REWAKE_CLAUDE_EFFORT` | its reasoning effort |
+| `REWAKE_PI_MODEL` | the model for a pi launch |
+| `REWAKE_PI_EFFORT` | its thinking level |
 
 No model names appear in this repository. Which model is cheap, and what it is
 called, belongs to whoever runs the sessions.
@@ -169,6 +171,9 @@ not from memory:
 
 - **Claude Code** takes both as flags, `--model <model>` and `--effort <level>`,
   apart or with `=`. Neither has a short form.
+- **pi** takes `--model` and `--thinking`. An explicit `--models` scope also suppresses
+  the model default; a thinking suffix on `--model` or `--models` suppresses the effort
+  default. Facts checked on 1.2.0 are in [research-pi.md](research-pi.md).
 - **Codex** takes the model as `--model` or `-m`, apart, with `=`, or joined
   (`-mname`) — and also as the configuration key `model`. It has no flag for the
   reasoning effort at all: that is the configuration key `model_reasoning_effort`.

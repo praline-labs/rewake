@@ -176,9 +176,9 @@ may be displayed with explicit labels; cached data is not a fresh measurement.
 
 ## Claude Code source
 
-Everything above describes the Codex source of 1.x, a server whose events the gateway
-read; in this build the fixture harness's adapter is the one source that publishes a
-snapshot. Until S9, October 11, 2026, a Claude Code session's wrapper collected the same
+The source-specific context formula and event handling above describe the Codex source
+of 1.x, a server whose events the gateway read. In this build the fixture and pi adapters
+publish snapshots. Until S9, October 11, 2026, a Claude Code session's wrapper collected the same
 snapshot from the session's hooks, its status line and rewake's plugin — activity,
 whether interruptions are heard, model and effort, context, compactions and the
 conversation, observed live on September 23, 2026 on Claude Code 2.1.280
@@ -187,6 +187,23 @@ hooks: how each field was read is in [claude-telemetry.md](archive/1.x/claude-te
 and [claude-plugin.md](archive/1.x/claude-plugin.md). A Claude Code session publishes no
 snapshot in this build, and every reader — `rewake list`, the main-only header, the
 compaction notice — shows its values unknown, as for any adapter without one.
+
+## pi source
+
+Added October 18, 2026, verified against pi 1.2.0 with a mock model
+([research-pi.md](research-pi.md#telemetry-and-remote-control)). The per-run extension
+reads native context usage, window and percent, model and thinking level; it pushes
+changes and answers a one-second poll. Percentage is rounded and bounded to 100 without
+the 1.x baseline. Missing usage after compaction stays unknown until the next native
+usage update. No limits are reported.
+
+The wrapper caches only the current connection's increasing sample sequence. A lost
+connection or three seconds without a sample makes its values stale. Model changes and
+conversation replacement take the new native snapshot whole, including unknown fields.
+Manual and automatic completion events increment one observed wrapper-lifetime count;
+a duplicate event sequence does not. Reconnect makes coverage partial. The last 64
+completion cues and bounded remote outcomes feed the usual notices and compaction letters.
+The native runtime supplies these values; no transcript file is read.
 
 ## Evidence and acceptance
 

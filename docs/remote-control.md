@@ -11,14 +11,20 @@ Built on September 24, 2026 for Claude Code, with unit and module tests and a wo
 case, and the same day for Codex (part B), where the wrapper serves the requests itself
 ([remote-control-codex.md](archive/1.x/remote-control-codex.md)).
 
-**No product harness serves it since S9, October 11, 2026.** The Codex side left in S8,
-and the Claude Code side — rewake's plugin module — left with the plugin in S9; stage 4
-gives Claude Code an adapter with its own control. Until then `rewake compact` and
-`rewake interrupt` refuse a Claude Code session with exit 2, saying it does not take
-them yet, and the fixture harness's run serves the run's control directory as the module
-did — with `control.Serve`, carrying each request to its program over the readiness
-connection while Control is live (since S11; until then the program polled the directory
-itself) — so the commands, the directory and the letter keep their workflow case
+**pi serves both verbs since October 18, 2026**, including compaction focus, through its
+per-run extension and native APIs ([research-pi.md](research-pi.md#telemetry-and-remote-control)).
+The wrapper serves the control directory with `control.Serve` and carries each request
+over the extension socket. Manual compaction refuses an active turn; it answers `started`
+when the native preparation hook is seen or `requested` after one second, and records the
+final result with native before/estimated-after counts for main's letter. Automatic
+compaction being disabled does not disable this manual request. Interrupt waits for the
+matching aborted settled event, names the initiator in the stopped report, and appends
+that actor to native history without starting a turn. A missing acknowledgment leaves an
+open outcome and is not repeated.
+
+The Claude Code side left with the plugin in S9, October 11, 2026, and is still refused
+with exit 2 until its mod offers Control. The fixture run also serves its control directory
+through `control.Serve`, keeping the shared command and letter workflow case
 (`fixture-steered`, [testing-cases.md](testing-cases.md#a-stop-and-steering-a-session)).
 What follows about Claude Code is how the module served it in 1.x.
 
@@ -66,9 +72,9 @@ and refusals. The call is checked whole before anything is written:
   unknown name gets the same refusal as `send`, with the live names.
 - **Its harness must offer the verb** (`Offer.Control`, [code.md](code.md#the-adapter-api)),
   and a focus only where the harness can pass one for a single compaction
-  (`CompactFocus`); each verb is offered on its own since S10. Since S9,
-  October 11, 2026, only the fixture harness takes the requests, and it takes a focus;
-  a Claude Code session is refused here, before anything is sent, until stage 4. In
+  (`CompactFocus`); each verb is offered on its own since S10. The fixture and pi
+  harnesses take both requests and a focus; a Claude Code session is refused here,
+  before anything is sent, until its mod offers them. In
   1.x both harnesses took them and Codex took no focus, so a focus to a Codex session
   was refused (owner decision below).
 
@@ -85,7 +91,7 @@ request, not the compaction's end:
 | Outcome | Exit | Meaning |
 | --- | --- | --- |
 | `started` | 0 | the compaction has started; its end comes to main as a letter |
-| `requested` | 0 | the session took the request, and the compaction's start was not seen within 3 seconds: it may still start, and its letter comes either way |
+| `requested` | 0 | the session took the request, and the compaction's start was not seen within the adapter's bound (one second on pi, three in the 1.x module): it may still start, and its letter comes either way |
 | `done` | 0 | the turn is interrupted |
 | `refused`, `in a turn` | 1 | a compaction was asked while the worker is in a turn |
 | `refused`, `no turn running` | 1 | an interrupt was asked while the worker is idle |
@@ -137,7 +143,7 @@ refused as `no control directory`. The id is 32 lowercase hex
 characters, and the served side refuses any other: it builds file names from it.
 
 The served side — in 1.x rewake's module in a Claude Code session, and in this build the
-fixture's run through `control.Serve` — can write files but not remove them, so the asker owns every removal
+fixture's and pi's runs through `control.Serve` — can write files but not remove them, so the asker owns every removal
 (`internal/core/control`):
 
 1. Take the lock, and remove everything a dead asker or an expired request left.

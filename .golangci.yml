@@ -122,6 +122,23 @@ linters:
           deny:
             - pkg: "github.com/praline-labs/rewake/"
               desc: "Import only the layers allowed in docs/rules/layout.md."
+        adapter-pi:
+          list-mode: lax
+          files:
+            - "${base-path}/internal/adapter/pi/**.go"
+          allow:
+            - "github.com/praline-labs/rewake/internal/adapter$"
+            - "github.com/praline-labs/rewake/internal/tool$"
+            - "github.com/praline-labs/rewake/internal/tool/"
+            - "github.com/praline-labs/rewake/internal/core$"
+            - "github.com/praline-labs/rewake/internal/core/"
+            - "github.com/praline-labs/rewake/internal/infra$"
+            - "github.com/praline-labs/rewake/internal/infra/"
+            - "github.com/praline-labs/rewake/internal/adapter/pi$"
+            - "github.com/praline-labs/rewake/internal/adapter/pi/"
+          deny:
+            - pkg: "github.com/praline-labs/rewake/"
+              desc: "Import only the layers allowed in docs/rules/layout.md."
         adapter-new:
           list-mode: lax
           files:
@@ -129,6 +146,7 @@ linters:
             - "!${base-path}/internal/adapter/catalog/**.go"
             - "!${base-path}/internal/adapter/claude/**.go"
             - "!${base-path}/internal/adapter/fixture/**.go"
+            - "!${base-path}/internal/adapter/pi/**.go"
           allow:
             - "github.com/praline-labs/rewake/internal/adapter$"
             - "github.com/praline-labs/rewake/internal/core$"

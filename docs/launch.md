@@ -132,6 +132,32 @@ A Claude Code session reports no telemetry in this build, and its row of `rewake
 carries none. The context fill and compaction come back through the mod, as parity with 1.x
 (stage 5 of [the stage plan](v2/design.md#the-stage-plan-from-here)).
 
+### pi
+
+`rewake pi` requires pi 1.2.0 or newer. The version is checked through the same program
+that will run the session, including a `--command` wrapper. That wrapper must `exec` pi:
+the extension socket admits only the exact harness pid and process start time.
+
+The adapter embeds `extension.ts` and its management module, writing both in the run
+directory. It adds `-ne -e
+<extension.ts> -na` and, unless `--no-intro`, its briefing through the repeatable
+`--append-system-prompt`. `-ne` disables discovered, configured and built-in extensions;
+explicit `-e` extensions still load. `-na` ignores project resources requiring trust.
+Neither flag edits the person's configuration. The socket path is passed in
+`REWAKE_PI_SOCKET`; nothing is injected as a first user message.
+
+A new conversation named by rewake is passed as `--session-id <uuid>`. A conflicting
+session, resume, continue, fork or `--no-session` option is refused. `--worktree` is
+rewake's flag and starts a new conversation in its own checkout.
+
+The extension connects from `session_start`. Its accepted hello makes Wake,
+TurnBoundary and Telemetry live, plus Control when the run has its control directory;
+a disconnected connection withdraws them. The boundary reports only after the harness
+starts, so tasks wait for that readiness. Native context, model and thinking level feed
+main's telemetry. Compact accepts a focus and refuses a running turn; interrupt waits
+for the turn to settle aborted and leaves its actor in native history. No limits are
+reported. The exchange and its verified native behavior are in [research-pi.md](research-pi.md).
+
 ### A worktree for a launch
 
 `rewake claude --worktree` and `rewake --main claude --worktree` give a session a checkout of its

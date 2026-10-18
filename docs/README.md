@@ -24,7 +24,7 @@ Sessions and launches:
 
 - [session-record.md](session-record.md) — the session record: every field, the boot, how a record is published, updated and pruned.
 - [roles.md](roles.md) — roles and names: the catalogue, what each role is told and reports, how a role and a name are chosen.
-- [launch.md](launch.md) — the wrapper's launch sequence, signals, room and role flags, the Claude Code flags, the intro.
+- [launch.md](launch.md) — the wrapper's launch sequence, signals, room and role flags, the harness flags, the intro.
 - [launch-defaults.md](launch-defaults.md) — model and effort defaults nobody typed, launch aliases and which flags a typed one replaces.
 - [worktree.md](worktree.md) — the checkout `--worktree` gives a launch, `.worktreeinclude`, and `rewake worktree land`, `finish`, `ls`, `rm`.
 - [install.md](install.md) — building and installing locally, the npm dry run, the upgrade from 1.x, the release gate.
@@ -35,7 +35,7 @@ Mail and reports:
 - [delivery-turn-end.md](delivery-turn-end.md) — a finished turn becoming a report: `turn-ended`, the report's derived id, what a retry replays.
 - [delivery-owed.md](delivery-owed.md) — `rewake inbox --owed` and `--awaited`: what a session still owes and what a run still waits on.
 - [delivery-sent.md](delivery-sent.md) — `rewake withdraw`, `rewake edit` and `send --to`: what a sender can still do with a sent message.
-- [delivery-adapters.md](delivery-adapters.md) — how a notice reaches a harness: the Claude Code socket line, receipts, the startup gate.
+- [delivery-adapters.md](delivery-adapters.md) — how a notice reaches a harness: the Claude Code socket line and receipts, the pi extension, startup gates.
 - [inbox-groups.md](inbox-groups.md) — grouped incoming mail: the session table, `--peek`, `--message <id>`, the window that fixes a group.
 - [mailbox-records.md](mailbox-records.md) — every kind of file a mailbox holds, the reading before any effect, the stop on record.
 - [turn-outcomes.md](turn-outcomes.md) — turn ends that are not an ordinary report: a failed turn, a keyboard stop, `rewake pending`.
@@ -71,6 +71,7 @@ Each fact carries where it was verified; they age with harness versions.
 - [research-claude-control.md](research-claude-control.md) — what reaches a running Claude Code session from outside besides a message.
 - [research-claude-actions.md](research-claude-actions.md) — what a function-hooks plugin can do to its own session: compact, abort, reload.
 - [research-claude-mod.md](research-claude-mod.md) — the dated records of stage 4's live probe of the mod on Claude Code.
+- [research-pi.md](research-pi.md) — pi 1.2.0 launch and extension facts, mock probes, telemetry and control, the adapter protocol and its limits.
 - [research-launch.md](research-launch.md) — what an installed binary answers: model and effort catalogues, repeatable flags, npm packages.
 - [research-worktree.md](research-worktree.md) — Claude Code's own worktree beside rewake's: continuations, trust, `.worktreeinclude`.
 - [prior-art.md](prior-art.md) — how other tools deliver messages between agents, what to borrow and what to avoid.
