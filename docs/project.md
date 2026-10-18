@@ -177,6 +177,14 @@ and the core does without whatever is missing, saying so rather than pretending.
 run actually has is checked when it starts, not assumed from what the adapter offers.
 See [v2/design-api.md](v2/design-api.md#the-capabilities).
 
+**Main answers a worker's permission requests and questions.** When a worker on Claude Code
+asks for a permission or the model asks a question, the request comes to main as a letter with
+its choices — allow once, allow for this session, refuse with a reason, or the question's own
+options — and main answers with `rewake answer`; the worker's call goes on with that answer. A
+person at the worker's screen may answer first; with no answer in two minutes the worker is
+refused and told to say what it needs. Main's own dialogs stay its own. (The owner's decision,
+October 18, 2026; see [permission-requests.md](permission-requests.md).)
+
 **Compaction and interrupt.** The main session can compact another session's
 conversation, optionally saying what the summary should keep, and can stop the turn
 another session is working on; it sees how full each session's context is before it hands
