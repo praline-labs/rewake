@@ -298,20 +298,20 @@ func chunks(t *testing.T, pieces []string) string {
 }
 
 // A red engine with no case to explain it names the tests that failed. That is
-// the shape a mutant that failed to build used to produce, and "no case
-// reporting a failure" alone left the next reader with nothing to look at.
+// useful when setup fails before a case can publish evidence: "no case
+// reporting a failure" alone leaves the reader with nothing to look at.
 func TestAnUnexplainedRedEngineNamesItsFailedTests(t *testing.T) {
 	text := stream(t, []string{
 		caseLine(t, record.Case{Case: "stub", Outcome: outcomePass}),
 		runRecordLine("stub"),
 	}, true)
-	failed, _ := json.Marshal(map[string]any{"Action": "fail", "Package": "workflow", "Test": "TestBatchControlsCrosswise/claude/window-under-replay"})
+	failed, _ := json.Marshal(map[string]any{"Action": "fail", "Package": "workflow", "Test": "TestBatchArrival/fixture"})
 	text = string(failed) + "\n" + text
 	found := summarize(t, text)
 	code := 1
 	found.EngineExit = &code
 	rendered := render(t, found)
-	if !strings.Contains(rendered, "failed test  TestBatchControlsCrosswise/claude/window-under-replay") {
+	if !strings.Contains(rendered, "failed test  TestBatchArrival/fixture") {
 		t.Errorf("the failed test is not named:\n%s", rendered)
 	}
 }

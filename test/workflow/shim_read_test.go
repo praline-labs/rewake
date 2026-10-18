@@ -144,9 +144,6 @@ func (s *shimSession) readMailbox() (string, error) {
 	if err := insideACase(); err != nil {
 		return "", err
 	}
-	if os.Getenv(shimReadFails) != "" {
-		return "", errors.New("the mailbox read was made to fail")
-	}
 	waitAtReadGate()
 	arguments := []string{"inbox"}
 	if os.Getenv(shimInboxJSON) != "" {

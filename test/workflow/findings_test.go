@@ -6,11 +6,8 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
-	"slices"
 	"strings"
 	"sync"
-	"testing"
-	"time"
 )
 
 // What the scenarios that answer by findings share, and the switches of the
@@ -34,58 +31,6 @@ func show[T any](value *T) string {
 		return "unknown"
 	}
 	return fmt.Sprint(*value)
-}
-
-// runGateControl runs a scenario against a mutant on the gate column, where a
-// control belongs since the gate's red is the one that blocks.
-func runGateControl(t *testing.T, scenario string, play func(*testing.T, *Case, *Isolation) []telemetryFinding, mutant mutation, breaks ...string) {
-	t.Helper()
-	runFindingsControlOn(t, gateColumn().harness, scenario, play, mutant, breaks...)
-}
-
-// runFindingsControlOn runs a scenario against a mutant on a column named by
-// its harness, and requires exactly the named observations to break — judged,
-// not merely unread — while every other one holds. A mutant that broke
-// everything would otherwise pass as a control of whatever it was named for.
-func runFindingsControlOn(t *testing.T, harness, scenario string, play func(*testing.T, *Case, *Isolation) []telemetryFinding, mutant mutation, breaks ...string) {
-	t.Helper()
-	name := scenario + "-control-" + mutant.name
-	enterScenario(t, name)
-	want := "the " + mutant.name + " mutant breaks " + strings.Join(breaks, "; ") + ", and nothing else"
-	c := Start(t, Spec{
-		Name:         name,
-		Harness:      harness,
-		Observations: []string{want},
-		Deadline:     120 * time.Second,
-	})
-	binary, err := buildMutant(c, mutant)
-	if err != nil {
-		c.Contradicted(want, "the mutant could not be built: %v", err)
-		return
-	}
-	findings := play(t, c, Isolate(t, c, binary))
-	var wrong, broke []string
-	for _, finding := range findings {
-		expected := slices.Contains(breaks, finding.observation)
-		switch {
-		case !finding.judged:
-			wrong = append(wrong, "could not judge "+finding.observation+": "+finding.detail)
-		case expected && finding.held:
-			wrong = append(wrong, finding.observation+" held anyway: "+finding.detail)
-		case !expected && !finding.held:
-			wrong = append(wrong, finding.observation+" broke too: "+finding.detail)
-		case expected:
-			broke = append(broke, finding.observation+": "+finding.detail)
-		}
-	}
-	if len(broke) != len(breaks) && len(wrong) == 0 {
-		wrong = append(wrong, fmt.Sprintf("the scenario made %d of the %d observations named", len(broke), len(breaks)))
-	}
-	if len(wrong) > 0 {
-		c.Contradicted(want, "%s", strings.Join(wrong, "; "))
-		return
-	}
-	c.Observed(want, strings.Join(broke, "; "))
 }
 
 // harnessArgs are the arguments the wrapper gave the harness: everything after

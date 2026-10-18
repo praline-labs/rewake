@@ -304,9 +304,6 @@ var toolList = toolScenario{
 	},
 }
 
-// toolScenarios are the six, for their controls.
-var toolScenarios = []toolScenario{toolInbox, toolSend, toolPending, toolWhoami, toolRetry, toolList}
-
 // sentHeadsUp is what send --json answers of a heads-up.
 type sentHeadsUp struct {
 	ID      string `json:"id"`

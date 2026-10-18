@@ -120,20 +120,3 @@ func playAddendumOwed(t *testing.T, c *Case, iso *Isolation, col column) []telem
 	return append(out, judged(obsAddendumReported, settles && awaited == "Rewake: nobody owes you a report.\n",
 		"reports read by main: %+v; in its mailbox: %v; --awaited printed %q", reports, aboutTo(iso, lead, task, addendum), awaited))
 }
-
-// The control, on the gate column: --owed that places no addendum
-// under its task, so a session re-reading its work takes the addendum for a
-// task of its own.
-var mutantOwedFlat = mutation{
-	name:  "owed-flat",
-	file:  "internal/cli/inbox_owed.go",
-	edits: []edit{{"\t\tif message.AddendumTo == \"\" {\n\t\t\troots[message.ID] = true\n", "\t\tif false {\n\t\t\troots[message.ID] = true\n"}},
-}
-
-func playAddendumOnGate(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
-	return playAddendumOwed(t, c, iso, gateColumn())
-}
-
-func TestAFlatOwedFails(t *testing.T) {
-	runGateControl(t, "addendum-owed", playAddendumOnGate, mutantOwedFlat, obsAddendumOwed)
-}

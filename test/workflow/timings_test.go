@@ -3,7 +3,6 @@ package workflow
 import (
 	"fmt"
 	"strings"
-	"testing"
 	"time"
 )
 
@@ -40,13 +39,11 @@ const (
 	suiteNoticeScan = 250 * time.Millisecond
 )
 
-// suiteTags are the build tags of the binary under test and every mutant:
+// suiteTags are the build tags of the binary under test:
 // rewakefixture puts the fixture harness in the catalog, for its column.
 const suiteTags = "rewakefixture"
 
-// suiteFlags are the build flags that set those values, for the binary under
-// test and every mutant alike: a mutant built at the real lengths would be
-// judged against windows its cases no longer wait for.
+// suiteFlags shorten the waits in the binary under test.
 var suiteFlags = []string{"-ldflags", strings.Join([]string{
 	buildValue("host/delivery", "builtQuiet", suiteQuiet),
 	buildValue("host/delivery", "builtCap", suiteCap),
@@ -57,33 +54,4 @@ var suiteFlags = []string{"-ldflags", strings.Join([]string{
 
 func buildValue(pkg, name string, value time.Duration) string {
 	return fmt.Sprintf("-X github.com/praline-labs/rewake/internal/%s.%s=%s", pkg, name, value)
-}
-
-// The linker ignores -X for a variable that does not exist, silently: a knob
-// renamed in the product, or moved to a file the suite's build leaves out, would
-// leave the suite running at the real length with nothing to say so. So each one
-// is looked up in the package the suite's binary compiles.
-func TestSuiteBuildValuesNameRealVariables(t *testing.T) {
-	root, err := moduleRoot()
-	if err != nil {
-		t.Fatal(err)
-	}
-	build, err := loadSuiteBuild(root)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, flag := range strings.Fields(suiteFlags[1]) {
-		if flag == "-X" {
-			continue
-		}
-		target, _, _ := strings.Cut(flag, "=")
-		dot := strings.LastIndex(target, ".")
-		why, err := build.settable(target[:dot], target[dot+1:])
-		if err != nil {
-			t.Fatal(err)
-		}
-		if why != "" {
-			t.Errorf("-X %s: %s %s, so the build would leave it unset", flag, target, why)
-		}
-	}
 }

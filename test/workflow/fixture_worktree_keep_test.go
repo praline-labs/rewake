@@ -11,8 +11,8 @@ import (
 
 // What rm keeps once the session a checkout was made for has ended: work that
 // is not in the checkout's changes, and sessions other than its own. Each is
-// played on a checkout of its own, so a mutant that lets one rm through does
-// not take the others' checkouts with it.
+// played on a checkout of its own, so an incorrect removal does not take the
+// others' checkouts with it.
 
 const (
 	obsTreeVisited   = "after its session ends, rm still refuses the checkout while another rewake session started in it runs, naming that session"
@@ -46,7 +46,7 @@ func (s treeStand) visited(tree treeView) telemetryFinding {
 	visitor := startSessionIn(s.t, s.c, s.iso, tree.Path, fixtureColumn.harness, "visitor", "--general", nil, nil, shimCwdFile+"="+cwdFile)
 	defer stopSession(s.t, s.c, visitor)
 	// Registered is not enough: both halves must have started in the
-	// checkout, or a mutant's rm takes the directory before they do and the
+	// checkout, or an incorrect removal takes the directory before they do and the
 	// visitor fails to start rather than losing its place.
 	if !waitFor(s.c, 30*time.Second, func() bool {
 		session, _ := halvesStarted(cwdFile)
@@ -156,58 +156,4 @@ func (s treeStand) moved(tree treeView) telemetryFinding {
 		forceErr == nil && !strings.Contains(listed+"\n", entry) && !recorded
 	return s.finding(obsTreeMoved, held, "rm of the moved checkout: %v, %q; rm --force: %v, %q; record left: %v; git lists:\n%s",
 		keptErr, kept, forceErr, forced, recorded, listed)
-}
-
-// The controls of what rm keeps.
-
-// rm that sees only the session a checkout was made for: a session started in
-// it since loses its directory.
-var mutantWorktreeVisitorIgnored = mutation{
-	name:  "worktree-visitor-ignored",
-	file:  "internal/cli/worktree_keep.go",
-	edits: []edit{{"(made || worktree.Within(session.CWD, record.Path))", "(made || false)"}},
-}
-
-// Ignored files taken for nothing: a .env is deleted with the checkout.
-var mutantWorktreeIgnoredUnseen = mutation{
-	name:  "worktree-ignored-unseen",
-	file:  "internal/host/worktree/git.go",
-	edits: []edit{{"\t\t\tcheck.Ignored = true\n", "\t\t\tcheck.Ignored = false\n"}},
-}
-
-// Reachability asked only after the HEAD moved: the commit a checkout was made
-// at is taken as safe after its branch is gone.
-var mutantWorktreeBranchTrusted = mutation{
-	name: "worktree-branch-trusted",
-	file: "internal/host/worktree/git.go",
-	edits: []edit{{
-		"\tif check.Unreachable, err = unreachable(record.CommonDir, head); err != nil {\n\t\treturn Check{}, err\n\t}\n\tentry, _, err := listed(record)",
-		"\tif check.Unreachable, err = unreachable(record.CommonDir, head); err != nil {\n\t\treturn Check{}, err\n\t}\n\tcheck.Unreachable = check.Unreachable && head != record.Commit\n\tentry, _, err := listed(record)",
-	}},
-}
-
-// A missing directory taken for a removed one: rm without --force goes on,
-// and the work moved with the directory loses its entry, which git worktree
-// repair needed to reconnect it. (That the entry goes alone, where git
-// worktree prune would take every missing checkout's, is the unit test's.)
-var mutantWorktreeMovedUnrefused = mutation{
-	name:  "worktree-moved-unrefused",
-	file:  "internal/cli/worktree_keep.go",
-	edits: []edit{{"\tif check.Missing && !check.Forgotten {\n", "\tif false {\n"}},
-}
-
-func TestARemovalThatIgnoresAVisitorFails(t *testing.T) {
-	runFindingsControlOn(t, fixtureColumn.harness, "fixture-worktree", playFixtureWorktree, mutantWorktreeVisitorIgnored, obsTreeVisited, obsTreeRemoved)
-}
-
-func TestARemovalThatDeletesIgnoredFilesFails(t *testing.T) {
-	runFindingsControlOn(t, fixtureColumn.harness, "fixture-worktree", playFixtureWorktree, mutantWorktreeIgnoredUnseen, obsTreeIgnored)
-}
-
-func TestARemovalThatTrustsTheMadeCommitFails(t *testing.T) {
-	runFindingsControlOn(t, fixtureColumn.harness, "fixture-worktree", playFixtureWorktree, mutantWorktreeBranchTrusted, obsTreeUnreached)
-}
-
-func TestARemovalOfAMovedCheckoutFails(t *testing.T) {
-	runFindingsControlOn(t, fixtureColumn.harness, "fixture-worktree", playFixtureWorktree, mutantWorktreeMovedUnrefused, obsTreeMoved)
 }

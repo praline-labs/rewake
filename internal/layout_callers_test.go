@@ -1,3 +1,4 @@
+// Package internal checks the callers of mailbox entry points that require a lock.
 package internal
 
 import (
@@ -92,7 +93,7 @@ func lockedReferences(t *testing.T, b build) map[string][]string {
 	found := map[string][]string{}
 	for _, pkg := range pkgs {
 		path, ok := judged(pkg.ImportPath)
-		if !ok || pkg.ForTest != "" {
+		if !ok {
 			continue
 		}
 		fset := token.NewFileSet()

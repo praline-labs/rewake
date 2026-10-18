@@ -150,17 +150,6 @@ func joinPool(t *testing.T, scenario string) {
 	})
 }
 
-// enterScenarioAround enters a scenario whose cases are its subtests, each of
-// which joins the pool itself — the crosswise checks, a case per pair. The
-// test registers the scenario and runs in parallel, holding no slot: its
-// subtests would otherwise run one at a time inside it.
-func enterScenarioAround(t *testing.T, name string) string {
-	t.Helper()
-	binary := enterSerialScenario(t, name)
-	runParallel(t)
-	return binary
-}
-
 // dispatch hands free slots to the waiting tickets, highest priority first and
 // in arrival order among equals. Called with pool.mu held.
 func dispatch() {

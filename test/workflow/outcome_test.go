@@ -58,8 +58,9 @@
 //   - fixtureshim_test.go: the fixture harness's program, the gate's, the one
 //     column since the Claude Code column retired in S9.
 //   - findings_test.go: what the scenarios that answer by findings share.
-//   - classification_test.go, regression_test.go, regression_processes_test.go
-//     and publication_test.go: the suite's tests of itself.
+//   - recorder_test.go: the test reporter used by the regression checks.
+//   - regression_test.go, regression_processes_test.go and publication_test.go:
+//     the suite's regression checks.
 //
 // The exported names here are not an API: nothing outside a test file can
 // import them. They are exported for the move that stage 2 expects — when the

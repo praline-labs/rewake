@@ -22,9 +22,8 @@ const selfCheckTimeout = 4 * time.Minute
 // and asserts that a scenario which skips a required observation makes the run
 // fail.
 //
-// The stand-in in classification_test.go proves the classifier; it cannot
-// prove that a real scenario reaches it. Start registers the finaliser through
-// t.Cleanup, and if that registration were ever dropped, every scenario would
+// Start registers the finaliser through t.Cleanup. If that registration were
+// ever dropped, every scenario would
 // still look green: observations made, nobody reporting, no verdict published,
 // no test noticing. Only a child process can observe that, because a scenario
 // that correctly fails would otherwise fail the test watching it.

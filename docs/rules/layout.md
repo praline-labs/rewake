@@ -1,16 +1,14 @@
 # Rules: the layout
 
-What each layer of the tree may import, where a harness may be named, and how adapters
-reach the program. The import rule and the registry rule are held by one test over the
-whole module, `internal/layout_test.go`. The layout and its reasons are
-[design.md](../v2/design.md#the-layout); where each package lives is
-[code.md](../code.md). The rules have no numbers: each section below is one rule.
+What each layer of the tree may import and where a harness may be named. The
+import rule is held by `depguard` in [.golangci.yml](../../.golangci.yml); the
+layout and its reasons are in [design.md](../v2/design.md#the-layout), and each
+package's place in [code.md](../code.md).
 
 ## The import rule
 
-Every package of the module, its test imports included, in every build variant — with
-and without `-race`, `rewakefault`, `rewakefixture` and both — imports only what its layer
-may. A layer always imports itself, and an adapter its own parts:
+A layer always imports itself, and an adapter its own parts. Test imports obey
+these same boundaries:
 
 | Layer | May import |
 |---|---|
@@ -19,34 +17,32 @@ may. A layer always imports itself, and an adapter its own parts:
 | `tool` | `core`, `infra` |
 | `adapter` | `core`, `infra` — the values the interfaces carry |
 | `adapter/<name>` | `adapter`, `tool`, `core`, `infra`; never another adapter |
-| `adapter/catalog` | `adapter` and every `adapter/<name>` — the only package that does |
+| `adapter/catalog` | `adapter` and every `adapter/<name>` |
 | `host` | `adapter` (the interfaces), `tool`, `core`, `infra`; never an adapter |
 | `cli` | `host`, `adapter`, `tool`, `core`, `infra`; never `adapter/catalog` or an adapter |
 | `cmd/rewake` | `cli`, `adapter/catalog` |
 
-Every layer but `infra` may import another module's package, each dependency its own
-decision (`AGENTS.md`, "Code"). A module taken as an exception to that rule may be
-confined to the one package it was taken for: `github.com/charmbracelet/` is imported by
-`internal/host/terminal` alone ([stage4-space.md](../v2/stage4-space.md#the-terminal-library)),
-and an import of it anywhere else fails naming the file and the package that may. A forbidden edge fails naming both packages and the file
-that makes it, and the build tag when only a tagged build has it; a package in no layer
-fails; a directory with a module of its own is no package of this one. The mail
-functions that run under a mailbox lock their caller holds keep the callers the test
-lists, since the lock is not reentrant and nothing at run time would say a caller is
-outside its section.
+Every layer may import the standard library. Every layer but `infra` may also
+import another module's package, each dependency its own decision (`AGENTS.md`,
+"Code"). `github.com/charmbracelet/` stays confined to
+`internal/host/terminal`, the package it was taken for
+([stage4-space.md](../v2/stage4-space.md#the-terminal-library)). The confinement
+includes tests and excludes child packages of `terminal`.
 
-Tests:
-- `internal/layout_test.go` `TestImportsFollowTheLayers`
-- `internal/layout_cases_test.go` `TestAForbiddenEdgeFailsNamingBothPackagesAndTheFile`
-- `internal/layout_cases_test.go` `TestAnEdgeOnlyATagBuildsFailsNamingTheTag`
-- `internal/layout_cases_test.go` `TestAConfinedLibraryIsImportedByItsPackageAlone`
-- `internal/layout_cases_test.go` `TestAPackageInNoPlaceFails`
-- `internal/layout_cases_test.go` `TestOneAdapterMayNotImportAnother`
-- `internal/layout_discovery_test.go` `TestEveryImportReachesTheRule`
-- `internal/layout_discovery_test.go` `TestARaceOnlyFileIsJudged`
-- `internal/layout_discovery_test.go` `TestADirectoryWithItsOwnModuleIsNoPackage`
-- `internal/layout_callers_test.go` `TestTheLockedEntryPointsKeepTheirCallers`
-- `internal/layout_callers_test.go` `TestCallerProblemsSeeEveryMismatch`
+The lint run checks the files selected by its build tags, including tests. The
+configured run includes `rewakefixture`; a different tag set is checked with
+`golangci-lint run --build-tags <tags> ./...`. Unlike the former layout test,
+lint does not enumerate eight builds or reject a directory merely for being
+outside the named layers. A new layer is a design change and needs its rule in
+`.golangci.yml`. An adapter gets a rule allowing its private subtree and an
+exclusion from `adapter-new`: depguard cannot express "the current adapter" as
+an import prefix. Until that rule is added, the fallback allows only the shared
+layers, never another adapter. `test/` and `tools/` are drivers outside the layers.
+
+The mail functions that run under a mailbox lock their caller holds keep the
+callers checked in `internal/layout_callers_test.go`, over every production tag
+set. The lock is not reentrant; a caller outside its section would otherwise
+run unlocked with no warning from the lock itself.
 
 ## Harness names outside the adapters
 
@@ -57,19 +53,5 @@ explains core code by one harness's behaviour is the first step toward a branch 
 Since the owner's decision of October 17, 2026 no test reads the words; the import rule
 keeps every adapter package out of the core, and review holds the rest.
 
-## No registry
-
-No package under `adapter` declares `func init`, and no package-level variable of an
-adapter type, or of a slice or map of them, exists outside `adapter/catalog`'s
-constructor, in a test file as in any other, whatever the file's build constraint; two
-declarations on one line are two.
-`cmd/rewake` builds the catalogue value and passes it down, so a third harness is one
-more argument there.
-
-Tests:
-- `internal/layout_test.go` `TestNoAdapterIsRegistered`
-- `internal/layout_cases_test.go` `TestAnInitThatRegistersAnAdapterFails`
-- `internal/layout_cases_test.go` `TestAPackageLevelVariableHoldingAdaptersFails`
-- `internal/layout_discovery_test.go` `TestARegistryInATestFileFails`
-- `internal/layout_discovery_test.go` `TestEveryFileIsReadWhateverItsConstraint`
-- `internal/layout_discovery_test.go` `TestTwoDeclarationsOnOneLineAreTwo`
+Decided by the owner, October 18, 2026: the import check moves to depguard and
+the separate prohibition of adapter registries is removed.

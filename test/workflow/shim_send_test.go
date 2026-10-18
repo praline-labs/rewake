@@ -150,9 +150,6 @@ func sendSecond() {
 	}
 	want, state := os.Getenv(shimSendWhenWorking), "working"
 	if want == "" {
-		want, state = os.Getenv(shimSendWhenIdle), "idle"
-	}
-	if want == "" {
 		return
 	}
 	seen, reached := awaitActivity(want, state)

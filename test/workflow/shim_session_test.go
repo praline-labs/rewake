@@ -145,7 +145,7 @@ func (s *shimSession) recordTurnEvent(kind, turn, detail string) {
 
 // turnOutcome is what the session records about how its turn ended.
 func turnOutcome() string {
-	if turnFailed() {
+	if os.Getenv(shimLateFailure) != "" {
 		return "failed"
 	}
 	return "completed"
@@ -249,13 +249,6 @@ func (s *shimSession) recordDelivered(notice mailboxNotice) {
 	defer func() { _ = file.Close() }()
 	for _, member := range notice.Members {
 		id := member.ID
-		if os.Getenv(shimWrongReportID) != "" {
-			// The delivery was real; what the scenario is told about it is
-			// not. This is how an observation that only looks at "a report
-			// came back" is told apart from one that checks which message the
-			// report settles.
-			id = "0000-not-the-message-that-arrived"
-		}
 		_, _ = fmt.Fprintln(file, id)
 	}
 }
@@ -284,14 +277,5 @@ func firstLine(text string) string {
 // holdWindow bounds the wait for a second delivery to be steered in. It is a
 // ceiling on a wait that a healthy run ends in milliseconds — the sender
 // watches the recipient's telemetry and sends as soon as it says working — and
-// a run that reaches it has already failed: nothing arrived mid-turn. Four
-// seconds and no more because the controls that steer nothing wait it out in
-// full, and the suite pays that wait once per control and crosswise pair.
+// a run that reaches it has already failed: nothing arrived mid-turn.
 const holdWindow = 4 * time.Second
-
-// turnFailed reports whether this turn must end in a failure. Two switches
-// reach it: one fails a turn after its answer was sent, the other fails the
-// held operation a mid-turn scenario is built on.
-func turnFailed() bool {
-	return os.Getenv(shimLateFailure) != "" || os.Getenv(shimFailHeldTurn) != ""
-}

@@ -13,10 +13,187 @@ run:
 linters:
   default: standard
   enable:
+    - depguard
     - gocritic
     - misspell
     - revive
   settings:
+    # Each rule includes test files. Lax mode permits other modules while
+    # the module-wide deny admits only the more specific layer paths below.
+    # Exact matches end in $, and descendant prefixes include / so a sibling
+    # such as coreextra is never mistaken for core.
+    depguard:
+      rules:
+        infra:
+          list-mode: strict
+          files:
+            - "${base-path}/internal/infra/**.go"
+          allow:
+            - "$gostd"
+            - "C$"
+            - "github.com/praline-labs/rewake/internal/infra$"
+            - "github.com/praline-labs/rewake/internal/infra/"
+        core:
+          list-mode: lax
+          files:
+            - "${base-path}/internal/core/**.go"
+          allow:
+            - "github.com/praline-labs/rewake/internal/core$"
+            - "github.com/praline-labs/rewake/internal/core/"
+            - "github.com/praline-labs/rewake/internal/infra$"
+            - "github.com/praline-labs/rewake/internal/infra/"
+          deny:
+            - pkg: "github.com/praline-labs/rewake/"
+              desc: "Import only the layers allowed in docs/rules/layout.md."
+        tool:
+          list-mode: lax
+          files:
+            - "${base-path}/internal/tool/**.go"
+          allow:
+            - "github.com/praline-labs/rewake/internal/tool$"
+            - "github.com/praline-labs/rewake/internal/tool/"
+            - "github.com/praline-labs/rewake/internal/core$"
+            - "github.com/praline-labs/rewake/internal/core/"
+            - "github.com/praline-labs/rewake/internal/infra$"
+            - "github.com/praline-labs/rewake/internal/infra/"
+          deny:
+            - pkg: "github.com/praline-labs/rewake/"
+              desc: "Import only the layers allowed in docs/rules/layout.md."
+        adapter-api:
+          list-mode: lax
+          files:
+            - "${base-path}/internal/adapter/*.go"
+          allow:
+            - "github.com/praline-labs/rewake/internal/adapter$"
+            - "github.com/praline-labs/rewake/internal/core$"
+            - "github.com/praline-labs/rewake/internal/core/"
+            - "github.com/praline-labs/rewake/internal/infra$"
+            - "github.com/praline-labs/rewake/internal/infra/"
+          deny:
+            - pkg: "github.com/praline-labs/rewake/"
+              desc: "Import only the layers allowed in docs/rules/layout.md."
+        host:
+          list-mode: lax
+          files:
+            - "${base-path}/internal/host/**.go"
+          allow:
+            - "github.com/praline-labs/rewake/internal/host$"
+            - "github.com/praline-labs/rewake/internal/host/"
+            - "github.com/praline-labs/rewake/internal/tool$"
+            - "github.com/praline-labs/rewake/internal/tool/"
+            - "github.com/praline-labs/rewake/internal/core$"
+            - "github.com/praline-labs/rewake/internal/core/"
+            - "github.com/praline-labs/rewake/internal/infra$"
+            - "github.com/praline-labs/rewake/internal/infra/"
+            - "github.com/praline-labs/rewake/internal/adapter$"
+          deny:
+            - pkg: "github.com/praline-labs/rewake/"
+              desc: "Import only the layers allowed in docs/rules/layout.md."
+        cli:
+          list-mode: lax
+          files:
+            - "${base-path}/internal/cli/**.go"
+          allow:
+            - "github.com/praline-labs/rewake/internal/cli$"
+            - "github.com/praline-labs/rewake/internal/cli/"
+            - "github.com/praline-labs/rewake/internal/host$"
+            - "github.com/praline-labs/rewake/internal/host/"
+            - "github.com/praline-labs/rewake/internal/tool$"
+            - "github.com/praline-labs/rewake/internal/tool/"
+            - "github.com/praline-labs/rewake/internal/core$"
+            - "github.com/praline-labs/rewake/internal/core/"
+            - "github.com/praline-labs/rewake/internal/infra$"
+            - "github.com/praline-labs/rewake/internal/infra/"
+            - "github.com/praline-labs/rewake/internal/adapter$"
+          deny:
+            - pkg: "github.com/praline-labs/rewake/"
+              desc: "Import only the layers allowed in docs/rules/layout.md."
+        # When adding an adapter, copy one private-subtree rule and exclude
+        # that subtree from adapter-new. Shared imports stay the same.
+        adapter-claude:
+          list-mode: lax
+          files:
+            - "${base-path}/internal/adapter/claude/**.go"
+          allow:
+            - "github.com/praline-labs/rewake/internal/adapter$"
+            - "github.com/praline-labs/rewake/internal/tool$"
+            - "github.com/praline-labs/rewake/internal/tool/"
+            - "github.com/praline-labs/rewake/internal/core$"
+            - "github.com/praline-labs/rewake/internal/core/"
+            - "github.com/praline-labs/rewake/internal/infra$"
+            - "github.com/praline-labs/rewake/internal/infra/"
+            - "github.com/praline-labs/rewake/internal/adapter/claude$"
+            - "github.com/praline-labs/rewake/internal/adapter/claude/"
+          deny:
+            - pkg: "github.com/praline-labs/rewake/"
+              desc: "Import only the layers allowed in docs/rules/layout.md."
+        adapter-fixture:
+          list-mode: lax
+          files:
+            - "${base-path}/internal/adapter/fixture/**.go"
+          allow:
+            - "github.com/praline-labs/rewake/internal/adapter$"
+            - "github.com/praline-labs/rewake/internal/tool$"
+            - "github.com/praline-labs/rewake/internal/tool/"
+            - "github.com/praline-labs/rewake/internal/core$"
+            - "github.com/praline-labs/rewake/internal/core/"
+            - "github.com/praline-labs/rewake/internal/infra$"
+            - "github.com/praline-labs/rewake/internal/infra/"
+            - "github.com/praline-labs/rewake/internal/adapter/fixture$"
+            - "github.com/praline-labs/rewake/internal/adapter/fixture/"
+          deny:
+            - pkg: "github.com/praline-labs/rewake/"
+              desc: "Import only the layers allowed in docs/rules/layout.md."
+        adapter-new:
+          list-mode: lax
+          files:
+            - "${base-path}/internal/adapter/*/**.go"
+            - "!${base-path}/internal/adapter/catalog/**.go"
+            - "!${base-path}/internal/adapter/claude/**.go"
+            - "!${base-path}/internal/adapter/fixture/**.go"
+          allow:
+            - "github.com/praline-labs/rewake/internal/adapter$"
+            - "github.com/praline-labs/rewake/internal/tool$"
+            - "github.com/praline-labs/rewake/internal/tool/"
+            - "github.com/praline-labs/rewake/internal/core$"
+            - "github.com/praline-labs/rewake/internal/core/"
+            - "github.com/praline-labs/rewake/internal/infra$"
+            - "github.com/praline-labs/rewake/internal/infra/"
+          deny:
+            - pkg: "github.com/praline-labs/rewake/"
+              desc: "Import only the layers allowed in docs/rules/layout.md."
+        catalog:
+          list-mode: lax
+          files:
+            - "${base-path}/internal/adapter/catalog/**.go"
+          allow:
+            - "github.com/praline-labs/rewake/internal/adapter$"
+            - "github.com/praline-labs/rewake/internal/adapter/"
+          deny:
+            - pkg: "github.com/praline-labs/rewake/"
+              desc: "Import only the layers allowed in docs/rules/layout.md."
+        command:
+          list-mode: lax
+          files:
+            - "${base-path}/cmd/rewake/*.go"
+          allow:
+            - "github.com/praline-labs/rewake/cmd/rewake$"
+            - "github.com/praline-labs/rewake/internal/adapter/catalog$"
+            - "github.com/praline-labs/rewake/internal/adapter/catalog/"
+            - "github.com/praline-labs/rewake/internal/cli$"
+            - "github.com/praline-labs/rewake/internal/cli/"
+          deny:
+            - pkg: "github.com/praline-labs/rewake/"
+              desc: "Import only the layers allowed in docs/rules/layout.md."
+        terminal-library:
+          list-mode: lax
+          files:
+            - "${base-path}/internal/**.go"
+            - "${base-path}/cmd/**.go"
+            - "!${base-path}/internal/host/terminal/*.go"
+          deny:
+            - pkg: "github.com/charmbracelet/"
+              desc: "Only internal/host/terminal may import this library."
     misspell:
       locale: US
 

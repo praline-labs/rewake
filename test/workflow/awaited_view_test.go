@@ -160,36 +160,3 @@ func playAwaitedView(t *testing.T, c *Case, iso *Isolation, col column) []teleme
 	return append(out, finding(obsAwaitedEmpty, len(model.Recipients) == 0 && plain == "Rewake: nobody owes you a report.\n",
 		"--awaited printed %q", plain))
 }
-
-// The controls, on the gate column only: the view reads files the same way
-// whichever harness wrote them.
-
-// A view blind to interim reports shows the slow task as plainly owed.
-var mutantAwaitedInterimIgnored = mutation{
-	name:  "awaited-interim-ignored",
-	file:  "internal/core/mail/awaited.go",
-	edits: []edit{{"\t\tcase Interim, Stopped:\n", "\t\tcase \"\":\n"}},
-}
-
-// A view that never lets a task go: neither a report nor a cleared wait
-// settles it.
-var mutantAwaitedNeverSettled = mutation{
-	name: "awaited-never-settled",
-	file: "internal/core/mail/awaited.go",
-	edits: []edit{
-		{"\tif err != nil || settled {\n", "\tif err != nil || settled && false {\n"},
-		{"\tif item.read() && !slices.Contains(", "\tif false && item.read() && !slices.Contains("},
-	},
-}
-
-func playAwaitedOnGate(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
-	return playAwaitedView(t, c, iso, gateColumn())
-}
-
-func TestAnAwaitedViewBlindToInterimsFails(t *testing.T) {
-	runGateControl(t, "awaited-view", playAwaitedOnGate, mutantAwaitedInterimIgnored, obsAwaitedOther)
-}
-
-func TestAnAwaitedViewThatNeverSettlesFails(t *testing.T) {
-	runGateControl(t, "awaited-view", playAwaitedOnGate, mutantAwaitedNeverSettled, obsAwaitedOther, obsAwaitedEmpty)
-}

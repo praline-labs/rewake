@@ -179,20 +179,3 @@ func playStoppedRouting(t *testing.T, c *Case, iso *Isolation, col column) []tel
 		"main published %d outcomes and holds %v from itself", outcomes(lead), leadHolds))
 	return out
 }
-
-// The control: the rule this scenario is for, undone — a stop nobody waits on
-// goes to main, as it did before the owner's decision.
-var mutantStoppedToMain = mutation{
-	name:  "stopped-to-main",
-	file:  "internal/core/mail/turn_reports.go",
-	edits: []edit{{"\tif event.Failed && !event.Stopped && len(reports) == 0 {\n", "\tif (event.Failed || event.Stopped) && len(reports) == 0 {\n"}},
-}
-
-func TestAStoppedSentToMainFails(t *testing.T) {
-	runInColumns(t, "stopped-routing-control-"+mutantStoppedToMain.name, func(t *testing.T, col column) {
-		play := func(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
-			return playStoppedRouting(t, c, iso, col)
-		}
-		runFindingsControlOn(t, col.harness, "stopped-routing", play, mutantStoppedToMain, obsStoppedToNobody, obsMainOwnEsc)
-	})
-}

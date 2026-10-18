@@ -24,9 +24,6 @@ import (
 // Three heads-ups follow, 600 ms apart: each gap is far outside the first
 // collection, and still they must not wake the recipient one by one — a
 // heads-up waits a few seconds for company.
-//
-// The controls break the product, not the fixture: each one is rewake with a
-// single line changed, built through an overlay (mutant_test.go).
 func TestBatchArrival(t *testing.T) {
 	runInColumns(t, "batch-arrival", runBatchArrival)
 }
@@ -108,8 +105,7 @@ func runBatchArrival(t *testing.T, col column) {
 	c.Observed(obsAlive, "neither session left before the verdict")
 }
 
-// The observations, named once: the scenario records them and the controls
-// name which of them their breakage must take down.
+// The observations the scenario records.
 const (
 	obsListening           = "the recipient can receive mail before the letters leave"
 	obsGroupOfTwo          = "two close letters are announced as one group of two"
@@ -134,10 +130,10 @@ const (
 // time, and the sender, which waits for the recipient to be ready before its
 // letters leave — mail sent earlier would wait in the mailbox and be folded
 // into the first group, which would measure readiness rather than the window.
-func startBatchSessions(t *testing.T, c *Case, iso *Isolation, col column, controls ...string) (*scenarioSession, *scenarioSession) {
+func startBatchSessions(t *testing.T, c *Case, iso *Isolation, col column) (*scenarioSession, *scenarioSession) {
 	t.Helper()
 	worker := startHarnessSession(t, c, iso, col.harness, "worker", "--general",
-		append([]string{shimReadEach + "=1"}, controls...)...)
+		shimReadEach+"=1")
 	sender := startHarnessSession(t, c, iso, col.harness, "sender", "--main",
 		shimSendTo+"="+worker.name, readinessSwitch(worker),
 		shimSendTexts+"="+batchAlpha+"|"+batchBeta, shimSendLaterText+"="+batchGamma,
@@ -150,7 +146,7 @@ func startBatchSessions(t *testing.T, c *Case, iso *Isolation, col column, contr
 // leave, and a red line about that names this, not the grouping that never got
 // a chance to happen.
 func awaitBatchReady(c *Case, worker *scenarioSession) bool {
-	if !waitFor(c, batchWindow, func() bool { return exists(worker.ready) }) {
+	if !waitFor(c, 45*time.Second, func() bool { return exists(worker.ready) }) {
 		c.Contradicted(obsListening, "%s never started listening", worker.name)
 		return false
 	}
@@ -329,22 +325,4 @@ func atoiOr(text string, fallback int) int {
 		return fallback
 	}
 	return n
-}
-
-// readsOf counts how the reads of these letters came out: how many were
-// attempted, and how many of those the product allowed. Counting rather than
-// naming, because which letter a group hands over first follows the order of
-// their ids, which is not the order they were sent.
-func readsOf(worker *scenarioSession, ids ...string) (attempted, succeeded int) {
-	for _, id := range ids {
-		ok, tried := readOf(worker, id)
-		if !tried {
-			continue
-		}
-		attempted++
-		if ok {
-			succeeded++
-		}
-	}
-	return attempted, succeeded
 }

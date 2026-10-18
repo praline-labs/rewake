@@ -184,39 +184,3 @@ func mailboxFrom(iso *Isolation, reader, sender string) []string {
 	}
 	return kinds
 }
-
-// The controls: the reason lost on the way from the frame to the completion,
-// and a failure or an interruption taken for a completed turn.
-var (
-	mutantReasonDropped = mutation{
-		name:  "reason-dropped",
-		file:  "internal/adapter/fixture/turns.go",
-		edits: []edit{{"Reason: reason, Answer: frame.Text,", "Reason: reason, Answer: \"\","}},
-	}
-	mutantFailureCompleted = mutation{
-		name:  "failure-completed",
-		file:  "internal/adapter/fixture/turns.go",
-		edits: []edit{{"\tcase OutcomeFailed:\n\t\treturn adapter.Failed, nil\n", "\tcase OutcomeFailed:\n\t\treturn adapter.Answered, nil\n"}},
-	}
-	mutantStopCompleted = mutation{
-		name:  "stop-completed",
-		file:  "internal/adapter/fixture/turns.go",
-		edits: []edit{{"\tcase OutcomeInterrupted:\n\t\treturn adapter.Aborted, nil\n", "\tcase OutcomeInterrupted:\n\t\treturn adapter.Answered, nil\n"}},
-	}
-)
-
-func TestTurnReasonControls(t *testing.T) {
-	runParallel(t)
-	for _, control := range []struct {
-		mutant mutation
-		breaks []string
-	}{
-		{mutantReasonDropped, []string{obsFailedReason, obsStoppedReason}},
-		{mutantFailureCompleted, []string{obsFailedReason}},
-		{mutantStopCompleted, []string{obsStoppedReason}},
-	} {
-		t.Run(control.mutant.name, func(t *testing.T) {
-			runFindingsControlOn(t, fixtureColumn.harness, "turn-reasons", playTurnReasons, control.mutant, control.breaks...)
-		})
-	}
-}

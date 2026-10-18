@@ -1,8 +1,8 @@
 package workflow
 
 // How a case tells the shim what to be: the marks that say it is running
-// inside a case at all, the files it writes its evidence to, and the controls
-// that make it answer like a harness that is wrong in one specific way.
+// inside a case at all, the files it writes its evidence to, and the behavior
+// each scenario asks it to exercise.
 //
 // Everything passes through the environment because the shim is a separate
 // process, re-executed as the harness by the wrapper — a case cannot hand it a
@@ -15,18 +15,9 @@ const (
 	// stands in for each sets this.
 	shimHarness = "RW_SHIM_HARNESS"
 
-	// shimWrongReportID makes the session record a different message id than
-	// the one delivered, so that the report's link points elsewhere;
-	// shimReadFails makes the mailbox read fail.
-	shimWrongReportID = "RW_SHIM_WRONG_REPORT_ID"
-	shimReadFails     = "RW_SHIM_READ_FAILS"
 	// shimLateFailure fails the turn after its text was sent and before the
 	// wrapper has published a report for it.
 	shimLateFailure = "RW_SHIM_LATE_FAILURE"
-	// shimExitAfterTurn makes the session leave, quietly and successfully, as
-	// soon as it has worked a turn. A session that disappears before the case
-	// is judged takes its evidence with it.
-	shimExitAfterTurn = "RW_SHIM_EXIT_AFTER_TURN"
 	// shimSendTo and shimSendText make this session send a task once it is
 	// ready, so that the sender in a delivery scenario is a session rather
 	// than the test process.
@@ -71,18 +62,12 @@ const (
 	// finishes. That is the pending operation a mid-turn scenario needs, and
 	// the session's own record of it is what the scenario reads.
 	shimHoldTurn = "RW_SHIM_HOLD_TURN"
-	// shimFailHeldTurn ends the held turn with a failure instead of an answer.
-	shimFailHeldTurn = "RW_SHIM_FAIL_HELD_TURN"
 	// shimEndReason is what the fixture program's turn says when it ends
 	// failed or interrupted, in place of what it read: the reason a scenario
 	// looks for in the report, distinct from any text the mail carried.
 	shimEndReason = "RW_SHIM_END_REASON"
-	// shimSendWhenWorking and shimSendWhenIdle name the session whose telemetry
-	// the sender watches before its second letter leaves: working for a
-	// delivery that must land inside a turn, idle again for the control that
-	// must land after it.
+	// shimSendWhenWorking names the recipient whose active turn the sender awaits.
 	shimSendWhenWorking = "RW_SHIM_SEND_WHEN_WORKING"
-	shimSendWhenIdle    = "RW_SHIM_SEND_WHEN_IDLE"
 	// shimSendSecondText is the letter that goes out once that state is seen.
 	shimSendSecondText = "RW_SHIM_SEND_SECOND_TEXT"
 	// shimSendsFile is where a sender records what became of each letter it

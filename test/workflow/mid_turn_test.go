@@ -45,7 +45,7 @@ func runMidTurn(t *testing.T, col column) {
 		return
 	}
 	iso := Isolate(t, c, binary)
-	worker, sender := startMidTurnSessions(t, c, iso, col, midTurnLive)
+	worker, sender := startMidTurnSessions(t, c, iso, col)
 	defer stopSession(t, c, worker)
 	defer stopSession(t, c, sender)
 
@@ -143,8 +143,7 @@ func runMidTurn(t *testing.T, col column) {
 	c.Observed(obsMidAlive, "neither session left before the verdict")
 }
 
-// The observations, named once: the scenario records them and the controls
-// name which of them their breakage must take down.
+// The observations the scenario records.
 const (
 	obsMidReady        = "the recipient reaches an accepted conversation"
 	obsPending         = "the operation is pending when the delivery arrives"
@@ -165,9 +164,8 @@ const (
 // anything: its fixture has to show a delivery reaching a session that is
 // already working. The socket column does not: one line goes in and nothing
 // comes back, so it has no notion of a turn in progress to deliver into. A
-// harness that does not offer it is unsupported, which is not a pass — see
-// classification_test.go.
-var capabilityMidTurn = capability("observes-mid-turn-arrival")
+// harness that does not offer it is unsupported, which is not a pass.
+const capabilityMidTurn = "observes-mid-turn-arrival"
 
 // offersMidTurn records every observation as unsupported when the column
 // cannot show a mid-turn arrival, and answers whether the case may go on.
@@ -184,27 +182,14 @@ func offersMidTurn(c *Case, col column) bool {
 	return false
 }
 
-// midTurnTiming says when the second letter leaves: as soon as the recipient
-// reports working, or only once it is idle again — which is the control that
-// must take the mid-turn observation down.
-type midTurnTiming int
-
-const (
-	midTurnLive midTurnTiming = iota
-	midTurnLate
-)
-
 // startMidTurnSessions launches a recipient that holds its first turn open and
 // a sender that sends one letter now and one when the recipient reaches the
 // state this run is about.
-func startMidTurnSessions(t *testing.T, c *Case, iso *Isolation, col column, when midTurnTiming, controls ...string) (*scenarioSession, *scenarioSession) {
+func startMidTurnSessions(t *testing.T, c *Case, iso *Isolation, col column) (*scenarioSession, *scenarioSession) {
 	t.Helper()
 	worker := startHarnessSession(t, c, iso, col.harness, "worker", "--general",
-		append([]string{shimInboxJSON + "=1", shimHoldTurn + "=1"}, controls...)...)
+		shimInboxJSON+"=1", shimHoldTurn+"=1")
 	timing := shimSendWhenWorking + "=" + worker.name
-	if when == midTurnLate {
-		timing = shimSendWhenIdle + "=" + worker.name
-	}
 	sender := startHarnessSession(t, c, iso, col.harness, "sender", "--main",
 		shimInboxJSON+"=1", shimSendTo+"="+worker.name, readinessSwitch(worker),
 		shimSendText+"="+midTurnFirst, timing, shimSendSecondText+"="+midTurnSecond)

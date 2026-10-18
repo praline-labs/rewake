@@ -2,8 +2,8 @@ package workflow
 
 // The columns a scenario runs in, and what each of them can show.
 //
-// The scenarios are the same text in each: the same observations, the same
-// controls. What differs is the evidence a harness makes available, and that
+// The scenarios make the same observations in each column. What differs is
+// the evidence a harness makes available, and that
 // difference is named rather than worked around. A column that cannot show
 // something records the observation as unsupported with the capability it
 // lacks — check-runner.md is explicit that a capability applies to a single
@@ -24,26 +24,7 @@ import (
 	"testing"
 )
 
-// knownCapabilities is every capability any scenario asks about. It is filled
-// by declaring one, never written by hand: a list maintained beside the
-// declarations would be the next thing to drift, and the test that holds the
-// gate column to every capability would then hold it to a stale list.
-var knownCapabilities []string
-
-// capability declares one thing a fixture can show, and registers it.
-func capability(name string) string {
-	knownCapabilities = append(knownCapabilities, name)
-	return name
-}
-
-// Each capability traces to a row of the feature map, and each is absent for
-// a reason that belongs to the harness rather than to the fixture.
-var (
-	// capabilityNamesMembers: a delivery names the messages it carries. The
-	// socket column's notification carries an id for the announcement, a
-	// count and a preview, and never the member ids.
-	capabilityNamesMembers = capability("names-delivered-message-ids")
-)
+const capabilityNamesMembers = "names-delivered-message-ids"
 
 // column is one harness fixture: the name rewake launches it by, what it can
 // show, and whether its red blocks.
@@ -66,18 +47,6 @@ func isGate(harness string) bool {
 		}
 	}
 	return false
-}
-
-// gateColumn is the column whose red blocks; column_gate_test.go holds that
-// there is exactly one. A control runs there: a control is a mutant of the
-// product, and the column that must catch it is the one whose red blocks.
-func gateColumn() column {
-	for _, col := range columns {
-		if col.gate {
-			return col
-		}
-	}
-	panic("workflow: no column is the gate")
 }
 
 // The columns the suite runs. mid-turn's capability is declared here too, so
