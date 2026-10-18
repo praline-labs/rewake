@@ -45,7 +45,7 @@ function harness(on: any) {
   return { opened, blits }
 }
 
-test("a main's pane opens by itself with its first worker, draws its screen and blits the next", async ($, on) => {
+test("a main's pane opens on /workers alone, with its first worker, draws its screen and blits the next", async ($, on) => {
   const run = world(on, {
     replies: {
       '/v1/hello': [main],
@@ -60,7 +60,11 @@ test("a main's pane opens by itself with its first worker, draws its screen and 
   const ui = harness(on)
   await start($)
   await run.clock.settle()
-  expect(ui.opened.map((one) => one.focus)).toEqual([undefined])
+  expect(ui.opened).toEqual([])
+  const answer = await $.command.run({ command: 'workers', args: '' } as any)
+  expect(ui.opened.map((one) => [one.id, one.focus, one.closeOnEscape])).toEqual([['rewake-workers', true, true]])
+  expect(answer.text).toMatch(/click the screen to type to api; Esc returns to the prompt/)
+  await run.clock.settle()
   const drawn = await $.ui.mount(pane())
   expect(await drawn.find({ type: 'Button', text: /api {2}claude {2}m1 {2}ctx 34% {2}working/ })).toBeDefined()
   expect((await drawn.find({ key: 'screen' }))?.props).toEqual(expect.objectContaining({ columns: 4, rows: 2, cells }))
@@ -88,6 +92,8 @@ test('keys typed in the key line reach the chosen worker in order, Escape and Ct
   harness(on)
   await start($)
   await run.clock.settle()
+  await $.command.run({ command: 'workers', args: '' } as any)
+  await run.clock.settle()
   const drawn = await $.ui.mount(pane(5))
   await drawn.press({ key: 'worker-s2' })
   await run.clock.settle()
@@ -113,6 +119,8 @@ test('a worker whose screen ended is said to have ended, and no key goes to it',
   })
   harness(on)
   await start($)
+  await run.clock.settle()
+  await $.command.run({ command: 'workers', args: '' } as any)
   await run.clock.settle()
   const drawn = await $.ui.mount(pane())
   await run.clock.settle()
@@ -155,7 +163,7 @@ test('keys carried by several posts are typed once, in order', async ($, on) => 
     get: async () => undefined, set: async () => {}, remove: async () => {},
     after: (_: number, fn: () => void) => { fn() }, log: () => {},
   }
-  const shown = { blit: async () => ({}), redraw: () => {}, open: async () => {} }
+  const shown = { blit: async () => ({}), redraw: () => {} }
   const workers = new Workers(host, shown, 'load')
   workers.workers = [api as any]
   workers.chosen = 's1'

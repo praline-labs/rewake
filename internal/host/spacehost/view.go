@@ -21,6 +21,12 @@ import (
 // of a terminal.Screen holding the rows changed since the frame before, every
 // row in the first — at most one per viewEvery, until the worker's output is
 // over and a frame says so. The client writes an attach's frames.
+//
+// A frame after the first is taken viewEvery after the change that woke it,
+// not at once: a program such as Claude Code hides the cursor, draws, and
+// shows it again within a few milliseconds, and a screen taken at the first
+// change shows it hidden, so the panel's cursor blinked with every frame the
+// program drew.
 const (
 	frameScreen byte = 's'
 	viewEvery        = 30 * time.Millisecond
@@ -48,6 +54,18 @@ func (r *relay) view(conn net.Conn) {
 		if ctx.Err() != nil {
 			return
 		}
+		if seq != 0 && !s.Ended {
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(viewEvery):
+			}
+			// Changed since seq, so it answers at once, with the program's
+			// frame finished.
+			if s = r.grid.Screen(ctx, seq); ctx.Err() != nil {
+				return
+			}
+		}
 		data, err := json.Marshal(s)
 		if err != nil {
 			return
@@ -59,11 +77,6 @@ func (r *relay) view(conn net.Conn) {
 			return
 		}
 		seq = s.Seq
-		select {
-		case <-ctx.Done():
-			return
-		case <-time.After(viewEvery):
-		}
 	}
 }
 

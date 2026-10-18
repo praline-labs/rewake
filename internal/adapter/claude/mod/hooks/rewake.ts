@@ -119,7 +119,7 @@ async function hello(load: Load, request: HelloRequest, delay: number, renumbere
       load.heartbeat.begin(load.run.generation)
       if (load.run.hostsSpaces) {
         load.workers.begin()
-        try { await load.command() } catch { /* The pane still opens by itself. */ }
+        try { await load.command() } catch { /* No /workers in this load: the pane stays closed. */ }
       }
       await load.outbox.admit()
       return
@@ -192,10 +192,6 @@ export const register: Register = (on) => {
       workers: new Workers(host, {
         blit: (cells, columns, rows) => $.ui.blit({ requestId: paneId, key: 'screen', columns, rows, cells }),
         redraw: () => { $.ui.invalidate('ui.render') },
-        open: async () => {
-          await $.ui.open({ id: paneId, title: 'Workers', rows: 40 })
-          current.workers.opens()
-        },
       }, loadId),
       asks: new Asks(host, loadId),
       command: async () => {
@@ -340,9 +336,14 @@ export const register: Register = (on) => {
     if (!load?.run?.hostsSpaces) {
       return { text: 'This session opens no spaces: the workers pane is main\'s.' }
     }
-    await $.ui.open({ id: paneId, title: 'Workers', rows: 40, focus: true })
+    // Escape closes it while the pane holds the keyboard; once a click gave
+    // the screen the keys, Escape hands them back to the prompt first.
+    await $.ui.open({ id: paneId, title: 'Workers', rows: 40, focus: true, closeOnEscape: true })
     load.workers.opens()
-    return { text: '' }
+    const name = load.workers.chosenName()
+    return { text: name === ''
+      ? 'Workers pane: no worker yet; Esc closes it.'
+      : `Workers pane: click the screen to type to ${name}; Esc returns to the prompt, and Esc again at an idle, empty prompt or the pane's ✕ closes it.` }
   })
 
   on('ui.close', async ($, e, next) => {

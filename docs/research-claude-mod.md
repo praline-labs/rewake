@@ -422,3 +422,27 @@ What building [the workers' pane](v2/workers-panel.md) showed of the mod API:
 - A `Client` posting one key per post lost a letter of text typed 30 ms apart: one post a frame
   is delivered, and a later one replaces one not yet delivered (as the `ui.message` type says).
   Posting every unacknowledged key, acknowledged through the answer's `props`, lost none at 10 ms.
+
+### The pane's focus, closing and frames (later the same day, 2.1.302)
+
+Driven through a pseudo-terminal of 200 by 50, fullscreen on (`CLAUDE_CODE_NO_FLICKER=1`),
+clicks sent as SGR mouse sequences; first a probe mod, then the pane with a real Claude Code
+worker on haiku:
+
+- A `Client` in an absolutely placed `Box` drawn after a `Raster`, the size of the `Raster` and
+  drawing only its last line, leaves the `Raster` visible and takes a click on the `Raster`'s
+  cells (`onPointer` saw it, in region cells); typing then reached the `Client`, and the worker.
+- No way gives a `Client` the keyboard without a click: `ClientProps` has no `autoFocus`, and
+  `$.ui.focus` names only a `Button`, `Input` or `Select`. A pane opened with `focus` read
+  `isFocused` true, yet letters typed then went to the prompt.
+- `closeOnEscape`: Escape right after the open closed the pane. With a `Client` holding the keys,
+  Escape returned them to the prompt (`isFocused` false) and the pane stayed; a second Escape at
+  the idle, empty prompt closed it. Ctrl+X then X closed the pane only while it held the keyboard
+  (after the open, or Ctrl+X Tab); with a `Client` holding it, both keys vanished — the `Client`
+  got neither — and with the prompt holding it nothing closed. The ✕ mark closed it always.
+- An idle Claude Code worker drew no frame in 10 s. A working one drew about 9 frames a second,
+  each as two screens a few milliseconds apart — cursor hidden while drawing, then shown — and a
+  view taking the screen at the first change sent both, so the inverse cursor cell in the pane
+  blinked at that rate. Taken 30 ms after the change, every frame of a working worker had the
+  cursor shown, and the frames halved. With the worker working, each closing way above held in
+  repeated tries.

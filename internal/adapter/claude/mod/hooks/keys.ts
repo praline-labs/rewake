@@ -1,7 +1,8 @@
 // The key surface of the workers' pane (docs/v2/workers-panel.md): a Client
-// line that turns each key into the bytes a terminal sends and posts them to
-// the hooks module, which types them into the chosen worker. A click gives it
-// the keyboard; Escape never arrives here, it returns the keyboard to the
+// over the worker's screen and the line under it, which turns each key into
+// the bytes a terminal sends and posts them to the hooks module, which types
+// them into the chosen worker. A click on the screen or the line gives it the
+// keyboard; Escape never arrives here, it returns the keyboard to the
 // prompt. The prefix carries what does not arrive: Alt+a, then c for Ctrl+C,
 // e or [ for Escape, x for Ctrl+X, Alt+a for Alt+a itself; any other key
 // cancels it (P15b, docs/research-claude-mod.md).
@@ -61,6 +62,8 @@ interface State {
 
 interface Props {
   name: string
+  // rows is the region's height: the screen's rows and the key line.
+  rows?: number
   acked?: number
 }
 
@@ -99,7 +102,10 @@ export default function Keys(props: Props, surface: any) {
   const state = surface.state as State | undefined
   if (state && typeof props?.acked === 'number' && props.acked > state.seen.acked) state.seen.acked = props.acked
   const pending = state?.pending ?? false
-  const { Text } = surface.elements
+  const { Box, Text } = surface.elements
   const name = String(props?.name ?? '').replace(/[\u0000-\u001f\u007f]/g, '')
-  return Text({ dimColor: !pending, children: [pending ? hint : `keys → ${name} · click here to type · Alt+a: c=^C e=Esc x=^X`] })
+  // Drawn over the screen: the rows above the key line stay empty, so the
+  // Raster under them shows through.
+  const line = Text({ dimColor: !pending, children: [pending ? hint : `keys → ${name} · click the screen to type · Esc: to prompt · Alt+a: c=^C e=Esc x=^X`] })
+  return Box({ flexDirection: 'column', justifyContent: 'flex-end', height: Math.max(1, Number(props?.rows) || surface.rows || 1), children: [line] })
 }

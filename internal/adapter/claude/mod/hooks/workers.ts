@@ -11,7 +11,7 @@ import type { Host } from './outbox.ts'
 export const paneId = 'rewake-workers'
 
 // The list is polled this often while the pane is open, and less often
-// while it is closed, so the pane opens by itself once a worker is there.
+// while it is closed, so /workers opens it on a list already current.
 export const listOpenMs = 2000
 export const listClosedMs = 5000
 // A blit refused because the pane is not drawn waits this long.
@@ -22,7 +22,6 @@ const unmountedMs = 1000
 export interface Shown {
   blit(cells: string, columns: number, rows: number): Promise<{ deny?: string }>
   redraw(): void
-  open(): Promise<void>
 }
 
 // Screen is the chosen worker's screen as the Raster draws it.
@@ -48,7 +47,6 @@ export class Workers {
   private listing = false
   private looping?: string
   private typing = Promise.resolve()
-  private opened = false
   // taken is the last key number typed, by key surface instance.
   private taken = new Map<string, number>()
 
@@ -82,13 +80,9 @@ export class Workers {
         changed = this.choose(first) || changed
       }
     }
+    // Only /workers opens the pane: one the mod opened by itself took the
+    // person's screen while they were at the prompt.
     if (changed) this.shown.redraw()
-    if (!this.opened && this.workers.length > 0) {
-      // Opened by the mod itself, without the keyboard: Claude Code shows it
-      // from 144 columns, and /workers opens it at any width.
-      this.opened = true
-      void this.shown.open().catch(() => { /* The person opens it with /workers. */ })
-    }
     this.host.after(this.isOpen ? listOpenMs : listClosedMs, () => { void this.list() })
   }
 
