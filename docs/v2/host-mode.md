@@ -3,8 +3,9 @@
 The owner's decision of October 18, 2026 ([project.md](../project.md#what-the-tool-does), "Main
 starts its workers"): `rewake claude`, started in a host mode, holds the person's terminal and
 shows main's Claude Code and each worker above a bottom tab bar, with a sidebar of workers on the
-right. An ordinary `rewake claude` stays transparent. The pane and `rewake attach` go in a later
-step. The techniques come from [agent-deck-ideas](../archive/v2/agent-deck-ideas.md) §2–3. The
+right. An ordinary `rewake claude` stays transparent. The bar and the sidebar replace the pane:
+once step 1 works live, the pane, `/workers`, the `workers/*` endpoints and `rewake attach` are
+removed outright (the owner's decision, October 18, 2026). The techniques come from [agent-deck-ideas](../archive/v2/agent-deck-ideas.md) §2–3. The
 mod side is the `mods` skill's, taken on Claude Code 2.1.302.
 
 ## Topology
@@ -29,13 +30,21 @@ person's terminal ⇄ host (main's wrapper) ⇄ pty ⇄ main's harness      loca
   The host finds spaces the way `spacehost.Panel.Workers()` does, polling once a second, and
   opens a view for each.
 - **One kind of tab.** Main's local grid and a worker's view both give `terminal.Screen` frames,
-  so the renderer never knows which program it is drawing.
+  so the renderer never knows which program it is drawing. The host keeps each tab whole from
+  the raw frames, modes included (`terminal.Picture`). `spacehost.View` is not reused here,
+  because it converts to `adapter.Screen` and drops the modes.
 - **Exits.** The host ends when main's harness exits: the host restores the terminal and the run
   ends. The space hosts see the run end and end their workers (SP1), which is already how it works
-  today. If the host itself is killed, the master side of main's pty closes and main gets
-  SIGHUP, so the run ends and the workers end with it. Today a killed wrapper leaves the harness
-  running on the terminal; that is not possible here, and it is a known limit. A worker that ends
-  keeps its tab, marked as ended, until its space record goes.
+  today. If the host itself is killed, its run ends with it, and the space hosts follow the run's
+  identity, so the workers end whatever main does. The master side of main's pty closes and main
+  gets a hangup, which a program may handle or ignore. Today a killed wrapper leaves the harness
+  running on the terminal; here it is left without one. A SIGKILL also cannot restore the
+  person's terminal from raw mode and the alternate screen, so `reset` repairs it. Both are known
+  limits, not a reason for another supervisor. A worker that ends keeps its tab, marked as
+  ended, until its space record goes.
+- **Job control.** The harness runs in a session of its own on its pty, so the person's
+  terminal no longer stops it or the host. A harness that stops itself is continued at once,
+  since nobody else could bring it back.
 
 ## Rendering: from the emulators
 
@@ -59,8 +68,8 @@ pass the programs' bytes through.
   switch is then only a full redraw of the other program's buffer: no program is told a new size
   and none has to repaint.
   - On a SIGWINCH the host resizes main's pty and grid, and sends an `r` frame on every view.
-  - The last size from any client wins, so in host mode the mod's `workers/resize` is a no-op.
-    The size belongs to the host.
+  - The last size from any client wins. Once the pane and attach are gone, the host is the
+    only client that sizes a worker.
 - **Not passed through.** Because nothing is passed through, a program's queries never reach the
   person's terminal, so the problem of an orphan reply after a switch does not exist here. Three
   outputs must still go out, and they become a new view frame `e` (an event) from the space host,
@@ -81,27 +90,41 @@ pass the programs' bytes through.
 ## Input
 
 - **One reader.** A single stdin reader feeds a prefix automaton over the byte stream, as in §2.
+  Its state survives a split at any offset.
+- **Whole keys.** An incomplete escape sequence at the end of a read (`ESC`, `ESC O`, a CSI of
+  only parameter bytes) is held until it completes or 50 ms pass. So a lone Escape still goes
+  out, and a key is never sent in two writes.
 - **The prefix is Ctrl+\\.** No harness binds it, and it is today's `rewake attach` detach key.
   - The automaton matches the legacy byte `0x1c` and its CSI-u and modifyOtherKeys forms.
   - It never matches inside a bracketed paste.
+  - A pending prefix lapses after 2 s.
 - **The commands after the prefix:**
   - `n`/`p`: the next or previous tab;
   - `1`–`9`: a worker;
   - `0` or `m`: main;
   - `s`: hide or show the sidebar;
   - the prefix again: sends Ctrl+\\ to the shown program;
-  - any other key: cancels.
-- **Mouse.** The host keeps SGR mouse (1000/1002 with 1006) and bracketed paste on the terminal.
+  - any other key: cancels, which is a choice; §2 forwarded both keys.
+- **The person's terminal mirrors the shown program's input modes.** At a switch, and whenever
+  the shown program changes them, the host sets on the person's terminal the program's:
+  - DECCKM and DECNKM, so Right arrives as `ESC O C` where the program asked for it;
+  - bracketed paste 2004;
+  - focus 1004;
+  - the mouse modes (9, 1000, 1002, 1003, 1006).
+
+  Keys then pass unchanged. At the exit every mode is reset. Step 1 is built this way.
+- **Mouse, from step 3.** The host keeps SGR mouse (1000/1002 with 1006) and bracketed paste on
+  the terminal, and stops mirroring the mouse.
   - A click on the bar or the sidebar switches tabs.
   - In the region, mouse events go to the shown program, with the coordinates offset and in the
     form its modes ask for, but only when the program turned mouse on. Otherwise they are
     dropped.
+  In step 1, while mirroring, a mouse event below the region (on the bar) is the host's and is
+  never forwarded.
 - **Paste.** A paste reaches the program framed by 200~/201~ only when the program enabled 2004;
   otherwise it goes bare.
 - **Focus events.** These go through when the program asked for them (1004).
-- **Keys.** All other input goes to the shown program unchanged. Arrows and the keypad then
-  follow the program's own DECCKM and DECNKM, since the person's terminal has none of its own
-  set.
+- **Keys.** All other input goes to the shown program unchanged.
 - **The kitty keyboard protocol.** The host does not push it on the person's terminal. Keys
   arrive in the legacy form, which Claude Code handles today behind the space host's emulator.
   Translating the kitty forms is a later step, done only if a harness needs it.
@@ -129,13 +152,10 @@ pass the programs' bytes through.
     ([launch-defaults.md](../launch-defaults.md)), so no new alias field is needed.
   - A flag rather than a separate command: host mode is a way of running main, not another
     harness.
-- **The plan.** `Request.Host` reaches the adapter. The run's `HostsSpaces` (the hello answer,
-  the `Spaces` panel, the `workers/*` endpoints) becomes `Role.Spaces && Host` instead of
-  `Role.Spaces`. The mod already gates its space features on `hello.hostsSpaces`
-  (`hooks/rewake.ts`), so it needs no environment variable and the protocol does not change.
-- **Out of host mode.** Without `--host`, main can still open spaces. Today they are seen through
-  `rewake attach` only; once attach is removed, only from a host. That is the owner's call at
-  that step.
+- **Nothing to gate.** Since the pane and its endpoints are removed rather than kept for host
+  mode, the mod needs no switch: no environment variable, no hello field. Ordinary main keeps
+  opening spaces as now; `Role.Spaces` and the live `SpacesCapability` are untouched. Without
+  `--host`, a worker's screen is seen only from a host.
 
 ## Steps, each checked live
 
@@ -146,13 +166,14 @@ pass the programs' bytes through.
    - Live check: type into main, start a worker, switch to it, type a line, switch back.
    - Tests: the prefix automaton, the layout arithmetic, and one workflow scenario over the
      fixture.
-2. **Mouse, paste and focus.** The forwarding rules above. Live check: Claude Code's fullscreen
+2. **Remove the pane.** The pane, `/workers`, the `workers/*` endpoints with the plan's `Spaces`
+   panel, and `rewake attach`, with their documents. Live check: main's Claude Code loads the
+   mod without them and host mode still shows the workers.
+3. **Mouse, paste and focus.** The forwarding rules above. Live check: Claude Code's fullscreen
    scroll and its click selection in a worker.
-3. **The sidebar.** The width threshold, `s`, and clicks on it.
-4. **Events.** The `e` frame: OSC 52, title, bell, default colours. Live check: a copy from a
+4. **The sidebar.** The width threshold, `s`, and clicks on it.
+5. **Events.** The `e` frame: OSC 52, title, bell, default colours. Live check: a copy from a
    worker lands in the clipboard.
-5. **Gating.** `HostsSpaces` from `--host`, and `workers/resize` made a no-op in host mode.
-6. **Later, by the owner's decision.** Remove the pane and `rewake attach`.
 
 The tests are the subset of §2's checklist that "Which tests to write" keeps: the automaton, a
 restore on every signal, and the routing of mouse and paste by mode.
