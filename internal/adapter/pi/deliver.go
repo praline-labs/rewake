@@ -29,6 +29,9 @@ func (r *run) Deliver(ctx context.Context, message mail.Message) mail.Result {
 	if err != nil {
 		return mail.Result{State: mail.Failed, Detail: "the extension did not acknowledge the notice; delivery was not retried automatically"}
 	}
+	if answer.Pending && !answer.OK {
+		return mail.Result{State: mail.Pending, Detail: answer.Error}
+	}
 	if !answer.OK {
 		return mail.Result{State: mail.Failed, Detail: "the extension refused the notice: " + answer.Error}
 	}

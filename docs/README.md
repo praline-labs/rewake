@@ -86,7 +86,7 @@ Each fact carries where it was verified; they age with harness versions.
 - [research-claude-control.md](research-claude-control.md) — what reaches a running Claude Code session from outside besides a message.
 - [research-claude-actions.md](research-claude-actions.md) — what a function-hooks plugin can do to its own session: compact, abort, reload.
 - [research-claude-mod.md](research-claude-mod.md) — the dated records of stage 4's live probe of the mod on Claude Code.
-- [research-pi.md](research-pi.md) — pi 1.2.0 launch and extension facts, mock probes, the first adapter protocol and its limits.
+- [research-pi.md](research-pi.md) — pi 1.2.0 launch and extension facts, mock probes, telemetry and control, the adapter protocol and its limits.
 - [research-launch.md](research-launch.md) — what an installed binary answers: model and effort catalogues, repeatable flags, npm packages.
 - [research-worktree.md](research-worktree.md) — Claude Code's own worktree beside rewake's: continuations, trust, `.worktreeinclude`.
 - [research-mail-tool.md](research-mail-tool.md) — what each harness did with the mail tool server; leaves with the mail tool.

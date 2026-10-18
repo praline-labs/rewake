@@ -2,7 +2,9 @@ import { randomUUID } from "node:crypto";
 import { createConnection, type Socket } from "node:net";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 
-type Frame = {
+import { management, type State } from "./management.ts";
+
+export type Frame = {
   op: string;
   id: number;
   protocol?: number;
@@ -14,10 +16,22 @@ type Frame = {
   ok?: boolean;
   error?: string;
   steered?: boolean;
+  state?: State;
+  sequence?: number;
+  pending?: boolean;
+  action?: string;
+  request?: string;
+  from?: string;
+  focus?: string;
+  reason?: string;
+  detail?: string;
+  open?: boolean;
+  tokensBefore?: number;
+  tokensAfter?: number;
 };
 type Waiter = { resolve: (frame: Frame) => void; reject: (error: Error) => void; timer: ReturnType<typeof setTimeout> };
-type Link = { socket: Socket; thread: string; ready: boolean; next: number; waiting: Map<number, Waiter> };
-type Turn = { id: string; link: Link; text: string; reason: string };
+export type Link = { socket: Socket; thread: string; ready: boolean; next: number; waiting: Map<number, Waiter> };
+export type Turn = { id: string; link: Link; text: string; reason: string; interrupted?: string };
 
 const maxFrame = 4 << 20;
 const socketPath = process.env.REWAKE_PI_SOCKET;
@@ -30,6 +44,10 @@ export default function (pi: ExtensionAPI) {
   let retry: ReturnType<typeof setTimeout> | undefined;
   let delay = 250;
   let turn: Turn | undefined;
+  const managed = management(pi, () => context, () => current, () => turn,
+    (link, fields) => { void ask(link, fields).catch(() => {
+      if (fields.op !== "state") warn("compaction observation was not acknowledged; ask main to check its outcome");
+    }); });
 
   function warn(message: string) {
     if (context?.hasUI) context.ui.notify(`rewake: ${message}`, "warning");
@@ -82,24 +100,34 @@ export default function (pi: ExtensionAPI) {
       }
       return;
     }
+    const respond = (reply: Partial<Frame>) => {
+      try { send(link, { op: "answer", id: frame.id, ...reply }); }
+      catch { close(link); }
+    };
+    if (link !== current || !link.ready || !context || frame.thread !== context.sessionManager.getSessionId()) {
+      respond({ outcome: "refused", reason: "not the selected conversation",
+        error: "the delivery conversation is no longer current" });
+      return;
+    }
+    if (frame.op === "state") { respond({ ok: true, state: managed.sample() }); return; }
+    if (frame.op === "control") {
+      void managed.control(link, frame).then(respond).catch(() => respond({ outcome: "failed", open: true,
+        detail: "native control did not return an outcome" }));
+      return;
+    }
     let reply: Partial<Frame>;
     if (frame.op !== "wake") reply = { error: "unknown host operation" };
-    else if (link !== current || !link.ready || !context || frame.thread !== context.sessionManager.getSessionId()) {
-      reply = { error: "the delivery conversation is no longer current" };
-    } else if (typeof frame.notice !== "string" || !frame.notice) {
-      reply = { error: "a wake needs a notice" };
-    } else {
+    else if (typeof frame.notice !== "string" || !frame.notice) reply = { error: "a wake needs a notice" };
+    else if (managed.busy()) reply = { pending: true, error: "compaction in progress" };
+    else {
       const steered = !context.isIdle();
       try {
         pi.sendMessage({ customType: "rewake_notice", content: frame.notice, display: true },
           { triggerTurn: true, deliverAs: "steer" });
         reply = { ok: true, steered };
-      } catch {
-        reply = { error: "the harness did not accept the notice" };
-      }
+      } catch { reply = { error: "the harness did not accept the notice" }; }
     }
-    try { send(link, { op: "answer", id: frame.id, ...reply }); }
-    catch { close(link); }
+    respond(reply);
   }
 
   function schedule() {
@@ -151,7 +179,7 @@ export default function (pi: ExtensionAPI) {
     });
     opening = (async () => {
       try {
-        const reply = await ask(link, { op: "hello", protocol: 1, thread });
+        const reply = await ask(link, { op: "hello", protocol: 2, thread, state: managed.sample() });
         if (!reply.ok) throw new Error("host refused the extension handshake");
         if (current !== link || !active) { close(link); return; }
         link.ready = true;
@@ -172,6 +200,7 @@ export default function (pi: ExtensionAPI) {
 
   pi.on("session_shutdown", async () => {
     active = false;
+    managed.reset();
     if (retry) clearTimeout(retry);
     retry = undefined;
     if (current) close(current);
@@ -189,6 +218,7 @@ export default function (pi: ExtensionAPI) {
     if (!link?.ready) { warn("turn started without a mail connection; its end cannot be reported"); return; }
     const started: Turn = { id: randomUUID(), link, text: "", reason: "" };
     turn = started;
+    managed.changed();
     try {
       const reply = await ask(link, { op: "turn-start", thread: link.thread, turn: started.id });
       if (!reply.ok) throw new Error("host refused the turn start");
@@ -212,9 +242,11 @@ export default function (pi: ExtensionAPI) {
   pi.on("agent_settled", async (event) => {
     const ended = turn;
     turn = undefined;
+    managed.changed();
     if (!ended) return;
     const outcome = event.aborted || ended.reason === "aborted" ? "aborted"
       : ended.reason === "stop" ? "answered" : "failed";
+    managed.settled(ended, outcome === "aborted");
     try {
       const reply = await ask(ended.link, { op: "turn-end", thread: ended.link.thread,
         turn: ended.id, outcome, text: ended.text }, 20000);

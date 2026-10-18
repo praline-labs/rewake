@@ -36,7 +36,7 @@ func (harness) Notes() []string {
 		"Discovered, configured and built-in extensions are disabled for this launch; explicit -e extensions still load. Project-local resources requiring trust are ignored. The person's configuration is not edited.",
 		"Tasks and questions are accepted after the extension connects from the harness process. A --command wrapper must exec pi, not start it as a child.",
 		"A turn ends at agent_settled, after automatic retries and queued work. Its end is not held open; use rewake pending before an interim end.",
-		"Context, limits, compact and interrupt are not offered in this first pass.",
+		"Context, model and thinking level come from the native session. Compact accepts an optional focus and refuses a running turn; interrupt stops a running turn. Limits are not reported.",
 		"REWAKE_PI_MODEL and REWAKE_PI_EFFORT supply --model and --thinking when the launch does not name them.",
 		"--worktree[=<name>] starts a new conversation in a checkout rewake makes. Continue or resume a conversation from its existing checkout, without --worktree.",
 	}
@@ -93,7 +93,9 @@ func (harness) EnvNotInherited() []string {
 
 func (harness) Offers() adapter.Offer {
 	return adapter.Offer{
-		Wake: true, TurnBoundary: adapter.TurnBoundaryOffer{Reports: true, AfterStart: true},
+		Wake: true, Telemetry: true,
+		Control:      adapter.ControlOffer{Compact: true, Interrupt: true, CompactFocus: true, InterruptTrace: "its next turn sees who interrupted it"},
+		TurnBoundary: adapter.TurnBoundaryOffer{Reports: true, AfterStart: true},
 		Conversation: adapter.ConversationOffer{Flag: sessionIDFlag},
 	}
 }

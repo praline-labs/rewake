@@ -21,8 +21,8 @@ func (r *run) serve(l *link) {
 	if err != nil {
 		return
 	}
-	if hello.Op != "hello" || hello.Protocol != 1 || hello.Thread == "" {
-		l.answer(hello, frame{Error: "expected protocol 1 hello with a conversation"})
+	if hello.Op != "hello" || hello.Protocol != protocolVersion || hello.Thread == "" || hello.State == nil || hello.State.Sequence == 0 || (hello.State.Activity != "working" && hello.State.Activity != "idle") {
+		l.answer(hello, frame{Error: "expected protocol 2 hello with a conversation and state"})
 		return
 	}
 	if r.handler.Publish == nil || (r.handler.Capture == nil && r.handler.EndCapture == nil) {
@@ -32,10 +32,11 @@ func (r *run) serve(l *link) {
 	// Put hello's acknowledgment on the wire before publishing live Wake:
 	// delivery can start as soon as the live callback records the capability.
 	l.answer(hello, frame{OK: true})
-	if !r.change(l, hello.Thread) {
+	if !r.change(l, hello) {
 		return
 	}
 	_ = l.conn.SetReadDeadline(time.Time{})
+	go r.pollState(l, hello.Thread)
 	l.serve(reader, func(request frame) { r.handle(l, request) })
 }
 
@@ -45,6 +46,14 @@ func (r *run) handle(l *link, request frame) {
 		return
 	}
 	switch request.Op {
+	case "state":
+		ok := r.observe(l, request.Thread, request.State)
+		r.leave()
+		l.answer(request, frame{OK: ok})
+	case "compacted", "compaction-result":
+		reply := r.compacted(l, request)
+		r.leave()
+		l.answer(request, reply)
 	case "turn-start":
 		reply := r.startTurn(l, request)
 		r.leave()

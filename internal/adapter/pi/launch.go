@@ -43,10 +43,11 @@ func (harness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, error)
 	}
 	env = append(env, socketEnv+"="+request.Socket)
 	run := newRun(file, request.Socket)
+	run.epoch, run.controlDir = request.Epoch, request.ControlDir
 	return adapter.LaunchPlan{
 		Command: request.Program(ID), Args: args, Env: env, Notes: notes,
 		Socket: request.Socket, OwnsSocket: true,
-		Service: run, Wake: run, TurnBoundary: run, Thread: run, Live: run,
+		Service: run, Wake: run, TurnBoundary: run, Thread: run, Live: run, Telemetry: run,
 	}, nil
 }
 

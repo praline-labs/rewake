@@ -137,17 +137,20 @@ terminal evidence and current compatibility limits are recorded in
 
 ## pi adapter
 
-A per-run extension connects to the wrapper's unix socket. A protocol-1 hello with the
-current conversation, from the exact process the wrapper started, makes Wake and
-TurnBoundary live. The extension reconnects after a lost socket, `/new` or `/reload`;
-a replaced socket cannot withdraw its successor's capabilities.
+A per-run extension connects to the wrapper's unix socket. A protocol-2 hello with the
+current conversation and native state, from the exact process the wrapper started, makes
+Wake, TurnBoundary and Telemetry live, plus Control when the run has its control directory.
+The extension reconnects after a lost socket, `/new` or `/reload`; a replaced socket cannot
+withdraw its successor's capabilities.
 
 The wrapper sends a `wake` frame with the notice and expected conversation. The extension
 checks the conversation and calls `pi.sendMessage` with `triggerTurn: true` and
 `deliverAs: "steer"`. An idle session starts work; a busy one takes the notice after its
 tool batch. An `answer` means the native call accepted the notice, not that a model request
 or inbox read succeeded. Before a connection exists the delivery is pending; after a write
-whose answer is lost it fails without an automatic replay.
+whose answer is lost it fails without an automatic replay. During compaction the extension
+explicitly refuses queue acceptance with `pending`, so delivery waits and can retry after
+compaction ends.
 
 `agent_start` is acknowledged before model work. `agent_end` supplies the last assistant
 text, while `agent_settled` reports the end after automatic work. An aborted settled event

@@ -82,11 +82,15 @@ func (rig *rig) client(t *testing.T, thread string, handle func(*link, frame)) *
 			l.answer(got, frame{OK: true})
 		}
 	})
-	reply, err := l.ask(t.Context(), frame{Op: "hello", Protocol: 1, Thread: thread})
+	reply, err := l.ask(t.Context(), frame{Op: "hello", Protocol: protocolVersion, State: &sample{Sequence: 1, Activity: "idle"}, Thread: thread})
 	if err != nil || !reply.OK {
 		t.Fatalf("hello: %+v, %v", reply, err)
 	}
-	if caps := receive(t, rig.live); len(caps) != 2 {
+	expected := 3
+	if rig.run.controlDir != "" {
+		expected++
+	}
+	if caps := receive(t, rig.live); len(caps) != expected {
 		t.Fatalf("live: %v", caps)
 	}
 	return l
@@ -154,7 +158,7 @@ func TestAReplacementConnectionOwnsTheConversation(t *testing.T) {
 }
 
 func TestBadHelloAndWrongPeerNeverBecomeLive(t *testing.T) {
-	for _, which := range []string{"protocol", "thread", "peer", "process-start"} {
+	for _, which := range []string{"protocol", "thread", "state", "peer", "process-start"} {
 		t.Run(which, func(t *testing.T) {
 			rig := newRig(t, func(r *run) {
 				if which == "peer" {
@@ -170,12 +174,15 @@ func TestBadHelloAndWrongPeerNeverBecomeLive(t *testing.T) {
 			}
 			defer func() { _ = conn.Close() }()
 			l := newLink(conn)
-			hello := frame{Op: "hello", ID: 1, Protocol: 1, Thread: "conversation"}
+			hello := frame{Op: "hello", ID: 1, Protocol: protocolVersion, State: &sample{Sequence: 1, Activity: "idle"}, Thread: "conversation"}
 			if which == "protocol" {
-				hello.Protocol = 2
+				hello.Protocol = 1
 			}
 			if which == "thread" {
 				hello.Thread = ""
+			}
+			if which == "state" {
+				hello.State = nil
 			}
 			if err := l.send(hello); err != nil && which != "peer" && which != "process-start" {
 				t.Fatal(err)
@@ -266,7 +273,7 @@ func TestHelloIsAcknowledgedBeforeWakeBecomesLive(t *testing.T) {
 	}
 	defer func() { _ = conn.Close() }()
 	l := newLink(conn)
-	if err := l.send(frame{Op: "hello", ID: 1, Protocol: 1, Thread: "conversation"}); err != nil {
+	if err := l.send(frame{Op: "hello", ID: 1, Protocol: protocolVersion, State: &sample{Sequence: 1, Activity: "idle"}, Thread: "conversation"}); err != nil {
 		t.Fatal(err)
 	}
 	_ = conn.SetReadDeadline(time.Now().Add(3 * time.Second))

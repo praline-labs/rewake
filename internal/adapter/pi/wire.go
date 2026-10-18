@@ -14,20 +14,35 @@ import (
 // Both peers number their own requests. Only answer frames consume a waiter;
 // a request from the other side may carry the same id.
 type frame struct {
-	Op       string `json:"op"`
-	ID       int64  `json:"id,omitempty"`
-	Protocol int    `json:"protocol,omitempty"`
-	Thread   string `json:"thread,omitempty"`
-	Turn     string `json:"turn,omitempty"`
-	Outcome  string `json:"outcome,omitempty"`
-	Text     string `json:"text,omitempty"`
-	Notice   string `json:"notice,omitempty"`
-	OK       bool   `json:"ok,omitempty"`
-	Error    string `json:"error,omitempty"`
-	Steered  bool   `json:"steered,omitempty"`
+	Op           string  `json:"op"`
+	ID           int64   `json:"id,omitempty"`
+	Protocol     int     `json:"protocol,omitempty"`
+	Thread       string  `json:"thread,omitempty"`
+	Turn         string  `json:"turn,omitempty"`
+	Outcome      string  `json:"outcome,omitempty"`
+	Text         string  `json:"text,omitempty"`
+	Notice       string  `json:"notice,omitempty"`
+	OK           bool    `json:"ok,omitempty"`
+	Error        string  `json:"error,omitempty"`
+	Steered      bool    `json:"steered,omitempty"`
+	State        *sample `json:"state,omitempty"`
+	Sequence     uint64  `json:"sequence,omitempty"`
+	Pending      bool    `json:"pending,omitempty"`
+	Action       string  `json:"action,omitempty"`
+	Request      string  `json:"request,omitempty"`
+	From         string  `json:"from,omitempty"`
+	Focus        string  `json:"focus,omitempty"`
+	Reason       string  `json:"reason,omitempty"`
+	Detail       string  `json:"detail,omitempty"`
+	Open         bool    `json:"open,omitempty"`
+	TokensBefore *int64  `json:"tokensBefore,omitempty"`
+	TokensAfter  *int64  `json:"tokensAfter,omitempty"`
 }
 
-const maxFrame = 4 << 20
+const (
+	maxFrame        = 4 << 20
+	protocolVersion = 2
+)
 
 var errClosed = errors.New("the extension connection closed")
 
@@ -40,8 +55,9 @@ type link struct {
 	closed  chan struct{}
 	once    sync.Once
 	// Only the reader touches the current turn.
-	turn    string
-	started int64
+	turn               string
+	started            int64
+	compactionSequence uint64
 }
 
 func newLink(conn net.Conn) *link {

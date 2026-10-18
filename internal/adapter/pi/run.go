@@ -2,9 +2,10 @@ package pi
 
 import (
 	"context"
-	_ "embed"
+	"embed"
 	"errors"
 	"net"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -12,27 +13,29 @@ import (
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
-//go:embed extension.ts
-var extension []byte
+//go:embed extension.ts management.ts
+var extensions embed.FS
 
 type run struct {
-	file, socket string
-	ctx          context.Context
-	cancel       context.CancelFunc
-	listener     *state.Listener
-	handler      adapter.TurnHandler
-	workers      adapter.Workers
-	live         func([]adapter.Capability)
-	liveMu       sync.Mutex
-	mu           sync.Mutex
-	closing      bool
-	links        map[*link]struct{}
-	current      *link
-	thread       string
-	process      adapter.RunProcess
-	ready        chan struct{}
-	processOnce  sync.Once
-	jobs         sync.WaitGroup
+	file, socket      string
+	epoch, controlDir string
+	observed          observations
+	ctx               context.Context
+	cancel            context.CancelFunc
+	listener          *state.Listener
+	handler           adapter.TurnHandler
+	workers           adapter.Workers
+	live              func([]adapter.Capability)
+	liveMu            sync.Mutex
+	mu                sync.Mutex
+	closing           bool
+	links             map[*link]struct{}
+	current           *link
+	thread            string
+	process           adapter.RunProcess
+	ready             chan struct{}
+	processOnce       sync.Once
+	jobs              sync.WaitGroup
 }
 
 func newRun(file, socket string) *run {
@@ -48,8 +51,14 @@ func (r *run) HarnessStarted(process adapter.RunProcess) {
 
 func (r *run) Start(ctx context.Context, _ func(string)) error {
 	r.ctx, r.cancel = context.WithCancel(ctx)
-	if err := state.WriteFile(r.file, extension, 0o600); err != nil {
-		return err
+	for _, name := range []string{"extension.ts", "management.ts"} {
+		data, err := extensions.ReadFile(name)
+		if err != nil {
+			return err
+		}
+		if err := state.WriteFile(filepath.Join(filepath.Dir(r.file), name), data, 0o600); err != nil {
+			return err
+		}
 	}
 	listener, err := state.Listen(r.socket)
 	if err != nil {
@@ -57,6 +66,7 @@ func (r *run) Start(ctx context.Context, _ func(string)) error {
 	}
 	r.listener = listener
 	go r.accept()
+	r.serveControl()
 	return nil
 }
 
@@ -122,7 +132,7 @@ func (r *run) Close() {
 
 // The live callback must be serialized without holding the lock taken by
 // Deliver and Thread. A disconnected older socket cannot withdraw its successor.
-func (r *run) change(l *link, thread string) bool {
+func (r *run) change(l *link, hello frame) bool {
 	r.liveMu.Lock()
 	defer r.liveMu.Unlock()
 	r.mu.Lock()
@@ -131,7 +141,11 @@ func (r *run) change(l *link, thread string) bool {
 		return false
 	}
 	old := r.current
-	r.current, r.thread = l, thread
+	r.current, r.thread = l, hello.Thread
+	if old != nil {
+		r.observed.partial = true
+	}
+	r.observeLocked(l, hello.Thread, hello.State)
 	r.mu.Unlock()
 	if old != nil && old != l {
 		old.close()
@@ -140,7 +154,11 @@ func (r *run) change(l *link, thread string) bool {
 		if l == nil {
 			r.live(nil)
 		} else {
-			r.live([]adapter.Capability{adapter.WakeCapability, adapter.TurnBoundaryCapability})
+			caps := []adapter.Capability{adapter.WakeCapability, adapter.TurnBoundaryCapability, adapter.TelemetryCapability}
+			if r.controlDir != "" {
+				caps = append(caps, adapter.ControlCapability)
+			}
+			r.live(caps)
 		}
 		r.leave()
 	}
@@ -155,6 +173,7 @@ func (r *run) disconnect(l *link) {
 	delete(r.links, l)
 	current := r.current == l
 	if current {
+		r.observed.partial = true
 		r.current = nil
 		r.thread = ""
 	}

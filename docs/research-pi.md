@@ -1,4 +1,4 @@
-# pi: the first adapter
+# pi: the adapter
 
 Verified October 18, 2026 against installed `@earendil-works/pi-coding-agent` 1.2.0.
 This package, not the older reference checkout, is the source for this adapter. The
@@ -14,9 +14,10 @@ Read in the package's `docs/cli.md`, `docs/extensions.md`, `CHANGELOG.md` and
 `dist/core/extensions/types.d.ts` on that version:
 
 - `-ne` / `--no-extensions` disables discovered, configured and built-in extensions;
-  explicitly passed `-e` / `--extension` entries still load. The adapter adds one embedded
-  TypeScript file, written only in the run directory. Runtime imports are Node built-ins;
-  its package import supplies types and needs no installed dependency beside pi.
+  explicitly passed `-e` / `--extension` entries still load. The adapter adds an embedded
+  TypeScript entry and its management module, written only in the run directory. Runtime
+  imports are Node built-ins and that sibling module; package imports supply types and
+  need no installed dependency beside pi.
 - `-na` / `--no-approve` ignores project-local resources requiring trust. It does not
   edit a trust record. These two flags intentionally limit discovery for this launch.
 - `--append-system-prompt` is repeatable. The adapter appends its briefing even when the
@@ -96,6 +97,58 @@ conversation's reconnect, busy steering, the aborted end mapping, and reload fol
 a successful wake. Interactive terminal rendering and delivery between real rewake sessions
 are main's live acceptance, not claimed by these probes.
 
+## Telemetry and remote control
+
+Read on the same installed 1.2.0 in `dist/core/extensions/types.d.ts`,
+`dist/core/extensions/runner.js`, `dist/core/agent-session.js` and
+`dist/modes/interactive/interactive-mode.js`:
+
+- `ctx.model` and `ctx.thinkingLevel` are live getters. `ctx.getContextUsage()` returns
+  native token usage, context window and percent; model context window remains available
+  before usage is known. Immediately after compaction, usage and percent are null until a
+  later assistant usage observation. The adapter preserves those unknowns; it does not
+  substitute the estimated compaction result or apply another harness's token baseline.
+- State is pushed at turn and compaction boundaries and settings changes, and polled
+  through that same extension once a second. A sample sequence orders pushes and poll
+  answers. A disconnected connection or three seconds without a valid observation makes
+  the cached sample stale. The wrapper's snapshot publisher never waits on a native call.
+- `ctx.compact({customInstructions, onComplete, onError})` returns void. Native manual
+  compaction calls abort before preparing its input; the adapter therefore refuses a busy
+  session before calling it and holds notices pending while compaction is in progress.
+  Disabling automatic compaction in native settings does not disable this manual command.
+- `session_before_compact` proves a start; before it, native preparation can refuse with
+  `Already compacted` or `Nothing to compact (session too small)`. These map to
+  `nothing to compact`. A request with no observed start after one second returns
+  `requested`; its final outcome still follows. Other failures report a fixed explanation,
+  not an error that could contain conversation text.
+- `session_compact` counts a completed manual or automatic compaction. The completion
+  callback separately supplies `tokensBefore` and optional `estimatedTokensAfter` for a
+  remote request's outcome. Native summary text is never sent to the wrapper. Counts are
+  observed since wrapper start, deduplicated by event sequence on each connection; gaps
+  make coverage partial. No missed event or outcome is recovered from history.
+- `ctx.abort()` also returns void. Interrupt waits up to three seconds for the matching
+  `agent_settled` with an aborted outcome; no settled event means an open failure, not
+  proof that the turn stopped. The stopped report names its initiator. A native custom
+  message, appended without starting a turn, leaves that same actor in the next turn's
+  history. An idle session refuses interrupt as `no turn running`.
+
+A third mock probe loaded both shipped modules and verified on 1.2.0:
+
+1. Protocol 2 hello and requested state exposed the selected model, thinking level,
+   window and native usage; an empty conversation refused compact and interrupt.
+2. An idle compaction accepted a focus in its native summary request, acknowledged
+   start, emitted one completion and a final outcome with both token counts. A notice
+   during that compaction was explicitly left pending. The native compactor made two
+   summary requests; the focus appeared in the first.
+3. Usage and percent became null after compaction, with the window still known. The
+   next ordinary turn made usage known again.
+4. Compact during a delayed model response was refused as `in a turn`. Interrupt of
+   that response settled aborted, reported the actor, and put the actor's interruption
+   trace in the next mock model request. That next turn completed normally.
+
+The mock used synthetic usage, so the result proves the native counts were transported,
+not that its summaries reduced context. Main owns interactive and real-room acceptance.
+
 ## The adapter's wire contract
 
 One JSON object per line, at most 4 MiB, over a private unix socket listened on by the
@@ -105,25 +158,31 @@ harness pid and rechecks its process start time before accepting the first frame
 
 | Direction | Operation | Fields and acknowledgment |
 |---|---|---|
-| Extension to host | `hello` | `protocol: 1`, `thread`; success makes Wake and TurnBoundary live |
-| Host to extension | `wake` | `thread`, `notice`; answer says `ok` and whether it was `steered` |
+| Extension to host | `hello` | `protocol: 2`, `thread`, initial `state`; success makes Wake, TurnBoundary and Telemetry live, plus Control when its directory exists |
+| Host to extension | `wake` | `thread`, `notice`; answer says `ok` and whether it was `steered`, or `pending` while compacting |
 | Extension to host | `turn-start` | `thread`, `turn`; acknowledgment precedes model work |
 | Extension to host | `turn-end` | `thread`, `turn`, `outcome`, `text`; acknowledgment follows publication |
-| Either | `answer` | matching `id`, `ok`, optional `error` |
+| Either | `state` | host asks with `thread`; extension answers or pushes `state` with sequence, activity, model, effort, tokens, window, percent and compacting |
+| Host to extension | `control` | `thread`, `action`, `request`, `from`, optional `focus`; answer carries outcome, reason, detail, open and token counts where known |
+| Extension to host | `compacted` | `thread`, event `sequence`, optional remote `request` and `from`; acknowledgment follows counting |
+| Extension to host | `compaction-result` | `thread`, `request`, `from`, outcome and optional token counts; acknowledgment follows retaining the outcome for main's letter |
+| Either | `answer` | matching `id`, `ok` or operation-specific result, optional `error` |
 
-Peer announcement, hello and wake wait at most five seconds. Each publication attempt has
-its own five-second deadline, at most three attempts with 200 ms between them; the extension
-waits twenty seconds for an end acknowledgment. The socket reader captures the read boundary
-before launching publication separately. Retries reuse that captured end and event id.
-Handlers count among the host's workers so a publication outlasting close retains its lease.
+Peer announcement, hello, wake and control wait at most five seconds. Each publication
+attempt has its own five-second deadline, at most three attempts with 200 ms between them;
+the extension waits twenty seconds for an end acknowledgment. The socket reader captures
+the read boundary before launching publication separately. Retries reuse that captured
+end and event id. Handlers and the control-directory server count among the host's workers
+so a publication outlasting close retains its lease.
 
 Disconnect withdraws the live capabilities. Reconnect backs off from 250 ms to eight
 seconds while the session runs. A new connection replaces the old one; the old connection
 cannot withdraw the new live set or finish a turn in another conversation. There is no
-heartbeat, durable outbox, end replay after reconnect or transcript recovery. A notice whose
-acknowledgment is lost fails without automatic resend. Conversation changes are checked at
-delivery, but this first pass does not reserve a conversation across inbox publication.
+durable outbox, end replay after reconnect or transcript recovery. A notice whose
+acknowledgment is lost fails without automatic resend. A control request with a lost
+answer has an open outcome and is not repeated. Conversation changes are checked at
+delivery, but this adapter does not reserve a conversation across inbox publication.
 
-Telemetry, compact, interrupt, and a live Spaces offer belong to the second pass. The
-current offer is Wake, TurnBoundary with Reports and AfterStart, and Conversation through
-`--session-id`; HoldsEnd is false.
+The current offer is Wake, TurnBoundary with Reports and AfterStart, Telemetry, Control
+with compact, focus and interrupt, and Conversation through `--session-id`. HoldsEnd is
+false; Limits and a live Spaces offer are absent.
