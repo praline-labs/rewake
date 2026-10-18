@@ -230,7 +230,7 @@ its first effect — before even the bootstrap creates anything — exit 1, nami
 byte-identical copy the lease admits; it compares the content id from commit 2. The tool
 child (`host/endpoint/run.go`) and the launch probe already start from `/proc/self/exe`;
 `os.Executable` in the environment's `PATH` and in grant shielding is no self-spawn and
-stays. The probe holder writes no room state.
+stays. The version probe writes no room state.
 
 **The lease**: `build.lock` in the room, with `flock(2)`, and `build` beside it.
 
