@@ -152,8 +152,8 @@ Claude Code, stage 4b Claude Code with pi.
 ## The owner's answers
 
 The owner answered the design's questions on October 5, 2026. Answers 1 and 2 are superseded
-by the owner's decision of October 18, 2026: the clearing of 1.x and the mail tools leave the
-code.
+by the owner's decision of October 18, 2026: the clearing of 1.x has left the code, and the mail
+tools leave it.
 
 1. **1.x state is deleted on upgrade**, not set aside, after the check that no 1.x
    wrapper is alive, with one line saying what was dropped. That check reads the

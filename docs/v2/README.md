@@ -28,9 +28,6 @@ Stage 3's documents that the living ones cite:
   program and its column.
 - [stage3-state.md](stage3-state.md) — the state root `v2/` and its inverse, what is a writer,
   the build id and the room's lease with its bootstrap writes.
-- [stage3-upgrade.md](stage3-upgrade.md) — clearing the state of 1.x: the supported upgrade,
-  the exclusion protocol, its tests against a stand-in of 1.x; it leaves the code with the
-  clearing.
 - [stage3-decision.md](stage3-decision.md) — the operator decision on an unknown outcome: its
   subject, its authority, the command, the write-once records and what every reader consults.
 

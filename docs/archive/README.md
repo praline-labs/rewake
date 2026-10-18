@@ -11,7 +11,7 @@ is no longer there — git history has it.
 - `v2/` — the closed stages of 2.0: the revision of 1.x, stage 3's plans, tests and
   evidence, the design of the documents' tests, the Codex design, stage 4's audit and its
   readings of Codex and agent-deck. Stage 3's documents that living ones still cite —
-  `stage3-fixture`, `stage3-state`, `stage3-decision`, `stage3-upgrade` — stay in `docs/v2/`.
+  `stage3-fixture`, `stage3-state`, `stage3-decision` — stay in `docs/v2/`; `stage3-upgrade` joined the archive when the clearing of 1.x left the code.
 - This folder — the records and research of 1.x: Codex's research and protocol, the gateway
   and native mailbox evidence, the thread probes, the review rounds, the work queue, the
   transport milestones, the Claude Code parity runs, the harness feature map of September,

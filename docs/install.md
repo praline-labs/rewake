@@ -65,18 +65,8 @@ reporting it missing.
 
 rewake 2.0 does not read the state of 1.x and carries none of its mail over. Before the
 update, end every rewake 1.x session and run no 1.x command; then install 2.0 and launch.
-The first launch that finds the 1.x tree beside the 2.0 root clears it
-([stage3-upgrade.md](v2/stage3-upgrade.md)): while a 1.x session runs, a 1.x command
-holds a lock, or a check of the tree cannot be made, it refuses with exit 1 and names
-what it found — end those sessions, or remove the path it names once no 1.x session runs,
-and launch again. Otherwise it removes the tree and says on stderr how many rooms,
-unread letters and undelivered reports went, "unknown" where a count cannot be
-established. The launch has to see the pid namespace the 1.x sessions ran in — the same
-machine, outside a sandbox that hides other processes — or it refuses rather than guess.
-Nothing is stopped automatically, and nothing outside the base is touched: worktrees stay.
-A refused launch has already made the empty 2.0 root beside the 1.x tree — the room's
-directories, its build lock and build record, and the clear lock — since its lease and the
-clear lock live there; it holds no session and no mail, and the next launch uses it.
+A 1.x tree under the state base is left as it is: 2.0 lives under its own root `v2/`, reads
+nothing of the old tree, and the tree can be removed by hand once no 1.x session runs.
 
 ## Releasing to npm
 

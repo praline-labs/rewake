@@ -101,7 +101,4 @@ The `rewake <2026-09-*` marks were cleared on October 18, 2026 by the owner's de
 2.0 starts from its own root `v2/`, so no record of those builds is read. Where the code under a mark
 also served a record without a boot clock or a namespace, that code stayed as an ordinary fallback.
 
-| File | Mark | Count |
-|---|---|---|
-| `internal/infra/legacy/record.go` | `rewake <2026-10-12` | 1 |
-| `internal/infra/legacy/count.go` | `rewake <2026-10-12` | 1 |
+None: the two marks of `rewake <2026-10-12` left with the clearing of 1.x on the same day.

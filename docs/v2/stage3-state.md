@@ -2,7 +2,7 @@
 
 How S17 builds what [design-state.md](design-state.md) decided: the state root `v2/` and
 its inverse, what is a writer, one build per room, the run directory, and the measurement
-of the hash. Clearing the state of 1.x is in [stage3-upgrade.md](stage3-upgrade.md), the
+of the hash. Clearing the state of 1.x is in [stage3-upgrade.md](../archive/v2/stage3-upgrade.md), the
 tests of each decision in [stage3-state-tests.md](../archive/v2/stage3-state-tests.md).
 Citations are to `ab8d752` (S16 landed). The Codex side's readiness review of October 11,
 2026, adopted by main on October 12 with its decisions D1–D12, corrected this plan; the
@@ -35,7 +35,7 @@ an installed 1.x writer that does not honour the lease is no safe coexistence.
 6. **Mapped counters and sockets through guarded resources**; `ErrNoLease` and the
    static test on, once every path is covered. Commits 5 and 6 split by kind of effect.
 7. **The clearing of 1.x** with its scoped cleanup authority
-   ([stage3-upgrade.md](stage3-upgrade.md)), its crash and concurrency matrix, the live
+   ([stage3-upgrade.md](../archive/v2/stage3-upgrade.md)), its crash and concurrency matrix, the live
    gate and the timing record.
 
 At each commit from the second the tests run a launch on an empty base and a session's
@@ -351,7 +351,7 @@ narrow authority, not a public exemption for arbitrary paths:
 So `infra/build` writes nothing itself. A view does none of these. The clearing of 1.x
 needs more than a room's lease — renaming trees under the base and locking
 `v2/.clear.lock` — and takes a separate capability scoped to the base for it
-([stage3-upgrade.md](stage3-upgrade.md#the-cleanup-authority)).
+([stage3-upgrade.md](../archive/v2/stage3-upgrade.md#the-cleanup-authority)).
 
 ## The run directory
 
