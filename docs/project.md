@@ -9,8 +9,8 @@ links are kept current like any other.
 ## The essence
 
 rewake lets interactive coding-agent sessions on one machine work together. A person
-starts an agent through it — `rewake claude`, `rewake codex` — and gets the ordinary
-program in their terminal; rewake registers the session under a name, and any other
+starts an agent through it — `rewake claude`, and next `rewake pi` — and gets the
+ordinary program in their terminal; rewake registers the session under a name, and any other
 session writes to it with `rewake send <name> "text"`. The recipient is told in one line
 that a message is waiting, which wakes it when it is idle, and reads the text itself.
 
@@ -18,8 +18,12 @@ The problem it solves: several agent sessions doing one piece of work — one ha
 tasks, others doing them — have no shared channel of their own. Without one, the person
 carries every message between terminals by hand, and nothing records who owes whom an
 answer. rewake gives them that channel and that record, with no service to run beside
-them — whichever harness each session runs on, and whatever its harness lets it read or
-write on disk.
+them — whichever harness each session runs on. The main session can also start its
+workers itself, so the work begins without the person opening terminals.
+
+Decided by the owner, October 18, 2026: the harnesses of 2.0 are Claude Code and next pi;
+Codex does not return soon. A space is main starting its workers; showing a worker's
+terminal inside Claude Code is not part of it.
 
 **Who calls it.** One person starts the sessions. The commands are called by the agents
 themselves, from their own shell or through the tools their harness offers them. So the
@@ -35,11 +39,10 @@ Each principle names where it comes from.
   command that asks a question hangs an agent forever. ([design.md](design.md#goal),
   [design.md](design.md#failures-and-exit-codes).)
 - **One command table, and everything derived from it.** The parser, the guide, every
-  help page, the hint on a refusal and the tools a model sees come from one description
-  of the commands, so none of them can drift from what the commands do. A table that has
-  drifted from the behaviour is worse than none: it teaches a wrong call with confidence.
-  ([design.md](design.md#output), [design.md](design.md#commands),
-  [v2/design-api.md](v2/design-api.md#tooltransport).)
+  help page and the hint on a refusal come from one description of the commands, so none
+  of them can drift from what the commands do. A table that has drifted from the behaviour
+  is worse than none: it teaches a wrong call with confidence.
+  ([design.md](design.md#output), [design.md](design.md#commands).)
 - **No arguments prints the guide**, not an error: the first call of a session should
   teach how the tool behaves. ([design.md](design.md#output).)
 - **The model of an answer is separate from its printing.** A command builds one answer
@@ -58,9 +61,9 @@ Each principle names where it comes from.
   could not be reached; 2 the call was wrong; 3 the message was accepted but is not
   delivered yet. ([design.md](design.md#failures-and-exit-codes),
   [v2/design.md](v2/design.md#what-does-not-change).)
-- **The command line is a first-class interface**, not a fallback beside the tools a
-  harness offers: every mail operation is a command, and a session whose harness offers
-  no tools works fully through the shell and the guide. (The owner's decision, recorded in
+- **The command line is the interface**: every mail operation is a command, and a session
+  works fully through its shell and the guide. Since October 18, 2026, by the owner's
+  decision, there are no mail tools beside it. (The owner's decision, recorded in
   [v2/design.md](v2/design.md#what-does-not-change).)
 - **The core knows no harness.** What rewake does with messages is written once, without
   naming any harness; each harness joins through an adapter that declares what it can
@@ -70,8 +73,8 @@ Each principle names where it comes from.
 - **Delivery only through what a harness offers itself.** rewake never intervenes in a
   session the person started themselves — it does not stand between them and its
   terminal — and never types into anyone's screen; it reaches a session only through the
-  ways that harness provides. For a session the person asks it to host in a tab, rewake
-  provides the terminal bridge, and only that. ([design.md](design.md#scope-of-the-first-version),
+  ways that harness provides. A worker main starts in a space runs in a pseudo-terminal
+  rewake holds, and rewake shows it only to a person who runs `rewake attach`. ([design.md](design.md#scope-of-the-first-version),
   [v2/design.md](v2/design.md#what-does-not-change).)
 - **The person's configuration is never edited.** Whatever a session needs is passed as
   options of that one launch. ([v2/design.md](v2/design.md#what-does-not-change),
@@ -124,17 +127,16 @@ only one that steers other sessions. See [flow.md](flow.md) and
 [roles.md](roles.md#what-a-session-is-told).
 
 **Different harnesses in one room, both ways.** Sessions on different harnesses work
-together in one room: a main session on one harness hands out work to sessions on
-another and reads their reports, and the other way round, through the same mail and the
-same rules as between two sessions of one harness. See
-[v2/design-codex.md](v2/design-codex.md#what-20-must-serve) and
+together in one room: a main session on Claude Code hands out work to sessions on pi and
+reads their reports, and the other way round, through the same mail and the same rules as
+between two sessions of one harness. See
 [v2/design.md](v2/design.md#the-stage-plan-from-here).
 
-**Mail regardless of what a session may touch on disk.** A session takes its mail, says
-what its turn still waits for, and answers even when its harness limits what the session
-itself can read or write on disk; its mail does not depend on those limits. See
-[mail-bridge.md](mail-bridge.md) and
-[v2/design-rules.md](v2/design-rules.md#tools-t1t11).
+**Main starts its workers.** The main session opens a space: rewake starts a worker on the
+harness main names, in a checkout of its own if asked, outside main's process tree, in a
+pseudo-terminal rewake holds; the worker joins main's room as any session, and ends when
+main's run ends. A person reaches its terminal with `rewake attach`, to answer a prompt the
+worker waits on. (The owner's decision, October 18, 2026.)
 
 **Messages of several kinds.** A task asks for work and owes a report; a question is a
 task whose sender waits for the answer; a note informs and owes nothing. A sender can
@@ -161,12 +163,8 @@ Where no notice can reach a session, the message is still kept, and the session 
 when it next looks. See [delivery.md](delivery.md#the-notice) and
 [v2/design-api.md](v2/design-api.md#wake).
 
-**Reading mail by command or by tool.** A session reads its mail with `rewake inbox`, or
-through tools its harness offers the model, which are the same commands with the same
-rules: the same set and the same arguments on every harness that offers them. A read
-counts only once the reader has received the text. See
-[v2/design-api.md](v2/design-api.md#tooltransport) and
-[v2/design-rules.md](v2/design-rules.md#tools-t1t11).
+**Reading mail by command.** A session reads its mail with `rewake inbox`; a read counts
+only once the reader has received the text. See [delivery.md](delivery.md).
 
 **The command line contract.** One command table, a guide printed with no arguments,
 help for every command, a machine-readable form of every answer, exit codes as a
@@ -174,19 +172,17 @@ contract, and never a prompt. See [design.md](design.md#interface); the tool pri
 own command list with `rewake guide`.
 
 **Harnesses join through adapters.** Each harness is reached through an adapter that
-offers what that harness can do — start a session, wake it, offer the mail tools, report
-its turns, report its context and limits, compact or interrupt it, apply a permission —
+offers what that harness can do — start a session, wake it, report its turns, report its
+context and limits, compact or interrupt it —
 and the core does without whatever is missing, saying so rather than pretending. What a
 run actually has is checked when it starts, not assumed from what the adapter offers.
 See [v2/design-api.md](v2/design-api.md#the-capabilities).
 
 **Compaction and interrupt.** The main session can compact another session's
 conversation, optionally saying what the summary should keep, and can stop the turn
-another session is working on. See [remote-control.md](remote-control.md).
-
-**Write access with a task.** The main session can give a session write access to a
-directory for the duration of a task; the access ends with the task. See
-[grants.md](grants.md).
+another session is working on; it sees how full each session's context is before it hands
+out work. On 2.0 these come through the Claude Code mod and natively on pi. See
+[remote-control.md](remote-control.md).
 
 **A checkout of its own.** A session can start in a separate git worktree, so
 sessions working on one repository do not step on each other. See
@@ -197,15 +193,14 @@ them, is one build of rewake; another build is refused, not mixed in. See [v2/de
 
 **What it never does.** It never intervenes in a session the person started themselves
 — it does not stand between them and its terminal — and never types into anyone's
-screen; for a session the person asks it to host in a tab, it provides the terminal
-bridge and nothing beyond it. It does not edit the person's harness configuration; it
+screen; a worker main starts runs in a terminal rewake holds and shows only through
+`rewake attach`. It does not edit the person's harness configuration; it
 does not read transcripts; it runs no service of its own beside the sessions; it does not
 guess an outcome it cannot prove.
 
 **How the project is checked.** A change lands only when the project's checks pass —
 formatting, static analysis and the tests. An end-to-end suite runs rewake against a
-stand-in harness, with controls that prove each scenario can fail, and live checks run
-against the real harnesses. See [testing.md](testing.md) and
+stand-in harness, and live checks run against the real harnesses. See [testing.md](testing.md) and
 `AGENTS.md`, "Checks".
 
 ## What to read next
@@ -221,18 +216,17 @@ By the kind of work. Every document is on [the map](README.md); the current plan
   documents it links to, [mailbox-records.md](mailbox-records.md).
 - **Changing an adapter or adding a harness**: [v2/design-api.md](v2/design-api.md),
   the harness's own design ([v2/design-claude.md](v2/design-claude.md),
-  [v2/design-codex.md](v2/design-codex.md)), [launch.md](launch.md), and its facts in
-  research below.
+  [v2/stage4-reading-pi.md](v2/stage4-reading-pi.md)), [launch.md](launch.md), and its
+  facts in research below.
 - **Changing the command line**: [design.md](design.md#interface),
   [roles.md](roles.md), and `AGENTS.md`, "How the CLI is organised".
 - **Changing the layout or the state directory**: [v2/design.md](v2/design.md),
   [v2/design-state.md](v2/design-state.md), [code.md](code.md).
-- **Changing the tests**: [testing.md](testing.md),
-  [v2/design-docs-tests.md](v2/design-docs-tests.md), `AGENTS.md`, "Checks".
+- **Changing the tests**: [testing.md](testing.md), `AGENTS.md`, "Checks".
 - **Changing the documents**: [README.md](README.md) and `AGENTS.md`, "Keeping the
   documentation true".
 - **Looking up a fact about a harness**: [research.md](research.md) and its companions
-  [research-launch.md](research-launch.md), [research-protocol.md](research-protocol.md),
-  [research-codex.md](research-codex.md); each fact says where and on which version it
-  was verified.
+  [research-launch.md](research-launch.md) and
+  [research-claude-mod.md](research-claude-mod.md); each fact says where and on which
+  version it was verified.
 - **Something behaves unexpectedly**: [traps.md](traps.md).
