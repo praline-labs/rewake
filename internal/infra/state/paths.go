@@ -58,18 +58,6 @@ func AwaitingPath(dir, name string) string {
 	return filepath.Join(dir, inboxDir, name, awaitingDir)
 }
 
-// ContextPath is where a run's wrapper answers the mail tool's children
-// (docs/archive-1.x/mail-bridge-server.md#who-calls): beside the inbox
-// socket, one per run, and short enough to bind.
-func ContextPath(dir, name, run string) string {
-	path := filepath.Join(dir, socketsDir, name+"."+run+".ctx")
-	if len(path) > 103 {
-		sum := sha256.Sum256([]byte(name + "\x00" + run))
-		path = filepath.Join(dir, socketsDir, fmt.Sprintf("%x.ctx", sum[:12]))
-	}
-	return path
-}
-
 // AuthorityAddress is where a run's wrapper answers for the decisions on
 // reports addressed to the run (internal/core/authority): an abstract unix
 // socket, named by the state directory and the run. Abstract, because a file in the state
