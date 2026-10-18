@@ -69,17 +69,6 @@ type decided struct {
 	Error    string               `json:"error,omitempty"`
 }
 
-// ListenDecisions binds the address of a run that holds no grants: every
-// wrapper answers for the decisions on reports addressed to its run, and only
-// a main's for grants (Listen).
-func ListenDecisions(address string, self int) (*Authority, error) {
-	a, err := Listen(address, self, 0)
-	if err == nil {
-		a.grants = false
-	}
-	return a, err
-}
-
 // HandleDecide installs the host's handler. Until it is installed, and once
 // the authority is closed, a decision asked for is refused: the run cannot
 // answer for one.

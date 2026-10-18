@@ -51,7 +51,7 @@ var listeners atomic.Int64
 func listenDecisions(t *testing.T, handler DecideHandler) (*Authority, string) {
 	t.Helper()
 	path := fmt.Sprintf("@rewake-test/%s/%d/%d", t.Name(), os.Getpid(), listeners.Add(1))
-	authority, err := ListenDecisions(path, os.Getpid())
+	authority, err := Listen(path, os.Getpid())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,10 +76,9 @@ func outcomeOf(err error) mail.DecisionOutcome {
 	return ""
 }
 
-// A wrapper that is no main answers a decision through its host's handler,
-// and the answer comes back whole but for the record's observations; it
-// takes no grant.
-func TestADecisionIsMadeByTheWrapperAskedAndNoGrantIsTaken(t *testing.T) {
+// A wrapper answers a decision through its host's handler, and the answer
+// comes back whole but for the record's observations.
+func TestADecisionIsMadeByTheWrapperAsked(t *testing.T) {
 	var asked mail.DecideRequest
 	_, path := listenDecisions(t, func(ctx context.Context, request mail.DecideRequest) (mail.DecideAnswer, error) {
 		asked = request
@@ -96,9 +95,6 @@ func TestADecisionIsMadeByTheWrapperAskedAndNoGrantIsTaken(t *testing.T) {
 	if d.ID != "d1" || d.Choice != mail.ChoiceNotArrived || d.Subject != subject || !d.By.Verified || answer.Path != "/decisions/r1" ||
 		!answer.Before || answer.Barrier == nil || len(answer.Owed) != 1 {
 		t.Fatalf("answered %+v", answer)
-	}
-	if err := Register(path, lib); err == nil || !strings.Contains(err.Error(), "holds no grants") {
-		t.Fatalf("a run that is no main took a grant: %v", err)
 	}
 }
 

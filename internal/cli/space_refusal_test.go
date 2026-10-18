@@ -23,8 +23,8 @@ func (s spacesStub) Offers() adapter.Offer { return adapter.Offer{Spaces: s.spac
 // Opening a space is refused by the level that is missing, each named: the
 // role, the harness's offer, the run's live set. Only all three let it go on.
 func TestASpaceIsRefusedByTheMissingCapability(t *testing.T) {
-	offering := adapter.NewCatalog(adapter.Protected{}, spacesStub{spaces: true})
-	lacking := adapter.NewCatalog(adapter.Protected{}, spacesStub{})
+	offering := adapter.NewCatalog(spacesStub{spaces: true})
+	lacking := adapter.NewCatalog(spacesStub{})
 	live := []string{string(adapter.WakeCapability), string(adapter.SpacesCapability)}
 	for _, test := range []struct {
 		name    string

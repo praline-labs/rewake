@@ -11,7 +11,6 @@ import (
 	"github.com/praline-labs/rewake/internal/adapter/claude/modhost"
 	"github.com/praline-labs/rewake/internal/core/brief"
 	"github.com/praline-labs/rewake/internal/core/registry"
-	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 )
 
@@ -132,7 +131,6 @@ func (claudeHarness) Notes() []string {
 		"A turn's end is not held open: a turn that ends after rewake pending without a new mark closes the task as answered.",
 		"A launch through --command reaches the mod only when the command ends by exec-ing claude: a wrapper that runs it as a child is never admitted, and the session takes no tasks.",
 		"Arguments after claude reach it as written, beside the flags rewake adds for delivery, except: a --help first asks rewake for this page; --worktree is rewake's, below; and a typed flag replaces an alias's copy of it.",
-		"Claude Code takes no grant in this rewake: not a directory, since the permission hook it took them through is gone until stage 6, and not Git metadata, so a write session commits within its own permissions. A directory a session needs, the owner adds: --add-dir at the launch or /add-dir in its terminal.",
 		"--worktree starts the session in a new checkout of HEAD on a new branch under rewake's worktree directory, at the same place within the repository; --worktree=<name> names both, and a name after a space is refused, since it would reach claude as the prompt. rewake worktree --help says how to land and remove it. It starts a new conversation only: --continue or -c, --resume or -r, --from-pr, --teleport, --fork-session, the attach and respawn commands, Claude Code's own -w and --tmux, --cloud and --environment are refused beside it. -w alone stays Claude Code's own worktree, inside the repository.",
 	}
 }
@@ -166,9 +164,7 @@ func (claudeHarness) SingleUseFlags() []adapter.Flag {
 
 // Offers: Wake, and a turn boundary that the run's mod proves with its hello
 // from inside the harness, so only after the harness starts; it reports every
-// end and holds none open (docs/v2/stage4-turns.md). Claude Code runs its
-// commands without a sandbox of its own, so `rewake send` reaches the
-// wrapper's socket to register a grant.
+// end and holds none open (docs/v2/stage4-turns.md).
 //
 // Spaces: a main run hosts them once its mod's hello is admitted; a run whose
 // mod did not load has none. Conversation: --session-id <uuid> starts the new
@@ -177,7 +173,6 @@ func (claudeHarness) Offers() adapter.Offer {
 	return adapter.Offer{
 		Wake:         true,
 		TurnBoundary: adapter.TurnBoundaryOffer{Reports: true, AfterStart: true},
-		Permissions:  adapter.PermissionsOffer{ReachesWrapper: true},
 		Spaces:       true, Conversation: adapter.ConversationOffer{Flag: sessionIDFlag},
 	}
 }
@@ -235,12 +230,11 @@ func (claudeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, 
 		reply = ""
 	}
 	if request.Intro && !adapter.HasFlag(args, introFlag) {
-		args = adapter.AddFlags(args, introFlag, brief.Intro(briefContext(request)))
+		args = adapter.AddFlags(args, introFlag, brief.Intro(request.BriefContext()))
 	}
 	if len(adapter.FlagValues(args, toolFlag, toolFlagKebab)) == 0 {
 		args = adapter.AddFlags(args, toolFlag, "Bash(rewake:*)")
 	}
-	args = grantDirs(args, request.GrantDirs)
 
 	if request.Conversation != "" {
 		if err := conversationRefusal(args); err != nil {
@@ -305,17 +299,4 @@ func flagValue(args []string, flag string) string {
 		}
 	}
 	return ""
-}
-
-// briefContext is the request's briefing with what the role texts leave to
-// the harness: a session that may commit does so within its own permissions,
-// since Claude Code takes no --grant-git.
-func briefContext(request adapter.LaunchRequest) brief.Context {
-	context := request.BriefContext()
-	if request.Role.GitWrite {
-		context.Harness = role.Section{Title: "ON CLAUDE CODE", Lines: []string{
-			"Claude Code takes no --grant-git: you commit within your own permissions, as the owner set them.",
-		}}
-	}
-	return context
 }

@@ -12,13 +12,13 @@ import (
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
-// TestChildBaseRoundTripAndGrantAuthority holds the round trip of the base
+// TestChildBaseRoundTripAndAuthority holds the round trip of the base
 // (docs/v2/stage3-state.md#the-roots): the wrapper exports the base, not its
 // root, and a shell of the session and a tool call's child, each resolving
 // the room from what they were given, find the wrapper's room byte for byte,
-// with one v2 in it — so the grant authority, whose address hashes the room,
+// with one v2 in it — so the run's authority, whose address hashes the room,
 // is the one the wrapper listens at.
-func TestChildBaseRoundTripAndGrantAuthority(t *testing.T) {
+func TestChildBaseRoundTripAndAuthority(t *testing.T) {
 	t.Setenv(state.RoomEnv, "red")
 	dir := stateDir(t)
 	base := os.Getenv(state.DirEnv)
@@ -39,7 +39,7 @@ func TestChildBaseRoundTripAndGrantAuthority(t *testing.T) {
 			t.Fatalf("%s resolves %q, %v; the wrapper's room is %q", who, got, err, dir)
 		}
 		if state.AuthorityAddress(got, fake.launch.Epoch) != state.AuthorityAddress(dir, fake.launch.Epoch) {
-			t.Fatalf("%s asks another grant authority than the wrapper's", who)
+			t.Fatalf("%s asks another authority than the wrapper's", who)
 		}
 	}
 

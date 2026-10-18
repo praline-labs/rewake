@@ -26,9 +26,8 @@ import (
 // resumeWindow is how long, from when a task was read, a run that ended
 // still owes it: a resume of its conversation may take it over until then.
 // Past it the task is lost for good — its sender reads that no report is
-// coming, a resume no longer takes it over, and main lets its grant go — so
-// that a sender told it is lost can send it again without the work being done
-// twice. A day, as long as finished mail is kept. Counted per task, not from
+// coming, and a resume no longer takes it over — so that a sender told it is
+// lost can send it again without the work being done twice. A day, as long as finished mail is kept. Counted per task, not from
 // when the wait began: a wait gathers what is read until the next report, and
 // a task read late into a long wait is owed as long as one read first.
 const resumeWindow = keepFinished
@@ -103,7 +102,7 @@ func AdoptWaits(dir, name, epoch, thread string) ([]string, error) {
 				}
 				// Read when the earlier run read it: taking it over does not
 				// start the window again, or a chain of resumes would keep a
-				// task, and its grant, owed for ever.
+				// task owed for ever.
 				if err := markScopedAwaiting(dir, name, epoch, Message{ID: id, From: waiter.Name, FromEpoch: waiter.Epoch}, waiter.readAt(index)); err != nil {
 					return adopted, err
 				}

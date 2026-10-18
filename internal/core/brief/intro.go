@@ -19,8 +19,7 @@ type Context struct {
 	// harness's command line has proven nothing yet and leaves it false.
 	Tool bool
 	// Harness is what the session's own harness adds: the sentences the
-	// role texts need about it — how it commits, how a grant behaves on it —
-	// which the role texts, naming no harness, leave to its adapter
+	// role texts need about it — how it commits, say — which the role texts, naming no harness, leave to its adapter
 	// (docs/v2/design-api.md#launch). Empty adds nothing.
 	Harness role.Section
 }

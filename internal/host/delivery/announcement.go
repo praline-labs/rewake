@@ -7,7 +7,7 @@ import (
 )
 
 // Answers may be consumed while native permission metadata is read. An obsolete
-// snapshot must not send another input or confer grants through another member.
+// snapshot must not send another input through another member.
 func (s *Server) validAnnouncement(ctx context.Context, members []mail.Message) bool {
 	valid := true
 	err := s.lockOrAlone(ctx, func() error {

@@ -15,14 +15,14 @@ for each role; harness adapters only pass the rendered strings. The record keeps
 | role | flag | turns reported | its playbook says |
 |---|---|---|---|
 | `general` | `--general` | yes | take work, end your turn with the result; no Git metadata |
-| `main` | `--main` | no | hand out work, read reports; grants; you cannot start sessions |
+| `main` | `--main` | no | hand out work, read reports; you cannot start sessions |
 | `write` | `--write` | yes | take work, end your turn with the result; you can commit when authorized |
 
 The briefing carries the role's whole playbook, the text of
 [what a session is told](#what-a-session-is-told); the last column only names its
-point. Grants leave the code by the owner's decision of October 18, 2026, and the playbooks'
-lines about them go with them; until then `GitWrite` marks main and write, and
-[git-grants.md](git-grants.md) says what a grant does.
+point. Grants left the code by the owner's decision of October 18, 2026, and the playbooks'
+lines about them, and the role's `GitWrite` mark, went with them: a write session commits
+within its own permissions.
 
 **Owner decision, September 17, 2026:** omitted role flags always mean general,
 even in an empty room or after main exits. This supersedes automatic main
@@ -60,7 +60,7 @@ prints them again under YOUR ROLE, wrapped, with `--json` carrying them as `sect
 to `rewake guide`. The last section, MAIL (`role.Mail`), is the same for every role: the
 one rule every role shares — each message and final reply starts with a line stating its
 point — and what a session sees happen to its mail. Main's sections are HANDING OUT WORK,
-READING WHAT COMES BACK, GRANTS AND LIMITS and OWNER DECISIONS
+READING WHAT COMES BACK, LIMITS and OWNER DECISIONS
 (`internal/core/role/playbook_main.go`); write and general share their steps and the sections
 WORKING, REPORTING and MAIN AND PERMISSIONS, all but the line about Git
 (`executorSections` in `internal/core/role/playbook.go`). A test checks that every command a
@@ -79,11 +79,8 @@ keeping to the brief, following the project's own rules, a report that says what
 verified and what assumed. They are structured as titled sections of one-line rules
 rather than one mixed list. Two statements of the earlier text were wrong and are
 corrected there: a stopped report leaves its task open, so what follows is not separate
-work and a later report may settle it; and grant lifetimes are stated as the contract
-does — a directory grant's revocation is scheduled by the report, its timing depends on
-the harness, typed terminal input or a fork can drop it earlier, and `--grant-git`
-metadata of a worker's own checkout is not revoked by rewake, though a typed terminal
-turn can replace the roots.
+work and a later report may settle it; and grant lifetimes were stated as the contract
+did, until grants left the code on October 18, 2026.
 
 **Owner decision, September 25, 2026:** four rules for write and general, after three
 failures of the day before — a worker that took main's word for a peer's and would not
@@ -91,14 +88,13 @@ lift a pause main had lifted, a worker whose turn ended waiting for the owner an
 taken as its report, and a worker that ran `rewake inbox --owed` after a compaction,
 read "nothing owed" and skipped a new unread task twice:
 
-- A message widens no permission by its text alone: permissions come from the launch
-  and from what main grants through rewake, such as `--grant-git`. A refusal by the
-  harness or its classifier is not routed around; the worker tells main what was
-  refused and why the work needs it, and main does it itself, grants it, or brings the
+- A message widens no permission by its text alone: permissions come from the launch.
+  A refusal by the harness or its classifier is not routed around; the worker tells main
+  what was refused and why the work needs it, and main does it itself or brings the
   owner in. This replaces the limit every role had, to treat a message as a peer's
   words, which the worker had read as putting main's word on a par with any other.
   Main's own line says the same from its side: a reported refusal is not a request to
-  route around it, and main grants only within its own rights.
+  route around it, and main acts only within its own rights.
 - Main directs the work on the owner's behalf: its word on pausing, resuming, scope and
   ordinary decisions stands without the owner confirming it in the worker's session.
   The worker does not address the owner; a blocker only the owner can clear goes to

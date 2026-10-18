@@ -45,8 +45,6 @@ type letterHeadModel struct {
 	CreatedAt     time.Time `json:"createdAt"`
 	AddendumTo    string    `json:"addendumTo,omitempty"`
 	Replaces      string    `json:"replaces,omitempty"`
-	GrantDirs     []string  `json:"grantDirs,omitempty"`
-	GrantGit      bool      `json:"grantGit,omitempty"`
 	ThreadChanged bool      `json:"threadChanged,omitempty"`
 	SenderState   string    `json:"senderState,omitempty"`
 	// Gone says the letter was no longer unread when this read reached it,
@@ -198,7 +196,7 @@ func freezeLetter(asJSON bool, view messageView, stored mail.Message) (receipt.L
 	if asJSON {
 		head := letterHeadModel{
 			ID: view.ID, From: view.From, Kind: mail.KindOf(view.Message), CreatedAt: view.CreatedAt,
-			AddendumTo: view.AddendumTo, Replaces: view.Replaces, GrantDirs: view.GrantDirs, GrantGit: view.GrantGit,
+			AddendumTo: view.AddendumTo, Replaces: view.Replaces,
 			ThreadChanged: view.ThreadChanged,
 		}
 		if view.Telemetry != nil {

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -36,7 +35,6 @@ func (s *fixtureSession) delivered(frame, reply fixtureFrame) fixtureFrame {
 		return reply
 	}
 	s.recordDelivered(notice)
-	s.recordGrants(notice)
 	s.turn.mu.Lock()
 	if open := s.turn.open; open != "" {
 		steered := s.turn.steered
@@ -220,19 +218,5 @@ func (s *fixtureSession) dropIfDone() {
 	if done {
 		s.recordTurnEvent("dropped", "", strconv.Itoa(limit))
 		_ = s.conn.Close()
-	}
-}
-
-// grantEventKind is the event a delivery that offered granted directories
-// leaves: its turn field names the letter, its detail the directories.
-const grantEventKind = "grant"
-
-// recordGrants writes down every letter of a delivery that came with granted
-// directories: what the core let reach the session.
-func (s *fixtureSession) recordGrants(notice mailboxNotice) {
-	for _, member := range notice.Members {
-		if len(member.Grants) > 0 {
-			s.recordTurnEvent(grantEventKind, member.ID, strings.Join(member.Grants, " "))
-		}
 	}
 }

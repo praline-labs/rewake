@@ -113,7 +113,7 @@ func Await(dir, to, id string, timeout time.Duration, running func() bool) (Stat
 // WriteStatus records what happened to a message. The delivery server records
 // each outcome with it, under the mailbox lock or in its status-only fallback.
 func WriteStatus(dir, to, id string, result Result) error {
-	status := Status{State: result.State, Via: result.Via, Detail: result.Detail, ReportAvailable: result.ReportAvailable, Withdrawn: result.Withdrawn, GrantApplied: result.GrantApplied, At: time.Now()}
+	status := Status{State: result.State, Via: result.Via, Detail: result.Detail, ReportAvailable: result.ReportAvailable, Withdrawn: result.Withdrawn, At: time.Now()}
 	encoded, err := json.MarshalIndent(status, "", "  ")
 	if err != nil {
 		return err

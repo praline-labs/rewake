@@ -144,13 +144,3 @@ type Withheld struct {
 	Capability Capability
 	Cause      string
 }
-
-// Resumer is a harness whose launch arguments can name the conversation a
-// launch resumes, so that the grants it had can be confirmed again and given
-// at launch (docs/grants.md#after-a-cold-resume): for one that also offers
-// directory grants, which no adapter does from S9 until stage 6 designs
-// Permissions. Empty when they name none — a new conversation, a picker, a
-// fork.
-type Resumer interface {
-	ResumedConversation(args []string) string
-}

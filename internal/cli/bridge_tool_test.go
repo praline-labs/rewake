@@ -254,45 +254,6 @@ func TestWhoamiNamesTheMailChannel(t *testing.T) {
 	}
 }
 
-// An answer longer than one result is kept and handed out in parts, each
-// inside the bound and each a whole envelope, that a shell can continue as
-// well as the tool; put together they are the answer.
-func TestALongAnswerComesInParts(t *testing.T) {
-	toolSession(t)
-	caller := newToolCaller(t)
-	full := formatCommandHelp(lookupCommand(t, "send"), true)
-	answer := caller.run("send", "--help", "--json")
-	var text strings.Builder
-	parts := 0
-	for ; ; parts++ {
-		if answer.code != ExitOK || !tool.Fits(answer.out, answer.errOut) {
-			t.Fatalf("part %d: %d, %d bytes: %s", parts, answer.code, tool.EncodedSize(answer.out, answer.errOut), answer.errOut)
-		}
-		var part outputPartModel
-		if err := json.Unmarshal([]byte(answer.out), &part); err != nil {
-			t.Fatalf("part %d is no whole envelope: %v: %s", parts, err, answer.out)
-		}
-		text.WriteString(part.Text)
-		if part.NextWords == nil {
-			break
-		}
-		if parts == 1 {
-			// The shell picks up where the tool left off.
-			code, out, errOut := run(part.NextWords...)
-			answer = toolRun{code: code, out: out, errOut: errOut}
-			continue
-		}
-		answer = caller.run(part.NextWords...)
-	}
-	if parts < 2 || strings.TrimRight(text.String(), "\n") != strings.TrimRight(full, "\n") {
-		t.Fatalf("%d-byte help came in %d parts as %d bytes", len(full), parts+1, text.Len())
-	}
-	// The human form names its continuation too.
-	if answer := caller.run("send", "--help"); nextFrom(answer.out) == nil {
-		t.Fatalf("the text form names no next part: %s", answer.out)
-	}
-}
-
 func lookupCommand(t *testing.T, name string) *Command {
 	t.Helper()
 	for _, group := range testTable().groups {

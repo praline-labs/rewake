@@ -41,7 +41,7 @@ func TestTheHarnessReceivesItsRoomAndDefaultGeneral(t *testing.T) {
 	if string(raw) != os.Getenv(state.DirEnv)+"\nred\n" {
 		t.Errorf("child environment=%q", raw)
 	}
-	if fake.launch.Room != "red" || fake.launch.Role.ID != "general" || fake.launch.Role.Silent || fake.launch.Role.GitWrite {
+	if fake.launch.Room != "red" || fake.launch.Role.ID != "general" || fake.launch.Role.Silent {
 		t.Errorf("launch context=%+v", fake.launch)
 	}
 	intro := brief.Intro(fake.launch.BriefContext())

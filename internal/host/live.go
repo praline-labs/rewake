@@ -255,9 +255,7 @@ func reserveIfLive(reserver adapter.Reserver, live *liveSet) mail.Reserver {
 
 // threadIfLive asks the run's conversation while its Wake is live. Without
 // it, as when the conversation rests on the Wake and went with it, a letter
-// owed a report is made readable in no conversation rather than failed: the
-// state of a letter whose sender's wrapper did not answer its pin, which
-// holds for this run and is not taken into a resume (host/grants.go). A
+// owed a report is made readable in no conversation rather than failed. A
 // delivery tried again once the Wake is live pins it then.
 func threadIfLive(thread func() (string, error), live *liveSet) func() (string, error) {
 	if thread == nil {

@@ -14,7 +14,7 @@ func TestGeneralIsTheReportingRoleAndReadsLegacyWorkers(t *testing.T) {
 		t.Fatal(err)
 	}
 	part, err := chosenRole(parsed.Call)
-	if err != nil || part.ID != "general" || part.GitWrite || part.Silent {
+	if err != nil || part.ID != "general" || part.Silent {
 		t.Fatalf("role=%+v %v", part, err)
 	}
 	if role.Of("worker").ID != "general" {

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/praline-labs/rewake/internal/core/grant/authority"
+	"github.com/praline-labs/rewake/internal/core/authority"
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/person"
 	"github.com/praline-labs/rewake/internal/core/registry"

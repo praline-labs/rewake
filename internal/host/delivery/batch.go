@@ -32,7 +32,6 @@ func announcement(messages []mail.Message) mail.Message {
 }
 
 func (s *Server) deliverGroup(ctx context.Context, pending []mail.Message) {
-	pending = grantAlone(s.checkGrants(pending))
 	if len(pending) == 0 {
 		return
 	}
@@ -54,7 +53,7 @@ func (s *Server) deliverGroup(ctx context.Context, pending []mail.Message) {
 			seen[member.ID] = true
 		}
 		for _, member := range preparer.pendingMessages(groupCtx) {
-			if !seen[member.ID] && joins(pending, member) {
+			if !seen[member.ID] {
 				pending = append(pending, member)
 			}
 		}
@@ -136,7 +135,7 @@ func (s *Server) deliverGroup(ctx context.Context, pending []mail.Message) {
 				s.finish(member, s.outcomes[member.ID])
 			}
 		} else {
-			s.failGranted(member, outcome)
+			s.finish(member, outcome)
 		}
 	}
 }
@@ -158,7 +157,7 @@ func (s *Server) prepared(message mail.Message, read, answered, expired bool, er
 			s.attempts[message.ID] = time.Now()
 			return false
 		}
-		s.failGranted(message, mail.Result{State: mail.Failed, Detail: err.Error(), ReportAvailable: mail.IsReport(message) && readable && !expired})
+		s.finish(message, mail.Result{State: mail.Failed, Detail: err.Error(), ReportAvailable: mail.IsReport(message) && readable && !expired})
 		return false
 	}
 	if err != nil {
@@ -170,81 +169,8 @@ func (s *Server) prepared(message mail.Message, read, answered, expired bool, er
 		return false
 	}
 	if expired {
-		s.failGranted(message, mail.Result{State: mail.Failed, Detail: "expired before the session could take it"})
+		s.finish(message, mail.Result{State: mail.Failed, Detail: "expired before the session could take it"})
 		return false
 	}
 	return true
-}
-
-// checkGrants checks each grant again before the message becomes readable —
-// its directories, and that the main it names did send it — and refuses the
-// message whose grant does not pass: a task is never handed over without the
-// grant it was sent with. Its sender is told. A grant expired is refused here
-// too.
-func (s *Server) checkGrants(pending []mail.Message) []mail.Message {
-	kept := make([]mail.Message, 0, len(pending))
-	for _, message := range pending {
-		if mail.CarriesGrant(message) && s.expired(message) {
-			// Before the harness is asked whether its reader is idle: a
-			// grant that is not going out needs no answer.
-			s.failGranted(message, mail.Result{State: mail.Failed, Detail: "expired before the session could take it"})
-			continue
-		}
-		if !mail.CarriesGrant(message) {
-			kept = append(kept, message)
-			continue
-		}
-		detail := "this session cannot check a grant"
-		if s.CheckGrant != nil {
-			err := s.CheckGrant(message)
-			if err == nil {
-				kept = append(kept, message)
-				continue
-			}
-			if errors.Is(err, mail.ErrNotYet) {
-				// The sender's wrapper is there and did not answer: asked
-				// again on a later pass, until the message expires.
-				s.attempts[message.ID] = time.Now()
-				s.record(message.ID, mail.Result{State: mail.Pending, Detail: err.Error()})
-				continue
-			}
-			detail = err.Error()
-		}
-		s.failGranted(message, mail.Result{State: mail.Failed, Detail: "its grant does not pass: " + detail})
-	}
-	return kept
-}
-
-// failGranted records a failed outcome, and for a message that carries a
-// grant tells its sender why: a grant that fails leaves a task nobody works
-// on, and its sender may have stopped waiting for the status long ago.
-func (s *Server) failGranted(message mail.Message, result mail.Result) {
-	s.finish(message, result)
-	if result.State == mail.Failed && !result.Withdrawn && mail.CarriesGrant(message) {
-		s.tellUndelivered(message, result.Detail)
-	}
-}
-
-// grantAlone narrows a pass to what may share one notice: a message carrying
-// a grant goes on its own, so its wait for an idle reader holds back no other
-// mail, and its roots and a refusal of its grant, which fails the notice, are
-// its own. The pass stops before it; mail after it may still join the group
-// while it is reserved, and so reach the reader before the grant does.
-func grantAlone(pending []mail.Message) []mail.Message {
-	for index, message := range pending {
-		if mail.CarriesGrant(message) {
-			if index == 0 {
-				return pending[:1]
-			}
-			return pending[:index]
-		}
-	}
-	return pending
-}
-
-// joins says whether a message found once a group is reserved may join it:
-// not one carrying a grant, whose wait for an idle reader was not asked, and
-// nothing beside one.
-func joins(group []mail.Message, message mail.Message) bool {
-	return !mail.CarriesGrant(message) && (len(group) == 0 || !mail.CarriesGrant(group[0]))
 }

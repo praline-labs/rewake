@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/core/grant/authority"
+	"github.com/praline-labs/rewake/internal/core/authority"
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/mail/mailtest"
 	"github.com/praline-labs/rewake/internal/core/person"
