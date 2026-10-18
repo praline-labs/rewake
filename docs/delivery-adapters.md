@@ -2,7 +2,7 @@
 
 How a notice reaches each harness once the wrapper's inbox server has decided to send it
 ([delivery.md](delivery.md#servicing-process-the-wrapper)): the line written to a Claude
-Code session and what its receipts say, and the Codex gateway. The mailbox, the lock, the
+Code session and what its receipts say, the pi extension, and the historical Codex gateway. The mailbox, the lock, the
 notice texts and reading are in [delivery.md](delivery.md).
 
 ## Claude Code adapter
@@ -134,3 +134,27 @@ result. See [stable publication](report-publication.md). Socket readers never wa
 completion observation is not proof of terminal receipt. The owner-run synthetic
 terminal evidence and current compatibility limits are recorded in
 [native gateway evidence](archive/gateway-native-evidence.md).
+
+## pi adapter
+
+A per-run extension connects to the wrapper's unix socket. A protocol-1 hello with the
+current conversation, from the exact process the wrapper started, makes Wake and
+TurnBoundary live. The extension reconnects after a lost socket, `/new` or `/reload`;
+a replaced socket cannot withdraw its successor's capabilities.
+
+The wrapper sends a `wake` frame with the notice and expected conversation. The extension
+checks the conversation and calls `pi.sendMessage` with `triggerTurn: true` and
+`deliverAs: "steer"`. An idle session starts work; a busy one takes the notice after its
+tool batch. An `answer` means the native call accepted the notice, not that a model request
+or inbox read succeeded. Before a connection exists the delivery is pending; after a write
+whose answer is lost it fails without an automatic replay.
+
+`agent_start` is acknowledged before model work. `agent_end` supplies the last assistant
+text, while `agent_settled` reports the end after automatic work. An aborted settled event
+reports aborted; a final `stop` reports answered; other stop reasons report failed. The
+reader captures the end's read boundary before publication, which runs separately so it
+cannot block answers to notices. Up to three publication attempts use the same event and
+capture. There is no durable outbox, transcript scan, or replay across a reconnect; a lost
+end requires main to ask again. The adapter cannot hold an end for an interim confirmation.
+
+The protocol, bounds and native evidence are in [research-pi.md](research-pi.md).

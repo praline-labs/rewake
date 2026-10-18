@@ -12,12 +12,13 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/adapter/claude"
+	"github.com/praline-labs/rewake/internal/adapter/pi"
 )
 
 // New returns the catalog in guide order: the adapters of this build, the
 // fixture's only in a build with its tag (testOnly).
 func New() adapter.Catalog {
-	return adapter.NewCatalog(foreign(), append([]adapter.Harness{claude.New()}, testOnly()...)...)
+	return adapter.NewCatalog(foreign(), append([]adapter.Harness{claude.New(), pi.New()}, testOnly()...)...)
 }
 
 // foreign is where the harnesses this build has no adapter for keep their
