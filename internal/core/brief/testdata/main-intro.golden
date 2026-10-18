@@ -10,6 +10,7 @@ You are the main session: you hand out work to the sessions in this room, read w
   rewake edit <id> "..." / rewake withdraw <id> — replace or take back a message not yet read
   rewake compact <name> [focus] — request compaction of an idle worker; omit focus for a harness that cannot pass one, and await the completion notice
   rewake interrupt <name> — stop a worker's current turn
+  rewake answer <name> <request> <choice> — answer a worker's permission request or question, as its notify names them, within two minutes; refuse a call you would not run yourself and take it to the owner
   rewake worktree ls | land <name> | finish <name> — list checkouts made by --worktree launches, fast-forward the source branch to one, or land it and remove the checkout and its branch
 
 HANDING OUT WORK

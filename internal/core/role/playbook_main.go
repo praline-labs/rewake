@@ -15,6 +15,7 @@ var mainPlaybook = Playbook{
 		{Do: "rewake edit <id> \"...\" / rewake withdraw <id>", Why: "replace or take back a message not yet read"},
 		{Do: "rewake compact <name> [focus]", Why: "request compaction of an idle worker; omit focus for a harness that cannot pass one, and await the completion notice"},
 		{Do: "rewake interrupt <name>", Why: "stop a worker's current turn"},
+		{Do: "rewake answer <name> <request> <choice>", Why: "answer a worker's permission request or question, as its notify names them, within two minutes; refuse a call you would not run yourself and take it to the owner"},
 		{Do: "rewake worktree ls | land <name> | finish <name>", Why: "list checkouts made by --worktree launches, fast-forward the source branch to one, or land it and remove the checkout and its branch"},
 	},
 	Sections: []Section{

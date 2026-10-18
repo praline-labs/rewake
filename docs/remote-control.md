@@ -11,6 +11,11 @@ Built on September 24, 2026 for Claude Code, with unit and module tests and a wo
 case, and the same day for Codex (part B), where the wrapper serves the requests itself
 ([remote-control-codex.md](archive/1.x/remote-control-codex.md)).
 
+**The same directory carries `rewake answer`** since October 18, 2026: main's answer to a
+Claude Code worker's permission request or question, the action `answer`, which the worker's
+wrapper reads against the open request and gives its mod
+([permission-requests.md](permission-requests.md#the-path)).
+
 **pi serves both verbs since October 18, 2026**, including compaction focus, through its
 per-run extension and native APIs ([research-pi.md](research-pi.md#telemetry-and-remote-control)).
 The wrapper serves the control directory with `control.Serve` and carries each request

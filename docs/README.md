@@ -54,8 +54,8 @@ Main and its workers:
 
 Designs not built:
 
-- [permission-requests.md](permission-requests.md) — a worker's permission request held while main answers with `rewake permission`.
-- [permission-requests-sources.md](permission-requests-sources.md) — where each fact behind that design was checked.
+- [permission-requests.md](permission-requests.md) — a worker's permission request or question carried to main, answered with `rewake answer`, the first answer winning.
+- [permission-requests-sources.md](permission-requests-sources.md) — the live probe on Claude Code 2.1.302 and the pi facts behind it.
 - [conversation-reset.md](conversation-reset.md) — `rewake clear` from main and a conversation marker in `list` and notices.
 
 The rules and the code:

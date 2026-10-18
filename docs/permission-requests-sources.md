@@ -1,59 +1,46 @@
 # Where the permission-request facts were checked
 
-The sources behind [permission-requests.md](permission-requests.md), one entry per fact
-it rests on.
+The facts behind [permission-requests.md](permission-requests.md). The September 29, 2026 record
+of the settings hooks `PermissionRequest` on Claude Code 2.1.280 and of Codex 0.157.1, which the
+first design rested on, is in git history before October 18, 2026: the build uses neither.
 
-Checked on September 29, 2026 against the installed Claude Code 2.1.280 binary (its bundled source,
-by the minified names), the older Claude Code tree kept as reference (`openagent`), and the
-Codex tree at the release commits `be2951ea3` (0.155.1) and `36650394c` (0.157.1); lines
-are 0.157.1's unless the two differ. Where the old tree and the binary disagree, the
-binary is what runs.
+## The live probe on Claude Code 2.1.302, October 18, 2026
 
-- **The hook's payload** — `executePermissionRequestHooks` (`QCe`) sends the common
-  fields, `tool_name`, `tool_input`, `permission_suggestions` and, for an MCP tool,
-  `mcp_server`; no `tool_use_id` in either tree (`utils/hooks.ts:4157`), though the help
-  text of both claims one (`hooksConfigManager.ts:166`). The common fields add `agent_id`
-  and `agent_type` in a subagent.
-- **Its answer** — `allow` with optional `updatedInput` and `updatedPermissions`, `deny`
-  with optional `message` and `interrupt`; the same schema in both
-  (`coreSchemas.ts:875`); `addDirectories` is one kind of `updatedPermissions` entry
-  (`PermissionUpdateSchema.ts:68`). A deny's message, or `Permission denied by hook`, becomes the
-  tool's error (`PermissionContext.ts:252`, `permissions.ts:453`); 2.1.280 also drops an input-less allow for a
-  tool that needs the person (`requiresUserInteraction`).
-- **Timeouts** — 600 s by default (`Ia=600000`; `TOOL_HOOK_EXECUTION_TIMEOUT_MS`), the
-  hook's own `timeout` in seconds replaces it, with no ceiling in the schema.
-- **The race** — hooks run beside the dialog unless `awaitAutomatedChecksBeforeDialog`,
-  and a decision counts only if nothing settled the dialog first
-  (`interactiveHandler.ts:411`; in 2.1.280 `if(!S)(async()=>{… s.runHooks(…) …})`). The
-  flag is set for a background subagent that may show prompts (`runAgent.ts:436`); in
-  2.1.280 that is every background subagent of an interactive session.
-- **A "no"** — without feedback on the main thread it aborts the turn
-  (`PermissionContext.ts:154`, `Kcn` in 2.1.280); a refused call returns before any
-  `PostToolUse*` hook (`toolExecution.ts:995`).
-- **Auto mode** — the classifier's refusal is a `deny` with reason `classifier`
-  (`permissions.ts:903`); `PermissionDenied` hooks get it, with `tool_use_id`, and may
-  answer `retry` (`toolExecution.ts:1073`); after 3 refusals in a row or 20 in all the
-  harness prompts (`denialTracking.ts:12`, `HN={maxConsecutive:3,maxTotal:20}` in 2.1.280).
-  What still prompts: safety checks the classifier may not approve, tools that need the
-  person, and the fallbacks when the classifier cannot judge — a transcript too long for it, or,
-  failing open, unavailable (`permissions.ts:818-875`).
-- **MCP and `WebFetch`** — an MCP tool passes to the rules and asks by default
-  (`MCPTool.ts:56`, `services/mcp/client.ts:1814`); `WebFetch` asks for a host neither
-  preapproved nor ruled on (`WebFetchTool.ts:112-176`).
-- **Codex requests** — `common.rs:1765-1801` in 0.157.1 (`1756-1792` in 0.155.1); the
-  decisions `accept`, `acceptForSession`, `acceptWithExecpolicyAmendment`,
-  `applyNetworkPolicyAmendment`, `decline`, `cancel`, the same in both (`v2/item.rs:66`,
-  `:115`); `cancel` aborts the turn.
-- **Codex answering** — first reply wins, any connection (`outgoing_message.rs:467`,
-  `:552`); `serverRequest/resolved` (`thread_lifecycle.rs:864`), dismissed in the terminal
-  (`tui/src/app/app_server_events.rs:237`); no timeout (`bespoke_event_handling.rs:1924`,
-  `:1971`); open requests cleared on turn start, completion and abort (`:157`, `:187`,
-  `:1206`); `steer_input` (`core/src/session/turn_input.rs:624`) and the drain before the
-  next request (`core/src/session/turn.rs:416`); the decline text
-  (`core/src/tools/events.rs:446`).
-- **Codex hooks** — hooks before guardian and the person
-  (`core/src/tools/approvals.rs:500`, `:493` in 0.155.1); deny wins
-  (`hooks/src/events/permission_request.rs`); unsupported fields and the deny message
-  (`hooks/src/engine/output_parser.rs:401`); timeout (`hooks/src/engine/discovery.rs:762`);
-  trust (`discovery.rs:712`, `hooks/src/config_rules.rs:23`); on by default
-  (`features/src/lib.rs:1212`, `:1171` in 0.155.1).
+An isolated interactive `claude --plugin-dir` in a pseudo-terminal the probe owned, not through
+rewake: `--permission-mode manual`, `--setting-sources ''`, `--strict-mcp-config`, a per-launch
+settings layer asking for `Write`, a private home with a private copy of the login, a cheap
+model; most cases were mod commands without a model turn, three were model turns. No setting of
+the person's was changed. Its mod, driver and evidence were kept in the room's scratch directory,
+not in the repository.
+
+- **The check.** `tool.check` awaits `next(e)`, the engine's verdict, which runs nothing; a
+  genuine ask from the per-launch rule reached it. The 2.1.302 CLI calls the manual mode
+  `manual`, not `default`.
+- **The question.** A direct `$.tool.call` of `AskUserQuestion` is refused by the host
+  (`runs the AskUserQuestion tool: that is $.ui.ask`). `$.ui.ask` opens the engine's own dialog
+  as a `tool.call` of `AskUserQuestion` through the mod's hook on it, and resolves to a string:
+  the label, labels joined with a comma and a space, or the text under Other. It rejects when
+  the hook answers `{ deny }`.
+- **Holding.** The hook started the dialog with `next(e)` and awaited successive host-held
+  `$.http.fetch` polls: one permission call was held 42 seconds, polls answered pending at 15
+  and 30 seconds, with no own-time skip and no fetch cut. No sleep or timer promise was in the
+  hook.
+- **The first answer.** A remote answer returned as `{ result: { questions, answers } }`, keyed
+  by question text, closed the shown dialog, and the pending `next` then settled as a native
+  rejection that did not replace the chosen result. A keyboard answer at 2 seconds — Allow once,
+  and Refuse — won over a remote answer scheduled for 12, and the native result's event woke the
+  host's poll. A model's own `AskUserQuestion` answered remotely reached the model as its
+  result, descriptions and all.
+- **The deadline.** A shortened 8-second deadline answered `{ deny }`, `$.ui.ask` rejected, the
+  check's handler refused, the dialog closed, and nothing was written; the same for a model's
+  own write.
+- **What it did not test.** Mail, `rewake answer`, the identity check, session allowances, the
+  full 120 seconds, restarts, subagents, other modes, races under load. The mode a check runs in
+  is read from the harness's classic events (`permission_mode`), as the 2.1.302 declarations
+  give it, not seen live.
+
+## pi 1.2.0
+
+No built-in tool-permission gate and no model question tool: the extension examples
+`question.ts` and `permission-gate.ts` are not loaded by default; `ui_prompt_start/end` carry a
+kind and a title, neither the choices nor a way to answer ([research-pi.md](research-pi.md)).

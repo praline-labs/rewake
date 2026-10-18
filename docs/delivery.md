@@ -73,7 +73,7 @@ refusals and help come from there.
 |---|---|---|---|
 | `task` | plain `send` | a report at the end of its turn | once delivered |
 | `question` | `--question` | the same | with the answer, up to `--wait` (600 s by default) |
-| `notify` | `--notify`; also main's wrapper for availability, departure and compaction notices, and the letter that ends a compaction main asked for with `rewake compact` ([remote-control.md](remote-control-letter.md)) | nothing | once delivered, after waiting up to four seconds for company ([the notice](#the-notice)) |
+| `notify` | `--notify`; also main's wrapper for availability, departure and compaction notices, the letter that ends a compaction main asked for with `rewake compact` ([remote-control.md](remote-control-letter.md)), and a worker's wrapper for a permission request or question main may answer with `rewake answer` ([permission-requests.md](permission-requests.md#what-main-sees)) | nothing | once delivered, after waiting up to four seconds for company ([the notice](#the-notice)) |
 | `finished` | successful turn end | nothing | — |
 | `error` | a failed turn end only | nothing | failure, exit 1 for a waiting question |
 | `stopped` | a turn stopped at the keyboard, or by a main's `rewake interrupt` | nothing | exit 1 for a waiting question |
