@@ -25,7 +25,7 @@ dropped in favour of the source that cannot go stale, or put under a test.
 ## What was done
 
 - **Controls: a table under a test.** The list moved from prose in `testing.md` to a
-  table by scenario in [testing-cases.md](../testing-cases.md#every-control), without a
+  table by scenario in [testing-cases.md](../testing-cases.md), without a
   count. `docs/controls_test.go` parses the suite and requires the mutants column to equal
   its `mutation` values both ways, and every listed fixture switch to be a name the suite
   spells. A switch has no single shape in the code — a field of a control struct, an

@@ -3,8 +3,8 @@
 The workflow cases that make rewake's calls through the fixture program's own tool
 transport, and the timed turn start that program sends, with their controls. The tiers,
 the commands and how to read a result are in [testing.md](testing.md); the transport
-itself is in [mail-bridge-transport.md](mail-bridge-transport.md), and the rules these
-cases hold, with the unit tests beside them, are in [rules/tools.md](rules/tools.md).
+itself is in [mail-bridge-transport.md](archive/mail-bridge-transport.md), and the rules these
+cases hold, with the unit tests beside them, are in [rules/tools.md](archive/rules-tools.md).
 
 ## One case per tool
 

@@ -54,5 +54,4 @@ What rewake adds to a harness's launch, in the full wording of
 ## What returns with the Codex adapter
 
 `mail-bridge-launch.md` rules 2, 4, 5 and 6 are about injecting an MCP server and checking
-its name; they return, redesigned, with the Codex adapter (stage 5). Rule 5's guarantee
-— the effective limits decide a read — is T6.
+its name; they return, redesigned, with the Codex adapter (stage 5).

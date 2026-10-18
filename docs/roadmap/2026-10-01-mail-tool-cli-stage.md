@@ -1,6 +1,6 @@
 # Stage M1 of the mail tool: the CLI side, accepted
 
-The first of the three stages of [mail-bridge.md](../mail-bridge.md) — the CLI that runs
+The first of the three stages of [mail-bridge.md](../archive/mail-bridge.md) — the CLI that runs
 one call of the mail tool — was accepted on October 1, 2026, after seventeen acceptance
 rounds on the Codex side. The server (M2) and the injection at launch (M3) come next;
 until the wrapper's context endpoint exists, nothing runs under the tool and every ticket
@@ -8,7 +8,7 @@ is refused.
 
 ## What was built
 
-- **The tool's CLI side** ([mail-bridge-cli.md](../mail-bridge-cli.md)): the worker's own
+- **The tool's CLI side** ([mail-bridge-cli.md](../archive/mail-bridge-cli.md)): the worker's own
   CLI words run as one call — the surface the tool allows, the ticket and the receipt of
   a call, reads in parts claimed by the call that showed them, the size cap on the final
   encoded bytes, and a retry that is a new call with its own deadline.
@@ -78,4 +78,4 @@ of every round were rerun at each later one.
 - What stays open of the recovery rules is in
   [turn-end-recovery.md](../turn-end-recovery.md#what-stays-open), and what the live
   stages must still show is in
-  [mail-bridge.md](../mail-bridge.md#what-stays-open-before-acceptance).
+  [mail-bridge.md](../archive/mail-bridge.md#what-stays-open-before-acceptance).

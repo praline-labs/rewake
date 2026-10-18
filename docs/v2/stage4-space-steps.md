@@ -68,9 +68,9 @@ alive after main ends.
 
 **The authority across the space** (the acceptance the design review named, October 13, 2026): a
 command run by the hosted worker calls main's decision endpoint on a report of the worker's
-and main's grant registration directly, once with the worker's environment and once with
+directly, once with the worker's environment and once with
 main's variables copied in; both are refused. Main's own shell and a tool child of main's
-still succeed against the same endpoints. **Main's wrapper killed:** a real-process worker
+still succeed against the same endpoint. **Main's wrapper killed:** a real-process worker
 that ignores SIGHUP and SIGTERM, main's wrapper killed with SIGKILL; SIGKILL is needed and sent
 to the harness's group only; within 5 + 2 s and a margin the worker's processes are gone, the
 end is recorded by the surviving worker wrapper, and that wrapper is gone after; the next main
@@ -124,7 +124,7 @@ run. Until then a rule stands here.
 - **SP9. A hosted worker is never main's descendant.** Its wrapper is reparented away from
   main's wrapper before it is seated, checked by the same ancestry test the authority makes; an
   open that cannot prove it is refused, and nothing the worker controls runs before that proof.
-  So main's decision and grant endpoints refuse the worker's commands by the existing rule, and
+  So main's decision endpoint refuses the worker's commands by the existing rule, and
   no authority rule changes.
 
 L1 and L3 carry the mod's directory; T10 the worker's build; the existing O2 and the
@@ -136,7 +136,7 @@ Each small enough for one review; each closed by its acceptance check, not by it
 
 | Step | What it builds | Acceptance |
 |---|---|---|
-| S4-1 | P4 and P15c, live, from the probe's kit: the peer of `$.http.fetch` on every request, after a reload and after a keeper's respawn — the kit's existing coverage, not P15b's fetches, which say nothing of their peer — and a shell child's request refused; the screen drawn as styled text in the key surface at 160 by 30, its repaint rate and CPU against P15b's cell grid; a progress signal on the held call, if the skill shows one (Q4); a worker's `turn.complete` and its `answer` | the records in [research-claude-mod.md](../research-claude-mod.md); P4 positive, or the stage stops for a channel design ([design-claude.md](design-claude.md#how-a-tool-call-runs)); P15c picks text or the fallback; P15c also carries the keeper's view cleaned of Claude Code's other rows and the prompt box made useful, since no render site hides it (the owner's questions of October 13, 2026) |
+| S4-1 | P4 and P15c, live, from the probe's kit: the peer of `$.http.fetch` on every request, after a reload and after a keeper's respawn — the kit's existing coverage, not P15b's fetches, which say nothing of their peer — and a shell child's request refused; the screen drawn as styled text in the key surface at 160 by 30, its repaint rate and CPU against P15b's cell grid; a progress signal on the held call, if the skill shows one (Q4); a worker's `turn.complete` and its `answer` | the records in [research-claude-mod.md](../research-claude-mod.md); P4 positive, or the stage stops for a channel design ([design-claude.md](design-claude.md#the-socket-and-its-peer)); P15c picks text or the fallback; P15c also carries the keeper's view cleaned of Claude Code's other rows and the prompt box made useful, since no render site hides it (the owner's questions of October 13, 2026) |
 | S4-2 | the rules test's SP group with SP3, SP4 and SP9; the protocol schema, `tools/protogen` and the drift test | the drift test green; review of the rules |
 | S4-3 | `internal/core/space` and `rewake space list`; built October 13, 2026 ([the record](stage4-space-record.md)) | the record tests under the lease; the listing on a hand-written record, closed and kept |
 | S4-4 | `internal/host/terminal`, with `charmbracelet/x/vt` (the owner's exception, [section 1](stage4-space.md#the-terminal-library)); built October 13, 2026 ([the terminal](stage4-space-terminal.md)) | the pseudo-terminal tests above, with `-race`; the layout test with the library only in `host/terminal`; `go list -deps` of the binary before and after, recorded with the exception |

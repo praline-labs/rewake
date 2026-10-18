@@ -19,13 +19,14 @@ version history are the skill's ([where the API facts live](#where-the-api-facts
 |---|---|---|
 | Launch | `claude` with one `--plugin-dir` | interactive first launch in an untrusted directory |
 | Wake | one of three candidates | P1 decides |
-| ToolTransport | `$.tool.register` + `tool.call` answered by the mod | P2, P4, P8 |
 | TurnBoundary | `turn.start` and `turn.complete`, reported without holding (S4-6); `classic.Stop` with `block` later | P3, for the hold |
 | Telemetry | `session.measure`, `$.session.usage()` | P6 |
 | Control | `$.session.compact`, `$.turn.abort`, clear by `$.command.run` | P7 |
-| Permissions | stage 6: `classic.PermissionRequest`, `classic.PreToolUse` | stage 6 |
 | PersonUI | stage 6: `$.ui.status`, panes | stage 6 |
 | Spaces | a main run's hello admitted, answered `hostsSpaces`; a worker named by `--session-id <uuid>` | P4 |
+
+ToolTransport and Permissions left the design by the owner's decision of October 18, 2026,
+with the mail tool and grants ([the mail tools](#the-mail-tools)).
 
 ## Where the API facts live
 
@@ -46,7 +47,7 @@ the probe named beside it decides, and the decision is not changed until then.
 
 The wrapper writes the mod into the run's directory and passes `--plugin-dir <dir>` to that
 launch only. Nothing in the person's settings changes (L1); the directory goes with the run
-(L3) and is one of the adapter's protected directories, so no grant reaches it.
+(L3).
 
 The mod's files — a manifest named `rewake`, the hooks file, `hooks/rewake.ts`, its outbox in
 `hooks/outbox.ts` and the generated `protocol.gen.ts`, each named in the `embed` line, since a pattern skips the
@@ -100,93 +101,26 @@ ways:
    worker, and every non-built-in mod after three crashes, and tells rewake nothing; the lapse
    of the mod's held poll withdraws what it proved ([the live set](stage4-turns.md#the-live-set)).
 
-Until a hello arrives, ToolTransport, TurnBoundary, Telemetry and Control are not live
+Until a hello arrives, TurnBoundary, Telemetry and Control are not live
 ([design-api.md](design-api.md#two-levels-offered-and-live)), and a session running without
 its mod takes no tasks ([answer 3](design.md#the-owners-answers)). P5 includes the losses.
 
 ## The mail tools
 
-At `session.start` the mod registers each tool of the set — name, the plain description
-and the input schema, all from `tool` ([design-api.md](design-api.md#tooltransport)) —
-before the first prompt. Whether registration outlives `/clear`, which runs no new
-`session.start`, is P9 (*to verify*; the skill confirms only that no `session.start`
-runs). Whether the tools load deferred, behind a tool search, is P8: the design planned
-a `tool.describe` hook with `isDeferred: false`; the skill says `$.tool.register`
-accepts `isDeferred: false` itself, which is simpler. P8 tries the registration form
-first and then whether the model calls the tools reliably.
+The mod registers no tools: the mail tool left the design by the owner's decision of
+October 18, 2026, before it was built on this adapter, and a session reads and sends
+through the shell commands. Its design — the tools' registration, the permission check, a
+call carried to the endpoint and a read proven by the final result — is in
+[rules-tools.md](../archive/rules-tools.md) and [mail-bridge.md](../archive/mail-bridge.md).
+What stays of it is how the host tells the mod's requests from a shell command's.
 
-**Permissions.** A call the mod answers itself in `tool.call` skips the permission check
-and its dialog (the skill), so a launch needs no allowance for the tools (1.x needed
-one, `mail-bridge-launch.md` rule 3). But a person's `permissions.deny` on an
-`mcp__rewake__` tool would then be routed around, which C7 forbids. So before
-answering, the mod asks `$.tool.check({tool, input})`: `deny` returns the person's
-refusal to the model as a denial; `allow` and `ask` go on, since rewake's own tools are
-what the launch is for. A refusal — the person's deny, or a check that cannot be relied
-on — runs no effect and **gives no advice to repeat the operation in the shell**, where
-that deny does not reach (C7, `mail-bridge-channel.md` rule 7): it names the refusal or
-the check that was unavailable, and the host tells main and the person once. Whether
-`$.tool.check` reports a deny rule for a mod-registered tool is P8 (*to verify*; the
-skill does not cover it); on a version where it cannot, the mod registers no tools —
-ToolTransport is not live and the session is briefed as without it — rather than run
-tools under a deny it cannot see. The skill notes that a guard hook fails open unless
-the failure is caught; the check's failure path is designed to the same rule, as a
-refusal and not as an allowance. A transport fault or a missing read proof under a
-check that answered `allow` keeps the ordinary fallback (T6, T11).
-
-### How a tool call runs
-
-Decided: **through the host's endpoint, not by a `rewake` process the mod starts.**
-
-1. `tool.call` for `mcp__rewake__<name>` fires in the mod with the model's arguments and
-   the reserved fields `tool` and `tool_use_id`, which no rewrite can change; a call
-   from a subagent carries `agentId` and is refused — subagents use the shell.
-2. The mod sends the call to the endpoint with `$.http.fetch` over the run's Unix socket:
-   the tool, the arguments, `tool_use_id`, `$.session.id()`, and the turn the call
-   belongs to. `tool.call` carries no turn id, so the turn is the one whose main-loop
-   `turn.start` (the one without `agentId`: from 2.1.299 a subagent's turns raise it too)
-   the mod has seen and whose `turn.complete` it has not; a call outside an open turn
-   has no proven turn, and its pending mark or read is unproven (T7). That the mod sees
-   a main-loop `tool.call` only between its turn's start and complete, and that turn ids
-   are never reused, are P3 and P9 (*to verify*); until P9 shows the latter, only an
-   operation's first attempt may mark (T7). The skill states the hook's time budget and
-   what counts against it; the endpoint call is held to it.
-3. The host checks that the request came from the mod (below), makes the binding (T2)
-   from those harness-supplied ids and the digest of the arguments, and runs the
-   operation in a CLI child of **its own image** under the receipts (T3, T4, T10). The
-   answer passes the one encoder and bound (T5).
-4. The mod returns the answer's text. A refusal returns as a denial where the skill's
-   documented denial answer carries the error flag to the model; the design assumed the
-   mod could only return text and so could not mark an error. This is a contradiction
-   with the skill: P8 checks live whether the denial answer reaches the model as an
-   error, and until then a refusal is plain text as designed (*to verify*).
-5. **A read counts only on proof of the final result** (T6): what the model is given
-   for that `tool_use_id` after every replacement and truncation, not what the tool
-   returned. An event that reports the result is not yet that proof: a post-tool hook
-   may replace what the model sees, a person's settings hook can replace a result after
-   the mod has seen it, and a large result becomes a preview at a size not yet measured.
-   The candidates are `classic.PostToolUse` and `classic.PostToolBatch`, the latter
-   fired once per batch before the next model request with each call's response. The
-   skill documents the hook order for the pre-tool event only, not for the post-tool
-   one, and not whether `classic.PostToolUse` fires for a call the mod answered
-   without passing it on. **A candidate is accepted only if P2 shows it carries the
-   final result** — after another hook's replacement, after a large result's preview —
-   compared with what a stand-in model API actually received (`tools/standin`), never
-   with a transcript. Accepted, the host acknowledges the parts when the final result
-   equals the recorded answer and arrived before the turn's end (T7, T8). **Without such
-   a signal the reading tools refuse before their first effect** and say to read with
-   `rewake inbox`; the other tools work.
-
-Why not a child the mod starts: such a child is a process below the harness exactly like
-a command the model runs in Bash, with the same environment (*to verify*, P10), so the
-host could not tell an acknowledgment from the mod from one the model typed; and after
-an npm upgrade the path the mod would run names a new build (T10). Through the endpoint
-the answer is computed by the wrapper's own build and the acknowledgment comes from
-evidence only the harness emits.
+### The socket and its peer
 
 **Telling the mod from a shell command.** Every request to the endpoint is checked on its
 own: the peer of its connection, by `SO_PEERCRED`, must be **the harness process itself**
 — the pid the wrapper started, alive with its start time before and after the answer, as
-the grant authority checks its peer (`docs/grants-authority.md`, steps 1–2). A descendant
+the grant authority checked its peer ([grants-authority.md](../archive/grants-authority.md),
+steps 1–2). A descendant
 of the harness is never accepted, since a command the model runs is one. No secret, token
 or session carries authority from one request to the next, so a mod reload, a respawned
 hooks worker or a dropped connection changes nothing: each request proves its origin
@@ -197,8 +131,7 @@ request the probe's mod made, through a reload, the keeper's hold and its polls,
 the harness process itself, and a model's shell child was refused; rewake's own mod's
 hello was admitted the same way in S4-5. Still open: a hooks worker respawned after a
 crash, and a shell child started before a reload. A negative result on a later version
-has **no fallback**: every capability that reaches the host through the mod —
-ToolTransport, TurnBoundary, Telemetry, Control, Spaces — would not be live, a role that
+has **no fallback**: every capability that reaches the host through the mod — TurnBoundary, Telemetry, Control, Spaces — would not be live, a role that
 must report would refuse to launch (answer 3 of
 [design.md](design.md#the-owners-answers)), and stage 4's working pair would wait for
 another trusted channel of events, designed and reviewed; admitting a helper process back
@@ -208,7 +141,7 @@ secret first. The threat is the one 1.x tickets answer — a model's command imi
 tool; a process of the same user rewriting the mod's files is outside it.
 
 The same holds for the endpoint's other callers in the mod — the hello, turn events,
-read evidence, control answers. The stream child of [Control](#control) is a descendant,
+control answers. The stream child of [Control](#control) is a descendant,
 so it carries no authority: it only signals that something is waiting, and the mod
 fetches the request and posts the answer itself.
 
@@ -260,7 +193,7 @@ Requests reach the mod by a stream, not by polling (answer 6): the mod starts on
 with `$.process.spawn` at `session.start`, which holds a connection to the endpoint and
 prints a line whenever something waits. The line is a hint only — no request, no
 content, no authority: the child is a descendant of the harness, which a model's command
-can be too ([the mail tools](#how-a-tool-call-runs)). On a hint the mod fetches the
+can be too ([the socket and its peer](#the-socket-and-its-peer)). On a hint the mod fetches the
 request itself and answers through the endpoint, each request checked on its own. A
 lost hint costs time, not a request: the mod also asks at each turn event and on a slow
 timer. The request files of `core/control` stay the transport between sessions. The

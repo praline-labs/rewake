@@ -1,6 +1,6 @@
 # Every record of a mailbox
 
-Rule 8 of [mail-bridge-cli.md](mail-bridge-cli.md#the-rules-the-code-holds) stops a
+Rule 8 of [mail-bridge-cli.md](archive/mail-bridge-cli.md#the-rules-the-code-holds) stops a
 mailbox on an unknown before any effect. That holds only if nothing an effect decides by
 is left for the effect to find: an effect that meets an unknown after an earlier effect
 of the same barrier went through has let that one through beside it. Acceptance after

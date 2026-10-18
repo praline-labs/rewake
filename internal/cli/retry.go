@@ -8,7 +8,7 @@ import (
 )
 
 // retryCommand is retry, which finishes or shows again what a call with a
-// receipt began (docs/mail-bridge.md#receipts-retries-and-deadlines). A tool
+// receipt began (docs/archive/mail-bridge.md#receipts-retries-and-deadlines). A tool
 // call that timed out, or whose answer the harness lost, leaves its receipt in
 // the answer it did give or in the refusal of the call that repeated it; this
 // is the one way back to that operation that cannot start a second one.

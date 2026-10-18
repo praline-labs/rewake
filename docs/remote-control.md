@@ -284,5 +284,4 @@ Codex adapter in S8.
 
 ## Tests
 
-What proves each part — the unit tests and the workflow cases
-with their mutants — is listed in [remote-control-tests.md](remote-control-tests.md).
+What proves each part — the unit tests and the workflow cases — is listed in [remote-control-tests.md](remote-control-tests.md).

@@ -217,9 +217,9 @@ From 0.156 the Codex terminal refuses `--add-dir` and a
 first request (live on 0.157.1; 0.155.1 still took both,
 [research-codex.md](archive/research-codex.md#runtime-workspace-roots)). Every `rewake codex`
 launch runs the terminal under `--remote`, so a launch that asked for a second writable
-directory simply ended. Rewake now refuses both itself with exit 2 and points at
-`rewake send --grant-dir`, which adds the directory for one task
-([grants.md](grants.md)).
+directory simply ended. Rewake then refused both itself with exit 2 and pointed at
+`rewake send --grant-dir`, which added the directory for one task and left the code with
+grants on October 18, 2026 ([grants.md](archive/grants.md)).
 
 *September 27, 2026.*
 

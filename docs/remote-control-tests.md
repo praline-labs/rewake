@@ -51,8 +51,7 @@ built is in [testing-plugin.md](archive/1.x/testing-plugin.md#steering-a-session
   letter to main; a compaction refused mid-turn with the turn going on; an interrupt
   giving main the stopped text naming it, also in its awaited list; an idle interrupt
   refused; a worker serving no control not answering; and a worker's call refused as a
-  wrong call; six product mutants, one per link of the core's path
-  ([testing-cases.md](testing-cases.md#a-stop-and-steering-a-session)).
+  wrong call ([testing-cases.md](testing-cases.md#a-stop-and-steering-a-session)).
 - `internal/core/control/serve_test.go` — the served side the Codex wrapper runs: an answer
   written once with the request's id, a request carried out once across a second look
   and a fresh server, one withdrawn or replaced as it is marked left undone and handed

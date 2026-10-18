@@ -182,9 +182,9 @@ rewake refuses to start a harness from a shell inside a session, exit 2
 sessions. The hosted launch is not a session's shell starting one; it is **main's wrapper**
 starting one, on a request the mod made under the peer check.
 
-**The topology: a worker is not main's descendant.** The authority of decisions and grants
+**The topology: a worker is not main's descendant.** The authority of decisions
 accepts a caller when it descends from the addressed wrapper and shares its namespaces
-(`internal/core/grant/authority/server.go`, `fromBelow`; `decide.go` checks the same on the
+(`internal/core/authority/server.go`, `fromBelow`; `decide.go` checks the same on the
 client side), and `proc.Descends` crosses an intervening wrapper. A worker started as main's
 wrapper's child would make every command the worker runs a command of main's for that check.
 Decided by main, October 13, 2026, on the principle the owner set for this step — simplify the
@@ -221,7 +221,7 @@ existing proof holds unchanged.
   no new authority rule is designed for it.
 - **What the authority then sees.** A command of the worker — its shell, its tool children,
   with or without main's variables copied in — descends from the worker's wrapper, not from
-  main's, so main's decision and grant endpoints refuse it as they refuse any stranger; the
+  main's, so main's decision endpoint refuses it as they refuse any stranger; the
   worker's own wrapper accepts it as its own. Main's shell and main's tool children still
   descend from main's wrapper and pass as today.
 - **The command.** `<image> <harness> --name <name> --<role> --room <main's room> --
@@ -392,10 +392,10 @@ The smallest set is three commands in the command table:
 - `rewake space close <name>` — a change; main only.
 
 Main's model calls them from its shell, and the person with `! rewake space open` at main's
-prompt; a command from a shell reaches its own run's wrapper as main's grants and decisions
-do today. Projecting them as tools for the model, and a slash command or a button for the
-person, come after the first space works: the tools follow from the table by the allowlist's
-review ([design-api.md](design-api.md#tooltransport)), and the person's UI is stage 6.
+prompt; a command from a shell reaches its own run's wrapper as main's decisions
+do today. A slash command or a button for the person comes after the first space works, and
+the person's UI is stage 6; tools for the model left with the mail tool on October 18, 2026
+([design-api.md](design-api.md#tooltransport)).
 
 The owner floated pi's interface as the renderer and pseudo-terminal host, with another
 harness spawned inside it; it is recorded as an alternative under the open questions, not

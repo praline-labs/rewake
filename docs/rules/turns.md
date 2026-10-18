@@ -12,8 +12,7 @@ that they are checked like the rest ([stage3-tests.md](../archive/v2/stage3-test
   end closes: the core keeps the answer and hands the session a reason to go on; the
   next end publishes that answer with its own, and every failure of the check falls to
   publishing, the behaviour without it (`core/mail/turn_hold.go:12-23`; held by
-  `cli/turn_hold_test.go:80,122,149` and `test/workflow/pending_confirm_test.go:25`, with
-  negative controls at 180 and 188). The mechanism is the adapter's TurnBoundary
+  `cli/turn_hold_test.go:80,122,149` and `test/workflow/pending_confirm_test.go`). The mechanism is the adapter's TurnBoundary
   ([design-api.md](../v2/design-api.md#turnboundary)): since S5 an adapter that can hold
   an end confirms it (`cli/completion.go`, `ConfirmCompletion`). An end held once is
   known by its event: confirmed again, it gets the same reason and nothing is published
@@ -33,9 +32,6 @@ that they are checked like the rest ([stage3-tests.md](../archive/v2/stage3-test
   - `internal/cli/inbox_awaited_test.go` `TestAwaitedTakesTheLatestInterimOrStop`
   - `test/workflow/awaited_view_test.go` `TestAwaitedView`
   - `test/workflow/pending_report_test.go` `TestPendingReport`
-  - `test/workflow/pending_report_test.go` `TestAnIgnoredPendingMarkFails`
-  - `test/workflow/pending_report_test.go` `TestAPendingTurnEndThatSettlesFails`
-  - `test/workflow/pending_report_test.go` `TestAPendingTurnEndWithoutItsTextFails`
   - `internal/cli/turn_hold_test.go` `TestAStopAfterAHoldCarriesTheHeldAnswer`
   - `internal/cli/turn_hold_test.go` `TestAnUnmarkedEndAfterAnInterimOneIsHeldOnce` — a holdable end handed to the core since S9
   - `internal/cli/turn_hold_test.go` `TestAContinuationThatMarksPendingKeepsTheTaskOwed` — a holdable end handed to the core since S9
@@ -43,8 +39,6 @@ that they are checked like the rest ([stage3-tests.md](../archive/v2/stage3-test
   - `internal/cli/turn_hold_test.go` `TestAnAnswerHeldAndNeverContinuedGoesWithTheNextEnd` — a holdable end handed to the core since S9
   - `internal/cli/turn_hold_test.go` `TestATurnEndIsHeldOnlyAfterAnInterimOne` — a holdable end handed to the core since S9
   - `test/workflow/pending_confirm_test.go` `TestPendingConfirm` — on the fixture column since S5, the only one since S9
-  - `test/workflow/pending_confirm_test.go` `TestAnUnconfirmedPendingFails` — on the fixture column since S5, the only one since S9
-  - `test/workflow/pending_confirm_test.go` `TestAConfirmationThatDropsTheAnswerFails` — on the fixture column since S5, the only one since S9
   - `internal/adapter/fixture/turns_test.go` `TestAnEndIsConfirmedWhenItCanBeHeld`
   - `internal/cli/turn_confirm_test.go` `TestAConfirmedEndAfterAnInterimOneIsHeldOnce`
   - `internal/cli/turn_confirm_test.go` `TestAConfirmedContinuationThatMarksPendingKeepsTheTaskOwed`
@@ -88,7 +82,6 @@ that they are checked like the rest ([stage3-tests.md](../archive/v2/stage3-test
   - `internal/cli/error_report_test.go` `TestIdentifiedFailuresAreNotRoutedAgainAfterTheirWaitsClear`
   - `internal/cli/error_report_test.go` `TestQuestionsReturnAnErrorOutcome`
   - `test/workflow/stopped_routing_test.go` `TestStoppedRouting`
-  - `test/workflow/stopped_routing_test.go` `TestAStoppedSentToMainFails`
   - `internal/cli/error_report_test.go` `TestFailedTurnsReachEveryWaitingSender` — a boundary end handed to the core since S9
   - `internal/cli/error_report_test.go` `TestUnclaimedFailuresReachMainAndMainKeepsItsOwn` — a boundary end handed to the core since S9
   - `internal/cli/neutral_end_test.go` `TestNeutralFailedEndsReachEveryWaitingSender`
@@ -96,7 +89,6 @@ that they are checked like the rest ([stage3-tests.md](../archive/v2/stage3-test
   - `internal/cli/neutral_end_test.go` `TestNeutralUnclaimedFailuresReachMainAndMainKeepsItsOwn`
   - `internal/cli/neutral_end_test.go` `TestNeutralAnEmptyEndAfterWorkReportsAnError`
   - `test/workflow/turn_reasons_test.go` `TestTurnReasons` — the fixture's end frame to the report
-  - `test/workflow/turn_reasons_test.go` `TestTurnReasonControls`
   - `internal/cli/turn_end_api_test.go` `TestEachEndReasonReportsItsOutcome`
   - `internal/cli/turn_end_api_test.go` `TestATurnEndWithoutItsEventOrAKnownReasonIsRefused`
   - `internal/host/turn_boundary_test.go` `TestTheWrapperPassesEachEndOnWithItsEventAndReason`

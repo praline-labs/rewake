@@ -1,11 +1,11 @@
 # Stage M2 of the mail tool: the server, built and accepted
 
-The second of the three stages of [mail-bridge.md](../mail-bridge.md) — the MCP server
+The second of the three stages of [mail-bridge.md](../archive/mail-bridge.md) — the MCP server
 that runs the mail tool outside the sandbox — was built on October 1, 2026 and accepted
 the same day on the Codex side after four acceptance rounds, against rules agreed after
 four review passes of the design ([mail-bridge-server.md](../archive/1.x/mail-bridge-server.md),
-[mail-bridge-turns.md](../mail-bridge-turns.md),
-[mail-bridge-checks.md](../mail-bridge-checks.md)). No harness starts the server yet:
+[mail-bridge-turns.md](../archive/mail-bridge-turns.md),
+[mail-bridge-checks.md](../archive/mail-bridge-checks.md)). No harness starts the server yet:
 its injection at launch is stage M3.
 
 ## What was built
@@ -29,7 +29,7 @@ its injection at launch is stage M3.
 ## How it was checked
 
 The tests and what each proves are in
-[mail-bridge-checks.md](../mail-bridge-checks.md#how-the-checks-are-built). The fault
+[mail-bridge-checks.md](../archive/mail-bridge-checks.md#how-the-checks-are-built). The fault
 test takes its 331 cases from the logs of 13 clean scenarios. The order test is generated
 in three spaces: one call taken apart into its steps against its turn's end taken apart
 (182 orders and 60 with the result lost, 274 cases), the call table under pressure and
@@ -53,7 +53,7 @@ says the step was done and names the `retry` that records it.
 ## The design passes
 
 Four review passes of the rules came before the code
-([what each found](../mail-bridge-checks.md#what-the-first-review-found)). The first
+([what each found](../archive/mail-bridge-checks.md#what-the-first-review-found)). The first
 accepted the transport without mail state, the ticket only after a native observation,
 the result cap and the stage boundary, and found seven defects — among them a boundary
 sampled after the end's waits, a Stop taken for the end of its turn, waits without a
@@ -102,7 +102,7 @@ the build.
   notices and display, moved to stage 3 by main's decision of October 1, 2026; stage 2
   keeps the server's outcomes (ran, refused, transport failed) as defined results.
 - The live checks on both harnesses
-  ([mail-bridge-checks.md](../mail-bridge-checks.md#left-to-stage-3-and-live)).
+  ([mail-bridge-checks.md](../archive/mail-bridge-checks.md#left-to-stage-3-and-live)).
 
 ## What stays open
 
@@ -115,4 +115,4 @@ the build.
   up, an answer waits on a full stdout without a bound of its own, holding its slot;
   at worst new calls answer "busy".
 - **Cases not generated**, with the reason for each, are listed at the end of
-  [How the checks are built](../mail-bridge-checks.md#how-the-checks-are-built).
+  [How the checks are built](../archive/mail-bridge-checks.md#how-the-checks-are-built).

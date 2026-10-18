@@ -148,7 +148,7 @@ session's shell, or from a person's shell in the same room. A shell without
    time-sortable. Nothing else is touched: the sender does not deliver. A `--notify`
    is first journaled under a receipt in the sender's mailbox and then written once
    under the recipient's lock, so a repeat or `rewake retry` cannot publish it twice
-   ([mail-bridge-cli.md](mail-bridge-cli.md#receipts)).
+   ([mail-bridge-cli.md](archive/mail-bridge-cli.md#receipts)).
 5. **The wait.** The sender polls `<id>.status` for up to `--wait` seconds (5
    by default; a question's delivery 5 at most) and prints one line: `Rewake: delivered to write-claude via socket`,
    `Rewake: pending for write-claude: …` or `Rewake: held for write-claude: …` (exit 3),
@@ -163,9 +163,8 @@ session's shell, or from a person's shell in the same room. A shell without
    task, and one report settles both. A short tail of the id is enough
    ([delivery-sent.md](delivery-sent.md)).
 
-Grants — `--grant-git` and `--grant-dir` on a task from main — leave the code by the owner's
-decision of October 18, 2026: no live harness takes one. Until they go,
-[grants.md](grants.md) says what they do.
+Grants — `--grant-git` and `--grant-dir` on a task from main — left the code by the owner's
+decision of October 18, 2026 ([grants.md](archive/grants.md) says what they did).
 
 ## Act 3. The wrapper announces it
 

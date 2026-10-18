@@ -165,7 +165,7 @@ The hook sat in a layer given with `--settings`, as rewake's own hooks do.
 ## A directory given to a running session
 
 Probed on September 27, 2026, Claude Code 2.1.280, in a private HOME against a stand-in
-API **[live]**, for a directory granted with a task ([grants.md](grants.md#claude-code)).
+API **[live]**, for a directory granted with a task ([grants.md](archive/grants.md#claude-code)).
 The session ran as `claude --settings <layer> --permission-mode acceptEdits`, with a
 PreToolUse and a PermissionRequest hook in that layer. Evidence:
 `~/.cache/rewake/evidence/2026-09-27/claude-grant-dir-probe/`.

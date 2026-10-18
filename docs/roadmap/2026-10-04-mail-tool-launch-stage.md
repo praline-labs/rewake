@@ -1,13 +1,13 @@
 # Stage M3 of the mail tool: the launch injection, built and its code accepted
 
-The third of the three stages of [mail-bridge.md](../mail-bridge.md) — giving the
+The third of the three stages of [mail-bridge.md](../archive/mail-bridge.md) — giving the
 harness the mail tool's server at launch, and keeping the run's mail channel — was built
 on October 4, 2026 against rules accepted after five design passes
 ([mail-bridge-launch.md](../archive/1.x/mail-bridge-launch.md),
 [mail-bridge-launch-codex.md](../archive/1.x/mail-bridge-launch-codex.md),
-[mail-bridge-channel.md](../mail-bridge-channel.md)). Its code was accepted the same day
+[mail-bridge-channel.md](../archive/mail-bridge-channel.md)). Its code was accepted the same day
 in the fourth Codex-side round. **The stage is not closed**: the live checks of
-[mail-bridge-live.md](../mail-bridge-live.md) are open, and until gates G2 and G7 close a
+[mail-bridge-live.md](../archive/mail-bridge-live.md) are open, and until gates G2 and G7 close a
 launch gives neither harness the tool and says why.
 
 ## Five design passes
@@ -127,7 +127,7 @@ two of them the limitations the build had left open. Fixed the same day:
   the wrapper, as subreaper, took any child in another session for an adopted one. A
   check now runs under a holder of its own that starts nothing else and is the
   subreaper of the check's tree; the wrapper is no subreaper, as the grants decision
-  already required ([grants](../grants.md#what-the-owner-decided)).
+  already required ([grants](../archive/grants.md#what-the-owner-decided)).
 - A denial held behind a waiting close let shell advice be written: denials are no
   longer held.
 - A ticket folded late moved the interval to the latest failure and lost a shell success

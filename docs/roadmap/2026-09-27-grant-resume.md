@@ -6,7 +6,7 @@ started without the directory; on Codex the thread could restore the root, and t
 rewake never took it back, and a grant given on the conversation's first turn was lost.
 Main decided the same day that main's wrapper confirms the grant again; the journal that
 follows the conversation, queued separately until then, became part of it. The mechanism
-is in [grants-resume.md](../grants-resume.md).
+is in [grants-resume.md](../archive/grants-resume.md).
 
 ## What was done
 
@@ -37,7 +37,7 @@ is in [grants-resume.md](../grants-resume.md).
   server was seen to. The workflow cases `claude-grant-resume` and `codex-grant-resume`,
   with `claude-resume-not-given`, `claude-resume-not-held`, `claude-resume-closed-held`,
   `codex-resume-not-restored`, `resume-waits-dropped` and `codex-resume-closed-held`
-  ([testing-cases.md](../testing-cases.md#a-directory-granted-with-a-task)).
+  ([testing-cases.md](../testing-cases.md)).
 
 ## Decided along the way
 

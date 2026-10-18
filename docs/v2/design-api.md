@@ -23,9 +23,9 @@ without touching the core).
 
 A capability is **offered** by the adapter — static, known from the catalogue before a
 launch. It is **live** for one run once the run proves it: the Claude Code adapter
-offers ToolTransport and TurnBoundary, but a run whose mod did not load has neither
+offers TurnBoundary, but a run whose mod did not load does not have it
 ([design-claude.md](design-claude.md#when-the-mod-does-not-load)). The host records the
-live set in the session record, next to the channel record it extends, and every
+live set in the session record, and every
 decision another session makes about this one — may a task be sent to it, may it be
 compacted — reads the live set, not the offered one. Some proofs come only from the running
 harness — Claude Code's mod says hello once its harness runs — so an offer says when its
@@ -33,8 +33,9 @@ boundary is proven after the start (`TurnBoundaryOffer.AfterStart`), and a launc
 not wait for it before starting the harness
 ([stage4-turns.md](stage4-turns.md#readiness-and-admission)).
 
-Rests on: the channel record's rules (a tool can fail to load, `mail-bridge-channel.md`
-rules 1–4), now applied to every capability.
+Rests on: the channel record's rules (a tool can fail to load,
+[mail-bridge-channel.md](../archive/mail-bridge-channel.md) rules 1–4), applied to every
+capability; the channel itself left with the mail tool on October 18, 2026.
 
 ## The capabilities
 
@@ -42,20 +43,20 @@ rules 1–4), now applied to every capability.
 |---|---|---|
 | Launch | required: describes and starts one run | — an adapter without Launch is not an adapter |
 | Wake | brings a notice to the session: wakes it idle, steers it busy where it can | writes the letter; `send` exits 3, "accepted, no notice can reach this session"; the session reads when it runs `rewake inbox` |
-| ToolTransport | offers the mail tools to the model and carries their calls under the tool rules | briefs the session on the shell commands; the guide is its interface |
 | TurnBoundary | reports a turn's start and end, with the end's answer, and confirms an end before it closes | publishes no report on its own; see [below](#turnboundary) |
 | Telemetry | reports context, limits and cost | `list` and main see the state as unknown |
 | Control | compacts, interrupts, clears | `rewake compact`, `interrupt`, `clear` to that session exit 1 naming the missing verb; `clear` is designed, not built ([conversation-reset.md](../conversation-reset.md)) |
-| Permissions | applies a grant to the run | `send --grant-*` to that session exits 1, as `--grant-git` to Claude Code does in 1.x |
 | PersonUI | shows the person the session's mail state | nothing beyond the notices; stage 6 |
 | Spaces | hosts spaces from a main run: a worker in a pseudo-terminal the wrapper owns, shown inside the harness ([stage4-space.md](stage4-space.md)) | `rewake space open` refuses, naming the missing level; see [below](#spaces) |
+
+ToolTransport and Permissions left the design by the owner's decision of October 18, 2026,
+with the mail tool and grants ([below](#tooltransport), [below](#permissions)).
 
 ### Launch
 
 Everything the catalogue says about a harness today, less the registry: `ID`, `Title`,
-`Summary`, `Examples`, `Notes`, `SingleUseFlags` (non-empty, a catalogue test holds it),
-`ProtectedDirs` widened to every directory that holds the harness's metadata, so that
-`grant/rules.go:317` no longer lists `.claude`, `.codex`, `.agents` in the core. Plus:
+`Summary`, `Examples`, `Notes`, `SingleUseFlags` (non-empty, a catalogue test holds it).
+Plus:
 
 - **The minimum version** and how to read the installed one ([below](#minimum-versions)).
 - **The plan of one run**: the argv and environment for the harness, given a neutral
@@ -63,8 +64,8 @@ Everything the catalogue says about a harness today, less the registry: `ID`, `T
   worktree, a conversation to resume, the endpoint's address — and the run directory
   the host owns, where the adapter may write what lives exactly as long as the run.
 - **Briefing words**: the sentences the role texts need about this harness (how it
-  commits, how a grant behaves on it). The core's role texts take them from here; they
-  name no harness ([design.md](design.md#the-test-that-holds-it)).
+  commits). The core's role texts take them from here; they
+  name no harness ([design.md](design.md#what-holds-it)).
 - **Resume and worktree**, as `Resumer` and `WorktreeHarness` do today.
 
 ### The harness process
@@ -101,42 +102,10 @@ session is steered or queued is part of the answer, because the notice texts pro
 
 ### ToolTransport
 
-The tools are the CLI's commands, offered to a model, and **one table** describes
-both, so a tool cannot drift from its command, as the examples cannot today
-(`AGENTS.md`, "How the CLI is organised"). Who owns what, without `tool` importing
-`cli` (which imports `tool`):
-
-- **`cli` owns the table** — `internal/cli/registry*.go`, as now — and the allowlist of
-  commands a tool may run (`cli/bridge_surface.go:12-27` today). From those it builds a
-  list of **descriptors**: per allowed command, its tool name, its summary, and each
-  flag or positional with its kind and plain description.
-- **`tool` owns the descriptor type** and what is derived from a descriptor alone: the
-  JSON Schema of a tool's input, the normalization of its arguments into the command's
-  words, the digest the binding names (T2). It imports neither `cli` nor an adapter.
-- **The descriptors travel down by composition.** `cli` builds them once and hands them
-  to the host with the launch; the host gives them to the adapter's ToolTransport,
-  which renders them — on Claude Code into the generated mod's registrations. The
-  call comes back as words for a CLI child of the wrapper's own image, which parses
-  them with the same table and checks them against the same allowlist again, as 1.x
-  does (`cli/bridge_surface.go:32-36`). A test holds that every adapter receives the
-  same descriptors and that each descriptor parses back to its command.
-
-The surface is an allowlist: a command added later stays off until reviewed. The
-starting set is the owner's (answer 2 of [design.md](design.md#the-owners-answers)):
-`inbox`, `send`, `pending`, `whoami`, `retry`, `list`. `decide` joined it in S18 by main's
-decision of October 12, 2026, so a recipient whose shell cannot reach its wrapper decides
-through its tool call ([stage3-decision.md](stage3-decision.md#the-command)).
-
-Each tool's schema declares only the command's flags and positionals, in plain words;
-none declares a property a harness reserves for itself (on Claude Code the reserved part
-of a tool call's input, `tool`, `tool_use_id` and `consent`, and its caller's `agentId`;
-the `mods` skill has the current list). The model sees `mcp__rewake__<name>` (decision 9).
-
-The adapter carries a call to the host's endpoint with its **binding** — the
-conversation, turn and call ids the harness itself supplied — and returns the answer.
-What makes that binding trusted, and when a read counts, is the tool rules
-([design-rules.md](design-rules.md#tools-t1t11)); how Claude Code meets them is in
-[design-claude.md](design-claude.md#how-a-tool-call-runs).
+Offered the mail tools to the model and carried their calls under the tool rules. It left
+the design with the mail tool by the owner's decision of October 18, 2026; a session uses
+the shell commands, and the guide is its interface. What it was is in
+[rules-tools.md](../archive/rules-tools.md) and [mail-bridge.md](../archive/mail-bridge.md).
 
 ### TurnBoundary
 
@@ -148,13 +117,10 @@ An adapter that cannot hold an end open says so in what it offers; the core then
 cannot keep a task open across an unmarked interim end, and that limit is written in
 the adapter's document rather than discovered.
 
-The boundary's reports reach the host on their own, whatever else the run serves: a run
-with no tool transport, or one whose mail tool could not start, still has its starts
-recorded. A timed start is the evidence a pending mark of an earlier turn is judged by
+The boundary's reports reach the host on their own, whatever else the run serves. A timed start is the evidence a pending mark of an earlier turn is judged by
 when that turn's end was lost
-([mail-bridge-turns.md](../mail-bridge-turns.md#a-pending-mark-at-its-turns-end)); the
-host records it once and, where the run has a mail tool, opens the turn in the tool's
-call table from the same report.
+([mail-bridge-turns.md](../archive/mail-bridge-turns.md#a-pending-mark-at-its-turns-end)); the
+host records it once.
 
 Without a live TurnBoundary a session's turn ends report nothing, and a worker's
 contract — "end your turn; your final reply goes to the sender" — does not hold. The
@@ -167,8 +133,8 @@ the host sees the loss; on Claude Code that is the lapse of the mod's heartbeat,
 of its last poll ([the live set](stage4-turns.md#the-live-set)). A withdrawal refuses new
 tasks; an end the harness still sends is taken. Notifies and reads still work through
 the shell; the shell never stands in for the boundary. On Claude Code the boundary
-reaches the host by the same checked requests as the tools, so it depends on P4 as they
-do ([design-claude.md](design-claude.md#how-a-tool-call-runs)).
+reaches the host by the mod's checked requests, so it depends on P4
+([design-claude.md](design-claude.md#the-socket-and-its-peer)).
 
 ### Telemetry
 
@@ -185,9 +151,9 @@ adapter does not offer is refused by the CLI before a file is written.
 
 ### Permissions
 
-Applies a grant — a directory, the Git metadata — to the run, and withdraws it when the
-grant ends. The policy and the authority stay in `core/grant`; stage 6 designs this
-capability on both adapters.
+Applied a grant — a directory, the Git metadata — to the run. Grants left the code by the
+owner's decision of October 18, 2026 ([grants.md](../archive/grants.md)); a session writes
+and commits within its own permissions.
 
 ### PersonUI
 

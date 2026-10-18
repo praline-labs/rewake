@@ -80,7 +80,7 @@ caller, makes the decision's final transaction (Q2 of
    wrapper's pid, start time and boot (`registry.ParseRun`, `core/registry/run.go`).
 2. `decide` connects to that run's authority address (`state.AuthorityAddress(roomDir,
    run)`, `infra/state/paths.go`, which hashes the canonical room directory and the run;
-   the grant scheme's, [grants-authority.md](../grants-authority.md#the-scheme)). Before
+   the grant scheme's, [grants-authority.md](../archive/grants-authority.md#the-scheme)). Before
    S18 only a main's wrapper listens there (`host/wrap.go`, set up in `host/grants.go`);
    from S18 every wrapper does, offering a non-main run the decision request only, never
    a grant's registration, carry or confirmation (`authority.ListenDecisions`). A run
@@ -105,7 +105,7 @@ caller, makes the decision's final transaction (Q2 of
    A command run for a tool call sends the call's deadline with the question, and the
    transaction writes no record past it, checked after both lock waits
    (`DecideRequest.DeadlineBoot`, rule 3 of
-   [mail-bridge-cli.md](../mail-bridge-cli.md#the-rules-the-code-holds)); the refusal is `expired`, nothing
+   [mail-bridge-cli.md](../archive/mail-bridge-cli.md#the-rules-the-code-holds)); the refusal is `expired`, nothing
    written, and the operation stays open for `rewake retry`.
    `test/decisionrig` holds this between real processes: the recipient's command is
    answered whatever its environment says; another worker's, with the recipient's
@@ -219,7 +219,7 @@ process runs below the wrapper of api."
   decision recorded before. A wrapper that cannot be reached is a refusal, exit 1, naming
   the tool; it is never taken for the person. The wrapper stays the decision's only
   writer. `fixture-decide-sandboxed` holds this on the fixture column, with a shell that
-  cannot `connect()` ([testing-cases.md](../testing-cases.md#a-decision-from-a-sandboxed-shell)).
+  cannot `connect()` ([testing-cases.md](../testing-cases.md)).
 - **Forms.** The list form is a view, the deciding form a change, classified in the
   command table when S18 adds them ([stage3-state.md](stage3-state.md#what-is-a-writer)).
 - **Naming.** By the stopped session and the report id, as the note prints them; the

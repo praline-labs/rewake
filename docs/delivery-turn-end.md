@@ -22,7 +22,7 @@ end in this build. Under the mailbox lock, for
 every eligible run in `awaiting/<own epoch>/` it leaves a `finished` message whose text
 is that reply, and whose `inReplyTo` lists the messages read from that run since its
 last report, addressed to that run — not to whoever holds the name now. The rules this
-follows are 7 and 8 of [mail-bridge-cli.md](mail-bridge-cli.md); how each record is
+follows are 7 and 8 of [mail-bridge-cli.md](archive/mail-bridge-cli.md); how each record is
 recovered, record by record, is [turn-end-recovery.md](turn-end-recovery.md), and this
 section is the path through the code.
 

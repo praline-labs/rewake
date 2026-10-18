@@ -1,6 +1,6 @@
 /*
 Package receipt is the journal of the mail operations a run performed through
-the words a tool call may carry (docs/mail-bridge.md#receipts-retries-and-deadlines).
+a journaled shell command (docs/archive/mail-bridge.md#receipts-retries-and-deadlines).
 
 An operation is journaled before it changes anything, and its record holds what
 it has done so far and what it answered. A repeated call finds the record by its

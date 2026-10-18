@@ -29,11 +29,11 @@ defects that had not been fixed; main set them as one package the same day.
 - A settled grant is taken back only at a notice into the conversation its entry names,
   and a root counts as rewake's only there: in another conversation the same directory is
   the person's, covers a grant inside it and is neither journaled nor taken back
-  ([grants.md](../grants.md#taking-a-grant-back)).
+  ([grants.md](../archive/grants.md#taking-a-grant-back)).
 - The resume first collects every answer, then takes out every root a settled hint
   names, confirmed or refused, and only then adds back the confirmed grants; a refused
   hint's note names only what stayed out
-  ([grants-resume.md](../grants-resume.md#codex)).
+  ([grants-resume.md](../archive/grants-resume.md#codex)).
 - The mains are asked all at once in the background, and the notice holds no
   reservation meanwhile: it stays pending, with a detail saying why, until they answered or
   ran out of time, and the answers are used for thirty seconds at most. The gateway says

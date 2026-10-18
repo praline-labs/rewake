@@ -10,7 +10,7 @@ import (
 )
 
 // What this process met reaching the state directory, for the shell
-// observation of the mail channel (docs/mail-bridge-channel.md#the-shell-observation):
+// observation of the mail channel (docs/archive/mail-bridge-channel.md#the-shell-observation):
 // the last write that completed and the first error that says the state could
 // not be reached — read-only, not permitted, or an I/O error — each with the
 // time it happened. A command that refused, timed out on a lock or wrote

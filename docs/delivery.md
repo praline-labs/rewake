@@ -45,12 +45,9 @@ a short notice and preview rather than the full body.
    `question` with `--question`, `notify` with `--notify` (see "Kinds").
    Sending settles nothing the sender owes the recipient: a message sent
    mid-turn is not the end of the turn.
-   A task or a question from main may carry grant fields — `grantGit`, `grantDirs`,
-   `grantBroad` — until grants leave the code by the owner's decision of October 18, 2026
-   ([grants.md](grants.md#sending)).
 4. Write `inbox/<name>/<id>.json.tmp`, rename it to `.json`. A `notify` is journaled
    first and written once under the recipient's lock, so a repeat or a retry cannot
-   publish it twice ([mail-bridge-cli.md](mail-bridge-cli.md#receipts)).
+   publish it twice ([mail-bridge-cli.md](archive/mail-bridge-cli.md#receipts)).
 5. Wait for `.status` up to `--wait` (5 seconds by default; a question gives its
    delivery 5 seconds of its `--wait` at most, the rest being its answer's) and print the
    result. The wait ends early once the recipient run is proven ended or its name taken
@@ -368,10 +365,6 @@ through is each message recorded: its sender run in `awaiting/<own epoch>/`
 status, then the move to `done/`, which is the commit. A failure at any step
 leaves the message unread, and the next `inbox` shows and records it again.
 Two readers at once are serialized: the second finds nothing new.
-
-A task that carried a directory grant is printed with one `grant: write <dir>` line per
-directory, and `inbox --owed` repeats them, until grants leave the code
-([grants.md](grants.md#delivery)).
 
 ### A resumed conversation
 
