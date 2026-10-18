@@ -276,7 +276,7 @@ decision settles the stop without being evidence.
   - `internal/core/mail/answer_stop_test.go` `TestAStoppedMailboxDoesNotTakeAnAnswer`
   - `internal/cli/stop_gate_test.go` `TestAnUnreadableJournalStopsEveryCall`
   - `internal/cli/stop_gate_test.go` `TestUnknownEvidenceStopsTheCallsAfterTheEnd`
-  - `internal/core/mail/plan_faults_test.go` `TestEveryReadOfThePlanStopsBeforeTheFirstEffect`
+  - `internal/core/mail/plan_faults_test.go` `TestPlanFaultSmoke`
   - `internal/core/mail/journal_test.go` `TestADoneJournalIsKeptWhileItsRunLives`
   - `internal/cli/turn_journal_retry_test.go` `TestALateRetryAfterTheSweepPublishesNothing`
   - `internal/core/receipt/receipt_test.go` `TestSweepKeepsWhatARecoveryReads`
@@ -457,4 +457,3 @@ what a decision may settle instead.
   - `internal/core/mail/decision_recovery_test.go` `TestDecisionPrecedesAllRecoveryEvidence`
   - `internal/core/mail/decision_final_lock_test.go` `TestDecisionFinalEvidenceIsLockedThroughCommit`
   - `internal/core/mail/decision_world_test.go` `TestDecisionCopiesFollowWorldTruth`
-  - `internal/core/mail/decision_matrix_test.go` `TestDecisionDurabilityAtEveryCut`
