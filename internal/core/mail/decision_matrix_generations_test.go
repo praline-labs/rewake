@@ -75,18 +75,8 @@ func (g generations) landed(i int) bool {
 }
 
 func generationsOf(value string) generations {
-	switch value {
-	case dm.OneGeneration:
+	if value == dm.OneGeneration {
 		return generations{choices: []string{ChoiceNotArrived}}
-	case dm.ChainOfForty:
-		g := generations{}
-		for i := range 40 {
-			g.choices = append(g.choices, ChoiceNotArrived)
-			if i > 0 {
-				g.truths = append(g.truths, false)
-			}
-		}
-		return g
 	}
 	landed := strings.HasPrefix(value, "two-landed-")
 	second := ChoiceArrived

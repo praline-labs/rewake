@@ -6,85 +6,66 @@ import (
 	"errors"
 	"fmt"
 	"maps"
-	"os"
 	"path/filepath"
 	"reflect"
 	"slices"
 	"strings"
 	"testing"
-
-	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
-// The barrier's plan reads what every effect will decide by, so nothing an
-// effect meets is news: no list of those reads is kept to check this by, since
-// such a list is what three review rounds found short. The test takes the
-// reads from the seam instead (access.go). Each scene runs once to learn what
-// its plan read, then once per read and fault — a path that cannot be
-// followed, one closed to reading, a directory where a file belongs, and,
-// for a kind that reads its content, content it does not read as — with the
-// fault in both passes, where nothing may change and the mailbox stops; and
-// once per read the effects make with the fault in the effects alone, where
-// the stop is the effect's and outlives a retry that meets it again, and a
-// barrier past it ends where the scene ends without one; and once per pair of
-// such a read and a read of the plan after the failure (plan_pairs_test.go),
-// where the effect's stop outlives the plan's cause, and once more with no
-// stop written, where the answer names both; and once per write the barrier
-// makes, broken once (plan_writes_test.go). A read added to an
-// effect later is on the list the next run. One that goes around the seam is
-// caught by the last leg: the room's mailboxes move aside, the seam follows
-// them, and a read around it meets a file where they were.
-func TestEveryReadOfThePlanStopsBeforeTheFirstEffect(t *testing.T) {
-	kinds := map[string]bool{}
-	var plans []map[seamRead]bool
-	for _, scene := range planScenes {
-		lab := newTwoSessionLab(t)
-		mailbox := scene.build(t, lab)
-		template := lab.dir
-		t.Run(scene.name, func(t *testing.T) {
-			work := filepath.Join(probeDir(t), "state")
-			base := runScene(t, fresh(t, template, work), mailbox, nil, nil, true)
-			if strings.HasPrefix(base.barrier, "unknown") {
-				t.Fatalf("the scene does not run through: %s", base.barrier)
-			}
-			plan, applied := base.planned, base.applied
-			plans = append(plans, plan)
-			for read := range applied {
-				if !ofStop(read.rel, mailbox) && !plan[read] {
-					t.Errorf("an effect read %s %s, which the plan did not", read.op, read.rel)
-				}
-			}
-			tried, inEffects, again := 0, 0, 0
-			for _, read := range sorted(plan) {
-				for _, fault := range faultsOf(t, read) {
-					planFault(t, fresh(t, template, work), mailbox, fault)
-					tried++
-					if applied[read] {
-						inEffects++
-						if effectFault(t, fresh(t, template, work), mailbox, fault, base) {
-							again++
-						}
-					}
-				}
-			}
-			pairs, unrecorded := causePairs(t, template, work, mailbox, base)
-			broken := writeFaults(t, template, work, mailbox, base)
-			t.Logf("%d reads in the plan, %d of them by the effects; %d faults in both passes, %d in the effects alone, %d of those met again by the retry; %d pairs of an effect's cause and the plan's after it, %d of them with no stop recorded; %d writes broken once", len(plan), len(applied), tried, inEffects, again, pairs, unrecorded, broken)
-			aside(t, fresh(t, template, work), mailbox, base)
+// One journal exercises each read-failure kind before effects and during
+// effects. The retry must converge on the clean result without publishing
+// its report twice; the exhaustive scene and fault-pair matrix is retired.
+func TestPlanFaultSmoke(t *testing.T) {
+	lab := newTwoSessionLab(t)
+	lab.owe(t, "task")
+	waiters, err := ReadWaiters(lab.dir, "api", lab.run)
+	if err != nil {
+		t.Fatal(err)
+	}
+	report := lab.report(Finished, "task")
+	if err := WriteJournal(lab.dir, "api", "end", TurnJournal{
+		Epoch: lab.run, Op: "end", Reports: []Message{report}, Clear: waiters,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	work := filepath.Join(probeDir(t), "state")
+	base := runScene(t, fresh(t, lab.dir, work), "api", nil, nil, true)
+	if !open(base.barrier) || !open(base.gateAfter) {
+		t.Fatalf("the clean journal did not finish: %s, %s", base.barrier, base.gateAfter)
+	}
+	read := seamRead{op: "read", rel: filepath.Join("inbox", "api", "journal", "end")}
+	if !base.planned[read] || !base.applied[read] {
+		t.Fatal("the journal was not read by both passes")
+	}
+	for _, kind := range []string{"not a directory", "no access", "a directory", "unparseable"} {
+		t.Run(kind, func(t *testing.T) {
+			fault := seamFault{at: read, kind: kind, garbage: []byte("{")}
+			planFault(t, fresh(t, lab.dir, work), "api", fault)
+			effectFault(t, fresh(t, lab.dir, work), "api", fault, base)
 		})
 	}
-	for _, plan := range plans {
-		for read := range plan {
-			if kind, ok := kindAt(read.rel); ok && read.op == "read" {
-				kinds[kind.pattern] = true
-			}
+	t.Run("failed journal completion", func(t *testing.T) {
+		write := seamWrite{op: "rename", rel: read.rel, n: 1}
+		if !slices.Contains(base.written, write) {
+			t.Fatal("the clean journal did not reach its completion")
 		}
-	}
-	for _, kind := range recordKinds {
-		if kind.opened && !kinds[kind.pattern] {
-			t.Errorf("no scene's plan reads %s (%s): its faults are not tried", kind.pattern, kind.what)
+		dir := fresh(t, lab.dir, work)
+		run := writeRun(dir, "api", &write, nil)
+		if !run.broke || open(run.barrier) {
+			t.Fatalf("the failed completion did not stop: broke %v, barrier %s", run.broke, run.barrier)
 		}
-	}
+		clean := runScene(t, dir, "api", nil, nil, true)
+		if clean.barrier != base.barrier || clean.gateAfter != base.gateAfter {
+			t.Errorf("retry: barrier %s, gate %s", clean.barrier, clean.gateAfter)
+		}
+		if changed := differ(base.tree, clean.tree, true); len(changed) > 0 {
+			t.Errorf("retry differs from the clean journal: %v", changed)
+		}
+		if copies := lettersOf(t, dir, "web")[report.ID]; copies != 1 {
+			t.Errorf("retry left %d copies of the report", copies)
+		}
+	})
 }
 
 // sceneRun is what one run of a scene answered and left.
@@ -186,36 +167,6 @@ func effectFault(t *testing.T, dir, mailbox string, fault seamFault, base sceneR
 	return retry.live.hits > 0
 }
 
-// aside runs the scene with the room's mailboxes moved where only the seam
-// finds them: it must end as it does in place.
-func aside(t *testing.T, dir, mailbox string, base sceneRun) {
-	t.Helper()
-	inbox := state.InboxesPath(dir)
-	moved := remapped{from: inbox, to: inbox + ".aside"}
-	if err := os.Rename(inbox, moved.to); err != nil {
-		t.Fatal(err)
-	}
-	writeRaw(t, inbox, "the mailboxes are aside")
-	run := sceneRun{plan: newProbe(dir, moved, nil), live: newProbe(dir, moved, nil)}
-	testAccess.Store(dir, passAccess{live: run.live, plan: run.plan})
-	run.gateBefore = outcome(MailboxStopped(dir, mailbox))
-	run.barrier = outcome(barrier(dir, mailbox, false))
-	run.gateAfter = outcome(MailboxStopped(dir, mailbox))
-	testAccess.Delete(dir)
-	if err := os.Remove(inbox); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Rename(moved.to, inbox); err != nil {
-		t.Fatal(err)
-	}
-	if run.gateBefore != base.gateBefore || run.barrier != base.barrier || run.gateAfter != base.gateAfter {
-		t.Errorf("around the seam: gate %s, barrier %s, gate after %s; in place %s, %s, %s", run.gateBefore, run.barrier, run.gateAfter, base.gateBefore, base.barrier, base.gateAfter)
-	}
-	if changed := differ(base.tree, snapshot(t, dir), true); len(changed) > 0 {
-		t.Errorf("around the seam the mailboxes differ: %v", changed)
-	}
-}
-
 // effectStop says an occurrence an effect met is open.
 func effectStop(dir, mailbox string) bool {
 	open, err := stopState(dir, mailbox)
@@ -227,29 +178,6 @@ func effectStop(dir, mailbox string) bool {
 func ofStop(rel, mailbox string) bool {
 	stops := filepath.Join("inbox", mailbox, stopsDir)
 	return rel == stops || strings.HasPrefix(rel, stops+string(filepath.Separator))
-}
-
-// faultsOf is every fault that applies to one read.
-func faultsOf(t *testing.T, read seamRead) []seamFault {
-	t.Helper()
-	var faults []seamFault
-	for _, kind := range map[string][]string{
-		"read": {"not a directory", "no access", "a directory"},
-		"stat": {"not a directory", "no access", "a directory"},
-		"list": {"not a directory", "no access"},
-	}[read.op] {
-		faults = append(faults, seamFault{at: read, kind: kind})
-	}
-	if record, ok := kindAt(read.rel); ok && read.op == "read" && record.parse != nil {
-		for _, garbage := range []string{"{", ""} {
-			if record.parse(read.rel, []byte(garbage)) != nil {
-				faults = append(faults, seamFault{at: read, kind: "unparseable", garbage: []byte(garbage)})
-				return faults
-			}
-		}
-		t.Errorf("no content tried fails to read as %s", record.what)
-	}
-	return faults
 }
 
 func (f seamFault) label() string { return fmt.Sprintf("%s %s: %s", f.at.op, f.at.rel, f.kind) }

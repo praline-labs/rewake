@@ -105,15 +105,6 @@ func (l twoSessionLab) session(t *testing.T, name string) registry.Session {
 	return session
 }
 
-// journal records an unfinished turn journal of web's under id.
-func (l twoSessionLab) journal(t *testing.T, id string, journal TurnJournal) {
-	t.Helper()
-	journal.Epoch, journal.Op = l.web.Epoch(), id
-	if err := WriteJournal(l.dir, "web", id, journal); err != nil {
-		t.Fatal(err)
-	}
-}
-
 func withLock(dir, name string, fn func() error) error {
 	return state.WithMailboxLock(context.Background(), dir, name, fn)
 }
