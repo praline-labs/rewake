@@ -55,3 +55,12 @@ func TestANarrowBarCutsTabsAndDropsTheHint(t *testing.T) {
 		t.Fatalf("a bar of no width has %d columns", n)
 	}
 }
+
+func TestAColumnOfTheBarNamesTheTabUnderIt(t *testing.T) {
+	runs := barRuns([]label{{name: "main"}, {name: "w1"}}, 80)
+	for col, want := range map[int]int{1: 0, 8: 0, 9: 1, 14: 1, 15: -1, 80: -1} {
+		if got := tabAt(runs, 2, col); got != want {
+			t.Errorf("column %d: tab %d, want %d", col, got, want)
+		}
+	}
+}

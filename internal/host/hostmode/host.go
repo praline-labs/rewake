@@ -46,6 +46,9 @@ type Host struct {
 	cur    *tab
 	in     input
 	dirty  bool
+	// framed says the paste going on reaches its program in brackets,
+	// decided at its start.
+	framed bool
 
 	ctx     context.Context
 	cancel  context.CancelFunc

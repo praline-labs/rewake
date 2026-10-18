@@ -25,13 +25,15 @@ func TestAnIndexedColorReachesTheTerminalAsAnIndex(t *testing.T) {
 				{Text: "c", Cols: 1, Bg: Color{Kind: Indexed, Index: 12}},
 			}},
 			Cursor: Cursor{Row: 0, Col: 3, Visible: true},
-			Modes:  Modes{CursorKeys: true, BracketedPaste: true},
+			// A program with no mouse and no paste of its own: the host's
+			// are on all the same.
+			Modes: Modes{CursorKeys: true},
 		})
 		if err != nil {
 			t.Fatal(err)
 		}
 		got := out.String()
-		for _, want := range []string{"31m", "38;5;123m", "104m", "\x1b[?1h", "\x1b[?2004h"} {
+		for _, want := range []string{"31m", "38;5;123m", "104m", "\x1b[?1h", "\x1b[?2004h", "\x1b[?1002h", "\x1b[?1006h"} {
 			if !strings.Contains(got, want) {
 				t.Errorf("%v: %q lacks %q", env, got, want)
 			}
@@ -43,7 +45,7 @@ func TestAnIndexedColorReachesTheTerminalAsAnIndex(t *testing.T) {
 		if err := c.Leave(); err != nil {
 			t.Fatal(err)
 		}
-		for _, want := range []string{"\x1b[?1l", "\x1b[?2004l", "\x1b[?1049l", "\x1b[?25h"} {
+		for _, want := range []string{"\x1b[?1l", "\x1b[?2004l", "\x1b[?1002l", "\x1b[?1006l", "\x1b[?1049l", "\x1b[?25h"} {
 			if !strings.Contains(out.String(), want) {
 				t.Errorf("%v: leaving, %q lacks %q", env, out.String(), want)
 			}

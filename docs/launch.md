@@ -167,7 +167,11 @@ main's harness runs on a pseudo-terminal of the wrapper's, in a session of its o
 space main opens gets a tab from its space socket's view. The host draws the shown program on
 the alternate screen above a bar of tabs; Ctrl+\ then `n`, `p`, a digit, `0` or `m` switches,
 and Ctrl+\ twice sends Ctrl+\ to the program. Every program is kept at the region's size, the
-terminal less the bar's row. `--host` is refused, exit 2, for a role that opens no spaces and
+terminal less the bar's row. The mouse and bracketed paste stay on at the person's terminal: a
+click on the bar switches, a mouse event in the region reaches the shown program in the form its
+modes ask for, or not at all when it turned the mouse off, and a paste comes framed only to a
+program that asked for brackets. Claude Code runs fullscreen there, `CLAUDE_CODE_NO_FLICKER=1`
+unless the person set the variable, so it scrolls its own history with the wheel. `--host` is refused, exit 2, for a role that opens no spaces and
 when standard input or output is not a terminal. Because the person's terminal is in raw mode,
 Ctrl+C and Ctrl+Z reach the shown program as bytes, never as signals; a harness that stops
 itself is continued at once, since no shell could bring it back. A kill of the wrapper still

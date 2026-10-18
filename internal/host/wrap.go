@@ -182,6 +182,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 		ControlDir: controlDir,
 		RunDir:     runDir,
 		Version:    version,
+		Host:       request.Host,
 	}
 	launchRequest.Env = launch.SessionEnv(launchRequest, request.Harness.EnvNotInherited())
 	plan, err := request.Harness.Launch(launchRequest)

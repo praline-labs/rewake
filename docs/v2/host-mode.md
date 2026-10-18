@@ -125,8 +125,9 @@ pass the programs' bytes through.
   - the mouse modes (9, 1000, 1002, 1003, 1006).
 
   Keys then pass unchanged. At the exit every mode is reset. Step 1 is built this way.
-- **Mouse, from step 2.** The host keeps SGR mouse (1000/1002 with 1006) and bracketed paste on
-  the terminal, and stops mirroring the mouse.
+- **Mouse, from step 2.** The host keeps SGR mouse (1002 with 1006) and bracketed paste on
+  the terminal, and stops mirroring the mouse. It asks for 1003, motion without a button,
+  only while the shown program asks for it: Claude Code does, for its hover.
   - A click on the bar or the sidebar switches tabs.
   - In the region, mouse events go to the shown program, with the coordinates offset and in the
     form its modes ask for, but only when the program turned mouse on. Otherwise they are
@@ -146,7 +147,9 @@ pass the programs' bytes through.
 - **Scrollback.** The host runs on the alternate screen, so the person's terminal scrollback
   holds nothing of the programs. That is lost.
   - The host starts Claude Code with `CLAUDE_CODE_NO_FLICKER=1`, unless the person set it, so
-    that each program scrolls its own history with the forwarded wheel.
+    that each program scrolls its own history with the forwarded wheel. The claude adapter
+    adds it for main when the launch is in host mode (`LaunchRequest.Host`); a worker inherits
+    it through main's environment, which `space open` runs in.
   - A host-side history view is a later idea, not a step here.
 - **Selection.** A drag in the region is the program's own selection, and its copy reaches the
   terminal clipboard through the forwarded OSC 52. Shift+drag gives the terminal's native
@@ -188,10 +191,17 @@ pass the programs' bytes through.
      UTF-8 character (x/ansi v0.11.7 and v0.11.8), so Claude Code's title `✳ Claude Code` was
      drawn over its logo, in every grid. The grid drops the non-ASCII bytes of an OSC string
      before the emulator; step 4's title forwarding must take that into account.
-   - **Left for later steps:** `CLAUDE_CODE_NO_FLICKER` (step 2); main's last words after it
-     exits — Claude Code's resume line — are drawn on the alternate screen and lost with it.
+   - **Left for later steps:** main's last words after it exits — Claude Code's resume line —
+     are drawn on the alternate screen and lost with it.
 2. **Mouse, paste and focus.** The forwarding rules above. Live check: Claude Code's fullscreen
    scroll and its click selection in a worker.
+   - **Built and checked live, October 18, 2026, Claude Code 2.1.302**
+     (`internal/host/hostmode/mouse.go`): main on the cheapest model opened a worker by its own
+     `space open`, and both ran fullscreen, the worker by inheritance. A click on the bar showed
+     the worker; the wheel scrolled its answer of 120 lines back to its top; a drag over six
+     lines made it say `copied 17 chars to clipboard`; a paste of two lines stayed in its prompt,
+     framed, its line break not sending it. At the exit every mode was reset.
+   - The copy reaches the person's clipboard only with step 4's OSC 52.
 3. **The sidebar.** The width threshold, `s`, and clicks on it.
 4. **Events and colours.** The `e` frame: OSC 52, title, bell, default colours; the theme's
    indices checked live. Live check: a copy from a

@@ -200,3 +200,19 @@ func withEnv(env []string, name, value string) []string {
 	}
 	return append(out, name+"="+value)
 }
+
+// fullscreenEnv switches Claude Code's fullscreen on, which has no flag
+// (docs/research-claude-mod.md).
+const fullscreenEnv = "CLAUDE_CODE_NO_FLICKER"
+
+// fullscreen has a host mode's main draw fullscreen and scroll its history
+// with the wheel the host forwards, unless the person chose either way
+// themselves. Its workers inherit the variable through main's environment.
+func fullscreen(env []string) []string {
+	for _, kv := range env {
+		if strings.HasPrefix(kv, fullscreenEnv+"=") {
+			return env
+		}
+	}
+	return append(env[:len(env):len(env)], fullscreenEnv+"=1")
+}

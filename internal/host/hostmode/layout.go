@@ -76,6 +76,20 @@ func barRuns(labels []label, width int) []terminal.Run {
 	return runs
 }
 
+// tabAt is the tab whose label covers the column col, from 1, of a bar laid
+// out by barRuns for tabs tabs, or -1: its first runs are the tabs' labels in
+// order, as many as fit.
+func tabAt(runs []terminal.Run, tabs, col int) int {
+	end := 0
+	for i := range min(tabs, len(runs)) {
+		end += runs[i].Cols
+		if col <= end {
+			return i
+		}
+	}
+	return -1
+}
+
 // cut keeps at most cols runes of s. A tab's name is a session's or a
 // space's, which rewake keeps to narrow characters, so a rune is a column.
 func cut(s string, cols int) string {

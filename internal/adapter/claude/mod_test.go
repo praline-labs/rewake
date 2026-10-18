@@ -193,3 +193,13 @@ func TestARunWritesItsModAndServesItsSocket(t *testing.T) {
 		t.Fatalf("the mod socket outlived its run: %v", err)
 	}
 }
+
+func TestTheHostModeTurnsFullscreenOnUnlessThePersonChose(t *testing.T) {
+	if got := fullscreen([]string{"A=1"}); !slices.Equal(got, []string{"A=1", "CLAUDE_CODE_NO_FLICKER=1"}) {
+		t.Fatalf("env %q", got)
+	}
+	theirs := []string{"CLAUDE_CODE_NO_FLICKER=0"}
+	if got := fullscreen(theirs); !slices.Equal(got, theirs) {
+		t.Fatalf("the person's choice became %q", got)
+	}
+}

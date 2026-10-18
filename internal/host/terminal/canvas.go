@@ -12,7 +12,8 @@ import (
 // Canvas is the person's terminal as the host mode draws it
 // (docs/v2/host-mode.md): a composed screen on the alternate screen, diffed
 // against what is shown by ultraviolet's renderer, with the shown program's
-// input modes mirrored so its keys arrive in the form it asked for.
+// key modes mirrored so its keys arrive in the form it asked for, and the
+// mouse and bracketed paste kept on for the host, which routes them.
 type Canvas struct {
 	r    *uv.TerminalRenderer
 	buf  *uv.RenderBuffer
@@ -30,7 +31,9 @@ type Frame struct {
 	Rows   [][]Run
 	// Cursor is in the region's coordinates; one outside it is not shown.
 	Cursor Cursor
-	// Modes are the shown program's, mirrored on the person's terminal.
+	// Modes are the shown program's: its key and focus modes are mirrored
+	// on the person's terminal, its mouse mode chooses only whether motion
+	// without a button is reported (hostModes).
 	Modes Modes
 	// Bar is drawn on the canvas's last row when it lies below the region.
 	Bar []Run
@@ -44,10 +47,12 @@ func NewCanvas(out io.Writer, env []string, size Size) *Canvas {
 	return c
 }
 
-// Enter takes the alternate screen, clears it and hides the cursor.
+// Enter takes the alternate screen, clears it, hides the cursor and turns
+// the host's mouse and bracketed paste on.
 func (c *Canvas) Enter() error {
 	c.r.EnterAltScreen()
-	_, _ = c.r.WriteString(ansi.HideCursor)
+	c.modes = hostModes(Modes{})
+	_, _ = c.r.WriteString(ansi.HideCursor + modeChanges(Modes{}, c.modes))
 	c.shown = false
 	return c.r.Flush()
 }
@@ -91,8 +96,9 @@ func (c *Canvas) Draw(f Frame) error {
 		c.shown = false
 	}
 	c.r.Render(c.buf)
-	_, _ = c.r.WriteString(modeChanges(c.modes, f.Modes))
-	c.modes = f.Modes
+	want := hostModes(f.Modes)
+	_, _ = c.r.WriteString(modeChanges(c.modes, want))
+	c.modes = want
 	at := f.Cursor
 	if at.Visible && at.Row >= 0 && at.Row < f.Region.Rows && at.Col >= 0 && at.Col < f.Region.Cols {
 		c.r.MoveTo(at.Col, at.Row)
@@ -183,7 +189,25 @@ func colorFor(c Color) color.Color {
 	return nil
 }
 
-// resetModes resets every mode a canvas may mirror.
+// hostModes are the modes the person's terminal keeps while the program
+// with modes is shown. The keys' forms and focus reports are the program's;
+// the mouse in the SGR form and bracketed paste are the host's, always on,
+// so a click on the bar reaches the host and a paste is known as one
+// whatever the program asked (docs/v2/host-mode.md#input). Motion without a
+// button is asked for only while the program wants it, so the host is not
+// flooded with reports nobody takes.
+func hostModes(program Modes) Modes {
+	mouse := MouseButton
+	if program.Mouse == MouseAny {
+		mouse = MouseAny
+	}
+	return Modes{
+		CursorKeys: program.CursorKeys, Keypad: program.Keypad, Focus: program.Focus,
+		BracketedPaste: true, Mouse: mouse, MouseSGR: true,
+	}
+}
+
+// resetModes resets every mode a canvas may set.
 var resetModes = modeChanges(Modes{
 	CursorKeys: true, Keypad: true, BracketedPaste: true, Mouse: MouseAny, MouseSGR: true, Focus: true,
 }, Modes{}) + ansi.ResetModeMouseX10 + ansi.ResetModeMouseNormal + ansi.ResetModeMouseButtonEvent

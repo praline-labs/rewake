@@ -27,14 +27,23 @@ var (
 )
 
 // action is what one piece of input asks of the host: bytes for the shown
-// program, or a command typed after the prefix.
+// program, a mouse report, a paste's start or end, or a command typed after
+// the prefix.
 type action struct {
 	send []byte
-	// mouseRow is the 1-based row of a mouse report in send, 0 for other
-	// input: a report on the bar is the host's.
-	mouseRow int
-	command  byte
+	// mouse is a report the host routes: to the bar, or re-encoded to the
+	// shown program in the form it asked for.
+	mouse *mouseEvent
+	// paste is pasteOpens or pasteCloses at the person's terminal's paste
+	// brackets, which reach the program only when it asked for them.
+	paste   int
+	command byte
 }
+
+const (
+	pasteOpens = 1 + iota
+	pasteCloses
+)
 
 // input turns the person's keystrokes into actions. Its state survives a
 // read cut at any offset: a sequence cut by the end of a read is held, a
@@ -102,15 +111,17 @@ func (in *input) lapse(out []action, now time.Time) []action {
 func (in *input) take(out []action, token []byte, now time.Time) []action {
 	token = bytes.Clone(token)
 	switch {
+	case in.paste && bytes.Equal(token, pasteEnd):
+		in.paste = false
+		return append(out, action{paste: pasteCloses})
 	case in.paste:
-		in.paste = !bytes.Equal(token, pasteEnd)
 		return append(out, action{send: token})
 	case bytes.Equal(token, pasteStart):
 		in.paste, in.pending = true, false
-		return append(out, action{send: token})
+		return append(out, action{paste: pasteOpens})
 	}
-	if row := mouseRow(token); row > 0 {
-		return append(out, action{send: token, mouseRow: row})
+	if m, ok := parseMouse(token); ok {
+		return append(out, action{mouse: &m})
 	}
 	if focusReport(token) {
 		return append(out, action{send: token})
@@ -137,7 +148,7 @@ func (in *input) take(out []action, token []byte, now time.Time) []action {
 func merge(actions []action) []action {
 	var out []action
 	for _, a := range actions {
-		if last := len(out) - 1; last >= 0 && a.send != nil && a.mouseRow == 0 && out[last].send != nil && out[last].mouseRow == 0 {
+		if last := len(out) - 1; last >= 0 && a.send != nil && out[last].send != nil {
 			out[last].send = append(out[last].send, a.send...)
 			continue
 		}
@@ -161,33 +172,6 @@ func commandKey(b byte) bool {
 
 func focusReport(token []byte) bool {
 	return bytes.Equal(token, []byte("\x1b[I")) || bytes.Equal(token, []byte("\x1b[O"))
-}
-
-// mouseRow is the row of a mouse report, from 1, or 0 for any other token:
-// SGR (CSI < b ; x ; y M or m) and the X10 form (CSI M and three bytes).
-func mouseRow(token []byte) int {
-	if len(token) == 6 && bytes.HasPrefix(token, []byte("\x1b[M")) {
-		return int(token[5]) - 32
-	}
-	if len(token) < 9 || !bytes.HasPrefix(token, []byte("\x1b[<")) {
-		return 0
-	}
-	final := token[len(token)-1]
-	if final != 'M' && final != 'm' {
-		return 0
-	}
-	fields := bytes.Split(token[3:len(token)-1], []byte(";"))
-	if len(fields) != 3 {
-		return 0
-	}
-	row := 0
-	for _, d := range fields[2] {
-		if d < '0' || d > '9' {
-			return 0
-		}
-		row = row*10 + int(d-'0')
-	}
-	return row
 }
 
 // tokenLength is the length of the whole token data starts with, or 0 when

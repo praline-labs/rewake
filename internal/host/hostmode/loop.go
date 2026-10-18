@@ -122,12 +122,49 @@ func (h *Host) dispatch(actions []action) {
 		switch {
 		case a.command != 0:
 			h.command(a.command)
-		case a.mouseRow > 0 && !h.lay.inRegion(a.mouseRow):
-			// On the bar: the host's, never the program's.
+		case a.mouse != nil:
+			h.mouse(*a.mouse)
+		case a.paste == pasteOpens:
+			h.framed = h.modes().BracketedPaste
+			if h.framed {
+				h.cur.send(pasteStart)
+			}
+		case a.paste == pasteCloses:
+			if h.framed {
+				h.cur.send(pasteEnd)
+			}
 		case len(a.send) > 0:
 			h.cur.send(a.send)
 		}
 	}
+}
+
+// mouse routes a report: a click on the bar shows the tab under it, an event
+// in the region goes to the shown program as it asked to hear it, anything
+// else is dropped. The region lies at the terminal's top left, so its cells
+// are the terminal's.
+func (h *Host) mouse(m mouseEvent) {
+	switch {
+	case m.row-1 == h.lay.bar:
+		if !m.leftClick() {
+			return
+		}
+		if i := tabAt(h.barRuns(), len(h.tabs), m.col); i >= 0 {
+			h.show(h.tabs[i])
+		}
+	case h.lay.inRegion(m.row) && m.col >= 1 && m.col <= h.lay.region.Cols:
+		if p := m.encode(h.modes(), m.col, m.row); p != nil {
+			h.cur.send(p)
+		}
+	}
+}
+
+// modes are the shown program's input modes; an ended one has none.
+func (h *Host) modes() terminal.Modes {
+	if h.cur.pic.Ended {
+		return terminal.Modes{}
+	}
+	return h.cur.pic.Modes
 }
 
 // command runs a key typed after the prefix. A digit naming no tab, and the
@@ -202,21 +239,23 @@ func (h *Host) label(t *tab) label {
 	return label{name: t.name, current: t == h.cur, ended: t.pic.Ended, changed: t != h.cur && t.pic.Seq != t.seen}
 }
 
-func (h *Host) draw() {
-	h.dirty = false
+func (h *Host) barRuns() []terminal.Run {
 	labels := make([]label, len(h.tabs))
 	for i, t := range h.tabs {
 		labels[i] = h.label(t)
 	}
+	return barRuns(labels, h.lay.size.Cols)
+}
+
+func (h *Host) draw() {
+	h.dirty = false
+	bar := h.barRuns()
 	pic := h.cur.pic
 	h.cur.seen = pic.Seq
-	modes := pic.Modes
 	if pic.Ended {
-		modes = terminal.Modes{}
 		pic.Cursor.Visible = false
 	}
 	_ = h.canvas.Draw(terminal.Frame{
-		Region: h.lay.region, Rows: pic.Rows, Cursor: pic.Cursor, Modes: modes,
-		Bar: barRuns(labels, h.lay.size.Cols),
+		Region: h.lay.region, Rows: pic.Rows, Cursor: pic.Cursor, Modes: h.modes(), Bar: bar,
 	})
 }
