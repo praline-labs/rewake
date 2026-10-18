@@ -37,7 +37,7 @@ func (w Waiter) readAt(index int) int64 {
 	if index < len(w.ReadAt) && w.ReadAt[index] != 0 {
 		return w.ReadAt[index]
 	}
-	// legacy(rewake <2026-09-28): a wait record written before read times were kept has only when its wait began; remove when no session started by an earlier build is registered
+	// A read time not known is taken as when the wait began.
 	return w.Since
 }
 

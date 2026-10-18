@@ -35,9 +35,8 @@ func (s Session) Judgeable() bool {
 		// deleted the record of a session that was running.
 		return false
 	}
-	// A record without a namespace comes from a version that did not record
-	// one; the reader's own is the best it has.
-	// legacy(rewake <2026-09-16): records of earlier builds carry no pidNamespace; remove when no session started by such a build is registered
+	// A record without a namespace is read in the reader's own: the best it
+	// has, and what the tests' records rely on.
 	return s.PIDNamespace == "" || s.PIDNamespace == here
 }
 

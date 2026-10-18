@@ -120,14 +120,13 @@ func (s *Server) noteArrivals(waiting []mail.Message, now time.Time) {
 // step forward between the write and this look cut the cap short, and split
 // bursts the window exists to join. The boot clock is one for every process
 // and never stepped, so a letter that carries its reading is placed by how
-// long ago that was, on now's monotonic reading. One without it, from an
-// earlier build, or whose reading is ahead of boot — written before a reboot
-// — falls back to its wall clock, and to now when that is ahead too.
+// long ago that was, on now's monotonic reading. One without it, or whose
+// reading is ahead of boot — written before a reboot — falls back to its wall
+// clock, and to now when that is ahead too.
 func writtenAt(message mail.Message, now time.Time, boot int64) time.Time {
 	if message.CreatedBoot != 0 && boot != 0 && boot >= message.CreatedBoot {
 		return now.Add(-time.Duration(boot - message.CreatedBoot))
 	}
-	// legacy(rewake <2026-09-26): letters of earlier builds carry no createdBoot and take this wall-clock path; remove when no session started by such a build is registered, keeping the path for a reading ahead of boot or no boot clock
 	if !message.CreatedAt.IsZero() && message.CreatedAt.Before(now) {
 		return message.CreatedAt
 	}

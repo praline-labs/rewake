@@ -61,7 +61,7 @@ func markFresh(path string) (bool, error) {
 			return age >= 0 && time.Duration(age) < answeringFresh, nil
 		}
 	}
-	// legacy(rewake <2026-09-26): marks of earlier builds are empty and judged by their mtime; remove when no session started by such a build is registered, keeping the mtime for a half-written touch or no boot clock
+	// A half-written touch, or no boot clock, is judged by the file's mtime.
 	info, err := os.Stat(path)
 	if errors.Is(err, os.ErrNotExist) {
 		return false, nil
