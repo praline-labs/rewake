@@ -179,15 +179,6 @@ linters:
           deny:
             - pkg: "github.com/praline-labs/rewake/"
               desc: "Import only the layers allowed in docs/rules/layout.md."
-        terminal-library:
-          list-mode: lax
-          files:
-            - "${base-path}/internal/**.go"
-            - "${base-path}/cmd/**.go"
-            - "!${base-path}/internal/host/terminal/*.go"
-          deny:
-            - pkg: "github.com/charmbracelet/"
-              desc: "Only internal/host/terminal may import this library."
     misspell:
       locale: US
 

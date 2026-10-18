@@ -1,5 +1,10 @@
 # Stage 4: the terminal a hosted worker runs on
 
+**Superseded, October 18, 2026**, by main's decision on the owner's of that day: with a space shown
+only through `rewake attach`, whose own terminal draws the worker, the emulator had no user and
+left the code with `charmbracelet/x/vt` and every module it brought in. `internal/host/terminal`
+keeps the pseudo-terminal of `pty.go` and the raw mode of `raw.go`; the rest below is a record.
+
 What step S4-4 built, October 13, 2026: `internal/host/terminal`, a program's
 pseudo-terminal and the screen it draws, with the emulator of `charmbracelet/x/vt` behind one
 small interface. The design is [stage4-space.md](stage4-space.md) — the pieces in its

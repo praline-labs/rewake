@@ -152,3 +152,4 @@ without a date. Local installation without publishing is in
 | October 18, 2026 | [Deletions, batch B](2026-10-18-deletions-b.md) | grants, the mail tool with its channel and tool-only read path, their documents archived, `AGENTS.md` shortened |
 | October 18, 2026 | [The pi adapter](2026-10-18-pi.md) | `rewake pi`: wake, turn reports, conversation, telemetry, compaction and interrupt over an embedded extension; live on a real model; open: pi in the space, the read-only reviewer |
 | October 18, 2026 | [The space: main starts its workers](2026-10-18-space.md) | S4-7 built, not yet accepted: `rewake space open` through a detached space host with a pseudo-terminal, closing when main's run ends, `rewake attach`; the record's `keeper` replaced by `host` |
+| October 18, 2026 | [The terminal emulator removed](2026-10-18-emulator.md) | `internal/host/terminal` keeps the pseudo-terminal and raw mode; `charmbracelet/x/vt` and its modules left `go.mod` |

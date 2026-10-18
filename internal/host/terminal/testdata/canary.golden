@@ -1,9 +1,0 @@
-0 "dim ❤️ 世界"
-  0+3 [dim] fg={0 0 0 0 0} bg={0 0 0 0 0}
-1 "three"
-2 "four"
-3 "new"
-  0+3 [bold] fg={0 0 0 0 0} bg={0 0 0 0 0}
-4 "five"
-cursor {Row:0 Col:0 Visible:true}
-modes {CursorKeys:false Keypad:false BracketedPaste:false Mouse:0 MouseSGR:false Focus:false AltScreen:false}

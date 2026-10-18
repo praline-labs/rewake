@@ -46,7 +46,7 @@ Stage 4, Claude Code's adapter as one mod, then the space:
 - [stage4-space-record.md](stage4-space-record.md) — the space record and `rewake space list`
   as S4-3 built them. Open it before writing a space's record from the host.
 - [stage4-space-terminal.md](stage4-space-terminal.md) — `internal/host/terminal` as S4-4
-  built it; only its `pty.go` stays once the space has `attach`.
+  built it; its emulator left the code on October 18, 2026, and only the pseudo-terminal stays.
 - [stage4-reading-pi.md](stage4-reading-pi.md) — pi read on October 13, 2026 at 0.85.1 and
   1.2.0, capability by capability, its risks and the probe items PI1–PI14. Open it before
   stage 4b.

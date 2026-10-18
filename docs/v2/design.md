@@ -194,7 +194,7 @@ Claude Code, and a person reaches a worker's terminal only with `rewake attach`.
     emulator, make it redraw — and one reserved prefix key. The person's external editor
     (Ctrl+G, `EDITOR`) is never taken for this.
 12. **No tmux anywhere in rewake** (decided October 13, 2026): not as the substrate a
-    session runs in, not for screenshots. Screen snapshots for tests come from rewake's own
-    emulator, `charmbracelet/x/vt`, over a pseudo-terminal. What agent-deck, which runs on
+    session runs in, not for screenshots. The emulator S4-4 built for screen snapshots,
+    `charmbracelet/x/vt`, left the code on October 18, 2026 with nothing using it. What agent-deck, which runs on
     tmux, teaches for the terminal, the checkouts and screen tests is gathered in
     [agent-deck-ideas.md](../archive/v2/agent-deck-ideas.md).
