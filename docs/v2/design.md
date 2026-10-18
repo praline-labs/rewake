@@ -178,15 +178,9 @@ probe ([research-claude-mod.md](../research-claude-mod.md)):
    versioned with it; the protocol between it and the host is described once, as a JSON
    schema, and the TypeScript types are generated from it.
 
-How a space is shown — the owner's decision of October 18, 2026, replacing the answers of
-October 13 on a tab inside Claude Code and a full-screen relay with no interface of its own: a
-host mode of rewake, chosen at launch, holds the person's terminal and relays main and the
-workers with a bottom tab bar and a right sidebar ([project.md](../project.md#what-the-tool-does),
-"Main starts its workers"; its design will be `docs/v2/host-mode.md`). The
-person runs Claude Code as before; the mod's space features are active only in that mode.
+How a space is shown (the owner's decision, October 18, 2026): a host mode of rewake, chosen
+at launch, holds the person's terminal and relays main and the workers with a bottom tab bar
+and a right sidebar ([project.md](../project.md#what-the-tool-does), "Main starts its
+workers"); the mod's space features are active only in that mode. Its design will be
+`docs/v2/host-mode.md`.
 
-12. **No tmux anywhere in rewake** (decided October 13, 2026): not as the substrate a
-    session runs in, not for screenshots; the host mode is rewake's own relay over its own
-    pseudo-terminals and the emulator `charmbracelet/x/vt`. What agent-deck, which runs on
-    tmux, teaches for the terminal, the checkouts and screen tests is gathered in
-    [agent-deck-ideas.md](../archive/v2/agent-deck-ideas.md).
