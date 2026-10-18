@@ -205,19 +205,15 @@ with the worker's run, at most 30 s, and fails with the record's reason otherwis
 
 What a harness needs to start unattended — Claude Code's folder trust, a permission mode — main
 passes after `--`; rewake types nothing into the worker on its own, only the person's keys from
-main's panel or an attach. `rewake attach <name>` relays the person's
-terminal to the worker's over `sock/space.<id>.sock`, in raw mode, the size following the
-window and resized once on attach so a full-screen harness repaints; one terminal at a time,
-`Ctrl-\` detaches. The same socket serves a view of the worker's screen, kept by the space
-host's emulator from the worker's output, to main's wrapper for main's panel; a view never makes
-attach busy, and the last size set, by either, is the worker's
-([workers-panel.md](v2/workers-panel.md)).
+main's host mode. The space host serves `sock/space.<id>.sock` to views: the worker's screen,
+kept by its emulator from the worker's output, as frames, and the keys and sizes a view sends
+back; the last size set is the worker's ([host-mode.md](v2/host-mode.md)).
 
 The space host reads main's run once a second (`ObserveRun` through `space.MainRuns`). Once
 it reads ended it sends SIGHUP to the worker's process group, SIGTERM after 1 s, SIGKILL after
 5 s more, waits up to 2 s for the group to be gone, records the end it observed and exits; a
 run read as unknown ends nothing. A group not seen gone, or a checkout that could not be looked
-for, leaves the record closing rather than record an end nobody saw. The attach socket is
+for, leaves the record closing rather than record an end nobody saw. The view socket is
 listened on before the worker starts; an open that cannot serve it is refused. Its standard streams are `/dev/null`: what goes wrong shows in
 the record's end or as the open's timeout.
 

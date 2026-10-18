@@ -85,8 +85,8 @@ func TestTheSetIsWakeUntilTheHelloThenTheBoundaryAndSpacesOnMain(t *testing.T) {
 				t.Fatal(err)
 			}
 			plan.Service.(adapter.HarnessWatcher).HarnessStarted(adapter.RunProcess{PID: os.Getpid(), Start: start})
-			if answer := helloFrom(t, modSocketPath(request)); answer.HostsSpaces != test.hosts {
-				t.Fatalf("the hello was answered hostsSpaces %v, the role opens spaces: %v", answer.HostsSpaces, test.hosts)
+			if answer := helloFrom(t, modSocketPath(request)); answer.Role != request.Role.ID {
+				t.Fatalf("the hello was answered role %q, want %q", answer.Role, request.Role.ID)
 			}
 			proven := []adapter.Capability{adapter.WakeCapability, adapter.TurnBoundaryCapability, adapter.TelemetryCapability, adapter.ControlCapability}
 			if test.hosts {

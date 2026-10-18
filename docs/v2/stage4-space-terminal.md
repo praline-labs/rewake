@@ -6,7 +6,7 @@ left the code with `charmbracelet/x/vt` and every module it brought in. `interna
 keeps the pseudo-terminal of `pty.go` and the raw mode of `raw.go`; the rest below is a record.
 Later that day the owner decided on the workers' panel, and the emulator came back from
 `eb52049^` — `emulator.go`, `vt.go`, `screen.go`, `hold.go`, with the clipboard dropped — behind
-a `Grid` the space host feeds ([workers-panel.md](workers-panel.md)).
+a `Grid` the space host feeds ([workers-panel.md](../archive/v2/workers-panel.md), replaced by the host mode).
 
 What step S4-4 built, October 13, 2026: `internal/host/terminal`, a program's
 pseudo-terminal and the screen it draws, with the emulator of `charmbracelet/x/vt` behind one

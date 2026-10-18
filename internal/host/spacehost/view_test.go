@@ -2,7 +2,6 @@ package spacehost
 
 import (
 	"context"
-	"io"
 	"net"
 	"os"
 	"os/exec"
@@ -11,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/host/terminal"
 )
 
@@ -55,7 +53,6 @@ func served(t *testing.T, program string) string {
 		_ = listener.Close()
 		_ = cmd.Process.Kill()
 		_ = cmd.Wait()
-		r.close()
 		_ = pty.Close()
 		_ = grid.Close()
 		_ = os.RemoveAll(dir)
@@ -64,27 +61,27 @@ func served(t *testing.T, program string) string {
 }
 
 // screenWith waits for a screen whose text holds want.
-func screenWith(t *testing.T, view *View, want string) adapter.Screen {
+func screenWith(t *testing.T, view *View, want string) terminal.Picture {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	var seq uint64
 	for {
-		s, err := view.Screen(ctx, seq)
-		if strings.Contains(textOf(s), want) {
-			return s
+		p, err := view.Picture(ctx, seq)
+		if strings.Contains(textOf(p), want) {
+			return p
 		}
-		if err != nil || ctx.Err() != nil || s.Ended {
-			t.Fatalf("no screen with %q (err %v), the last:\n%s", want, err, textOf(s))
+		if err != nil || ctx.Err() != nil || p.Ended {
+			t.Fatalf("no screen with %q (err %v), the last:\n%s", want, err, textOf(p))
 		}
-		seq = s.Seq
+		seq = p.Seq
 	}
 }
 
-func textOf(s adapter.Screen) string {
+func textOf(p terminal.Picture) string {
 	var b strings.Builder
-	for _, line := range s.Lines {
-		for _, run := range line {
+	for _, row := range p.Rows {
+		for _, run := range row {
 			b.WriteString(run.Text)
 		}
 		b.WriteByte('\n')
@@ -92,60 +89,37 @@ func textOf(s adapter.Screen) string {
 	return b.String()
 }
 
-// A view and an attach are served at once: keys a view types reach the
-// worker, the worker's echo reaches both, and the view sees it on the
-// screen while the attach gets the bytes.
-func TestAViewTypesIntoTheWorkerBesideAnAttach(t *testing.T) {
+// Keys a view types reach the worker, the view sees the echo on the screen,
+// and a size it sends is the worker's.
+func TestAViewTypesIntoTheWorkerAndSizesIt(t *testing.T) {
 	socket := served(t, "exec cat")
-	conn, err := net.Dial("unix", socket)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() { _ = conn.Close() }()
-	answer := make([]byte, 1)
-	if _, err := conn.Write([]byte{modeAttach}); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := io.ReadFull(conn, answer); err != nil || answer[0] != accepted {
-		t.Fatalf("the attach: %q %v", answer, err)
-	}
 	view, err := OpenView(socket)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer func() { _ = view.Close() }()
-	if err := view.Keys([]byte("typed in the panel\r")); err != nil {
+	if err := view.Keys([]byte("typed in the host\r")); err != nil {
 		t.Fatal(err)
 	}
-	s := screenWith(t, view, "typed in the panel")
-	if s.Cols != 60 || s.Rows != 10 || len(s.Lines) != 10 {
-		t.Fatalf("the screen's size: %dx%d, %d lines", s.Cols, s.Rows, len(s.Lines))
+	p := screenWith(t, view, "typed in the host")
+	if p.Size != (terminal.Size{Cols: 60, Rows: 10}) || len(p.Rows) != 10 {
+		t.Fatalf("the screen's size: %+v, %d rows", p.Size, len(p.Rows))
 	}
-	_ = conn.SetReadDeadline(time.Now().Add(10 * time.Second))
-	var got []byte
-	buf := make([]byte, 256)
-	for !strings.Contains(string(got), "typed in the panel") {
-		n, err := conn.Read(buf)
-		if err != nil {
-			t.Fatalf("the attach got %q: %v", got, err)
-		}
-		got = append(got, buf[:n]...)
-	}
-	if err := view.Resize(40, 8); err != nil {
+	if err := view.Resize(terminal.Size{Cols: 40, Rows: 8}); err != nil {
 		t.Fatal(err)
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	for s.Cols != 40 || s.Rows != 8 {
-		if s, err = view.Screen(ctx, s.Seq); err != nil || ctx.Err() != nil {
-			t.Fatalf("the view was not resized: %dx%d, %v", s.Cols, s.Rows, err)
+	for p.Size != (terminal.Size{Cols: 40, Rows: 8}) {
+		if p, err = view.Picture(ctx, p.Seq); err != nil || ctx.Err() != nil {
+			t.Fatalf("the view was not resized: %+v, %v", p.Size, err)
 		}
 	}
 }
 
-// With nobody attached the grid answers the worker's query itself: a cursor
-// report asked for reaches the worker, which prints what it read.
-func TestTheGridAnswersAQueryWhileNobodyIsAttached(t *testing.T) {
+// The grid answers the worker's query itself: a cursor report asked for
+// reaches the worker, which prints what it read.
+func TestTheGridAnswersAQuery(t *testing.T) {
 	socket := served(t, `stty raw -echo; printf '\033[6n'; head -c 4 | od -An -c; sleep 10`)
 	view, err := OpenView(socket)
 	if err != nil {
@@ -153,14 +127,4 @@ func TestTheGridAnswersAQueryWhileNobodyIsAttached(t *testing.T) {
 	}
 	defer func() { _ = view.Close() }()
 	screenWith(t, view, "033")
-}
-
-// The screen's values cross from the terminal to the adapter by number, so
-// the two packages' orders must agree.
-func TestTheScreensValuesAgreeWithTheAdapters(t *testing.T) {
-	if adapter.ScreenAttrs(terminal.Strikethrough) != adapter.Strikethrough || adapter.ScreenAttrs(terminal.Inverse) != adapter.Inverse ||
-		adapter.ScreenAttrs(terminal.Bold) != adapter.Bold || adapter.ScreenColorKind(terminal.RGB) != adapter.RGBColor ||
-		adapter.ScreenColorKind(terminal.Indexed) != adapter.IndexedColor {
-		t.Fatal("the terminal's attributes or color kinds differ from the adapter's")
-	}
 }

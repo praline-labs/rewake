@@ -3,7 +3,7 @@ package terminal
 import "testing"
 
 // A wide glyph is a run of its own, two columns for one glyph: how the
-// workers' pane learns its width from the emulator rather than guess it.
+// host mode learns its width from the emulator rather than guess it.
 func TestAWideGlyphIsARunOfItsOwn(t *testing.T) {
 	emulator, err := newVT(Size{Cols: 8, Rows: 1})
 	if err != nil {

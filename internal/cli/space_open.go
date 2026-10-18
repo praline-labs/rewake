@@ -20,8 +20,8 @@ import (
 // register: its wrapper registers before the harness is up, within seconds.
 const openBound = 30 * time.Second
 
-// workerSize is the worker's terminal until somebody attaches: an attach
-// sizes it to the person's window.
+// workerSize is the worker's terminal until a host mode shows it: the host
+// sizes it to its own region.
 var workerSize = terminal.Size{Cols: 120, Rows: 40}
 
 // spaceOpened is what rewake space open answers.
@@ -39,7 +39,7 @@ type spaceOpened struct {
 func (o spaceOpened) lines() []string {
 	return []string{
 		fmt.Sprintf("Rewake: opened space %s: %s (%s, %s) runs in room %s and closes when this run ends.", o.Space, o.Session, o.Harness, o.Role, o.Room),
-		fmt.Sprintf("Give it a task with rewake send %s \"...\"; the person reaches its terminal with rewake attach %s, and %s detaches.", o.Session, o.Space, spacehost.DetachKeyName),
+		fmt.Sprintf("Give it a task with rewake send %s \"...\"; a host mode of main shows its terminal on a tab of its own.", o.Session),
 	}
 }
 
@@ -167,7 +167,7 @@ func awaitWorker(dir, id, session string) error {
 				closeUnstarted(dir, id, fmt.Sprintf("the space host did not record itself within %s", openBound))
 				return failf("the space %s did not open: its space host did not start within %s.", record.Name, openBound)
 			}
-			return failf("the worker %s has not registered within %s; the space is still %s: rewake space list shows it, rewake attach %s shows its terminal.", session, openBound, record.State, record.Name)
+			return failf("the worker %s has not registered within %s; the space is still %s: rewake space list shows it, and a host mode of main shows its terminal.", session, openBound, record.State)
 		}
 		time.Sleep(100 * time.Millisecond)
 	}

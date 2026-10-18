@@ -2,10 +2,9 @@ package terminal
 
 import "slices"
 
-// The screen as main's panel shows it (docs/v2/workers-panel.md): rows of
-// styled runs with the cursor, and the modes a key encoder needs. These are
-// the terminal's own values; the space host maps them onto the adapter's, so
-// this package knows no harness and no mod.
+// The screen as the host mode shows it (docs/v2/host-mode.md): rows of
+// styled runs with the cursor, and the input modes the person's terminal
+// mirrors. This package knows no harness and no mod.
 
 // Screen is the screen at one sequence, carrying the rows changed since the
 // sequence its reader had.

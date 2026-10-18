@@ -115,7 +115,7 @@ test("the model's own question keeps its choices, and main's answer is its resul
 })
 
 test("main's own asks stay with the engine", async ($, on) => {
-  const run = world(on, { replies: { '/v1/hello': [{ status: 200, text: '{"role":"main","hostsSpaces":false,"generation":1}' }] } })
+  const run = world(on, { replies: { '/v1/hello': [{ status: 200, text: '{"role":"main","generation":1}' }] } })
   engine(on, run)
   await start($)
   await $.classic.SessionStart({ source: 'startup', permission_mode: 'default' })

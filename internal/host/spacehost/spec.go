@@ -8,7 +8,7 @@
 // shows it is outside main's run, opens the pseudo-terminal, starts an
 // ordinary launch of the worker on it, and checks main's run once a second;
 // once that run has ended it stops the worker's process group, records what
-// it observed and exits. It serves the terminal's master to rewake attach.
+// it observed and exits. It serves the worker's screen to a host mode's views.
 package spacehost
 
 import (

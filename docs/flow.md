@@ -43,7 +43,7 @@ inbox/<name>/.lock               the mailbox lock, one flock for every state cha
 sock/<name>.<epoch>.sock         Claude Code's inbound socket for this run
 sock/<name>.<epoch>.reply.sock   where that run's wrapper hears what the socket did with a line
 spaces/<id>.json                 a space main opened: its worker, its space host, its end
-sock/space.<id>.sock             the worker's terminal, served by its space host to rewake attach
+sock/space.<id>.sock             the worker's screen, served by its space host to a host mode's views
                                  and, as a view of its screen, to main's wrapper for its panel
 ```
 
@@ -328,16 +328,11 @@ base and none of main's session in its environment. From there the worker is any
 1 for it, its record `sessions/api-claude.json`. The space host records the worker's run, open;
 the command answers once that run is registered, within 30 s.
 
-Main sends `api-claude` a task, and its report comes back as in Acts 2 to 5. Main's Claude Code
-shows the worker in its pane "Workers" — opened by `/workers` alone — with its model, context
-and activity, and its screen live; a click on the screen gives it the keys, typing goes to the
-worker, and Alt+a starts the pane's prefix: then `q` closes the pane and returns the keys to
-main's prompt, a digit chooses a worker, `z` switches the pane's size, and `c`, `e` or `x` sends
-Ctrl+C, Escape or Ctrl+X. Off fullscreen, where a click gives the screen no keys, the pane takes a
-line at a time from a field under the screen, with buttons for Escape, Ctrl+C, the size and
-closing ([workers-panel.md](v2/workers-panel.md)). The person can also reach the worker's
-terminal with `rewake attach api` from a terminal of their own, and leaves with `Ctrl-\`; the
-worker keeps running.
+Main sends `api-claude` a task, and its report comes back as in Acts 2 to 5. When main was
+started in the host mode, its wrapper holds the person's terminal and shows main and each worker
+on a tab of its own, drawn from their emulators under a tab bar; Ctrl+\\ then a key switches
+between them, and everything else typed goes to the program shown
+([host-mode.md](v2/host-mode.md)). Without the host mode the worker runs unseen.
 
 The space host reads main's run once a second. When it reads ended — main exited, crashed or
 its wrapper was killed — it sends the worker's process group SIGHUP, SIGTERM after a second and

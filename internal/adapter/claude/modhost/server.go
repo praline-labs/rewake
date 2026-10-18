@@ -35,9 +35,6 @@ type Config struct {
 	// Wait bounds how long a request waits for the host to name the
 	// harness's process; a request that comes before is held, then refused.
 	Wait time.Duration
-	// HostsSpaces is the run's role opening spaces, which a hello is
-	// answered with: the mod then serves the spaces' side of the protocol.
-	HostsSpaces bool
 	// Live hears each transition of what the mod proves: a hello that opens
 	// a generation, once it is bound and recorded and before it is
 	// answered, so the set is live by the time the mod acts on the answer;
@@ -65,7 +62,6 @@ type Config struct {
 type Server struct {
 	cfg        Config
 	management management
-	pane       pane
 	asks       *asking.Broker
 
 	mu      sync.Mutex
@@ -213,7 +209,6 @@ func (s *Server) Close() {
 		if s.current != nil {
 			s.current.disarm()
 		}
-		s.pane.closeViews()
 		s.mu.Unlock()
 		close(s.stop)
 		if s.http == nil {
@@ -340,20 +335,16 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 // endpoints is the protocol's paths and what serves each.
 func (s *Server) endpoints() map[string]http.HandlerFunc {
 	return map[string]http.HandlerFunc{
-		PathHello:         s.hello,
-		PathTurnStart:     s.turnStart,
-		PathTurnEnd:       s.turnEnd,
-		PathModEnded:      s.ended,
-		PathModAlive:      s.alive,
-		PathModState:      s.state,
-		PathModControl:    s.controlReply,
-		PathAskOpen:       s.askOpen,
-		PathAskPoll:       s.askPoll,
-		PathAskSettle:     s.askSettle,
-		PathWorkersList:   s.workersList,
-		PathWorkersScreen: s.workersScreen,
-		PathWorkersKeys:   s.workersKeys,
-		PathWorkersResize: s.workersResize,
+		PathHello:      s.hello,
+		PathTurnStart:  s.turnStart,
+		PathTurnEnd:    s.turnEnd,
+		PathModEnded:   s.ended,
+		PathModAlive:   s.alive,
+		PathModState:   s.state,
+		PathModControl: s.controlReply,
+		PathAskOpen:    s.askOpen,
+		PathAskPoll:    s.askPoll,
+		PathAskSettle:  s.askSettle,
 	}
 }
 

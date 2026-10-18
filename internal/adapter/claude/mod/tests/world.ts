@@ -4,7 +4,7 @@ import { mock } from 'claude-code/testing'
 export const socket = '/state/sock/api.1.mod.sock'
 export const epoch = '7.100.boot'
 export const own = 'rewake/outbox/' + epoch
-export const admitted = { status: 200, text: '{"role":"write","hostsSpaces":false,"generation":1}' }
+export const admitted = { status: 200, text: '{"role":"write","generation":1}' }
 export const holdMs = 15_000
 
 export type Reply = { status: number; text: string } | 'receipt' | 'throw' | ((body: any) => Promise<Reply>)

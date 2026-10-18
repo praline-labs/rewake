@@ -176,8 +176,9 @@ a refusal names the one that is missing:
   session without them live is refused as a target, exit 1: its run has not proven them or has
   lost them, which a later run may not repeat.
 
-On Claude Code the proof is the mod's hello: an admitted hello on a main run makes Spaces live,
-and its answer says `hostsSpaces`, so the mod serves the spaces' side of the protocol. A mod
+On Claude Code the proof is the mod's hello: an admitted hello on a main run makes Spaces live.
+The answer no longer says `hostsSpaces`: the mod served the workers' pane by it, and the pane went
+with the host mode on October 18, 2026 ([host-mode.md](host-mode.md)). A mod
 that is lost takes them out of the live set when the host sees the loss — the lapse of its
 heartbeat, the signal that withdraws its turn boundary, built in S4-6
 ([the live set](stage4-turns.md#the-live-set)). A run whose mod did not load never has them.

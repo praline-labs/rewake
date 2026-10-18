@@ -106,7 +106,7 @@ func (v *vtEmulator) look() look {
 // a run of its own counted as its width, the cell after it, which only holds
 // its place, skipped. So a run of one glyph over two columns is how a reader
 // learns a glyph is wide: the emulator's width, not a reader's guess (the
-// workers' pane draws each cell of its Raster from it). A wide glyph cut by
+// host mode draws each cell of its canvas from it). A wide glyph cut by
 // the right edge is drawn as a blank, so the runs add up to the width.
 func (v *vtEmulator) row(y, width int) []Run {
 	var runs []Run

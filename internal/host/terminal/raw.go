@@ -9,10 +9,10 @@ import (
 	"unsafe"
 )
 
-// Plain is a pseudo-terminal whose screen nothing here keeps: the space host runs
-// a worker on it and relays its master to whoever attaches, whose own
-// terminal draws what the worker writes (docs/rules/space.md). The master is
-// the caller's to read; nothing here reads it.
+// Plain is a pseudo-terminal whose screen nothing here keeps: a space host
+// runs a worker on it, and the host mode main's harness, each feeding what the
+// program writes to a Grid (docs/rules/space.md, docs/v2/host-mode.md). The
+// master is the caller's to read; nothing here reads it.
 type Plain struct {
 	Master *os.File
 	sideMu sync.Mutex
@@ -79,11 +79,11 @@ func (p *Plain) Close() error {
 }
 
 // SizeOf reads the window size of a terminal this process holds, the
-// person's own for an attach.
+// person's own for the host mode.
 func SizeOf(f *os.File) (Size, error) { return getSize(f) }
 
 // MakeRaw puts the terminal f in raw mode, as cfmakeraw(3) does, and returns
-// what restores the mode it had: every key reaches the attached program,
+// what restores the mode it had: every key reaches the shown program,
 // ^C and ^Z among them, and nothing is echoed twice.
 func MakeRaw(f *os.File) (restore func() error, err error) {
 	var old syscall.Termios

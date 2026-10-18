@@ -34,7 +34,7 @@ internal/adapter/fixture/                     the test harness behind rewaketest
 internal/host/                                wrapper: launch, signals, lifecycle
 internal/host/launch/                         a launch's host side: the run's environment, the version read before the claim, the bounded probe, the aliases a short name expands to
 internal/host/delivery/                       the delivery server: the serving loop, notices and their batches, the coalescing window, outcomes and the sweep's lock
-internal/host/terminal/                       a program's pseudo-terminal by the standard library, the size and raw mode of an attaching terminal, and the screen the program draws, the one package the emulator library enters
+internal/host/terminal/                       a program's pseudo-terminal by the standard library, the size and raw mode of the person's terminal, and the screen the program draws, the one package the emulator library enters
 internal/host/worktree/                       checkouts rewake makes for a launch: git worktree add, records, land, removal
 scripts/                                      packaging scripts and the tests of the npm shim
 docs/                                         the documentation, and the tests that keep it true to the tree

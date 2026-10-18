@@ -5,7 +5,7 @@ import { epoch, holdMs, start, world } from './world.ts'
 import type { Reply } from './world.ts'
 
 const loadKey = 'rewake/load/' + epoch
-const answered = (generation: number) => ({ status: 200, text: JSON.stringify({ role: 'write', hostsSpaces: false, generation }) })
+const answered = (generation: number) => ({ status: 200, text: JSON.stringify({ role: 'write', generation }) })
 const refused = (status: number, body: Record<string, unknown> = { error: 'no' }) => ({ status, text: JSON.stringify(body) })
 
 test('an admitted load polls with its generation, one poll at a time, the next at once after each answer', async ($, on) => {

@@ -41,19 +41,6 @@ export const paths = {
   // askSettle ends an open request with the answer that came first, which main's waiting rewake
   // answer hears; 404 names a request this run does not hold.
   askSettle: "/v1/ask/settle",
-  // workersList lists the workers of the spaces this run opened that are not over, for the
-  // workers' pane (docs/v2/workers-panel.md); served only to a run that hosts spaces, 404
-  // otherwise.
-  workersList: "/v1/workers/list",
-  // workersScreen is a long poll of one worker's screen: answered once its sequence passes the
-  // one asked, or after screenHoldSeconds with the same; 404 names a worker not listed or whose
-  // screen cannot be reached.
-  workersScreen: "/v1/workers/screen",
-  // workersKeys types into one worker, answered once the keys are written to its terminal.
-  workersKeys: "/v1/workers/keys",
-  // workersResize sets one worker's terminal size, the pane's body less its own lines; the last
-  // size set, here or by rewake attach, stands.
-  workersResize: "/v1/workers/resize",
 } as const
 
 /** What each endpoint is asked and answers. */
@@ -68,10 +55,6 @@ export interface Endpoints {
   "/v1/ask/open": { request: AskOpenRequest; answer: AskOpenAnswer }
   "/v1/ask/poll": { request: AskPollRequest; answer: AskPollAnswer }
   "/v1/ask/settle": { request: AskSettleRequest; answer: Done }
-  "/v1/workers/list": { request: WorkersRequest; answer: WorkersAnswer }
-  "/v1/workers/screen": { request: ScreenRequest; answer: ScreenAnswer }
-  "/v1/workers/keys": { request: KeysRequest; answer: Done }
-  "/v1/workers/resize": { request: ResizeRequest; answer: Done }
 }
 
 /** The protocol's bounds. */
@@ -89,14 +72,6 @@ export const bounds = {
   // aliveHoldSeconds is how long the endpoint holds a mod/alive poll before it answers; the mod
   // sends the next at once.
   aliveHoldSeconds: 15,
-  // screenHoldSeconds is how long the endpoint holds a workers/screen poll whose screen has not
-  // changed before it answers the same screen; the mod sends the next at once.
-  screenHoldSeconds: 15,
-  // viewIdleSeconds is how long the endpoint keeps a worker's screen open with no workers
-  // request naming it; the next one opens it again.
-  viewIdleSeconds: 30,
-  // maxScreenSide is the most columns or rows workers/resize takes, a Raster's widest.
-  maxScreenSide: 512,
   // aliveLapseSeconds is how long the endpoint waits for the next mod/alive poll, from the last
   // one's arrival or the hello's, before the load's heartbeat lapses and what the mod proved is
   // withdrawn.
@@ -198,88 +173,6 @@ export interface AskSettleRequest {
   winner: AskWinner
 }
 
-// WorkersRequest asks for the workers.
-export interface WorkersRequest {
-  // loadId is the admitted load asking.
-  loadId: string
-}
-
-// WorkersAnswer is the workers, in the order their spaces opened.
-export interface WorkersAnswer {
-  // workers are the workers listed.
-  workers: Worker[]
-}
-
-// Worker is one space's worker, as rewake list knows it; a field nobody observed is absent.
-export interface Worker {
-  // space is the space's id, which the other workers requests name.
-  space: string
-  // name is the space's name.
-  name: string
-  // session is the worker's session name.
-  session: string
-  // harness is the worker's harness, by its adapter id.
-  harness: string
-  // state is the space's state: opening, open or closing.
-  state: string
-  // activity is the worker's turn, working or idle.
-  activity?: string
-  // model is the worker's configured model.
-  model?: string
-  // effort is the worker's configured reasoning effort.
-  effort?: string
-  // percent is how full the worker's context is.
-  percent?: number
-}
-
-// ScreenRequest asks for one worker's screen once it is past a sequence.
-export interface ScreenRequest {
-  // loadId is the admitted load asking.
-  loadId: string
-  // space names the worker by its space.
-  space: string
-  // after is the sequence of the screen the mod has, 0 for none.
-  after: number
-}
-
-// ScreenAnswer is a worker's whole screen as a Raster draws it.
-export interface ScreenAnswer {
-  // seq is the screen's sequence, the after of the next poll.
-  seq: number
-  // columns is the screen's width in cells.
-  columns: number
-  // rows is the screen's height in cells.
-  rows: number
-  // cells is every cell, row-major, as a Raster's cells: base64 of little-endian u32 triplets,
-  // a width-1 code point, the foreground and the background as 0x00RRGGBB or 0x01000000 for the
-  // default; the visible cursor is drawn inverse.
-  cells: string
-  // ended says the worker's output is over: the screen changes no more.
-  ended: boolean
-}
-
-// KeysRequest is what to type into one worker.
-export interface KeysRequest {
-  // loadId is the admitted load asking.
-  loadId: string
-  // space names the worker by its space.
-  space: string
-  // keys are the bytes a terminal sends for the keys, as UTF-8.
-  keys: string
-}
-
-// ResizeRequest is a size for one worker's terminal.
-export interface ResizeRequest {
-  // loadId is the admitted load asking.
-  loadId: string
-  // space names the worker by its space.
-  space: string
-  // columns is the width, 1 to maxScreenSide.
-  columns: number
-  // rows is the height, 1 to maxScreenSide.
-  rows: number
-}
-
 // Refusal is the answer of an endpoint that did not do what was asked, with a status other than
 // 200.
 export interface Refusal {
@@ -314,9 +207,6 @@ export interface HelloRequest {
 export interface HelloAnswer {
   // role is the run's role, as rewake's role catalogue names it.
   role: string
-  // hostsSpaces says whether the run's wrapper hosts spaces, so the mod registers the keeper
-  // and polls events.
-  hostsSpaces: boolean
   // generation is the load's heartbeat generation, which every mod/alive poll of this hello
   // carries; a retried hello of a live generation gets the same one.
   generation: number

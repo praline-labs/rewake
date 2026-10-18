@@ -4,9 +4,11 @@ The owner's decision of October 18, 2026 ([project.md](../project.md#what-the-to
 starts its workers"): `rewake claude`, started in a host mode, holds the person's terminal and
 shows main's Claude Code and each worker above a bottom tab bar, with a sidebar of workers on the
 right. An ordinary `rewake claude` stays transparent. The bar and the sidebar replace the pane:
-once step 1 works live, the pane, `/workers`, the `workers/*` endpoints and `rewake attach` are
-removed outright (the owner's decision, October 18, 2026). The techniques come from [agent-deck-ideas](../archive/v2/agent-deck-ideas.md) §2–3. The
-mod side is the `mods` skill's, taken on Claude Code 2.1.302.
+the pane, `/workers`, the `workers/*` endpoints and `rewake attach` were removed outright before
+step 1, so nothing trails behind (the owner's decision, October 18, 2026; the pane's design is
+archived, [workers-panel.md](../archive/v2/workers-panel.md)). The techniques come from
+[agent-deck-ideas](../archive/v2/agent-deck-ideas.md) §2–3. The mod side is the `mods` skill's,
+taken on Claude Code 2.1.302.
 
 ## Topology
 
@@ -62,7 +64,17 @@ pass the programs' bytes through.
   which diffs against what is on the terminal and degrades colour to the terminal's profile.
   `ultraviolet` is already a direct dependency (`internal/host/terminal/vt.go`), so this adds none.
 - **What reaches the terminal.** Full colour (RGB, indexed, default) and all six attributes
-  arrive as the emulator holds them. The shown program's cursor is placed at its position plus
+  arrive as the emulator holds them.
+- **The person's theme shows through** (the owner's wish, October 18, 2026). A program's
+  indexed colour is written to the person's terminal as an index, never converted to RGB, so the
+  terminal's own palette paints it: 0–15 as `ansi.BasicColor` (SGR 30–37, 90–97), 16–255 as
+  `ansi.IndexedColor` (SGR 38;5;n). `ultraviolet` hands a colour to `colorprofile.Convert`,
+  which (v0.4.2, read in the module source) passes a basic colour through on every profile and
+  an indexed one on every profile but ANSI, where it maps it to the nearest of the 16. RGB stays
+  RGB on a true-colour terminal and becomes the nearest index on a 256-colour one. A default
+  colour stays the terminal's default. The bar and the sidebar use the default and palette
+  colours only. A configuration section of the host for its layout and chrome colours comes
+  later; nothing now. The shown program's cursor is placed at its position plus
   the region's offset, and shown or hidden as the program has it.
 - **Sizes.** Every program's pty, main's and each worker's, is kept at the region's size. A tab
   switch is then only a full redraw of the other program's buffer: no program is told a new size
@@ -94,7 +106,7 @@ pass the programs' bytes through.
 - **Whole keys.** An incomplete escape sequence at the end of a read (`ESC`, `ESC O`, a CSI of
   only parameter bytes) is held until it completes or 50 ms pass. So a lone Escape still goes
   out, and a key is never sent in two writes.
-- **The prefix is Ctrl+\\.** No harness binds it, and it is today's `rewake attach` detach key.
+- **The prefix is Ctrl+\\.** No harness binds it, and it was `rewake attach`'s detach key.
   - The automaton matches the legacy byte `0x1c` and its CSI-u and modifyOtherKeys forms.
   - It never matches inside a bracketed paste.
   - A pending prefix lapses after 2 s.
@@ -113,7 +125,7 @@ pass the programs' bytes through.
   - the mouse modes (9, 1000, 1002, 1003, 1006).
 
   Keys then pass unchanged. At the exit every mode is reset. Step 1 is built this way.
-- **Mouse, from step 3.** The host keeps SGR mouse (1000/1002 with 1006) and bracketed paste on
+- **Mouse, from step 2.** The host keeps SGR mouse (1000/1002 with 1006) and bracketed paste on
   the terminal, and stops mirroring the mouse.
   - A click on the bar or the sidebar switches tabs.
   - In the region, mouse events go to the shown program, with the coordinates offset and in the
@@ -166,13 +178,11 @@ pass the programs' bytes through.
    - Live check: type into main, start a worker, switch to it, type a line, switch back.
    - Tests: the prefix automaton, the layout arithmetic, and one workflow scenario over the
      fixture.
-2. **Remove the pane.** The pane, `/workers`, the `workers/*` endpoints with the plan's `Spaces`
-   panel, and `rewake attach`, with their documents. Live check: main's Claude Code loads the
-   mod without them and host mode still shows the workers.
-3. **Mouse, paste and focus.** The forwarding rules above. Live check: Claude Code's fullscreen
+2. **Mouse, paste and focus.** The forwarding rules above. Live check: Claude Code's fullscreen
    scroll and its click selection in a worker.
-4. **The sidebar.** The width threshold, `s`, and clicks on it.
-5. **Events.** The `e` frame: OSC 52, title, bell, default colours. Live check: a copy from a
+3. **The sidebar.** The width threshold, `s`, and clicks on it.
+4. **Events and colours.** The `e` frame: OSC 52, title, bell, default colours; the theme's
+   indices checked live. Live check: a copy from a
    worker lands in the clipboard.
 
 The tests are the subset of §2's checklist that "Which tests to write" keeps: the automaton, a

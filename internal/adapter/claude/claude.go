@@ -253,7 +253,6 @@ func (claudeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, 
 	var live adapter.LiveReporter
 	var turns adapter.TurnBoundary
 	var telemetry adapter.Telemetry
-	var spaces adapter.SpacePanel
 	env := request.Env
 	modSocket := modSocketPath(request)
 	switch {
@@ -271,13 +270,10 @@ func (claudeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, 
 		run.server = modhost.New(modhost.Config{
 			Socket: modSocket, Role: request.Role.ID, Record: filepath.Join(request.RunDir, "hello.json"), Wait: harnessWait,
 			ControlDir: request.ControlDir, Epoch: request.Epoch,
-			HostsSpaces: request.Role.Spaces, Live: run.transition, Ended: runEnded,
+			Live: run.transition, Ended: runEnded,
 			Asked: askedOf(request),
 		})
 		service, live, turns, telemetry = run, run, run, run.server
-		if request.Role.Spaces {
-			spaces = run.server
-		}
 	}
 	return adapter.LaunchPlan{
 		Command:      request.Program("claude"),
@@ -291,7 +287,6 @@ func (claudeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, 
 		Live:         live,
 		TurnBoundary: turns,
 		Telemetry:    telemetry,
-		Spaces:       spaces,
 	}, nil
 }
 

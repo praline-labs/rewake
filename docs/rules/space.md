@@ -17,15 +17,17 @@ and SP8 enter with the one space step that replaces S4-7 to S4-10.
 A space is main starting a worker: `rewake space open` runs a detached space host, which runs an
 ordinary launch of the worker in a pseudo-terminal it owns, watches main's run and ends the
 worker when that run ends. There is no keeper, no screen, no keys and no liveness pipe, and the
-space host takes no request of the mod: its only socket is `rewake attach`'s, the person's own
-terminal relayed to the worker's, open to any process of the user as every room file is. So SP1
+space host takes no request of the mod: its only socket served the person's own terminal
+relayed to the worker's, open to any process of the user as every room file is. So SP1
 is held by the space host's watch, SP3 by the environment it builds, SP9 by its own position
 outside main's run before the worker starts; SP4 stays the rule of main's mod socket. SP8 — the
 next start closing a record left open — is not built: a record is closed by its space host,
 and one whose space host died with the machine stays open in the listing. Later that day the
-owner decided on main's panel: the same socket also serves a view of the worker's screen, which
-main's wrapper relays to its mod ([workers-panel.md](../v2/workers-panel.md)); the space host
-still takes no request of the mod itself.
+owner decided on main's panel: the same socket also served a view of the worker's screen, which
+main's wrapper relayed to its mod ([the archived design](../archive/v2/workers-panel.md)). The
+same evening the host mode replaced both the panel and the attach: the socket serves views only,
+to main's wrapper in the host mode ([host-mode.md](../v2/host-mode.md)), and the space host
+still takes no request of the mod.
 
 ## The rules
 
@@ -118,7 +120,7 @@ still takes no request of the mod itself.
   - `internal/adapter/claude/modhost/alive_test.go` `TestAPollPastTheCloseRenewsNothing`
 
   Since S4-7, October 18, 2026, the space host is no endpoint of the mod: it takes no request
-  of main's harness, and its attach socket relays a terminal and decides nothing.
+  of main's harness, and its view socket serves a screen and keys and decides nothing.
 
 - **SP7. A kept checkout is never forgotten and never removed by rewake.** A closed space
   whose checkout is still there is listed to main at its start and by `rewake space list`

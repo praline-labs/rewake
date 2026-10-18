@@ -23,7 +23,7 @@ version history are the skill's ([where the API facts live](#where-the-api-facts
 | Telemetry | context and configured model through the mod | built October 18, 2026; live acceptance pending |
 | Control | compact with focus and interrupt through the mod | built October 18, 2026; live acceptance pending; no clear |
 | PersonUI | stage 6: `$.ui.status`, panes | stage 6 |
-| Spaces | a main run's hello admitted, answered `hostsSpaces`; a worker named by `--session-id <uuid>` | P4 |
+| Spaces | a main run's hello admitted; a worker named by `--session-id <uuid>` | P4 |
 
 ToolTransport and Permissions left the design by the owner's decision of October 18, 2026,
 with the mail tool and grants ([the mail tools](#the-mail-tools)).
@@ -234,11 +234,12 @@ commit into the new one (T2, T7). The skill names `classic.SessionStart`, which 
 after a clear, a resume and a fork (the branch) with its source, as the natural carrier of that
 telling; the choice between it and the end event is for stage 4.
 
-## The workers' pane
+## The workers' screens
 
-Main's mod draws the workers of its run's spaces in a pane of its own, their screens as a
-`Raster` and their keys through a `Client`, over the `workers/*` endpoints its run's wrapper
-serves to a run that hosts spaces: [workers-panel.md](workers-panel.md).
+The mod draws no worker. Its pane, `/workers` and the `workers/*` endpoints were removed on
+October 18, 2026, when the host mode replaced them: main's wrapper draws the workers on the
+person's terminal itself ([host-mode.md](host-mode.md); the pane's design is archived,
+[workers-panel.md](../archive/v2/workers-panel.md)).
 
 ## What the mod never does
 

@@ -52,7 +52,6 @@ func documentedForms(launch string) []formCase {
 		// Refused by the handler before any read.
 		{[]string{"space"}, view},
 		{[]string{"space", "open"}, view},
-		{[]string{"attach", "api"}, view},
 		// Refused by the handler before any read.
 
 		{[]string{launch}, change},

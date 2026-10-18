@@ -116,11 +116,11 @@ func ioctl(f *os.File, request uintptr, arg unsafe.Pointer) error {
 	return nil
 }
 
-// Environ is env as a program on this terminal gets it. The program starts
-// before anyone attaches and is drawn by whatever terminal attaches later, so
-// TERM and COLORTERM name a common capable terminal, never the one inherited
-// from main's command: that one may be a pipe's or a graphics-capable one an
-// attaching terminal does not share. LC_CTYPE is set to C.UTF-8 when the
+// Environ is env as a program on this terminal gets it. The program is drawn
+// by the emulator, never by the person's terminal directly, so TERM and
+// COLORTERM name the capable terminal the emulator plays, never the one
+// inherited from main's command: that one may be a pipe's or a
+// graphics-capable one the emulator does not play. LC_CTYPE is set to C.UTF-8 when the
 // locale in effect names no UTF-8, since a program in the C locale draws a
 // wide glyph as question marks; an LC_ALL the person set is theirs and stays.
 func Environ(env []string) []string {
