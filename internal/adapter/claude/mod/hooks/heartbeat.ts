@@ -4,7 +4,7 @@
 // so the chain keeps going between turns and a reload cancels it with the
 // old copy. The host withdraws what the mod proved when the polls stop.
 import { paths } from '../protocol.gen.ts'
-import type { AliveRequest } from '../protocol.gen.ts'
+import type { AliveAnswer, AliveRequest } from '../protocol.gen.ts'
 import { nextDelay } from './outbox.ts'
 import type { Host } from './outbox.ts'
 
@@ -21,6 +21,7 @@ export class Heartbeat {
     private readonly loadId: string,
     // again says the load's hello once more, for a generation that lapsed.
     private readonly again: () => void,
+    private readonly received?: (answer: AliveAnswer, generation: number) => void,
   ) {}
 
   // begin runs a chain for a generation a hello answered; a retried hello
@@ -59,6 +60,8 @@ export class Heartbeat {
     }
     switch (status) {
       case 200:
+        try { this.received?.(JSON.parse(text) as AliveAnswer, generation) }
+        catch { this.host.log('rewake: malformed heartbeat answer') }
         this.host.after(0, () => {
           void this.poll(generation, 0)
         })

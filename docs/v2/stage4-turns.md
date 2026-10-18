@@ -246,8 +246,8 @@ fixture's program — answer `ErrRunGone` as they answered the nil, so nothing c
 
 ## The live set
 
-**What the mod proves.** An admitted hello makes TurnBoundary live, and Spaces on a run that
-hosts them. Wake stays the inbox lane's, live from the service's start.
+**What the mod proves.** An admitted hello makes TurnBoundary, Telemetry and Control live
+(the last needs the control directory), plus Spaces on main. Wake stays the inbox lane's.
 
 **Loads and generations.** The host keeps, per run, the current load — its `loadId`, its
 `loadSeq`, its heartbeat's generation, live or lapsed — and the load ids it has seen superseded.

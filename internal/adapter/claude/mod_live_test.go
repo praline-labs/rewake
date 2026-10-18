@@ -60,7 +60,7 @@ func TestTheSetIsWakeUntilTheHelloThenTheBoundaryAndSpacesOnMain(t *testing.T) {
 			room := buildtest.Room(t, base, state.DefaultRoom)
 			request := adapter.LaunchRequest{
 				Name: "api", Epoch: "e1", Dir: room, RoomDir: room, Socket: filepath.Join(room, "sock", "api.e1.sock"),
-				RunDir: filepath.Join(room, "run", "api.e1"), Role: test.role,
+				RunDir: filepath.Join(room, "run", "api.e1"), Role: test.role, ControlDir: filepath.Join(room, "run", "api.e1", "control"),
 			}
 			if err := state.EnsureSubdir(request.RunDir); err != nil {
 				t.Fatal(err)
@@ -88,7 +88,7 @@ func TestTheSetIsWakeUntilTheHelloThenTheBoundaryAndSpacesOnMain(t *testing.T) {
 			if answer := helloFrom(t, modSocketPath(request)); answer.HostsSpaces != test.hosts {
 				t.Fatalf("the hello was answered hostsSpaces %v, the role opens spaces: %v", answer.HostsSpaces, test.hosts)
 			}
-			proven := []adapter.Capability{adapter.WakeCapability, adapter.TurnBoundaryCapability}
+			proven := []adapter.Capability{adapter.WakeCapability, adapter.TurnBoundaryCapability, adapter.TelemetryCapability, adapter.ControlCapability}
 			if test.hosts {
 				proven = append(proven, adapter.SpacesCapability)
 			}
@@ -112,10 +112,10 @@ func TestALapseLeavesWakeAndANewHelloRestoresTheSet(t *testing.T) {
 		hosts bool
 	}{{role.Main, true}, {role.Write, false}} {
 		t.Run(test.role.ID, func(t *testing.T) {
-			run := &modRun{lane: newLane("", "", false), server: modhost.New(modhost.Config{}), hostsSpaces: test.hosts}
+			run := &modRun{lane: newLane("", "", false), server: modhost.New(modhost.Config{}), hostsSpaces: test.hosts, controls: true}
 			var reports [][]adapter.Capability
 			run.ReportLive(func(set []adapter.Capability) { reports = append(reports, slices.Clone(set)) })
-			proven := []adapter.Capability{adapter.WakeCapability, adapter.TurnBoundaryCapability}
+			proven := []adapter.Capability{adapter.WakeCapability, adapter.TurnBoundaryCapability, adapter.TelemetryCapability, adapter.ControlCapability}
 			if test.hosts {
 				proven = append(proven, adapter.SpacesCapability)
 			}

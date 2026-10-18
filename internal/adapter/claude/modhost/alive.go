@@ -152,17 +152,22 @@ func (s *Server) alive(w http.ResponseWriter, r *http.Request) {
 		s.refuseEffect(w, status, err)
 		return
 	}
+	if command := s.takeCommand(poll); command != nil {
+		s.answer(w, r, AliveAnswer{Control: command})
+		return
+	}
 	timer := time.NewTimer(s.hold())
 	defer timer.Stop()
 	select {
 	case <-timer.C:
+	case <-s.management.wake:
 	case <-s.stop:
 		refuse(w, http.StatusServiceUnavailable, errClosing.Error())
 		return
 	case <-r.Context().Done():
 		return
 	}
-	s.answer(w, r, Done{})
+	s.answer(w, r, AliveAnswer{Control: s.takeCommand(poll)})
 }
 
 // renew is a poll's effect, decided as a turn's is: the peer checked again

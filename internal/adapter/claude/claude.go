@@ -172,6 +172,8 @@ func (claudeHarness) SingleUseFlags() []adapter.Flag {
 func (claudeHarness) Offers() adapter.Offer {
 	return adapter.Offer{
 		Wake:         true,
+		Telemetry:    true,
+		Control:      adapter.ControlOffer{Compact: true, CompactFocus: true, Interrupt: true},
 		TurnBoundary: adapter.TurnBoundaryOffer{Reports: true, AfterStart: true},
 		Spaces:       true, Conversation: adapter.ConversationOffer{Flag: sessionIDFlag},
 	}
@@ -248,6 +250,7 @@ func (claudeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, 
 	var service adapter.Service
 	var live adapter.LiveReporter
 	var turns adapter.TurnBoundary
+	var telemetry adapter.Telemetry
 	env := request.Env
 	modSocket := modSocketPath(request)
 	switch {
@@ -261,12 +264,13 @@ func (claudeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, 
 		// environment.
 		args = adapter.AddFlags(args, pluginDirFlag, modDir(request.RunDir))
 		env = withEnv(env, modSocketEnv, modSocket)
-		run := &modRun{lane: wake, dir: modDir(request.RunDir), socket: modSocket, hostsSpaces: request.Role.Spaces}
+		run := &modRun{lane: wake, dir: modDir(request.RunDir), socket: modSocket, hostsSpaces: request.Role.Spaces, controls: request.ControlDir != ""}
 		run.server = modhost.New(modhost.Config{
 			Socket: modSocket, Role: request.Role.ID, Record: filepath.Join(request.RunDir, "hello.json"), Wait: harnessWait,
+			ControlDir: request.ControlDir, Epoch: request.Epoch,
 			HostsSpaces: request.Role.Spaces, Live: run.transition, Ended: runEnded,
 		})
-		service, live, turns = run, run, run
+		service, live, turns, telemetry = run, run, run, run.server
 	}
 	return adapter.LaunchPlan{
 		Command:      request.Program("claude"),
@@ -279,6 +283,7 @@ func (claudeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, 
 		Wake:         wake,
 		Live:         live,
 		TurnBoundary: turns,
+		Telemetry:    telemetry,
 	}, nil
 }
 

@@ -66,6 +66,15 @@ wrapper or alter ordinary tasks/reports. Workers receive no announcement telemet
 
 ## Context and settings
 
+On the current Claude Code adapter, the mod reports the native context use, model window
+and percentage, plus the configured model. It samples after hello, measurement and turn
+or compaction events, and each heartbeat answer. No rate limits are copied; effort remains
+unknown. A fresh conversation or completed compaction may have a known window and unknown
+usage until another native response. A lapse withdraws freshness, and a mod reload makes
+compaction coverage partial ([mod design](v2/design-claude.md#telemetry)).
+
+The following calculation and settings correlation describe the older gateway collector.
+
 Context occupancy is the last reported `last.totalTokens`, never the accumulated
 session total. For known usage U and usable window W above baseline B=12000:
 
@@ -176,17 +185,17 @@ may be displayed with explicit labels; cached data is not a fresh measurement.
 
 ## Claude Code source
 
-The source-specific context formula and event handling above describe the Codex source
-of 1.x, a server whose events the gateway read. In this build the fixture and pi adapters
-publish snapshots. Until S9, October 11, 2026, a Claude Code session's wrapper collected the same
-snapshot from the session's hooks, its status line and rewake's plugin — activity,
-whether interruptions are heard, model and effort, context, compactions and the
-conversation, observed live on September 23, 2026 on Claude Code 2.1.280
-([harness-features.md](archive/harness-features.md), HF-11 and HF-22). All of it left with the
-hooks: how each field was read is in [claude-telemetry.md](archive/1.x/claude-telemetry.md)
-and [claude-plugin.md](archive/1.x/claude-plugin.md). A Claude Code session publishes no
-snapshot in this build, and every reader — `rewake list`, the main-only header, the
-compaction notice — shows its values unknown, as for any adapter without one.
+Added back through the mod on October 18, 2026: context, configured model, activity and
+compaction state use the existing snapshot; its observations stay fresh only while the
+current mod's heartbeat holds. The native context window and percentage are copied without
+the older gateway formula above. Effort stays unknown, and rate limits are not copied.
+The source and test-kit check on 2.1.302, with live acceptance pending, is in
+[the parity record](research-claude-parity.md).
+
+The older collection from hooks, a status-line tap and the 1.x plugin left in S9,
+October 11, 2026. Its field sources remain in
+[claude-telemetry.md](archive/1.x/claude-telemetry.md) and
+[claude-plugin.md](archive/1.x/claude-plugin.md).
 
 ## pi source
 
