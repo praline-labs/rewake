@@ -6,7 +6,7 @@ import { socket, epoch, own, admitted, world, start, complete } from './world.ts
 test('a load says hello to its run over the socket the run names, with the next number of its counter', async ($, on) => {
   const run = world(on, { store: { ['rewake/load/' + epoch]: 4 } })
   await start($)
-  expect(run.sent.length).toBe(1)
+  expect(run.hellos().length).toBe(1)
   const hello = run.sent[0]
   expect(hello.path).toBe('/v1/hello')
   expect(hello.socket).toBe(socket)

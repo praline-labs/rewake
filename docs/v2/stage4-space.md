@@ -58,6 +58,9 @@ holds every edge above: `host/space` imports `adapter`, `core`, `infra` and `hos
 
 ### The terminal library
 
+**Superseded, October 18, 2026:** the emulator left the code with this library once a space was
+shown only through `rewake attach` ([the terminal](stage4-space-terminal.md)).
+
 The owner's direction, October 13, 2026: no parser of rewake's own — a screen that a nested
 harness draws needs CSI, SGR in all its colour forms, scroll regions, the alternate screen,
 modes and the widths of wide glyphs, which is not small. The dependency rule asks a library

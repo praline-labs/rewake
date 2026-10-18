@@ -136,7 +136,7 @@ func refuseNestedLaunch(call Call) error {
 		inside = "rewake session " + name
 	}
 	return &UsageError{Command: call.Command, Message: fmt.Sprintf(
-		"this shell runs inside %s (%s or %s is set), and a session does not start other sessions. Start %s from a shell outside any rewake session; a way for main to start a worker, when there is one, will be its own command.",
+		"this shell runs inside %s (%s or %s is set), and a session does not start other sessions. Start %s from a shell outside any rewake session; main starts a worker with rewake space open.",
 		inside, state.SessionEnv, state.EpochEnv, call.Command.Name)}
 }
 

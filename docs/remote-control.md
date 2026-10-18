@@ -22,11 +22,15 @@ matching aborted settled event, names the initiator in the stopped report, and a
 that actor to native history without starting a turn. A missing acknowledgment leaves an
 open outcome and is not repeated.
 
-The Claude Code side left with the plugin in S9, October 11, 2026, and is still refused
-with exit 2 until its mod offers Control. The fixture run also serves its control directory
-through `control.Serve`, keeping the shared command and letter workflow case
+**Claude Code serves both verbs through the mod again since October 18, 2026**, including
+focus. The wrapper carries a request on the heartbeat's answer; the mod refuses compaction
+during a turn, answers `requested`, then reports the native result for main's letter.
+Interrupt waits for the matching aborted turn and records its requester in the stopped report
+and native history. Capabilities follow the mod's admitted hello and heartbeat. Live acceptance
+is pending ([design](v2/design-claude.md#control), [checked scope](research-claude-parity.md)).
+The fixture also serves `control.Serve` and the shared command and letter workflow case
 (`fixture-steered`, [testing-cases.md](testing-cases.md#a-stop-and-steering-a-session)).
-What follows about Claude Code is how the module served it in 1.x.
+The historical Claude Code observations below describe the 1.x module.
 
 **Accepted live** on September 24, 2026, on Claude Code 2.1.280 with the installed
 rewake built from `e65b865`, in the owner's sessions started through their launch
@@ -73,8 +77,7 @@ and refusals. The call is checked whole before anything is written:
 - **Its harness must offer the verb** (`Offer.Control`, [code.md](code.md#the-adapter-api)),
   and a focus only where the harness can pass one for a single compaction
   (`CompactFocus`); each verb is offered on its own since S10. The fixture and pi
-  harnesses take both requests and a focus; a Claude Code session is refused here,
-  before anything is sent, until its mod offers them. In
+  harnesses and Claude Code take both requests and a focus. In
   1.x both harnesses took them and Codex took no focus, so a focus to a Codex session
   was refused (owner decision below).
 
@@ -143,7 +146,7 @@ refused as `no control directory`. The id is 32 lowercase hex
 characters, and the served side refuses any other: it builds file names from it.
 
 The served side — in 1.x rewake's module in a Claude Code session, and in this build the
-fixture's and pi's runs through `control.Serve` — can write files but not remove them, so the asker owns every removal
+fixture's, pi's and Claude Code's runs through `control.Serve` — can write files but not remove them, so the asker owns every removal
 (`internal/core/control`):
 
 1. Take the lock, and remove everything a dead asker or an expired request left.

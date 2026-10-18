@@ -7,6 +7,7 @@
 import type { Register } from 'claude-code'
 import { paths } from '../protocol.gen.ts'
 import type { EndReason, HelloAnswer, HelloRequest, TurnEndRequest, TurnStartRequest } from '../protocol.gen.ts'
+import { Management } from './management.ts'
 import { Heartbeat } from './heartbeat.ts'
 import { Outbox, cut, listed, loadKey, newId, nextDelay } from './outbox.ts'
 import type { Host } from './outbox.ts'
@@ -88,6 +89,7 @@ interface Load {
   epoch: string
   outbox: Outbox
   heartbeat: Heartbeat
+  management: Management
   // run is the wrapper's answer to this load's hello: undefined until it
   // comes, and when no wrapper answered, which later steps read as "not live".
   run?: HelloAnswer
@@ -105,6 +107,7 @@ async function hello(load: Load, request: HelloRequest, delay: number, renumbere
     const answer = await load.host.post(paths.hello, request)
     if (answer.ok) {
       load.run = JSON.parse(answer.text) as HelloAnswer
+      load.management.admit(load.run.generation)
       load.heartbeat.begin(load.run.generation)
       await load.outbox.admit()
       return
@@ -166,11 +169,22 @@ export const register: Register = (on) => {
       host,
       epoch,
       outbox: new Outbox(host, epoch, loadId),
+      management: new Management(host, {
+        id: () => $.session.id(),
+        model: () => $.session.model(),
+        usage: () => $.session.usage(),
+        compact: (focus) => $.session.compact({ instructions: focus || undefined }),
+        abort: (turnId) => $.turn.abort({ turnId }),
+        trace: (text) => $.session.append({ message: { type: 'user', content: [{ type: 'text', text }] } }),
+      }, loadId),
       // A lapsed generation's chain says the load's latest hello again.
       heartbeat: new Heartbeat(host, loadId, () => {
         if (latest !== undefined) {
           void hello(current, latest, 0, true)
         }
+      }, (answer, generation) => {
+        current.management.changed()
+        if (answer.control) void current.management.control(answer.control, generation)
       }),
     }
     let latest: HelloRequest | undefined
@@ -197,6 +211,7 @@ export const register: Register = (on) => {
   // (docs/v2/stage4-turns.md#the-start-time). A subagent's, which carries its
   // agent id, is not the session's turn and is not sent, as its end is not.
   on('turn.start', async ($, e, next) => {
+    if (e.agentId === undefined) load?.management.started(e.turnId)
     const started = await next(e)
     if (load?.run && e.agentId === undefined) {
       try {
@@ -216,7 +231,8 @@ export const register: Register = (on) => {
     if (load === undefined || e.agentId !== undefined) {
       return done
     }
-    let answer = e.answer
+    const actor = await load.management.ended(e.turnId, e.reason === 'aborted')
+    let answer = actor ?? e.answer
     if (answer === '' && e.reason === 'refusal') {
       answer = e.refusal?.explanation ?? ''
     }
@@ -233,4 +249,24 @@ export const register: Register = (on) => {
     await load.outbox.add(cut(end))
     return done
   })
+
+  on('session.measure', async ($, e, next) => {
+    const measured = await next(e)
+    load?.management.changed()
+    return measured
+  })
+
+  on('session.compact', async ($, e, next) => {
+    if (e.agentId !== undefined || !load) return next(e)
+    load.management.compactStarted()
+    try {
+      const result = await next(e)
+      load.management.compactEnded(result.skip === undefined)
+      return result
+    } catch (error) {
+      load.management.compactEnded(false)
+      throw error
+    }
+  })
+
 }

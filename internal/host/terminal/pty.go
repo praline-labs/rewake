@@ -1,10 +1,8 @@
 package terminal
 
 import (
-	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"strconv"
 	"strings"
 	"syscall"
@@ -13,7 +11,7 @@ import (
 
 // The pseudo-terminal is opened with the standard library alone: rewake runs
 // on Linux only, where a pair is /dev/ptmx, two ioctls to unlock and name the
-// other side, and an open of /dev/pts/<n> (docs/v2/stage4-space.md#1-the-pieces-and-where-they-live).
+// other side, and an open of /dev/pts/<n>.
 
 // Size is a terminal's size in columns and rows.
 type Size struct {
@@ -21,22 +19,13 @@ type Size struct {
 	Rows int `json:"rows"`
 }
 
-const (
-	// maxSide is the most a side may measure: the kernel's window size holds
-	// each side in sixteen bits.
-	maxSide = 1<<16 - 1
-	// maxCells bounds the grid: the emulator allocates every cell at once, and
-	// two sides the kernel accepts make billions. It is many times the
-	// largest screen a person sits at.
-	maxCells = 1 << 18
-)
+// maxSide is the most a side may measure: the kernel's window size holds
+// each side in sixteen bits.
+const maxSide = 1<<16 - 1
 
 func (s Size) check() error {
 	if s.Cols < 1 || s.Rows < 1 || s.Cols > maxSide || s.Rows > maxSide {
 		return fmt.Errorf("a terminal of %dx%d: each side is 1 to %d", s.Cols, s.Rows, maxSide)
-	}
-	if s.Cols*s.Rows > maxCells {
-		return fmt.Errorf("a terminal of %dx%d: more than %d cells", s.Cols, s.Rows, maxCells)
 	}
 	return nil
 }
@@ -127,57 +116,12 @@ func ioctl(f *os.File, request uintptr, arg unsafe.Pointer) error {
 	return nil
 }
 
-// Prepare makes cmd run on the terminal: the terminal's side as its standard
-// streams and its controlling terminal, in a session of its own, with the
-// environment Environ gives. Start it after Prepare, then call ReleaseSide,
-// so the terminal sees the program's end when its last process closes the
-// side.
-func (t *Terminal) Prepare(cmd *exec.Cmd) error {
-	t.sideMu.Lock()
-	defer t.sideMu.Unlock()
-	if t.side == nil {
-		return errors.New("the terminal's side was already released")
-	}
-	cmd.Stdin, cmd.Stdout, cmd.Stderr = t.side, t.side, t.side
-	if cmd.SysProcAttr == nil {
-		cmd.SysProcAttr = &syscall.SysProcAttr{}
-	}
-	// Ctty names a descriptor of the child: its standard input, the side.
-	cmd.SysProcAttr.Setsid, cmd.SysProcAttr.Setctty, cmd.SysProcAttr.Ctty = true, true, 0
-	env := cmd.Env
-	if env == nil {
-		env = os.Environ()
-	}
-	cmd.Env = Environ(env)
-	return nil
-}
-
-// Side is the terminal's side, for a launch Prepare does not describe; nil
-// once released.
-func (t *Terminal) Side() *os.File {
-	t.sideMu.Lock()
-	defer t.sideMu.Unlock()
-	return t.side
-}
-
-// ReleaseSide closes this process's copy of the side once the program holds
-// its own: until then the program's end cannot be seen.
-func (t *Terminal) ReleaseSide() error {
-	t.sideMu.Lock()
-	defer t.sideMu.Unlock()
-	if t.side == nil {
-		return nil
-	}
-	err := t.side.Close()
-	t.side = nil
-	return err
-}
-
-// Environ is env as a program on this terminal gets it. TERM and COLORTERM
-// describe the emulator, never the terminal the person sits at: an inherited
-// TERM such as a graphics-capable one invites protocols a grid of cells
-// cannot hold. LC_CTYPE is set to C.UTF-8 when the locale in effect names no
-// UTF-8, since the emulator reads UTF-8 and a program in the C locale draws a
+// Environ is env as a program on this terminal gets it. The program starts
+// before anyone attaches and is drawn by whatever terminal attaches later, so
+// TERM and COLORTERM name a common capable terminal, never the one inherited
+// from main's command: that one may be a pipe's or a graphics-capable one an
+// attaching terminal does not share. LC_CTYPE is set to C.UTF-8 when the
+// locale in effect names no UTF-8, since a program in the C locale draws a
 // wide glyph as question marks; an LC_ALL the person set is theirs and stays.
 func Environ(env []string) []string {
 	values := map[string]string{}

@@ -22,7 +22,9 @@ import (
 // Config is what a run's mod endpoint serves.
 type Config struct {
 	// Socket is the run's mod socket, in the room's sock/ directory.
-	Socket string
+	Socket     string
+	ControlDir string
+	Epoch      string
 	// Role is the run's role, as the role catalog names it, which a hello
 	// is answered with.
 	Role string
@@ -56,7 +58,8 @@ type Config struct {
 // time as the request arrives and again before the answer
 // (docs/rules/space.md, SP4).
 type Server struct {
-	cfg Config
+	cfg        Config
+	management management
 
 	mu      sync.Mutex
 	harness adapter.RunProcess
@@ -105,7 +108,8 @@ type Server struct {
 // New is a run's mod endpoint, listening once Start binds it.
 func New(cfg Config) *Server {
 	return &Server{
-		cfg: cfg, known: make(chan struct{}), stop: make(chan struct{}), served: make(chan struct{}),
+		management: management{wake: make(chan struct{}, 1), requests: map[string]*command{}},
+		cfg:        cfg, known: make(chan struct{}), stop: make(chan struct{}), served: make(chan struct{}),
 		loads: map[string]bool{}, superseded: map[string]bool{}, ends: map[string]*capture{},
 	}
 }
@@ -194,6 +198,9 @@ func (s *Server) Close() {
 	s.closing.Do(func() {
 		s.mu.Lock()
 		s.closed = true
+		if s.management.cancel != nil {
+			s.management.cancel()
+		}
 		s.transition++
 		if s.current != nil {
 			s.current.disarm()
@@ -324,11 +331,13 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 // endpoints is the protocol's paths and what serves each.
 func (s *Server) endpoints() map[string]http.HandlerFunc {
 	return map[string]http.HandlerFunc{
-		PathHello:     s.hello,
-		PathTurnStart: s.turnStart,
-		PathTurnEnd:   s.turnEnd,
-		PathModEnded:  s.ended,
-		PathModAlive:  s.alive,
+		PathHello:      s.hello,
+		PathTurnStart:  s.turnStart,
+		PathTurnEnd:    s.turnEnd,
+		PathModEnded:   s.ended,
+		PathModAlive:   s.alive,
+		PathModState:   s.state,
+		PathModControl: s.controlReply,
 	}
 }
 

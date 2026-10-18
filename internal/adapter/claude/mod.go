@@ -23,7 +23,7 @@ import (
 // dot, and the manifest's directory is one, while the tests and the schema
 // are no part of what a run loads.
 //
-//go:embed mod/.claude-plugin/plugin.json mod/hooks/hooks.json mod/hooks/rewake.ts mod/hooks/outbox.ts mod/hooks/heartbeat.ts mod/protocol.gen.ts
+//go:embed mod/.claude-plugin/plugin.json mod/hooks/hooks.json mod/hooks/rewake.ts mod/hooks/outbox.ts mod/hooks/heartbeat.ts mod/hooks/management.ts mod/protocol.gen.ts
 var modFiles embed.FS
 
 // pluginDirFlag loads a plugin from a directory for one launch.
@@ -84,6 +84,7 @@ type modRun struct {
 	// hostsSpaces is the run's role opening spaces: an admitted hello then
 	// proves SpacesCapability.
 	hostsSpaces bool
+	controls    bool
 
 	// reporting orders the live set's reports, the start's and each
 	// transition's the endpoint hears, so the set reported last is the
@@ -108,7 +109,10 @@ func (r *modRun) ReportLive(live func([]adapter.Capability)) { r.live = live }
 func (r *modRun) report(proven bool) {
 	set := []adapter.Capability{adapter.WakeCapability}
 	if proven {
-		set = append(set, adapter.TurnBoundaryCapability)
+		set = append(set, adapter.TurnBoundaryCapability, adapter.TelemetryCapability)
+		if r.controls {
+			set = append(set, adapter.ControlCapability)
+		}
 		if r.hostsSpaces {
 			set = append(set, adapter.SpacesCapability)
 		}
@@ -140,6 +144,8 @@ func (r *modRun) Start(ctx context.Context, note func(string)) error {
 	} else if err := r.server.Start(); err != nil {
 		// The mod would load and find nobody: it reports nothing.
 		r.withhold("its endpoint is not listening: " + err.Error())
+	} else {
+		r.server.StartControl(ctx)
 	}
 	sweepReplies(filepath.Dir(r.socket))
 	if err := r.lane.Start(ctx, note); err != nil {
