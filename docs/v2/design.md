@@ -178,25 +178,15 @@ probe ([research-claude-mod.md](../research-claude-mod.md)):
    versioned with it; the protocol between it and the host is described once, as a JSON
    schema, and the TypeScript types are generated from it.
 
-Three more decisions of the owner, October 13, 2026, on how a space is shown. Answers 10 and
-11 are superseded by the owner's decision of October 18, 2026: a space is not shown inside
-Claude Code, and a person reaches a worker's terminal only with `rewake attach`.
+How a space is shown — the owner's decision of October 18, 2026, replacing the answers of
+October 13 on a tab inside Claude Code and a full-screen relay with no interface of its own: a
+host mode of rewake, chosen at launch, holds the person's terminal and relays main and the
+workers with a bottom tab bar and a right sidebar ([project.md](../project.md#what-the-tool-does),
+"Main starts its workers"; its design will be `docs/v2/host-mode.md`). The
+person runs Claude Code as before; the mod's space features are active only in that mode.
 
-10. **The person runs Claude Code, and the harnesses live inside it through the mod**
-    (decided October 13, 2026). The approach is fixed; what stays open is only how a space's
-    pseudo-terminal is shown in full ([stage4-space.md](stage4-space.md)).
-11. **The full screen: a space's Text tab now, the host mode later** (decided October 13,
-    2026). Now a space is drawn in its tab as styled text, and `rewake attach` in a second
-    window gives its whole screen. Later, as a stage of its own and by the owner's decision on
-    the principle of [project.md](../project.md#the-philosophy), a host mode, `rewake claude
-    --host`: rewake holds main's terminal and switches the whole window between main and the
-    workers as a transparent pseudo-terminal relay, with no multiplexer interface of its own.
-    The work is only at a switch — restore the shown program's terminal modes from its
-    emulator, make it redraw — and one reserved prefix key. The person's external editor
-    (Ctrl+G, `EDITOR`) is never taken for this.
 12. **No tmux anywhere in rewake** (decided October 13, 2026): not as the substrate a
-    session runs in, not for screenshots. The emulator S4-4 built, `charmbracelet/x/vt`,
-    left the code on October 18, 2026 and came back that day to keep a worker's screen for
-    main's panel ([workers-panel.md](workers-panel.md)). What agent-deck, which runs on
+    session runs in, not for screenshots; the host mode is rewake's own relay over its own
+    pseudo-terminals and the emulator `charmbracelet/x/vt`. What agent-deck, which runs on
     tmux, teaches for the terminal, the checkouts and screen tests is gathered in
     [agent-deck-ideas.md](../archive/v2/agent-deck-ideas.md).
