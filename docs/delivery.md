@@ -45,13 +45,9 @@ a short notice and preview rather than the full body.
    `question` with `--question`, `notify` with `--notify` (see "Kinds").
    Sending settles nothing the sender owes the recipient: a message sent
    mid-turn is not the end of the turn.
-   A task or a question from main may carry `grantGit` ([git-grants.md](git-grants.md))
-   and `grantDirs`, the resolved directories of `--grant-dir` and `--grant-dir-broad`,
-   with `grantBroad` naming those confirmed as broad; the directories are checked
-   before the file is written ([grants.md](grants.md#sending)). A message carrying a
-   grant is registered with the sender's own wrapper before it is written, and refused
-   with exit 1 when the wrapper does not take it; the recipient's wrapper confirms it
-   there at delivery ([grants.md](grants.md#who-can-grant)).
+   A task or a question from main may carry grant fields — `grantGit`, `grantDirs`,
+   `grantBroad` — until grants leave the code by the owner's decision of October 18, 2026
+   ([grants.md](grants.md#sending)).
 4. Write `inbox/<name>/<id>.json.tmp`, rename it to `.json`. A `notify` is journaled
    first and written once under the recipient's lock, so a repeat or a retry cannot
    publish it twice ([mail-bridge-cli.md](mail-bridge-cli.md#receipts)).
@@ -83,7 +79,7 @@ refusals and help come from there.
 | `notify` | `--notify`; also main's wrapper for availability, departure and compaction notices, and the letter that ends a compaction main asked for with `rewake compact` ([remote-control.md](remote-control-letter.md)) | nothing | once delivered, after waiting up to four seconds for company ([the notice](#the-notice)) |
 | `finished` | successful turn end | nothing | — |
 | `error` | a failed turn end only | nothing | failure, exit 1 for a waiting question |
-| `stopped` | a turn stopped at the keyboard, or by a main's `rewake interrupt`; on Codex also a run that passed unseen, or a turn that ended with no proof of work | nothing | exit 1 for a waiting question |
+| `stopped` | a turn stopped at the keyboard, or by a main's `rewake interrupt` | nothing | exit 1 for a waiting question |
 | `pending` | a normal turn end marked with `rewake pending` only | nothing | — a waiting question keeps waiting |
 
 The rule for agents, stated in the intro and the guide: a task or a question is
@@ -96,7 +92,7 @@ turns. The run is asked first, by the live set its session record carries
 TurnBoundary is not live refuses a task and a question alike, exit 1, with nothing sent;
 a note still goes. Since S11, October 11, 2026, this reads the live set, never the offer:
 a run that has not yet proven its boundary, or has lost it, refuses as one on a harness
-with none does — Claude Code in this build, since S9 — and the offer only picks the
+with none does, and the offer only picks the
 words of the refusal. The set is read again once the message is in hand — reading it
 from stdin lasts as long as the writer keeps the pipe open — and a boundary withdrawn
 meanwhile refuses the same way; a record that cannot be read again fails the send, and
@@ -109,7 +105,7 @@ when it runs `rewake inbox`. The recipient's wrapper keeps the letter pending ra
 than failing it, so a Wake made live again carries the next attempt (S11). It reserves
 nothing through that Wake and asks it for no conversation: the letter is made readable
 the plain way, a letter owed a report in no conversation — as one whose sender's wrapper
-did not answer its pin, its grant held for this run and not taken into a resume — and
+did not answer its pin — and
 pinned when a later attempt finds the Wake live. A Wake withdrawn while a reservation is
 asked is the same case, so the promise `send` made is never broken by a failed letter.
 
@@ -167,11 +163,7 @@ its notice is on the way. For that, `read` is final: whatever the harness says
 afterwards, the status stays `read` and the message is not linked or announced
 again. A withdrawal is final the same way: `failed` with `withdrawn: true` stays
 what it is whatever the notice's outcome turns out to be
-([delivery-sent.md](delivery-sent.md#withdraw-rewake-withdraw-id)). A letter the mail
-tool has started showing in parts is recorded `delivered` whatever the notice's outcome,
-and stays in `unread/` until it is read
-([mail-bridge-cli.md](mail-bridge-cli.md#reads-in-parts)). The Codex sandbox
-allows `flock` on files in `/tmp`.
+([delivery-sent.md](delivery-sent.md#withdraw-rewake-withdraw-id)).
 
 No wait for the lock is endless: a reader holds it while it prints, and its
 stdout can block for as long as nobody drains the pipe. The server waits while
@@ -239,39 +231,16 @@ other: a later expiry changes nothing and tells nobody.
 **The first notice.** An adapter may say its harness cannot take a notice yet. Until
 it can, waiting mail stays `pending` with the detail "the session is still starting",
 is not made readable, and goes out on the next pass once the harness opens. The
-Claude Code adapter opens three seconds after its lane starts: until S9, October 11,
-2026, the status line rewake installed opened it sooner, and with the status line gone
-the bound is the only gate.
+Claude Code adapter opens three seconds after its lane starts; that bound is the only
+gate.
 
 **A reservation that cannot be taken in three seconds fails the message, it does not
-hold it.** September 22, 2026: the reservation is bounded at three seconds twice, by
-the delivery context in `internal/host/delivery/prepare.go` and again by `Reserve` in
-`internal/adapter/codex/server_delivery.go`. On a timeout, `Reserve` in
-`internal/adapter/codex/gateway/reservation.go` returns a plain context error; `refuse`
-in `internal/host/delivery/prepare.go` wraps it into `ErrThreadUnavailable`, declared in
-`internal/core/mail/thread.go`; and `internal/host/delivery/batch.go` turns that into `failed`
-rather than `pending`. So a wrapper
-that waited for the thread to go idle before delivering would not deliver late — it
-would not deliver at all, and the sender would be told the delivery failed. That is
-why the choice between an active thread and an idle one is left to the native
-start-or-steer call rather than taken from a status snapshot.
-
-The one exception is a compaction (September 24, 2026): a Codex conversation being
-compacted, by main's `rewake compact` or the terminal's `/compact`, takes no work, and
-the gateway's `Reserve` then returns `gateway.ErrCompacting`, which `Reserve` in
-`internal/adapter/codex/server_delivery.go` passes on as `mail.ErrNotYet`. `refuse`
-lets that one through unwrapped, so the message stays `pending` and goes on a later
-pass, once the compaction has ended, the wrapper's wait for its end has, or its mark's bound
-has passed — 80 seconds for a compaction whose turn is not seen, 10 minutes for one
-seen running ([remote-control-codex.md](archive-1.x/remote-control-codex.md)). A delivery the server
-itself refuses for a compaction running (`ActiveTurnNotSteerable { turn_kind: Compact }`,
-September 26, 2026) is `gateway.ErrCompacting` too, and `DeliverChecked` makes it
-`pending`: the message goes once the compaction has ended. One more hold keeps a Codex
-message `pending` rather than fail it (September 29, 2026): a conversation the launch did
-not ask for, until it is resumed or the person accepts another
-([delivery-conversation.md](archive-1.x/delivery-conversation.md)). Nothing else holds a delivery: an
-operation whose end the gateway has not read makes main's compaction refuse, not a
-delivery wait.
+hold it.** The reservation a Wake makes is bounded at three seconds by the delivery context
+in `internal/host/delivery/prepare.go`; a refusal or a timeout is wrapped into
+`ErrThreadUnavailable` (`internal/core/mail/thread.go`), and `internal/host/delivery/batch.go`
+turns that into `failed` rather than `pending`. The one error let through unwrapped is
+`mail.ErrNotYet`: the Wake says the session cannot take the message yet, and it stays
+`pending` for a later pass.
 
 Only an answer accepted under a fresh reservation receives a new delivery
 window. `retention/<report id>` records that reservation and, on release, fixes
@@ -279,7 +248,7 @@ one deadline origin. Retries never extend it; ordinary reports keep their
 original TTL. This state survives server restarts. Receipts remain while any
 queued, unread or archived report still refers to their questions.
 
-Status: `{"state":"delivered|read|pending|held|failed","via":"socket|app-server","detail":"...","at":"..."}`,
+Status: `{"state":"delivered|read|pending|held|failed","via":"socket","detail":"...","at":"..."}`,
 plus optional `reportAvailable: true` for retained notification failures.
 Shutdown preserves unexpired reports for the addressed epoch, including those
 not yet announced. A reserved report stays queued for its waiting send; ordinary
@@ -344,9 +313,8 @@ work a preview began, and the window would be time spent on that work. Nor does 
 replacement (`replaces`), a notify's included: it sends no recall, so its own preview is
 what sets the old notice aside.
 
-The window lives in the recipient's wrapper, in the mailbox server both harnesses share:
-the Claude Code socket line and the Codex gateway call are made after it, so both get
-the same grouping. The server learns an arrival the first time a pass sees the message,
+The window lives in the recipient's wrapper, in the mailbox server every harness shares:
+the adapter's notice is made after it, so every harness gets the same grouping. The server learns an arrival the first time a pass sees the message,
 and the quiet counts from that sight; a retry, or mail that waited for the session to open, keeps its first arrival and is
 not held again. While a letter waits, its status is `pending` with the detail `waiting
 up to 4s to be announced together with other mail that arrives meanwhile`, so a sender
@@ -378,7 +346,7 @@ including indentation. Rewake does not summarize or include later body lines.
 ### Adapters
 
 How a notice reaches each harness — the Claude Code socket line with its reply socket
-and receipts, and the Codex gateway — is in [delivery-adapters.md](delivery-adapters.md).
+and receipts — is in [delivery-adapters.md](delivery-adapters.md).
 
 ### Reading (`rewake inbox`)
 
@@ -401,28 +369,14 @@ status, then the move to `done/`, which is the commit. A failure at any step
 leaves the message unread, and the next `inbox` shows and records it again.
 Two readers at once are serialized: the second finds nothing new.
 
-Under the mail tool the read goes in parts instead, and a letter is read only once the
-wrapper confirms every part reached the model; `inbox --next` and `rewake retry`
-continue or show again a read or a long output from either channel
-([mail-bridge-cli.md](mail-bridge-cli.md#reads-in-parts)).
-
-A task that carries a directory grant is printed with one `grant: write <dir>` line per
-directory between its heading and its text, and `inbox --owed` repeats them while the
-task is owed: the roots changed without a word in the terminal, so the reader learns it
-here ([grants.md](grants.md#delivery)). The `--owed` lines add that a turn typed in the
-terminal may have dropped the grant since, or, once the journal says so, that it was
-revoked or dropped ([grants.md](grants.md#taking-a-grant-back)).
+A task that carried a directory grant is printed with one `grant: write <dir>` line per
+directory, and `inbox --owed` repeats them, until grants leave the code
+([grants.md](grants.md#delivery)).
 
 ### A resumed conversation
 
 How a cold resume takes over what an earlier run of the name read and had not reported
 on: [delivery-conversation.md](archive-1.x/delivery-conversation.md#a-resumed-conversation).
-
-### A conversation the launch did not ask for
-
-A Codex launch in 1.x held its mail for a conversation it had not asked for until the
-person ran `rewake accept`. Both left with the Codex adapter in S8:
-[delivery-conversation.md](archive-1.x/delivery-conversation.md).
 
 ### Owed reports
 

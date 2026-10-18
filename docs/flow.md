@@ -11,11 +11,11 @@ from the code.
 
 | who | what it is | lives |
 |---|---|---|
-| **wrapper** | the `rewake claude` / `rewake codex` process, the harness's parent | as long as its harness |
-| **harness** | Claude Code or Codex, the ordinary program in the terminal | the session |
+| **wrapper** | the `rewake claude` process — next `rewake pi` — the harness's parent | as long as its harness |
+| **harness** | Claude Code, next pi, the ordinary program in the terminal | the session |
 | **agent** | the model inside the harness, calling `rewake send`, `rewake inbox`, `rewake whoami` from its shell | a turn at a time |
 | **sender** | any `rewake send` process: an agent's shell, a person's shell | until the status arrives |
-| **turn boundary** | the harness's word that a turn ended, which its adapter in the wrapper hands the core; Claude Code has none in this build (Act 5) | a moment |
+| **turn boundary** | the harness's word that a turn ended, which its adapter in the wrapper hands the core; on Claude Code the mod says it (Act 5) | a moment |
 
 There is no daemon. Each wrapper services exactly one mailbox: its own
 session's. Everything the processes share is files under the state directory,
@@ -46,7 +46,7 @@ sock/<name>.<epoch>.reply.sock   where that run's wrapper hears what the socket 
 
 ## Act 1. A session starts
 
-`rewake --write codex` starts write-codex. The sender in this example starts
+`rewake --write claude` starts write-claude. The sender in this example starts
 with `rewake --main --name lead claude`, becoming lead-claude. The owner runs both, from
 terminals outside any session: a launch from a shell inside a rewake session is refused
 with exit 2 before any step below ([launch.md](launch.md#no-session-inside-a-session)).
@@ -62,7 +62,8 @@ with exit 2 before any step below ([launch.md](launch.md#no-session-inside-a-ses
    lease too, refused in a room of another build
    ([stage3-state.md](v2/stage3-state.md#one-build-per-room)). A view form takes no
    lease, writes nothing and fails if it tries; in a room of another build it says so
-   once on stderr. With the lease held, and only at a launch, the state rewake 1.x left
+   once on stderr. With the lease held, and only at a launch — until this clearing leaves the
+   code by the decision of October 18, 2026 — the state rewake 1.x left
    beside the root is cleared: refused, exit 1, while a 1.x session runs, a 1.x lock is
    held or a check of it cannot be made, and otherwise deleted after a validation of the
    set-aside tree, with one line on stderr counting what went
@@ -74,8 +75,7 @@ with exit 2 before any step below ([launch.md](launch.md#no-session-inside-a-ses
    ([launch.md](launch.md#a-worktree-for-a-launch)).
    Then, before any name is claimed, the bounded read of Claude Code's version: one
    older than 2.1.287, or a read that cannot show its process ended, refuses the launch
-   with nothing published. The mail tool's injection and its checks left with Codex in
-   S8 ([mail-bridge-launch.md](archive-1.x/mail-bridge-launch.md#the-launch-in-order)).
+   with nothing published.
 2. **The name and role.** Under the room lock, first select the role (step 4),
    then append the harness ID to the role prefix or explicit `--name` prefix.
    Automatic collisions add -2, -3 after the harness suffix; explicit conflicts
@@ -90,40 +90,20 @@ with exit 2 before any step below ([launch.md](launch.md#no-session-inside-a-ses
    under the room lock if a live main already occupies the room. Explicit
    `--general` and `--write` remain unchanged; a --name prefix never selects a
    role. Main stays silent; write reports like general. A role that owes reports is refused,
-   exit 1, on a harness whose contract reports no turn's end — none of a release since S4-6 —
-   and on Claude Code when a cause known to keep the mod from loading stands; the mod proves
+   exit 1, on a harness whose contract reports no turn's end, and on Claude Code when a cause
+   known to keep the mod from loading stands; the mod proves
    the boundary after the start ([stage4-turns.md](v2/stage4-turns.md#readiness-and-admission)).
-   A write session on Codex is the
-   one recipient of an explicit Git metadata grant requested by main — Claude Code takes
-   none, and main cannot send to itself — and every role of a directory grant
-   ([grants.md](grants.md)); selecting a role does not request access. The record and intro say default general for an omitted
+   Selecting a role requests no access. The record and intro say default general for an omitted
    role flag, or identify the explicit flag.
 5. **The harness command line.** The user's arguments go through as written, save the
    exceptions each launch page's notes list: a `--help` written first, rewake's own
-   `--worktree`, a flag the line types again in place of an alias's copy, and the Codex
-   flags that name another server or configuration, which are refused. rewake adds, for one launch only and never into a config file:
+   `--worktree` and a flag the line types again in place of an alias's copy. rewake adds, for one launch only and never into a config file:
    - Claude Code: `--messaging-socket-path sock/<name>.<epoch>.sock`,
      `--append-system-prompt <intro>`, `--allowedTools "Bash(rewake:*)"` unless the
-     line gives its own. Nothing else: the settings layer with the Stop, StopFailure and
-     telemetry hooks, the status-line tap and rewake's plugin left in S9, October 11,
-     2026 ([claude-telemetry.md](archive-1.x/claude-telemetry.md),
-     [claude-plugin.md](archive-1.x/claude-plugin.md)), so the wrapper is not told when
-     a Claude Code turn ends, and a role that owes reports refuses to launch on it
-     with exit 1, naming the missing turn boundary and stage 4;
-   - Codex: an owned foreground app-server on a private socket, initialized before
-     the TUI starts with --remote. Explicit configuration and the briefing reach
-     the server; an inline gateway follows accepted TUI intent. Launch roles add no
-     Git roots, and no notify program is installed. Resume/fork keep caller input
-     and omit generated permission flags; incompatible
-     remote/profile/local-provider launches refuse; `--worktree` never reaches it.
-     A resume tells the gateway which conversation it asked for — by id, or the
-     terminal's first resume for `--last` and the picker — and delivery waits for that
-     one ([delivery-conversation.md](archive-1.x/delivery-conversation.md)). With the mail tool, `-c`
-     leaves under `mcp_servers.rewake` after the caller's own, for the terminal and the
-     server alike, and the gateway checks the injection at every thread
-     ([mail-bridge-launch-codex.md](archive-1.x/mail-bridge-launch-codex.md)). The server's start
-     compares the version its `initialize` answer names with the launch's read; one not
-     confirmed starts the server again without the leaves unless assumed gates keep it.
+     line gives its own, `--plugin-dir` naming the mod written into the run's directory
+     ([design-claude.md](v2/design-claude.md#loading-the-mod-for-one-run)), and
+     `--session-id` naming the new conversation unless the line continues one. The mod
+     tells the wrapper when a turn starts and ends (Act 5).
 6. **The environment.** `REWAKE_SESSION=<name>`, `REWAKE_EPOCH=<epoch>`,
    `REWAKE_DIR=<base>` and `REWAKE_ROOM=<room>`; inherited Claude Code markers are stripped, so the harness
    never borrows another session's socket. A launch from inside a session never gets
@@ -151,7 +131,7 @@ shown as a session whose state is unknown.
 
 ## Act 2. A task is sent
 
-`rewake send write-codex "run the smoke and report what failed"` — from the main
+`rewake send write-claude "run the smoke and report what failed"` — from the main
 session's shell, or from a person's shell in the same room. A shell without
 `REWAKE_ROOM` uses `default`. Commands cannot name a different room.
 
@@ -162,40 +142,34 @@ session's shell, or from a person's shell in the same room. A shell without
    names listed.
 3. **The kind.** Plain `send` is a `task`; `--question` and `--notify` are the
    other two. A task or a question to a session whose TurnBoundary is not live — its
-   record's live set, which a run on Claude Code never has in this build — is refused
+   record's live set; on Claude Code, until the mod has proven it — is refused
    here, before anything is written, exit 1: nothing would carry its answer back. A note
    still goes. Where the boundary is live, a question to a silent recipient is refused
    next, exit 2: that role never reports, so it could never answer. A letter to a run
    whose Wake is not live is written and reported accepted, exit 3, at once: no notice
    can reach it until its Wake is live, and it reads the letter with `rewake inbox`.
-4. **The file.** `inbox/write-codex/<id>.json.tmp`, renamed to `.json`. The id is
+4. **The file.** `inbox/write-claude/<id>.json.tmp`, renamed to `.json`. The id is
    time-sortable. Nothing else is touched: the sender does not deliver. A `--notify`
    is first journaled under a receipt in the sender's mailbox and then written once
    under the recipient's lock, so a repeat or `rewake retry` cannot publish it twice
    ([mail-bridge-cli.md](mail-bridge-cli.md#receipts)).
 5. **The wait.** The sender polls `<id>.status` for up to `--wait` seconds (5
-   by default; a question's delivery 5 at most) and prints one line: `Rewake: delivered to write-codex via app-server`,
-   `Rewake: pending for write-codex: …` or `Rewake: held for write-codex: …` (exit 3),
-   or `Rewake: failed for write-codex: …` (exit 1). A task or a question is announced
+   by default; a question's delivery 5 at most) and prints one line: `Rewake: delivered to write-claude via socket`,
+   `Rewake: pending for write-claude: …` or `Rewake: held for write-claude: …` (exit 3),
+   or `Rewake: failed for write-claude: …` (exit 1). A task or a question is announced
    at once; a `--notify` waits up to four seconds for company (Act 3), and the send
    waits with it — inside its five, so it still answers delivered.
 6. **The id.** Unless the send failed, a second line gives the message's id,
    `id <id>`. It is how the sender acts on the message later, while it is its own
    run: `rewake withdraw <id>` takes it back unread, leaving a withdrawn note under
    the same id where a notice went out; `rewake edit <id> "..."` does that and sends
-   the new text as a new letter; `rewake send write-codex "..." --to <id>` adds to the
+   the new text as a new letter; `rewake send write-claude "..." --to <id>` adds to the
    task, and one report settles both. A short tail of the id is enough
    ([delivery-sent.md](delivery-sent.md)).
 
-A task or a question from main may carry a grant: `--grant-git` for Git metadata, or
-`--grant-dir <dir>` for a directory outside the worker's workspace. A granted directory
-is resolved and checked here, before anything is written; a protected one is refused
-with exit 2, a missing one with exit 1, and one the worker can write already is named
-and not carried ([grants.md](grants.md#sending)). Then `send` registers the grant with its
-own session's wrapper, which takes it only from a process running below itself and
-holds it in memory; a grant not registered — a Codex main's, a command from outside
-main's tree — is refused with exit 1 and nothing is written
-([grants.md](grants.md#who-can-grant)).
+Grants — `--grant-git` and `--grant-dir` on a task from main — leave the code by the owner's
+decision of October 18, 2026: no live harness takes one. Until they go,
+[grants.md](grants.md) says what they do.
 
 ## Act 3. The wrapper announces it
 
@@ -229,37 +203,7 @@ in one notice. A task or a question does not wait, and takes whatever is waiting
      minute takes the delivery back. The first notice to a new
      session waits three seconds from the launch, since until the session
      has drawn its interface the gate holds everything
-     ([delivery-adapters.md](delivery-adapters.md#claude-code-adapter)). Only notes
-     and reports reach a Claude Code session in this build: a task or a question to
-     it is refused at send with exit 1, since nothing would report its end, and with
-     it every grant ([grants-claude.md](archive-1.x/grants-claude.md) is how 1.x
-     granted to one).
-   - Codex: a launch that resumed and whose terminal went on in another conversation
-     keeps the message `pending` until that one is resumed or the person runs `rewake
-     accept`; main is told once, the terminal shows a warning
-     ([delivery-conversation.md](archive-1.x/delivery-conversation.md)). Otherwise:
-     call turn/start through the reserved TUI connection/generation with empty
-     input and [standalone mailbox output](archive-1.x/native-mailbox.md): short notice plus fixed
-     member identities, never full task bodies. A task or question carrying a grant
-     goes on a notice of its own and waits, pending, while the thread is active, so the
-     grant holds from its first turn; its directories are checked again first, and the
-     wrapper of the main that sent it is asked to confirm it — answered only by that
-     wrapper's own process, in this wrapper's namespaces. A grant that no longer passes,
-     or that main does not confirm, fails the task and tells its sender; a main that is
-     alive and does not answer yet keeps it pending. On an idle thread the
-     adapter reads the current local roots without history and sends them with the
-     granted directories, and with --grant-git (a write session only) the missing Git
-     metadata of the thread's repository. If roots cannot be read, --grant-git alone
-     goes without the field and says so in delivery status; a directory grant waits
-     and is read again.
-     No-flag tasks and report-only groups never get a grant. What rewake granted for
-     tasks since reported on is taken out of the roots at the same time
-     ([grants.md](grants.md#taking-a-grant-back)). Other notices start idle work or
-     steer the active turn. A successful RPC result means delivered. A stale
-     or unavailable thread fails; it is not silently retargeted or queued. After ACK,
-     a best-effort [display-only row](archive-1.x/native-mailbox-ui.md) goes only to the owning
-     primary TUI. It does not execute a command, add context or change delivery status;
-     native streaming may defer its visible appearance.
+     ([delivery-adapters.md](delivery-adapters.md#claude-code-adapter)).
 
 4. **The status.** `delivered` (the waiting copy is removed, `unread/` keeps
    the message), `pending` (retried every two seconds), `held` (both copies stay
@@ -289,8 +233,7 @@ why it was refused or failed — comes later as a notify from the worker
    metadata without bodies, consumption, waiters or task-boundary changes; successful
    output has no dispatch side effect; new mail does not wait for an overview.
    `--message <id>` selects one available message; the flags are mutually exclusive.
-   Plain inbox retains read-all; through the mail tool it reads in parts
-   ([mail-bridge-cli.md](mail-bridge-cli.md#reads-in-parts)). Under the lock, the selected available messages are
+   Plain inbox retains read-all. Under the lock, the selected available messages are
    printed, oldest first, with its sender, kind and time. Reports reserved by a
    waiting `send --question` are skipped (Act 6). A verified main caller first
    sees a [session-state header](session-state.md) and blank line for each message;
@@ -316,20 +259,10 @@ why it was refused or failed — comes later as a notify from the worker
 ## Act 5. The turn ends and the report goes back
 
 The harness itself says when a turn is over, through its adapter in the wrapper: the
-fixture's program with an end frame, Codex in 1.x through turn/completed on its own TUI
-connection. Claude Code said it through its Stop and StopFailure hooks until S9, October
-11, 2026; in this build it says nothing, which is why no reporting role runs on it. The gateway retains
-admitted outcomes across selection changes; no observer attachment is needed.
-An asynchronous publisher journals callbacks before the durable report path. An observed active-to-idle interval missing
-completion after a short grace produces error with "completion not observed",
-without an assistant result, when its turn is known; when its turn was never named it
-is a gap, reported as an advisory `stopped` that settles nothing, since it may have been
-a compaction. Only a turn with proof that it is work — a reply naming it or an item
-other than a compaction's — settles a wait; one without is reported as advisory, and a
-turn its `contextCompaction` item shows to be a compaction reports nothing, so a
-compaction's turn never settles a wait ([codex-publication.md](archive-1.x/codex-publication.md)). Every
-adapter's end goes through the same internal reporting function and turn journals. A callback with `agent_id` is from a nested agent and is
-ignored without changing the parent session's waits.
+fixture's program with an end frame, Claude Code through the mod's `turn/end`
+([stage4-turns.md](v2/stage4-turns.md)). Every adapter's end goes through the same internal
+reporting function and turn journals. A subagent's turn is not reported and changes none of the
+session's waits.
 
 1. **Who is owed.** Under the lock, the turn end reads
    `awaiting/<own epoch>/`. A silent role emits no successful reports;
@@ -337,7 +270,7 @@ ignored without changing the parent session's waits.
    earlier end left unfinished (`mail.Reconcile`); an unknown it cannot decide stops the
    mailbox until a later look finds its cause gone, or, for a report nobody can prove
    arrived, until a decision settles it: main's note of the stop names the recipient run,
-   which decides from its own shell or the rewake tool, or the person from outside every
+   which decides from its own shell, or the person from outside every
    session, with `rewake decide <name> <report> --arrived | --not-arrived`; `rewake list`
    names the stopped session ([stage3-decision.md](v2/stage3-decision.md#the-command)). An identified turn carries its read boundary, and its
    journal records the full report batch and what it clears before any report goes out
@@ -348,22 +281,11 @@ ignored without changing the parent session's waits.
    whoever holds the name now. The id is derived from the wait, so a retried
    end writes the same report once. A retry finds its journal and completes it, and
    answers nothing read above its boundary even when new work arrived between attempts.
-3. **A grant ends.** A directory granted with a task lives at least until this
-   report; a stopped turn or a pending mark keeps it, and an error report or a
-   withdrawal ends it as a report does. On Codex rewake takes it back at the next
-   delivery into the conversation it was granted in, not at the report itself, and a person's own turn
-   in the terminal drops it at once. A cold resume before the report starts a new
-   run, which takes over the task's wait but gets no grant back in this build: no
-   harness that takes a grant also resumes, and restoring one waits for stage 6
-   ([grants-resume.md](grants-resume.md)). The Git metadata of a Codex worker's own
-   checkout, opened by `--grant-git` alone, is not journaled and rewake never takes it
-   back: it stays for the rest of the thread unless a typed turn replaces the roots
-   ([git-grants.md](git-grants.md)).
-4. **Forget the reported messages** after all reports are written, as the journal's
+3. **Forget the reported messages** after all reports are written, as the journal's
    next step; the journal is then marked done. Cleanup matches the original run and
    wait; newly read messages remain owed to the next result.
-5. **The sender is woken** by its own wrapper, through Act 3, with
-   `Rewake: write-codex finished, 1 new message(s)`. The sender reads it with
+4. **The sender is woken** by its own wrapper, through Act 3, with
+   `Rewake: write-claude finished, 1 new message(s)`. The sender reads it with
    `rewake inbox`; a `finished` asks for nothing back, so the exchange ends
    here. The main session never reports successful turns, which is
    what keeps two sessions from waking each other forever.

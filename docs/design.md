@@ -7,8 +7,8 @@ obtained. This document covers what we're building and how.
 ## Goal
 
 `rewake` lets interactive coding-agent harnesses on one machine talk to each
-other. A human launches a harness through the tool — `rewake claude`, `rewake
-codex` — and gets an ordinary program in their terminal. The session registers
+other. A human launches a harness through the tool — `rewake claude`, and next
+`rewake pi` — and gets an ordinary program in their terminal. The session registers
 itself, and any other session, or a human from a shell, can write to it with
 `rewake send <name> "text"`. The recipient sees a notice with a first-line preview when a message is
 waiting — `Rewake: api notify, 1 new message` — which wakes it if it is idle,
@@ -20,46 +20,42 @@ That's where the requirements on output and failure messages come from (see the
 
 ## Scope of the first version
 
-In scope: Claude Code and Codex, the commands `claude`, `codex`, `list`, `send`,
-`inbox`, `whoami`, the no-argument overview, `--json`. Linux.
+In scope: Claude Code, and next pi (the owner's decision of October 18, 2026); the commands
+`claude`, `list`, `send`, `inbox`, `whoami`, the no-argument overview, `--json`. Linux.
 
-Out of scope: pi, opencode, grok (their delivery paths are covered in research);
+Out of scope: Codex, which does not return soon (the same decision); opencode, grok;
 macOS (needs replacements for `/proc`); delivery receipts from the recipient (added
 later for Claude Code's inbound gate, September 23, 2026 — [delivery-adapters.md](delivery-adapters.md#claude-code-adapter));
 message history; a UI.
 
-Never doing: a pseudo-terminal proxy or typing text into someone else's screen;
-editing the user's harness configs; reading transcript contents.
+Never doing: standing between a person and a session they started, or typing text into
+someone else's screen — a pseudo-terminal only for a worker main starts in a space; editing
+the user's harness configs; reading transcript contents.
 
 ## Design
 
 ### Processes
 
-**Wrapper** — the `rewake claude|codex` process. It stays the harness's parent
+**Wrapper** — the `rewake claude` process, next `rewake pi`. It stays the harness's parent
 for its whole life: launches it with an inherited terminal, registers the
 session, services its inbox, and on exit deregisters the session and returns the
 harness's exit code. There's no daemon: each wrapper is the delivery point for
 its own session only.
 
-The server adapter has three processes: wrapper, app-server and TUI. The wrapper
-starts and stops both children, owns the inline RPC gateway and routes reports; the server
-owns thread execution and sandboxing; the TUI keeps the inherited terminal.
 Since S10 the LaunchPlan carries one run's capabilities as separate interfaces — a
 Service for this lifecycle, Wake for delivery, TurnBoundary for its turn ends, Telemetry
 and the thread — and what an adapter offers before any launch is its `Offers()` value
 ([code.md](code.md#the-adapter-api)). An optional transport-neutral reservation holds
 a destination across inbox readability and ACK; native RPC stays inside its adapter.
-The socket adapter keeps its direct delivery — since S9, October 11, 2026, without the
-hooks that told its wrapper when a turn ended (Claude Code reports its turns through its mod
-since S4-6, [stage4-turns.md](v2/stage4-turns.md)) — and its wrapper also listens on a reply socket of its own beside the session's: Claude
+The Claude Code adapter delivers straight to the session's socket, reports its turns through
+its mod ([stage4-turns.md](v2/stage4-turns.md)), and its wrapper also listens on a reply socket of its own beside the session's: Claude
 Code reports there what its inbound gate did with a line, and only to the process that
 wrote the line, so the wrapper — the one writer of its session's notices — is the one
 listener ([delivery-adapters.md](delivery-adapters.md#claude-code-adapter)).
 
 **Sender** — any process that calls `rewake send`. It doesn't deliver anything
 itself: it drops a file into the recipient's inbox and waits for a status. This
-way sending works the same from a plain shell, from Claude Code's Bash, and from
-a Codex sandbox, which can write to `/tmp` but is denied sockets and `~/.codex`.
+way sending works the same from a plain shell and from an agent's shell.
 
 There's no separate daemon: nothing to start, stop, or recover, and there's no
 state where "the sessions exist but the daemon is dead". Exactly as many wrapper
@@ -68,10 +64,9 @@ take part in messaging.
 
 ### State directory
 
-`$REWAKE_DIR`, defaulting to `/tmp/rewake-<uid>`. It has to be `/tmp`: the Codex
-sandbox writes there by default, and `$XDG_RUNTIME_DIR` isn't reachable from it.
-The wrapper passes `REWAKE_DIR` to children explicitly, so a sandbox with a
-different `TMPDIR` still finds the same directory.
+`$REWAKE_DIR`, defaulting to `rewake-<uid>` in the system's temporary directory. The
+wrapper passes `REWAKE_DIR` to children explicitly, so a child with a different `TMPDIR`
+still finds the same directory.
 
 Checked on every open: it's a directory, not a symlink, owned by the current
 uid, with no group or other access; otherwise it fails with an explanation.
@@ -100,18 +95,17 @@ only looks leaves no state behind. [Optional primary observations](session-state
     inbox/<name>/awaiting/<epoch>/<peer> reports owed by this run
     inbox/<name>/pending/      this run's `rewake pending` marks; its last word on the work and a held answer (turn-outcomes.md)
     inbox/<name>/receipts/<epoch>/ journal of notify, pending, reads in parts and long outputs (mail-bridge-cli.md)
-    inbox/<name>/receipts/<epoch>/calls/<call> the operation a mail tool call holds, by its native call (mail-bridge-server.md)
-    inbox/<name>/receipts/<epoch>/channel/<boot>.<pid> a shell call's outcome for the run's wrapper to fold into the mail channel, removed once folded (mail-bridge-channel.md)
-    inbox/<name>/claims/<id>   a letter a tool read has started showing in parts
+    inbox/<name>/receipts/<epoch>/calls/<call> the operation a mail tool call holds, by its native call (mail-bridge-server.md); leaves with the mail tool
+    inbox/<name>/receipts/<epoch>/channel/<boot>.<pid> a shell call's outcome for the run's wrapper to fold into the mail channel, removed once folded (mail-bridge-channel.md); leaves with the mail tool
+    inbox/<name>/claims/<id>   a letter a tool read has started showing in parts; leaves with the mail tool
     inbox/<name>/once/<epoch>/<id> a journaled notify or a turn end's report written into this mailbox, so a retry writes it once
     sock/<name>.<epoch>.sock   one inbound socket per run
     sock/<name>.<epoch>.reply.sock the wrapper's own: Claude Code's receipts for held lines
-    sock/<name>.<epoch>.ctx    the wrapper's context endpoint for the mail tool's server or transport and its children (mail-bridge-server.md, mail-bridge-transport.md)
-    sock/<name>.<epoch>.mcp.json the mail tool's server entry handed to Claude Code for one run, removed with it (mail-bridge-launch.md)
+    sock/<name>.<epoch>.ctx    the wrapper's context endpoint for the mail tool's server or transport and its children (mail-bridge-server.md, mail-bridge-transport.md); leaves with the mail tool
     control/<name>.<epoch>/    a main's compact or interrupt request and its answer (remote-control.md)
     run/<name>.<epoch>/        what an adapter writes for one run, removed with the run or, after a kill, by a later launch once the run is proven dead (v2/stage3-state.md)
     letters/<name>/<id>.json   a compaction this main asked for, held by the command while it asks, kept on an answer that leaves the outcome open until its letter goes (remote-control-letter.md)
-    spaces/<id>.json           a space a main opened: its worker, checkout, keeper, state and observed end, kept after it closes (v2/stage4-space-record.md)
+    spaces/<id>.json           a space a main opened: its worker, checkout, state and observed end, kept after it closes (v2/stage4-space-record.md)
 ```
 
 All mailbox paths in the delivery specification are relative to the room.
@@ -156,8 +150,7 @@ What a session record holds, field by field, and how it is published and pruned:
 
 ### Roles and names
 
-A session's role — what it is told, whether its turns are reported, whether it may take
-a Git grant — and how its name is built from the role, the prefix and the harness are
+A session's role — what it is told, whether its turns are reported — and how its name is built from the role, the prefix and the harness are
 in [roles.md](roles.md), with the owner decisions that set them.
 
 ### Environment the harness receives
@@ -173,7 +166,7 @@ in [roles.md](roles.md), with the owner decisions that set them.
   `rewake claude` launched from inside another session would inherit that
   session's socket and have transcript saving disabled.
 
-None of the variable names contain `KEY`, `SECRET`, or `TOKEN`: Codex strips
+None of the variable names contain `KEY`, `SECRET`, or `TOKEN`: a harness may strip
 those from the agent's command environment.
 
 ## Launch and signals
@@ -190,13 +183,6 @@ receive it before it is archived. Missing or stale reservations return unread
 reports to ordinary notification. Silent roles refuse questions before sending.
 An accepted report survives a failed notification in unread, with the failed
 diagnostic and durable reportAvailable flag. Task/notify failures still archive.
-
-The server backend tracks thread identity separately from its event subscription.
-First delivery may precede persistence. Active status triggers bounded resume
-attempts; idle without an observed completion produces an explicit observation
-error after a grace period. See [ordering evidence](server-observation.md).
-Observer cleanup follows established root changes, including fresh idle roots;
-it does not resolve [terminal ownership ambiguity](thread-ownership-investigation.md).
 
 ## A session without a wrapper
 
@@ -248,14 +234,13 @@ belongs to the harness.
 - One line per object, aligned columns, empty values are omitted.
   ```
   general-claude-2  claude  12m  /workspace/api  room=default  (general)
-  write-codex       codex   3m   /workspace/web  room=default  (write)
+  write-claude      claude  3m   /workspace/web  room=default  (write)
   ```
   List shows addresses, harnesses, ages, working directories, rooms and roles.
 - `send` prints the result as one line:
   ```
   Rewake: delivered to general-claude-2 via socket
-  Rewake: delivered to write-codex via app-server
-  Rewake: failed for write-codex: delivery thread is unavailable
+  Rewake: failed for write-claude: delivery thread is unavailable
   ```
 - A line rewake says itself in the ordinary flow starts with `Rewake:` and states the
   outcome — a notice, a delivery result, an inbox header, a note of its own. It does
@@ -301,21 +286,12 @@ interface every adapter implements are in [code.md](code.md).
 
 ## Testing
 
-How to run, read and extend the tests is in [testing.md](testing.md). Three layers,
-cheapest first. Unit tests beside the code, run by the five checks in
-`AGENTS.md`: name publishing races, liveness with reused pids, inbox order, retries and
-expiry, the owned server's framing, correlation and reconnects on a fake socket, and a
-parse of every example in the command table. The workflow suite in `test/workflow`,
-switched on by `REWAKE_WORKFLOW=1`: a built rewake end to end against a fixture of each
-harness, in every column, with negative controls of two kinds: some build rewake with
-one line mutated (batch-arrival's four, three of task-report's, mid-turn's
-wait-for-idle), the others change the fixture's world (task-report's other four, the
-readiness controls, mid-turn's late and failed-operation); what each runs and why is in
-[check-runner-scenarios.md](check-runner-scenarios.md). The schema case that held the
-fixture's messages to a real Codex's protocol schema left with the Codex adapter in S8.
-And live runs with real harnesses in a separate `/tmp` state directory, done by hand and
-recorded in the dated acceptance documents; live Codex runs spend subscription quota,
-so they use a cheap model and short messages.
+How to run, read and extend the tests is in [testing.md](testing.md); the commands and
+which tests to write are in `AGENTS.md`, "Checks". Three layers, cheapest first: unit tests
+beside the code; the workflow suite in `test/workflow`, switched on by `REWAKE_WORKFLOW=1`,
+a built rewake end to end against the fixture harness, with negative controls; and live runs
+with real harnesses in a separate state directory, done by hand and recorded in the dated
+acceptance documents.
 
 ## Distribution
 
@@ -343,10 +319,9 @@ so they use a cheap model and short messages.
 
 ## Owner decisions, September 16, 2026
 
-1. The intro is injected at launch for both harnesses, on by default; turned off
+1. The intro is injected at launch for every harness, on by default; turned off
    with `--no-intro`.
-2. Permissions for the tool's own commands are granted for both harnesses, not
-   just Claude Code.
+2. Permissions for the tool's own commands are granted for every harness.
 3. The state directory in `/tmp` with 0700 permissions — this trust boundary is
    accepted.
 4. A session without a wrapper is not supported; `register` is dropped from the
@@ -358,6 +333,6 @@ so they use a cheap model and short messages.
    instructions live in the guide. Nothing is added to a notice that the person
    watching the session would not see.
 7. Whatever rewake passes to a harness adds to the user's settings and never replaces them. A replacement-only briefing key is passed only when it cannot overwrite
-   the user's instructions. Rewake never installs a notify program.
+   the user's instructions.
 
 [Compact session tables and grouped inbox reading](inbox-groups.md) preserve message identities while sharing a bounded collection window and destination admission.
