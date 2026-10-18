@@ -64,10 +64,13 @@ October 18, 2026). The worker runs with `TERM=xterm-256color` and `COLORTERM=tru
 to the nearest step of `0x11` per channel.
 
 **The mod.** Only `/workers` opens the pane `rewake-workers`, with the focus and
-`closeOnEscape`, as large as the surface spares — `rows` and `columns` asked at 1000, so inline
-above the prompt it takes what the layout leaves and docked beside a fullscreen transcript all
-but the transcript's narrow strip — and answers how to use it; Alt+a then `z` opens it again
-without a size, at the surface's own share, and back (the owner, October 18, 2026); the mod no longer opens it by itself when the first
+`closeOnEscape` — inline above the prompt as tall as the layout spares (`rows` 1000), docked
+beside a fullscreen transcript as wide as a worker of 100 columns and the frame, at most half the
+terminal (`columns` the smaller of 104 and half of `presentation.columns`), so the transcript
+stays — and answers how to use it; `z` opens it again at its other size, docked as wide as the
+surface spares (`columns` 1000), inline at the surface's third, and back (the owner, October 18,
+2026). A width the person dragged or keyed the dock to wins over both, kept across sessions in
+`pluginPanes.dockColumns` of `~/.claude.json`; the mod no longer opens it by itself when the first
 worker appears, since the person got stuck in a pane they had not asked for (the owner, October
 18, 2026, until the pane is quiet and closes reliably). The pane draws one line per worker —
 `1 name  harness  model  effort  ctx 34%  working`, a `Button` with its digit as hotkey selects
@@ -102,6 +105,13 @@ the key surface's keyboard. The line reads
 waits, the prefix's hint. Ctrl+X with an arrow is not named: with the key surface holding the
 keyboard Ctrl+X reaches nobody.
 
+**Line mode.** Off fullscreen (`viewport.isFullscreen` false) a click gives the key surface no
+keyboard, so the pane draws no key surface: under the screen an `Input` with `autoFocus` takes the
+pane's focus after `/workers`, and Enter sends its line and Enter to the worker and empties it;
+under it, plain `Button`s `e: Esc`, `c: ^C`, `z: size` and `q: close`. While the field has the
+focus every printable key is its own, so the hotkeys — theirs and the workers' digits — work once
+Tab has moved the focus off the field (the owner, October 18, 2026).
+
 **Closing.** Alt+a then `q` closes the pane from the key surface, and the keyboard returns to
 main's prompt with no Escape typed. Escape closes the pane while the pane holds the keyboard, as
 right after `/workers`. While the key surface has it, Escape hands it to the prompt, and a second Escape at an
@@ -130,7 +140,8 @@ while unattached; modhost's relay over a fake `SpaceView` — list, screen in Ra
 a view closed when idle; the cell encoding as pure logic; the mod's pane in `claude plugin test`
 — the list drawn, `/workers` opening the pane with the focus and `closeOnEscape` and its answer
 naming the worker, a selection, a blit after a screen poll, keys and the prefix posted, the
-prefix choosing a worker and closing the pane; bold and dim as color. No
+prefix choosing a worker and closing the pane, the line mode's line, ^C and close; bold and dim
+as color. No
 workflow scenario: the path has no stand-in harness that draws a pane.
 
 ## Seen live
@@ -158,6 +169,10 @@ through a pseudo-terminal with two haiku workers, fullscreen at 200 and 120 by 5
 200 by 50 ([the probe](../research-claude-mod.md#the-panes-prefix-size-and-colors-later-the-same-day-21302)):
 Alt+a reached the key surface and drew the prefix's hint, Alt+a `2` chose the second worker,
 Alt+a `q` closed the pane and the next letters went to main's prompt, Alt+a `z` resized the open
-pane with the keys still the key surface's. Docked, the full pane left main's transcript 24
-columns at either width. Without fullscreen the pane took 38 of 50 rows, but a click gives the
-key surface no keyboard there, so neither typing nor the prefix reaches it.
+pane with the keys still the key surface's. Docked at `columns` 1000 the pane left main's
+transcript 24 columns at either width, so its first width became the half above. Without
+fullscreen the pane took 38 of 50 rows, but a click gave the key surface no keyboard there; the
+line mode then, inline at 200 by 50: `! echo probe-line` typed in the field and Enter ran in the
+worker and the field emptied, Tab took the focus off the field, `q` closed the pane and the next
+letters went to main's prompt. Fullscreen kept the key surface. A kept `dockColumns` of 92 in the
+machine's `~/.claude.json` held the dock at 92 columns through every `columns` asked.

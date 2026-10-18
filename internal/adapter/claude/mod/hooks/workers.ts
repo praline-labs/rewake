@@ -27,8 +27,9 @@ export interface Shown {
   blit(cells: string, columns: number, rows: number): Promise<{ deny?: string }>
   redraw(): void
   close(): void
-  // size opens the open pane again at its full or its compact size.
-  size(compact: boolean): void
+  // size opens the open pane again at its first or its switched size, for
+  // a terminal of so many columns.
+  size(switched: boolean, columns: number): void
 }
 
 // Screen is the chosen worker's screen as the Raster draws it.
@@ -48,8 +49,13 @@ export class Workers {
   // them, so the pane says so rather than show a last screen.
   ended = new Map<string, string>()
   isOpen = false
-  // compact is the pane's size the prefix chose; /workers opens it full.
-  compact = false
+  // switched is the pane's other size, which the prefix chose; /workers
+  // opens it at its first. columns is the terminal's width /workers ran in:
+  // a drawing's viewport is the pane's, not the terminal's.
+  switched = false
+  columns = 80
+  // clearLine asks the next drawing of the line mode's field to empty it.
+  clearLine = false
   // size is the screen's size the pane's body leaves, once a drawing said.
   size?: { columns: number; rows: number }
   private sized?: { space: string; columns: number; rows: number }
@@ -217,8 +223,8 @@ export class Workers {
       if (typeof item?.n !== 'number' || item.n <= last) continue
       if (typeof item.keys === 'string') this.type(item.keys)
       else if (typeof item.choose === 'number') this.chooseNth(item.choose)
-      else if (item.close === true) this.closeByKey()
-      else if (item.size === true) this.toggleSize()
+      else if (item.close === true) this.close()
+      else if (item.size === true) this.switchSize()
       else continue
       last = item.n
     }
@@ -233,11 +239,11 @@ export class Workers {
     return this.size === undefined ? screen : crop(screen, this.size.columns, this.size.rows)
   }
 
-  // toggleSize switches the pane between its full and its compact size.
-  private toggleSize() {
+  // switchSize switches the pane between its first and its other size.
+  switchSize() {
     if (!this.isOpen) return
-    this.compact = !this.compact
-    this.shown.size(this.compact)
+    this.switched = !this.switched
+    this.shown.size(this.switched, this.columns)
   }
 
   // chooseNth chooses the worker of a digit, as its button's hotkey does.
@@ -246,9 +252,10 @@ export class Workers {
     if (space !== undefined && this.choose(space)) this.shown.redraw()
   }
 
-  // closeByKey closes the pane from its prefix; marking it closed here does
-  // not lean on the ui.close hook hearing a close raised inside another hook.
-  private closeByKey() {
+  // close closes the pane from its prefix or its button; marking it closed
+  // here does not lean on the ui.close hook hearing a close raised inside
+  // another hook.
+  close() {
     if (!this.isOpen) return
     this.closes()
     this.shown.close()

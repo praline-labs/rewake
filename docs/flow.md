@@ -333,7 +333,9 @@ shows the worker in its pane "Workers" — opened by `/workers` alone — with i
 and activity, and its screen live; a click on the screen gives it the keys, typing goes to the
 worker, and Alt+a starts the pane's prefix: then `q` closes the pane and returns the keys to
 main's prompt, a digit chooses a worker, `z` switches the pane's size, and `c`, `e` or `x` sends
-Ctrl+C, Escape or Ctrl+X ([workers-panel.md](v2/workers-panel.md)). The person can also reach the worker's
+Ctrl+C, Escape or Ctrl+X. Off fullscreen, where a click gives the screen no keys, the pane takes a
+line at a time from a field under the screen, with buttons for Escape, Ctrl+C, the size and
+closing ([workers-panel.md](v2/workers-panel.md)). The person can also reach the worker's
 terminal with `rewake attach api` from a terminal of their own, and leaves with `Ctrl-\`; the
 worker keeps running.
 

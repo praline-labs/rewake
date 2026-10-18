@@ -1,7 +1,9 @@
 // The drawing of the workers' pane (docs/v2/workers-panel.md): one line per
 // worker, a Button its digit presses; the chosen worker's screen as a Raster,
-// or a line saying it ended; the key surface over it. Elsewhere than the
-// terminal a Raster does not draw, so the pane lists the workers alone.
+// or a line saying it ended; the key surface over it, or off fullscreen,
+// where a click gives the key surface no keyboard, a line to type and
+// buttons. Elsewhere than the terminal a Raster does not draw, so the pane
+// lists the workers alone.
 import { crop, line } from './workers.ts'
 import type { Workers } from './workers.ts'
 
@@ -23,7 +25,7 @@ function blankCells(columns: number, rows: number): string {
 }
 
 export async function drawPane($: any, e: any, workers: Workers | undefined) {
-  const { Box, Text, Button, Raster, Client } = $.ui.resolve(e)
+  const { Box, Text, Button, Raster, Client, Input } = $.ui.resolve(e)
   const last = workers?.chosen === undefined ? undefined : workers.ended.get(workers.chosen)
   if (workers !== undefined && workers.workers.length === 0 && last !== undefined) {
     return Text({ children: [`${last} ended, and no other worker is open.`] })
@@ -50,11 +52,17 @@ export async function drawPane($: any, e: any, workers: Workers | undefined) {
   } else if (e.surface !== 'terminal' || Raster === undefined || Client === undefined) {
     body.push(Text({ dimColor: true, children: ["A worker's screen shows in the terminal; here, rewake attach <name> from a terminal reaches it."] }))
   } else if (chosen !== undefined) {
+    const lineMode = e.viewport?.isFullscreen === false
     const columns = Math.max(1, Math.min(512, Number(e.props?.bodyColumns) || 80))
-    const rows = Math.max(1, Math.min(512, (Number(e.props?.scroll?.bodyRows) || 24) - items.length - 1))
+    const rows = Math.max(1, Math.min(512, (Number(e.props?.scroll?.bodyRows) || 24) - items.length - (lineMode ? 2 : 1)))
     workers.drawn(columns, rows)
     const screen = workers.screen?.space === chosen.space ? workers.screen : undefined
     const shown = crop(screen ?? { columns, rows, cells: blankCells(columns, rows) }, columns, rows)
+    if (lineMode) {
+      body.push(Raster({ key: 'screen', columns: shown.columns, rows: shown.rows, cells: shown.cells }))
+      body.push(...lineControls($, { Box, Button, Input }, workers, chosen.name))
+      return Box({ flexDirection: 'column', children: body })
+    }
     // A Raster takes no click: Claude Code makes a click on it a selection,
     // and the keys stay the prompt's. So the key surface spans the screen
     // and its own line under it, drawn over the Raster: a click anywhere on
@@ -68,4 +76,37 @@ export async function drawPane($: any, e: any, workers: Workers | undefined) {
     ] }))
   }
   return Box({ flexDirection: 'column', children: body })
+}
+
+// lineControls is the line mode: a field that has the pane's focus, whose
+// line goes to the worker with Enter on Enter, and buttons for what a line
+// cannot carry. While the field has the focus every printable key is its
+// own, so the buttons' hotkeys work once Tab moved the focus to them.
+function lineControls($: any, elements: any, workers: Workers, name: string) {
+  const { Box, Button, Input } = elements
+  const clear = workers.clearLine
+  workers.clearLine = false
+  const press = (key: string, hotkey: string, label: string, act: () => void) =>
+    Button({ key, hotkey, plain: true, label, onPress: act })
+  return [
+    Input({
+      key: 'line',
+      autoFocus: true,
+      label: name,
+      placeholder: 'a line for the worker; Enter sends it, Tab reaches the buttons',
+      submitLabel: 'send',
+      ...(clear ? { value: '' } : {}),
+      onSubmit: (value: string) => {
+        workers.type(value + '\r')
+        workers.clearLine = true
+        $.ui.invalidate('ui.render')
+      },
+    }),
+    Box({ flexDirection: 'row', gap: 2, children: [
+      press('send-escape', 'e', 'Esc', () => workers.type('\x1b')),
+      press('send-interrupt', 'c', '^C', () => workers.type('\x03')),
+      press('switch-size', 'z', 'size', () => workers.switchSize()),
+      press('close', 'q', 'close', () => workers.close()),
+    ] }),
+  ]
 }

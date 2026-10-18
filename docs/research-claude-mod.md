@@ -466,3 +466,12 @@ two Claude Code workers on haiku opened from main's shell mode:
   per channel; with no `COLORTERM` there, `d7875f` and `ffaf00`, the 256-color palette. After
   dim was drawn as color, the status line's `5h` went from `999999` to `666666`; bold red and
   blue became `ff0000` and `5555ff`; the bold default `Claude Code v2.1.302` stays the default.
+- Fullscreen off, an `Input` with `autoFocus` under a `Raster` took the keys after `/workers`
+  opened the pane with `focus`; Enter ran `onSubmit`, a drawing with `value: ''` emptied the
+  field, Tab moved the focus to the plain `Button`s and their hotkeys pressed them. The `Input`'s
+  `label` is drawn with `: ` after it.
+- `command.run`'s `presentation` carried `{ isFullscreen: true, columns: 200 }`; a pane drawing's
+  `viewport.columns` is not the terminal's width (it read 108 docked).
+- A `dockColumns` kept in `~/.claude.json` (`pluginPanes`) held the dock at 92 columns: `columns`
+  of 100, 1000, 150 and 60 and none, asked through `$.ui.open` of the open pane, each answered
+  `{ isPlaced: true }` and none moved it. Before it was kept, the same reopens moved the dock.

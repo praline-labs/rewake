@@ -146,11 +146,13 @@ async function hello(load: Load, request: HelloRequest, delay: number, renumbere
   })
 }
 
-// paneSize is what the pane asks for: as much as the surface spares, inline
-// above the prompt or docked beside a fullscreen transcript, or, compact,
-// the surface's own share.
-function paneSize(compact: boolean): { rows?: number; columns?: number } {
-  return compact ? {} : { rows: 1000, columns: 1000 }
+// paneSize is what the pane asks for in a terminal of so many columns.
+// First: inline above the prompt as tall as the layout spares; docked
+// beside a fullscreen transcript as wide as a worker of 100 columns and the
+// frame, at most half the terminal, so the transcript stays. Switched: inline
+// the surface's own share, docked as wide as the surface spares.
+function paneSize(switched: boolean, columns: number): { rows?: number; columns?: number } {
+  return switched ? { columns: 1000 } : { rows: 1000, columns: Math.max(1, Math.min(104, Math.floor(columns / 2))) }
 }
 
 export const register: Register = (on) => {
@@ -200,7 +202,7 @@ export const register: Register = (on) => {
         blit: (cells, columns, rows) => $.ui.blit({ requestId: paneId, key: 'screen', columns, rows, cells }),
         redraw: () => { $.ui.invalidate('ui.render') },
         close: () => { void $.ui.close({ id: paneId }) },
-        size: (compact) => { void $.ui.open({ id: paneId, title: 'Workers', closeOnEscape: true, ...paneSize(compact) }) },
+        size: (switched, columns) => { void $.ui.open({ id: paneId, title: 'Workers', closeOnEscape: true, ...paneSize(switched, columns) }) },
       }, loadId),
       asks: new Asks(host, loadId),
       command: async () => {
@@ -341,19 +343,23 @@ export const register: Register = (on) => {
     }
   })
 
-  on('command.run', { command: 'workers' }, async ($) => {
+  on('command.run', { command: 'workers' }, async ($, e) => {
     if (!load?.run?.hostsSpaces) {
       return { text: 'This session opens no spaces: the workers pane is main\'s.' }
     }
     // Escape closes it while the pane holds the keyboard; once a click gave
     // the screen the keys, Escape hands them back to the prompt first, and a
     // second one could reach main's turn — so the prefix leads.
-    load.workers.compact = false
-    await $.ui.open({ id: paneId, title: 'Workers', focus: true, closeOnEscape: true, ...paneSize(false) })
+    load.workers.switched = false
+    load.workers.columns = Number(e.presentation?.columns) || 80
+    await $.ui.open({ id: paneId, title: 'Workers', focus: true, closeOnEscape: true, ...paneSize(false, load.workers.columns) })
     load.workers.opens()
     const name = load.workers.chosenName()
-    return { text: name === ''
-      ? 'Workers pane: no worker yet; Esc closes it.'
+    if (name === '') return { text: 'Workers pane: no worker yet; Esc closes it.' }
+    // Off fullscreen the pane sits above the prompt and a click gives the
+    // key surface no keyboard: the pane takes a line at a time instead.
+    return { text: e.presentation?.isFullscreen === false
+      ? `Workers pane: type a line to ${name}, Enter sends it; Tab reaches the buttons for Esc, ^C, the size and closing; Esc closes the pane.`
       : `Workers pane: click the screen to type to ${name}; there Alt+a then q closes the pane, 1-9 chooses a worker, z switches its size, c, e, x send ^C, Esc, ^X.` }
   })
 

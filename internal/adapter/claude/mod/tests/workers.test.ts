@@ -21,9 +21,9 @@ const screen = (seq: number, ended = false) => ({ status: 200, text: JSON.string
 
 // What Claude Code passes a ui.render hook for the pane: a body of 4 columns
 // and, less the list's line and the key line, 2 rows.
-const pane = (rows = 4) => ({
+const pane = (rows = 4, isFullscreen = true) => ({
   plugin: 'rewake', component: 'Pane', requestId: 'rewake-workers', surface: 'terminal',
-  viewport: { columns: 100, rows: 30 },
+  viewport: { columns: 100, rows: 30, isFullscreen },
   props: { title: 'Workers', isFocused: true, bodyColumns: 4, placement: 'inline', scroll: { offset: 0, bodyRows: rows }, view: {} },
 }) as any
 
@@ -145,6 +145,36 @@ test('the prefix chooses a worker by its digit and closes the pane, with no Esca
   await run.clock.settle()
   const typed = run.sent.filter((one) => one.path === '/v1/workers/keys').map((one) => [one.body.space, one.body.keys])
   expect(typed).toEqual([['s2', 'w']])
+  expect(ui.closed.map((one) => one.id)).toEqual(['rewake-workers'])
+})
+
+test('off fullscreen the pane takes a line at a time, and its buttons send ^C and close it', async ($, on) => {
+  const run = world(on, {
+    replies: {
+      '/v1/hello': [main],
+      '/v1/workers/list': [listed(api)],
+      '/v1/workers/screen': [screen(1), async () => {
+        await run.clock.sleep(holdMs)
+        return screen(1)
+      }],
+      '/v1/workers/resize': [{ status: 200, text: '{}' }],
+      '/v1/workers/keys': [{ status: 200, text: '{}' }],
+    },
+  })
+  const ui = harness(on)
+  await start($)
+  await run.clock.settle()
+  await $.command.run({ command: 'workers', args: '' } as any)
+  expect(ui.opened.map((one) => [one.rows, one.columns])).toEqual([[1000, 40]])
+  await run.clock.settle()
+  const drawn = await $.ui.mount(pane(6, false))
+  expect(await drawn.find({ key: 'keys' })).toBeUndefined()
+  await drawn.input({ key: 'line', text: 'ls', kind: 'submit' })
+  await drawn.press({ key: 'send-interrupt' })
+  await drawn.press({ key: 'close' })
+  await run.clock.settle()
+  const typed = run.sent.filter((one) => one.path === '/v1/workers/keys').map((one) => one.body.keys)
+  expect(typed).toEqual(['ls\r', '\x03'])
   expect(ui.closed.map((one) => one.id)).toEqual(['rewake-workers'])
 })
 
