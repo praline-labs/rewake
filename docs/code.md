@@ -19,7 +19,7 @@ internal/core/registry/registrytest/          for tests: the boot a session of t
 internal/infra/proc/                          /proc: identity, liveness, job-control state, lineage, namespaces, owner and initial environment
 internal/infra/boottime/                      the boot clock, comparable across processes and never set back
 internal/core/mail/                           message, status, sender-side write, the locked sweep and settlement, turn ends and the read's acknowledgment
-internal/core/mail/decisionmodel/             the operator decision's worlds and their expected outcomes, apart from the code (docs/v2/stage3-decision-manifest.md)
+internal/core/mail/decisionmodel/             the operator decision's worlds and their expected outcomes, apart from the code (docs/archive/v2/stage3-decision-manifest.md)
 internal/core/mail/mailtest/                  for tests outside mail: the paths and bytes of its records, each checked against mail
 internal/core/receipt/                        the journal of mail operations run through the tool's words: keys, records, frozen reads
 internal/tool/                                what the CLI and the context endpoint share: the ticket, result bounds, cutting parts, the gate against a turn's end

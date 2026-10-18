@@ -23,7 +23,7 @@ What rewake adds to a harness's launch, in the full wording of
 
 - **L3. Nothing persists past the run**: what a launch writes lives in the run's
   directory and goes with it; after a kill, a later launch removes it once the run is
-  proven dead ([the qualified guarantee](../v2/stage3-rundir.md#the-qualified-guarantee)).
+  proven dead ([the qualified guarantee](../archive/v2/stage3-rundir.md#the-qualified-guarantee)).
   (Rule 8.) Known limit, recorded on October 16, 2026, accepted with S4-6's design: on
   Claude Code the mod keeps the ends its host has not acknowledged in the harness's own store,
   outside the run's directory, and removes those of a killed run only once a later load's

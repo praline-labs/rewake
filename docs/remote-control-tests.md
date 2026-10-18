@@ -2,12 +2,12 @@
 
 What proves `rewake compact` and `rewake interrupt`, part by part: the design is in
 [remote-control.md](remote-control.md), the Codex side in
-[remote-control-codex.md](archive-1.x/remote-control-codex.md), and the workflow case in
+[remote-control-codex.md](archive/1.x/remote-control-codex.md), and the workflow case in
 [testing-cases.md](testing-cases.md#a-stop-and-steering-a-session). The tests of the
 Claude Code module and its collector — the module under node against a strict host, the
 interrupter mark, the compaction marks — left with the plugin in S9, October 11, 2026;
 they are in the history at `98acc3b`, and how the retired `claude-steered` case was
-built is in [testing-plugin.md](archive-1.x/testing-plugin.md#steering-a-session).
+built is in [testing-plugin.md](archive/1.x/testing-plugin.md#steering-a-session).
 
 - `internal/core/control/control_test.go` — the protocol: a done answer and the cleanup, the
   modes, `not answering` with the request removed, a taken request without an outcome
@@ -135,7 +135,7 @@ built is in [testing-plugin.md](archive-1.x/testing-plugin.md#steering-a-session
   compaction refused mid-turn with the turn going on, an interrupt giving main the
   stopped text, also in its awaited list, and the worker's next notice no line, an idle
   interrupt refused, and a worker's call refused; seven product mutants
-  ([testing-plugin.md](archive-1.x/testing-plugin.md#steering-a-session)). The shape case checks the
+  ([testing-plugin.md](archive/1.x/testing-plugin.md#steering-a-session)). The shape case checks the
   shim's reply and events for both requests against the schema.
 - The workflow case `codex-compact-hold` — a task sent right after main's compaction of
   a Codex worker whose compaction runs long, the shim refusing input meanwhile as the

@@ -258,18 +258,18 @@ everything else.
   `exec`, an interrupt, a subagent; the mod re-checked on 2.1.302 in the test kit and against
   the release's report. Open it before designing the space, the keeper or the
   mod's join, and re-check it after a harness update.
-- [research-codex.md](research-codex.md) — what only a running Codex session shows,
+- [research-codex.md](archive/research-codex.md) — what only a running Codex session shows,
   split from research.md by subject: `codex queue`, thread identity and terminal events,
   the sandbox as a running session meets it, why `--worktree` cannot go with a remote
   terminal, environment and instructions, the session-owned app-server, and the model's
   plan tool. Open it before touching the Codex adapter or after a Codex
   update.
-- [research-codex-live-checks.md](research-codex-live-checks.md) — dated live probes of
+- [research-codex-live-checks.md](archive/research-codex-live-checks.md) — dated live probes of
   delivery and conversation selection, split from research-codex.md by subject: a
   compaction held against a task, two real sessions driven end to end through steering,
   `/new`, compaction and an interrupt, and the terminal's selection between two installed
   versions. Open it before touching delivery timing or conversation selection on Codex.
-- [research-codex-conversation.md](research-codex-conversation.md) — source facts about a
+- [research-codex-conversation.md](archive/research-codex-conversation.md) — source facts about a
   Codex conversation's permissions, split from research-codex.md by subject: what states
   them, how a settings update is queued, applied and told, what a running turn keeps, and
   the warning the terminal draws without a turn; read for a sandbox check that was
@@ -296,22 +296,22 @@ everything else.
   checkout, where trust is kept, `.worktreeinclude` as the binary and the reference
   source do it and where they differ, and what else its worktree does that rewake does
   not. Open it before changing the Claude Code worktree flag or `.worktreeinclude`.
-- [research-protocol.md](research-protocol.md) — what the generated Codex schema and the
+- [research-protocol.md](archive/research-protocol.md) — what the generated Codex schema and the
   reference source state: the flags schema generation needs, required fields of the
   types the adapter uses, how start-or-steer forks, where `canAcceptDirectInput`
   lives, what compaction and the terminal's other commands send over the protocol, and
   what a compaction or an interrupt on rewake's request would send and meet, where a
   new conversation runs, and what the protocol offers for the model's plan. Open it when the adapter or the fixture has to match a protocol change.
-- [research-permissions.md](research-permissions.md) — the Codex sandbox: network and
+- [research-permissions.md](archive/research-permissions.md) — the Codex sandbox: network and
   filesystem limits on Linux, why `.git`, `.agents` and `.codex` are protected, how
   `--add-dir` grants access, worktree quirks, and a short account of remote resume
   refusing overrides. Open it when a Codex session cannot write where it should.
-- [continuation-permissions.md](continuation-permissions.md) — the evidence behind remote
+- [continuation-permissions.md](archive/continuation-permissions.md) — the evidence behind remote
   resume and fork refusing permission overrides, the protocol calls ruled out for adding
   Git roots to an idle session, and the exact sequence `--grant-git` uses instead,
   including its race with a turn typed by hand. Open it when working on grants or on
   resume and fork.
-- [harness-features.md](harness-features.md) — the capability matrix: one row per feature,
+- [harness-features.md](archive/harness-features.md) — the capability matrix: one row per feature,
   one column per harness, each cell live, implemented, missing, researched or not
   applicable with dated evidence, and the ordered parity queue. Open it first for "does X
   work on harness Y today", and when choosing what to build next.
@@ -349,19 +349,19 @@ everything else.
   person at a terminal, the output and evidence contract with its outcome names, isolation
   per tier, and the lessons of earlier false-green tests. Open it for the terms the suite
   uses and the contract it must keep.
-- [check-runner-proposal.md](check-runner-proposal.md) — the decision that answered it:
+- [check-runner-proposal.md](archive/check-runner-proposal.md) — the decision that answered it:
   `go test` with a switch and shared helpers in `test/workflow`, the alternatives rejected
   and why, the harness as a parameter, and the conditions for the paid tier. Open it to
   learn why the suite is shaped as it is.
-- [check-runner-scenarios.md](check-runner-scenarios.md) — the scenarios themselves: each
+- [check-runner-scenarios.md](archive/check-runner-scenarios.md) — the scenarios themselves: each
   one's invariant, observations and negative controls, links to how it was built, the
   deferred ones, and the scenario-by-harness matrix, with which column is the gate and
   which search. Open it when adding a scenario or reading what one proves.
-- [native-mailbox-check.md](native-mailbox-check.md) — a runbook for repeating the
+- [native-mailbox-check.md](archive/native-mailbox-check.md) — a runbook for repeating the
   owner-facing check of Codex mailbox delivery: the environment, the permission it needs,
   the exact launch commands and the idle and active delivery script. Open it to run that
   check again by hand.
-- [native-mailbox-ui-check.md](native-mailbox-ui-check.md) — what the deleted fixture for
+- [native-mailbox-ui-check.md](archive/native-mailbox-ui-check.md) — what the deleted fixture for
   the arrival-row check did — isolation, a scripted model endpoint, permission defaults,
   the three phases a person judged by eye — kept as history, not as a request to rerun.
   Open it when rebuilding that check on the suite.
@@ -372,38 +372,38 @@ Dated records of what was seen. Their observations are never edited afterwards; 
 note ahead of them may say what has changed since, and where one has been superseded,
 the newer document says so.
 
-- [claude-parity-2026-09-21.md](claude-parity-2026-09-21.md) — three parity rows closed
+- [claude-parity-2026-09-21.md](archive/claude-parity-2026-09-21.md) — three parity rows closed
   with Claude Code in the roles they waited on: telemetry of a Codex worker read by a
   Claude Code main, grouped arrival and selected reads on a Claude Code recipient, and
   mid-turn delivery to a working Claude Code session; with what the probes do not show.
-- [gateway-native-evidence.md](gateway-native-evidence.md) — the source citations for how
+- [gateway-native-evidence.md](archive/gateway-native-evidence.md) — the source citations for how
   the Codex terminal picks its primary conversation, and the owner's fork and side
   sequence and the installed primary and side delivery acceptance of September 19. Open
   it when the question is why rewake trusts a conversation as the terminal's own.
-- [inbox-acceptance.md](inbox-acceptance.md) — acceptance of revision 6 of grouped
+- [inbox-acceptance.md](archive/inbox-acceptance.md) — acceptance of revision 6 of grouped
   inbox: the candidate's hashes, a startup smoke test and a live delivery to an active and
   an idle session. The contract it accepts is inbox-groups.md.
-- [native-mailbox-acceptance.md](native-mailbox-acceptance.md) — acceptance of native
+- [native-mailbox-acceptance.md](archive/native-mailbox-acceptance.md) — acceptance of native
   mailbox delivery: the evidence levels from unprompted controls to the installed check,
   the read-only sandbox default that failed the first run, and what the deleted research
   package showed, recounted, with the main session's own report quoted as observed.
-- [native-terminal-progress.md](native-terminal-progress.md) — the captured events and
+- [native-terminal-progress.md](archive/native-terminal-progress.md) — the captured events and
   source lines behind two rules stated elsewhere: a failed or interrupted turn is woken
   only by new mail (delivery.md), and native start-or-steer does not wait for a finished
   turn (inbox-groups.md).
-- [reviews-native-ui-2026-09-20.md](reviews-native-ui-2026-09-20.md) — the review and
+- [reviews-native-ui-2026-09-20.md](archive/reviews-native-ui-2026-09-20.md) — the review and
   installed acceptance of the arrival row: two prototype rounds, its promotion into the
   adapter, the binary's hash, and the quoted observations, with the limit that the row is
   transient.
-- [server-observation.md](server-observation.md) — the observer approach to reading turn
+- [server-observation.md](archive/server-observation.md) — the observer approach to reading turn
   outcomes that preceded the gateway: subscription versus identity, a race after turn
   start and the completion grace. The gateway replaced it, as the file says.
-- [thread-ownership-investigation.md](thread-ownership-investigation.md) — the
+- [thread-ownership-investigation.md](archive/thread-ownership-investigation.md) — the
   investigation that established loaded-thread metadata cannot tell which conversation a
   terminal shows, the intent-gateway design later adopted, and the observer mitigation
   shipped before it. A status note at the top says R14-1 and R14-2, open in the text,
   are closed, and the observer is gone.
-- [thread-lock-probes.md](thread-lock-probes.md) — owner-run probes that extend it: file
+- [thread-lock-probes.md](archive/thread-lock-probes.md) — owner-run probes that extend it: file
   descriptors and writer locks across `/new` and resume, binary provenance, and a resume
   matrix, concluding that a writer lock does not identify the selected conversation. Its
   status note records the same closure of R14-1 and R14-2.
@@ -421,7 +421,7 @@ the newer document says so.
   what Claude Code and a mod already do, with the dated readings of pi and Codex weighed
   beside it. Open it
   before any 2.0 work.
-- [work-queue.md](work-queue.md) — what comes next, in the owner's order: stage 4 of 2.0
+- [work-queue.md](archive/work-queue.md) — what comes next, in the owner's order: stage 4 of 2.0
   through the roadmap's open list, then the 1.x queue — the rest of the workflow suite, the arrival-row check on the suite, a named harness version against a
   local responder, a two-way channel for Claude Code, the rest of stage 2 of the plugin
   and a focus for a Codex compaction, the parity queue, and what is
@@ -432,7 +432,7 @@ the newer document says so.
   `YYYY-MM-DD-<subject>.md` by the day it closed, plus `risks.md` for the risks table and
   `later.md` for what is deferred without a date. The index has one line per entry and
   says what is open; it is the map of that directory.
-- [archive-1.x/README.md](archive-1.x/README.md) — the documents of 1.x code that stage 3
+- [archive-1.x/README.md](archive/1.x/README.md) — the documents of 1.x code that stage 3
   removes, moved unchanged by the step that removed the code, with a table of where each
   was, the step and the SHA-256 of its bytes; the index of that directory. Open it to
   read a record that links a document no longer at its path.
@@ -440,12 +440,12 @@ the newer document says so.
   1.x Codex adapter, the MCP mail server and the launch injection as S8 removed them, a
   nested module nothing builds, kept as the reference stage 5 designs the Codex adapter
   from; the index says where each part was.
-- [reviews.md](reviews.md) — the first ten review rounds, all of September 16, 2026: each
+- [reviews.md](archive/reviews.md) — the first ten review rounds, all of September 16, 2026: each
   defect found and its fix, ending with the decision on Git metadata access by role.
-- [reviews-later.md](reviews-later.md) — the review rounds and repair chains from
+- [reviews-later.md](archive/reviews-later.md) — the review rounds and repair chains from
   September 17 to 20: expanded checks, Git write grants, rounds 11 to 14, the gateway,
   report publication and startup repairs, session state and activity, grouped inbox.
-- [transport-milestones-2026-09-17.md](transport-milestones-2026-09-17.md) — the owned
+- [transport-milestones-2026-09-17.md](archive/transport-milestones-2026-09-17.md) — the owned
   server transport milestone with its live acceptance table, and the entries of the same
   day on fresh threads, continuation, Git grants (marked superseded), lost reports,
   naming and explicit main.
@@ -455,6 +455,6 @@ the newer document says so.
 - [traps.md](traps.md) — what behaves other than expected, by symptom: roles and reports,
   tests run next to a live session, arguments and continuation, delivery and what counts
   as proof. Open it when a failure is confusing, before assuming a new defect.
-- [intermittent-bugs.md](intermittent-bugs.md) — failures whose trigger is not fully
+- [intermittent-bugs.md](archive/intermittent-bugs.md) — failures whose trigger is not fully
   understood, with timelines and what to capture next time. Open it when a delivery
   failure resembles an old one.

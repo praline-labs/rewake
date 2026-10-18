@@ -1,7 +1,7 @@
 # The mail channel of a run
 
 Part of stage 3 of [mail-bridge.md](mail-bridge.md), beside the launch injection of
-[mail-bridge-launch.md](archive-1.x/mail-bridge-launch.md): what the wrapper records about how this
+[mail-bridge-launch.md](archive/1.x/mail-bridge-launch.md): what the wrapper records about how this
 run's mail travels — through the tool, through the shell, or neither — what it tells
 the worker and main, what `whoami`, `rewake list` and main's header show, and what the
 briefing says. **Design, third pass, October 4, 2026; built the same day**, with the
@@ -19,7 +19,7 @@ bound, a server reporting its command cannot start — left with the 1.x adapter
 MCP injection ([archive/1.x/codex](../archive/1.x/codex/README.md)).
 
 **The keeper runs again since S11, October 11, 2026**
-([stage3-steps-adapters.md](v2/stage3-steps-adapters.md#s11-the-host-on-the-live-set-codex)),
+([stage3-steps-adapters.md](archive/v2/stage3-steps-adapters.md#s11-the-host-on-the-live-set-codex)),
 for every run whose adapter offers a tool transport. The record is begun when the plan
 is attached: the tool offered when the plan carries a transport and the tools, no tool
 with its reason when it does not. Its inputs are the endpoint's hello and close, the
@@ -224,7 +224,7 @@ A connection that came back during an open interval adds `; reconnected <T>, unu
 the line and changes neither the category nor the class, so it sends no notice; a
 ticket closes the interval. `whoami` prints the line
 in every run, with the reason in words the diagnostics allow
-([mail-bridge-launch.md](archive-1.x/mail-bridge-launch.md#the-refusal-and-what-may-be-shown)).
+([mail-bridge-launch.md](archive/1.x/mail-bridge-launch.md#the-refusal-and-what-may-be-shown)).
 `rewake list` shows the category's word (`denied`, `tool`, `starting`, `failing`,
 `shell`, `none`, `no tool`); the `--json` forms carry the observations and the block.
 The record lives in session state beside `DeliveryHold`, written by the wrapper only.

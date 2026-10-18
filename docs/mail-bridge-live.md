@@ -2,7 +2,7 @@
 
 The plan of the live checks of stage 3 of [mail-bridge.md](mail-bridge.md): where they
 run, how each case sets its conditions, how preservation is proven without touching the
-person's configuration, and which gates of [mail-bridge-launch.md](mail-bridge-launch.md#gates)
+person's configuration, and which gates of [mail-bridge-launch.md](archive/1.x/mail-bridge-launch.md#gates)
 and [mail-bridge-channel.md](mail-bridge-channel.md) each case closes. **Plan, October 4,
 2026, run the same day** on build 916f888 — the results are in
 [the run of October 4, 2026](#the-run-of-october-4-2026), the facts it learned about the
@@ -72,7 +72,7 @@ allowances under both spellings or none, `--strict-mcp-config`, a caller's `--se
 spellings and under other tables, `--command`, aliases and defaults, `--` — the plan's
 arguments equal those of the adapter without stage 3, which already merges `--settings`
 and adds its own flags, plus exactly the additions of
-[mail-bridge-launch.md](mail-bridge-launch.md); the merged settings equal that adapter's
+[mail-bridge-launch.md](archive/1.x/mail-bridge-launch.md); the merged settings equal that adapter's
 plus our hook entries. A launch against a fake harness writes nothing outside the state
 directory: the configuration files of a temporary `HOME`, `CODEX_HOME` and
 `CLAUDE_CONFIG_DIR` stay as they were. Every diagnostic surface is searched for sentinels
@@ -91,7 +91,7 @@ digests, never contents (an `env` may hold secrets):
   under test as well.
 - **`~/.claude.json` as a whole, less named runtime fields.** The harness rewrites it
   itself — `pluginUsage` because of the `--plugin-dir` every rewake launch passes
-  ([claude-plugin.md](claude-plugin.md)), a projects entry for each new folder,
+  ([claude-plugin.md](archive/1.x/claude-plugin.md)), a projects entry for each new folder,
   counters, caches — so it cannot stay byte-identical. The whole JSON is compared after
   removing an explicit list of runtime fields; a field that appears, disappears or
   changes outside the list is a difference, in every project's entry, the case's own
@@ -136,12 +136,12 @@ it. So these stay off the live runs:
 
 Before the run every gate was open, so no launch carried the tool: a case that needed it
 — all but S1 and the gates' own checks — launched with `REWAKE_GATES_ASSUMED` naming the gates
-it stands behind ([gates taken as closed](mail-bridge-launch.md#gates-taken-as-closed)),
+it stands behind ([gates taken as closed](archive/1.x/mail-bridge-launch.md#gates-taken-as-closed)),
 and its record says which. Since the run, Claude Code 2.1.284 carries the tool with no
 assumption (G7 closed); Codex still needs G2 assumed. A gate a case closes is entered in `closedGates` for the
 harness version it ran against, and later cases on that version need not assume it. A
 launch takes its harness's version as [the harness
-version](mail-bridge-version.md) says, and an unknown one keeps every
+version](archive/1.x/mail-bridge-version.md) says, and an unknown one keeps every
 gate open: a case on Claude Code that needs the tool runs with the native install's
 `claude` on `PATH`, `--command` or not.
 
@@ -175,7 +175,7 @@ call. The user part runs in a scratch configuration directory,
 whose user layer may be written, the managed part in the container of G6. The person's
 user layer is never written for it, and its own values are not an experiment: they
 cannot be changed during a session. A part that cannot be run stays unproven, and the
-rule of the gate applies ([G8](mail-bridge-launch.md#gates)): a run whose layer of that
+rule of the gate applies ([G8](archive/1.x/mail-bridge-launch.md#gates)): a run whose layer of that
 kind names either variable acknowledges no read on Claude Code.
 
 ## The run of October 4, 2026
@@ -247,7 +247,7 @@ each in the way its finding was found:
   "server gone" at the kill; killed before the sub-agent's first call — "server gone"
   placed at the kill once that call binds its connection; with a sub-agent server that
   never calls — unchanged, the open compromise of an unbound connection, recorded as
-  such ([conversation connections](mail-bridge-channel-codex.md#conversation-connections)).
+  such ([conversation connections](archive/1.x/mail-bridge-channel-codex.md#conversation-connections)).
 - **The version unconfirmed** (no model): a fixture whose `--version` names one
   version and whose `initialize` another, or none — the injection withdrawn, the
   channel "no tool" with `harness version not confirmed`, the wrapper run once more; and

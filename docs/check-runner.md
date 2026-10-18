@@ -18,11 +18,11 @@ broken.
 Because most of the mailbox is shared code, the Codex column is a regression gate and
 the Claude Code column is where defects are expected to be found.
 
-The answer to this research task is [check-runner-proposal.md](check-runner-proposal.md),
+The answer to this research task is [check-runner-proposal.md](archive/check-runner-proposal.md),
 September 21, 2026. What was built on it: the workflow suite in `test/workflow`, the
 summarizer `tools/checksummary` and the harness cache `tools/harnesscache`; there is no
 separate runner command, by decision. The scenarios as built are in
-[check-runner-scenarios.md](check-runner-scenarios.md).
+[check-runner-scenarios.md](archive/check-runner-scenarios.md).
 
 Native model-context delivery and the arrival UI are installed and accepted through
 `4cfd3cf`. They are no longer a pending prerequisite or the next implementation
@@ -37,14 +37,14 @@ Two decisions, the first now answered:
    claims to observable invariants, identify evidence gaps and propose a small suite.
    Decide process boundaries, result ownership, synchronization, artifact collection
    and how the suite proves its own negative cases. Document alternatives and costs.
-   Delivered as [check-runner-proposal.md](check-runner-proposal.md).
+   Delivered as [check-runner-proposal.md](archive/check-runner-proposal.md).
 2. **Runner implementation.** After that proposal is reviewed, implement the smallest
    orchestration needed for the chosen workflows. Reuse existing Go tests and mature
    fixtures; do not build a broad framework or tests that merely reproduce current
    implementation branches.
 
 The investigation should produce a harness-by-scenario matrix linked to the
-[feature map](harness-features.md). Use registered harness identities and the map's
+[feature map](archive/harness-features.md). Use registered harness identities and the map's
 capability/acceptance boundaries. A scenario needs a stated invariant, prerequisites,
 observation points, evidence tier and reason for every unsupported or unrun cell.
 Shared user contracts may use different native mechanisms; feature presence does not
@@ -140,7 +140,7 @@ contract; neither model comprehension nor terminal appearance follows from it.
 | Real-model semantic | Task understanding and model/tool choices under a stated setup, with strict marker/data provenance where relevant. | Other prompting conditions, comprehensive timing or visual behavior. |
 | Owner TUI | Visible rows, interaction, deferral and observed transitions. | Unrecorded exact event order, durable cache semantics or exhaustive recovery coverage. |
 
-Populate the harness-by-scenario matrix from [harness-features.md](harness-features.md)
+Populate the harness-by-scenario matrix from [harness-features.md](archive/harness-features.md)
 and these tiers. Record the highest justified evidence for each cell and its gaps,
 not a single ambiguous tested boolean. An unsupported native surface does not justify
 emulating a different feature and reporting parity. Unknown cells remain research
@@ -216,7 +216,7 @@ Avoid a blanket exponential matrix and implementation-mirroring pseudo-tests.
 ## Initial implementation: the selection, made September 21, 2026
 
 Research selected three, and they are specified in
-[check-runner-scenarios.md](check-runner-scenarios.md):
+[check-runner-scenarios.md](archive/check-runner-scenarios.md):
 
 1. **Idle task to sender report notice** — the complete correlated chain, including
    explicit controller-versus-model ownership of inbox reading and final cleanup.

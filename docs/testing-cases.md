@@ -4,7 +4,7 @@ What the end-to-end cases in `test/workflow` claim, case by case: the sessions e
 starts, what the fixture plays for it, what it must see, and the controls that prove it
 can fail. How to write a scenario, a control, a fixture or a column, and what every case
 shares, is in [testing.md](testing.md#extending-the-suite); each scenario's invariant as
-first argued is in [check-runner-scenarios.md](check-runner-scenarios.md).
+first argued is in [check-runner-scenarios.md](archive/check-runner-scenarios.md).
 
 The Codex column and its cases — `codex-steered`, `codex-compact-hold`,
 `codex-tui-later-shape`, `codex-worktree`, `codex-grant-dir`, `codex-grant-forgery`,
@@ -22,7 +22,7 @@ The Claude Code column and its cases — `claude-telemetry`, `claude-interrupted
 columns — retired in S9, October 11, 2026, when Claude Code's hooks, plugin and
 telemetry left; the column returns with stage 4, when Claude Code gets a turn boundary
 again. Their code is in the history at `98acc3b` (`test/workflow/claude*_test.go`), and
-how they ran is in [testing-plugin.md](archive-1.x/testing-plugin.md) and the S9 entry
+how they ran is in [testing-plugin.md](archive/1.x/testing-plugin.md) and the S9 entry
 of the roadmap. What they held of the code that stays is held now by the fixture's cases
 — `fixture-steered`, `thread-changed` and `stopped-routing` below took the neutral part
 of `claude-steered`, `thread-changed` and `claude-interrupted` — and, for the code only
@@ -54,7 +54,7 @@ live check of S9 woke a Claude Code main through it.
 
 Retired with the Claude Code column in S9, October 11, 2026, with the telemetry they
 measured: the budgets, their measurement and their controls are in
-[claude-telemetry.md](archive-1.x/claude-telemetry.md) and in the history at `98acc3b`.
+[claude-telemetry.md](archive/1.x/claude-telemetry.md) and in the history at `98acc3b`.
 
 ## Launch, reports and what a main waits on
 

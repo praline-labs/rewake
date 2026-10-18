@@ -51,6 +51,6 @@ place where the list can be forgotten. The suite is where the hundreds of lines 
 
 The summary names which column a red result came from and stops there. Codex is the
 regression gate and Claude Code the search column, and
-[check-runner-scenarios.md](../check-runner-scenarios.md) forbids a runner from
+[check-runner-scenarios.md](../archive/check-runner-scenarios.md) forbids a runner from
 promoting the second on its own; saying which column is the whole of what it may do
 with that difference.

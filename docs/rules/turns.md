@@ -3,7 +3,7 @@
 What a turn's end reports when the turn was woken after `rewake pending`, failed or was
 interrupted, in the full wording of [design-rules.md](../v2/design-rules.md#turn-outcomes).
 The design gives these two rules no number; stage 3 numbers them **O1** and **O2** so
-that they are checked like the rest ([stage3-tests.md](../v2/stage3-tests.md#how-a-rule-names-its-tests)).
+that they are checked like the rest ([stage3-tests.md](../archive/v2/stage3-tests.md#how-a-rule-names-its-tests)).
 
 ## The rules
 

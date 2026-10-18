@@ -142,7 +142,7 @@ same day: [turn-end-recovery.md](turn-end-recovery.md) says how, record by recor
    of an earlier build stays on its protocol and that an irrecoverable report is settled
    by `rewake settle`, the run and successor records, the look for earlier-build writers
    and the conversion of their receipts — was removed in stage 3 of 2.0 and is kept in
-   [archive-1.x/protocol-cutover.md](archive-1.x/protocol-cutover.md). What each acceptance from the fourth on
+   [archive-1.x/protocol-cutover.md](archive/1.x/protocol-cutover.md). What each acceptance from the fourth on
    found, and what closes it now, is in
    [turn-end-recovery-findings.md](turn-end-recovery-findings.md#what-each-earlier-finding-meets).
 
@@ -380,7 +380,7 @@ lock (rule 2).
 Once-marks of runs other than the live one go at every sweep, which retires them, and
 any letter, only under the mailbox lock and only while its own run is the name's live
 run, read under that lock; a sweep that cannot take the lock, or a server of a run that
-has ended, retires nothing ([stage3-publication.md](v2/stage3-publication.md#the-contract)).
+has ended, retires nothing ([stage3-publication.md](archive/v2/stage3-publication.md#the-contract)).
 No sweep of a mailbox removes a path an open occurrence of its stop names, and none
 removes anything while the stop cannot be read (`inbox/stop_keep.go`,
 [turn-end-recovery.md](turn-end-recovery.md)).

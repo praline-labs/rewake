@@ -5,7 +5,7 @@ an unknown stops — in the full wording of [design-rules.md](../v2/design-rules
 from `mail-bridge-cli.md` rules 1–8 without the 1.x migration. Each rule ends with the
 tests that hold it ([README.md](README.md)). The operator decision on an unknown
 outcome, which the last clause of E8 names, follows them as D1–D8, built in S18
-([stage3-decision-recovery.md](../v2/stage3-decision-recovery.md#its-rules)): when
+([stage3-decision-recovery.md](../archive/v2/stage3-decision-recovery.md#its-rules)): when
 evidence cannot return, the subject's recipient run or the person decides, and the
 decision settles the stop without being evidence.
 
@@ -367,14 +367,14 @@ decision settles the stop without being evidence.
 E8 says a stop the plan found goes once the plan finds its cause gone, and that a stop is
 lifted only by returning evidence, never by removing its cause. Read literally, the first
 lets the removal of an unreadable record lift a stop, which the second forbids. Stage 3
-reads them together as correction 2 of [stage3.md](../v2/stage3.md#corrections-to-the-accepted-design),
+reads them together as correction 2 of [stage3.md](../archive/v2/stage3.md#corrections-to-the-accepted-design),
 agreed in review: a stop is one write-once record per occurrence of a cause; an
 occurrence is resolved only by evidence about its effect — the effect proven done or proven
 not done — never by its path becoming absent or merely readable; an effect-only cause is
 resolved the same way, once a barrier has run its effect through to evidence, not by the
 barrier having run; one resolution never resolves another, and a cause that recurs after
 its resolution is a new occurrence. S3 built it
-([stage3-steps.md](../v2/stage3-steps.md#s3-a-stop-is-resolved-per-cause-by-evidence-codex)),
+([stage3-steps.md](../archive/v2/stage3-steps.md#s3-a-stop-is-resolved-per-cause-by-evidence-codex)),
 and inverted the tests above that lifted a stop by a removed cause; each keeps a half on
 valid bytes closed to reading, where opening them again resolves the cause. The wording
 of E8 above is the accepted one: the single record it names, `stopped`, is from S3 one
@@ -385,8 +385,8 @@ record per occurrence, `stops/<key>/<occurrence>`, with its resolution beside it
 
 When evidence cannot return, the sender's mailbox stays stopped until the subject's
 recipient run or the person decides whether the report arrived. The rules are worded in
-[stage3-decision-recovery.md](../v2/stage3-decision-recovery.md#its-rules), from the model
-of [stage3-decision-model.md](../v2/stage3-decision-model.md); the command that makes a
+[stage3-decision-recovery.md](../archive/v2/stage3-decision-recovery.md#its-rules), from the model
+of [stage3-decision-model.md](../archive/v2/stage3-decision-model.md); the command that makes a
 decision is `rewake decide` ([stage3-decision.md](../v2/stage3-decision.md#the-command)).
 A decision is no evidence and removes no record: E8 holds beside it, and these rules say
 what a decision may settle instead.

@@ -1,7 +1,7 @@
 # Stage 3 of 2.0: the rules accepted, S1 and S2 built
 
 Stage 3 of 2.0 builds the core of the rewrite in nineteen steps, S1–S19
-([stage3.md](../v2/stage3.md)). On October 5, 2026 its rules were written and accepted
+([stage3.md](../archive/v2/stage3.md)). On October 5, 2026 its rules were written and accepted
 after seven review rounds, S1 was built and accepted after four, and S2 was built and
 accepted after two. **The stage is not closed**: S3 and S4 were accepted on October 6
 ([S3's entry](2026-10-06-stage3-s3.md), [S4's](2026-10-06-stage3-s4.md)), S5 on
@@ -58,7 +58,7 @@ Every round was a Codex-side review of the documents alone, before any code.
    a moot disposition never closes it, and refused part B again: proof retention and
    the evidence domain still let the race through. Committed as `cae5c56`.
 6. **Refused, four findings.** The publication contract,
-   [stage3-publication.md](../v2/stage3-publication.md), holds the recipient's lock from
+   [stage3-publication.md](../archive/v2/stage3-publication.md), holds the recipient's lock from
    the liveness check through the evidence reads to the write, and retires proof only
    there, by the live run; the review found its ordering sound, and confirmed a further
    gap the writer reported, a sweep of an ended run's server retiring a live
@@ -106,7 +106,7 @@ Run identity and liveness stay; journal retention stays, as
 `internal/inbox/journal_retention.go`. The tests that used conversion records were
 rebuilt on a two-session lab of current journals, nine mutants run one at a time were
 all killed, and the workflow suite gave the same outcome per case before and after.
-[protocol-cutover.md](../archive-1.x/protocol-cutover.md) moved to the archive unchanged.
+[protocol-cutover.md](../archive/1.x/protocol-cutover.md) moved to the archive unchanged.
 
 The Codex-side review found no blocking defect in the code and refused on the
 documentation: E8 and the recovery sequence still described the conversion's mailbox-wide

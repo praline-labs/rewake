@@ -21,8 +21,8 @@ holds open, with three controls of which one mutates the product; `second-termin
 which states that a turn ended twice by a misbehaving server yields one report, and
 says in its own text that it has no reachable control;
 and two self-checks, `shim-answers-match-schema` and `self-check-incomplete`.
-The scenarios are described in [check-runner-scenarios.md](../check-runner-scenarios.md),
-the shape in [check-runner-proposal.md](../check-runner-proposal.md), the evidence
+The scenarios are described in [check-runner-scenarios.md](../archive/check-runner-scenarios.md),
+the shape in [check-runner-proposal.md](../archive/check-runner-proposal.md), the evidence
 contract in [check-runner.md](../check-runner.md). What building each of them cost,
 and what it does not prove, is in its own record:
 [task-report](2026-09-21-scenario-task-report.md),

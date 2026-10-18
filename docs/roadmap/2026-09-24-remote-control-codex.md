@@ -4,13 +4,13 @@ Stage 2 of rewake's function-hooks plugin, part B: `rewake compact` and
 `rewake interrupt` for a Codex worker, with the same observable behaviour as part A on
 Claude Code ([2026-09-24-remote-control.md](2026-09-24-remote-control.md)). Codex has no
 plugin, so the worker's wrapper serves the control directory itself. The design as
-built is in [remote-control-codex.md](../remote-control-codex.md).
+built is in [remote-control-codex.md](../archive/1.x/remote-control-codex.md).
 
 **The owner's decisions**, recorded where they apply:
 
 - A focus for a Codex compaction is refused with exit 2 before anything is sent; a
   proper route and an emulation are to be researched later, not built (September 24;
-  [work-queue.md](../work-queue.md)).
+  [work-queue.md](../archive/work-queue.md)).
 - On Codex no line about an interrupt is added to the worker's next notice: Codex puts
   `<turn_aborted>` into the model's history itself, and the line on Claude Code exists
   to match it (September 24).
@@ -45,12 +45,12 @@ built is in [remote-control-codex.md](../remote-control-codex.md).
   their refusals, the wrapper serving its directory; the workflow case `codex-steered`
   with five product mutants, the shim answering both requests as the server does and
   aborting a held turn for a compaction sent mid-turn; the shape case checking those
-  answers against the schema ([testing-plugin.md](../testing-plugin.md#on-codex)). The
+  answers against the schema ([testing-plugin.md](../archive/1.x/testing-plugin.md#on-codex)). The
   helpers both steered cases share moved to `test/workflow/steered_helpers_test.go`.
 
 **The live run**, on Codex CLI 0.155.1 in a private state directory, the cheapest model
 at effort `low`, one short turn per check, recorded in
-[research-protocol.md](../research-protocol.md#compaction-and-interrupt-on-request):
+[research-protocol.md](../archive/research-protocol.md#compaction-and-interrupt-on-request):
 
 - A compaction on request runs as a turn: its reply first, then the status, the turn
   and the `contextCompaction` item, a token usage, the turn completed. No
@@ -94,7 +94,7 @@ driving the conversation" is `in a turn`, the thin client's refusal is the new r
 `remote conversation` — so that a refusal the table did not know is no longer counted
 as a started compaction ([remote-control.md](../remote-control.md#on-claude-code)).
 Codex 0.156.1 was checked against the fixture before the owner updates
-([research-protocol.md](../research-protocol.md#codex-01561-against-the-fixture)).
+([research-protocol.md](../archive/research-protocol.md#codex-01561-against-the-fixture)).
 
 **Found in the re-review** (review-claude; both holes of the first round closed, the
 full suite green):
@@ -142,7 +142,7 @@ by the replies and events that name a turn and by a resume's snapshot, cleared b
 turn's `turn/completed`, by a snapshot showing it idle and by a change of selection. The
 compaction's refusal, the interrupt's turn id and the compaction mark read it. The
 frames and the Codex source for each order it relies on are in
-[remote-control-codex.md](../remote-control-codex.md#what-the-gateway-knows-a-conversation-is-doing).
+[remote-control-codex.md](../archive/1.x/remote-control-codex.md#what-the-gateway-knows-a-conversation-is-doing).
 Found while building it: the server may send a turn's `turn/completed` before its reply
 to `turn/start`, so a reply naming a turn already ended starts nothing. Each defect has a
 test that failed before the change, review-codex's and review-claude's repros included;
@@ -179,7 +179,7 @@ turns are kept per conversation across selections, the mark survives an idle sna
 until its bound, an unbound mark found running is tied to the first new turn any event
 names, the running turn's id is learned from any event, and a reply is taken for the
 running turn only in the selection that sent its request
-([remote-control-codex.md](../remote-control-codex.md#what-the-gateway-knows-a-conversation-is-doing)).
+([remote-control-codex.md](../archive/1.x/remote-control-codex.md#what-the-gateway-knows-a-conversation-is-doing)).
 Two tests of round 1 changed with the rule: a turn acknowledged before a `/resume` and
 never seen to start now holds the conversation until the bound, and so does a compaction
 only answered.
@@ -207,7 +207,7 @@ by things that are not its end.
   of the tree without `.git`.
 
 Main set the rule anew
-([remote-control-codex.md](../remote-control-codex.md#what-the-gateway-knows-a-conversation-is-doing)):
+([remote-control-codex.md](../archive/1.x/remote-control-codex.md#what-the-gateway-knows-a-conversation-is-doing)):
 an accepted operation whose end was not read makes the conversation uncertain for main's
 compaction, which is refused with an explanation and never sent; only that operation's
 `turn/completed` with a final status, or the answer to a `turn/start` or `turn/steer`
@@ -379,7 +379,7 @@ subject started outside it, its own sandbox left on.
    `rewake inbox --owed`, which leaves new mail unread. After the first it ended its turn
    with "nothing owed"; after the second it resumed the old interrupted task and reported
    `INTERRUPT_COMPLETED`. A defect of the role briefing, queued
-   ([work-queue.md](../work-queue.md)).
+   ([work-queue.md](../archive/work-queue.md)).
 5. A focus: exit 2, `focus not supported by Codex`; the count stayed 2.
 6. An ordinary task, read with `rewake inbox`: main received `finished — Point:
    NORMAL_NEW_OK.`

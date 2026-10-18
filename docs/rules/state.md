@@ -57,7 +57,7 @@ adversarial test it fails. The cost was measured on October 12, 2026: a median o
 2.76 ms warm for the hash of an 8.6 MB build, 4.02 ms with none of its pages resident,
 and about 2 ms of a 20 ms change form
 ([stage3-state.md](../v2/stage3-state.md#the-cost-of-the-hash), raw samples in
-[stage3-s17-evidence.md](../v2/stage3-s17-evidence.md#the-cost-of-the-hash)).
+[stage3-s17-evidence.md](../archive/v2/stage3-s17-evidence.md#the-cost-of-the-hash)).
 
 Tests:
 - `internal/infra/build/id_test.go` `TestBuildIDIsExecutableContent`

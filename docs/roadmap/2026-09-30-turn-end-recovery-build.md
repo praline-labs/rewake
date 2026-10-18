@@ -3,7 +3,7 @@
 Round 10 of the mail-tool stage: the recovery rules accepted on September 30, 2026 —
 rules 7 and 8 of [mail-bridge-cli.md](../mail-bridge-cli.md),
 [turn-end-recovery.md](../turn-end-recovery.md) and
-[protocol-cutover.md](../protocol-cutover.md) — built into the code the same day. How the
+[protocol-cutover.md](../archive/1.x/protocol-cutover.md) — built into the code the same day. How the
 path runs through the code is in [delivery-turn-end.md](../delivery-turn-end.md); the
 launch's part is in [launch.md](../launch.md#launching-a-harness).
 
@@ -17,7 +17,7 @@ launch's part is in [launch.md](../launch.md#launching-a-harness).
   carried a capability and its files belonged to root. Main's decision of the same day
   widened the rule to the permitted or inheritable set, or a process that is not
   dumpable; the ground and the evidence are in
-  [protocol-cutover.md](../protocol-cutover.md#proving-the-earlier-writers-stopped).
+  [protocol-cutover.md](../archive/1.x/protocol-cutover.md#proving-the-earlier-writers-stopped).
 - Two launch tests had passed only because the look ran against the machine's own
   processes: their fixture records carried no pid namespace, so a record was out of
   sight and refused once the look judged it.
@@ -54,7 +54,7 @@ launch's part is in [launch.md](../launch.md#launching-a-harness).
 - The earlier probes run under overlays, their changed expectations written down in
   [turn-end-recovery-findings.md](../turn-end-recovery-findings.md#what-the-earlier-probes-now-expect).
 - The session record moved to [session-record.md](../session-record.md) and a resumed
-  conversation to [delivery-conversation.md](../delivery-conversation.md#a-resumed-conversation),
+  conversation to [delivery-conversation.md](../archive/1.x/delivery-conversation.md#a-resumed-conversation),
   so that design.md and delivery.md stay under 400 lines.
 
 ## The review of October 1

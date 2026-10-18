@@ -1,7 +1,7 @@
 # The batch-arrival scenario, as built — September 22, 2026
 
 What building the grouping scenario taught. The contract it was built to is section 2
-of [check-runner-scenarios.md](../check-runner-scenarios.md).
+of [check-runner-scenarios.md](../archive/check-runner-scenarios.md).
 
 Two sessions again, both shims: the sender waits for
 the recipient's accepted conversation — read from its own `rewake list` — and only
@@ -63,7 +63,7 @@ and the pair running last was blamed for a clock it never used. Switch:
 A fixture boundary: the shim ignores an unknown switch, so a renamed one leaves its
 control passing as a healthy case; making that a refusal is a separate decision.
 
-Two rows of the [feature map](../harness-features.md) are claimed here, HF-07 and
+Two rows of the [feature map](../archive/harness-features.md) are claimed here, HF-07 and
 HF-20, and one is not: HF-08 is `rewake inbox` with no arguments, a read of
 everything waiting, which this scenario never runs and could not — a read-all would
 consume the members whose separate reads it asserts.

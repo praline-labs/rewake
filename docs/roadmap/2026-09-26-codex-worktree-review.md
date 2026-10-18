@@ -133,7 +133,7 @@ closed. What it found, fixed in the same change as the refusal by words:
 - **A session started with `-C <checkout>` from elsewhere is not seen by rm**: it
   registers the wrapper's directory. Not fixed; written down in
   [launch.md](../launch.md#a-worktree-for-a-launch) and queued with `claude -w`, which
-  has the same gap ([work-queue.md](../work-queue.md#also-queued-not-scheduled)).
+  has the same gap ([work-queue.md](../archive/work-queue.md#also-queued-not-scheduled)).
 - **A dangling link as the worktree root**, pointing into the repository, failed at
   `mkdir` with exit 1 instead of being refused with 2. The root's links are followed
   now even when their target does not exist yet.

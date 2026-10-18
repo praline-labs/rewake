@@ -2,7 +2,7 @@
 
 The intermittent bug of September 24, a harness stopped from outside running on while
 its wrapper stayed stopped, had a suspected cause and no confirmation
-([intermittent-bugs.md](../intermittent-bugs.md#a-stopped-harness-leaves-its-wrapper-stopped--fixed-september-26-2026)).
+([intermittent-bugs.md](../archive/intermittent-bugs.md#a-stopped-harness-leaves-its-wrapper-stopped--fixed-september-26-2026)).
 A read-only health review of the code on September 26 confirmed it with a probe, and
 the fix followed.
 

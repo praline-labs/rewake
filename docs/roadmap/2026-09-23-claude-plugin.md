@@ -9,7 +9,7 @@ review-claude's research of the same day found that a function-hooks plugin does
 it: `turn.complete` with reason `aborted`
 ([research-claude-control.md](../research-claude-control.md#what-a-function-hooks-plugin-hears)).
 
-**What was built** ([claude-plugin.md](../claude-plugin.md)):
+**What was built** ([claude-plugin.md](../archive/1.x/claude-plugin.md)):
 
 - The wrapper writes the plugin beside its telemetry socket for each run and passes
   `--plugin-dir` and `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1` for that launch only; the
@@ -34,7 +34,7 @@ it: `turn.complete` with reason `aborted`
 and the module run under node with events that throw on a read of conversation text.
 The Claude Code fixture now loads the plugin as the harness does, stricter than it, and
 runs the module; the workflow case `claude-interrupted` and its three mutant controls
-are described in [testing.md](../testing-plugin.md#claude-code-interruptions).
+are described in [testing.md](../archive/1.x/testing-plugin.md#claude-code-interruptions).
 
 A Claude Code run now keeps a read clock for its whole life, as a Codex run always has,
 so that an interruption's report is bounded by what was read when it was heard. Its
@@ -80,7 +80,7 @@ harness, in a private HOME with a stand-in API, and found the plugin silent ther
   key by key, the person's own entries kept — is in
   [research-claude-control.md](../research-claude-control.md#built-in-plugins-and-what-the-switch-adds);
   `pluginUsage` for `rewake@inline` turned out to come from `--plugin-dir`, not from the
-  switch ([claude-plugin.md](../claude-plugin.md#limits)).
+  switch ([claude-plugin.md](../archive/1.x/claude-plugin.md#limits)).
 
 **Accepted live**, September 24, 2026: the owner pressed Esc and then Ctrl+C at the
 keyboard, each during a task write-claude held from main, on Claude Code 2.1.280 with
@@ -88,7 +88,7 @@ rewake built from `d97da91`; each gave main a `stopped` and both tasks stayed aw
 The Ctrl+C's arrived at most 5 s after its task was sent, the turn's start included; the
 Esc's has no bound, since the keypress time is unknown. HF-06 is **live** on Claude
 Code; the observation and its limits are in
-[harness-features.md](../harness-features.md#capability-map).
+[harness-features.md](../archive/harness-features.md#capability-map).
 
 **What stays open.**
 
@@ -101,4 +101,4 @@ Code; the observation and its limits are in
 - The plugin's `turn.start` is not yet recorded as a turn start for `rewake pending`;
   UserPromptSubmit still is.
 - Stage 2, acting on the session, is not scheduled
-  ([work-queue.md](../work-queue.md)).
+  ([work-queue.md](../archive/work-queue.md)).

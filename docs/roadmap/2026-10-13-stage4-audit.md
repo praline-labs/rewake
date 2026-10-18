@@ -3,11 +3,11 @@
 Stage 4 opens with an audit of what the installed Claude Code and a mod already give, before
 the probe and before any adapter code (the owner's decision of October 12, 2026). Written on
 October 13, 2026, on Claude Code 2.1.296 with the `mods` skill of the same version, on branch
-`s4-audit` from `v2` at `d0091d6`: [stage4-audit.md](../v2/stage4-audit.md), its rows in
-[stage4-audit-rows.md](../v2/stage4-audit-rows.md) and
-[stage4-audit-rows-space.md](../v2/stage4-audit-rows-space.md), and the dated readings of pi
+`s4-audit` from `v2` at `d0091d6`: [stage4-audit.md](../archive/v2/stage4-audit.md), its rows in
+[stage4-audit-rows.md](../archive/v2/stage4-audit-rows.md) and
+[stage4-audit-rows-space.md](../archive/v2/stage4-audit-rows-space.md), and the dated readings of pi
 ([stage4-reading-pi.md](../v2/stage4-reading-pi.md)) and Codex
-([stage4-reading-codex.md](../v2/stage4-reading-codex.md)) it folds in. Documents only: no
+([stage4-reading-codex.md](../archive/v2/stage4-reading-codex.md)) it folds in. Documents only: no
 code changed, and the audit's writer ran nothing live.
 
 ## What the audit found
@@ -43,7 +43,7 @@ All of October 13, 2026, each written where it applies:
   Code with pi.
 - The space is stage 4's target: main creates a pseudo-terminal rewake owns, shown as a tab
   in its Claude Code, a worktree may be made in it, and a worker is seated there
-  ([the target](../v2/stage4-audit.md#the-target-a-space)); main may create spaces and seat
+  ([the target](../archive/v2/stage4-audit.md#the-target-a-space)); main may create spaces and seat
   workers in them, with the limits designed in stages 4 and 6.
 - The worktree's lifecycle goes whole to Claude Code, even with another harness inside: a
   Claude Code worker makes its own, and a worker of another harness is seated in a checkout a

@@ -86,7 +86,7 @@ lands and finishes it, and that a Claude Code launch gets the same worktree.
   research-launch.md to [research-worktree.md](../research-worktree.md).
 - Codex's own worktree, read in the 0.155.1 and 0.157.1 sources, carries nothing
   beyond the commit and runs no preparation; setup at creation is the desktop
-  application's ([research-codex.md](../research-codex.md#--worktree-with-a-remote-terminal)).
+  application's ([research-codex.md](../archive/research-codex.md#--worktree-with-a-remote-terminal)).
 
 Records written before this day name no branch; land refuses them, and the code that
 tells them apart carries a legacy mark ([legacy.md](../legacy.md)).
@@ -176,7 +176,7 @@ The acceptance run also confirmed live, on Codex 0.155.1 and 0.157.1: trust and
 leaves the worker's index, HEAD and files as they were; finish with the worker running
 refuses with exit 1 before landing; no git variable reaches Codex; and a conversation
 begun in a checkout resumes there
-([research-codex.md](../research-codex.md#--worktree-with-a-remote-terminal)), which
+([research-codex.md](../archive/research-codex.md#--worktree-with-a-remote-terminal)), which
 closes the item queued for it.
 
 ## What stays open

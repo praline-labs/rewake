@@ -2,7 +2,7 @@
 
 **Design, not built; open choices at the end.** A worker that asks its harness for a permission nobody at its
 keyboard will give stops the task, and main is not told
-([work-queue.md](work-queue.md#now-after-100)). This is the contract for holding such a
+([work-queue.md](archive/work-queue.md#now-after-100)). This is the contract for holding such a
 request while main decides, on both harnesses, and falling back to a refusal that names
 the next step when main does not answer in time. Nothing here is code; the facts it rests
 on are marked with where they were seen, with file and line in
@@ -29,7 +29,7 @@ On September 28, 2026 the owner decided:
 
 1. The harness raises a permission request it would put to the person.
 2. The worker's wrapper decides at once what it can: a write inside a grant is allowed as
-   today ([grants-claude.md](archive-1.x/grants-claude.md)); a request reserved for the person
+   today ([grants-claude.md](archive/1.x/grants-claude.md)); a request reserved for the person
    ([what goes to the owner](#what-goes-to-the-owner)) is left to the person, and main is
    told of it; everything else is **held**.
 3. A held request goes to the room's current verified main as a letter of the new kind

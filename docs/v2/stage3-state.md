@@ -3,7 +3,7 @@
 How S17 builds what [design-state.md](design-state.md) decided: the state root `v2/` and
 its inverse, what is a writer, one build per room, the run directory, and the measurement
 of the hash. Clearing the state of 1.x is in [stage3-upgrade.md](stage3-upgrade.md), the
-tests of each decision in [stage3-state-tests.md](stage3-state-tests.md).
+tests of each decision in [stage3-state-tests.md](../archive/v2/stage3-state-tests.md).
 Citations are to `ab8d752` (S16 landed). The Codex side's readiness review of October 11,
 2026, adopted by main on October 12 with its decisions D1–D12, corrected this plan; the
 corrections are written in here, not kept beside it.
@@ -28,7 +28,7 @@ an installed 1.x writer that does not honour the lease is no safe coexistence.
 3. **The roots**: `Base`, `Root`, `RoomDir` under `v2/`, the checked inverses, resolvers
    that create nothing; view mode on, with `ErrViewWrite`, now that every view path is
    repaired. Every path oracle of the tests is corrected here.
-4. **The run directory** and the lifetime of what it holds ([stage3-rundir.md](stage3-rundir.md)),
+4. **The run directory** and the lifetime of what it holds ([stage3-rundir.md](../archive/v2/stage3-rundir.md)),
    closing L3 with its qualification.
 5. **Ordinary writes through the seam**: files, the name, mailbox, receipt and control
    locks, the tagged callbacks, with S3's and S15's lock and publication order kept.
@@ -207,7 +207,7 @@ take the same mailbox again there.
 A static test over `internal/`, in all four build variants, fails on a write outside
 `infra/state` — a direct call, an alias, a function value, a descriptor's mode or owner, a listen not proven abstract — except in its own table of
 file, effect and reason, which fails on a stale entry; what it reads and excuses is in
-[stage3-state-tests.md](stage3-state-tests.md#stage-3-the-tests-of-state-and-builds), with the
+[stage3-state-tests.md](../archive/v2/stage3-state-tests.md#stage-3-the-tests-of-state-and-builds), with the
 worktree's writes beside a checkout the main class. A refusal for want of a lease is
 counted (`state.NoLeaseRefusals`), so a swallowed one still shows in the tests. The same
 lease rule covers `tools/` and `test/`, which call the CLI; where a driver there writes a room
@@ -284,7 +284,7 @@ retry among them, are workers of the run, and the run keeps its own hold on the 
 (`build.Lease.Keep`, beside the caller's) until the last of them has returned. Their
 stops wait only so long, so a write stalled in the filesystem does not hold the
 wrapper's exit: `Run` may return first, and the lease then goes when that worker ends,
-or with the process, and the run's directory with it ([stage3-rundir.md](stage3-rundir.md);
+or with the process, and the run's directory with it ([stage3-rundir.md](../archive/v2/stage3-rundir.md);
 `TestRunKeepsTheLeaseAndItsDirectoryUntilItsWorkersStop`,
 `TestALiveSetWritesNothingAfterItsStop`, `TestAStoppedWorkerCountsUntilItsLastWrite`). A
 decision asked from below the wrapper (S18) is a worker admitted under that count, none
@@ -356,12 +356,12 @@ needs more than a room's lease — renaming trees under the base and locking
 ## The run directory
 
 The directory of one run, what it holds and when it goes, with the qualified
-guarantee of its removal, are in [stage3-rundir.md](stage3-rundir.md).
+guarantee of its removal, are in [stage3-rundir.md](../archive/v2/stage3-rundir.md).
 
 ## The tests
 
 Each decision is held by a test that fails on a mutant of it; the tests, by area and
-commit, and the oracles kept are in [stage3-state-tests.md](stage3-state-tests.md).
+commit, and the oracles kept are in [stage3-state-tests.md](../archive/v2/stage3-state-tests.md).
 
 ## The cost of the hash
 
@@ -377,7 +377,7 @@ disabled in a test build, the lease and the I/O otherwise equal, the two builds 
 separate rooms: median and 95th percentile, exit codes checked, the raw samples kept, with
 the artifact's size, id and build flags and whether the advice succeeded. No production
 flag turns the hash off. Measured on October 12, 2026 on commit `8e4d46b`
-([stage3-s17-evidence.md](stage3-s17-evidence.md#the-cost-of-the-hash), raw samples
+([stage3-s17-evidence.md](../archive/v2/stage3-s17-evidence.md#the-cost-of-the-hash), raw samples
 there): the hash of the 8.6 MB build took a median of 2.76 ms warm (p95 3.79 ms) and
 4.02 ms with none of its pages resident (p95 4.85 ms); `rewake pending` took a median of
 20.62 ms with it and 18.66 ms without, warm, and 28.38 ms and 25.22 ms with the binaries'

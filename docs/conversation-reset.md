@@ -104,7 +104,7 @@ screen and sends `sessionStartSource: "clear"` (`tui/src/app/event_dispatch.rs:3
 The field has two values, `startup` and `clear` (`app-server-protocol/src/protocol/v2/thread.rs:50`).
 Both commands are refused while a task runs (`tui/src/slash_command.rs:241`, `:260`;
 `:208`, `:226` in 0.155.1), seen live for `/new` on 0.155.1
-([research-codex-live-checks.md](research-codex-live-checks.md)).
+([research-codex-live-checks.md](archive/research-codex-live-checks.md)).
 
 **Nothing else can make the terminal switch.** The terminal changes its thread only
 inside the handling of its own request's reply. A `thread/started` for a thread it does
@@ -149,7 +149,7 @@ The same on both harnesses unless said.
   settles them, marked `threadChanged` with the line "the reader's thread changed after
   delivery" (`internal/core/mail/thread.go`, `turn_reports.go`). On Codex seen live on
   0.155.1 ([record](roadmap/2026-09-26-live-checks.md)); on Claude Code it passes the
-  fixture case only (HF-10 in [harness-features.md](harness-features.md)). The model in
+  fixture case only (HF-10 in [harness-features.md](archive/harness-features.md)). The model in
   the new conversation does not know the task, so that report answers other work.
 - **Grants.** A grant records the conversation it went into
   (`internal/core/grant/authority/grantauth.go`), and a resume restores it only into that one

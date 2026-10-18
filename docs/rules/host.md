@@ -6,7 +6,7 @@ the launch aliases and the endpoint the adapters reach
 ([design.md](../v2/design.md#the-layout)). Its rules have no numbers of their own: they
 are the 1.x rules of [launch.md](../launch.md) and [delivery.md](../delivery.md) the
 wrapper carries, and each block below names the tests that hold them
-([stage3-tests-tcl.md](../v2/stage3-tests-tcl.md#the-host)). The tests are in
+([stage3-tests-tcl.md](../archive/v2/stage3-tests-tcl.md#the-host)). The tests are in
 `internal/host` since S16 moved them there from `internal/wrap`.
 
 ## The wrapper

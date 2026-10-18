@@ -5,8 +5,8 @@ and what it does not, how to run it, how to read what comes out, how to check a 
 harness version before updating, and how to extend the suite. It describes the code as
 it is. For depth it links to the documents where each decision was argued:
 [check-runner.md](check-runner.md) for the evidence contract,
-[check-runner-proposal.md](check-runner-proposal.md) for why the suite has its shape,
-[check-runner-scenarios.md](check-runner-scenarios.md) for each scenario's invariant
+[check-runner-proposal.md](archive/check-runner-proposal.md) for why the suite has its shape,
+[check-runner-scenarios.md](archive/check-runner-scenarios.md) for each scenario's invariant
 and controls, and the roadmap records named below for how each piece was built.
 
 ## The tiers
@@ -73,7 +73,7 @@ fixture nor `state.Fault` can build it, the package that owns the step may carry
 test operations in a file built only under `rewakefault`, and the tests in the other
 package that use them carry the same tag. They run in the `rewakefault,rewakefixture`
 race run; an untagged build has no such operation. The only such file is
-`internal/core/mail/faultops.go`, decided by S15 for `core/mail` ([stage3-moves.md](v2/stage3-moves.md#s15-the-delivery-server-to-hostdelivery-codex)):
+`internal/core/mail/faultops.go`, decided by S15 for `core/mail` ([stage3-moves.md](archive/v2/stage3-moves.md#s15-the-delivery-server-to-hostdelivery-codex)):
 a waiting copy's removal that fails, and the listing of a mailbox's stops observed.
 
 ### Three columns, three meanings
@@ -99,7 +99,7 @@ every registered capability but those its exception table names, each with its r
 and the step that retires it — since S8 none: conversation selection, Codex's own, left
 with it. The summary
 names the column of every result and promotes none; ending the asymmetry is the owner's
-decision, recorded in [harness-features.md](harness-features.md).
+decision, recorded in [harness-features.md](archive/harness-features.md).
 
 ## Running it
 

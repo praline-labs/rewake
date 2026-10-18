@@ -16,7 +16,7 @@ on the session. Part B, the Codex side, followed the same day
 - A focus for a Codex compaction is refused for now: `thread/compact/start` has no field
   for it, and `compact_prompt` replaces the whole prompt for the whole conversation. A
   proper route and an emulation through the conversation's history are to be researched
-  later (September 24; [work-queue.md](../work-queue.md)).
+  later (September 24; [work-queue.md](../archive/work-queue.md)).
 - After an interrupt from main, the Claude Code worker's next rewake notice carries a
   line saying so, once, so that its model sees roughly what Codex's does (September 24).
 - When main asked for a compaction itself with `rewake compact`, it gets no "context
@@ -27,7 +27,7 @@ on the session. Part B, the Codex side, followed the same day
 **The research.** review-claude probed Claude Code 2.1.280 live against a stand-in API
 and read the binary and the Codex schemas the same morning; the facts are in
 [research-claude-actions.md](../research-claude-actions.md#compaction-abort-polling) and
-[research-protocol.md](../research-protocol.md#compaction-and-interrupt-on-request):
+[research-protocol.md](../archive/research-protocol.md#compaction-and-interrupt-on-request):
 
 - `$.session.compact()` or `({ instructions })` compacts an idle session, runs the
   plugin event `session.compact` and the hooks `PreCompact`, `SessionStart` with source
@@ -65,7 +65,7 @@ and read the binary and the Codex schemas the same morning; the facts are in
   wrapper's directory, and the module under node against a strict host.
 
 Part A2 is the workflow case `claude-steered` with seven product mutants
-([testing-plugin.md](../testing-plugin.md#steering-a-session)). For it the fixture's
+([testing-plugin.md](../archive/1.x/testing-plugin.md#steering-a-session)). For it the fixture's
 plugin host now serves `$.clock.every`, `$.fs`, `$.session.compact` and `$.turn.abort`
 as strictly as 2.1.280, the last two through a channel back to the session, which
 compacts with the harness's hooks or ends a turn it holds open. The seven mutants
@@ -226,7 +226,7 @@ private HOME against the stand-in API, a main and a worker started through rewak
 
 - Part B, the Codex side: the wrapper serves the same directory, refuses a compaction
   itself while a turn runs or a `turn/start` is in flight, and sends
-  `thread/compact/start` and `turn/interrupt` ([work-queue.md](../work-queue.md#then-stage-2-of-the-plugin-the-rest)).
+  `thread/compact/start` and `turn/interrupt` ([work-queue.md](../archive/work-queue.md#then-stage-2-of-the-plugin-the-rest)).
 - A focus for a Codex compaction, to be researched as the owner decided.
 - An asker killed outright with SIGKILL cannot withdraw its request: a target stalled at
   that moment carries it out when it resumes, telling nobody
@@ -235,7 +235,7 @@ private HOME against the stand-in API, a main and a worker started through rewak
   harness the wrapper stays stopped while the harness runs again, and by its state it
   would deliver no mail until someone continues it; the wrapper's own `SIGCONT` to the
   harness is the likelier cause
-  ([intermittent-bugs.md](../intermittent-bugs.md)).
+  ([intermittent-bugs.md](../archive/intermittent-bugs.md)).
 - The fixture's threshold for "Not enough messages to compact" is its own, and a focus
   reaching the summary request is shown only live; the workflow case says so.
 - A typed `/compact` refused as "Not enough messages" leaves `compacting` set until the

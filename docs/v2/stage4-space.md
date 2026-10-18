@@ -8,7 +8,7 @@ record of the hosted launch, the record and the reasoning behind them.
 
 The design of stage 4's first end to end, written October 13, 2026 on branch
 `s4-space-design`, for review before any code. It rests on the owner's target
-([stage4-audit.md](stage4-audit.md#the-target-a-space)), the owner's answers 7–9
+([stage4-audit.md](../archive/v2/stage4-audit.md#the-target-a-space)), the owner's answers 7–9
 ([design.md](design.md#the-owners-answers)), the owner's decisions of the same day
 recorded below, and the probe's records on Claude Code 2.1.296
 ([research-claude-mod.md](../research-claude-mod.md)). Its rules, tests, build steps and open
@@ -89,7 +89,7 @@ its path in the harness's environment, `REWAKE_MOD_SOCKET`, and the mod reads it
 
 **Who answers.** Main's wrapper, through `modhost`, while the wrapper stays — until a
 replacement authority contract is accepted the mod's join is not in this step
-([stage4-audit.md](stage4-audit.md#a-what-the-wrapper-does-today-and-whether-the-mod-can-take-it-over)).
+([stage4-audit.md](../archive/v2/stage4-audit.md#a-what-the-wrapper-does-today-and-whether-the-mod-can-take-it-over)).
 A worker's wrapper answers its own mod the same way. Each request is checked on its own: the
 peer of the connection, by `SO_PEERCRED`, must be the harness process the wrapper started,
 alive with its start time before and after the answer — the check the endpoint already makes

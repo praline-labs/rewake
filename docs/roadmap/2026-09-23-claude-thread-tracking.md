@@ -1,7 +1,7 @@
 # Conversation tracking for Claude Code — September 23, 2026
 
 The owner approved, on September 23, 2026, conversation tracking for Claude Code
-(HF-10, entry 6 of the [parity queue](../harness-features.md#open)). On Codex rewake
+(HF-10, entry 6 of the [parity queue](../archive/harness-features.md#open)). On Codex rewake
 knows which conversation a message was delivered to, and a report from another one —
 after `/new` — carries `threadChanged`, so the sender knows the answer may not be about
 its task and can resend. On Claude Code the field was always absent: nothing recorded

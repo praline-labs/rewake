@@ -89,7 +89,7 @@ kept unchanged at the time; the package holding them was deleted on September 22
 not exercise this mailbox publisher; these defects have deterministic wire and
 cross-package reproductions. Independent re-review passed. By September 19 the
 owner had installed the reviewed startup-repaired build and a short task returned
-an automatic final report. The subsequent [installed primary/side check](gateway-native-evidence.md#installed-primaryside-delivery-acceptance--september-19-2026)
+an automatic final report. The subsequent [installed primary/side check](archive/gateway-native-evidence.md#installed-primaryside-delivery-acceptance--september-19-2026)
 received a primary result while side stayed visible and another after side closed,
 without resume or restart. Side output settled neither task. This accepts those
 report paths without attributing every historical delay or loss to one cause.

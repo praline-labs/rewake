@@ -3,7 +3,7 @@
 Stage 2 of the 2.0 rebuild, written October 5, 2026 on the `v2` branch, for review
 before any code. It rests on the owner's decisions of October 5, 2026 — the nine of the
 plan and the twelve answers to the revision's proposals — and on the accepted revision
-([revision.md](revision.md), commit `8a20bdd`). Every decision names what it rests on
+([revision.md](../archive/v2/revision.md), commit `8a20bdd`). Every decision names what it rests on
 and what is still unknown. The owner answered the questions of the first draft on
 October 5, 2026 ([below](#the-owners-answers)); one is still open. Three later decisions
 of October 13, 2026 follow them there.
@@ -14,9 +14,7 @@ of October 13, 2026 follow them there.
 | [design-api.md](design-api.md) | the adapter API: the capabilities, what the core does without each, the catalogue, minimum versions |
 | [design-rules.md](design-rules.md) | the core rules, restated from 1.x without its migration, and the guarantees bound to every tool transport |
 | [design-claude.md](design-claude.md) | the Claude Code adapter as one mod: tools, turns, telemetry, control, wake, loading, and the stage 4 probe |
-| [design-codex.md](design-codex.md) | Codex: the reserved place, the capabilities it is expected to fill, the pair it must serve |
 | [design-state.md](design-state.md) | the state directory of 2.0, clearing the state of 1.x, one build per room |
-| [design-docs-tests.md](design-docs-tests.md) | how the documents and the tests of 2.0 are laid out |
 
 Where a fact is marked, the marks are those of the recon: **[doc]** official
 documentation, **[live]** seen on a running harness, **[code]** read in the tree at
@@ -70,7 +68,7 @@ tools/  test/workflow/  scripts/
 ```
 
 What each owns, and where 1.x code lands, is in the revision's one-line table
-([revision.md](revision.md#every-part-in-one-line)); the layout above refines it in two
+([revision.md](../archive/v2/revision.md#every-part-in-one-line)); the layout above refines it in two
 places. The endpoint the mod reaches is the host's (it lives as long as the wrapper),
 while what a call means — the descriptor types, binding, parts, the end gate — is
 `tool`'s; the descriptors themselves are built by `cli` from its command table and
@@ -90,7 +88,7 @@ passed down ([design-api.md](design-api.md#tooltransport)).
 | `cli` | `host`, `adapter`, `tool`, `core`, `infra`; never `adapter/catalog` or an adapter |
 | `cmd/rewake` | `cli`, `adapter/catalog` |
 
-Rests on: the layering faults the revision found ([revision.md](revision.md#layering-faults-to-fix)) —
+Rests on: the layering faults the revision found ([revision.md](../archive/v2/revision.md#layering-faults-to-fix)) —
 `cli` importing the Claude adapter in five files, the core naming a harness in three
 places, the global registry filled from `init`.
 
@@ -179,7 +177,7 @@ code.
    ([design-rules.md](design-rules.md#an-operator-decision-on-an-unknown-outcome)).
 5. **No Codex code on `v2` between stages 3 and 5**: the Codex packages leave the `v2`
    tree at stage 3 (they stay on `main` and in history as reference), so the builds of
-   stages 3 and 4 launch Claude Code only ([design-codex.md](design-codex.md#meanwhile)).
+   stages 3 and 4 launch Claude Code only ([design-codex.md](../archive/v2/design-codex.md#meanwhile)).
 6. **A harness version that cannot be read refuses the launch**, saying how it was
    asked; a mod against an unknown API fails silently, which is worse
    ([design-api.md](design-api.md#minimum-versions)).
@@ -229,4 +227,4 @@ Claude Code, and a person reaches a worker's terminal only with `rewake attach`.
     session runs in, not for screenshots. Screen snapshots for tests come from rewake's own
     emulator, `charmbracelet/x/vt`, over a pseudo-terminal. What agent-deck, which runs on
     tmux, teaches for the terminal, the checkouts and screen tests is gathered in
-    [agent-deck-ideas.md](agent-deck-ideas.md).
+    [agent-deck-ideas.md](../archive/v2/agent-deck-ideas.md).

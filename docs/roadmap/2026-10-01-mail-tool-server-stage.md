@@ -3,7 +3,7 @@
 The second of the three stages of [mail-bridge.md](../mail-bridge.md) — the MCP server
 that runs the mail tool outside the sandbox — was built on October 1, 2026 and accepted
 the same day on the Codex side after four acceptance rounds, against rules agreed after
-four review passes of the design ([mail-bridge-server.md](../mail-bridge-server.md),
+four review passes of the design ([mail-bridge-server.md](../archive/1.x/mail-bridge-server.md),
 [mail-bridge-turns.md](../mail-bridge-turns.md),
 [mail-bridge-checks.md](../mail-bridge-checks.md)). No harness starts the server yet:
 its injection at launch is stage M3.
@@ -108,7 +108,7 @@ the build.
 
 - **The window before the capture on Codex**: a turn the app-server starts before the
   gateway reads the last `turn/completed` can commit a read inside that end's boundary;
-  older than stage 2, queued in [work-queue.md](../work-queue.md#now-after-100).
+  older than stage 2, queued in [work-queue.md](../archive/work-queue.md#now-after-100).
 - **The run's limit of 65,536 tickets**: past it every new call of the run is refused,
   rather than a used call forgotten and served twice.
 - **Backpressure on a client that never reads**: while stdin is open and nothing backs

@@ -15,7 +15,7 @@ supply activity. Labels distinguish idle, working, waiting for approval/input,
 not loaded and system error. A known compaction in progress adds `compacting`, and a
 session whose snapshot says its interrupted turns go unheard adds `interruptions
 unheard` — in 1.x a Claude Code session whose plugin did not load
-([claude-plugin.md](archive-1.x/claude-plugin.md#whether-interruptions-are-heard)); no
+([claude-plugin.md](archive/1.x/claude-plugin.md#whether-interruptions-are-heard)); no
 adapter of this build reports it so. Only the gap is named: a session that hears them
 needs no word in a narrow cell, and an adapter that never sets the field would leave a
 column of its own empty for most rows.

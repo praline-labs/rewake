@@ -66,7 +66,7 @@ as its granting main is refused at delivery as before.
 
 What this holds against rests on the peer checks, not on the address being hidden. A
 Codex sandbox with its network on shares the host's network namespace and sees every
-`@rewake` name ([research-codex.md](research-codex.md#the-sandboxs-namespaces)); only
+`@rewake` name ([research-codex.md](archive/research-codex.md#the-sandboxs-namespaces)); only
 with the network off is it cut off from them. So the wrapper checks who is at the other
 end both ways — the pid, the start time and the mount, user and PID namespaces — and the
 namespace check at registration is what keeps a sandbox main started from granting.
@@ -76,7 +76,7 @@ namespace check at registration is what keeps a sandbox main started from granti
 - **A worker inside the Codex sandbox.** Codex runs a command in a mount, user and PID
   namespace of its own, in `workspace-write` and `read-only` alike, and `setsid`, a
   double fork or `nohup` do not change them
-  ([research-codex.md](research-codex.md#the-sandboxs-namespaces)). Its process is below
+  ([research-codex.md](archive/research-codex.md#the-sandboxs-namespaces)). Its process is below
   no wrapper, so it registers nothing; a listener it starts in a run it names itself is
   in other namespaces, so nothing it confirms counts. This is what the scheme is for.
 - **A sandbox main started itself.** A Codex that main runs from its own shell — for a
@@ -99,7 +99,7 @@ namespace check at registration is what keeps a sandbox main started from granti
   hole: such a worker writes wherever the user can anyway, and a grant on Claude Code
   removes prompts rather than draws a line.
 - **A Codex main** cannot grant: its own sandbox refuses `connect()` on a unix socket
-  ([research-permissions.md](research-permissions.md)), so its `rewake send` never
+  ([research-permissions.md](archive/research-permissions.md)), so its `rewake send` never
   reaches its wrapper. `--grant-dir` and `--grant-git` from a Codex main are refused with
   exit 1; before this change `--grant-git` from one was accepted
   ([git-grants.md](git-grants.md)).

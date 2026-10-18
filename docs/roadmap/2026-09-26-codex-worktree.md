@@ -16,7 +16,7 @@ without a model call.
   created and before they connect to any server: ``Error: `--worktree` is only supported
   for local sessions``, exit 1. rewake always starts the terminal with `--remote`, so the
   first route is closed upstream
-  ([research-codex.md](../research-codex.md#--worktree-with-a-remote-terminal)).
+  ([research-codex.md](../archive/research-codex.md#--worktree-with-a-remote-terminal)).
 - **In a local launch the terminal owns the checkout.** It allocates a managed worktree,
   rebuilds its configuration with the checkout as cwd, passes that cwd and the workspace
   roots as ordinary `thread/start` parameters, and afterwards binds the checkout to the
@@ -24,7 +24,7 @@ without a model call.
 - **The protocol would take a checkout made elsewhere.** `ThreadStartParams` has an
   optional `cwd` and `runtimeWorkspaceRoots` and no worktree field, and the server
   applies `cwd` per conversation
-  ([research-protocol.md](../research-protocol.md#where-a-new-conversation-runs)). So
+  ([research-protocol.md](../archive/research-protocol.md#where-a-new-conversation-runs)). So
   the second route is possible — but it is a feature of rewake's own: matching a managed
   worktree means repeating the allocation, its settings, the trust checks and the binding
   to the thread, and following them from version to version.

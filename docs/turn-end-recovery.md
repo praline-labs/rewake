@@ -13,7 +13,7 @@ mailbox (8-stop), and a hold takes a place on the read clock so that a stop afte
 Esc keeps its held answer (7-clock). How a mailbox passed from the builds before the
 journal to it — the cutover, the conversion of their receipts and `rewake settle` — was
 removed in stage 3 of 2.0 and is kept in
-[archive-1.x/protocol-cutover.md](archive-1.x/protocol-cutover.md).
+[archive-1.x/protocol-cutover.md](archive/1.x/protocol-cutover.md).
 
 ## The operation
 
@@ -191,7 +191,7 @@ adoption takes one over (8-reconcile). In order:
 0. Install what the mailbox's operator decisions fixed — a resend's journal, the notes —
    before everything below, stopped or not: recovery writing its own records and
    telling, never a report of the stopped mailbox published or a wait cleared
-   ([stage3-decision-recovery.md](v2/stage3-decision-recovery.md#installing-the-effects)).
+   ([stage3-decision-recovery.md](archive/v2/stage3-decision-recovery.md#installing-the-effects)).
    What it cannot read stops the mailbox as an effect's failure, and no journal runs.
 1. Plan before any effect: read every file of the tree against the list of record
    kinds, then run the remaining steps below as a plan that writes nothing, so what each
@@ -211,7 +211,7 @@ adoption takes one over (8-reconcile). In order:
    The recipient's run, the report's evidence and its writes are read and made in one
    section of the recipient's mailbox lock, which the barrier waits for, bounded, while
    it holds its own; a report to the sender's own name is published inside the lock the
-   barrier already holds ([stage3-publication.md](v2/stage3-publication.md#the-contract)).
+   barrier already holds ([stage3-publication.md](archive/v2/stage3-publication.md#the-contract)).
    A run that ends after that section read it live still gets the letter, once. When
    the wait expires the barrier fails as for any busy mailbox: nothing is written, no
    stop is recorded, the journal stays unfinished with its waits owed, and the next

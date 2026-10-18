@@ -6,7 +6,7 @@ was 85% full and sent it its next task, the compaction ran about 104 seconds, an
 main's wait for the end. The task went into the running compaction, the server refused
 it with `ActiveTurnNotSteerable { turn_kind: Compact }`, and the delivery failed with
 "not retried automatically"; main was told the compaction had failed, and was told
-nothing when it succeeded ([research-codex-live-checks.md](../research-codex-live-checks.md#a-delivery-during-a-long-compaction)).
+nothing when it succeeded ([research-codex-live-checks.md](../archive/research-codex-live-checks.md#a-delivery-during-a-long-compaction)).
 
 ## Why it was lost
 
@@ -51,11 +51,11 @@ or one running past any bound.
   compaction with the 0.155.1 refusal and logs the refusal and the compaction's end. The
   new workflow case `codex-compact-hold` runs a compaction past the start bound and one
   past both, with four product mutants
-  ([testing-plugin.md](../testing-plugin.md#a-long-compaction-on-codex)).
-- Documents: [remote-control-codex.md](../remote-control-codex.md),
+  ([testing-plugin.md](../archive/1.x/testing-plugin.md#a-long-compaction-on-codex)).
+- Documents: [remote-control-codex.md](../archive/1.x/remote-control-codex.md),
   [remote-control.md](../remote-control.md#known-limits),
   [remote-control-letter.md](../remote-control-letter.md),
-  [delivery.md](../delivery.md), [research-codex.md](../research-codex.md),
+  [delivery.md](../delivery.md), [research-codex.md](../archive/research-codex.md),
   [traps.md](../traps.md), the testing documents and the two shortened waits in
   [testing-pool.md](../testing-pool.md#waits-the-suite-shortens).
 
@@ -91,7 +91,7 @@ or one running past any bound.
 - **A compaction that ends while the terminal is away** releases its hold on the
   terminal's return, but main learns its end only at the bound: the resume asks for no
   turns, so nothing says how it ended
-  ([remote-control-codex.md](../remote-control-codex.md)).
+  ([remote-control-codex.md](../archive/1.x/remote-control-codex.md)).
 
 ## Review
 
@@ -122,6 +122,6 @@ for two defects, one gap and three documents; fixed in the next commit.
 - Documents: the letter's bound for a Claude Code compaction is 15 minutes, not "several";
   the terminal's `/compact` sets a mark and holds deliveries the same way, and a repeated
   one is refused for as long as main's runs; the request's own bound. The limits of
-  [remote-control-codex.md](../remote-control-codex.md) moved to
-  [remote-control-codex-limits.md](../remote-control-codex-limits.md) when it passed 400
+  [remote-control-codex.md](../archive/1.x/remote-control-codex.md) moved to
+  [remote-control-codex-limits.md](../archive/1.x/remote-control-codex-limits.md) when it passed 400
   lines.

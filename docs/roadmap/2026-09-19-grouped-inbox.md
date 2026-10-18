@@ -1,6 +1,6 @@
 # Compact tables and grouped inbox — accepted, September 19, 2026
 
-Revision 6 passed independent review and [installed live acceptance](../inbox-acceptance.md).
+Revision 6 passed independent review and [installed live acceptance](../archive/inbox-acceptance.md).
 Ready mail uses native start-or-steer without peek/terminal gating; every notice
 keeps fixed members. Busy input was read between tool calls, the original report
 survived, and a new idle task woke and returned its report. [The contract](../inbox-groups.md)

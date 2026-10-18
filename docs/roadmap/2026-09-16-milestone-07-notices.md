@@ -35,4 +35,4 @@ The run found two things no test had:
   list, so the answering session woke up once more only to read that its answer
   had been read. Messages to a waiting session are now marked as replies.
 
-The review round five findings are recorded in [reviews.md](../reviews.md).
+The review round five findings are recorded in [reviews.md](../archive/reviews.md).

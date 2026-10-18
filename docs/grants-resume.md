@@ -26,7 +26,7 @@ to ask for.
 ## Which conversation a run continues
 
 Each delivery pins the conversation it went into before the task becomes readable
-(`inbox/<name>/threads/<id>`, [delivery.md](archive-1.x/delivery-conversation.md#a-resumed-conversation)). A new
+(`inbox/<name>/threads/<id>`, [delivery.md](archive/1.x/delivery-conversation.md#a-resumed-conversation)). A new
 run learns its own conversation from its harness: on Claude Code in 1.x from the
 session's telemetry (`session_id`, which `--resume` keeps), on Codex from the thread the
 terminal started or resumed. A conversation is a link between runs only through those two; the
@@ -35,7 +35,7 @@ nothing.
 
 A run that continues a conversation takes over what the runs before it owe there: their
 waits for tasks delivered into it move to the new run, which reports on them at its next
-turn end ([delivery.md](archive-1.x/delivery-conversation.md#a-resumed-conversation)). Without that, the task
+turn end ([delivery.md](archive/1.x/delivery-conversation.md#a-resumed-conversation)). Without that, the task
 would be closed by the resume and its grant could never end by a report. A wait is taken
 over within a day of the task being read; past that the task is lost, its sender reads so, and
 main lets its grant go ([delivery-owed.md](delivery-owed.md#what-others-owe-you-rewake-inbox---awaited)).
@@ -118,7 +118,7 @@ directories it is given as `--add-dir`, and no launch gives it any.
 What a cold resume leaves in the thread depends on the terminal's version. On 0.157.1 its
 `thread/resume` carries no roots, and the server restores those the thread last saved; a
 grant given on the thread's first turn was not saved and is lost (live,
-[research-codex.md](research-codex.md#runtime-workspace-roots)). On 0.155.1 the terminal's
+[research-codex.md](archive/research-codex.md#runtime-workspace-roots)). On 0.155.1 the terminal's
 `thread/resume` names roots of its own without the saved grant, so the grant is gone
 before the first notice (live, acceptance by review-codex on September 28, 2026).
 Either way the first notice settles it. At the first notice into a conversation the

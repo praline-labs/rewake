@@ -14,4 +14,4 @@ reported by ending the turn with the result rather than by another send.
 In Codex the notice keeps the 🟢: Codex strips control characters from a user
 message, so a coloured `●` like Claude Code's is not possible there.
 
-Earlier findings and fixes are in the [review history](../reviews.md) and [its later part](../reviews-later.md).
+Earlier findings and fixes are in the [review history](../archive/reviews.md) and [its later part](../archive/reviews-later.md).

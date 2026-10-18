@@ -1,8 +1,8 @@
 # Message delivery
 
-Owned native announcements use the [mailbox output](archive-1.x/native-mailbox.md);
+Owned native announcements use the [mailbox output](archive/1.x/native-mailbox.md);
 actual inbox reads still establish reporting obligations. A separate
-[transient display-only row](archive-1.x/native-mailbox-ui.md) follows a successful ACK on the
+[transient display-only row](archive/1.x/native-mailbox-ui.md) follows a successful ACK on the
 primary TUI; losing that row never retries mail or changes its delivered status.
 
 [Back to the design](design.md).
@@ -205,7 +205,7 @@ copy: a copy goes only beside another that stands, a regular file (a directory o
 symbolic link at its path is none), so an archive into `done/` that
 fails leaves the readable copy where it is for the next pass. The letter may be the
 only proof a publication landed, and retiring that proof is the sweep's alone
-([stage3-publication.md](v2/stage3-publication.md#the-contract)). An accepted finished/error/stopped
+([stage3-publication.md](archive/v2/stage3-publication.md#the-contract)). An accepted finished/error/stopped
 report whose notification fails keeps its readable copy and failed diagnostic,
 with `reportAvailable: true` in its status. Only its waiting copy is removed;
 there is no automatic notice retry. Durable recovery respects this flag, and a
@@ -376,7 +376,7 @@ directory, and `inbox --owed` repeats them, until grants leave the code
 ### A resumed conversation
 
 How a cold resume takes over what an earlier run of the name read and had not reported
-on: [delivery-conversation.md](archive-1.x/delivery-conversation.md#a-resumed-conversation).
+on: [delivery-conversation.md](archive/1.x/delivery-conversation.md#a-resumed-conversation).
 
 ### Owed reports
 

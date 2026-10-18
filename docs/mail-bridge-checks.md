@@ -1,6 +1,6 @@
 # Building and checking the server of the mail tool
 
-The third part of the stage 2 design, beside [mail-bridge-server.md](archive-1.x/mail-bridge-server.md)
+The third part of the stage 2 design, beside [mail-bridge-server.md](archive/1.x/mail-bridge-server.md)
 (the rules and one call) and [mail-bridge-turns.md](mail-bridge-turns.md) (after the
 answer): what the build changes in stage 1, how it is tested without a live harness,
 what stage 3 must still show live, and what the reviews of the rules found and what
@@ -214,7 +214,7 @@ write failing needs Claude Code's prompt hook, and waits for stage 3.
   configuration at launch and at each admitted thread; Claude Code's
   `MAX_MCP_OUTPUT_TOKENS` and `MCP_TOOL_TIMEOUT` are taken per call by the hook, and
   acknowledge a read only once the gate G8 shows them to be the values the harness
-  applies ([mail-bridge-launch.md](archive-1.x/mail-bridge-launch.md#claude-code)). A limit not proven safe
+  applies ([mail-bridge-launch.md](archive/1.x/mail-bridge-launch.md#claude-code)). A limit not proven safe
   leaves that read unacknowledged; the cap is never raised to fit.
 
 ## What the first review found

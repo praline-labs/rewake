@@ -3,7 +3,7 @@
 Split from [research.md](research.md) by subject on September 23, 2026: what reaches a
 running Claude Code session besides a message, and what it lets rewake hear back — an
 interruption, the session's own commands, text put into its input box. The Codex side of
-the same questions is in [research-protocol.md](research-protocol.md#compaction-and-the-terminals-commands-over-the-protocol).
+the same questions is in [research-protocol.md](archive/research-protocol.md#compaction-and-the-terminals-commands-over-the-protocol).
 
 Its facts are records of the versions its sections name. The current mod API is in the `mods`
 skill; read it there before relying on anything here.
@@ -99,7 +99,7 @@ exclude ([project.md](project.md#the-philosophy)).
 
 Probed on September 23, 2026, Claude Code 2.1.280, same setup **[live]**, with the
 event list read in the binary **[source]**. rewake builds its interruption signal on
-this ([claude-plugin.md](archive-1.x/claude-plugin.md)).
+this ([claude-plugin.md](archive/1.x/claude-plugin.md)).
 
 - **Enabling it** takes `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=1` and `--plugin-dir <dir>`
   (or `CLAUDE_CODE_PLUGIN_DIRS`) for one launch. It loads only in a trusted workspace,

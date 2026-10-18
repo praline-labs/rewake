@@ -34,7 +34,7 @@ main's name into the shared state directory, the owner decided:
   at delivery, and nothing on disk counts as proof ([who can grant](#who-can-grant));
 - a Codex main cannot grant for now, `--grant-dir` and `--grant-git` both, since its
   sandbox cannot reach its wrapper; how it could is queued
-  ([work-queue.md](work-queue.md#also-queued-not-scheduled));
+  ([work-queue.md](archive/work-queue.md#also-queued-not-scheduled));
 - no subreaper in the wrapper: the namespace check holds a sandboxed Codex worker, and a
   session run with Codex's legacy Landlock backend, which drops those namespaces, takes
   no grant at all;
@@ -142,7 +142,7 @@ Matched exactly, and granted only with `--grant-dir-broad <the same path>`:
   adapter names what its harness keeps inside a project, and the catalogue adds `.codex`
   and `.agents` for Codex. A checkout keeps its metadata there and a harness its configuration, and
   what reads them next runs what was written. Inside a grant Claude Code's hook kept them
-  with the person in 1.x ([grants-claude.md](archive-1.x/grants-claude.md)); granted as the
+  with the person in 1.x ([grants-claude.md](archive/1.x/grants-claude.md)); granted as the
   root, or below one, nothing inside would, so the grant names them. The metadata `--grant-git` adds beside
   a granted checkout is what that flag is for, and passes the hard tier alone;
 - each `~/.config/<app>` with a `credentials` file directly inside. Writing there does
@@ -260,7 +260,7 @@ directory granted inside it, and is not journaled or taken back there.
 
 At least until the task is reported on, and in practice until the next delivery after the
 report into the conversation it was granted in. It ends earlier in two ways the owner accepted, both observed live on Codex 0.155.1
-and 0.157.1 ([research-codex.md](research-codex.md#runtime-workspace-roots)):
+and 0.157.1 ([research-codex.md](archive/research-codex.md#runtime-workspace-roots)):
 
 - a person's own turn in the terminal sends only the launch directory, which replaces the
   roots and drops the grant; rewake records it as dropped when it comes to take it back;
@@ -304,7 +304,7 @@ Claude Code has no sandbox, so in 1.x a grant went through its permission hooks:
 `grant-hook` asked the worker's wrapper, which kept the confirmed grants in memory; the
 first file-tool write inside a grant added its root as a working directory, `.git` and
 the harness directories inside it stayed with the person, and after the report a forced
-question took the root out ([grants-claude.md](archive-1.x/grants-claude.md)). The hooks,
+question took the root out ([grants-claude.md](archive/1.x/grants-claude.md)). The hooks,
 the keeper in the worker's wrapper and the hidden command left in S9, October 11, 2026.
 A grant rides only on a task, and a task to a Claude Code session is refused in this
 build; stage 6 designs how a grant reaches Claude Code again.

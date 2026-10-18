@@ -23,7 +23,7 @@ unknown. The first pattern that matches a path is its kind.
 | `.lock` | the mailbox lock | nothing: it says nothing |
 | `stops/<key>/<occurrence>`, `.resolved`, `.told` | an occurrence of a stop's cause; its resolution; that main was told | by the stop itself, below |
 | `decisions/<report>.told-recipient`, `.told-main` | that a decision's note was told to the recipient run, to main's | a told record that names an answer which tells a note |
-| `decisions/<report>.durable` | that a decision was flushed whole before any effect it fixed ([stage3-decision-recovery.md](v2/stage3-decision-recovery.md#installing-the-effects)) | a marker that names the decision beside it |
+| `decisions/<report>.durable` | that a decision was flushed whole before any effect it fixed ([stage3-decision-recovery.md](archive/v2/stage3-decision-recovery.md#installing-the-effects)) | a marker that names the decision beside it |
 | `decisions/<report>.closed` | that a decided report's obligation was closed by its journal's tail ([stage3-decision.md](v2/stage3-decision.md)) | a closure for the report its name says |
 | `decisions/<report>` | an operator decision on a report whose outcome is unknown | a decision that holds together and names the report and mailbox its place says |
 | `<id>.json`, `unread/<id>.json`, `done/<id>.json` | a letter | a message |
@@ -39,7 +39,7 @@ unknown. The first pattern that matches a path is its kind.
 | `once/<run>/<id>` | a publication mark | `intent` or `published` |
 | `threads/<id>`, `claims/<id>` | a delivery thread; a read in parts that claimed a letter | readable |
 | `receipts/<run>/.<token>.lock`, `key-*`, `<token>.json` | a call's receipt lock, key and receipt | nothing; a token; a receipt that says what its place says |
-| `receipts/<run>/calls/<call>` | the operation a tool call holds, by its native call ([mail-bridge-server.md](archive-1.x/mail-bridge-server.md)) | a token whose receipt is in the same run |
+| `receipts/<run>/calls/<call>` | the operation a tool call holds, by its native call ([mail-bridge-server.md](archive/1.x/mail-bridge-server.md)) | a token whose receipt is in the same run |
 
 A file named `.tmp-*`, in any directory, is a write that never finished
 (`state.WriteAtomic`), never a record.
@@ -182,7 +182,7 @@ paths; once it reads, the occurrence is closed.
   completion, or the journal is on record as completed. A barrier that was canceled,
   whose effect failed, or that met another cause has not. One the installation of
   operator decisions met (operation `.install`) is resolved once that installation has
-  nothing left it could fail on ([stage3-decision-recovery.md](v2/stage3-decision-recovery.md#installing-the-effects)).
+  nothing left it could fail on ([stage3-decision-recovery.md](archive/v2/stage3-decision-recovery.md#installing-the-effects)).
 - An occurrence a valid operator decision disposes — naming it exactly, about its own
   report — is no longer open, and protects nothing; the decision closes the report's step
   in its journal ([stage3-decision.md](v2/stage3-decision.md)).

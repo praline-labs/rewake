@@ -29,4 +29,4 @@ TOML through two review rounds and was removed. The format was not the problem;
 writing the parser was.
 
 Open: parsing the Codex configuration with the same library instead of looking for a
-mention of a key in the file's text, queued in [work-queue.md](../work-queue.md).
+mention of a key in the file's text, queued in [work-queue.md](../archive/work-queue.md).
