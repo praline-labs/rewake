@@ -203,6 +203,22 @@ func buildGroups(catalog adapter.Catalog) []Group {
 				Access:  changeForm,
 				Handler: handleInterrupt,
 			},
+			{
+				Name:           "answer",
+				Args:           "<name> <request> <choice>...",
+				MaxPositionals: Variadic,
+				Summary:        "Answer a worker's permission request or question, as its notify names them.",
+				Options:        []Option{jsonOption},
+				Examples:       []string{"rewake answer worker 3f9a once", "rewake answer worker 3f9a session", "rewake answer worker 3f9a refuse \"not on this branch\"", "rewake answer worker 3f9a 2", "rewake answer worker 3f9a 1,3", "rewake answer worker 3f9a \"use the staging database\""},
+				Next:           []string{"rewake inbox"},
+				Notes: []string{
+					"A worker that asks for a permission or asks a question at its screen leaves main a notify: the tool and its input or the question, the choices, the deadline and this command. The request waits two minutes; a person at the worker's screen may answer first, and with no answer by the deadline the worker is refused and told to end with rewake pending.",
+					"A permission takes once (this call), session (this exact call for the rest of the worker's run) or refuse, with a reason after it that the worker's model reads. A question takes the numbers of its options, several as 1,3 where it allows several, or any other text as the answer typed under Other; with several questions, one quoted word each.",
+					"Only main answers. Waits up to 5 seconds for the worker to take the answer and up to 15 more for it to confirm; exit 0 taken; 1 refused (no such request, not a choice, answered first at the screen, past its deadline, not answering, another request in flight) or not confirmed; 2 a wrong call.",
+				},
+				Access:  changeForm,
+				Handler: handleAnswer,
+			},
 		},
 	}
 

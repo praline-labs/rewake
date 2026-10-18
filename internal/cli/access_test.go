@@ -66,6 +66,8 @@ func documentedForms(launch string) []formCase {
 		{[]string{"retry", "0123456789abcdef01234567"}, change},
 		{[]string{"compact", "api"}, change},
 		{[]string{"interrupt", "api"}, change},
+		{[]string{"answer", "api", "3f9a", "once"}, change},
+		{[]string{"answer", "api", "3f9a", "refuse", "not", "now", "--json"}, change},
 		{[]string{"worktree", "rm", "fix-login"}, change},
 		{[]string{"worktree", "land", "fix-login", "--into", "release"}, change},
 		{[]string{"worktree", "finish", "fix-login"}, change},
