@@ -28,6 +28,20 @@ const (
 	// PathModControl acknowledges a control request or reports its final outcome. Asked
 	// ControlReply, answered Done.
 	PathModControl = "/v1/mod/control"
+	// PathAskOpen opens a permission request or a question of a worker's run for main to answer
+	// (docs/permission-requests.md): the host leaves main a notify naming it and answers its id;
+	// 409 says the run is no worker or the room has no main to ask, and the question stays the
+	// person's at the screen. Asked AskOpenRequest, answered AskOpenAnswer.
+	PathAskOpen = "/v1/ask/open"
+	// PathAskPoll is a long poll of an open request: answered with main's answer once main gives
+	// it, or once the request is settled or past its deadline, or after maxWaitSeconds less five
+	// as pending; 404 names a request this run does not hold. Asked AskPollRequest, answered
+	// AskPollAnswer.
+	PathAskPoll = "/v1/ask/poll"
+	// PathAskSettle ends an open request with the answer that came first, which main's waiting
+	// rewake answer hears; 404 names a request this run does not hold. Asked AskSettleRequest,
+	// answered Done.
+	PathAskSettle = "/v1/ask/settle"
 	// PathWorkersList lists the workers of the spaces this run opened that are not over, for the
 	// workers' pane (docs/v2/workers-panel.md); served only to a run that hosts spaces, 404
 	// otherwise. Asked WorkersRequest, answered WorkersAnswer.
@@ -72,6 +86,140 @@ const (
 	// withdrawn.
 	AliveLapseSeconds = 30
 )
+
+// AskKind is what a request asks: a permission for a call, or the model's own question.
+type AskKind string
+
+// The values of AskKind.
+const (
+	AskKindPermission AskKind = "permission"
+	AskKindQuestion   AskKind = "question"
+)
+
+// AskOpenRequest is a request to open: what the harness's question dialog shows, and for a
+// permission the call it is about.
+type AskOpenRequest struct {
+	// LoadID is the admitted load asking.
+	LoadID string `json:"loadId"`
+
+	// Call is the question tool call the dialog belongs to.
+	Call string `json:"call"`
+
+	// Kind is what the request asks.
+	Kind AskKind `json:"kind"`
+
+	// Tool is a permission's tool, as the model names it.
+	Tool *string `json:"tool,omitempty"`
+
+	// Input is a permission's call arguments as JSON text, cut by the mod to what a body takes.
+	Input *string `json:"input,omitempty"`
+
+	// Cwd is the directory the worker runs in.
+	Cwd *string `json:"cwd,omitempty"`
+
+	// Questions are the dialog's questions; a permission's one question has its three choices.
+	Questions []AskQuestion `json:"questions"`
+}
+
+// AskQuestion is one question of a dialog.
+type AskQuestion struct {
+	// Question is the question's text, which an answer is keyed by.
+	Question string `json:"question"`
+
+	// Header is the question's short label.
+	Header *string `json:"header,omitempty"`
+
+	// MultiSelect says several options may be chosen.
+	MultiSelect *bool `json:"multiSelect,omitempty"`
+
+	// Options are the question's options, in order.
+	Options []AskOption `json:"options"`
+}
+
+// AskOption is one option of a question.
+type AskOption struct {
+	// Label is the option's label, which an answer names.
+	Label string `json:"label"`
+
+	// Description says what the option means.
+	Description *string `json:"description,omitempty"`
+}
+
+// AskOpenAnswer is an opened request.
+type AskOpenAnswer struct {
+	// ID is the request's id, which main's answer names.
+	ID string `json:"id"`
+
+	// LifetimeMs is how long the request waits for an answer from now, in milliseconds.
+	LifetimeMs int `json:"lifetimeMs"`
+}
+
+// AskPollRequest asks what became of an open request.
+type AskPollRequest struct {
+	// LoadID is the admitted load asking.
+	LoadID string `json:"loadId"`
+
+	// ID is the request.
+	ID string `json:"id"`
+}
+
+// AskState is what became of a request: nothing yet, main's answer, settled, or past its
+// deadline.
+type AskState string
+
+// The values of AskState.
+const (
+	AskStatePending  AskState = "pending"
+	AskStateAnswered AskState = "answered"
+	AskStateSettled  AskState = "settled"
+	AskStateExpired  AskState = "expired"
+)
+
+// AskPollAnswer is what became of a request.
+type AskPollAnswer struct {
+	// State is what became of the request.
+	State AskState `json:"state"`
+
+	// Answers are main's answers, one per question, when answered.
+	Answers []AskAnswer `json:"answers,omitempty"`
+
+	// Reason is the reason main gave a refused permission.
+	Reason *string `json:"reason,omitempty"`
+}
+
+// AskAnswer is main's answer to one question.
+type AskAnswer struct {
+	// Question is the question's text.
+	Question string `json:"question"`
+
+	// Answer is the label chosen, the labels chosen joined with a comma and a space, or the text
+	// typed under Other.
+	Answer string `json:"answer"`
+}
+
+// AskWinner is the answer a request was settled with: main's, the person's at the screen, none
+// by the deadline, or none because the call was cut short.
+type AskWinner string
+
+// The values of AskWinner.
+const (
+	AskWinnerMain    AskWinner = "main"
+	AskWinnerLocal   AskWinner = "local"
+	AskWinnerExpired AskWinner = "expired"
+	AskWinnerAborted AskWinner = "aborted"
+)
+
+// AskSettleRequest ends an open request.
+type AskSettleRequest struct {
+	// LoadID is the admitted load settling.
+	LoadID string `json:"loadId"`
+
+	// ID is the request.
+	ID string `json:"id"`
+
+	// Winner is the answer that came first.
+	Winner AskWinner `json:"winner"`
+}
 
 // WorkersRequest asks for the workers.
 type WorkersRequest struct {

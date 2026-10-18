@@ -9,8 +9,10 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/adapter/claude/modhost"
+	"github.com/praline-labs/rewake/internal/core/ask"
 	"github.com/praline-labs/rewake/internal/core/brief"
 	"github.com/praline-labs/rewake/internal/core/registry"
+	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 )
 
@@ -270,6 +272,7 @@ func (claudeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, 
 			Socket: modSocket, Role: request.Role.ID, Record: filepath.Join(request.RunDir, "hello.json"), Wait: harnessWait,
 			ControlDir: request.ControlDir, Epoch: request.Epoch,
 			HostsSpaces: request.Role.Spaces, Live: run.transition, Ended: runEnded,
+			Asked: askedOf(request),
 		})
 		service, live, turns, telemetry = run, run, run, run.server
 		if request.Role.Spaces {
@@ -290,6 +293,18 @@ func (claudeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, 
 		Telemetry:    telemetry,
 		Spaces:       spaces,
 	}, nil
+}
+
+// askedOf tells main of a worker's request: a session of the roles that take
+// work, general and write, asks main rather than wait at a screen nobody may
+// watch; main's own and any other role's requests stay at its screen.
+func askedOf(request adapter.LaunchRequest) func(string, ask.Offer, time.Time) error {
+	if request.Role.ID != role.General.ID && request.Role.ID != role.Write.ID {
+		return nil
+	}
+	return func(id string, offer ask.Offer, deadline time.Time) error {
+		return ask.TellMain(request.RoomDir, request.Name, request.Epoch, id, offer, deadline)
+	}
 }
 
 // runEnded says a run is proven ended, for the mod's question about the

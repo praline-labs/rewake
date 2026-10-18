@@ -59,6 +59,10 @@ func (s *Server) dispatch(ctx context.Context, request control.Request) control.
 		s.mu.Unlock()
 		return control.Answer{Outcome: control.Refused, Reason: control.NotAnswering}
 	}
+	if request.Action == control.Reply {
+		s.mu.Unlock()
+		return s.answerAsk(ctx, request)
+	}
 	if request.Action != control.Compact && request.Action != control.Interrupt {
 		s.mu.Unlock()
 		return control.Answer{Outcome: control.Refused, Detail: "unknown control action"}

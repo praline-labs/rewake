@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter"
+	asking "github.com/praline-labs/rewake/internal/core/ask"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
@@ -50,6 +51,10 @@ type Config struct {
 	// Ended says a run, by its epoch, is proven ended — of another boot, or
 	// its wrapper gone — for mod/ended; nil proves none ended.
 	Ended func(epoch string) bool
+	// Asked tells main of a worker's request the mod opened, by its id, what
+	// it shows and its deadline (asks.go); nil for a run main does not
+	// answer for, whose requests stay the person's at the screen.
+	Asked func(id string, offer asking.Offer, deadline time.Time) error
 }
 
 // Server is the wrapper's end of the mod's protocol for one run. Every
@@ -61,6 +66,7 @@ type Server struct {
 	cfg        Config
 	management management
 	pane       pane
+	asks       *asking.Broker
 
 	mu      sync.Mutex
 	harness adapter.RunProcess
@@ -110,6 +116,7 @@ type Server struct {
 func New(cfg Config) *Server {
 	return &Server{
 		management: management{wake: make(chan struct{}, 1), requests: map[string]*command{}},
+		asks:       asking.NewBroker(),
 		cfg:        cfg, known: make(chan struct{}), stop: make(chan struct{}), served: make(chan struct{}),
 		loads: map[string]bool{}, superseded: map[string]bool{}, ends: map[string]*capture{},
 	}
@@ -340,6 +347,9 @@ func (s *Server) endpoints() map[string]http.HandlerFunc {
 		PathModAlive:      s.alive,
 		PathModState:      s.state,
 		PathModControl:    s.controlReply,
+		PathAskOpen:       s.askOpen,
+		PathAskPoll:       s.askPoll,
+		PathAskSettle:     s.askSettle,
 		PathWorkersList:   s.workersList,
 		PathWorkersScreen: s.workersScreen,
 		PathWorkersKeys:   s.workersKeys,

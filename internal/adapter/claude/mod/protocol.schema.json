@@ -80,6 +80,24 @@
       "answer": {"$ref": "#/$defs/Done"}
     },
     {
+      "path": "ask/open",
+      "description": "opens a permission request or a question of a worker's run for main to answer (docs/permission-requests.md): the host leaves main a notify naming it and answers its id; 409 says the run is no worker or the room has no main to ask, and the question stays the person's at the screen.",
+      "request": {"$ref": "#/$defs/AskOpenRequest"},
+      "answer": {"$ref": "#/$defs/AskOpenAnswer"}
+    },
+    {
+      "path": "ask/poll",
+      "description": "is a long poll of an open request: answered with main's answer once main gives it, or once the request is settled or past its deadline, or after maxWaitSeconds less five as pending; 404 names a request this run does not hold.",
+      "request": {"$ref": "#/$defs/AskPollRequest"},
+      "answer": {"$ref": "#/$defs/AskPollAnswer"}
+    },
+    {
+      "path": "ask/settle",
+      "description": "ends an open request with the answer that came first, which main's waiting rewake answer hears; 404 names a request this run does not hold.",
+      "request": {"$ref": "#/$defs/AskSettleRequest"},
+      "answer": {"$ref": "#/$defs/Done"}
+    },
+    {
       "path": "workers/list",
       "description": "lists the workers of the spaces this run opened that are not over, for the workers' pane (docs/v2/workers-panel.md); served only to a run that hosts spaces, 404 otherwise.",
       "request": {"$ref": "#/$defs/WorkersRequest"},
@@ -105,6 +123,110 @@
     }
   ],
   "$defs": {
+    "AskKind": {
+      "type": "string",
+      "description": "is what a request asks: a permission for a call, or the model's own question.",
+      "enum": ["permission", "question"]
+    },
+    "AskOpenRequest": {
+      "type": "object",
+      "description": "is a request to open: what the harness's question dialog shows, and for a permission the call it is about.",
+      "properties": {
+        "loadId": {"type": "string", "description": "is the admitted load asking."},
+        "call": {"type": "string", "description": "is the question tool call the dialog belongs to."},
+        "kind": {"$ref": "#/$defs/AskKind", "description": "is what the request asks."},
+        "tool": {"type": "string", "description": "is a permission's tool, as the model names it."},
+        "input": {"type": "string", "description": "is a permission's call arguments as JSON text, cut by the mod to what a body takes."},
+        "cwd": {"type": "string", "description": "is the directory the worker runs in."},
+        "questions": {"type": "array", "items": {"$ref": "#/$defs/AskQuestion"}, "description": "are the dialog's questions; a permission's one question has its three choices."}
+      },
+      "required": ["loadId", "call", "kind", "questions"],
+      "additionalProperties": false
+    },
+    "AskQuestion": {
+      "type": "object",
+      "description": "is one question of a dialog.",
+      "properties": {
+        "question": {"type": "string", "description": "is the question's text, which an answer is keyed by."},
+        "header": {"type": "string", "description": "is the question's short label."},
+        "multiSelect": {"type": "boolean", "description": "says several options may be chosen."},
+        "options": {"type": "array", "items": {"$ref": "#/$defs/AskOption"}, "description": "are the question's options, in order."}
+      },
+      "required": ["question", "options"],
+      "additionalProperties": false
+    },
+    "AskOption": {
+      "type": "object",
+      "description": "is one option of a question.",
+      "properties": {
+        "label": {"type": "string", "description": "is the option's label, which an answer names."},
+        "description": {"type": "string", "description": "says what the option means."}
+      },
+      "required": ["label"],
+      "additionalProperties": false
+    },
+    "AskOpenAnswer": {
+      "type": "object",
+      "description": "is an opened request.",
+      "properties": {
+        "id": {"type": "string", "description": "is the request's id, which main's answer names."},
+        "lifetimeMs": {"type": "integer", "description": "is how long the request waits for an answer from now, in milliseconds."}
+      },
+      "required": ["id", "lifetimeMs"],
+      "additionalProperties": false
+    },
+    "AskPollRequest": {
+      "type": "object",
+      "description": "asks what became of an open request.",
+      "properties": {
+        "loadId": {"type": "string", "description": "is the admitted load asking."},
+        "id": {"type": "string", "description": "is the request."}
+      },
+      "required": ["loadId", "id"],
+      "additionalProperties": false
+    },
+    "AskState": {
+      "type": "string",
+      "description": "is what became of a request: nothing yet, main's answer, settled, or past its deadline.",
+      "enum": ["pending", "answered", "settled", "expired"]
+    },
+    "AskPollAnswer": {
+      "type": "object",
+      "description": "is what became of a request.",
+      "properties": {
+        "state": {"$ref": "#/$defs/AskState", "description": "is what became of the request."},
+        "answers": {"type": "array", "items": {"$ref": "#/$defs/AskAnswer"}, "description": "are main's answers, one per question, when answered."},
+        "reason": {"type": "string", "description": "is the reason main gave a refused permission."}
+      },
+      "required": ["state"],
+      "additionalProperties": false
+    },
+    "AskAnswer": {
+      "type": "object",
+      "description": "is main's answer to one question.",
+      "properties": {
+        "question": {"type": "string", "description": "is the question's text."},
+        "answer": {"type": "string", "description": "is the label chosen, the labels chosen joined with a comma and a space, or the text typed under Other."}
+      },
+      "required": ["question", "answer"],
+      "additionalProperties": false
+    },
+    "AskWinner": {
+      "type": "string",
+      "description": "is the answer a request was settled with: main's, the person's at the screen, none by the deadline, or none because the call was cut short.",
+      "enum": ["main", "local", "expired", "aborted"]
+    },
+    "AskSettleRequest": {
+      "type": "object",
+      "description": "ends an open request.",
+      "properties": {
+        "loadId": {"type": "string", "description": "is the admitted load settling."},
+        "id": {"type": "string", "description": "is the request."},
+        "winner": {"$ref": "#/$defs/AskWinner", "description": "is the answer that came first."}
+      },
+      "required": ["loadId", "id", "winner"],
+      "additionalProperties": false
+    },
     "WorkersRequest": {
       "type": "object",
       "description": "asks for the workers.",

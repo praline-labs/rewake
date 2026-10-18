@@ -29,6 +29,18 @@ export const paths = {
   modState: "/v1/mod/state",
   // modControl acknowledges a control request or reports its final outcome.
   modControl: "/v1/mod/control",
+  // askOpen opens a permission request or a question of a worker's run for main to answer
+  // (docs/permission-requests.md): the host leaves main a notify naming it and answers its id;
+  // 409 says the run is no worker or the room has no main to ask, and the question stays the
+  // person's at the screen.
+  askOpen: "/v1/ask/open",
+  // askPoll is a long poll of an open request: answered with main's answer once main gives it,
+  // or once the request is settled or past its deadline, or after maxWaitSeconds less five as
+  // pending; 404 names a request this run does not hold.
+  askPoll: "/v1/ask/poll",
+  // askSettle ends an open request with the answer that came first, which main's waiting rewake
+  // answer hears; 404 names a request this run does not hold.
+  askSettle: "/v1/ask/settle",
   // workersList lists the workers of the spaces this run opened that are not over, for the
   // workers' pane (docs/v2/workers-panel.md); served only to a run that hosts spaces, 404
   // otherwise.
@@ -53,6 +65,9 @@ export interface Endpoints {
   "/v1/mod/ended": { request: EndedRequest; answer: EndedAnswer }
   "/v1/mod/state": { request: StateRequest; answer: Done }
   "/v1/mod/control": { request: ControlReply; answer: Done }
+  "/v1/ask/open": { request: AskOpenRequest; answer: AskOpenAnswer }
+  "/v1/ask/poll": { request: AskPollRequest; answer: AskPollAnswer }
+  "/v1/ask/settle": { request: AskSettleRequest; answer: Done }
   "/v1/workers/list": { request: WorkersRequest; answer: WorkersAnswer }
   "/v1/workers/screen": { request: ScreenRequest; answer: ScreenAnswer }
   "/v1/workers/keys": { request: KeysRequest; answer: Done }
@@ -87,6 +102,101 @@ export const bounds = {
   // withdrawn.
   aliveLapseSeconds: 30,
 } as const
+
+// AskKind is what a request asks: a permission for a call, or the model's own question.
+export type AskKind = "permission" | "question"
+
+// AskOpenRequest is a request to open: what the harness's question dialog shows, and for a
+// permission the call it is about.
+export interface AskOpenRequest {
+  // loadId is the admitted load asking.
+  loadId: string
+  // call is the question tool call the dialog belongs to.
+  call: string
+  // kind is what the request asks.
+  kind: AskKind
+  // tool is a permission's tool, as the model names it.
+  tool?: string
+  // input is a permission's call arguments as JSON text, cut by the mod to what a body takes.
+  input?: string
+  // cwd is the directory the worker runs in.
+  cwd?: string
+  // questions are the dialog's questions; a permission's one question has its three choices.
+  questions: AskQuestion[]
+}
+
+// AskQuestion is one question of a dialog.
+export interface AskQuestion {
+  // question is the question's text, which an answer is keyed by.
+  question: string
+  // header is the question's short label.
+  header?: string
+  // multiSelect says several options may be chosen.
+  multiSelect?: boolean
+  // options are the question's options, in order.
+  options: AskOption[]
+}
+
+// AskOption is one option of a question.
+export interface AskOption {
+  // label is the option's label, which an answer names.
+  label: string
+  // description says what the option means.
+  description?: string
+}
+
+// AskOpenAnswer is an opened request.
+export interface AskOpenAnswer {
+  // id is the request's id, which main's answer names.
+  id: string
+  // lifetimeMs is how long the request waits for an answer from now, in milliseconds.
+  lifetimeMs: number
+}
+
+// AskPollRequest asks what became of an open request.
+export interface AskPollRequest {
+  // loadId is the admitted load asking.
+  loadId: string
+  // id is the request.
+  id: string
+}
+
+// AskState is what became of a request: nothing yet, main's answer, settled, or past its
+// deadline.
+export type AskState = "pending" | "answered" | "settled" | "expired"
+
+// AskPollAnswer is what became of a request.
+export interface AskPollAnswer {
+  // state is what became of the request.
+  state: AskState
+  // answers are main's answers, one per question, when answered.
+  answers?: AskAnswer[]
+  // reason is the reason main gave a refused permission.
+  reason?: string
+}
+
+// AskAnswer is main's answer to one question.
+export interface AskAnswer {
+  // question is the question's text.
+  question: string
+  // answer is the label chosen, the labels chosen joined with a comma and a space, or the text
+  // typed under Other.
+  answer: string
+}
+
+// AskWinner is the answer a request was settled with: main's, the person's at the screen, none
+// by the deadline, or none because the call was cut short.
+export type AskWinner = "main" | "local" | "expired" | "aborted"
+
+// AskSettleRequest ends an open request.
+export interface AskSettleRequest {
+  // loadId is the admitted load settling.
+  loadId: string
+  // id is the request.
+  id: string
+  // winner is the answer that came first.
+  winner: AskWinner
+}
 
 // WorkersRequest asks for the workers.
 export interface WorkersRequest {

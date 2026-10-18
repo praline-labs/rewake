@@ -29,6 +29,9 @@ import (
 const (
 	Compact   = "compact"
 	Interrupt = "interrupt"
+	// Answer gives a worker's open permission request or question main's
+	// answer (docs/permission-requests.md).
+	Reply = "answer"
 )
 
 // Outcomes of a request. A compaction is answered Started once the served
@@ -59,6 +62,10 @@ const (
 	NothingHeld        = "nothing held"
 	NotSelected        = "not the selected conversation"
 	NoSelection        = "no conversation selected"
+	NoRequest          = "no such request"
+	NotAChoice         = "not a choice"
+	AnsweredFirst      = "answered first at the screen"
+	Expired            = "past its deadline"
 )
 
 // Request is what the asker writes. From is the asking session's name: the
@@ -70,6 +77,10 @@ type Request struct {
 	From   string `json:"from"`
 	// Conversation is the one an acceptance names.
 	Conversation string `json:"conversation,omitempty"`
+	// Ask and Choices are an answer's request and the words main typed for
+	// it, read against the request's offer by the served side.
+	Ask     string   `json:"ask,omitempty"`
+	Choices []string `json:"choices,omitempty"`
 }
 
 // Answer is what the served side writes: the outcome, a fixed reason word for
