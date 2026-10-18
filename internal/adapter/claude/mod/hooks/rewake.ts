@@ -13,6 +13,7 @@ import { Outbox, cut, listed, loadKey, newId, nextDelay } from './outbox.ts'
 import type { Host } from './outbox.ts'
 import { Workers, paneId } from './workers.ts'
 import { drawPane } from './pane.ts'
+import { Asks, allowOnce, allowSession, refuseCall } from './asks.ts'
 
 // The harness's reasons, mapped to the protocol's.
 const reasons: Record<string, EndReason> = {
@@ -93,6 +94,7 @@ interface Load {
   heartbeat: Heartbeat
   management: Management
   workers: Workers
+  asks: Asks
   // command registers /workers, for a run that hosts spaces.
   command: () => Promise<void>
   // run is the wrapper's answer to this load's hello: undefined until it
@@ -112,6 +114,7 @@ async function hello(load: Load, request: HelloRequest, delay: number, renumbere
     const answer = await load.host.post(paths.hello, request)
     if (answer.ok) {
       load.run = JSON.parse(answer.text) as HelloAnswer
+      load.asks.role = load.run.role
       load.management.admit(load.run.generation)
       load.heartbeat.begin(load.run.generation)
       if (load.run.hostsSpaces) {
@@ -194,6 +197,7 @@ export const register: Register = (on) => {
           current.workers.opens()
         },
       }, loadId),
+      asks: new Asks(host, loadId),
       command: async () => {
         await $.command.register({ name: 'workers', description: "Show the workers of main's spaces, their screens and keys", immediate: true })
       },
@@ -269,6 +273,49 @@ export const register: Register = (on) => {
     await load.outbox.add(cut(end))
     return done
   })
+
+  // The permission mode the harness reports with its classic events, which an
+  // ask is carried to main in only where the person would be asked
+  // (asks.ts).
+  on('classic.SessionStart', async ($, e, next) => {
+    if (load && e.permission_mode) load.asks.mode = e.permission_mode
+    return next(e)
+  })
+  on('classic.UserPromptSubmit', async ($, e, next) => {
+    if (load && e.permission_mode) load.asks.mode = e.permission_mode
+    return next(e)
+  })
+  on('classic.PostToolUse', async ($, e, next) => {
+    if (load && e.permission_mode) load.asks.mode = e.permission_mode
+    return next(e)
+  })
+
+  // A worker's call the engine would ask the person about is asked as a
+  // question with three choices, which the question bridge below carries to
+  // main too; an exact call allowed for the session passes without asking.
+  // A failure of the bridge refuses the call: nothing has run.
+  on('tool.check', async ($, e, next) => {
+    const verdict = await next(e)
+    if (verdict.decision !== 'ask' || !load?.asks.asking(e)) return verdict
+    const cwd = await $.session.cwd()
+    const key = load.asks.key(cwd, e)
+    if (load.asks.allows(key)) return { decision: 'allow', reason: 'allowed for this session through rewake' }
+    const question = load.asks.permission(cwd, e, key)
+    try {
+      const answer = await $.ui.ask(question, { header: 'Permission', options: [allowOnce, allowSession, refuseCall] })
+      return load.asks.decide(question, answer)
+    } catch {
+      return load.asks.refused(question)
+    }
+  }).catch(($, e, next) => ({ decision: 'deny', reason: 'rewake could not carry this permission request (' + next.error.message + '), so the call was refused.' }))
+
+  // Every question dialog of a worker — a permission's and the model's own —
+  // is opened for main as well, and the first answer wins (asks.ts). A
+  // failure before the dialog opened leaves it to the person.
+  on('tool.call', { tool: 'AskUserQuestion' }, async ($, e, next) => {
+    if (!load?.run || !load.asks.worker()) return next(e)
+    return load.asks.bridge(e, () => next(e), next.signal)
+  }).catch(($, e, next) => (next.called ? { deny: 'rewake could not carry this question (' + next.error.message + ').' } : next(e)))
 
   on('session.measure', async ($, e, next) => {
     const measured = await next(e)
