@@ -70,28 +70,19 @@ func TestTheFirstReportLeavesOutWhatTheExchangeDidNotProve(t *testing.T) {
 	}
 }
 
-// The briefing is built once the exchange has shown whether the tool is
-// live, and handed over once.
-func TestTheBriefingFollowsTheLiveTool(t *testing.T) {
-	for _, withTool := range []bool{true, false} {
-		t.Run(strconv.FormatBool(withTool), func(t *testing.T) {
-			file := filepath.Join(buildtest.Dir(t), "brief")
-			switches := []string{switchBrief + "=" + file}
-			if !withTool {
-				switches = append(switches, switchNo+"="+ToolTransport)
-			}
-			calls := 0
-			setup := func(b *backend) {
-				b.brief = func(tool bool) string { calls++; return "tool=" + strconv.FormatBool(tool) }
-			}
-			if _, err := startConfigured(t, setup, switches...); err != nil {
-				t.Fatal(err)
-			}
-			raw, err := os.ReadFile(file)
-			if err != nil || string(raw) != "tool="+strconv.FormatBool(withTool) || calls != 1 {
-				t.Fatalf("the briefing %q (%v), built %d times", raw, err, calls)
-			}
-		})
+// The briefing is handed over once, after the exchange.
+func TestTheBriefingIsHandedOverOnce(t *testing.T) {
+	file := filepath.Join(buildtest.Dir(t), "brief")
+	calls := 0
+	setup := func(b *backend) {
+		b.brief = func() string { calls++; return "the briefing" }
+	}
+	if _, err := startConfigured(t, setup, switchBrief+"="+file); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(file)
+	if err != nil || string(raw) != "the briefing" || calls != 1 {
+		t.Fatalf("the briefing %q (%v), built %d times", raw, err, calls)
 	}
 }
 
@@ -125,24 +116,5 @@ func TestControlIsCarriedOnlyWhileLive(t *testing.T) {
 				t.Fatalf("the answer %+v, want %+v", answer, want)
 			}
 		})
-	}
-}
-
-// The program's denial of a call of the tool for permission reaches the
-// neutral input, which the channel record takes as a block; without a live
-// transport it is refused.
-func TestADenialReachesTheNeutralInput(t *testing.T) {
-	heard := &toolInput{}
-	_, p := paired(t, adapter.TurnHandler{Tool: heard}, Served...)
-	if answer := p.ask(t, Frame{Op: opToolDenied, Call: "c1"}); !answer.OK {
-		t.Fatalf("the denial: %+v", answer)
-	}
-	if got := heard.events(); !slices.Equal(got, []string{"denied c1"}) {
-		t.Fatalf("heard %q", got)
-	}
-	without := &toolInput{}
-	_, q := paired(t, adapter.TurnHandler{Tool: without}, Wake)
-	if answer := q.ask(t, Frame{Op: opToolDenied, Call: "c1"}); answer.OK || len(without.events()) != 0 {
-		t.Fatalf("a denial without a live transport: %+v %q", answer, without.events())
 	}
 }

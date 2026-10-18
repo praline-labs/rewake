@@ -10,17 +10,12 @@ import (
 	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/host/launch"
 	"github.com/praline-labs/rewake/internal/infra/state"
-	"github.com/praline-labs/rewake/internal/tool"
 )
 
 // Run executes one invocation against the catalog the binary built and
 // returns the process exit code.
 func Run(catalog adapter.Catalog, argv []string, stdout, stderr io.Writer) int {
 	t := newTable(catalog)
-	if tool.Active() {
-		// A tool call: its own surface, parser path and bounded answer.
-		return runBridge(t, argv, stdout, stderr)
-	}
 	ctx := &Context{Stdout: stdout, Stderr: stderr, table: t}
 	// What this invocation meets reaching the state is its own evidence.
 	state.ResetReach()
@@ -78,7 +73,6 @@ func runParsed(ctx *Context, result parsed) int {
 	}
 
 	err := result.Call.Command.Handler(ctx, result.Call)
-	observeShell(ctx.access, result.Call, err)
 	if err != nil {
 		return report(ctx, err)
 	}

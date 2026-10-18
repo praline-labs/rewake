@@ -263,3 +263,11 @@ func TestAnEditAfterTheNoticeSendsNoRecall(t *testing.T) {
 		t.Fatalf("an edit sent a recall: %+v", told)
 	}
 }
+
+// must is a lookup's answer in a test that set up nothing it could not read.
+func must[T any](value T, err error) T {
+	if err != nil {
+		panic(err)
+	}
+	return value
+}

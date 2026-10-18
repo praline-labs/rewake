@@ -47,8 +47,6 @@ func recordedLive(t *testing.T, dir string) registry.Session {
 func TestTheLiveSetIsRecordedAndADropLeavesTheRun(t *testing.T) {
 	dir, session := liveRun(t)
 	live := newLiveSet(dir, session.Name, session.Epoch())
-	var exchanged [][]adapter.Capability
-	live.exchanged = func(set []adapter.Capability) { exchanged = append(exchanged, set) }
 	both := []adapter.Capability{adapter.WakeCapability, adapter.TurnBoundaryCapability}
 	for _, step := range []struct {
 		set  []adapter.Capability
@@ -70,9 +68,6 @@ func TestTheLiveSetIsRecordedAndADropLeavesTheRun(t *testing.T) {
 		if live.has(adapter.TurnBoundaryCapability) != slices.Contains(step.want, "turn-boundary") {
 			t.Fatalf("the run's own view disagrees with its record after %v", step.set)
 		}
-	}
-	if len(exchanged) != 1 || !slices.Equal(exchanged[0], both) {
-		t.Fatalf("the exchange was heard %v, want once with its own set", exchanged)
 	}
 }
 

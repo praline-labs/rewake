@@ -1,8 +1,6 @@
 package cli
 
 import (
-	"strings"
-
 	"github.com/praline-labs/rewake/internal/adapter"
 )
 
@@ -17,11 +15,4 @@ func launchExample(catalog adapter.Catalog) string {
 		return all[0].ID()
 	}
 	return "<harness>"
-}
-
-func inWords(words []string, conjunction string) string {
-	if len(words) < 2 {
-		return strings.Join(words, "")
-	}
-	return strings.Join(words[:len(words)-1], ", ") + " " + conjunction + " " + words[len(words)-1]
 }

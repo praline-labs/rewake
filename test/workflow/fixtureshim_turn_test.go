@@ -84,12 +84,7 @@ func (s *fixtureSession) work(id string, notice mailboxNotice) {
 
 	var text string
 	var err error
-	// The calls the scenario asks for: a read through the tool is the turn's
-	// read; any other call comes after the shell's, as a task's work would.
-	calls := s.toolCalls()
 	switch {
-	case readsThroughTool(calls):
-		text = s.callTools(id, calls)
 	case os.Getenv(shimReadEach) != "":
 		text, err = s.readEach(notice)
 	default:
@@ -97,9 +92,6 @@ func (s *fixtureSession) work(id string, notice mailboxNotice) {
 	}
 	if err != nil {
 		text = "could not read the mailbox: " + err.Error()
-	}
-	if len(calls) > 0 && !readsThroughTool(calls) {
-		s.callTools(id, calls)
 	}
 	s.recordTurn(id + " " + firstLine(text))
 	if held := s.holdOpen(id); held != "" {

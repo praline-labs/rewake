@@ -7,10 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/core/channel"
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/core/role"
-	"github.com/praline-labs/rewake/internal/core/session"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -95,13 +93,6 @@ type whoamiModel struct {
 	Harness   string `json:"harness,omitempty"`
 	Directory string `json:"directory"`
 	Managed   bool   `json:"managed"`
-	// MailChannel is how this call reached the mail: "tool" through the
-	// rewake tool, "shell" otherwise; empty outside a session.
-	MailChannel string `json:"mailChannel,omitempty"`
-	// Mail is how this run's mail travels, as its wrapper records it
-	// (docs/mail-bridge-channel.md#what-is-shown); Channel the record.
-	Mail    string          `json:"mail,omitempty"`
-	Channel *channel.Record `json:"channel,omitempty"`
 }
 
 func handleWhoami(ctx *Context, _ Call) error {
@@ -122,12 +113,6 @@ func handleWhoami(ctx *Context, _ Call) error {
 			return failf("cannot identify this session in room %s: %v", model.Room, err)
 		}
 		model.Harness, model.Role = own.Harness, role.Of(own.Role).ID
-		model.MailChannel = "shell"
-		if ctx.scope != nil {
-			model.MailChannel = "tool"
-		}
-		model.Channel = session.Load(dir, name, os.Getenv(state.EpochEnv)).Channel
-		model.Mail = channel.Label(model.Channel)
 	}
 
 	return printValue(ctx, model, func() []string {
@@ -141,12 +126,7 @@ func handleWhoami(ctx *Context, _ Call) error {
 		if model.Harness != "" {
 			line += "  " + model.Harness
 		}
-		lines := []string{line, "Others reach you with: rewake send " + name + " \"text\""}
-		if ctx.scope != nil {
-			lines = append(lines, "This call came through the rewake tool.")
-		}
-		lines = append(lines, model.Mail)
-		return lines
+		return []string{line, "Others reach you with: rewake send " + name + " \"text\""}
 	})
 }
 

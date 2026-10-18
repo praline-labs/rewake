@@ -201,8 +201,7 @@ func TestDecideAsThePerson(t *testing.T) {
 }
 
 // Below the recipient's wrapper the command asks the wrapper, which writes
-// verified; a wrapper out of reach is a refusal naming the tool, never the
-// person's path.
+// verified; a wrapper out of reach is a refusal, never the person's path.
 func TestDecideBelowTheRecipientAsksItsWrapper(t *testing.T) {
 	t.Run("unreachable", func(t *testing.T) {
 		lab := newDecideLab(t)
@@ -211,7 +210,7 @@ func TestDecideBelowTheRecipientAsksItsWrapper(t *testing.T) {
 		}}
 		r.install(t)
 		code, out, errOut := run("decide", "api", lab.report.ID, "--arrived")
-		if code != ExitFailed || r.scanned != 0 || lab.decision(t) != nil || !strings.Contains(errOut, "rewake tool's decide") || !strings.Contains(errOut, "never taken for the person") {
+		if code != ExitFailed || r.scanned != 0 || lab.decision(t) != nil || !strings.Contains(errOut, "never taken for the person") {
 			t.Fatalf("exit %d, scanned %d:\n%s%s", code, r.scanned, out, errOut)
 		}
 	})
@@ -273,27 +272,5 @@ func TestDecideWrongCalls(t *testing.T) {
 	}
 	if lab.decision(t) != nil {
 		t.Fatal("a wrong call decided")
-	}
-}
-
-// Through the tool a decision runs under a receipt bound to the call, and
-// retry with it gives the answer again without deciding twice.
-func TestDecideThroughTheTool(t *testing.T) {
-	lab := newDecideLab(t)
-	t.Setenv(state.SessionEnv, "web")
-	r := &route{below: true, wrapper: lab.asWrapper}
-	r.install(t)
-	caller := newToolCaller(t)
-	first := caller.run("decide", "api", lab.report.ID, "--not-arrived")
-	found := receiptLine.FindStringSubmatch(first.out)
-	if first.code != ExitOK || found == nil || lab.decision(t) == nil || !lab.decision(t).By.Verified {
-		t.Fatalf("exit %d:\n%s%s", first.code, first.out, first.errOut)
-	}
-	again := caller.run("retry", found[1])
-	if again.code != ExitOK || !strings.Contains(again.out, "these words ran earlier") || r.asked != 1 {
-		t.Fatalf("retry: exit %d, asked %d:\n%s%s", again.code, r.asked, again.out, again.errOut)
-	}
-	if list := caller.run("decide", "api"); list.code != ExitOK || !strings.Contains(list.out, "decided "+lab.decision(t).ID) {
-		t.Fatalf("the list through the tool: exit %d\n%s%s", list.code, list.out, list.errOut)
 	}
 }

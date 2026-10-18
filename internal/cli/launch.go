@@ -82,17 +82,13 @@ func handleLaunch(h adapter.Harness) func(*Context, Call) error {
 			OnConfirm: func(ctx context.Context, self registry.Session, result adapter.TurnEnd) (string, error) {
 				return ConfirmCompletion(ctx, dir, self, result)
 			},
-			Harness: h,
-			Dir:     dir,
-			Name:    call.Flag("name", ""),
-			Args:    args,
-			Intro:   !call.Switch("no-intro"),
-			Role:    part,
-			Command: program,
-			// The mail tool's endpoint runs the CLI's own checks
-			// (docs/mail-bridge.md).
-			MailTool: &host.MailTool{Words: ctx.table.toolWords, Acknowledge: AcknowledgeRead, Check: ctx.table.toolCheck, Tools: ctx.table.toolDescriptors()},
-
+			Harness:   h,
+			Dir:       dir,
+			Name:      call.Flag("name", ""),
+			Args:      args,
+			Intro:     !call.Switch("no-intro"),
+			Role:      part,
+			Command:   program,
 			OnClaimed: onClaimed,
 			Lease:     lease,
 		})

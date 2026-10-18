@@ -26,8 +26,7 @@ type Service interface {
 
 // ProcessService is a service that runs a process of its own, which speaks
 // for the harness: the run is available once that process names its
-// conversation, the harness is ended when the process is gone, and the tool's
-// calls may come from below it.
+// conversation, and the harness is ended when the process is gone.
 type ProcessService interface {
 	Service
 	// ProcessID is the process's pid, zero before it started.
@@ -87,20 +86,6 @@ type Receiver interface {
 // snapshot.
 type Telemetry interface {
 	SessionState() session.Snapshot
-}
-
-// ToolTransport is a run that registers the mail tools with its harness and
-// names the process that asks the host's endpoint to run their calls
-// (docs/v2/design-api.md#tooltransport). D is the tool layer's descriptor,
-// which this package names as a parameter because it imports no tool layer:
-// the host asks for ToolTransport[tool.Descriptor].
-type ToolTransport[D any] interface {
-	// OfferTools hands the run the tools and the endpoint, before its
-	// service starts; serve tells the endpoint which process asks.
-	OfferTools(tools []D, endpoint string, serve func(pid int, start uint64))
-	// ToolReadsOff says why a read through the tool cannot count, empty
-	// when it can (T6).
-	ToolReadsOff() string
 }
 
 // LiveReporter is a run that says which of its adapter's capabilities it has

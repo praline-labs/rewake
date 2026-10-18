@@ -56,15 +56,6 @@ func (b *backend) handle(l *link, frame Frame) {
 		b.compacted(l, frame)
 	case opThread:
 		b.threadChanged(l, frame)
-	case opToolCall:
-		reply := b.toolCall(l, frame)
-		b.dispatch(frame, func() { _ = l.answer(frame, reply) })
-	case opToolResult:
-		reply := b.toolResult(l, frame)
-		b.dispatch(frame, func() { _ = l.answer(frame, reply) })
-	case opToolDenied:
-		reply := b.toolDenied(l, frame)
-		b.dispatch(frame, func() { _ = l.answer(frame, reply) })
 	default:
 		if frame.ID != 0 {
 			b.dispatch(frame, func() { _ = l.answer(frame, Frame{Error: "the adapter does not take " + frame.Op}) })
@@ -150,22 +141,11 @@ func (b *backend) endOf(l *link, frame Frame) (adapter.TurnEnd, error) {
 		Event: ID + "/" + frame.End, Thread: b.thread, Reason: reason, Answer: frame.Text,
 		Started: b.turns[frame.Turn].started,
 	}
-	// Through the run's gate when it has one, so a read acknowledged now
-	// lands on one side of this end; a plain capture otherwise.
-	if b.handler.EndCapture != nil {
-		completion.Boundary, completion.Ended = b.handler.EndCapture()
-	}
-	if completion.Boundary == nil && b.handler.Capture != nil {
+	if b.handler.Capture != nil {
 		completion.Boundary = b.handler.Capture()
 	}
-	if completion.Ended == 0 {
-		completion.Ended = boottime.Now()
-	}
+	completion.Ended = boottime.Now()
 	b.ends[frame.End] = completion
-	if b.handler.Tool != nil {
-		// After the end's capture: a call heard from here on is outside it.
-		b.handler.Tool.TurnEnded(b.thread, frame.Turn)
-	}
 	return completion, nil
 }
 

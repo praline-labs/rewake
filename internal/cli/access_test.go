@@ -3,11 +3,9 @@ package cli
 import (
 	"errors"
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/core/receipt"
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
@@ -69,7 +67,6 @@ func documentedForms(launch string) []formCase {
 		{[]string{"inbox", "--json"}, change},
 		{[]string{"inbox", "--message", "8d4ddd85"}, change},
 		{[]string{"inbox", "--peek"}, change},
-		{[]string{"inbox", "--next", "0123456789abcdef01234567.0.1"}, change},
 		{[]string{"pending", "the review"}, change},
 		{[]string{"retry", "0123456789abcdef01234567"}, change},
 		{[]string{"compact", "api"}, change},
@@ -135,15 +132,6 @@ func TestEveryParsedFormHasAccessClass(t *testing.T) {
 	}
 }
 
-// TestEveryToolCallIsAChange holds D2: through the tool every form is a
-// change, its help included, because its bounded answer may be kept for
-// continuing.
-func TestEveryToolCallIsAChange(t *testing.T) {
-	if toolAccess != accessChange {
-		t.Fatalf("a tool call is a %s, want a change", toolAccess)
-	}
-}
-
 // TestViewsLeaveADeadRecordInPlace holds the repaired view paths: whoami,
 // inbox --owed and --awaited, list and the guide, asked by a session whose
 // record is dead, look it up without pruning it; a change form asked the same
@@ -171,28 +159,5 @@ func TestViewsLeaveADeadRecordInPlace(t *testing.T) {
 	run("inbox")
 	if _, err := os.Lstat(path); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("a change form left the dead record: %v", err)
-	}
-}
-
-// TestAViewIsNeverObserved holds that the shell's observation follows the
-// class: after a write, a view writes no note even for a command whose change
-// forms are observed, and the same call as a change does.
-func TestAViewIsNeverObserved(t *testing.T) {
-	dir := liveSession(t, "api")
-	epoch := epochOf(t, dir, "api")
-	t.Setenv(state.SessionEnv, "api")
-	state.ResetReach()
-	t.Cleanup(state.ResetReach)
-	if err := state.WriteAtomic(filepath.Join(dir, "written"), []byte("x")); err != nil {
-		t.Fatal(err)
-	}
-	call := Call{Command: &Command{Name: "send"}}
-	observeShell(accessView, call, nil)
-	if notes := receipt.TakeShell(dir, "api", epoch); len(notes) != 0 {
-		t.Fatalf("a view left %+v", notes)
-	}
-	observeShell(accessChange, call, nil)
-	if notes := receipt.TakeShell(dir, "api", epoch); len(notes) != 1 {
-		t.Fatalf("a change left %+v", notes)
 	}
 }

@@ -69,7 +69,7 @@ func playTurnStart(t *testing.T, c *Case, iso *Isolation) []telemetryFinding {
 		starts = append(starts, latestTurnStart(iso, worker.name))
 	}
 	held := starts[0] > 0 && starts[1] > starts[0]
-	return []telemetryFinding{toolFinding(obsTurnStartRecorded, held, "the latest start after each turn: %v", starts)}
+	return []telemetryFinding{judged(obsTurnStartRecorded, held, "the latest start after each turn: %v", starts)}
 }
 
 // latestTurnStart is the latest turn start a session's mailbox records, 0 when

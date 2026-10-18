@@ -101,13 +101,8 @@ func (fixtureHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan,
 		if settings.brief {
 			notes = append(notes, "not adding the rewake briefing: the fixture's configuration in "+settings.path+" sets one")
 		} else {
-			// Built once the exchange shows whether the tool is live, which
-			// decides the transport sentence.
 			context := request.BriefContext()
-			run.brief = func(tool bool) string {
-				context.Tool = tool
-				return brief.Intro(context)
-			}
+			run.brief = func() string { return brief.Intro(context) }
 		}
 	}
 	// The run serves its control directory itself, carrying each request to
@@ -143,10 +138,9 @@ func (fixtureHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan,
 // launch that names one is refused.
 func (fixtureHarness) Offers() adapter.Offer {
 	return adapter.Offer{
-		Wake:          true,
-		ToolTransport: Transport,
-		TurnBoundary:  adapter.TurnBoundaryOffer{Reports: true, HoldsEnd: true},
-		Telemetry:     true,
+		Wake:         true,
+		TurnBoundary: adapter.TurnBoundaryOffer{Reports: true, HoldsEnd: true},
+		Telemetry:    true,
 		Control: adapter.ControlOffer{
 			Compact: true, Interrupt: true, CompactFocus: true,
 			InterruptTrace: "the fixture ends the turn saying who interrupted it",

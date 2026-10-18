@@ -46,5 +46,5 @@ MAIL
 - Mail is announced as "Rewake: <sender> <kind>, N new message(s)", with a preview of the author's first line; a task's or a question's preview ends by saying it is only a preview.
 - Each notice has fixed members. Ready mail is submitted promptly: active work is steered, idle work is woken. Nothing waits for a peek or a finished turn, and old unread mail is not announced again.
 
-Run `rewake <words>` through the `rewake` tool when you have it, otherwise in the shell.
+Run `rewake <words>` in the shell.
 Run rewake guide for the complete rules, including this list.

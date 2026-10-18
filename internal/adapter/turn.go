@@ -89,8 +89,7 @@ type TurnHandler struct {
 	// boot clock — a time the harness took, at or before anything the turn
 	// ran, never the time its report arrived; 0 where the harness gives
 	// none. The host records a timed start, the evidence a pending mark of
-	// an earlier turn whose end was lost is judged by, and opens the turn
-	// for the mail tool's calls where the run has a tool. Call it before the
+	// an earlier turn whose end was lost is judged by. Call it before the
 	// start is answered, so whatever the turn does next is after it.
 	Started func(conversation, turn string, at int64)
 	Capture func() *mail.ReadBoundary
@@ -102,23 +101,11 @@ type TurnHandler struct {
 	// reason and confirms its next end again. The same end confirmed again
 	// gets the same answer. Nil where the wrapper was given none.
 	Confirm func(context.Context, TurnEnd) (string, error)
-	// EndCapture captures the boundary of a turn's end through the gate
-	// the mail tool's acknowledgments enter
-	// (docs/mail-bridge-turns.md#a-turns-end-meets-its-calls), with the
-	// moment it noted the end on the boot clock. Nil where the run has no
-	// gate; Capture is then the end's boundary.
-	EndCapture func() (*mail.ReadBoundary, int64)
-	// Tool takes what the harness reports of the mail tool's calls in no
-	// harness's terms: a turn's end, calls seen, their results. Starts are
-	// not among them: they go to Started, tool or none.
-	// It never waits. Nil where the run has no tool.
-	Tool ToolInput
 }
 
 // TurnBoundary is a run's report of its turns: their starts reach the host
-// through the handler's Started, their ends through Publish or Confirm,
-// whether or not the run has a tool. The host hands it the handler before the
-// run's service starts.
+// through the handler's Started, their ends through Publish or Confirm. The
+// host hands it the handler before the run's service starts.
 type TurnBoundary interface {
 	ReportTurns(TurnHandler)
 }

@@ -2,7 +2,6 @@ package cli
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/praline-labs/rewake/internal/core/receipt"
 	"github.com/praline-labs/rewake/internal/infra/state"
@@ -55,30 +54,6 @@ func handleRetry(ctx *Context, call Call) error {
 	}
 	if err != nil {
 		return failf("could not read the receipt %s: %v", token, err)
-	}
-	// A retry through the tool is held to the tool's surface like any other
-	// call: the words a shell call journaled — a text from stdin, say — are
-	// the shell's to finish.
-	if ctx.scope != nil {
-		if _, err := ctx.table.toolWords(record.Words); err != nil {
-			return failf("the receipt %s holds words the rewake tool does not run (%v); finish it in the shell: rewake retry %s", token, err, token)
-		}
-	}
-	switch {
-	case record.Output == nil && len(record.Words) > 0 && record.Words[0] == "inbox":
-		if record.Read != nil {
-			if ctx.JSON && !record.Read.JSON {
-				return &UsageError{Command: call.Command, Message: "this read was printed as text and shows again so; drop --json."}
-			}
-			ctx.JSON = record.Read.JSON
-		}
-		return emitRead(ctx, site, token, 0, 0)
-	case record.Output != nil:
-		if ctx.JSON && !record.Output.JSON {
-			return &UsageError{Command: call.Command, Message: "this output was printed as text and shows again so; drop --json."}
-		}
-		_, err := fmt.Fprint(ctx.Stdout, renderOutputPart(record, 0, len(record.Output.Parts)))
-		return err
 	}
 	original, err := ctx.table.parse(record.Words)
 	if err != nil || original.Call.Command == nil {

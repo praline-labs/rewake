@@ -104,12 +104,6 @@ func handleDecide(ctx *Context, call Call) error {
 	if choice == "" {
 		return listDecisions(ctx, dir, name)
 	}
-	// Through the tool the decision runs under a receipt, bound to the call
-	// before the wrapper is asked: a call whose child dies then says it held
-	// an operation, never that nothing ran, and retry asks again.
-	if ctx.scope != nil && !ctx.journaling {
-		return journaled(ctx, call, handleDecide)
-	}
 	return decideReport(ctx, call, dir, name, report, choice)
 }
 
@@ -129,19 +123,11 @@ func decideReport(ctx *Context, call Call, dir, name, report, choice string) err
 	}
 	ask := mail.DecideRequest{Sender: name, Report: report, Choice: choice, Expect: subject}
 	path := mail.DecisionPath(dir, name, report)
-	if err := decisionDeadline(ctx); err != nil {
-		return err
-	}
-	// The check above is made before any lock wait; the writer makes it
-	// again after both, just before the record, by the call's own bound.
-	if ctx.scope != nil {
-		ask.DeadlineBoot = ctx.scope.ticket.DeadlineBoot
-	}
 	var answer mail.DecideAnswer
 	if run, ok := authority.RunOf(subject.RecipientRun); ok && runsBelow(run) {
 		answer, err = askWrapper(state.AuthorityAddress(dir, subject.RecipientRun), run, ask, path)
 		if errors.Is(err, authority.ErrUnreachable) {
-			return unfinished(ctx, fmt.Sprintf("Rewake: the wrapper of %s (run %s) could not be reached from this process (%v), so nothing was decided. A sandboxed shell cannot reach it: decide through the rewake tool's decide with the same words. A wrapper out of reach is never taken for the person.",
+			return unfinished(ctx, fmt.Sprintf("Rewake: the wrapper of %s (run %s) could not be reached from this process (%v), so nothing was decided. A wrapper out of reach is never taken for the person.",
 				subject.Recipient, subject.RecipientRun, err))
 		}
 	} else {
@@ -177,17 +163,8 @@ func belowRun(run authority.Run) bool {
 	return proc.Default.Descends(os.Getpid(), run.PID) == nil
 }
 
-// decisionDeadline refuses to ask once a tool call's answer is no longer
-// wanted: the decision would be made where the model never learns of it.
-func decisionDeadline(ctx *Context) error {
-	if ctx.op == nil {
-		return nil
-	}
-	return beforeCommit(ctx, ctx.op.record.Token, "the decision was asked")
-}
-
-// unfinished is a failure after which the same words may still decide:
-// through the tool it leaves the operation open for retry.
+// unfinished is a failure after which the same words may still decide: under
+// a receipt it leaves the operation open for retry.
 func unfinished(ctx *Context, message string) error {
 	if ctx.op != nil {
 		return &unfinishedError{message: message + fmt.Sprintf(" Ask again with: rewake retry %s", ctx.op.record.Token)}

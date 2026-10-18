@@ -50,8 +50,6 @@ type Request struct {
 	// OnConfirm runs an end the adapter may hold open, beside OnTurn
 	// (adapter.TurnHandler.Confirm).
 	OnConfirm func(context.Context, registry.Session, adapter.TurnEnd) (string, error)
-	// MailTool serves the mail tool's endpoint; nil serves none.
-	MailTool *MailTool
 	// OnClaimed hears the session once its name is claimed, before the
 	// harness is planned: whatever was prepared for the launch learns whose
 	// it is. An error ends the launch.
@@ -172,8 +170,6 @@ func Run(ctx context.Context, request Request) (int, error) {
 		}
 	}
 
-	tool := startMailTool(request, name, epoch)
-	defer tool.close()
 	live := newLiveSet(request.Dir, name, epoch)
 	live.workers = &life.workers
 	defer live.stop()
@@ -204,9 +200,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 	// closed once, before the run's directory goes.
 	closeService := closeOnce(plan.Service)
 	defer closeService()
-	tool.attach(plan)
 	live.planned = plannedLive(request.Harness.Offers(), plan, controlDir)
-	live.exchanged = tool.exchanged
 	_, _ = fmt.Fprintf(os.Stderr, "rewake: room %s, role %s: %s\n", session.Room, session.Role, session.RoleReason)
 	for _, note := range plan.Notes {
 		// Said once, on stderr, before the harness takes over the screen: these
@@ -232,7 +226,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 	if counter, ok := plan.Service.(adapter.WorkerCounter); ok {
 		counter.CountWorkers(runWorkers{life: life})
 	}
-	stopServing, err := startServing(ctx, request, session, name, epoch, plan, tool, live, closeService)
+	stopServing, err := startServing(ctx, request, session, name, epoch, plan, live, closeService)
 	if err != nil {
 		return 0, err
 	}
@@ -261,7 +255,6 @@ func Run(ctx context.Context, request Request) (int, error) {
 	}
 
 	process, _ := plan.Service.(adapter.ProcessService)
-	tool.started(command.Process.Pid, process)
 	if start, err := proc.StartTime(command.Process.Pid); err == nil {
 		session.HarnessPID = command.Process.Pid
 		session.HarnessStart = start
@@ -277,13 +270,12 @@ func Run(ctx context.Context, request Request) (int, error) {
 	if process != nil {
 		watchCtx, stopWatching := context.WithCancel(ctx)
 		defer stopWatching()
-		go stopWithProcess(watchCtx, process, command.Process, session.HarnessStart, tool.keeper.exited)
+		go stopWithProcess(watchCtx, process, command.Process, session.HarnessStart)
 	}
 	harnessStart := session.HarnessStart
-	tool.keeper.started(ctx, func() bool { return proc.Alive(command.Process.Pid, harnessStart) })
 	go forward(signals, command.Process, func() bool {
 		return proc.Alive(command.Process.Pid, harnessStart)
-	}, tool.keeper.exited)
+	})
 
 	serveCtx, stopServing := context.WithCancel(ctx)
 	defer stopServing()
@@ -347,7 +339,6 @@ func Run(ctx context.Context, request Request) (int, error) {
 	code := waitForHarness(command.Process.Pid)
 	// The run begins to end with its harness: no decision is taken from here.
 	life.closeAdmission()
-	tool.keeper.exited()
 
 	// Stop serving before the record goes away, and let the server refuse what
 	// is still waiting: a sender blocked on a status should be told the session

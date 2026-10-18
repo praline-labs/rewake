@@ -33,9 +33,6 @@ func handleInbox(ctx *Context, call Call) error {
 	if err != nil {
 		return err
 	}
-	if mode.next != "" {
-		return continueOutput(ctx, call, mode.next)
-	}
 	peek, selected := mode.peek, mode.selected
 	dir, err := state.Dir()
 	if err != nil {
@@ -62,10 +59,6 @@ func handleInbox(ctx *Context, call Call) error {
 		}
 		return showOwed(ctx, call, dir, session, epoch)
 	}
-	if ctx.scope != nil && !peek {
-		return bridgeRead(ctx, mode, readSite{dir: dir, self: session, epoch: epoch})
-	}
-
 	// Held from looking to marking. Two readers at once — parallel tool calls,
 	// a command run again while the first still prints — would otherwise both
 	// show the same task, and the server must not record a delivery over a read

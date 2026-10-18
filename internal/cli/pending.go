@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -30,8 +31,8 @@ const pendingLockWait = 5 * time.Second
 // going instead of reporting; the obligation stays open for the next turn end.
 func handlePending(ctx *Context, call Call) error {
 	if !ctx.journaling {
-		// A mark is one of the tool's words: its receipt ties a retry to the
-		// call that made it, never to a later turn.
+		// A mark's receipt ties a retry to the call that made it, never to a
+		// later turn.
 		return journaled(ctx, call, handlePending)
 	}
 	text := ""
@@ -72,21 +73,11 @@ func handlePending(ctx *Context, call Call) error {
 	if ctx.op != nil {
 		token = ctx.op.record.Token
 	}
-	wait := pendingLockWait
-	if ctx.scope != nil {
-		wait = max(time.Millisecond, min(wait, ctx.scope.remaining()))
-	}
-	lockCtx, cancel := context.WithTimeout(context.Background(), wait)
+	lockCtx, cancel := context.WithTimeout(context.Background(), pendingLockWait)
 	defer cancel()
 	var waiting []string
-	var late error
 	verdict := mail.VerdictWrite
 	err = state.WithMailboxLock(lockCtx, dir, self.Name, func() error {
-		// Under the lock, just before the mark: the wait for it may have
-		// outlasted the call.
-		if late = beforeCommit(ctx, token, "the turn was marked"); late != nil {
-			return nil
-		}
 		// A stopped mailbox changes nothing until a person settles it.
 		if err := mail.MailboxStopped(dir, self.Name); err != nil {
 			return err
@@ -107,7 +98,7 @@ func handlePending(ctx *Context, call Call) error {
 			return fmt.Errorf("could not read the letters being read in parts: %w", err)
 		}
 		for _, name := range claimedBy {
-			if !contains(waiting, name) {
+			if !slices.Contains(waiting, name) {
 				waiting = append(waiting, name)
 			}
 		}
@@ -115,7 +106,7 @@ func handlePending(ctx *Context, call Call) error {
 		if err != nil {
 			return fmt.Errorf("the latest start of this turn cannot be read, so the mark cannot be tied to its turn: %w", err)
 		}
-		if verdict, err = mail.JudgeMark(dir, self, epoch, file, at, attemptScope(ctx, ctx.op), started); err != nil || verdict != mail.VerdictWrite {
+		if verdict, err = mail.JudgeMark(dir, self, epoch, file, at, attemptScope(ctx.op), started); err != nil || verdict != mail.VerdictWrite {
 			return err
 		}
 		if len(waiting) == 0 {
@@ -123,9 +114,6 @@ func handlePending(ctx *Context, call Call) error {
 		}
 		return mail.MarkPending(dir, self.Name, epoch, file, text, at)
 	})
-	if late != nil {
-		return late
-	}
 	switch verdict {
 	case mail.VerdictTurnEnded:
 		return failf("not marked: the turn ended first, so its end reported without this mark")
@@ -151,14 +139,10 @@ func handlePending(ctx *Context, call Call) error {
 }
 
 // pendingTime is when the mark was asked for, on the boot clock, and the
-// file its mark is kept in: the tool call's own time, since the process
-// resuming it may run in a later turn, and a journaled mark's recorded time
-// and file on every retry, so a retry never makes a second mark.
+// file its mark is kept in: a journaled mark's recorded time and file on every
+// retry, so a retry never makes a second mark.
 func pendingTime(ctx *Context, text string) (int64, string, error) {
 	at := boottime.ProcessStarted
-	if ctx.scope != nil {
-		at = ctx.scope.ticket.CalledBoot
-	}
 	if ctx.op == nil {
 		return at, mail.MarkName(at, mail.NewID()), nil
 	}

@@ -74,18 +74,14 @@ func handleSend(ctx *Context, call Call) error {
 		return err
 	}
 	if kind.kind == mail.Note && !ctx.journaling {
-		// A heads-up is one of the tool's words: its receipt makes a repeat
-		// or a retry publish it once.
+		// A heads-up's receipt makes a retry publish it once.
 		return journaled(ctx, call, handleSend)
-	}
-	if ctx.scope != nil {
-		wait = max(0, min(wait, ctx.scope.remaining()-toolMargin))
 	}
 	// A resumed heads-up is the one its first call fixed: the same run, the
 	// same text, stdin not read again.
 	pinned := false
 	if ctx.op != nil {
-		if err := ctx.op.resolveEndedRun(ctx); err != nil {
+		if err := ctx.op.resolveEndedRun(); err != nil {
 			return err
 		}
 		if step := ctx.op.pinnedNotify(); step != nil {
@@ -197,7 +193,7 @@ func handleSend(ctx *Context, call Call) error {
 		defer release()
 	}
 	if journaledSend {
-		err = ctx.op.publish(ctx, message)
+		err = ctx.op.publish(message)
 	} else {
 		err = writeSent(dir, self, epoch, message, session)
 	}

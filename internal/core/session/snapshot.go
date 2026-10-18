@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"time"
 	"unicode/utf8"
-
-	"github.com/praline-labs/rewake/internal/core/channel"
 )
 
 // Snapshot describes the last reported primary state, not cumulative usage or
@@ -47,10 +45,6 @@ type Snapshot struct {
 	// it: the publisher and the reader are different processes, and the wall
 	// clock can be stepped by seconds between the two.
 	PublishedBoot int64 `json:"publishedBoot,omitempty"`
-	// Channel is how the run's mail travels (docs/mail-bridge-channel.md),
-	// kept by its wrapper only; nil from a run without the mail tool's
-	// harness or a build before it.
-	Channel *channel.Record `json:"channel,omitempty"`
 }
 
 // Values of Snapshot.Interruptions.

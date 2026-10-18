@@ -27,8 +27,6 @@ import (
 	"strconv"
 	"sync"
 	"time"
-
-	"github.com/praline-labs/rewake/internal/tool"
 )
 
 // The program's switches. Each withholds one capability from the hello, or
@@ -48,9 +46,6 @@ const (
 	shimHelperRequests = "RW_SHIM_HELPER_REQUESTS"
 	// shimNoHold reports ends that cannot be held: the adapter publishes them.
 	shimNoHold = "RW_SHIM_NO_HOLD"
-	// shimBriefFile is where the program keeps the briefing the adapter
-	// sends it.
-	shimBriefFile = "RW_SHIM_BRIEF_FILE"
 	// shimDropAnswer loses the core's answer to the first end once and sends
 	// the same end again, as a harness whose answer was lost would.
 	shimDropAnswer = "RW_SHIM_DROP_ANSWER"
@@ -74,7 +69,6 @@ var fixtureServed = []struct{ name, withheld string }{
 	{"turn-boundary", shimNoBoundary},
 	{"telemetry", shimNoTelemetry},
 	{"control", shimNoControl},
-	{"tool-transport", shimNoTool},
 }
 
 // fixtureFrame is one line of the exchange.
@@ -101,17 +95,6 @@ type fixtureFrame struct {
 	Steered    bool            `json:"steered,omitempty"`
 	// At is the program's own time of a turn's start, on the boot clock.
 	At int64 `json:"at,omitempty"`
-	// The tool transport's fields: the probe's offer, what the program
-	// registered, and a call's report and result.
-	Tools     []tool.Descriptor `json:"tools,omitempty"`
-	Endpoint  string            `json:"endpoint,omitempty"`
-	Names     []string          `json:"names,omitempty"`
-	Digest    string            `json:"digest,omitempty"`
-	Call      string            `json:"call,omitempty"`
-	Tool      string            `json:"tool,omitempty"`
-	Arguments json.RawMessage   `json:"arguments,omitempty"`
-	Texts     []string          `json:"texts,omitempty"`
-	IsError   bool              `json:"isError,omitempty"`
 	// A control request and its answer, and a compaction's end
 	// (fixtureshim_control_test.go).
 	Action       string `json:"action,omitempty"`
@@ -250,7 +233,6 @@ type fixtureSession struct {
 	waiting map[int64]chan fixtureFrame
 	// turns counts the turns worked, for shimDropAfter.
 	turns int
-	tools fixtureTools
 }
 
 func fixtureSessionStart(launch fixtureLaunch) (*fixtureSession, error) {
@@ -370,11 +352,6 @@ func (s *fixtureSession) serve(frame fixtureFrame) {
 	case "release":
 		return
 	case "brief":
-		// The briefing comes once the exchange showed whether the tool is
-		// live; a case that asks keeps it to read.
-		if path := os.Getenv(shimBriefFile); path != "" {
-			_ = os.WriteFile(path, []byte(frame.Text), 0o600)
-		}
 		reply.OK = true
 	case "control":
 		reply = s.control(frame, reply)
@@ -404,8 +381,6 @@ func (s *fixtureSession) probe(frame, reply fixtureFrame) fixtureFrame {
 		reply.State = "none"
 	case "control":
 		reply.State = "ready"
-	case "tool-transport":
-		reply = s.registerTools(frame, reply)
 	}
 	return reply
 }

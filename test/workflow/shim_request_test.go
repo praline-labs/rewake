@@ -51,7 +51,7 @@ func serveRequests() {
 			record := "-1\nunreadable request: " + fmt.Sprint(err)
 			base := filepath.Join(dir, strings.TrimSuffix(name, ".args"))
 			if err == nil {
-				code, out := request.run(base)
+				code, out := request.run()
 				record = strconv.Itoa(code) + "\n" + out
 			}
 			target := base + ".out"
@@ -86,13 +86,6 @@ func (r *requests) env() string { return shimRequestDir + "=" + r.dir }
 func (r *requests) ask(c *Case, args ...string) (int, string, bool) {
 	encoded, _ := json.Marshal(args)
 	return r.send(c, encoded, strings.Join(args, " "))
-}
-
-// askWith runs a request with more than arguments: variables over the
-// session's own, or a process that leaves the session's tree first.
-func (r *requests) askWith(c *Case, request shimRequest) (int, string, bool) {
-	encoded, _ := json.Marshal(request)
-	return r.send(c, encoded, strings.Join(request.Args, " "))
 }
 
 func (r *requests) send(c *Case, encoded []byte, shown string) (int, string, bool) {

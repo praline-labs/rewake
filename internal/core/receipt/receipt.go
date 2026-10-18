@@ -32,6 +32,14 @@ import (
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
+// Digest identifies a call's normalized words: the same words, the same
+// digest, which a key and the shell's search for an unsettled operation take.
+func Digest(words []string) string {
+	encoded, _ := json.Marshal(words)
+	sum := sha256.Sum256(encoded)
+	return hex.EncodeToString(sum[:])
+}
+
 // Key scopes an operation. Two calls with the same key are one operation.
 type Key struct {
 	Epoch        string
