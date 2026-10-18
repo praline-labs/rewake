@@ -15,6 +15,7 @@ from the code.
 | **harness** | Claude Code, next pi, the ordinary program in the terminal | the session |
 | **agent** | the model inside the harness, calling `rewake send`, `rewake inbox`, `rewake whoami` from its shell | a turn at a time |
 | **sender** | any `rewake send` process: an agent's shell, a person's shell | until the status arrives |
+| **space host** | a detached `rewake` process `rewake space open` starts: owns a worker's terminal, watches main's run, ends the worker after it (A space, below) | as long as its worker and main |
 | **turn boundary** | the harness's word that a turn ended, which its adapter in the wrapper hands the core; on Claude Code the mod says it (Act 5) | a moment |
 
 There is no daemon. Each wrapper services exactly one mailbox: its own
@@ -42,6 +43,8 @@ inbox/<name>/.lock               the mailbox lock, one flock for every state cha
                                  (every kind a mailbox holds: docs/mailbox-records.md)
 sock/<name>.<epoch>.sock         Claude Code's inbound socket for this run
 sock/<name>.<epoch>.reply.sock   where that run's wrapper hears what the socket did with a line
+spaces/<id>.json                 a space main opened: its worker, its space host, its end
+sock/space.<id>.sock             the worker's terminal, served by its space host to rewake attach
 ```
 
 ## Act 1. A session starts
@@ -310,6 +313,30 @@ waiters as a `pending` message with that text first and the turn's own answer af
 owing nothing and settling nothing, and the next turn end without a mark is the report
 ([turn-outcomes.md](turn-outcomes.md#interim-turn-ends-rewake-pending)), after the core
 has held it once, through the adapter, to ask whether the work is done.
+
+## A space: main starts a worker
+
+Main runs `rewake space open api --harness claude --worktree -- <harness args>` from its shell,
+while its run has `Spaces` live. The command writes the record, `spaces/<id>.json`, opening,
+and re-executes rewake as a launcher in a session of its own; the launcher starts the
+**space host** and exits, so the space host is nobody's child in main's tree. The space host
+records its own run, checks that its chain of parents does not meet main's wrapper — or closes
+the record, the worker never started — and starts in a pseudo-terminal it owns an ordinary
+`rewake --name api --room <main's room> --write claude --worktree <harness args>`, with main's
+base and none of main's session in its environment. From there the worker is any session: Act
+1 for it, its record `sessions/api-claude.json`. The space host records the worker's run, open;
+the command answers once that run is registered, within 30 s.
+
+Main sends `api-claude` a task, and its report comes back as in Acts 2 to 5. The person reaches
+the worker's terminal with `rewake attach api` from a terminal of their own — to accept a
+dialog, answer a prompt — and leaves with `Ctrl-\`; the worker keeps running.
+
+The space host reads main's run once a second. When it reads ended — main exited, crashed or
+its wrapper was killed — it sends the worker's process group SIGHUP, SIGTERM after a second and
+SIGKILL after five more, closes the record with what it saw — the worker ended, its checkout
+there or gone — and exits. A worker that ends by itself closes the space the same way. A
+checkout left behind is listed as kept by `rewake space list` until it is gone
+([space.md](rules/space.md)).
 
 The rest of the flow — a blocking question (Act 6), a notify (Act 7), the session's
 end (Act 8), one exchange traced through its files, where the flow can stall, and

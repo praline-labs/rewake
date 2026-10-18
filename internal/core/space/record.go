@@ -1,7 +1,7 @@
 /*
 Package space keeps the record of each space a main's run opens: a worker that
-main's wrapper hosts in a pseudo-terminal of its own, in a checkout of its own
-(docs/v2/stage4-space.md).
+a detached space host runs in a pseudo-terminal of its own, in main's room, and
+closes once main's run has ended (docs/rules/space.md).
 
 A record is one JSON file per space under the room's spaces directory, named
 by the space's id. It is written before the act it names is answered and
@@ -26,11 +26,11 @@ import (
 type State string
 
 const (
-	// Opening means the record is written, the worker not yet seated. What the
-	// worker will be — harness, name, role, session id — is fixed here,
+	// Opening means the record is written, the worker not yet started. What
+	// the worker will be — harness, name, role, session id — is fixed here,
 	// before anything starts.
 	Opening State = "opening"
-	// Open means the worker is seated in its checkout, its run recorded.
+	// Open means the worker's wrapper was started, its run recorded.
 	Open State = "open"
 	// Closing means the space is being shut down; nothing new is seated.
 	Closing State = "closing"
@@ -72,12 +72,13 @@ type Record struct {
 	Main Run `json:"main"`
 	// Worker is the session the space hosts.
 	Worker Worker `json:"worker"`
-	// Checkout is where the worker runs; empty until the keeper's checkout
-	// is found, and always set before the worker starts.
+	// Checkout is the worktree the worker's launch made for it: empty for a
+	// worker started without one, and until its session is seen there.
 	Checkout Checkout `json:"checkout"`
-	// Keeper is the agent id of the subagent whose entry is the space's tab;
-	// empty until its spawn answers, and for a space hosted without one.
-	Keeper   string    `json:"keeper,omitempty"`
+	// Host is the space host's run, pid.start.boot as an epoch: the process
+	// that holds the worker's terminal and closes it. Set before the worker
+	// starts.
+	Host     string    `json:"host,omitempty"`
 	OpenedAt time.Time `json:"openedAt"`
 	// Closing is why the space began to close, once it did.
 	Closing string `json:"closing,omitempty"`
@@ -100,13 +101,14 @@ type Run struct {
 type Worker struct {
 	// Harness is the worker harness's adapter id.
 	Harness string `json:"harness"`
-	// Name is the prefix the worker is launched with, --name.
+	// Name is the prefix the worker is launched with, --name: its session is
+	// <name>-<harness>.
 	Name string `json:"name"`
 	Role string `json:"role"`
 	// SessionID is the conversation id rewake chose before the launch;
 	// empty for a harness that takes none, which the record so says.
 	SessionID string `json:"sessionId,omitempty"`
-	// Run is the worker's own run, once its wrapper is seen running.
+	// Run is the worker's own run, once its wrapper is started.
 	Run string `json:"run,omitempty"`
 }
 
@@ -145,12 +147,11 @@ const (
 // Seen is a checkout as closing found it.
 type Seen struct {
 	// Presence is what closing saw of the checkout: there, gone or never
-	// made, or unknown when it could not be looked at. It is always set, so
+	// made (gone, with no checkout recorded), or unknown when it could not be looked at. It is always set, so
 	// an observation nobody made never reads as a checkout seen gone (SP2).
 	Presence Presence `json:"presence"`
 	// Changes, Commits and Locked are what was found in a checkout there:
-	// changes or untracked files, commits beyond its base, a Git lock such
-	// as a dead keeper leaves.
+	// changes or untracked files, commits beyond its base, a Git lock.
 	Changes bool `json:"changes,omitempty"`
 	Commits bool `json:"commits,omitempty"`
 	Locked  bool `json:"locked,omitempty"`

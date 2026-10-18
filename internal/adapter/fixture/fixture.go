@@ -108,6 +108,7 @@ func (fixtureHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan,
 	// The run serves its control directory itself, carrying each request to
 	// the program while Control is live (control.go).
 	run.controlDir = request.ControlDir
+	run.hostsSpaces = request.Role.Spaces
 	return adapter.LaunchPlan{
 		Service: run, Wake: run, TurnBoundary: run, Telemetry: run, Thread: run, Live: run,
 		Socket:     socket,
@@ -130,12 +131,11 @@ func (fixtureHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan,
 // takes a focus with a compaction, and ends an interrupted turn with the
 // interrupter's name as its text, which is what the stopped report carries.
 //
-// Spaces: none, said here rather than left to the zero value. Nothing in
-// rewake hosts a space before S4-7 builds the host's neutral seam, and an
-// offer no run could prove would be a capability the CLI admits and the run
-// cannot serve; S4-7 gives the fixture its spaces through that seam, never
-// through another adapter's mod. Conversation: the program takes no id, so a
-// launch that names one is refused.
+// Spaces: a main run of the fixture proves them once its program is
+// connected, as a Claude Code main does once its mod is admitted: the space
+// host is rewake's own detached process and needs nothing of the harness.
+// Conversation: the program takes no id, so a launch that names one is
+// refused.
 func (fixtureHarness) Offers() adapter.Offer {
 	return adapter.Offer{
 		Wake:         true,
@@ -145,7 +145,7 @@ func (fixtureHarness) Offers() adapter.Offer {
 			Compact: true, Interrupt: true, CompactFocus: true,
 			InterruptTrace: "the fixture ends the turn saying who interrupted it",
 		},
-		Spaces: false,
+		Spaces: true,
 		Conversation: adapter.ConversationOffer{
 			Unnamed: "the fixture keeps one conversation per run and takes no id for it",
 		},

@@ -4,17 +4,22 @@ What step S4-3 built, October 13, 2026: the record of a space in `internal/core/
 the view that lists it, `rewake space list`. The design is
 [stage4-space.md](stage4-space.md) — the record in its section 1, what closing observes in
 section 7, the restore it serves in section 8 — and the rules it holds are SP2 and SP7 in
-[rules/space.md](../rules/space.md). The steps that write it are S4-7 (opening) and S4-9
-(closing) in [stage4-space-steps.md](stage4-space-steps.md#the-build-steps); this step gives
-them the record and its steps, and nothing yet calls them but the tests.
+[rules/space.md](../rules/space.md). The step that writes it is S4-7 — opening and closing
+alike since October 18, 2026 — in [stage4-space-steps.md](stage4-space-steps.md#the-build-steps);
+this step gave it the record and its steps.
+
+**Changed October 18, 2026** by the space step (S4-7, [the entry](../roadmap/2026-10-18-space.md)):
+the `keeper` field is gone and `host` replaces it; the checkout is no longer required to open,
+and is recorded after the worker's launch made it. A record written before still reads, its
+`keeper` read past; an `open` one without `host` does not.
 
 ## Where it lives
 
 One JSON file per space, `spaces/<id>.json` in the room
 ([design.md](../design.md#state-directory)), written only through `internal/infra/state`,
 so it refuses without the room's lease and in a view ([rules/state.md](../rules/state.md)).
-The file is named by the space's id, 32 hex digits drawn at random, which is also the id the
-mod's protocol carries (`SpaceOpen.space`): a closed record stays for what a restore reads,
+The file is named by the space's id, 32 hex digits drawn at random, which also names the space
+host's attach socket, `sock/space.<id>.sock`: a closed record stays for what a restore reads,
 and its name is free again for a new space. The name is unique among the room's spaces that
 are not over, checked when a record is created. Every step runs under the room's space lock,
 `spaces/.lock`: it reads the record, checks the step against its state, and replaces the whole
@@ -28,8 +33,8 @@ file in one write, so a crash between two steps leaves the earlier one whole.
 | `state` | below |
 | `main` | the run that opened it: name, epoch (the wrapper's pid, start time and boot) and pid namespace |
 | `worker` | harness id, `--name`, role, the session id rewake drew before the launch (absent for a harness that takes none), and its run once its wrapper is seen running |
-| `checkout` | path and branch where the worker runs |
-| `keeper` | the agent id of the keeper subagent, once its spawn answers |
+| `checkout` | path and branch of the worktree the worker's launch made, once its session is seen there; absent for a worker started without one |
+| `host` | the space host's run, as an epoch, recorded by the space host before it checks anything |
 | `openedAt`, `closing` | when it opened; why it began to close |
 | `end` | what closing observed: when, why, the worker's end, the checkout as found — there, gone or unknown, never left out — and when a checkout not seen gone was seen gone |
 
@@ -44,11 +49,12 @@ naming the state, and every step is written before the act it names is answered 
 
 - **Create**: the record in `opening`, with the worker fixed — harness, name, role, session
   id — before anything of it starts.
-- **SetKeeper**, **SetCheckout**: in `opening` only, each once.
-- **Opened**: `opening` to `open`, with the worker's run; refused without the checkout, so
-  the checkout is in the record before the worker can run in it. S4-7 writes it before the
-  host opens the worker's launch gate, so every run of a worker's harness has a record that
-  names it.
+- **SetHost**: in `opening` only, once — the space host's own run.
+- **Opened**: `opening` to `open`, with the worker's run; refused without the space host's
+  run, written once the worker's wrapper is started and before the open is answered.
+- **SetCheckout**: in any state not over, once, when the worker's session is seen to claim a
+  worktree — `closing` included, since the worker can claim it after the space host last
+  looked.
 - **BeginClosing**: `opening` or `open` to `closing`, with why; a second one keeps the
   first, since main's exit is seen both by its mod and by its harness ending.
 - **Close**: any state not over to `kept`, when the checkout was found still there or could
@@ -65,7 +71,7 @@ naming the state, and every step is written before the act it names is answered 
 
 Every record, whatever step wrote it, holds its own invariants, and one read that breaks them
 is unreadable rather than half believed: an end exactly when the state is final, `open` with
-its checkout and its worker's run, `kept` exactly while a checkout not seen gone at the close
+its space host's run and its worker's run, `kept` exactly while a checkout not seen gone at the close
 is not seen gone since. A closed record whose end omits the checkout's presence does not read.
 
 ## The listing

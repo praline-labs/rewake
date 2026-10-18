@@ -53,6 +53,7 @@ func documentedForms(launch string) []formCase {
 		// Refused by the handler before any read.
 		{[]string{"space"}, view},
 		{[]string{"space", "open"}, view},
+		{[]string{"attach", "api"}, view},
 		// Refused by the handler before any read.
 		{[]string{"decide", "api", "--arrived"}, view},
 		{[]string{"decide", "api", "1790370984617481194-8d4ddd85c8f1"}, view},
@@ -76,6 +77,7 @@ func documentedForms(launch string) []formCase {
 		{[]string{"worktree", "finish", "fix-login"}, change},
 		{[]string{"decide", "api", "1790370984617481194-8d4ddd85c8f1", "--arrived"}, change},
 		{[]string{"decide", "api", "1790370984617481194-8d4ddd85c8f1", "--not-arrived", "--json"}, change},
+		{[]string{"space", "open", "api", "--harness", launch}, change},
 	}
 	for _, kind := range sendKinds {
 		if kind.flag.Flag != "" {

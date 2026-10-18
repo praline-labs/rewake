@@ -83,22 +83,25 @@ func Create(dir string, record Record) error {
 	})
 }
 
-// SetKeeper records the agent id of the space's keeper, once its spawn
-// answers.
-func SetKeeper(dir, id, agent string) (Record, error) {
-	return change(dir, id, "recording the keeper", func(r *Record) error {
-		if r.State != Opening || (r.Keeper != "" && r.Keeper != agent) || agent == "" {
+// SetHost records the space host's run, once it is detached and before it
+// starts anything: a worker always has a record naming what closes it.
+func SetHost(dir, id, hostRun string) (Record, error) {
+	return change(dir, id, "recording the space host", func(r *Record) error {
+		if r.State != Opening || r.Host != "" || hostRun == "" {
 			return errStep
 		}
-		r.Keeper = agent
+		r.Host = hostRun
 		return nil
 	})
 }
 
-// SetCheckout records where the worker will run, before it starts.
+// SetCheckout records the worktree the worker's launch made, once its
+// session is seen there; once recorded it does not change. Closing takes it
+// too: the worker can claim its checkout after the space host last looked,
+// and the close must not find it unrecorded.
 func SetCheckout(dir, id string, checkout Checkout) (Record, error) {
 	return change(dir, id, "recording the checkout", func(r *Record) error {
-		if r.State != Opening || checkout.Path == "" || (r.Checkout.Path != "" && r.Checkout != checkout) {
+		if r.State.Final() || checkout.Path == "" || (r.Checkout.Path != "" && r.Checkout != checkout) {
 			return errStep
 		}
 		r.Checkout = checkout
@@ -106,12 +109,11 @@ func SetCheckout(dir, id string, checkout Checkout) (Record, error) {
 	})
 }
 
-// Opened records the worker's run once its wrapper is seen running: before
-// the host opens the worker's launch gate, so a run of the worker's harness
-// always has a record that names it, and before the open is answered.
+// Opened records the worker's run once the space host started its wrapper,
+// before the open is answered.
 func Opened(dir, id, workerRun string) (Record, error) {
 	return change(dir, id, "opening", func(r *Record) error {
-		if r.State != Opening || r.Checkout.Path == "" || workerRun == "" {
+		if r.State != Opening || r.Host == "" || workerRun == "" {
 			return errStep
 		}
 		r.State, r.Worker.Run = Open, workerRun
@@ -120,8 +122,7 @@ func Opened(dir, id, workerRun string) (Record, error) {
 }
 
 // BeginClosing records that the space is closing and why, before anything
-// is stopped. A space already closing stays as it is: main's exit is seen
-// both by its mod and by its harness ending.
+// is stopped. A space already closing stays as it is.
 func BeginClosing(dir, id, why string) (Record, error) {
 	return change(dir, id, "closing", func(r *Record) error {
 		switch {
@@ -137,9 +138,10 @@ func BeginClosing(dir, id, why string) (Record, error) {
 
 // Close records what closing observed: the worker's end and the checkout as
 // found after it. The space is kept when its checkout was found there or
-// could not be looked at, and closed only when it was seen gone. A record is closed only from an observation (SP2), so an end
-// that observed nothing is refused; any state that is not over may close,
-// since the next start closes a record whatever step its dead main reached.
+// could not be looked at, and closed only when it was seen gone or never
+// made. A record is closed only from an observation (SP2), so an end that
+// observed nothing is refused; any state that is not over may close, since an
+// open can fail at any step.
 func Close(dir, id string, end End) (Record, error) {
 	return change(dir, id, "closing from what was observed", func(r *Record) error {
 		if r.State.Final() {

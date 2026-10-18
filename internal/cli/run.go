@@ -4,17 +4,24 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/host/launch"
+	"github.com/praline-labs/rewake/internal/host/spacehost"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // Run executes one invocation against the catalog the binary built and
 // returns the process exit code.
 func Run(catalog adapter.Catalog, argv []string, stdout, stderr io.Writer) int {
+	// A space host's stage is this binary re-executed by rewake space open,
+	// with no arguments of its own: it runs before anything reads them.
+	if spec, ok := os.LookupEnv(spacehost.Env); ok && len(argv) == 0 {
+		return spacehost.Stage(spec)
+	}
 	t := newTable(catalog)
 	ctx := &Context{Stdout: stdout, Stderr: stderr, table: t}
 	// What this invocation meets reaching the state is its own evidence.

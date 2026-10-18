@@ -61,6 +61,10 @@ type backend struct {
 	hello     chan struct{}
 	helloOnce sync.Once
 
+	// hostsSpaces is the run's role opening spaces: a live connection then
+	// proves SpacesCapability.
+	hostsSpaces bool
+
 	mu      sync.Mutex
 	link    *link
 	thread  string
@@ -344,6 +348,11 @@ func (b *backend) current() []adapter.Capability {
 		if b.live[capability] {
 			out = append(out, adapter.Capability(capability))
 		}
+	}
+	// A space host is rewake's own process, which needs of the run only that
+	// it runs: the program's connection proves that.
+	if b.hostsSpaces && b.link != nil {
+		out = append(out, adapter.SpacesCapability)
 	}
 	return out
 }

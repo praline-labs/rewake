@@ -20,7 +20,7 @@ func spaceRecord(id, name, spaceState, main, namespace, checkout, end string) st
 	"main": {"name": "lead-one", "run": "` + main + `", "pidNamespace": "` + namespace + `"},
 	"worker": {"harness": "worker-harness", "name": "` + name + `", "role": "write", "sessionId": "0f0e0d0c-0b0a-4908-8706-050403020100", "run": "5151.1800"},
 	"checkout": {"path": "` + checkout + `", "branch": "worktree-agent-` + name + `"},
-	"keeper": "agent-` + name + `", "openedAt": "2026-10-13T12:00:00Z"` + end + `}`
+	"host": "6161.1750", "openedAt": "2026-10-13T12:00:00Z"` + end + `}`
 }
 
 // rewake space list reads the room's records as a view: open, closed and
@@ -121,7 +121,7 @@ func TestSpaceListShowsOpenClosedAndKept(t *testing.T) {
 	if _, out, _ := run("space", "list"); strings.Contains(out, "kept checkout") || !strings.Contains(out, "kept    kept") {
 		t.Fatalf("a kept checkout removed by hand:\n%s", out)
 	}
-	if code, _, errOut := run("space", "open"); code != ExitUsage || !strings.Contains(errOut, "space needs list") {
+	if code, _, errOut := run("space", "close"); code != ExitUsage || !strings.Contains(errOut, "space needs list") {
 		t.Fatalf("a verb list does not know: %d %q", code, errOut)
 	}
 }
