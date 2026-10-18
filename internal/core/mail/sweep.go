@@ -1,9 +1,11 @@
 package mail
 
 import (
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -72,6 +74,13 @@ func SweepFinishedLocked(dir, name, epoch string) {
 				continue
 			}
 			if (directory == state.DonePath(dir, name) || directory == state.UnreadPath(dir, name)) &&
+				reportStillAwaited(dir, name, filepath.Join(directory, entry.Name())) {
+				// Its writer's wait still names what it answers: the end that
+				// wrote it did not clear the wait, and a retry finding no letter
+				// would write it again.
+				continue
+			}
+			if (directory == state.DonePath(dir, name) || directory == state.UnreadPath(dir, name)) &&
 				!settleOnce(dir, name, epoch, strings.TrimSuffix(entry.Name(), ".json")) {
 				// The letter is the only proof an intent was carried out; a
 				// retry finding neither would write it again.
@@ -94,6 +103,36 @@ func SweepFinishedLocked(dir, name, epoch string) {
 	if !kept.keeps(filepath.Join(state.InboxPath(dir, name), "receipts")) {
 		receipt.Sweep(dir, name, epoch, cutoff, func(id string) bool { return stillUnread(dir, name, id) })
 	}
+}
+
+// reportStillAwaited says whether the letter at path is a report whose writer's
+// run still records the wait it answers. One whose wait cannot be read may be
+// such a report, and is kept; a letter that cannot be read is no report.
+func reportStillAwaited(dir, name, path string) bool {
+	raw, err := state.ReadFile(path)
+	if err != nil {
+		return false
+	}
+	var letter Message
+	if json.Unmarshal(raw, &letter) != nil || !IsReport(letter) || len(letter.InReplyTo) == 0 || !state.ValidName(letter.From) {
+		return false
+	}
+	waits, ok := awaitingPath(dir, letter.From, letter.FromEpoch)
+	if !ok {
+		return false
+	}
+	raw, err = state.ReadFile(filepath.Join(waits, name))
+	if errors.Is(err, os.ErrNotExist) {
+		return false
+	}
+	if err != nil {
+		return true
+	}
+	waiter, err := parseWaiter(name, string(raw))
+	if err != nil {
+		return true
+	}
+	return waiter.Epoch == letter.ToEpoch && slices.ContainsFunc(letter.InReplyTo, func(id string) bool { return slices.Contains(waiter.Messages, id) })
 }
 
 // keepFinished is how long a delivered or refused message and its status are

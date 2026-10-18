@@ -96,6 +96,15 @@ func WriteJournal(dir, name, id string, journal TurnJournal) error {
 	return writeJournalFile(filepath.Join(JournalPath(dir, name), id), journal)
 }
 
+// writeDoneJournal records the turn end op of name as done: what a retry of the
+// same event and the next end's window read (JournalRecorded, TurnWindowStart).
+func writeDoneJournal(dir, name, op string, journal TurnJournal) error {
+	if err := state.EnsureSubdir(JournalPath(dir, name)); err != nil {
+		return err
+	}
+	return writeJournalFile(filepath.Join(JournalPath(dir, name), op+doneSuffix), journal)
+}
+
 func writeJournalFile(path string, journal TurnJournal) error {
 	return world{files: osAccess{}}.writeJournalFile(path, journal)
 }

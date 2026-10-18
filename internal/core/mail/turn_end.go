@@ -56,16 +56,10 @@ func EndTurn(parent context.Context, dir string, self registry.Session, event Tu
 	defer cancel()
 	reason := ""
 	err := state.WithMailboxLock(ctx, dir, self.Name, func() error {
-		// Every record of the mailbox is reconciled first: a wait an
-		// unfinished journal answered would be answered again, and a stopped
-		// mailbox changes nothing (docs/turn-end-recovery.md#reconciliation).
-		if err := Reconcile(ctx, dir, self.Name); err != nil {
-			return err
-		}
 		op := turnOp(self, event)
 		if event.ID != "" {
 			// An end on record is answered from the record, never run again: a
-			// journal of it, which the barrier has completed; a hold of it,
+			// done journal of it; a hold of it,
 			// answered with the same reason and nothing kept again; or a
 			// journal that took its kept answer, so it was published with its
 			// continuation. Only an end of another identity takes a kept

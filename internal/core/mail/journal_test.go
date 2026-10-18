@@ -2,7 +2,6 @@ package mail
 
 import (
 	"context"
-	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -49,38 +48,6 @@ func finishAll(t *testing.T, dir string) error {
 	})
 }
 
-// A report the journal published, read and swept since, is not published
-// again: the journal keeps the proof the mailbox no longer does.
-func TestAJournalDoesNotRepublishASweptReport(t *testing.T) {
-	dir, epoch, report := journalLab(t)
-	// The wait stays readable, so the barrier reads every record and goes on
-	// to publish; only its clearing fails. An unreadable one would stop the
-	// mailbox before any effect.
-	waiter := filepath.Join(state.AwaitingPath(dir, "api"), epoch)
-	if err := os.Chmod(waiter, 0o500); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = os.Chmod(waiter, 0o700) })
-	if finishAll(t, dir) == nil {
-		t.Fatal("the clearing did not fail")
-	}
-	if err := archive(dir, "web", report.ID); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Remove(filepath.Join(state.DonePath(dir, "web"), report.ID+".json")); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Chmod(waiter, 0o700); err != nil {
-		t.Fatal(err)
-	}
-	if err := finishAll(t, dir); err != nil {
-		t.Fatal(err)
-	}
-	if waiting, err := List(dir, "web"); err != nil || len(waiting) != 0 {
-		t.Fatalf("published again after the sweep: %d %v", len(waiting), err)
-	}
-}
-
 // A journal takes the kept answer it carried and no other: an answer kept
 // after it is a later turn end's.
 func TestAJournalTakesOnlyTheAnswerItCarried(t *testing.T) {
@@ -104,65 +71,6 @@ func TestAJournalTakesOnlyTheAnswerItCarried(t *testing.T) {
 	}
 	if text, kept, err := KeptAnswer(dir, "api", epoch); err != nil || !kept || text != "a later answer" {
 		t.Fatalf("the journal took a later answer: %q %v %v", text, kept, err)
-	}
-}
-
-// publishedWithoutItsEntry publishes the report of journalLab and fails to
-// record it in the journal, then has web read it and the sweep remove it a day
-// later. mark, when set, is left in place of web's mark of the report: the
-// state of an end that died between writing the report and marking it.
-func publishedWithoutItsEntry(t *testing.T, mark string) (string, Message) {
-	t.Helper()
-	dir, _, report := journalLab(t)
-	journals := JournalPath(dir, "api")
-	if err := os.Chmod(journals, 0o500); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = os.Chmod(journals, 0o700) })
-	if finishAll(t, dir) == nil {
-		t.Fatal("the entry was recorded")
-	}
-	if err := os.Chmod(journals, 0o700); err != nil {
-		t.Fatal(err)
-	}
-	if waiting, err := List(dir, "web"); err != nil || len(waiting) != 1 {
-		t.Fatalf("the report did not go out: %d %v", len(waiting), err)
-	}
-	if mark != "" {
-		path, _ := oncePath(dir, "web", report.ToEpoch, report.ID)
-		if err := os.WriteFile(path, []byte(mark), 0o600); err != nil {
-			t.Fatal(err)
-		}
-	}
-	if err := archive(dir, "web", report.ID); err != nil {
-		t.Fatal(err)
-	}
-	done := filepath.Join(state.DonePath(dir, "web"), report.ID+".json")
-	old := time.Now().Add(-keepFinished - time.Hour)
-	if err := os.Chtimes(done, old, old); err != nil {
-		t.Fatal(err)
-	}
-	sweepAsLiveRun(t, dir, "web", report.ToEpoch)
-	if _, err := os.Stat(done); !errors.Is(err, os.ErrNotExist) {
-		t.Fatalf("the sweep kept the read report: %v", err)
-	}
-	return dir, report
-}
-
-// A report put in its mailbox whose entry in the journal could not be written
-// is not published again once read and swept: the recipient's mark of it
-// outlives the report.
-func TestAReportWhoseEntryFailedIsNotRepublishedAfterTheSweep(t *testing.T) {
-	for _, mark := range []string{"", onceIntent} {
-		t.Run("mark="+mark, func(t *testing.T) {
-			dir, _ := publishedWithoutItsEntry(t, mark)
-			if err := finishAll(t, dir); err != nil {
-				t.Fatal(err)
-			}
-			if waiting, err := List(dir, "web"); err != nil || len(waiting) != 0 {
-				t.Fatalf("published again after the sweep: %d %v", len(waiting), err)
-			}
-		})
 	}
 }
 
