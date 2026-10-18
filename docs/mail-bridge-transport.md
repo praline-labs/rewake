@@ -4,7 +4,7 @@ From S7 a harness may carry the mail tool's calls itself, without a tool server 
 rewake's: the harness registers the tools and its own process asks the wrapper's endpoint
 to run each call (`docs/v2/design-api.md#tooltransport`). The fixture is the first harness
 to do so ([stage3-fixture.md](v2/stage3-fixture.md#the-tool-transport)); the Claude Code
-mod is meant to be the next. The rules of [mail-bridge-server.md](archive-1.x/mail-bridge-server.md)
+mod is meant to be the next. The rules of [mail-bridge-server.md](archive/1.x/mail-bridge-server.md)
 hold unchanged — T1–T11 in [rules/tools.md](rules/tools.md) bind every transport — and this
 page says where the path differs.
 

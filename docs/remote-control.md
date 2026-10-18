@@ -2,14 +2,14 @@
 
 A main session acts on a running worker without a person at its keyboard: it compacts
 the worker's conversation, or interrupts the worker's turn. It was built as stage 2 of
-rewake's function-hooks plugin for Claude Code ([claude-plugin.md](archive-1.x/claude-plugin.md)
+rewake's function-hooks plugin for Claude Code ([claude-plugin.md](archive/1.x/claude-plugin.md)
 is stage 1, which only listened). What the harness offers for it is in
 [research-claude-actions.md](research-claude-actions.md)
-and, for Codex, [research-protocol.md](research-protocol.md#compaction-and-interrupt-on-request).
+and, for Codex, [research-protocol.md](archive/research-protocol.md#compaction-and-interrupt-on-request).
 
 Built on September 24, 2026 for Claude Code, with unit and module tests and a workflow
 case, and the same day for Codex (part B), where the wrapper serves the requests itself
-([remote-control-codex.md](archive-1.x/remote-control-codex.md)).
+([remote-control-codex.md](archive/1.x/remote-control-codex.md)).
 
 **No product harness serves it since S9, October 11, 2026.** The Codex side left in S8,
 and the Claude Code side — rewake's plugin module — left with the plugin in S9; stage 4
@@ -190,7 +190,7 @@ the command waited up to 90 seconds for the end.
 ## On Claude Code
 
 Until S9, October 11, 2026, rewake's plugin module served the directory inside the
-session ([claude-plugin.md](archive-1.x/claude-plugin.md) has the module): the wrapper
+session ([claude-plugin.md](archive/1.x/claude-plugin.md) has the module): the wrapper
 wrote the directory's path into it, and it polled for a request four times a second.
 A compaction called the host's `$.session.compact()`, with the host's own refusals
 mapped to `in a turn`, `compaction switched off`, `remote conversation` and `nothing
@@ -225,9 +225,9 @@ program ends the turn saying who interrupted it.
 ## On Codex
 
 In 1.x the wrapper served the directory itself, through the gateway that held the
-app-server connection ([remote-control-codex.md](archive-1.x/remote-control-codex.md)),
+app-server connection ([remote-control-codex.md](archive/1.x/remote-control-codex.md)),
 and the directory carried one action that was not main's, `accept`
-([delivery-conversation.md](archive-1.x/delivery-conversation.md)). Both left with the
+([delivery-conversation.md](archive/1.x/delivery-conversation.md)). Both left with the
 Codex adapter in S8.
 
 ## Known limits
@@ -256,7 +256,7 @@ Codex adapter in S8.
 - A focus for a Codex compaction is refused for now: `thread/compact/start` has no
   field for it, and `compact_prompt` replaces the whole prompt for the whole
   conversation. A proper route and an emulation through the conversation's history are
-  to be researched later ([work-queue.md](work-queue.md)) (September 24, 2026).
+  to be researched later ([work-queue.md](archive/work-queue.md)) (September 24, 2026).
 - After an interrupt from main, the Claude Code worker's next rewake notice carries a
   line saying so, once, so that its model sees roughly what Codex's does
   (September 24, 2026). The line left with the plugin in S9, October 11, 2026; stage 4

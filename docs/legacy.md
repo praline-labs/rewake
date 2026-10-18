@@ -97,14 +97,8 @@ None open: the marks of `codex <0.157.1` left with the Codex adapter in S8, Octo
 
 ## Current marks
 
-| File | Mark | Count |
-|---|---|---|
-| `internal/core/mail/answer_mark.go` | `rewake <2026-09-26` | 1 |
-| `internal/core/mail/waiters.go` | `rewake <2026-09-28` | 1 |
-| `internal/host/delivery/window.go` | `rewake <2026-09-26` | 1 |
-| `internal/core/registry/liveness.go` | `rewake <2026-09-16` | 1 |
-| `internal/host/worktree/land.go` | `rewake <2026-09-27` | 1 |
-| `internal/core/role/role.go` | `rewake <2026-09-17` | 1 |
-| `internal/core/session/store.go` | `rewake <2026-09-26` | 1 |
-| `internal/infra/legacy/record.go` | `rewake <2026-10-12` | 1 |
-| `internal/infra/legacy/count.go` | `rewake <2026-10-12` | 1 |
+The `rewake <2026-09-*` marks were cleared on October 18, 2026 by the owner's decision of that day:
+2.0 starts from its own root `v2/`, so no record of those builds is read. Where the code under a mark
+also served a record without a boot clock or a namespace, that code stayed as an ordinary fallback.
+
+None: the two marks of `rewake <2026-10-12` left with the clearing of 1.x on the same day.

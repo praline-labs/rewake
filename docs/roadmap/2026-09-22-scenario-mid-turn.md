@@ -1,13 +1,13 @@
 # The mid-turn scenario, as built — September 22, 2026
 
 What building the third selected scenario taught. The contract it was built to is
-section 3 of [check-runner-scenarios.md](../check-runner-scenarios.md).
+section 3 of [check-runner-scenarios.md](../archive/check-runner-scenarios.md).
 
 The question belongs to the server, not to the product. rewake sends the same request
 whether the recipient is idle or working — a `turn/start` — and the server decides
 between starting a turn and steering the input into the one already running. So the
 fixture had to learn that fork before the scenario could exist, and what was
-established about it is in [research-protocol.md](../research-protocol.md): a steered
+established about it is in [research-protocol.md](../archive/research-protocol.md): a steered
 `turn/start` answers with the running turn's id and nothing else changes, no second
 `turn/started` follows it, and a mailbox delivery can steer despite its empty input
 list because a tool output is submitted as a response item rather than as user input.

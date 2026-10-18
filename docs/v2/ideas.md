@@ -169,7 +169,7 @@ subagent's own tool row rather than a pane: a `Raster` grid repainted by `blit` 
 second, and a `Client` under it. After a click the `Client` got letters, Alt as `meta`, F1 as
 its raw sequence, the arrows and Tab. Escape returned focus to the prompt; Ctrl+C, Ctrl+X and
 a bracketed paste did not reach it, the paste going into the prompt. The owner's direction
-for that gap is a prefix key ([two levels of UI](stage4-audit.md#two-levels-of-ui)); the
+for that gap is a prefix key ([two levels of UI](../archive/v2/stage4-audit.md#two-levels-of-ui)); the
 `fetch` over a Unix socket worked, each call ending after 30 s at the latest. P15b, the
 same day ([the record](../research-claude-mod.md#p15b-a-real-pseudo-terminal-in-the-keepers-row)),
 drew a real pseudo-terminal in that row with its screen kept by a VT emulator: the keys and
@@ -192,7 +192,7 @@ The questions it raised, as the owner answered them that day
   as any harness.
 
 Weighed in the stage 4 audit, October 13, 2026
-([stage4-audit-rows-space.md](stage4-audit-rows-space.md#16-worker-tabs-and-buttons--split-p15)): the
+([stage4-audit-rows-space.md](../archive/v2/stage4-audit-rows-space.md#16-worker-tabs-and-buttons--split-p15)): the
 pseudo-terminal belongs to a rewake process, the space's terminal process, whose identity
 P11 and P15 decide, so a tab can host a worker of any harness, Codex and pi included, and a
 button appears when main launches a worker, not only on "+"; a reload of the mod loses the
@@ -202,7 +202,7 @@ with the mod drawing the terminal in that subagent's tool row — which P15a sho
 — or in its pane for that view. Main
 launching workers is a new authority; the owner made it the target the same day — main
 creates a space, a tab over a pseudo-terminal rewake owns, and seats a worker in it
-([the target](stage4-audit.md#the-target-a-space)). The probe above is P15 of
+([the target](../archive/v2/stage4-audit.md#the-target-a-space)). The probe above is P15 of
 [design-claude.md](design-claude.md#the-stage-4-probe), which runs beside stage 4's probe by
 main's decision of the same day.
 
@@ -255,7 +255,7 @@ input open.
 sessions prove unworkable for some use. No stage holds it. Workers close with their main by
 the owner's decision of October 13, 2026 ([answer 7](design.md#the-owners-answers)), so a
 headless worker would too; background workers under Claude Code's supervisor are dropped
-([row 18](stage4-audit-rows-space.md#18-headless-and-background-workers--dropped)).
+([row 18](../archive/v2/stage4-audit-rows-space.md#18-headless-and-background-workers--dropped)).
 
 ## 5. A worktree made on the Claude Code side, a Codex worker seated in it
 
@@ -279,7 +279,7 @@ worktree lies inside the repository.
 the probe), 5 for seating a Codex worker. Owner's idea, October 12, 2026.
 
 Weighed in the stage 4 audit, October 13, 2026
-([stage4-audit-rows-space.md](stage4-audit-rows-space.md#13-worktree--split-p12-p12b)): a checkout made
+([stage4-audit-rows-space.md](../archive/v2/stage4-audit-rows-space.md#13-worktree--split-p12-p12b)): a checkout made
 without a hook gets no `classic.WorktreeRemove` by the documentation, so the veto for a foreign worker waits on
 P12. After that day's review the owner directed that the whole lifecycle goes to Claude Code
 even with another harness inside: a Claude Code worker makes its own with `-w`, and a worker

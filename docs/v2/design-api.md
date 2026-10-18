@@ -87,7 +87,7 @@ bounded: it stops admission, waits for the handlers in flight within its bound a
 the rest, and a handler that outlasts it — stalled in the filesystem, say — stays counted,
 so the run's end holds the room's lease and its directory until that handler's last write
 rather than the close holding the wrapper's exit
-([stage3-rundir.md](stage3-rundir.md#where-it-is-and-when-it-goes)). Built in S4-5's review
+([stage3-rundir.md](../archive/v2/stage3-rundir.md#where-it-is-and-when-it-goes)). Built in S4-5's review
 fix, October 13, 2026.
 
 ### Wake

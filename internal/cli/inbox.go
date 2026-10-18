@@ -143,9 +143,8 @@ func mailboxStopped(dir, name string) error {
 // mailAdmitted refuses the mail of a run whose launch asked to resume a
 // conversation that is neither resumed nor replaced at the person's word: the
 // shell may be running in a conversation nobody chose
-// (docs/archive-1.x/delivery-conversation.md). The wrapper's own record decides, written
-// before the terminal starts; the published snapshot only names the
-// conversations, since it is written on a tick and may not show the hold yet.
+// (docs/archive/1.x/delivery-conversation.md). The wrapper's own record decides, written
+// before the terminal starts.
 func mailAdmitted(dir, name, epoch string) error {
 	held, detail, err := session.MailHeld(dir, name, epoch)
 	if err != nil {
@@ -153,9 +152,6 @@ func mailAdmitted(dir, name, epoch string) error {
 	}
 	if !held {
 		return nil
-	}
-	if hold := session.Load(dir, name, epoch).DeliveryHold; hold != nil && (hold.Reason == session.HoldUnintended || hold.Reason == session.HoldMailClosed) {
-		detail = hold.Detail
 	}
 	return failf("the mail of %s waits for its conversation: %s", name, detail)
 }

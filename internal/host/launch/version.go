@@ -1,7 +1,6 @@
 package launch
 
 import (
-	"errors"
 	"fmt"
 	"path/filepath"
 	"regexp"
@@ -37,10 +36,7 @@ func Gate(h adapter.Harness, program string, env []string, dir string) (string, 
 	if gate.Minimum == "" {
 		return "", nil
 	}
-	version, err := ReadVersion(program, gate.Args, env, dir)
-	if err != nil {
-		return "", err
-	}
+	version := readVersion(program, gate.Args, env, dir)
 	return version.Value, RequireVersion(h.Title(), version, gate.Minimum)
 }
 
@@ -53,36 +49,25 @@ type Version struct {
 	Unknown string
 }
 
-// ReadVersion asks a program its version as a probe, bounded and reaped. It
-// answers the version it printed, or an unknown version saying what came
-// of the read — no start, no answer within the bound, an exit other than 0,
-// no version in the output — once the holder has shown that everything the
-// probe began has ended. When that cannot be shown it answers an error,
-// which refuses the launch: it would otherwise run beside what is left.
-func ReadVersion(program string, args, env []string, dir string) (Version, error) {
+// readVersion asks a program its version as a probe, bounded, its group
+// killed. It answers the version it printed, or an unknown version saying
+// what came of the read — no start, no answer within the bound, an exit other
+// than 0, no version in the output.
+func readVersion(program string, args, env []string, dir string) Version {
 	asked := strings.Join(append([]string{filepath.Base(program)}, args...), " ")
-	notEnded := fmt.Errorf("%s %s: what it started could not be shown to have ended", asked, OutcomeNotEnded)
-	probe, err := StartProbe(ProbeSpec{Label: strings.Join(args, " "), Program: program, Args: args, Env: env, Dir: dir, Bound: versionBound, Capture: true})
+	probe := runProbe(program, args, env, dir, versionBound)
+	value := versionToken.FindString(string(probe.Output))
 	switch {
-	case errors.Is(err, ErrProbeNotEnded):
-		return Version{}, notEnded
-	case err != nil:
-		return Version{Unknown: asked + " " + OutcomeNoStart}, nil
-	}
-	code, answered := probe.Wait()
-	if probe.End() != nil {
-		return Version{}, notEnded
-	}
-	value := versionToken.FindString(string(probe.Output()))
-	switch {
-	case !answered:
-		return Version{Unknown: asked + " gave " + OutcomeBound}, nil
-	case code != 0:
-		return Version{Unknown: asked + " ended with " + OutcomeExit(code)}, nil
+	case !probe.Started:
+		return Version{Unknown: asked + " " + outcomeNoStart}
+	case !probe.Answered:
+		return Version{Unknown: asked + " gave " + outcomeBound}
+	case probe.Code != 0:
+		return Version{Unknown: asked + " ended with " + outcomeExit(probe.Code)}
 	case value == "":
-		return Version{Unknown: asked + " printed no version"}, nil
+		return Version{Unknown: asked + " printed no version"}
 	}
-	return Version{Value: value}, nil
+	return Version{Value: value}
 }
 
 // RequireVersion is a launch's refusal by version: nil when the version is

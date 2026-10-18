@@ -3,8 +3,8 @@
 The third of the three stages of [mail-bridge.md](../mail-bridge.md) — giving the
 harness the mail tool's server at launch, and keeping the run's mail channel — was built
 on October 4, 2026 against rules accepted after five design passes
-([mail-bridge-launch.md](../mail-bridge-launch.md),
-[mail-bridge-launch-codex.md](../mail-bridge-launch-codex.md),
+([mail-bridge-launch.md](../archive/1.x/mail-bridge-launch.md),
+[mail-bridge-launch-codex.md](../archive/1.x/mail-bridge-launch-codex.md),
 [mail-bridge-channel.md](../mail-bridge-channel.md)). Its code was accepted the same day
 in the fourth Codex-side round. **The stage is not closed**: the live checks of
 [mail-bridge-live.md](../mail-bridge-live.md) are open, and until gates G2 and G7 close a

@@ -53,10 +53,6 @@ func (e *RefusedError) Error() string {
 // any other checkout is refused: that may be a worker's, the worktree's own
 // among them, and a merge there would change files and HEAD under it.
 func Land(record Record, into string) (Landing, error) {
-	// legacy(rewake <2026-09-27): records of earlier builds name no branch, their checkouts are detached; remove when no such record is left under the worktree root
-	if record.Branch == "" {
-		return Landing{}, &StateError{Reason: fmt.Sprintf("%s is a detached checkout from before rewake gave worktrees a branch, so it has no branch to land; make one in it with git switch -c <name> and merge that by hand", record.Ref())}
-	}
 	if repositoryGone(record) {
 		return Landing{}, &StateError{Reason: fmt.Sprintf("the repository %s of %s is gone", record.CommonDir, record.Ref())}
 	}

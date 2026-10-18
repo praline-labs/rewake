@@ -114,7 +114,7 @@ harness.
 prompt, can detach, outlive a module reload and end with the harness process, and its
 parent before detaching is the harness process. Not seen: `session.end` without an exit
 (clear, resume), a respawn of the hooks worker, the harness killed outright, and the
-authority obligations of the mod's join ([stage4-audit.md](v2/stage4-audit.md#a-what-the-wrapper-does-today-and-whether-the-mod-can-take-it-over)).
+authority obligations of the mod's join ([stage4-audit.md](archive/v2/stage4-audit.md#a-what-the-wrapper-does-today-and-whether-the-mod-can-take-it-over)).
 
 ## P12b: a subagent of main as the worktree's keeper
 

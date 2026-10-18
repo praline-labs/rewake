@@ -40,7 +40,7 @@ No scenario message was sent. On main's decision the next runs passed
 The interrupt's side finding: the `sleep 20` ran on after the turn ended and wrote its
 end marker 20 seconds after it started. An interrupt on Codex 0.155.1 does not stop a
 command the turn already started
-([remote-control-codex-limits.md](../remote-control-codex-limits.md)).
+([remote-control-codex-limits.md](../archive/1.x/remote-control-codex-limits.md)).
 
 **Not checked by these runs.** The compaction was short, 3.6 seconds, so the 80-second
 bound for a compaction not yet seen, the 10-minute bound for one seen running, a

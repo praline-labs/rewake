@@ -9,7 +9,7 @@ cannot start another, and main lands and finishes it — is said there.
 its own, on a branch of its own. Codex's terminal cannot make one under rewake — it
 refuses `--worktree` together with `--remote`, before it creates anything, and rewake
 always starts it with `--remote`
-([research-codex.md](research-codex.md#--worktree-with-a-remote-terminal)) — so the
+([research-codex.md](archive/research-codex.md#--worktree-with-a-remote-terminal)) — so the
 launch command takes the flag for itself and never passes it on. Decided by the owner on
 September 26, 2026, as the variant that keeps only the substance of Codex's worktree:
 a checkout made with the public `git worktree add`, and rewake's own record of it.
@@ -86,7 +86,7 @@ bring the work back, and that Claude Code launches get the same checkout.
   harness arguments resolve there too.
 - **Trust.** Codex resolves a linked worktree's trust to its main checkout, so a
   launch from a trusted repository keeps that trust in its checkout
-  ([research-codex.md](research-codex.md#--worktree-with-a-remote-terminal)). Claude
+  ([research-codex.md](archive/research-codex.md#--worktree-with-a-remote-terminal)). Claude
   Code keeps trust under the canonical git root, which for a linked worktree is its main
   checkout too — read in its source, not checked live
   ([research-worktree.md](research-worktree.md#continuing-a-conversation-and-trust)).
@@ -111,7 +111,7 @@ bring the work back, and that Claude Code launches get the same checkout.
   September 26, 2026; fork read in the source, not run). Moving the conversation into the
   checkout — handing the terminal the checkout as its `-C` — is not built: what that does
   to a continued conversation's permissions
-  ([continuation-permissions.md](continuation-permissions.md)) was not checked. It is
+  ([continuation-permissions.md](archive/continuation-permissions.md)) was not checked. It is
   asked of the words, not of Codex's grammar: `resume` or `fork` as a whole argument
   anywhere before `--` refuses. The grammar lets a prompt come before the subcommand and
   ends an image's joined value (`--image=foo`, `-ifoo`) in its own argument where a
@@ -151,7 +151,7 @@ bring the work back, and that Claude Code launches get the same checkout.
   ref update run as they would for the person's own `git merge --ff-only`, waited for
   at most a minute ([landing and finishing](#landing-and-finishing)). The same
   choices were weighed against Codex's own worktree, which turns filters off too
-  ([research-codex.md](research-codex.md#--worktree-with-a-remote-terminal)), and
+  ([research-codex.md](archive/research-codex.md#--worktree-with-a-remote-terminal)), and
   against Claude Code's, which sets `core.hooksPath` in the shared configuration and
   resets an existing branch with `-B`
   ([research-worktree.md](research-worktree.md#what-else-claude-codes-worktree-does)); rewake does neither.
@@ -274,7 +274,7 @@ a package manager that keeps a shared cache. rewake builds no preparation comman
 link to the source's dependencies and no shared directory keyed by a lock file's hash.
 `.worktreeinclude` carries only what it lists, and without it nothing is copied. Codex's
 own worktree carries nothing beyond the commit
-([research-codex.md](research-codex.md#--worktree-with-a-remote-terminal)).
+([research-codex.md](archive/research-codex.md#--worktree-with-a-remote-terminal)).
 
 ## Landing and finishing
 
@@ -381,7 +381,7 @@ refuses. The checks and the removal hold the repository's lock together
   the one its wrapper started in, not the target of `-C`. Its work is not lost —
   `git worktree remove` refuses a checkout with changes — but a clean checkout goes from
   under it. Recording the directory a session actually works in is queued
-  ([work-queue.md](work-queue.md#also-queued-not-scheduled));
+  ([work-queue.md](archive/work-queue.md#also-queued-not-scheduled));
 - a directory gone while the repository still lists it: it may have been moved with its
   work, and `git worktree repair <new path>` run in the repository reconnects it. With
   `--force` its own entry is removed with `git worktree remove`, never `git worktree
@@ -402,4 +402,4 @@ that day that a refusal over state exits 1 in every worktree command.
 A main's `--grant-git` reaches such a checkout as it does a worktree made by hand: the
 grant reads the conversation's cwd, which is in the checkout, and resolves its private
 and common Git directories
-([research-permissions.md](research-permissions.md#managed-worktrees-and-continuation-permissions)).
+([research-permissions.md](archive/research-permissions.md#managed-worktrees-and-continuation-permissions)).

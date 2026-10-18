@@ -1,7 +1,7 @@
 # The task-report scenario, as built — September 21, 2026
 
 What building the first delivery scenario taught. The contract it was built to is
-section 1 of [check-runner-scenarios.md](../check-runner-scenarios.md).
+section 1 of [check-runner-scenarios.md](../archive/check-runner-scenarios.md).
 
 The shape check covers the delivery path too. It did
 not at first: four messages of the new path — the `turn/start` reply, `turn/started`,

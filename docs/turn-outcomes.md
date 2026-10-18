@@ -10,7 +10,7 @@ settled — is in [delivery-turn-end.md](delivery-turn-end.md#the-end-of-a-turn)
 After a failed or interrupted turn, a session is woken only by new mail: what was
 already announced is never announced again, and new mail needs neither a manual
 continuation nor a peek to reach it. Owner decision, September 19, 2026; the evidence
-is in [native-terminal-progress.md](native-terminal-progress.md). This holds for the
+is in [native-terminal-progress.md](archive/native-terminal-progress.md). This holds for the
 keyboard stops below as well.
 
 The adapter that heard the turn end emits error with the harness reason unchanged. Since
@@ -196,7 +196,7 @@ cannot tell work from a compaction. It publishes a `stopped` with the text "a ru
 this conversation passed unseen by rewake; whether it did your task is not known here",
 routed and kept like a keyboard stop: current waiters only, waits intact, the next
 finished settling the task. Why it cannot settle anything is in
-[codex-publication.md](archive-1.x/codex-publication.md).
+[codex-publication.md](archive/1.x/codex-publication.md).
 
 **A turn that ended unproven** (Codex, September 25, 2026, main's decision in round 8):
 a turn with no reply naming it and no item but a compaction's — a goal's turn failing
@@ -215,7 +215,7 @@ notice and kept waits; the next turn end that finishes settles the task — owne
 decision, September 23, 2026: harnesses do not diverge here. In 1.x Codex's gateway saw
 `turn/completed` with status `interrupted`, and Claude Code's stop came from rewake's
 function-hooks plugin, reporting `turn.complete` with reason `aborted`
-([claude-plugin.md](archive-1.x/claude-plugin.md)); the plugin left in S9, October 11,
+([claude-plugin.md](archive/1.x/claude-plugin.md)); the plugin left in S9, October 11,
 2026, and in this build the fixture's program is the one that reports a stop.
 
 Answer receipts store the report id in received/<question id>. Only an exact

@@ -4,7 +4,7 @@ The fixture adapter is the harness the core is proven on in stage 3: no real har
 every capability controllable, so the neutral scenarios run end to end and each
 capability's absence can be produced on purpose. Written on the 1.x contract in S5,
 made the suite's gate in S6, given its tool transport in S7, re-expressed on the
-capabilities in S10 ([stage3-steps.md](stage3-steps.md)). The suite today is described in
+capabilities in S10 ([stage3-steps.md](../archive/v2/stage3-steps.md)). The suite today is described in
 `docs/testing.md` and `docs/testing-cases.md`; citations are to `test/workflow/` and
 `internal/harness/backend.go` at `b6ed4ed`.
 
@@ -29,7 +29,7 @@ wrapper drives it by the path it drives Codex by, and the column works the day i
 - Turn ends through the `CompletionHandler` the wrapper passes to `Start`, as Codex's:
   `Capture` at a turn's start, `EndCapture` at its end, with the end's reason — and,
   unlike Codex, `Confirm` rather than `Publish`, the neutral confirmation S5's first
-  commit adds ([stage3-steps.md](stage3-steps.md#s5-the-confirmation-and-the-fixture-beside-the-others-codex)):
+  commit adds ([stage3-steps.md](../archive/v2/stage3-steps.md#s5-the-confirmation-and-the-fixture-beside-the-others-codex)):
   the end may be held, and the program then runs one more turn with the core's reason.
   Each end names its event; a switch drops the core's answer once and confirms the same
   end again, as a harness whose answer was lost would, and expects the same hold. A
@@ -227,11 +227,11 @@ the "Every control" table of `docs/testing-cases.md` with them (`docs/controls_t
 ## The tool transport
 
 From S7 the program also plays the harness's side of a tool call, for the suite and for
-the neutral rig ([stage3-tests-tcl.md](stage3-tests-tcl.md#the-neutral-rig)): it receives
+the neutral rig ([stage3-tests-tcl.md](../archive/v2/stage3-tests-tcl.md#the-neutral-rig)): it receives
 the descriptors, registers the six tools, and for a call reports the native call
 observed, sends the request with its binding (conversation, turn and call id chosen as a
 harness would, and the transport's declaration that its turn ids are never reused —
-S7's one contract, [stage3-steps-adapters.md](stage3-steps-adapters.md#s7-the-tool-path-on-the-fixture-codex):
+S7's one contract, [stage3-steps-adapters.md](../archive/v2/stage3-steps-adapters.md#s7-the-tool-path-on-the-fixture-codex):
 declared by default, withheld by a switch), confirms, runs
 nothing itself — the CLI child of the wrapper's image runs the words — and records the
 result it would hand the model, with a switch for each way the result can go wrong:

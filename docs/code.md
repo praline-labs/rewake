@@ -13,13 +13,12 @@ internal/infra/state/                         directory: checks, paths, atomic w
 internal/infra/build/                         the build id (SHA-256 of the image) and the room's build lease
 internal/infra/build/buildtest/               for tests: a room made and its build recorded the way a launch of the test binary does
 internal/infra/buildtime/                     durations a build may shorten through -ldflags, for the suite
-internal/infra/legacy/                        clearing the state of 1.x at a launch: admission, set aside, validation, deletion and its counts
 internal/core/registry/                       session record, name publishing, liveness and listing
 internal/core/registry/registrytest/          for tests: the boot a session of this build carries
 internal/infra/proc/                          /proc: identity, liveness, job-control state, lineage, namespaces, owner and initial environment
 internal/infra/boottime/                      the boot clock, comparable across processes and never set back
 internal/core/mail/                           message, status, sender-side write, the locked sweep and settlement, turn ends and the read's acknowledgment
-internal/core/mail/decisionmodel/             the operator decision's worlds and their expected outcomes, apart from the code (docs/v2/stage3-decision-manifest.md)
+internal/core/mail/decisionmodel/             the operator decision's worlds and their expected outcomes, apart from the code (docs/archive/v2/stage3-decision-manifest.md)
 internal/core/mail/mailtest/                  for tests outside mail: the paths and bytes of its records, each checked against mail
 internal/core/receipt/                        the journal of mail operations run through the tool's words: keys, records, frozen reads
 internal/tool/                                what the CLI and the context endpoint share: the ticket, result bounds, cutting parts, the gate against a turn's end
@@ -51,8 +50,6 @@ test/workflow/record/                         the record format a suite run prin
 test/toolrig/                                 the neutral rig: the tool path's oracles on the fixture's program and the host endpoint; the delivery server against the fixture's reservation, the test playing the program
 test/leaserig/                                the room's build lease raced between real builds of rewake, each paused at a named step
 test/decisionrig/                             decisions asked of real sessions' wrappers by real processes below them and outside, each wrapper paused or killed at a named step
-test/upgraderig/                              the clearing of 1.x between real processes: its crash and concurrency matrices over a fault build
-test/upgraderig/standin/                      the stand-in of 1.x the rig runs: rooms, launch locks, records and letters made as 1.x makes them
 tools/checksummary/                           summarizes a suite run into a few lines and summary.json
 tools/release/                                the release gate: checks, builds with pack.sh, publishes only when told
 tools/protogen/                               writes the mod protocol's Go and TypeScript types from its schema; its test fails when a checked-in file differs

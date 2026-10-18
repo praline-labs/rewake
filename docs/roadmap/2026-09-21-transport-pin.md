@@ -12,7 +12,7 @@ unobserved version is a reason to warn, not to stop a launch the owner asked for
 
 What was observed on 0.155.1, and what was not, is in [research.md](../research.md)
 under the tag of that version; the schema facts are in
-[research-protocol.md](../research-protocol.md). Open: every fact tagged 0.154.0 stays
+[research-protocol.md](../archive/research-protocol.md). Open: every fact tagged 0.154.0 stays
 unrechecked on 0.155.1, and moving the pin again means walking the fixture types
 against the new schema by hand. Checking a new version in a disposable environment
-before the owner installs it is queued in [work-queue.md](../work-queue.md).
+before the owner installs it is queued in [work-queue.md](../archive/work-queue.md).

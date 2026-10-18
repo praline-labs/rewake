@@ -22,7 +22,7 @@ is refused.
   mailbox until evidence or a person settles it.
 - **Turn-end recovery and the protocol cutover**
   ([turn-end-recovery.md](../turn-end-recovery.md),
-  [protocol-cutover.md](../protocol-cutover.md), built as recorded in
+  [protocol-cutover.md](../archive/1.x/protocol-cutover.md), built as recorded in
   [the entry of September 30](2026-09-30-turn-end-recovery-build.md)): runs named by pid,
   start and boot; one journal per turn end with its read boundary; marks of the run's
   life; the earlier build's receipts converted into one journal and decided together,
@@ -74,7 +74,7 @@ of every round were rerun at each later one.
 - **One place of the older delivery code** still reads an error as absence: `send`
   goes on when the registry lookup before it fails with anything but "not found". Its
   effect is low — the epoch is checked again before the letter goes — and it is queued
-  in [work-queue.md](../work-queue.md#now-after-100).
+  in [work-queue.md](../archive/work-queue.md#now-after-100).
 - What stays open of the recovery rules is in
   [turn-end-recovery.md](../turn-end-recovery.md#what-stays-open), and what the live
   stages must still show is in

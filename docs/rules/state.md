@@ -1,10 +1,9 @@
 # Rules: state and builds
 
 Where rewake 2.0 keeps its state, how one build holds a room, which calls may change the
-state and through what, and how the state of 1.x is cleared. The design is
+state and through what, and that the state of 1.x is left alone. The design is
 [design-state.md](../v2/design-state.md); how stage 3 built it, with every caller and
-every write it routes, is [stage3-state.md](../v2/stage3-state.md), the clearing's
-protocol [stage3-upgrade.md](../v2/stage3-upgrade.md), and the run directory, which goes
+every write it routes, is [stage3-state.md](../v2/stage3-state.md), and the run directory, which goes
 with its run, is L3 in [launch.md](launch.md). The rules have no numbers: each section
 below is one rule, with the tests that hold it. That a tool call keeps the same build is T10 in [tools.md](tools.md).
 
@@ -13,7 +12,7 @@ below is one rule, with the tests that hold it. That a tool call keeps the same 
 The base is `$REWAKE_DIR`, absolute, or `rewake-<uid>` in the system's temporary
 directory: a directory, not a symbolic link, owned by the user, mode 0700. Inside it 2.0
 keeps everything under its root `v2/`, and each room at `v2/rooms/<room>`, so 1.x never
-reads 2.0's records and 2.0 reads the 1.x tree only to clear it. The inverse is checked,
+reads 2.0's records and 2.0 never reads the 1.x tree. The inverse is checked,
 never counted: a room's root is its grandparent only when its parent is named `rooms` and
 its grandparent `v2`, an error otherwise, and every caller handles that error rather than
 substituting the ambient `REWAKE_DIR`. A child of the wrapper — a shell of the session, a
@@ -57,7 +56,7 @@ adversarial test it fails. The cost was measured on October 12, 2026: a median o
 2.76 ms warm for the hash of an 8.6 MB build, 4.02 ms with none of its pages resident,
 and about 2 ms of a 20 ms change form
 ([stage3-state.md](../v2/stage3-state.md#the-cost-of-the-hash), raw samples in
-[stage3-s17-evidence.md](../v2/stage3-s17-evidence.md#the-cost-of-the-hash)).
+[stage3-s17-evidence.md](../archive/v2/stage3-s17-evidence.md#the-cost-of-the-hash)).
 
 Tests:
 - `internal/infra/build/id_test.go` `TestBuildIDIsExecutableContent`
@@ -149,51 +148,14 @@ Tests:
 - `internal/infra/state/bypass_test.go` `TestTheBypassCheckSeesADescriptorsMetadataChange`
 - `internal/infra/state/bypass_test.go` `TestTheBypassCheckExcusesOnlyAProvenAbstractAddress`
 
-## Clearing the state of 1.x
+## The state of 1.x
 
-There is no migration of 1.x state: the first launch of a 2.0 session that finds a 1.x
-tree under the base clears it, and no other command does. It first checks that no 1.x
-wrapper runs and no 1.x command holds a lock, reading only the liveness fields of the
-1.x session records against `/proc`; a live session refuses the launch, exit 1, naming
-each with its room, and nothing is stopped automatically; a check that cannot be made —
-a record, a directory or process data that cannot be read, a lock held, a record of
-another pid namespace — refuses, naming the path, since an unknown is never taken for
-absence. With none alive and every check read, the launch sets the tree aside, validates
-it again from its contents and deletes it only then, the 1.x trees and nothing else under
-the base, never following a link, and prints one line on stderr with what was removed and
-the counts of unread and undelivered letters dropped, "unknown" where a count cannot be
-established. A deletion that fails after the validation is finished by a later launch. A
-room's lease clears nothing of 1.x, the clearing's own authority dies with its lease, and
-every wait of the clearing is bounded. The owner decided on October 5, 2026 that 1.x
-state is deleted, not set aside.
+2.0 never reads the tree rewake 1.x left under the base, and no command clears it: a launch
+leaves it as it is, and the person may remove it by hand once no 1.x session runs. The
+clearing a launch did from stage 3 left the code by the owner's decision of October 18, 2026;
+its protocol is kept in [stage3-upgrade.md](../archive/v2/stage3-upgrade.md).
 
 Tests:
-- `internal/infra/state/cleanup_test.go` `TestARoomLeaseCannotClearTheTreesOf1x`
-- `internal/infra/state/cleanup_test.go` `TestTheCleanupCoversOnlyTheTreesOf1xOfItsBase`
-- `internal/infra/state/cleanup_test.go` `TestTheCleanupDiesWithItsLease`
-- `internal/infra/state/cleanup_test.go` `TestATreeTransitionNeverReplaces`
-- `internal/infra/state/cleanup_test.go` `TestARoomLockIsCheckedAtItsRenamedPath`
-- `internal/infra/state/cleanup_test.go` `TestTheClearLockAndProbesKeepTheirBounds`
-- `internal/infra/state/cleanup_test.go` `TestDeletingATreeNeverFollowsALink`
+- `internal/cli/roots_test.go` keeps the 1.x tree byte for byte through a launch's lease, the
+  change forms and the views.
 - `internal/infra/state/plaindir_test.go` `TestAPlainDirListingRefusesWithoutWaitingOrFollowing`
-- `internal/infra/legacy/admission_test.go` `TestLegacyAdmissionRejectsLiveBusyAndUnknown`
-- `internal/infra/legacy/admission_test.go` `TestLegacyMissingProcessIsDeadButReadFailureUnknown`
-- `internal/infra/legacy/validation_test.go` `TestCandidateRequiresPostRenameValidation`
-- `internal/infra/legacy/validation_test.go` `TestValidationReusesOwnedLocks`
-- `internal/infra/legacy/validation_test.go` `TestASetAsideDrawsAgainOnATakenName`
-- `internal/infra/legacy/validation_test.go` `TestRecreatedRoomsRevokesAdmissionOnlyOnEvidence`
-- `internal/infra/legacy/validation_test.go` `TestCandidateRestoreNeverReplacesRooms`
-- `internal/infra/legacy/deletion_test.go` `TestValidatedDeletionFailureDefersOnlyDeletion`
-- `internal/infra/legacy/deletion_test.go` `TestLegacySummarySurvivesPartialDeletion`
-- `internal/infra/legacy/deletion_test.go` `TestLegacyClearNeverFollowsForeignPaths`
-- `internal/infra/legacy/recovery_test.go` `TestAValidatedTreeIsDeletedOnlyOnceSettled`
-- `internal/infra/legacy/recovery_test.go` `TestEveryOutcomeIsSaidBesideALaterRefusal`
-- `internal/infra/legacy/special_test.go` `TestASpecialFileIsRefusedWithoutWaiting`
-- `internal/infra/legacy/special_test.go` `TestASpecialSummaryIsUnknownWithoutWaiting`
-- `internal/infra/legacy/special_test.go` `TestAMailboxSwappedAfterItsCheckIsNeitherFollowedNorWaitedOn`
-- `internal/infra/legacy/count_test.go` `TestTheCounterCountsEachThingOnceAndNeverGuesses`
-- `internal/infra/legacy/bounds_test.go` `TestTheClearingWaitsKeepTheirBounds`
-- `test/upgraderig/clearlock_test.go` `TestClearLockTimeoutRefuses`
-- `test/upgraderig/clearlock_test.go` `TestTheClearingActsOnWhatItFindsUnderTheLock`
-- `test/upgraderig/matrix_test.go` `TestLegacyClearConcurrentMatrix`
-- `test/upgraderig/matrix_test.go` `TestLegacyClearCrashMatrix`

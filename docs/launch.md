@@ -5,10 +5,7 @@
 ## Launching a harness
 
 The common part of the wrapper:
-1. Check the shared state root and selected room directory. Run the mail tool's name
-   check before anything is claimed, so a refusal leaves nothing behind; it decides
-   whether the launch carries the tool, and why not when it does not
-   ([mail-bridge-launch.md](archive-1.x/mail-bridge-launch.md#the-launch-in-order)). Under the room's
+1. Check the shared state root and selected room directory. Under the room's
    launch lock, choose the role and the name, only reading: a dead session record is
    removed only by the publication over it, under the name's lock. Then publish the
    session record (the harness pid is still empty). The lock is released before
@@ -50,7 +47,7 @@ specified once, in design.md and roles.md: [Rooms](design.md#rooms), [Roles](rol
 
 ### No session inside a session
 
-A launch — `rewake claude`, `rewake codex`, or an alias that stands for one — from a
+A launch — `rewake claude`, or an alias that stands for one — from a
 shell inside a rewake session is refused with exit 2, before anything else is checked
 (main's decision of September 27, 2026). A Claude Code worker runs a plain `rewake`
 command unasked, and a launch among them would start an agent with none of the
@@ -60,8 +57,9 @@ nothing — emptying one is as deliberate as removing it, and removing both
 (`env -u REWAKE_SESSION -u REWAKE_EPOCH`) is the way a person's live run from a
 session's shell goes. A live record behind it is not required — a worker can remove or rewrite its
 own — so a shell left over from a session that has ended is refused too, and a new
-shell is the way out. `--help` on a launch word still prints the help page. A way for
-main to start a worker, when there is one, will be its own command, not this path. The
+shell is the way out. `--help` on a launch word still prints the help page. Main starts a
+worker with its own command, `rewake space open`, planned in
+[S4-7](v2/stage4-space-steps.md#the-build-steps), not this path. The
 rule is on every launch page's notes and in main's playbook, so a main learns it before
 it tries.
 
@@ -85,33 +83,22 @@ rewake --main --name lead --command my-claude claude
   the adapter adds is the same. Every process of the launch runs through it — the version
   read before the claim and the harness itself — because a version read beside the wrapper
   would answer for a different program than the one the launch starts.
-- **The Codex home rewake reads** is still taken from its own environment at launch. A
-  wrapper that sets `CODEX_HOME` runs both halves there, but rewake decides from its own
-  view whether to pass the briefing — so with `developer_instructions` in the wrapper's
-  `config.toml` and not in rewake's, the briefing passed with `-c` would replace them —
-  and reads its notes and records the home from it too. So a launch with `--command` on
-  Codex says on stderr which home rewake read, and to export `CODEX_HOME` for rewake as
-  well when the wrapper sets it.
 - **A wrapper should end with `exec`.** Without it the wrapper's shell stays the process
-  rewake started: termination signals and the server's parent-death signal reach the
+  rewake started: termination signals reach the
   shell, not the harness.
 - **What is checked:** the value, before anything is launched — a name must be found on
   `PATH`, a path with a slash is resolved against the launch directory and passed on as
   that absolute path, and either must be an executable file; otherwise the launch is
-  refused naming the value and the next action. The absolute path matters for Codex,
-  whose server starts in the `-C` directory: a relative one would resolve there. rewake
-  does not run the program to check it, and does not guess the harness from its name:
+  refused naming the value and the next action. rewake does not run the program to check it, and does not guess the harness from its name:
   wrappers are named anything. The version read before the claim does run it once, with
-  the arguments the adapter's version gate names (`<wrapper> --version` on both adapters,
+  the arguments the adapter's version gate names (`<wrapper> --version`,
   [design-api.md](v2/design-api.md#minimum-versions)); a wrapper that does not answer it
   with a version refuses the launch, as an unreadable version always does.
 - **In an alias** it is the field `command = "<program>"`, which becomes `--command`
   before the harness word — in the user alias file only
   ([launch-defaults.md](launch-defaults.md#naming-a-whole-launch)). With it, a launch
   through a wrapper is one word: `[alias.lead]` with `harness = "claude"`, `rewake =
-  ["--main", "--name", "lead"]` and `command = "my-claude"` is `rewake lead`. A Claude
-  Code launch takes `--main` since S9, October 11, 2026: a role that owes reports is
-  refused there until stage 4.
+  ["--main", "--name", "lead"]` and `command = "my-claude"` is `rewake lead`.
 - Owner decision, September 23, 2026: the harness is named, the program is given; no
   guessing from names and no probing.
 
@@ -140,78 +127,13 @@ rewake --main --name lead --command my-claude claude
 
 ### Claude Code telemetry
 
-Until S9, October 11, 2026, the launch added one `--settings` layer — merged into a
-caller's own — carrying the Stop and StopFailure hooks that ran `rewake turn-ended`, the
-telemetry hooks and the status-line tap, the grant hook, and rewake's function-hooks
-plugin with `--plugin-dir`. All of it left with S9: the hooks and the tap are in
-[claude-telemetry.md](archive-1.x/claude-telemetry.md), the plugin in
-[claude-plugin.md](archive-1.x/claude-plugin.md), the grant hook in
-[grants-claude.md](archive-1.x/grants-claude.md). A Claude Code session reports no
-telemetry in this build, and its row of `rewake list` carries none.
-
-### Codex
-
-The wrapper owns two children: a foreground app-server on a private Unix socket
-and the ordinary TUI connected with --remote through its inline gateway. The
-original socket belongs to the gateway; the native endpoint adds `.up`. The socket uses the existing
-per-run digest fallback and 103-byte limit. The server has its own process group,
-so keyboard interrupts reach the TUI without killing its transport. Both children
-end with the session; no daemon lifecycle command is used. Server stderr goes
-to the adjacent private `.up.log` file. Server death terminates the TUI and refuses
-pending mail as session ended.
-
-The adjacent `.gateway.log` records bounded, payload-free connection-close reasons;
-see [startup transport diagnostics and limits](archive-1.x/startup-transport.md).
-
-Once the app-server is up the wrapper also serves the run's control directory, polling
-it every 100 ms and carrying a main's `rewake compact` or `rewake interrupt` out through
-the gateway ([remote-control-codex.md](archive-1.x/remote-control-codex.md)).
-
-The adapter initializes and closes a startup probe before starting the TUI; it
-never discovers or resumes a root. The gateway forwards the TUI connection. Explicit -c overrides and the generated developer_instructions are passed
-to the server. A mention of developer_instructions in user configuration still
-suppresses the generated value; user files are never edited. The server receives
-the session's REWAKE_* environment, which the default shell policy inherits.
-Its remote-control startup is disabled with the version-specific internal marker.
-Rewake does not install notify; a caller's own configured program stays theirs.
-
-No role automatically adds Git metadata roots on fresh launch, resume or fork.
-Owner-supplied roots and sandbox, approval, network and temporary-directory policies
-are preserved. -C/--cd still selects the effective server cwd and TUI request.
-Continuations retain caller input without generated permission overrides; unsupported
-caller permission overrides keep the existing native-compatibility diagnostic.
-
-Only a verified main's [explicit --grant-git task/question](git-grants.md) requests
-additional metadata roots. It reads current local roots without history and appends
-only missing validated metadata for an eligible recipient. A steered active turn
-keeps its existing permission context; new roots may affect only subsequent turns.
-Manual input can replace roots, so a later explicit request checks them afresh.
-See [continuation permission evidence](continuation-permissions.md).
-
-Caller permission flags and permission-related -c overrides stay untouched.
-For resume/fork, a separate stderr note explains that the remote TUI rejects
-them and advises removing them or starting a new thread. Arguments after -- are
-prompt text, not permission flags. The registry keeps
-the wrapper's cwd — the launch directory, or the checkout of a `--worktree` launch
-([below](#a-worktree-for-a-launch)).
-Existing --remote, --profile and --oss/--local-provider launches
-are refused with advice: they cannot safely share this owned server topology or
-forward all configuration. Use explicit settings.
-
-Unknown TUI arguments are preserved, not interpreted as server configuration.
-
-The launch's one `codex --version` read, taken before the claim, is compared at startup
-with the version the transport was last observed working on — 0.155.1 since September
-21, 2026 — and a different or unreadable one warns, without refusing. Moving the pin
-takes two edits that have to agree: the constant `lastObservedServerVersion` in
-`internal/adapter/codex/server_version.go`, and the literal the matching test names. The duplication is deliberate: a fixture echoing the constant back
-would make the matching test tautological and let a typo in the pin through. A fake
-executable and socket server cover the process and protocol contract. Real-model
-acceptance remains a separate owner-run check.
+A Claude Code session reports no telemetry in this build, and its row of `rewake list`
+carries none. The context fill and compaction come back through the mod, as parity with 1.x
+(stage 5 of [the stage plan](v2/design.md#the-stage-plan-from-here)).
 
 ### A worktree for a launch
 
-`rewake codex --worktree` and `rewake --main claude --worktree` give a session a checkout of its
+`rewake claude --worktree` and `rewake --main claude --worktree` give a session a checkout of its
 own, on a branch of its own, under rewake's worktree directory. `rewake worktree land`
 fast-forwards a branch of the checkout it came from to the worktree's commits, `finish`
 lands once more and removes the worktree and its branch, and `ls` and `rm` list and
@@ -221,39 +143,25 @@ remove. What the flag does for each harness, where the checkout goes, what
 
 A session cannot start another ([no session inside a session](#no-session-inside-a-session)),
 so the owner starts each writer, in a checkout of its own with `--worktree=<topic>`, from
-a terminal outside any session — on a harness that reports turns, since a write session
-is refused on Claude Code until stage 4. The main session then takes the accepted work with
+a terminal outside any session. The main session then takes the accepted work with
 `rewake worktree land <topic>` and closes the checkout with
 `rewake worktree finish <topic>`, rather than making one by hand with `git worktree add`.
 A writer's uncommitted edits then never mix with what is being checked or committed in
 the main checkout at the same time.
-
-### Fresh workspace permissions
-
-The native adapter preserves the caller's sandbox selection. In the September 20
-owner check, a fresh disposable directory without a trust/sandbox selection chose
-read-only and could not write the inbox `.lock`. The owner selected
-`-c 'sandbox_mode="workspace-write"'` for that test launch; configuration and runtime
-were not modified. Inbox reads need write access for locking and receipts. This
-acceptance does not establish inbox support under deliberately selected read-only
-permissions. [Evidence](native-mailbox-acceptance.md) and the
-[updated owner recipe](native-mailbox-check.md) retain that prerequisite.
 
 ### The intro
 
 The system layer uses an independent six-line briefing for general, write or
 main from `internal/core/brief/roles.go`. Each names its identity and selection reason,
 explains the commands that role needs, and points to guide for the full contract.
-General receives no Git metadata grant; write may commit; main delegates and
-reads results. All ask for the point of a message in its first line. Per-role
+Write may commit; main delegates and reads results. All ask for the point of a message in its first line. Per-role
 snapshots make wording changes reviewable.
 
 ### First input
 
 Launch supplies only the system briefing; the first task prompts the agent to
 read rewake guide. Caller prompts, continuations and their `--` delimiter stay
-intact, with injected transport flags placed before the delimiter. A fresh
-server thread accepts turn/start before any operator input.
+intact, with injected transport flags placed before the delimiter.
 
 **Owner decision, September 17, 2026:** startup must not create an empty dialogue
 or add automatic messages to resumed conversations.

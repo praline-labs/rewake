@@ -2,7 +2,7 @@
 
 The numbered rules 2.0 carries, restated without the 1.x migration (decision 3) and
 without a harness. Which 1.x rule each comes from, and why the others went, is in
-[revision-rules.md](revision-rules.md). The full wording of each rule moves into the
+[revision-rules.md](../archive/v2/revision-rules.md). The full wording of each rule moves into the
 2.0 rules documents in stage 3 with its tests; this file fixes what each says. The
 overview is in [design.md](design.md).
 
@@ -108,7 +108,7 @@ that `settle` served (`cli/settle.go:28`, `inbox/conversion_decide.go:209`) does
 return.
 
 Gone with the migration: 8-withheld, 8-settle, 8-cutover, 8-origin, the earlier-build
-evidence and the run and successor records ([revision-rules.md](revision-rules.md#mail-bridge-climd-rules-18)).
+evidence and the run and successor records ([revision-rules.md](../archive/v2/revision-rules.md#mail-bridge-climd-rules-18)).
 
 ## Tools, T1–T11
 
@@ -178,7 +178,7 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
 The carried fault and order tests (`bridge/server/fault_test.go`, `order_cut_test.go`,
 `order_gen_test.go`, `bridge/endpoint/order_table_test.go`) hold T2–T8; their oracles
 become transport-neutral and run against every transport
-([design-docs-tests.md](design-docs-tests.md#tests)).
+([design-docs-tests.md](../archive/v2/design-docs-tests.md#tests)).
 
 ## Turn outcomes
 
@@ -221,7 +221,7 @@ one adapter needs beyond the neutral events lives in the adapter.
   is printed. (Rule 7.)
 - **L3. Nothing persists past the run**: what a launch writes lives in the run's
   directory and goes with it; after a kill, a later launch removes it once the run is
-  proven dead ([the qualified guarantee](stage3-rundir.md#the-qualified-guarantee)).
+  proven dead ([the qualified guarantee](../archive/v2/stage3-rundir.md#the-qualified-guarantee)).
   (Rule 8.)
 
 `mail-bridge-launch.md` rules 2, 4, 5 and 6 are about injecting an MCP server and checking

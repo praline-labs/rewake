@@ -10,8 +10,8 @@ The integration review reproduced the five checks and native synthetic cases wit
 no defect. The owner accepted the new `Ran rewake notice --display-only` label,
 installed the reviewed binary and restarted main/write. UI-INSTALLED-OK returned as
 an automatic native finished report and was read; the owner confirmed visible rows.
-[The accepted contract](../native-mailbox-ui.md) retains native Ran, deferred streaming
-and independent delivery/read/report truth. [Review history](../reviews-native-ui-2026-09-20.md)
+[The accepted contract](../archive/1.x/native-mailbox-ui.md) retains native Ran, deferred streaming
+and independent delivery/read/report truth. [Review history](../archive/reviews-native-ui-2026-09-20.md)
 keeps the initial permission-override refusal and limited owner timing evidence.
 Final closeout changes only documentation after review; no new runtime behavior or
 UI persistence mechanism is added. Other harness behavior is unchanged.

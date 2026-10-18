@@ -5,7 +5,7 @@ before updating their own installation, never by testing on it; and, when this w
 scheduled, for two things explicitly: downloaded binaries are cached rather than
 fetched on every start, and the version under test is easy to name. This closes the
 schema half of that queue entry. The behaviour half stays queued in
-[work-queue.md](../work-queue.md).
+[work-queue.md](../archive/work-queue.md).
 
 **What was built.** `tools/harnesscache`, one Go program over two packages the suite
 imports as well. `cache` resolves a selector — an exact version, `latest`, or

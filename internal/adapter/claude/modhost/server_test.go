@@ -143,7 +143,7 @@ func TestOnlyTheHarnessesOwnProcessIsServed(t *testing.T) {
 		t.Fatal(err)
 	}
 	server.HarnessStarted(adapter.RunProcess{PID: beside.Process.Pid, Start: start})
-	for _, path := range []string{PathHello, PathSpaceKeys, "/v1/elsewhere"} {
+	for _, path := range []string{PathHello, PathTurnEnd, "/v1/elsewhere"} {
 		status, text, err := post(socket, path, validHello("beside"))
 		if err != nil || status != http.StatusForbidden || !strings.Contains(text, "not the harness's own process") {
 			t.Fatalf("a process beside the harness on %s: %d %s %v", path, status, text, err)
@@ -199,8 +199,7 @@ func TestARequestBeforeTheHarnessIsNamedWaits(t *testing.T) {
 }
 
 // A body is bounded before it is parsed, is exactly the request the schema
-// describes, and names what it must; the endpoints of later steps say they
-// are not in this build, and an unknown path is not found.
+// describes, and names what it must; an unknown path is not found.
 func TestARequestIsTheSchemasOrRefused(t *testing.T) {
 	server, socket := serving(t)
 	huge := []byte(`{"loadId":"` + strings.Repeat("x", MaxBodyBytes) + `","sessionId":"s","harnessVersion":"v"}`)
@@ -215,7 +214,6 @@ func TestARequestIsTheSchemasOrRefused(t *testing.T) {
 		{"a missing version", PathHello, []byte(`{"loadId":"l","sessionId":"s"}`), http.StatusBadRequest},
 		{"two values", PathHello, []byte(`{"loadId":"l","sessionId":"s","harnessVersion":"v"} {}`), http.StatusBadRequest},
 		{"not JSON", PathHello, []byte(`hello`), http.StatusBadRequest},
-		{"a later step's endpoint", PathSpaceScreen, []byte(`{}`), http.StatusNotImplemented},
 		{"an unknown path", "/v1/elsewhere", []byte(`{}`), http.StatusNotFound},
 	}
 	for _, c := range cases {

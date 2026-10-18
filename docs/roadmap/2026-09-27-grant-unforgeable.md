@@ -47,7 +47,7 @@ stage 2 for it, and settled the details with the sketch the same day
   Codex main is a regression of this change, written in
   [git-grants.md](../git-grants.md).
 - **No subreaper.** A Codex worker's commands run in namespaces of their own
-  ([research-codex.md](../research-codex.md#the-sandboxs-namespaces)); a session that
+  ([research-codex.md](../archive/research-codex.md#the-sandboxs-namespaces)); a session that
   mentions `use_legacy_landlock`, which runs them beside rewake, is refused a grant.
 - **The journal** of a Codex session lives in its wrapper's memory; the file under
   `grants/` is a copy for `rewake list --json`, never read back. Live entries are never
@@ -111,5 +111,5 @@ review-claude found one medium point and three low ones, fixed the same day:
   unit tests do, the registration's in a real user namespace.
 - A grant from a Codex main, a journal keyed by thread for a cold resume, and whether
   Codex resolves a root on every command are queued
-  ([work-queue.md](../work-queue.md#also-queued-not-scheduled)).
+  ([work-queue.md](../archive/work-queue.md#also-queued-not-scheduled)).
 - Stage 2 is paused on its branch and is to ask the worker's wrapper, not the journal.

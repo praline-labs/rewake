@@ -1,11 +1,11 @@
 # A failed resume holds deliveries until the launch's conversation or the person's word
 
 Stage A of the fix for the defect seen September 29, 2026
-([work-queue.md](../work-queue.md#now-after-100)): a worker relaunched with a resume of a
+([work-queue.md](../archive/work-queue.md#now-after-100)): a worker relaunched with a resume of a
 conversation another Codex held went on in a new, empty one, rewake delivered main's task
 there, and the worker could not read it, its sandbox leaving rewake's state directory
 read-only. Built the same day on the owner's decisions of that day; the conversation
-marker is stage B. How it works is in [delivery-conversation.md](../delivery-conversation.md).
+marker is stage B. How it works is in [delivery-conversation.md](../archive/1.x/delivery-conversation.md).
 
 ## What was found
 
@@ -15,8 +15,8 @@ marker is stage B. How it works is in [delivery-conversation.md](../delivery-con
 - From Codex's source (0.159.0, 0.157.1): the terminal answers an active-writer refusal
   with a read-only view of the same conversation, not a new one; a remote terminal's
   resume drops permission overrides; `thread/read` states no permissions, while lifecycle
-  replies and `thread/settings/updated` do ([research-codex.md](../research-codex.md#a-conversation-another-program-holds),
-  [research-codex-conversation.md](../research-codex-conversation.md#what-states-a-conversations-permissions)).
+  replies and `thread/settings/updated` do ([research-codex.md](../archive/research-codex.md#a-conversation-another-program-holds),
+  [research-codex-conversation.md](../archive/research-codex-conversation.md#what-states-a-conversations-permissions)).
   How the incident's new conversation began stays unestablished.
 
 ## What was done
@@ -131,13 +131,13 @@ permission tracking, with three findings, each confirmed by a probe that went re
 
 The owner decided on September 30, 2026 to take the mail-reach check out rather than go on
 closing windows the protocol does not state: mail will not depend on the sandbox, the
-wrapper doing its writes outside it ([work-queue.md](../work-queue.md#now-after-100), the
+wrapper doing its writes outside it ([work-queue.md](../archive/work-queue.md#now-after-100), the
 bullet "Mail that does not depend on the sandbox"). Stage A keeps what review-codex
 accepted — the launch's intent, the hold and `rewake accept`, the admission record with the
 `mail-closed` hold, the notices and the terminal's warning, the refused resume held across
 connections — and lost the check before delivery, the permission tracking kept only for
 it, the root it added, and their tests. The source facts read for it stay true and stay in
-[research-codex-conversation.md](../research-codex-conversation.md).
+[research-codex-conversation.md](../archive/research-codex-conversation.md).
 
 ## Tests
 

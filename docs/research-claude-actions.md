@@ -11,7 +11,7 @@ fill the harness's task list — with the forms and refusals of each; and what a
 in rewake's settings layer can do to a turn's end, and a permission hook to its working
 directories. `rewake compact` and `rewake interrupt` rest on it
 ([remote-control.md](remote-control.md)). The Codex side of the same requests is in
-[research-protocol.md](research-protocol.md#compaction-and-interrupt-on-request).
+[research-protocol.md](archive/research-protocol.md#compaction-and-interrupt-on-request).
 
 Tags: **[live]** — observed in a private HOME against a stand-in API; **[source]** — read
 in the installed binary's bundled source. Facts age with harness versions: recheck
@@ -97,7 +97,7 @@ Probed by review-claude on September 24, 2026, Claude Code 2.1.280, with a stand
 Probed by review-claude on September 24, 2026, Claude Code 2.1.280, in a private HOME
 against a stand-in API **[live]** and in the binary **[source]**, for a todo list sent
 with a task, a feature the owner later dropped
-([work-queue.md](work-queue.md#dropped-a-todo-list-sent-with-a-task)).
+([work-queue.md](archive/work-queue.md#dropped-a-todo-list-sent-with-a-task)).
 
 - **The tools** are `TaskCreate`, `TaskUpdate`, `TaskList` and `TaskGet`; `TodoWrite` is
   the older one, which takes their place only with `CLAUDE_CODE_ENABLE_TASKS=0`

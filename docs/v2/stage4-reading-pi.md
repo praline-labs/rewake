@@ -1,7 +1,7 @@
 # Stage 4 reading: pi
 
 A dated record, kept as written but for one local path, replaced by a description of it. A
-subagent of the orchestrating session read pi for the [stage 4 audit](stage4-audit.md) on
+subagent of the orchestrating session read pi for the [stage 4 audit](../archive/v2/stage4-audit.md) on
 October 13, 2026: pi's documentation, source and examples at 0.85.1 (a reference tree at
 commit `05c622981`), and the documentation, changelog and package manifest of the npm
 package 1.2.0, the version installed since that day. No pi was run, no model called. The

@@ -1,57 +1,35 @@
 # Roadmap
 
-Work for `docs/design.md` closes only after its acceptance criterion passes. This folder
-holds the roadmap as one file per entry, each named by the day it closed and headed by
-the words its section carried; this index lists them all. What is still open is named
-below; the order of what comes next is in [work-queue.md](../work-queue.md). The
-transport milestones of September 17 stay in
-[transport-milestones-2026-09-17.md](../transport-milestones-2026-09-17.md), which
-preserves owned-server acceptance, continuation permissions, lost reports, naming and
-explicit main; the review rounds are in [reviews.md](../reviews.md) and
-[reviews-later.md](../reviews-later.md).
-
-Open [intermittent bugs](../intermittent-bugs.md): the unexplained two-root-thread
-refusal on September 17, 2026 cleared after recipient restart.
+A step closes when its acceptance passes, not when its code exists. This folder holds the
+roadmap as one file per entry, named by the day it closed; this index lists them all. What is
+open, and the order of what comes next, are below. The records of 1.x — the transport
+milestones, the work queue, the review rounds, the intermittent bugs and the remaining work of
+September — are in [the archive](../archive/README.md).
 
 ## How the work is run
 
-- One step, one commit; commit message short, subject line only, in English.
-- Before every commit, the five checks listed in `AGENTS.md` are green: the
-  formatter over the module's package list, `go vet`, `staticcheck`,
-  `golangci-lint` and the race-detected, shuffled test run with the session's
-  `REWAKE_*` variables cleared. `AGENTS.md` says why two of them take the form
-  they do; this file does not repeat the commands, so they cannot drift here.
-  No failing check is waived.
-- Live runs happen in a separate `/tmp` directory, with their own `REWAKE_DIR`.
-  The user's working harness sessions are left untouched.
-- Live Codex runs spend subscription quota: cheap model, short messages, no
-  more than one turn per check. Warn the owner before a run that spends quota.
-- After milestones 3 and 5, a separate review agent passes over the diff:
-  looking for defects and for checks that stay green on broken code. Findings get
-  fixed before the next milestone.
-- A milestone marked **live criterion** is accepted by running the real
-  harnesses, not by tests.
-- The working rules on delegation, the review chain and what the write session
-  may commit were set by the owner on September 17–21, 2026 and live in
-  `AGENTS.md`, under "Delegation and review" and "Commits".
+The process is `AGENTS.md`'s: the checks, which tests to write, one review on blockers, the
+commits. A step closes when it works live and breaks no existing test, and lands here as one
+entry of at most ten lines. Live runs use their own `REWAKE_DIR` and never touch the owner's
+sessions.
 
 ## Open right now
 
-- [Milestone 6. Ready for daily use](2026-09-16-milestone-06-ready-for-daily-use.md)
-  — the publication is not done; the file keeps what is.
-- Stage 4 of 2.0 — Claude Code's adapter as one mod; opened on October 13, 2026 with the
-  audit of what Claude Code and a mod already do ([stage4-audit.md](../v2/stage4-audit.md)),
-  reviewed and recorded in [its entry](2026-10-13-stage4-audit.md); the probe's first runs
-  — P11's first half, P12b, P15a — and the owner's decisions they led to are in
-  [their entry](2026-10-13-stage4-probe-1.md), P15b's real pseudo-terminal in
-  [its own](2026-10-13-stage4-probe-2.md), the first working space's design and its review in
-  [theirs](2026-10-13-stage4-space-design.md). Then stage 4b, pi's adapter,
-  and stage 5, Codex's entry point, by the owner's decision of the same day
-  ([the stage plan](../v2/design.md#the-stage-plan-from-here)).
-  Stage 3 is closed: [its closing entry](2026-10-13-stage3-s19.md) says what it built.
-- [The workflow suite](2026-09-21-workflow-suite.md) — in progress since
-  September 21, 2026; what exists and what remains are listed there and in
-  [work-queue.md](../work-queue.md).
+The order of work set on October 18, 2026 ([its entry](2026-10-18-decision.md)):
+
+1. The documents brought to that decision.
+2. The deletions: the delivery hold, the 1.x legacy marks, the keeper and the screen in the mod
+   protocol, grants, the mail tool, the clearing of 1.x, the version probe made small.
+3. The space on Claude Code, one step: `rewake space open` and `rewake attach`
+   ([S4-7](../v2/stage4-space-steps.md#the-build-steps)).
+4. pi's adapter, then a read-only reviewer on it, then pi in a space (stage 4b,
+   [the stage plan](../v2/design.md#the-stage-plan-from-here)).
+5. Compaction and context on the mod and on pi; then the room can move to 2.0.
+6. The test diet, alongside from the start.
+
+[Milestone 6](2026-09-16-milestone-06-ready-for-daily-use.md) of 1.x keeps its open
+publication. Stage 3 of 2.0 is closed ([its entry](2026-10-13-stage3-s19.md)); stage 4's
+steps so far are the entries of October 13–17 below.
 
 ## Entries
 
@@ -166,80 +144,4 @@ without a date. Local installation without publishing is in
 | October 16, 2026 | [Stage 4 of 2.0: a Claude Code worker's turns through the mod](2026-10-16-stage4-s4-6.md) | S4-6, accepted on October 16, 2026 with five checks green on `74e1ab6`: the design checked for readiness on the Codex side, its three blockers fixed — no receipt for a run proven gone, the outbox kept until a receipt, hellos ordered by a load number; part A, the turns reported through the mod without holding, each end taken once as its first capture, a boundary proven after the start, with two report-loss blockers of its review fixed in the outbox; the notice's preview saying it is only one, after a worker did a task from it live; part B, the heartbeat, its lapse withdrawing what the mod proved and a new hello restoring it, accepted without a blocker; live on Claude Code 2.1.296: reports, a lapse in 29 s, an `exec` wrapper admitted and a child one refused, an interrupt read as stopped, a subagent unreported, the hello 1.6–3.3 s after the start; `AfterStartBound` stays 30 s; open: the hooks' order at a turn's end, the limits of not holding, three documents past 400 lines |
 | October 17, 2026 | [The Claude Code mod on Claude Code 2.1.302](2026-10-17-mod-302.md) | the mod brought up to 2.1.302 before S4-7: a subagent's `turn.start`, raised from 2.1.299, no longer sent as the session's; the `Host` of closures kept; the live script's reload made a real change; five checks green on `34c23d7`, every live scenario of S4-6's part C passed on 2.1.302; open: what the release offers the space, for S4-7's design |
 | October 17, 2026 | [A lighter development process](2026-10-17-process.md) | by the owner's decision: the tests of `docs/` removed, the layout test kept to the import and registry rules, three levels of checks, which tests to write, one review, the guarantees frozen |
-
-## Remaining work — owner decisions, September 19–21, 2026
-
-What comes next, in the order the owner set on September 21, 2026, is in
-[work-queue.md](../work-queue.md): the rest of the workflow suite, then pinning harness
-versions in a disposable environment — its schema half closed on September 23, 2026
-([entry](2026-09-23-harness-versions.md)), its behaviour half is still queued — then a
-two-way channel for Claude Code, then the parity queue. Launch aliases, which stood second in that order, closed the same day
-([entry](2026-09-21-launch-aliases.md)). This section keeps the decisions behind those items.
-
-What the directory grants and the worktrees of September 27, 2026 left open — a grant
-restored after a cold resume, a grant from a Codex main, a root swapped after delivery,
-`land` and `finish` beside a foreign `git worktree add`, an owner file of grant rules —
-is ordered in [work-queue.md](../work-queue.md#later-what-the-directory-grants-and-the-worktrees-left-open-in-1x).
-
-The native-notification priority is complete, and so is the Claude Code handoff it
-pointed to: orchestration moved to Claude Code on September 21, 2026. The first three
-entries of the [parity queue](../harness-features.md) closed the same day — HF-12, HF-07
-with HF-20, and HF-21 — each on one observed run
-([claude-parity-2026-09-21.md](../claude-parity-2026-09-21.md)). Queue entries are not
-milestones; the remaining ones are listed in the feature map.
-
-Check automation is the [workflow suite](../check-runner.md), recorded in
-[the suite entry](2026-09-21-workflow-suite.md): the research answer,
-[check-runner-proposal.md](../check-runner-proposal.md) with its selected scenarios in
-[check-runner-scenarios.md](../check-runner-scenarios.md), was accepted on September 21,
-2026 and the first scenario is implemented; short console output and a summary file,
-and paid and manual tiers as opt-in, are still requirements rather than code.
-
-A command that lists the models and effort levels a harness offers is **deferred**.
-Owner decision, September 21, 2026, asked directly: not now. The reconnaissance that
-would feed it is done and recorded in [research-launch.md](../research-launch.md) — what can be read
-from each harness, how, and at what cost — so the work would start from facts rather
-than from scratch. Roughly a day.
-
-It would answer, per harness: which models are available to this account, which effort
-levels each of them takes, and what the configured context window is. For Codex the
-window comes from the catalogue and a configuration key, with arithmetic. For Claude
-Code neither the subcommands that were read nor the catalogue cache carries one — but
-the Agent SDK and the data handed to the status line do, and the reconnaissance did not
-go there. So the open question is not
-"is there a source" but "which of them is worth depending on", and nobody has yet found
-a catalogue of windows for every model that does not require starting a session.
-
-The sources are uneven: one protocol method, belonging to the Codex protocol, and three
-unofficial ones — a debug subcommand group, an undocumented per-login cache, and the
-text of a warning message. On the Claude Code side the documented route is the SDK.
-
-The requirement that shapes it: **a source that disappears must turn its cell into
-"unknown", never leave a stale truth standing.** Caches expire, debug commands are not
-promises, and an account's list changes. A table that keeps showing yesterday's answer
-because today's lookup failed is worse than one that admits it does not know — that is
-the same mistake as a check reporting success it did not earn, one layer up.
-
-A lead for the Claude Code telemetry collector, then missing (entry 5 of the
-[parity queue](../harness-features.md)). Claude Code has a channel where the harness calls
-a command **we** name and hands it a structure describing the session, the context
-window size among its fields — so the source is the input to a program of ours, not
-text meant for a person. rewake already works this way elsewhere: the wrapper sets a
-command for the end of a turn, which calls `rewake turn-ended`
-(`internal/harness/hooks.go`). A different integration point, the same shape — the
-harness calls what we named and hands it data — and that shape looks like a fit for
-the collector.
-
-Not proposed, and not to be done: parsing the rendering of the status line. It is a
-display for a person, its format is not promised, and a reader of the screen would be
-fragile for no reason. What that structure carries was established on September 23,
-2026, beside what the hooks carry, in [research.md](../research.md#telemetry-sources-the-status-line-and-hooks):
-model, effort and context fill are there, activity is not, and compactions come from
-hooks. The collector was built the same day on both, the hooks and a tap on the status
-line that keeps the person's own ([entry](2026-09-23-claude-telemetry.md)).
-
-Persistent Git permissions remain a separate future item: explicit orchestrator
-event, scope to run and repository, preservation across later owner turns, and revocation. A running turn keeps its prior permission context.
-Only validated Git metadata roots are in scope, not tools, credentials or arbitrary
-folders. Do not implement that persistence in the current batch feature.
-The main-readiness/missing-notice incident stays open separately.
+| October 18, 2026 | [pi next, main starts its workers, a lighter binary](2026-10-18-decision.md) | by the owner's decision: pi instead of Codex, the space as main starting its workers without showing them inside Claude Code, what goes from the code and the new order of work |

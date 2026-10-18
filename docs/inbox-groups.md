@@ -74,7 +74,7 @@ The wrapper keeps destination reservation, metadata/read-phase readiness, per-me
 scope and readability checks. Native `turn/start` calls start-or-steer atomically,
 so the wrapper does not guess active/idle from a status snapshot, interrupt work or
 race a separate status query against starting. Native acceptance is not proof of
-model consumption. The [source and live evidence](native-terminal-progress.md)
+model consumption. The [source and live evidence](archive/native-terminal-progress.md)
 distinguishes those boundaries. Task completion tracking still publishes normal,
 error and stopped outcomes; it no longer gates announcement dispatch.
 
@@ -118,7 +118,7 @@ or CLI JSON. Each member retains its own ID, body, kind, epochs, status, receipt
 and task/question obligations.
 
 The native reservation and ACK track one `turn/start` submission for the group:
-empty `input` plus [standalone mailbox `toolOutput`](archive-1.x/native-mailbox.md). Active
+empty `input` plus [standalone mailbox `toolOutput`](archive/1.x/native-mailbox.md). Active
 steering can acknowledge the same native turn for several distinct groups.
 Every member shares that ACK, while normal actual reads and causal boundaries still
 decide which assignments a completion answers. No new native protocol or renderer
@@ -144,7 +144,7 @@ TTL, cancellation, output/status failures and no old-unread replay remain covere
 Outcome tests preserve normal/error/stopped reports, including before-ACK native
 terminals and their observed status ordering. Late-main discovery remains grouped.
 
-Revision 6 passed independent review and [installed live acceptance](inbox-acceptance.md)
+Revision 6 passed independent review and [installed live acceptance](archive/inbox-acceptance.md)
 on September 19. Active mail was consumed between tool calls without waiting for
 the original turn to finish; its report survived, and subsequent idle delivery
 woke the recipient and returned a report. Untested races are not claimed as live proof.

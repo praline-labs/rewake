@@ -2,9 +2,9 @@
 
 The numbered rules rewake 2.0 keeps, each in its full wording, as a reference of
 behaviour. The wording is the one fixed in [design-rules.md](../v2/design-rules.md);
-which 1.x rule each comes from is in [revision-rules.md](../v2/revision-rules.md). A rule
+which 1.x rule each comes from is in [revision-rules.md](../archive/v2/revision-rules.md). A rule
 here is stated independently of the code: what the system guarantees, not how one file
-does it. Created in stage 3's first step, S1 ([stage3.md](../v2/stage3.md#documents)).
+does it. Created in stage 3's first step, S1 ([stage3.md](../archive/v2/stage3.md#documents)).
 
 - [effects.md](effects.md) — **E1–E8**, the effects of a mail operation: unknown effects
   never discarded, locks, checks in the critical section, one durable read, the size
@@ -53,4 +53,4 @@ met. A clause the code does not hold is stated in the rule's text as a known lim
 
 A move rewrites the paths in the same commit. Tests that hold only the 1.x migration,
 `settle` or a removed harness mechanism are not named; which those are, and why, is in
-[stage3-tests.md](../v2/stage3-tests.md) and [stage3-tests-tcl.md](../v2/stage3-tests-tcl.md).
+[stage3-tests.md](../archive/v2/stage3-tests.md) and [stage3-tests-tcl.md](../archive/v2/stage3-tests-tcl.md).

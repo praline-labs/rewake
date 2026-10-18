@@ -88,7 +88,7 @@ report written, in one section of the recipient's lock, which a turn end holding
 waits for, bounded; a report to the sender's own name is written inside the lock the
 turn end already holds. So a sweep never runs between the look and the write, and an
 attempt that finds the run live there also finds every earlier landing
-([stage3-publication.md](v2/stage3-publication.md#why-it-is-enough)). When the wait
+([stage3-publication.md](archive/v2/stage3-publication.md#why-it-is-enough)). When the wait
 expires the turn end fails as for any busy mailbox: nothing is written, no stop is
 recorded, and the next barrier publishes the report once. A report whose recipient is a
 run that has ended or was replaced, as read inside that section, is moot: the journal

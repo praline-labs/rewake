@@ -66,7 +66,7 @@ Acceptance on the Codex side found two more, both fixed on the branch:
 ## What stays open
 
 - land, finish and the checks of ls and rm are still not serialized with a
-  `git worktree add` rewake does not run ([work-queue.md](../work-queue.md)).
+  `git worktree add` rewake does not run ([work-queue.md](../archive/work-queue.md)).
 - A hook land stopped waiting for may still land what it was merging; land run again
   says what did.
 - The git calls without hooks — `git status` with a clean or smudge filter, say — have no

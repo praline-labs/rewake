@@ -9,7 +9,7 @@ if the owner asked. The owner asked, and chose between two variants on September
 - **A** — repeat Codex's private scheme: its directory layout, a detached `--no-checkout`
   add, `config.worktree`, the binding of the checkout to the thread. Not built: the
   scheme is no contract, and rewake would drift from a new Codex version silently. It is
-  in [work-queue.md](../work-queue.md) as something to study later.
+  in [work-queue.md](../archive/work-queue.md) as something to study later.
 - **B** — only the substance: a detached checkout made with the public
   `git worktree add`, and rewake's own record of it. Built.
 
@@ -40,7 +40,7 @@ if the owner asked. The owner asked, and chose between two variants on September
 - **Trust**: read in Codex's source, a linked worktree takes its trust from its main
   checkout when its metadata has the layout `git worktree add` writes; a test holds
   rewake's checkouts to that layout
-  ([research-codex.md](../research-codex.md#--worktree-with-a-remote-terminal)).
+  ([research-codex.md](../archive/research-codex.md#--worktree-with-a-remote-terminal)).
 - The harness side is one optional interface, `harness.WorktreeHarness`, implemented by
   Codex only; the new package is `internal/worktree`.
 

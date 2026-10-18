@@ -1,4 +1,4 @@
-# Design: state, the upgrade from 1.x, one build per room
+# Design: state, the state of 1.x, one build per room
 
 There is no migration of 1.x state: it is cleared on upgrade and sessions are restarted
 (decision 3). This file says where 2.0 keeps its state, how the 1.x state goes, and the
@@ -11,7 +11,7 @@ The base stays `$REWAKE_DIR`, by default `/tmp/rewake-<uid>`, with the same chec
 Codex sandbox writes `/tmp` by default (`docs/design.md`, "State directory"). Inside it
 2.0 keeps everything under its root **`v2/`**: `v2/rooms/<room>/...`
 ([stage3-state.md](stage3-state.md#the-roots) names the three levels). 1.x never reads there, and
-2.0 never reads the 1.x tree except to clear it, so neither build can take the other's
+2.0 never reads the 1.x tree, so neither build can take the other's
 records for its own — the property the cutover had to prove with run records, successor
 bindings and a scan of processes (`docs/protocol-cutover.md`), now held by a path.
 
@@ -26,7 +26,7 @@ migration and the Claude Code MCP injection needed:
   `run/<name>.<epoch>/`, holding what an adapter writes for one run — the mod; its
   socket keeps the short form in `sock/` — removed with the run, or, after a run killed
   outright, by a later launch once that run is proven dead (L3,
-  [stage3-rundir.md](stage3-rundir.md));
+  [stage3-rundir.md](../archive/v2/stage3-rundir.md));
 - unchanged: sessions, mailboxes with their journals, receipts, marks, claims and once
   records, control requests, letters, threads where an adapter uses them.
 
@@ -41,46 +41,13 @@ change for it: `v2/rooms/<room>/` and the room's name stay in the core, kept for
 communication between two mains later, and stage 4's design only makes the default room
 follow the main, its name taken from the main without a flag.
 
-## Clearing the state of 1.x
+## The state of 1.x
 
-**When.** At the first launch of a 2.0 session (`rewake claude ...`) that finds a 1.x
-tree — `rooms/` directly under the base, or a tree a clearer set aside there. Other commands do not clear: a `send` or an
-`inbox` must stay quick and must not surprise; they see only `v2/`.
-
-**What is checked first.** Whether any 1.x wrapper still runs, or any 1.x command holds
-a lock. The launch reads only the liveness fields of the 1.x session records —
-`servicePid`, `serviceStart` and `pidNamespace` (`docs/session-record.md`) — and compares
-them with `/proc`, in the pid namespace the 1.x wrappers ran in, which is a precondition
-of the supported upgrade. This read of a 1.x format, and the count of dropped mail,
-carry a legacy mark (`legacy(rewake <date>)`, dated the day the 2.0 state root lands,
-`docs/legacy.md`) and go with it, beside the marks the table already holds.
-
-- **A 1.x session alive**: the launch refuses, exit 1, naming each live session with its
-  room, and saying that rewake 2.0 does not read 1.x mail, so those sessions have to be
-  ended (and their conversations resumed under 2.0, where a harness can resume). Nothing
-  is stopped or restarted automatically (`AGENTS.md`, "Delegation and review").
-- **A check that cannot be made** — a record, a directory or `/proc` data that cannot be
-  read, a lock held, a record of another pid namespace: the launch refuses, exit 1,
-  naming the path; an unknown is never taken for absence.
-- **None alive, every check read**: the launch sets `rooms/` aside, validates the set-aside
-  tree again from its contents, and deletes it only then — the 1.x trees and nothing
-  else under the base — and prints one line on stderr: what was removed, with the counts
-  of unread and undelivered letters dropped, "unknown" where a count cannot be
-  established, so the person knows whether mail was lost. A deletion that fails after
-  the validation is finished by the next launch.
-
-The protocol — the trees and their names, the locks, every crash and every failed read —
-is [stage3-upgrade.md](stage3-upgrade.md).
-
-The owner decided on October 5, 2026 that 1.x state is deleted, not set aside (answer 1
-of [design.md](design.md#the-owners-answers)).
-
-**What the person is told before.** The release notes and `docs/install.md` of 2.0 say:
-end every rewake session, update, start again; unread mail of 1.x is not carried over.
-The npm package's install step does nothing to the state: the first launch does.
-
-Outside the state root rewake 1.x changed nothing of the person's (it never edits a
-harness's configuration), so there is nothing else to clear.
+From stage 3 to October 18, 2026 the first launch cleared the 1.x tree under the base, by the
+owner's answer 1 of October 5; the owner's decision of October 18 took that out of the code. 2.0
+leaves the 1.x tree as it is, and the person removes it by hand once no 1.x session runs
+(`docs/install.md`). The clearing's protocol is kept in
+[stage3-upgrade.md](../archive/v2/stage3-upgrade.md).
 
 ## One build per room
 

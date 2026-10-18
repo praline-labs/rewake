@@ -1,16 +1,11 @@
 package launch
 
 import (
-	"bufio"
 	"bytes"
-	"encoding/json"
+	"context"
 	"errors"
-	"fmt"
-	"io"
-	"os"
 	"os/exec"
 	"strconv"
-	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -18,260 +13,74 @@ import (
 
 // A probe runs a person's program the way the harness itself would, before
 // the run is claimed, to learn something only that program can answer — its
-// version (version.go). Each runs in a session of its own under a holder
-// process, bounded, with its output captured to a bound and never shown;
-// whatever it started is ended and reaped on every outcome, and a process
-// that cannot be ended is an outcome of its own, which refuses the launch.
-
-// ProbeSpec is one probe to run.
-type ProbeSpec struct {
-	// Label is the probe's fixed name in a diagnostic: "--version".
-	Label string
-	// Program, Args, Env and Dir start it, as the harness would be started.
-	Program string
-	Args    []string
-	Env     []string
-	Dir     string
-	// Bound is how long the probe may take, from its start to its end.
-	Bound time.Duration
-	// Capture keeps the output to read; false discards it.
-	Capture bool
-}
+// version (version.go). It runs in a process group of its own, bounded, with
+// its output captured to a bound and never shown; the group is killed on every
+// outcome, so nothing it started in that group outlives it.
 
 // The outcome classes a diagnostic may name: never the program's output,
 // which may carry what the person keeps private.
 const (
-	OutcomeBound        = "no answer within its bound"
-	OutcomeUnrecognized = "an answer not recognized"
-	OutcomeNoStart      = "could not start"
-	OutcomeNotEnded     = "could not be ended"
+	outcomeBound   = "no answer within its bound"
+	outcomeNoStart = "could not start"
 )
 
-// OutcomeExit is the class of a probe that exited with a code the reading
+// outcomeExit is the class of a probe that exited with a code the reading
 // did not expect.
-func OutcomeExit(code int) string { return "exit code " + strconv.Itoa(code) }
+func outcomeExit(code int) string { return "exit code " + strconv.Itoa(code) }
 
 // maxProbeOutput bounds what a probe's output keeps; past it the output is
 // read and dropped, so the program never blocks on a full pipe.
 const maxProbeOutput = 64 << 10
 
-// endGrace is how long a probe's group has between SIGTERM and SIGKILL.
-const endGrace = time.Second
+// pipeGrace is how long the output may stay open after the program ended or
+// was killed: a process that left the group still holding the pipe does not
+// keep the launch waiting.
+const pipeGrace = time.Second
 
-// reapBound bounds the sweep for processes the probe left behind.
-const reapBound = 3 * time.Second
-
-// holderBound bounds what the holder itself takes: starting the program,
-// and ending once its tree is ended.
-const holderBound = 5 * time.Second
-
-// Probe is a started probe.
-type Probe struct {
-	holder   *exec.Cmd
-	pid      int
-	held     chan struct{}
-	control  *os.File
-	deadline time.Time
-	output   *boundedBuffer
-	reader   *os.File
-	copied   chan struct{}
-	exited   chan struct{}
-	status   syscall.WaitStatus
-	lost     bool
-	result   chan string
-	ended    sync.Once
-	endErr   error
+// probeResult is how a probe went.
+type probeResult struct {
+	Output []byte
+	// Code is the exit code, 128 plus the signal for one a signal ended.
+	Code int
+	// Started is false when the program could not be started.
+	Started bool
+	// Answered is false when the bound passed first.
+	Answered bool
 }
 
-// StartProbe starts a probe under a holder of its own: a process that
-// starts nothing but the probe and is the subreaper of its tree, so whatever
-// the probe leaves, in any group or session, is the holder's to end — and
-// nothing of this process's own is ever taken for it.
-func StartProbe(spec ProbeSpec) (*Probe, error) {
-	p := &Probe{
-		output: &boundedBuffer{limit: maxProbeOutput},
-		held:   make(chan struct{}), copied: make(chan struct{}), exited: make(chan struct{}), result: make(chan string, 1),
+// runProbe runs program with args, env and dir within bound and kills its
+// process group when it ends or the bound passes.
+func runProbe(program string, args, env []string, dir string, bound time.Duration) probeResult {
+	ctx, cancel := context.WithTimeout(context.Background(), bound)
+	defer cancel()
+	output := &boundedBuffer{limit: maxProbeOutput}
+	cmd := exec.CommandContext(ctx, program, args...)
+	cmd.Env, cmd.Dir, cmd.Stdout, cmd.Stderr = env, dir, output, output
+	// A group of its own: a signal to this process's group is not one to
+	// end the probe, and the probe's group is killed without touching ours.
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	cmd.Cancel = func() error { return syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL) }
+	cmd.WaitDelay = pipeGrace
+	if err := cmd.Start(); err != nil {
+		return probeResult{}
 	}
-	order, err := json.Marshal(holderOrder{Program: spec.Program, Args: spec.Args, Env: spec.Env, Dir: spec.Dir})
-	if err != nil {
-		return nil, err
-	}
-	var opened []*os.File
-	pipe := func() (*os.File, *os.File) {
-		r, w, perr := os.Pipe()
-		if perr != nil && err == nil {
-			err = perr
-		}
-		opened = append(opened, r, w)
-		return r, w
-	}
-	reader, writer := pipe()
-	controlR, controlW := pipe()
-	reportR, reportW := pipe()
-	closeAll := func() {
-		for _, f := range opened {
-			if f != nil {
-				_ = f.Close()
-			}
-		}
-	}
-	if err != nil {
-		closeAll()
-		return nil, err
-	}
-	holder := &exec.Cmd{
-		Path: "/proc/self/exe", Args: []string{holderName},
-		Stdout: writer, Stderr: writer, ExtraFiles: []*os.File{controlR, reportW},
-		// A group of its own: a signal to this process's group is not one
-		// to end the probe, and the holder ends it only when told or orphaned.
-		SysProcAttr: &syscall.SysProcAttr{Setpgid: true},
-	}
-	started := time.Now()
-	if err := holder.Start(); err != nil {
-		closeAll()
-		return nil, err
-	}
-	_ = writer.Close()
-	_ = controlR.Close()
-	_ = reportW.Close()
-	p.holder, p.control, p.reader = holder, controlW, reader
-	p.deadline = started.Add(spec.Bound)
-	go func() {
-		defer close(p.held)
-		_ = holder.Wait()
-	}()
-	go func() {
-		defer close(p.copied)
-		if spec.Capture {
-			_, _ = io.Copy(p.output, reader)
-			return
-		}
-		_, _ = io.Copy(io.Discard, reader)
-	}()
-	answer := make(chan bool, 1)
-	go p.readReports(reportR, answer)
-	if _, err := controlW.Write(append(order, '\n')); err == nil {
-		select {
-		case ok := <-answer:
-			if ok {
-				return p, nil
-			}
-		case <-time.After(holderBound):
-		}
-	}
-	if p.End() != nil {
-		return nil, ErrProbeNotEnded
-	}
-	return nil, errors.New("the probe could not be started")
-}
-
-// ErrProbeNotEnded is a probe that could not be started and whose holder
-// could not show that everything it began has ended: what a caller that
-// reads an unknown outcome as harmless must still refuse on.
-var ErrProbeNotEnded = errors.New("the probe could not be started, and what it began could not be shown to have ended")
-
-// readReports follows what the holder says: whether the program started,
-// how it exited, and how its tree ended. A holder that is gone says no more:
-// the program's exit is then unknown, and so is its tree.
-func (p *Probe) readReports(reports *os.File, started chan<- bool) {
-	defer func() { _ = reports.Close() }()
-	exited := false
-	scanner := bufio.NewScanner(reports)
-	for scanner.Scan() {
-		word, value, _ := strings.Cut(scanner.Text(), " ")
-		switch word {
-		case reportStarted:
-			p.pid, _ = strconv.Atoi(value)
-			started <- true
-		case reportNoStart:
-			started <- false
-		case reportExit:
-			if status, err := strconv.ParseUint(value, 10, 32); err == nil && !exited {
-				p.status, exited = syscall.WaitStatus(status), true
-				close(p.exited)
-			}
-		case reportEnded, reportLeft:
-			p.result <- scanner.Text()
-		}
-	}
-	select {
-	case started <- false:
-	default:
-	}
-	if !exited {
-		p.lost = true
-		close(p.exited)
-	}
-	close(p.result)
-}
-
-// Deadline is when the probe's bound passes.
-func (p *Probe) Deadline() time.Time { return p.deadline }
-
-// Exited closes when the probe's own process has exited: a program that
-// exits before it answers will not answer.
-func (p *Probe) Exited() <-chan struct{} { return p.exited }
-
-// Wait waits for the probe's own process to exit within its bound. It
-// answers its exit code, or false when the bound passed first.
-func (p *Probe) Wait() (int, bool) {
-	timer := time.NewTimer(time.Until(p.deadline))
-	defer timer.Stop()
-	select {
-	case <-p.exited:
-	case <-timer.C:
-		return 0, false
-	}
+	err := cmd.Wait()
+	// Whatever it left running in its group goes with it.
+	_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+	result := probeResult{Output: output.Bytes(), Started: true, Answered: ctx.Err() == nil}
+	var exit *exec.ExitError
 	switch {
-	case p.lost:
-	case p.status.Exited():
-		return p.status.ExitStatus(), true
-	case p.status.Signaled():
-		return 128 + int(p.status.Signal()), true
+	case errors.As(err, &exit):
+		status, _ := exit.Sys().(syscall.WaitStatus)
+		if status.Signaled() {
+			result.Code = 128 + int(status.Signal())
+		} else {
+			result.Code = exit.ExitCode()
+		}
+	case err != nil && !errors.Is(err, exec.ErrWaitDelay):
+		result.Code = -1
 	}
-	return -1, true
-}
-
-// Output is what the probe printed, up to its bound. Read only after End.
-func (p *Probe) Output() []byte { return p.output.Bytes() }
-
-// End has the holder end the probe's group — SIGTERM, then SIGKILL a second
-// later — and then everything else of its tree, and waits for the holder to
-// say so. An error says something could not be ended, or that the holder
-// could not tell: the launch is refused, since it would run beside it.
-func (p *Probe) End() error {
-	p.ended.Do(func() { p.endErr = p.end() })
-	return p.endErr
-}
-
-func (p *Probe) end() error {
-	_, _ = p.control.Write([]byte(orderEnd + "\n"))
-	var result string
-	select {
-	case result = <-p.result:
-	case <-time.After(2*endGrace + reapBound + holderBound):
-	}
-	_ = p.control.Close()
-	select {
-	case <-p.held:
-	case <-time.After(holderBound):
-		// A holder that does not end is ended: what it held is then
-		// beyond this process's knowledge, which the error says.
-		_ = syscall.Kill(-p.holder.Process.Pid, syscall.SIGKILL)
-		<-p.held
-		result = ""
-	}
-	// The pipe is closed once nothing writes to it any more; a writer that
-	// could not be ended would otherwise hold the copy forever.
-	_ = p.reader.Close()
-	<-p.copied
-	switch {
-	case result == reportEnded:
-		return nil
-	case strings.HasPrefix(result, reportLeft+" "):
-		return fmt.Errorf("%s processes it started could not be ended", strings.TrimPrefix(result, reportLeft+" "))
-	}
-	return errors.New("its holder did not say how its tree ended")
+	return result
 }
 
 // boundedBuffer keeps the first limit bytes written and drops the rest.

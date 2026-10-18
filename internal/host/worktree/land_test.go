@@ -179,11 +179,6 @@ func TestLandNeedsATargetFromADetachedSource(t *testing.T) {
 	if _, err := Land(record, ""); !errors.As(err, &blocked) || !strings.Contains(err.Error(), "--into") {
 		t.Errorf("got %v", err)
 	}
-	legacy := record
-	legacy.Branch = ""
-	if _, err := Land(legacy, "main"); !errors.As(err, &blocked) || !strings.Contains(err.Error(), "detached") {
-		t.Errorf("a record without a branch: %v", err)
-	}
 }
 
 // DropBranch deletes a branch another ref holds, and keeps one with commits

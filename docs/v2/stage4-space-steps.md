@@ -1,15 +1,18 @@
 # Stage 4: the first working space — tests, rules and build steps
 
+**Superseded in part, October 18, 2026**, by the owner's decision: a space is main starting its
+workers, not shown inside Claude Code; the keeper, the screen, the keys, the liveness pipe and
+the gate below are not built, and one step replaces S4-7 to S4-10 ([the build steps](#the-build-steps)).
+
 The second half of [stage4-space.md](stage4-space.md), written October 13, 2026: what the
 tests can hold and what only a live check shows, the rules each new behaviour needs before
 code, the build steps in order with their acceptance, and the questions a step would
 otherwise guess. Every step goes through the chain of `AGENTS.md`: the writer writes, a
-review, fixes, and the commit; the steps that touch processes and transport — the terminal,
-the hosted launch, the mod's endpoint, closing — also get the Codex side's acceptance.
+review, fixes, and the commit.
 
 ## 10. Tests
 
-**What the five checks hold, with no harness.**
+**What the checks hold, with no harness.**
 
 - `internal/host/space`, the launch: the launcher started from the test binary, the worker's
   wrapper reparented — `proc.Descends` to the test refuses — with the slave side as its
@@ -82,11 +85,11 @@ answer. Main runs them, as in the probe.
 
 ## Rules before code
 
-A new group, `docs/rules/space.md`, numbered **SP1–SP9**, with `docs/rules_test.go` taught the
-group in S4-2. Each rule names its tests as every group does, so a rule enters the group in the
-step that builds the test holding it (decided by main, October 13, 2026): SP3, SP4 and SP9 at
-S4-2, held in their existing part; SP2 and SP7 at S4-3, SP5 at S4-7, SP6 at S4-8, SP1 and SP8 at
-S4-9. Until then a rule stands here.
+A new group, `docs/rules/space.md`, numbered **SP1–SP9**, made in S4-2. A rule entered the group
+with the step that built what holds it (decided by main, October 13, 2026): SP3, SP4 and SP9 at
+S4-2, SP2 and SP7 at S4-3. Since October 18, 2026 SP5 and SP6, the keeper's seat and its keys,
+are not built, and SP1 and SP8 enter with the space step, SP1 as the space host watching main's
+run. Until then a rule stands here.
 
 - **SP1. A space lives no longer than its main.** When main's run ends — by `session.end`, by
   its harness ending, or by its wrapper being killed — every worker of its spaces is ended
@@ -134,19 +137,16 @@ Each small enough for one review; each closed by its acceptance check, not by it
 | Step | What it builds | Acceptance |
 |---|---|---|
 | S4-1 | P4 and P15c, live, from the probe's kit: the peer of `$.http.fetch` on every request, after a reload and after a keeper's respawn — the kit's existing coverage, not P15b's fetches, which say nothing of their peer — and a shell child's request refused; the screen drawn as styled text in the key surface at 160 by 30, its repaint rate and CPU against P15b's cell grid; a progress signal on the held call, if the skill shows one (Q4); a worker's `turn.complete` and its `answer` | the records in [research-claude-mod.md](../research-claude-mod.md); P4 positive, or the stage stops for a channel design ([design-claude.md](design-claude.md#how-a-tool-call-runs)); P15c picks text or the fallback; P15c also carries the keeper's view cleaned of Claude Code's other rows and the prompt box made useful, since no render site hides it (the owner's questions of October 13, 2026) |
-| S4-2 | the rules test's SP group with SP3, SP4 and SP9; the protocol schema, `tools/protogen` and the drift test | `go test ./docs/` and the drift test green; review of the rules |
+| S4-2 | the rules test's SP group with SP3, SP4 and SP9; the protocol schema, `tools/protogen` and the drift test | the drift test green; review of the rules |
 | S4-3 | `internal/core/space` and `rewake space list`; built October 13, 2026 ([the record](stage4-space-record.md)) | the record tests under the lease; the listing on a hand-written record, closed and kept |
 | S4-4 | `internal/host/terminal`, with `charmbracelet/x/vt` (the owner's exception, [section 1](stage4-space.md#the-terminal-library)); built October 13, 2026 ([the terminal](stage4-space-terminal.md)) | the pseudo-terminal tests above, with `-race`; the layout test with the library only in `host/terminal`; `go list -deps` of the binary before and after, recorded with the exception |
 | S4-5 | the embedded mod's skeleton and `modhost`: written per run, `--plugin-dir`, the mod socket, `hello` with the peer check — part A, built October 13, 2026, its handlers counted among the run's workers after review ([loading the mod](design-claude.md#loading-the-mod-for-one-run)); `SpacesCapability` live on main; the spaces offer, its live and refused states and the conversation's name written into the API contract and the catalogue's completeness test, not as scattered optional assertions — part B, built October 13, 2026 ([spaces](design-api.md#spaces), [conversation names](design-api.md#conversation-names)) | live: the hello on the installed Claude Code, a shell child's request refused; the validator test |
 | S4-6 A | built and accepted October 16, 2026 ([the record](../roadmap/2026-10-16-stage4-s4-6.md)): the worker's turns ([stage4-turns.md](stage4-turns.md)): `turn/start` and `turn/end` in `modhost`, each end's first capture reused by every retry, the dispatch split out of `server.go`; the mod's `turn.start` and `turn.complete`, its outbox in `$.store`, its retry chain and the cut of a long answer; the offer `TurnBoundary{Reports: true, HoldsEnd: false, AfterStart: true}`; the known causes refusing a reporting role; availability waiting for a boundary proven after the start | the tests of [part A](stage4-turns-build.md#the-build): the reasons mapped, a failed end, a lost receipt and a retry answering only its first capture, one end at once captured once, another digest refused, a request across `Close`, a run proven gone answered 410 with no receipt and an unreadable record retried, a reporting role refused on a known cause, a task refused before the hello; the mod's tests in `claude plugin test`, its outbox kept until a receipt or a run proven ended |
 | S4-6 B | built and accepted October 16, 2026: the heartbeat: `mod/alive`, generations, the lapse and the withdrawal of TurnBoundary and main's Spaces, the restore by a new hello | the tests of [part B](stage4-turns-build.md#the-build): a lapse withdraws and a hello restores, a hello of an earlier or superseded load refused, an older generation or transition changes nothing, an end after a lapse is taken |
 | S4-6 C | passed October 16, 2026 on Claude Code 2.1.296 ([the records](../research-claude-mod.md#s4-6-a-workers-turns-through-the-mod)): live, by main ([part C](stage4-turns-build.md#the-build)) | main sends a task to a worker started by hand with `rewake claude --write` and reads its report; the same through `--command` with and without `exec`; a mod that stops polling withdrawn within 30 s and restored; an interrupt reported as stopped; a subagent's turn not reported; the hooks' order at a turn's end and the heartbeat between turns and through a reload |
-| S4-7 | opening a space: `rewake space open`, `events`, the keeper's type, its spawn, its hold and the duplicate, the checkout found and proven the keeper's and empty of work, the base moved, the detached launch with its checks and its gate, the hosted wrapper's process groups, its environment and base, its session id, the record | the workflow scenario with the fixture worker and `test/spacerig` under a private base, the default base untouched; the authority across the space (above); live: the keeper spawned, the worker registered in main's room, its session id in the record, its wrapper outside main's tree; the native cleanup compared with the keeper's original base for an untouched reset checkout and for one with the worker's changes and commits, not inferred from Git status |
-| S4-8 | the view: the screen as styled text in the keeper's row, `space/screen`, keys, the prefix and its hint, resize | live: the worker's screen in the keeper's view, a prompt typed there answered, Alt+a c twice ending the worker |
-| S4-9 | closing: `session/closing`, the liveness pipe and the worker wrapper's bounded shutdown, a keeper released after its worker's observed end, `rewake space close`, the conversation's end that closes nothing, the next start's closing of a dead main's records, the reminder | the workflow scenario: main's run ends and its worker is gone, the record closed from the observed end; main's wrapper killed with a worker that ignores SIGHUP and SIGTERM (above); Ctrl+C and Ctrl+Z through the terminal; live: `/exit` with a worker seated — the worker ended, what the release achieved within 1.5 s (Q7), an unchanged checkout removed or kept and reminded, a changed one kept and reminded; `/clear` with a space open (Q13) |
-| S4-10 | the end to end: main opens a space, sends the worker a task, reads its report, closes main | live, written into the roadmap: the whole target above in one run on the installed Claude Code |
+| S4-7 | the space, by the owner's decision of October 18, 2026 in place of S4-7 to S4-10: `rewake space open <name> --harness claude\|pi [--role …] [--worktree[=…]] -- <harness args>`, a change for main only while its run has `Spaces` live; a short launcher re-executes rewake with `Setsid` and exits, so the space host is not main's descendant (SP9); the space host opens a pseudo-terminal (`host/terminal/pty.go` only), strips `REWAKE_SESSION`, `REWAKE_EPOCH` and the harness's own session markers, and runs an ordinary `rewake <harness> …` in it under main's base and room; it watches main's run once a second (`registry.ObserveRun`) and, when that run has ended, by SIGKILL too, sends SIGHUP, then SIGTERM to the worker's group and SIGKILL after about 5 s, closes the record from the observed end and exits; the record without the keeper's fields; `rewake attach <name>`, a raw relay of the master over a unix socket with raw termios on the client and SIGWINCH forwarded | the workflow scenario with the fixture worker under a private base, the default base untouched; the authority across the space (above); live: from a Claude Code main a Claude Code worker with `--worktree`, and a pi worker once its adapter exists, a task and its report each, `attach` answering a prompt the worker waits on, main closed — `kill -9` included — and the workers gone within seconds |
 
-The restore by session id is the step after S4-10 ([section 8](stage4-space.md#8-restore)).
+The restore by session id is the step after S4-7 ([section 8](stage4-space.md#8-restore)).
 
 **What the handlers owe the schema's choices** (the review of S4-2, October 13, 2026). The
 generated types say which fields may be absent, not which combinations are valid, so each
@@ -154,11 +154,8 @@ handler validates its messages:
 
 - S4-5, refusals: a status other than 200 with `Refusal` is an admission refusal; a lost answer or a server error after an effect proves no absence of the effect, and a retry keeps its identity.
 - S4-5, `loadId`: the admitted load is bound to the run the socket and the peer check prove; it never stands in for the peer check of each request.
-- S4-5 and S4-9, `role` and `reason` as strings: a value the host does not know never selects a more permissive action.
+- S4-5, `role` and `reason` as strings: a value the host does not know never selects a more permissive action.
 - S4-6, `Receipt`: the end handler takes a retried end only with the matching `endId`, as its first capture; a turn's start time the mod cannot give stays unknown (zero), never the arrival time, and a pending mark that needs it is recorded as a limit ([the start time](stage4-turns.md#the-start-time)).
-- S4-7, `Spawn`: exactly one of `agentId` and `error`; `events` acknowledges only what the mod processed, a spawn's acknowledgement is retried idempotently, and the sequence is scoped to the run.
-- S4-8, `space/screen`: `after` 0 asks for the whole screen, the first answer is a complete baseline, rows and columns stay in range, and a dead worker carries exactly one of `code` and `signal`.
-- S4-8, `space/keys`: the keys are UTF-8 text and control bytes, which is what the key surface sends; raw octets would need another encoding.
 
 ## Open questions
 

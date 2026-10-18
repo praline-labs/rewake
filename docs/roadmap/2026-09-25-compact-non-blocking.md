@@ -6,7 +6,7 @@ refused at once, or the compaction started — and the result reaches main later
 letter, the way `send` returns at once and the report comes later. The same on both
 harnesses; `rewake interrupt` is unchanged. The design as built is in
 [remote-control.md](../remote-control-letter.md) and
-[remote-control-codex.md](../remote-control-codex.md).
+[remote-control-codex.md](../archive/1.x/remote-control-codex.md).
 
 **The owner's decision** (September 24, 2026), recorded in
 [remote-control.md](../remote-control.md#owner-decisions): the command does not block;

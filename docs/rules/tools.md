@@ -298,8 +298,8 @@ from `mail-bridge-server.md` 1–11 after the second revision review, R1.)
 The carried fault and order tests (`bridge/server/fault_test.go`, `order_cut_test.go`,
 `order_gen_test.go`, `host/endpoint/order_table_test.go`) hold T2–T8; their oracles
 are transport-neutral and run against every transport
-([design-docs-tests.md](../v2/design-docs-tests.md#tests)). S7 rebuilt them on the neutral
-rig ([stage3-tests-tcl.md](../v2/stage3-tests-tcl.md#the-neutral-rig)) in `test/toolrig`:
+([design-docs-tests.md](../archive/v2/design-docs-tests.md#tests)). S7 rebuilt them on the neutral
+rig ([stage3-tests-tcl.md](../archive/v2/stage3-tests-tcl.md#the-neutral-rig)) in `test/toolrig`:
 the fixture's program is the harness's process, its tool calls reach the host endpoint's
 transport role, and the faults reach the program, the child and the endpoint's own steps.
 Each rebuilt oracle fails under the mutation its old one failed under. The old ones left

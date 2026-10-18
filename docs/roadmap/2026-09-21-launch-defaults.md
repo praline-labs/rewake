@@ -17,5 +17,5 @@ which spelling, is in [research-launch.md](../research-launch.md). The workflow 
 paid tier relies on it: a case sets two variables and touches no harness
 configuration ([check-runner.md](../check-runner.md)).
 
-Not to be developed further ([work-queue.md](../work-queue.md)): an alias states the
+Not to be developed further ([work-queue.md](../archive/work-queue.md)): an alias states the
 choice explicitly, which is what a default was approximating.

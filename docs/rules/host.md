@@ -6,7 +6,7 @@ the launch aliases and the endpoint the adapters reach
 ([design.md](../v2/design.md#the-layout)). Its rules have no numbers of their own: they
 are the 1.x rules of [launch.md](../launch.md) and [delivery.md](../delivery.md) the
 wrapper carries, and each block below names the tests that hold them
-([stage3-tests-tcl.md](../v2/stage3-tests-tcl.md#the-host)). The tests are in
+([stage3-tests-tcl.md](../archive/v2/stage3-tests-tcl.md#the-host)). The tests are in
 `internal/host` since S16 moved them there from `internal/wrap`.
 
 ## The wrapper
@@ -14,8 +14,8 @@ wrapper carries, and each block below names the tests that hold them
 The wrapper's ownership of its run, signals and its following of a stop, control, availability,
 compaction letters, departure, notices, naming, roles, the room's context and the
 delivery window, as 1.x holds them; and the launch's version read, through the adapter's
-gate before the claim, in a bounded probe whose output is never shown, refusing below the
-minimum or when no version can be read
+gate before the claim, in a bounded probe in a process group of its own, killed with its
+group, whose output is never shown, refusing below the minimum or when no version can be read
 ([design-api.md](../v2/design-api.md#minimum-versions)), in `internal/host/launch` since
 S10.
 
@@ -72,8 +72,6 @@ Tests:
 - `internal/host/session_notices_test.go` `TestDeparturePublicationRetriesWithoutDuplicate`
 - `internal/host/session_notices_test.go` `TestObservedCompactionSurvivesDepartureBeforeNextScan`
 - `internal/host/session_notices_test.go` `TestStateNoticeObserverStaysInRoomAndDoesNotNotifyItself`
-- `internal/host/hold_notices_test.go` `TestMainIsToldOncePerHold`
-- `internal/host/hold_notices_test.go` `TestAChangedCauseIsToldAgain`
 - `internal/host/naming_test.go` `TestLaunchNamesFollowSelectedRoleAndHarness`
 - `internal/host/naming_test.go` `TestExplicitPrefixControlsNameButNotRole`
 - `internal/host/naming_test.go` `TestNamePrefixAndAssembledBoundaries`
@@ -93,9 +91,8 @@ Tests:
 - `internal/host/launch/version_test.go` `TestAVersionBelowTheMinimumIsRefused`
 - `internal/host/launch/version_test.go` `TestAnUnreadableVersionIsRefused`
 - `internal/host/launch/version_test.go` `TestAGateWithoutAMinimumReadsNothing`
-- `internal/host/launch/probe_test.go` `TestAProbePastItsBoundIsEnded`
-- `internal/host/launch/probe_test.go` `TestWhatAProbeLeftInASessionOfItsOwnIsEnded`
-- `internal/host/launch/probe_test.go` `TestAProbeLeavesOtherChildrenAlone`
+- `internal/host/launch/probe_test.go` `TestAProbePastItsBoundIsEndedWithItsGroup`
+- `internal/host/launch/probe_test.go` `TestAProbeIsNotHeldByItsOutputPastTheGrace`
 
 ## The live set
 

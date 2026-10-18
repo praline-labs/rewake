@@ -182,9 +182,9 @@ snapshot. Until S9, October 11, 2026, a Claude Code session's wrapper collected 
 snapshot from the session's hooks, its status line and rewake's plugin — activity,
 whether interruptions are heard, model and effort, context, compactions and the
 conversation, observed live on September 23, 2026 on Claude Code 2.1.280
-([harness-features.md](harness-features.md), HF-11 and HF-22). All of it left with the
-hooks: how each field was read is in [claude-telemetry.md](archive-1.x/claude-telemetry.md)
-and [claude-plugin.md](archive-1.x/claude-plugin.md). A Claude Code session publishes no
+([harness-features.md](archive/harness-features.md), HF-11 and HF-22). All of it left with the
+hooks: how each field was read is in [claude-telemetry.md](archive/1.x/claude-telemetry.md)
+and [claude-plugin.md](archive/1.x/claude-plugin.md). A Claude Code session publishes no
 snapshot in this build, and every reader — `rewake list`, the main-only header, the
 compaction notice — shows its values unknown, as for any adapter without one.
 

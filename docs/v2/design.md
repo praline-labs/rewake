@@ -3,7 +3,7 @@
 Stage 2 of the 2.0 rebuild, written October 5, 2026 on the `v2` branch, for review
 before any code. It rests on the owner's decisions of October 5, 2026 — the nine of the
 plan and the twelve answers to the revision's proposals — and on the accepted revision
-([revision.md](revision.md), commit `8a20bdd`). Every decision names what it rests on
+([revision.md](../archive/v2/revision.md), commit `8a20bdd`). Every decision names what it rests on
 and what is still unknown. The owner answered the questions of the first draft on
 October 5, 2026 ([below](#the-owners-answers)); one is still open. Three later decisions
 of October 13, 2026 follow them there.
@@ -14,9 +14,7 @@ of October 13, 2026 follow them there.
 | [design-api.md](design-api.md) | the adapter API: the capabilities, what the core does without each, the catalogue, minimum versions |
 | [design-rules.md](design-rules.md) | the core rules, restated from 1.x without its migration, and the guarantees bound to every tool transport |
 | [design-claude.md](design-claude.md) | the Claude Code adapter as one mod: tools, turns, telemetry, control, wake, loading, and the stage 4 probe |
-| [design-codex.md](design-codex.md) | Codex: the reserved place, the capabilities it is expected to fill, the pair it must serve |
 | [design-state.md](design-state.md) | the state directory of 2.0, clearing the state of 1.x, one build per room |
-| [design-docs-tests.md](design-docs-tests.md) | how the documents and the tests of 2.0 are laid out |
 
 Where a fact is marked, the marks are those of the recon: **[doc]** official
 documentation, **[live]** seen on a running harness, **[code]** read in the tree at
@@ -30,12 +28,11 @@ about the mod that still needs a live check says so and names its stage 4 probe.
   revision's proposals: the hidden `observe`, `status-tap` and `bridge-hook`, `settle`,
   `--no-mail-tool` on Claude Code, and the Codex notify branch of `turn-ended`.
   `rewake guide` and `rewake edit` stay (answer 12).
-- **The CLI is a first-class interface**, not a fallback (answer 12). Every mail
-  operation is a command; a harness with no mod, or a session whose mod did not load,
-  works through the shell and the guide. The tools a model sees are a projection of the
-  same command table ([design-api.md](design-api.md#tooltransport)).
+- **The CLI is the interface** (answer 12). Every mail operation is a command; a session
+  works through its shell and the guide. Decided by the owner, October 18, 2026: there are
+  no mail tools beside the command line; the mail tool's code leaves the tree.
 - **The boundaries of [project.md](../project.md#the-philosophy)**: no typing into a
-  screen, and a pseudo-terminal only for a session the person asks rewake to host; the
+  screen, and a pseudo-terminal only for a worker main starts in a space; the
   person's harness configuration is never edited; transcripts are not read; no daemon —
   what serves a session lives as long as it.
 - **What the CLI promises a caller**: one command table, no arguments prints the guide,
@@ -54,31 +51,28 @@ internal/
     registry/            sessions, names, liveness, epochs, the live capabilities of a run
     session/             the session-state snapshot
     role/  brief/        roles, playbooks, briefings — harness words come from the adapter
-    grant/               grant policy and the unforgeable authority
+    grant/               grant policy and the unforgeable authority; grants leave the code
+                         (October 18, 2026), the authority stays
     control/             compact, interrupt and clear as request files
-    channel/             the channel record of a run: tool, shell or none
+    channel/             the channel record of a run; leaves with the mail tool
   adapter/               the capability interfaces and the values they exchange; no implementation
     catalog/             the one place that names every adapter; a value, not a registry
     claude/              the Claude Code adapter; mod/ holds the module (TypeScript, answer 9) and its manifest
-    codex/               reserved: designed afresh in stage 5 (design-codex.md)
   host/                  the wrapper: launch lifetime, claim, signals, availability,
                          departure, notices, the delivery loop, worktree, launch aliases,
-                         the endpoint the adapters reach
-  tool/                  the mail tools: descriptor types and their schema encoding, binding,
-                         parts, end gate, result bound; the descriptors come from cli
+                         the endpoint the adapters reach (leaves with the mail tool)
+  tool/                  the output helpers `inbox` uses; the mail tools' descriptors,
+                         binding and end gate leave with the mail tool
   cli/                   words, help, exit codes — one command table; imports no adapter
 tools/  test/workflow/  scripts/
 ```
 
 What each owns, and where 1.x code lands, is in the revision's one-line table
-([revision.md](revision.md#every-part-in-one-line)); the layout above refines it in two
+([revision.md](../archive/v2/revision.md#every-part-in-one-line)); the layout above refines it in two
 places. The endpoint the mod reaches is the host's (it lives as long as the wrapper),
 while what a call means — the descriptor types, binding, parts, the end gate — is
 `tool`'s; the descriptors themselves are built by `cli` from its command table and
-passed down ([design-api.md](design-api.md#tooltransport)). And
-`adapter/codex/gateway` and `tool/mcp` of the revision are not laid out now: nothing of
-Codex is ported before stage 5 (answer 7), and how the Codex adapter is built is
-decided then.
+passed down ([design-api.md](design-api.md#tooltransport)).
 
 ### The import rule
 
@@ -94,7 +88,7 @@ decided then.
 | `cli` | `host`, `adapter`, `tool`, `core`, `infra`; never `adapter/catalog` or an adapter |
 | `cmd/rewake` | `cli`, `adapter/catalog` |
 
-Rests on: the layering faults the revision found ([revision.md](revision.md#layering-faults-to-fix)) —
+Rests on: the layering faults the revision found ([revision.md](../archive/v2/revision.md#layering-faults-to-fix)) —
 `cli` importing the Claude adapter in five files, the core naming a harness in three
 places, the global registry filled from `init`.
 
@@ -132,40 +126,34 @@ fold are known to fail it and are moved in stage 3; the rest is found by running
 ## The stage plan from here
 
 Each stage is closed by its acceptance, not by code existing (`docs/roadmap/README.md`).
-Every stage goes through the chain of `AGENTS.md`: rules, a review of the rules, build,
-acceptance, live probe where the stage has one, commit.
+Every step of a stage goes through the chain of `AGENTS.md`, "Delegation and review".
 
 | Stage | What it builds | Acceptance requires |
 |---|---|---|
-| 3 core | the layout and its test; `core/*`, `tool`, `host`, `cli` with the full vocabulary on the shell; the carried tests with their rules; the state root of 2.0, clearing 1.x and one build per room ([design-state.md](design-state.md)); a fixture adapter for tests | the five checks; a concurrent scenario where a writer of the old build is still running while a new build launches into the room, and two builds of one revision with different trees refused as different; `internal/layout_test.go` green with no stale exception; every carried rule names its tests and they exist ([design-docs-tests.md](design-docs-tests.md)); the workflow suite's neutral scenarios green in a column on the fixture adapter; Codex-side acceptance, since this is transport and process behaviour |
-| 4 Claude Code | the probe first ([design-claude.md](design-claude.md#the-stage-4-probe)), its results written into research with the version (the first, October 13, 2026: [research-claude-mod.md](../research-claude-mod.md)); then the adapter and its mod | the probe answered point by point; the owner's target met end to end if the probes allow — main creates a space, a pseudo-terminal a rewake process owns drawn in the view of the keeper subagent the mod spawns, its entry in Claude Code's tasks list as the tab and its checkout as the worktree, and a Claude Code worker seated in it exchanges work with main ([stage4-audit.md](stage4-audit.md#the-target-a-space)), or without the tab if P15 fails; closing main closes its spaces and their workers, and each worker's session id is in the space's record for a restore (answer 7); the suite's Claude column on a mod host; live: a Claude Code main and a Claude Code worker exchange a task, a question, a notify and a report, idle and busy; a read through the tool counted only on proof; the mod not loading is named under `--bare`, `--safe-mode` and `disableAllHooks`; a version below 2.1.287 refused |
-| 4b pi | an audit and a probe of pi's extension API on a pinned version ([stage4-audit.md](stage4-audit.md#consequences-for-the-stage-plan)); then the adapter, an extension loaded for its run | live: a Claude Code main and a pi worker exchange a task, a question, a notify and a report, idle and busy, beside Claude Code workers in the same room; the tool set with the same schemas in the pi column; a version below the minimum refused |
-| 5 Codex entry point | Codex's place in the catalogue before 2.0, without its adapter; the adapter itself after the release, designed afresh ([design-codex.md](design-codex.md)) | the entry point fully described by what it offers, and every capability it does not offer refused by name |
-| 6 permissions and the person's UI | grants applied by each adapter's Permissions (on Claude Code in the mod, replacing `grant-hook`); PersonUI | live grants on Claude Code and pi; the person's own status line untouched (answer 4) |
-| 7 release 2.0.0 | full live checks, briefings, upgrade notes, the npm package | the full workflow suite and crosswise check; the upgrade from a machine running 1.x walked live ([design-state.md](design-state.md#clearing-the-state-of-1x)) |
+| 3 core | the layout and its test; `core/*`, `tool`, `host`, `cli` with the full vocabulary on the shell; the state root of 2.0 and one build per room ([design-state.md](design-state.md)); a fixture adapter for tests | closed October 13, 2026 ([its entry](../roadmap/2026-10-13-stage3-s19.md)) |
+| 4 Claude Code | the probe first ([design-claude.md](design-claude.md#the-stage-4-probe)), its results written into research with the version (the first, October 13, 2026: [research-claude-mod.md](../research-claude-mod.md)); then the adapter and its mod; then the space, one step by the decision of October 18, 2026 ([stage4-space-steps.md](stage4-space-steps.md#the-build-steps)) | live: a Claude Code main and a Claude Code worker exchange a task, a question, a notify and a report, idle and busy; main opens a space, a worker started in it joins main's room, exchanges a task and its report, is reached by `rewake attach`, and ends when main's run ends, `kill -9` included; each worker's session id in the space's record for a restore (answer 7); the mod not loading is named under `--bare`, `--safe-mode` and `disableAllHooks`; a version below 2.1.287 refused |
+| 4b pi | pi's adapter on its own duplex JSON-lines protocol, its extension loaded for its run, a minimum version; first Wake, TurnBoundary and Conversation, then Telemetry and Control; a read-only reviewer profile ([stage4-reading-pi.md](stage4-reading-pi.md)) | live: a Claude Code main and a pi worker exchange a task, a question, a notify and a report, idle and busy, beside Claude Code workers in the same room; a pi worker opened in a space; a version below the minimum refused |
+| 5 compaction and context | the parity the room uses on 1.0.3: `rewake compact`, `interrupt` and the context in `list`, through the mod on Claude Code and natively on pi | live on both harnesses: main sees a worker's context fill, compacts it and interrupts a turn |
+| 6 release 2.0.0 | live checks, briefings, notes for running 2.0 beside 1.0.3, the npm package | the full workflow suite and crosswise check; the room moved to 2.0 under its own `REWAKE_DIR`, with a way back to 1.0.3 |
 
-Until stage 7, the owner works in a separate 1.x environment and the `v2` branch
+Until the release, the owner works in a separate 1.x environment and the `v2` branch
 releases nothing; 2.0 experiments run with their own `REWAKE_DIR`, and nothing passes
-between the generations ([design-codex.md](design-codex.md#meanwhile)). The mixed pair —
-a Claude Code main with Claude Code and pi workers in one room — is required before
-the release.
+between the generations. The mixed pair — a Claude Code main with Claude Code and pi
+workers in one room — is required before the release.
 
 Decided by the owner on October 13, 2026: the next harness after Claude Code is pi, before
-Codex. pi carries the models the room's Claude Code sessions do not already serve, Codex's
-models among them through pi's own subscription provider; Claude Code's work stays on
-Claude Code sessions. Codex is not built now: before 2.0 it gets an entry point, a stub
-without a real implementation, and its full adapter comes after the release. Stage 4 is
-Claude Code with Claude Code, stage 4b Claude Code with pi.
-
-Decided by main the same day, for the stub to meet the rule that a harness cannot be
-half-registered (`AGENTS.md`): Codex's entry point is a catalogue entry fully described by
-what it offers — Launch alone, its version read and gated, its protected directories
-declared by the entry — and every capability it lacks refuses by name
-([stage4-audit.md](stage4-audit.md#consequences-for-the-stage-plan)).
+Codex. Decided by the owner on October 18, 2026: Codex does not return soon, and neither its
+entry point nor its adapter is planned; a space is main starting its workers, without showing
+their terminal inside Claude Code; grants and the mail tool leave the code; compaction and
+context stay as parity. Main's decisions on the analysis the owner accepted, and the order of
+work, are in [the roadmap entry](../roadmap/2026-10-18-decision.md). Stage 4 is Claude Code with
+Claude Code, stage 4b Claude Code with pi.
 
 ## The owner's answers
 
-The owner answered the design's questions on October 5, 2026.
+The owner answered the design's questions on October 5, 2026. Answers 1 and 2 are superseded
+by the owner's decision of October 18, 2026: the clearing of 1.x has left the code, and the mail
+tools leave it.
 
 1. **1.x state is deleted on upgrade**, not set aside, after the check that no 1.x
    wrapper is alive, with one line saying what was dropped. That check reads the
@@ -189,7 +177,7 @@ The owner answered the design's questions on October 5, 2026.
    ([design-rules.md](design-rules.md#an-operator-decision-on-an-unknown-outcome)).
 5. **No Codex code on `v2` between stages 3 and 5**: the Codex packages leave the `v2`
    tree at stage 3 (they stay on `main` and in history as reference), so the builds of
-   stages 3 and 4 launch Claude Code only ([design-codex.md](design-codex.md#meanwhile)).
+   stages 3 and 4 launch Claude Code only ([design-codex.md](../archive/v2/design-codex.md#meanwhile)).
 6. **A harness version that cannot be read refuses the launch**, saying how it was
    asked; a mod against an unknown API fails silently, which is worse
    ([design-api.md](design-api.md#minimum-versions)).
@@ -219,7 +207,9 @@ probe ([research-claude-mod.md](../research-claude-mod.md)):
    versioned with it; the protocol between it and the host is described once, as a JSON
    schema, and the TypeScript types are generated from it.
 
-Three more decisions of the owner, October 13, 2026, on how a space is shown:
+Three more decisions of the owner, October 13, 2026, on how a space is shown. Answers 10 and
+11 are superseded by the owner's decision of October 18, 2026: a space is not shown inside
+Claude Code, and a person reaches a worker's terminal only with `rewake attach`.
 
 10. **The person runs Claude Code, and the harnesses live inside it through the mod**
     (decided October 13, 2026). The approach is fixed; what stays open is only how a space's
@@ -237,4 +227,4 @@ Three more decisions of the owner, October 13, 2026, on how a space is shown:
     session runs in, not for screenshots. Screen snapshots for tests come from rewake's own
     emulator, `charmbracelet/x/vt`, over a pseudo-terminal. What agent-deck, which runs on
     tmux, teaches for the terminal, the checkouts and screen tests is gathered in
-    [agent-deck-ideas.md](agent-deck-ideas.md).
+    [agent-deck-ideas.md](../archive/v2/agent-deck-ideas.md).

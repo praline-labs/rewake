@@ -6,7 +6,7 @@ The 121 non-test runtime files stayed unchanged through the follow-up. The owner
 accepted ordinary-briefing idle work and automatic report reading, plus a normal
 sleep/notify scenario without visible user-message bubbles. After installation and
 restart, the short task returned NATIVE-INSTALLED-OK through native output and inbox.
-[Acceptance and limits](../native-mailbox-acceptance.md) distinguish owner timing from
+[Acceptance and limits](../archive/native-mailbox-acceptance.md) distinguish owner timing from
 the deterministic standalone active control. The initial read-only failure required
 explicit per-launch workspace-write in the fresh test directory, not automatic
 permission expansion. Deliberately read-only inbox support is not established.

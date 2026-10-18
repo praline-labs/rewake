@@ -1,17 +1,17 @@
 # Stage 3: the operator decision
 
-Part B of stage 3 ([stage3.md](stage3.md#two-acceptances-part-a-and-part-b)): the design
+Part B of stage 3 ([stage3.md](../archive/v2/stage3.md#two-acceptances-part-a-and-part-b)): the design
 of answer 4 of [design.md](design.md#the-owners-answers), a command that lets the
 report's recipient or the person record "arrived" or "did not arrive" for a report whose
 outcome is unknown. The contract is accepted
 ([design-rules.md](design-rules.md#an-operator-decision-on-an-unknown-outcome)), with two
 corrections: 8, below under [authority](#authority), and 9,
-[in the model](stage3-decision-model.md#correction-9-in-its-normative-form). The model —
+[in the model](../archive/v2/stage3-decision-model.md#correction-9-in-its-normative-form). The model —
 the world, its outcomes and what a decision is answerable for — is in
-[stage3-decision-model.md](stage3-decision-model.md); this file designs what can be
+[stage3-decision-model.md](../archive/v2/stage3-decision-model.md); this file designs what can be
 decided, who decides, the command and its records, and what every reader consults; the
 protocol, the rules and the tests are in
-[stage3-decision-recovery.md](stage3-decision-recovery.md). Built in S18, on S3's
+[stage3-decision-recovery.md](../archive/v2/stage3-decision-recovery.md). Built in S18, on S3's
 occurrences.
 
 The running example: the worker `api` owes main `lead` a report. `api`'s turn end writes
@@ -27,8 +27,8 @@ that reads — the report id, the sender's run, the recipient's name and run, th
 obligations it answers, the journal operation (run and event, E7) that carries it. A
 resend is an ordinary journal operation (`journal/decided-<D>`), so an unknown resend is
 a subject of the same kind, read from its own journal; its decision names the first as
-its parent ([the model](stage3-decision-model.md#the-transitions),
-[composition](stage3-decision-recovery.md#composition)).
+its parent ([the model](../archive/v2/stage3-decision-model.md#the-transitions),
+[composition](../archive/v2/stage3-decision-recovery.md#composition)).
 
 Every report kind an ordinary turn journal carries can be a subject — a finished report,
 an interim or stopped one, a failure report to the sender's own name with no waits — and a
@@ -38,7 +38,7 @@ full report id and checked against the sender's run, the recipient's run and the
 operation — the report's own sender run included, which must be the journal's: a report
 the journal carries with another sender run, or none, is no subject; two journals naming one report, or a report whose step is already published,
 moot or decided, are no subject (Q5 of
-[stage3-decision-build.md](stage3-decision-build.md#q5-subject-scope)). A subject that
+[stage3-decision-build.md](../archive/v2/stage3-decision-build.md#q5-subject-scope)). A subject that
 reads is listed and decidable even while other records of the mailbox do not read.
 
 A subject is tied to the open stop occurrences about it: an occurrence names the
@@ -54,7 +54,7 @@ several reports gives one subject per report.
 **No subject, nothing to decide.** A cause whose only source of identity is the
 unreadable record itself — a journal that does not read, a file of no known kind — has
 no subject, whatever number of reports it may carry. **Decided by the owner on
-October 5, 2026** (answer 3 of [stage3.md](stage3.md#the-owners-answers)): no command
+October 5, 2026** (answer 3 of [stage3.md](../archive/v2/stage3.md#the-owners-answers)): no command
 lifts such a stop; `decide` lists it as undecidable, naming each record and why nothing
 can decide it, and the person repairs the file. The diagnostic does not suggest that a
 new name or room settles the old obligations, because it does not.
@@ -74,7 +74,7 @@ literally, the run the report was addressed to, verified through its own wrapper
 whatever its role. Decided by the owner as above, with the condition below. The caller must run below the wrapper of the run the report
 was addressed to — the subject's recipient name and epoch — and that wrapper, not the
 caller, makes the decision's final transaction (Q2 of
-[stage3-decision-build.md](stage3-decision-build.md#q2-authority-at-the-linearization-point)).
+[stage3-decision-build.md](../archive/v2/stage3-decision-build.md#q2-authority-at-the-linearization-point)).
 
 1. The subject gives the recipient run: name and epoch, the epoch encoding the
    wrapper's pid, start time and boot (`registry.ParseRun`, `core/registry/run.go`).
@@ -165,7 +165,7 @@ state directory and is not in the selected root. The scan is `person.Classify`
 (`core/person`).
 
 The checks read a strict inventory, not the forgiving views (Q3 of
-[stage3-decision-build.md](stage3-decision-build.md#q3-the-persons-path)):
+[stage3-decision-build.md](../archive/v2/stage3-decision-build.md#q3-the-persons-path)):
 `registry.ListReadOnly` skips a record that does not load and `WorkDirs` discards its
 errors, so neither may answer. Only a registry or a rooms directory missing for real is
 empty: each is listed without following a link at its own level or the room's
@@ -249,7 +249,7 @@ process runs below the wrapper of api."
   `...; api stays stopped on R2, decide each the same way.` Same words again: `recorded
   before as D at <time>; ...`, and the barrier runs. A resend that has completed since is
   not sent again: the answer says what its form keeps
-  ([the completion summary](stage3-decision-recovery.md#installing-the-effects)) —
+  ([the completion summary](../archive/v2/stage3-decision-recovery.md#installing-the-effects)) —
   `sent again as R' (published)`, `(moot: lead's run ended; whether it landed is not
   known)`, `(unknown, decided by lead as D2)`; `(in progress)` from an open form;
   `(completed, outcome not kept)` from a done form without a readable summary. A
@@ -276,7 +276,7 @@ unless the row says otherwise: written to a temporary name and linked into place
 S17's write seam under the room's build lease. Each kind joins the one list of record
 kinds (`core/mail/records.go`), and one strict reader per kind serves every reader below
 — recovery, `stopState`, retention and the views (Q6 of
-[stage3-decision-build.md](stage3-decision-build.md#q6-validity-disposal-and-unknown-records)).
+[stage3-decision-build.md](../archive/v2/stage3-decision-build.md#q6-validity-disposal-and-unknown-records)).
 A strict reader takes one JSON value, refuses a field its record has no place for, and
 refuses anything after the value but JSON's own whitespace — a closing delimiter left
 there included (`strictJSON`, `core/mail/decision_records.go`). Every record of the
@@ -322,8 +322,8 @@ sweep removes them.
 **What a decision keeps of the originals** — the journal that names the subject, the
 subject's marks and letter, every occurrence about it and every path one names — is the
 observations its final plan used: bytes and hashes where a read returned, the error and
-`lstat` where it failed ([the model](stage3-decision-model.md#correction-9-in-its-normative-form),
-[the record](stage3-decision-recovery.md#the-decisions-record)). After the record, the
+`lstat` where it failed ([the model](../archive/v2/stage3-decision-model.md#correction-9-in-its-normative-form),
+[the record](../archive/v2/stage3-decision-recovery.md#the-decisions-record)). After the record, the
 live paths go on with their ordinary writers in both mailboxes.
 
 **What every reader consults:**

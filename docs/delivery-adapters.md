@@ -105,8 +105,8 @@ build. Until S9, October 11, 2026, the hooks and the status line named the conve
 as `session_id` to a telemetry collector in the wrapper, which pinned an owed message to
 it, and the Stop and StopFailure hooks ran `rewake turn-ended` at each turn's end, with
 rewake's plugin reporting a turn a person interrupted
-([claude-plugin.md](archive-1.x/claude-plugin.md),
-[claude-telemetry.md](archive-1.x/claude-telemetry.md)). All of it left with S9: the
+([claude-plugin.md](archive/1.x/claude-plugin.md),
+[claude-telemetry.md](archive/1.x/claude-telemetry.md)). All of it left with S9: the
 adapter offers launch and delivery only, so the wrapper never hears a Claude Code turn
 end, a role that owes reports refuses to launch on it, and a task or a question to such
 a session is refused at send. The `thread-changed` workflow case holds the core's side
@@ -119,7 +119,7 @@ The wrapper's gateway follows the native TUI's own accepted primary intent and
 matching direct-input reply. It does not discover a loaded root or attach an
 observer through resume. The transport reserves epoch/connection/generation/thread
 before inbox readability and holds admission through the delivery ACK. A-B-A never
-reuses an old reservation. See [gateway selection and admission](archive-1.x/gateway.md).
+reuses an old reservation. See [gateway selection and admission](archive/1.x/gateway.md).
 
 Readiness waits for ordinary resume backfill outside the mailbox lock, admission
 FIFO and global gate. Native reads and approval replies remain able to progress.
@@ -133,4 +133,4 @@ durable report and turn journal path asynchronously; later reads cannot join an 
 result. See [stable publication](report-publication.md). Socket readers never wait on mailbox locks. Upstream
 completion observation is not proof of terminal receipt. The owner-run synthetic
 terminal evidence and current compatibility limits are recorded in
-[native gateway evidence](gateway-native-evidence.md).
+[native gateway evidence](archive/gateway-native-evidence.md).

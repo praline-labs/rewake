@@ -23,7 +23,7 @@ stand-in API the same morning
 - A module that uses `$` inside a logical expression does not load
   ([research-claude-control.md](../research-claude-control.md#what-a-function-hooks-plugin-hears)).
 
-**What was built** (`de44dda`, [claude-telemetry.md](../claude-telemetry.md)):
+**What was built** (`de44dda`, [claude-telemetry.md](../archive/1.x/claude-telemetry.md)):
 
 - rewake's plugin reads the variable and the key at the session's start and at every
   measure of the context, and sends the two raw values with `plugin.ready` and
