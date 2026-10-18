@@ -186,3 +186,17 @@ delivery, but this adapter does not reserve a conversation across inbox publicat
 The current offer is Wake, TurnBoundary with Reports and AfterStart, Telemetry, Control
 with compact, focus and interrupt, and Conversation through `--session-id`. HoldsEnd is
 false; Limits and a live Spaces offer are absent.
+
+## Live acceptance on a real model (October 18, 2026)
+
+Main's run of `.scratch/process/live-pi.sh` on the branch's build, pi 1.2.0 with the person's own
+settings (provider `openai-codex`), a print-mode Claude Code main on haiku, a private
+`REWAKE_DIR` (`.scratch/pi-evidence/live/`). **[live]** The boundary went live about 1 s after
+the start; a question came back with the word from a file; after 45 s idle a question woke the
+worker and was answered; main's status line showed the worker's context (`1% used / 272K`); an
+interrupt from main during a 90 s shell sleep was taken, and the next question was answered;
+`rewake compact worker-pi '<focus>'` was refused as "nothing to compact" while the conversation
+was under pi's `keepRecentTokens` (20 000 by default), and after three reads of about 12 000
+tokens it started, the next answer showed `compactions 1` with the context down from 15% to 6%,
+and the word the focus named was kept. The compaction's letter goes to main's run, which a
+print-mode main has already ended by then — the same trap as a report to it (`docs/traps.md`).

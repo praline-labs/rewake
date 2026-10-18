@@ -149,3 +149,4 @@ without a date. Local installation without publishing is in
 | October 18, 2026 | [pi next, main starts its workers, a lighter binary](2026-10-18-decision.md) | by the owner's decision: pi instead of Codex, the space as main starting its workers without showing them inside Claude Code, what goes from the code and the new order of work |
 | October 18, 2026 | [Deletions, batch A](2026-10-18-deletions-a.md) | the delivery hold, the old legacy marks, the keeper and the screen of the mod protocol, the clearing of 1.x and the version probe's holder |
 | October 18, 2026 | [Deletions, batch B](2026-10-18-deletions-b.md) | grants, the mail tool with its channel and tool-only read path, their documents archived, `AGENTS.md` shortened |
+| October 18, 2026 | [The pi adapter](2026-10-18-pi.md) | `rewake pi`: wake, turn reports, conversation, telemetry, compaction and interrupt over an embedded extension; live on a real model; open: pi in the space, the read-only reviewer |
