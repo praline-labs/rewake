@@ -458,3 +458,15 @@ the newer document says so.
 - [intermittent-bugs.md](archive/intermittent-bugs.md) — failures whose trigger is not fully
   understood, with timelines and what to capture next time. Open it when a delivery
   failure resembles an old one.
+
+## Names in records and addresses
+
+No model or provider is named in code, configuration or text that explains how the system
+works: that keeps the project from depending on any one of them. Two kinds of text are outside
+that rule. A verbatim record of an observation is never edited afterwards, so it keeps the
+names it saw — a model's, for one; striking a name would make the evidence untrue and leave an
+acceptance document empty. And an artifact address — the registry name of a harness package,
+the path of the binary inside it, the command that starts it — is what the code fetches and
+runs, so it stays exactly as it is; replaced by a variable, the same string only moves to
+wherever the variable is set. A model or provider name passed as a value inside such a command
+or example is not an address, and the ordinary rule applies to it.
