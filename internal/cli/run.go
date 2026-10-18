@@ -27,13 +27,14 @@ func Run(catalog adapter.Catalog, argv []string, stdout, stderr io.Writer) int {
 	// What this invocation meets reaching the state is its own evidence.
 	state.ResetReach()
 
-	// Aliases first: everything downstream sees the arguments the alias stands
-	// for, so nothing else in the CLI has to know that aliases exist.
+	// Direct aliases expand before parsing, so the ordinary launch path sees
+	// only arguments. Keep the same set for workers and space open's --alias.
 	aliases := launch.Load()
+	ctx.aliases = aliases
 	for _, note := range aliases.Notes {
 		_, _ = fmt.Fprintln(stderr, "rewake: "+note)
 	}
-	expanded, err := aliases.Expand(argv, catalog.IDs(), t.launchFlagTakesValue, projectForbidden(), t.singleUseFlags)
+	expanded, err := aliases.ExpandConfigured(argv, catalog, t.launchFlagTakesValue, projectForbidden())
 	if err != nil {
 		return report(ctx, &UsageError{Message: err.Error()})
 	}

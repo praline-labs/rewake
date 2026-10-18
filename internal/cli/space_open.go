@@ -5,13 +5,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"slices"
-	"strings"
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/core/registry"
-	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/core/space"
 	"github.com/praline-labs/rewake/internal/host/spacehost"
 	"github.com/praline-labs/rewake/internal/host/terminal"
@@ -56,7 +53,7 @@ func handleSpaceOpen(ctx *Context, call Call) error {
 	if len(call.Positionals) < 2 {
 		return usage("space open needs the space's name: rewake space open api --harness claude.")
 	}
-	name, harnessArgs := call.Positionals[1], call.Positionals[2:]
+	name := call.Positionals[1]
 	dir, err := state.Dir()
 	if err != nil {
 		return usage("%s", err.Error())
@@ -72,14 +69,11 @@ func handleSpaceOpen(ctx *Context, call Call) error {
 	if err := spacesRefusal(call.Command, catalog, self); err != nil {
 		return err
 	}
-	h, ok := catalog.Find(call.Flag("harness", ""))
-	if !ok {
-		return usage("space open needs --harness, one of: %s.", strings.Join(catalog.IDs(), ", "))
+	target, err := ctx.spaceTarget(call)
+	if err != nil {
+		return err
 	}
-	part, ok := role.Find(call.Flag("role", role.Write.ID))
-	if !ok || part.Spaces {
-		return usage("--role takes a worker's role, not %q: %s or %s.", call.Flag("role", ""), role.Write.ID, role.General.ID)
-	}
+	h, part := target.harness, target.part
 	if err := refuseReportingRole(h, part); err != nil {
 		return err
 	}
@@ -90,10 +84,6 @@ func handleSpaceOpen(ctx *Context, call Call) error {
 	if other, err := registry.LookupReadOnly(dir, session); err == nil && other.Alive() {
 		return failf("the session %s already runs in this room; choose another name for the space.", session)
 	}
-	launchWords, err := workerLaunch(h, call, name, part, filepath.Base(dir))
-	if err != nil {
-		return err
-	}
 	record := space.Record{
 		Name:     name,
 		Main:     space.Run{Name: self.Name, Run: epoch, PIDNamespace: proc.Namespace()},
@@ -101,22 +91,25 @@ func handleSpaceOpen(ctx *Context, call Call) error {
 		OpenedAt: time.Now().UTC(),
 	}
 	if conversation := catalog.Offers(h.ID()).Conversation; conversation.Names() {
-		if slices.Contains(harnessArgs, conversation.Flag) {
-			return usage("rewake chooses the worker's %s and keeps it in the space's record; remove it from the harness's arguments.", conversation.Flag)
-		}
 		if record.Worker.SessionID, err = space.NewSessionID(); err != nil {
 			return failf("%v", err)
 		}
-		harnessArgs = append(slices.Clone(harnessArgs), conversation.Flag, record.Worker.SessionID)
 	}
 	if record.ID, err = space.NewID(); err != nil {
 		return failf("%v", err)
 	}
-	spec, err := hostSpec(ctx.table.catalog, dir, record.ID, append(launchWords, harnessArgs...))
+	launchWords, err := workerLaunch(target, call, name, filepath.Base(dir), record.Worker.SessionID)
+	if err != nil {
+		return err
+	}
+	spec, err := hostSpec(ctx.table.catalog, dir, record.ID, launchWords)
 	if err != nil {
 		return failf("%v", err)
 	}
 	_, spec.Worktree = call.Flags["worktree"]
+	if taker, ok := h.(adapter.WorktreeHarness); ok {
+		spec.Worktree = spec.Worktree || adapter.HasFlag(target.args, taker.WorktreeFlag())
+	}
 	var taken *space.NameTakenError
 	if err := space.Create(dir, record); errors.As(err, &taken) {
 		return failf("%v", err)
@@ -132,25 +125,6 @@ func handleSpaceOpen(ctx *Context, call Call) error {
 	}
 	opened := spaceOpened{Space: name, ID: record.ID, Session: session, Harness: h.ID(), Role: part.ID, Room: filepath.Base(dir), SessionID: record.Worker.SessionID, Worktree: spec.Worktree}
 	return printValue(ctx, opened, opened.lines)
-}
-
-// workerLaunch is the worker's ordinary launch, the words after rewake: its
-// name, main's room, its role, the harness and, when asked, the harness's
-// worktree flag.
-func workerLaunch(h adapter.Harness, call Call, name string, part role.Role, room string) ([]string, error) {
-	words := []string{"--name", name, "--room", room, "--" + part.ID, h.ID()}
-	checkout, given := call.Flags["worktree"]
-	if !given {
-		return words, nil
-	}
-	taker, ok := h.(adapter.WorktreeHarness)
-	if !ok {
-		return nil, &UsageError{Command: call.Command, Message: fmt.Sprintf("%s makes no worktree through rewake; open the space without --worktree.", h.Title())}
-	}
-	if checkout == "true" {
-		return append(words, taker.WorktreeFlag()), nil
-	}
-	return append(words, taker.WorktreeFlag()+"="+checkout), nil
 }
 
 // hostSpec is the space host's spec: main's room and working directory, the

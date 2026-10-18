@@ -3,6 +3,7 @@ package workflow
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -36,8 +37,21 @@ func TestFixtureSpace(t *testing.T) {
 		return
 	}
 	worker, env := spaceWorker(iso, "api", fixtureColumn.harness)
+	wrapper := filepath.Join(iso.ShimDir, "worker-wrapper")
+	marker := filepath.Join(iso.Home, "wrapper-started")
+	if err := os.WriteFile(wrapper, fmt.Appendf(nil, "#!/bin/sh\nprintf started > %q\nexec %q \"$@\"\n", marker, filepath.Join(iso.ShimDir, fixtureColumn.harness)), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	aliasDir := filepath.Join(iso.Home, ".config", "rewake")
+	if err := os.MkdirAll(aliasDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	aliases := fmt.Sprintf("[alias.worker]\nharness = %q\nrewake = [\"--write\", \"--name\", \"alias-name\"]\ncommand = %q\n", fixtureColumn.harness, wrapper)
+	if err := os.WriteFile(filepath.Join(aliasDir, "aliases.toml"), []byte(aliases), 0o600); err != nil {
+		t.Fatal(err)
+	}
 
-	encoded, _ := json.Marshal(shimRequest{Args: []string{"space", "open", "api", "--harness", fixtureColumn.harness, "--json"}, Env: env})
+	encoded, _ := json.Marshal(shimRequest{Args: []string{"space", "open", "api", "--alias", "worker", "--json"}, Env: env})
 	code, out, answered := asks.send(c, encoded, "space open api")
 	var opened struct {
 		Session string `json:"session"`
@@ -48,7 +62,12 @@ func TestFixtureSpace(t *testing.T) {
 		stopSession(t, c, lead)
 		return
 	}
-	c.Observed(obsSpaceOpened, "space open answered "+opened.Session+", registered in main's room")
+	if !waitFor(c, 5*time.Second, func() bool { _, err := os.Stat(marker); return err == nil }) {
+		c.Contradicted(obsSpaceOpened, "the alias's worker wrapper never ran")
+		stopSession(t, c, lead)
+		return
+	}
+	c.Observed(obsSpaceOpened, "space open used the alias's wrapper and answered "+opened.Session+", registered in main's room rather than the alias's name")
 
 	if code, out, _ := asks.ask(c, "send", worker.name, fixtureSpaceTask); code != 0 {
 		c.Contradicted(obsSpaceReported, "the task was not sent: %d %s", code, out)

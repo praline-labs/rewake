@@ -224,18 +224,6 @@ func projectForbidden() []string {
 	return append(roleFlags(), launch.CommandFlag)
 }
 
-// singleUseFlags asks a harness which of its flags it takes at most once. The
-// answer belongs to the harness — one may refuse a repeated --model while
-// accepting another flag repeated — so this only looks it up.
-func (t *table) singleUseFlags(id string) []adapter.Flag {
-	for _, candidate := range t.catalog.All() {
-		if candidate.ID() == id {
-			return candidate.SingleUseFlags()
-		}
-	}
-	return nil
-}
-
 // roleSummary keeps the guide on the same catalog as launch flags and help.
 func roleSummary() string {
 	var descriptions []string

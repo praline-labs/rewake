@@ -25,6 +25,15 @@ Read in the package's `docs/cli.md`, `docs/extensions.md`, `CHANGELOG.md` and
 - `--session-id` opens or creates the named conversation. The native CLI rejects it with
   `--session`, `--continue` or `--resume`. The adapter also rejects a fork or
   `--no-session` when rewake names a new conversation. The id does not add a user message.
+  Rechecked October 18, 2026 on installed 1.2.0 in `docs/cli.md`, `docs/sessions.md` and
+  `dist/main.js` (`validateSessionIdFlags`, `createSessionManager`): an exact id searches
+  the current project's session directory and creates the session if absent. Thus a space's
+  fresh random `--session-id` must not be classified as continuation beside `--worktree`;
+  that mistaken classification caused the pi worker's exit 2. Continue, resume, session and
+  fork flags still refuse a new checkout. Session storage can be shared through
+  `--session-dir`, the environment or native settings; the fresh random id, not an
+  assumption about that storage, keeps a space independent of existing conversations. These are source checks, not
+  a new live acceptance run.
 - `--model`, `--models`, and `--thinking` name model selection and effort. Thinking levels
   are `off`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`; a model selector can carry
   a thinking suffix. Defaults from `REWAKE_PI_MODEL` and `REWAKE_PI_EFFORT` yield to those

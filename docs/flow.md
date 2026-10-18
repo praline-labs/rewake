@@ -316,13 +316,15 @@ has held it once, through the adapter, to ask whether the work is done.
 
 ## A space: main starts a worker
 
-Main runs `rewake space open api --harness claude --worktree -- <harness args>` from its shell,
-while its run has `Spaces` live. The command writes the record, `spaces/<id>.json`, opening,
+Main can read `rewake workers` and run `rewake space open api --alias claude-write --worktree
+-- <harness args>` from its shell, while its run has `Spaces` live. The alias supplies its
+worker wrapper, role and applied settings; main's aliases refuse. `--harness claude` remains
+the direct form without an alias. Listing is a view for any role, not a launch. Opening writes the record, `spaces/<id>.json`, opening,
 and re-executes rewake as a launcher in a session of its own; the launcher starts the
 **space host** and exits, so the space host is nobody's child in main's tree. The space host
 records its own run, checks that its chain of parents does not meet main's wrapper — or closes
 the record, the worker never started — and starts in a pseudo-terminal it owns an ordinary
-`rewake --name api --room <main's room> --write claude --worktree <harness args>`, with main's
+`rewake --name api --room <main's room> --write --command claude-worker claude --worktree <harness args>`, with main's
 base and none of main's session in its environment. From there the worker is any session: Act
 1 for it, its record `sessions/api-claude.json`. The space host records the worker's run, open;
 the command answers once that run is registered, within 30 s.
