@@ -40,11 +40,11 @@ func (w world) readInterim(name string) (*interimRecord, error) {
 		return nil, nil
 	}
 	if err != nil {
-		return nil, unknownRecord(interimPath(dir, name), fmt.Errorf("the interim record %s cannot be read: %w", interimPath(dir, name), err))
+		return nil, fmt.Errorf("the interim record %s cannot be read: %w", interimPath(dir, name), err)
 	}
 	var record interimRecord
 	if err := json.Unmarshal(raw, &record); err != nil {
-		return nil, unknownRecord(interimPath(dir, name), fmt.Errorf("the interim record %s is not readable: %w", interimPath(dir, name), err))
+		return nil, fmt.Errorf("the interim record %s is not readable: %w", interimPath(dir, name), err)
 	}
 	return &record, nil
 }
@@ -59,7 +59,7 @@ func LastInterim(dir, name, epoch string) (string, bool, error) {
 	return record.Text, true, nil
 }
 
-// recordInterim is the step of a turn end's journal that records the end's
+// recordInterim is the step of a turn end that records the end's
 // word: line for an interim end, settles for a finished or failed one; a stop
 // says nothing of the work and records nothing. It writes only over a record
 // that is absent, another run's, or ended earlier than this end, and orders
@@ -68,9 +68,9 @@ func LastInterim(dir, name, epoch string) (string, bool, error) {
 // between two of a kind the operation whose name sorts last. Ended is
 // compared only within one run: a boot clock says nothing across runs.
 //
-// A journal of a run that no longer holds the name, completed by the next
-// run's barrier, leaves that run's record alone: only the run holding the
-// name is ever asked about its interim end.
+// An end of a run that no longer holds the name leaves the record of the run
+// that does alone: only the run holding the name is ever asked about its
+// interim end.
 func recordInterim(dir, name, epoch, op string, ended int64, line *string, settles bool) error {
 	return live(dir).recordInterim(name, epoch, op, ended, line, settles)
 }

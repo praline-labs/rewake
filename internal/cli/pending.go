@@ -3,7 +3,6 @@ package cli
 import (
 	"context"
 	"fmt"
-	"slices"
 	"strings"
 	"time"
 
@@ -78,10 +77,6 @@ func handlePending(ctx *Context, call Call) error {
 	var waiting []string
 	verdict := mail.VerdictWrite
 	err = state.WithMailboxLock(lockCtx, dir, self.Name, func() error {
-		// A stopped mailbox changes nothing until a person settles it.
-		if err := mail.MailboxStopped(dir, self.Name); err != nil {
-			return err
-		}
 		// A record that cannot be read may be a waiter: "nothing owed" is
 		// an answer only when every one of them was read.
 		waiters, err := mail.ReadWaiters(dir, self.Name, epoch)
@@ -90,17 +85,6 @@ func handlePending(ctx *Context, call Call) error {
 		}
 		for _, waiter := range waiters {
 			waiting = append(waiting, waiter.Name)
-		}
-		// A letter a tool read showed and the wrapper has not confirmed yet
-		// is owed as surely: its confirmation comes before the turn ends.
-		claimedBy, err := mail.ClaimedOwedBy(dir, self.Name, epoch)
-		if err != nil {
-			return fmt.Errorf("could not read the letters being read in parts: %w", err)
-		}
-		for _, name := range claimedBy {
-			if !slices.Contains(waiting, name) {
-				waiting = append(waiting, name)
-			}
 		}
 		started, err := mail.LatestTurnStart(dir, self.Name, epoch)
 		if err != nil {

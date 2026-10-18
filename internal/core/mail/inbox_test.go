@@ -17,7 +17,6 @@ func stateDir(t *testing.T) string {
 	}
 	t.Setenv(state.DirEnv, dir)
 	resolved := buildtest.Current(t)
-	checkRecordKinds(t, resolved)
 	return resolved
 }
 

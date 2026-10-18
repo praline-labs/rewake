@@ -156,3 +156,4 @@ without a date. Local installation without publishing is in
 | October 18, 2026 | [The terminal emulator removed](2026-10-18-emulator.md) | `internal/host/terminal` keeps the pseudo-terminal and raw mode; `charmbracelet/x/vt` and its modules left `go.mod` |
 | October 18, 2026 | [Trying 2.0 beside 1.0.3](2026-10-18-try-2.md) | the section of `install.md` that runs 2.0 as `rewake2` with its own state, checked as far as a shell goes |
 | October 18, 2026 | [Worker aliases and pi worktrees](2026-10-18-worker-aliases.md) | optional alias metadata, `workers`, `space open --alias` through the worker wrapper, fresh pi ids allowed in worktrees; open: review and live acceptance |
+| October 18, 2026 | [A simple turn end](2026-10-18-simple-turn-end.md) | the guarantee mechanics removed: `decide`, decisions, stops, the barrier, journals with plan and seam, report once-marks, claims; reports written before the waits are cleared; on branch `simple-end`, under review |

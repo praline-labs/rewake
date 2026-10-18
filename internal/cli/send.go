@@ -45,8 +45,6 @@ type sendModel struct {
 	Named    string `json:"named,omitempty"`
 	// Receipt names the journal record of a heads-up, for rewake retry.
 	Receipt string `json:"receipt,omitempty"`
-	// Decided is the decision that closed a question without an answer.
-	Decided *awaitedDecision `json:"decided,omitempty"`
 }
 
 func handleSend(ctx *Context, call Call) error {

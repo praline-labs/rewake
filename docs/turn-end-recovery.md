@@ -1,26 +1,26 @@
 # Recovering a turn end
 
-Rules 7 and 8 of [mail-bridge-cli.md](archive/mail-bridge-cli.md) say what recovery may do; this
-document says how, for every record the code reads. It was written on September 30,
-2026, before the code that follows it, which landed the same day
-(`internal/core/mail/journal.go`, `reconcile.go`, `interim.go`, `kept.go`,
-`read_boundary.go`, `turn_reports.go`);
-[delivery-turn-end.md](delivery-turn-end.md) walks the same path through the code. Rule
-clauses are cited as 7-identity, 7-scope, 7-clock, 7-journal, 8-evidence, 8-stop,
-8-proof, 8-retention and 8-reconcile, in the order the rules state them. Two owner
-decisions of the same day shape it: an unknown that no look can settle stops the whole
-mailbox (8-stop), and a hold takes a place on the read clock so that a stop after an
-Esc keeps its held answer (7-clock). How a mailbox passed from the builds before the
+Rules 7 and 8 of [rules/effects.md](rules/effects.md) say what recovery may do; this
+document says how, for every record the code reads (`internal/core/mail/turn_reports.go`,
+`journal.go`, `interim.go`, `kept.go`, `read_boundary.go`);
+[delivery-turn-end.md](delivery-turn-end.md) walks the same path through the code. It was
+written on September 30, 2026 for the turn-end journals, and rewritten on October 18,
+2026, when the owner replaced the journals, the barrier, the stops and the operator
+decision with a simple turn end: under the sender's mailbox lock it writes its reports,
+then clears the waits they answer, takes the kept answer and records the interim end, and
+last records itself done. Rule clauses are cited as 7-identity, 7-scope, 7-clock and 8.
+An owner decision of September 30 still shapes it: a hold takes a place on the read clock
+so that a stop after an Esc keeps its held answer (7-clock). How a mailbox passed from the builds before the
 journal to it — the cutover, the conversion of their receipts and `rewake settle` — was
 removed in stage 3 of 2.0 and is kept in
 [archive-1.x/protocol-cutover.md](archive/1.x/protocol-cutover.md).
 
 ## The operation
 
-A turn end is named by its run and its event (7-identity). Its journal is named from
-that, so a retry that finds it finds its own; its reports are named by the obligations
-they answer and, for a report that closes nothing, by the operation; a notice about it
-is named by the operation.
+A turn end is named by its run and its event (7-identity). Its done record,
+`journal/<op>.done`, is named from that, so a retry that finds it finds its own; its
+reports are named by the obligations they answer and, for a report that closes nothing,
+by the operation in the id's tail, found again in the recipient's mailbox on a retry.
 
 Its scope (7-scope) comes from the event, fixed by the event's form:
 
@@ -39,23 +39,22 @@ that retry from a first attempt.
 
 A hook's first call is heard once, so any end after a hold is its continuation. An end
 an adapter confirms names its event and may be retried: if the answer to its hold is
-lost and the same end comes again, it finds no journal, since a hold writes none. So a
-hold records, in the one write of `kept.json`, the held end's operation (`held`) and
-the reason it was answered (`reason`), and the journal of the end that takes the kept
-answer names that operation (`Held`) beside the version, in every form it takes —
-open, done in place and renamed done. Under the mailbox lock, after the barrier and
-before the hold check, an end that names its event is answered from the record:
+lost and the same end comes again, it finds no done record, since a hold writes none.
+So a hold records, in the one write of `kept.json`, the held end's operation (`held`)
+and the reason it was answered (`reason`), and the done record of the end that takes the
+kept answer names that operation (`Held`). Under the mailbox lock, before the hold
+check, an end that names its event is answered from the record:
 
-- a journal of its own operation — published before;
+- a done record of its own operation — published before;
 - the kept answer's `held` naming it — the same reason again, nothing published and
   nothing kept again;
-- a journal that took the kept answer naming it — published before, with its
+- a done record that took the kept answer naming it — published before, with its
   continuation.
 
-Only an end of another identity takes the kept answer. Done journals stay while their
-run lives, and retries come only from that run. A journal that cannot be read may be the
-one that took the kept answer, so the lookup fails and the end reports nothing, as an
-unreadable record stops any end. The third check is the one a continuation that marked
+Only an end of another identity takes the kept answer. Done records stay while their
+run lives, and retries come only from that run. A done record that cannot be read may be
+the one that took the kept answer, so the lookup fails and the end reports nothing on
+that attempt. The third check is the one a continuation that marked
 pending needs: it leaves the task owed and the run interim, so without it the held end
 confirmed again would be held, or published, a second time.
 
@@ -88,9 +87,9 @@ load touches neither the filesystem nor a lock. A store the guard refuses leaves
 where it was, the same as a crash before the commit.
 
 An end with a boundary takes the kept answer only when its position is at or below
-`Through`, and only by the version it names in the journal. A hook heard once takes
+`Through`, and drops it only while it is still that version. A hook heard once takes
 this run's kept answer as it finds it: nothing can be kept between its reading and its
-journal, which share the lock.
+effects, which share the lock.
 
 ## Pending marks
 
@@ -99,39 +98,38 @@ A mark is one file per `rewake pending` call, named by its run, the boot-clock t
 never writes over an earlier one. A call that cannot read its start time records no
 mark and says so: a mark with no `At` would belong to no turn. No turn end removes a
 mark (7-scope). Removing was what let a later pending end destroy the evidence an
-earlier end's retry needed: E1 is marked P1, its journal write fails; E2 is marked P2
-and, removing P1 as stale, leaves E1's retry to find no mark and close as finished a
-turn that said pending. A mark therefore stays for its run's life, since only that run
-retries its ends, and goes when the run's records are swept. Being used is no effect:
-the journal of the end records the name and line of the mark that decided it.
+earlier end's retry needed: E1 is marked P1, its attempt fails; E2 is marked P2 and,
+removing P1 as stale, leaves E1's retry to find no mark and close as finished a turn
+that said pending. A mark therefore stays for its run's life, since only that run
+retries its ends, and goes when the run's records are swept. Being used is no effect.
 
 | Mark | Recovery |
 |---|---|
 | this run's, `At` in the end's window | the latest by `At`, then by name, gives the pending line; ties do not depend on the order of retries |
 | this run's, `At` outside the window | another turn's; not this end's |
 | another run's | not this end's; swept with that run's records |
-| unreadable, its name in the window | the end stops (8-stop): it may be this turn's |
+| unreadable, its name in the window | the end fails on that attempt: it may be this turn's |
 
 An end's window runs from just after its start to its `Ended`, inclusive. Its start is
 the later of the turn's start the event carries and the latest `Ended` of this run that
-a journal records below its own; with neither, the run's start. Every journal of this
-build, a done one too, keeps its `Ended` while it is kept (8-retention), so moving the
-start past an end is a step of that end's operation, not a later write. No assumption
+a done record keeps below its own; with neither, the run's start. A done record keeps its
+`Ended` while it is kept, so moving the start past an end is the last step of that end's
+operation, not a later write. No assumption
 that windows never overlap is needed. The hook path records the next turn's start only
 after an end is published, by a write that can fail silently, and a native completion's
 times are when the gateway observed its events: with that stale start alone, E2 would
-take P1, already E1's, and so would every end after it. With E1's journal, E2's window
-opens after E1. A mark at the very start is the turn before's, since the start comes
+take P1, already E1's, and so would every end after it. With E1's done record, E2's
+window opens after E1. A mark at the very start is the turn before's, since the start comes
 before anything its turn runs; one at the very end is this turn's, since the agent's
 call precedes the end it announces. The same window decides the hold.
 
 A retry is told from a new end by its event, the same run and event with the same
-`Started` and `Ended`. A retry whose journal is there takes the mark its journal names;
-one without it took no effect and decides as a first attempt, where a journal written
-since can only narrow the window to its own turn. Windows still overlap when an end is
-heard before an earlier one of its run has a journal — a late completion, a lost
-journal write. A mark in both makes both interim, and the end after both is narrowed by
-both journals, so it does not repeat. That is the safe side: a mark only makes an end
+`Started` and `Ended`. A retry whose done record is there is answered from it; one
+without it decides as a first attempt, where a done record written since can only narrow
+the window to its own turn. Windows still overlap when an end is heard before an earlier
+one of its run is recorded done — a late completion, a lost write. A mark in both makes
+both interim, and the end after both is narrowed by both records, so it does not
+repeat. That is the safe side: a mark only makes an end
 interim, and taking one twice delays a close, where missing it closes a task the agent
 said goes on.
 
@@ -147,11 +145,11 @@ another run's, or ended earlier than it did:
 | In place | Recovery |
 |---|---|
 | absent, or another run's | write (not done) |
-| this run's, same operation | done: a retry after the write, before the journal step was marked |
+| this run's, same operation | done: a retry after the write, before the end was recorded done |
 | this run's, ended earlier | write over it (not done) |
 | this run's, ended later — a later interim end, or a settling end that came first | superseded: the later end is the last word |
 | this run's, the same `Ended`, another operation | fixed without regard to the order of retries: interim wins over settled, since it only makes the next unmarked end ask once, and between two of a kind the operation whose name sorts last |
-| unreadable | the end stops (8-stop), and names the path |
+| unreadable | the end fails on that attempt, and names the path |
 
 `Ended` is compared only within one run: a boot clock says nothing across runs or
 restarts of the machine, and a record of another run is written over. An end whose
@@ -163,109 +161,59 @@ it is published under its own identity within its read boundary, a stop to the c
 waiters with their waits kept, an error clearing the waits it answers, and a waiting
 question exits 1 on the stop. What it lacks it does not invent: it takes no pending
 mark, since only a finish is softened by one; it neither writes nor settles the interim
-record, so the record in place stays for the next end heard; and its journal records no
-`Ended`, so it moves no later window. Without a boundary it is refused as any id
+record, so the record in place stays for the next end heard; and its done record keeps
+no `Ended`, so it moves no later window. Without a boundary it is refused as any id
 without one is.
 
 ## The evidence for each effect
 
-| Effect | Proven done | Proven not done | Unknown |
+| Effect | Done | Not done | Unreadable |
 |---|---|---|---|
-| A report of the journal protocol | listed in the journal; `published` mark; letter present | no mark and no letter; `intent` mark and no letter | a mark that cannot be read or says neither (a later look) |
-| Taking the kept answer | absent, or holding another version, after the journal named this version | the version named still in place | a record that cannot be read |
-| Clearing a wait | the messages gone from the wait record | the messages still there | a wait record that cannot be read |
-| Recording the interim end | by the interim table | by the interim table | a record that cannot be read |
-
-A report found with its letter and without a mark is recorded in the sender's journal
-first, and marked `published` for the recipient after (8-proof). A failure of the
-journal write leaves the letter as the only proof, and the attempt stops; if the sweep
-takes the letter before the next look, the report is unknown for good, never unsent.
-A failure of the mark after the journal write leaves the journal's entry as the proof,
-and the sweep changes nothing.
+| A report | a letter of its id in the recipient's mailbox, in any stage; or every task of its wait answered by a finished or failed report of the name there | neither | the stage that cannot be searched fails the attempt: a second copy is the outcome that cannot be taken back |
+| Clearing a wait | the messages gone from the wait record | the messages still there | the wait record fails the attempt |
+| Taking the kept answer | absent, or holding another version | the version carried still in place | the record fails the attempt |
+| Recording the interim end | by the interim table | by the interim table | the record fails the attempt |
+| The end recorded done | `journal/<op>.done` | absent | the record fails the lookup, and the end reports nothing on that attempt |
 
 ## Reconciliation
 
-The barrier runs under the mailbox lock before a turn end reads a wait and before
-adoption takes one over (8-reconcile). In order:
-
-0. Install what the mailbox's operator decisions fixed — a resend's journal, the notes —
-   before everything below, stopped or not: recovery writing its own records and
-   telling, never a report of the stopped mailbox published or a wait cleared
-   ([stage3-decision-recovery.md](archive/v2/stage3-decision-recovery.md#installing-the-effects)).
-   What it cannot read stops the mailbox as an effect's failure, and no journal runs.
-1. Plan before any effect: read every file of the tree against the list of record
-   kinds, then run the remaining steps below as a plan that writes nothing, so what each
-   decides by is read first ([mailbox-records.md](mailbox-records.md#the-plan-and-the-seam)).
-   One that cannot be read stops the mailbox (8-stop). The same plan gates every other
-   call that would change the mailbox, and each cause is recorded as an occurrence of
-   the stop, so a stop found late lets no effect through.
-2. Complete every unfinished journal in turn. Each report the journal has not
-   settled yet reads its decision first: a decided report's step is closed by the
-   decision and never published. Any other is established from the evidence above and
-   settled: published when its
-   recipient's run is the one it was addressed to, recorded moot when that run has ended
-   or was replaced, since it can reach nobody. The journal is saved after each report,
-   so an earlier report may be out before a later one is found moot. A report an open
-   occurrence of the stop is about is neither: it stays, its journal unfinished, since
-   a run that ended says nothing of whether the report landed.
-   The recipient's run, the report's evidence and its writes are read and made in one
-   section of the recipient's mailbox lock, which the barrier waits for, bounded, while
-   it holds its own; a report to the sender's own name is published inside the lock the
-   barrier already holds ([stage3-publication.md](archive/v2/stage3-publication.md#the-contract)).
-   A run that ends after that section read it live still gets the letter, once. When
-   the wait expires the barrier fails as for any busy mailbox: nothing is written, no
-   stop is recorded, the journal stays unfinished with its waits owed, and the next
-   barrier publishes the report once. A turn end can therefore fail on a busy
-   recipient, where before this it wrote without the recipient's lock.
-3. Then the journal's own steps, named when it was written: take the kept answer by
-   version, clear the waits it names, write the interim record, mark done.
-
-Journals never overlap each other: an end reads only the waits the barrier left, and
-the barrier completes every journal before that. So no report answers an obligation
-another journal's report closed, and the barrier collects no closed obligations across
-the mailbox and decides no report superseded; the 1.x conversion needed both only
-because it turned overlapping records into journals. A done journal keeps no more than
-its done mark and its `Ended`, which opens the next end's window (pending marks).
+Removed on October 18, 2026, with the journals it completed. Nothing runs before a turn
+end reads a wait: an end that failed part way left its wait standing and nothing else to
+complete, and its retry, or the next end, runs the steps again (8). Adoption looks for the
+answer itself: a run that resumes a conversation does not take over a task that already
+has a finished or failed report of the name in the sender's mailbox
+(`internal/core/mail/answered.go`), since the run before it may have died between writing
+the report and clearing the wait.
 
 ## The stop
 
-A stopped mailbox (8-stop) keeps every record. Its session reads, reports and clears
-nothing, and adoption takes nothing over: each of its hooks and calls that would change
-the mailbox answers the exact cause instead, and a hook exits so the harness goes on,
-never blocking a stop. Letters from others still arrive and wait unread, since none
-decides an effect, and recovery writes its own records of the stop. The stop is one
-occurrence per cause, each naming the path that could not be read or parsed and the
-operation it is about, and each is resolved only by evidence returning, never by its
-path being removed ([mailbox-records.md](mailbox-records.md#the-stop-on-record)): a
-cause the reading found once a plan reads its paths again and decides its operation,
-one only an effect met once its journal is completed. Main is told of each occurrence
-once, and the mailbox's sweeps remove nothing an open occurrence names.
+Removed on October 18, 2026: a record that cannot be read fails the operation that met
+it, and stops nothing else.
 
 ## Every record and state
 
-| Record | State | Proven | Unknown | Recovery |
-|---|---|---|---|---|
-| Journal | absent | nothing was done | — | a completion prepares from its event; a hook from its one attempt |
-| Journal | unfinished | what it names | per effect, by the evidence table | reconcile, then complete |
-| Journal | done | complete, and its `Ended` | — | nothing; kept while the run lives |
-| Journal | unreadable | — | everything | the mailbox stops |
-| `kept.json` | this run's, at or below the boundary | its version and position | — | taken by the version the journal names |
-| `kept.json` | this run's, above the boundary | a later hold | — | left for a later end |
-| `kept.json` | this run's, `held` naming the end confirmed | that end was held, and its reason | — | the same reason again; the word raised to its position |
-| Journal | any form, `Held` naming the end confirmed | that end was published with its continuation | — | answered as published |
-| `kept.json` | another run's | an ended run's | whether it was ever published | never taken; written over by the next hold |
-| `kept.json` | unreadable | — | its owner | the mailbox stops before any effect, and nothing writes over it |
-| Pending mark | any | as the pending table | — | as the pending table |
-| `interim.json` | any | as the interim table | — | as the interim table |
-| Once mark | none, intent, published | as the evidence table | — | as the evidence table |
-| Once mark | other, unreadable, or behind a path that cannot be followed | — | the publication | the mailbox stops before any effect, naming the path |
-| Wait record | unreadable | — | its messages | the mailbox stops |
+| Record | State | Recovery |
+|---|---|---|
+| Done record | absent | the end runs its steps from the disk |
+| Done record | present, its operation | answered from it; kept while the run lives |
+| Done record | `Held` naming the end confirmed | answered as published with its continuation |
+| Done record | unreadable | the end fails on that attempt |
+| `kept.json` | this run's, at or below the boundary | taken, and dropped while still the version carried |
+| `kept.json` | this run's, above the boundary | left for a later end |
+| `kept.json` | this run's, `held` naming the end confirmed | the same reason again; the word raised to its position |
+| `kept.json` | another run's | never taken; written over by the next hold |
+| `kept.json` | unreadable | the end fails, and nothing writes over it |
+| Pending mark | any | as the pending table |
+| `interim.json` | any | as the interim table |
+| Wait record | unreadable | the end fails, and nothing writes over it |
+| Report letter | read and older than a day, its writer's wait still naming what it answers | kept by the sweep, so a late retry finds it |
 
 ## What the reviews found
 
-Which clause closes each finding of the earlier acceptances and reviews, and what the
-earlier probes now expect of the same bytes, is in
-[turn-end-recovery-findings.md](turn-end-recovery-findings.md).
+Which clause closed each finding of the earlier acceptances and reviews of the journals,
+and what the earlier probes expected, is in
+[turn-end-recovery-findings.md](turn-end-recovery-findings.md), a record of the mechanics
+removed on October 18, 2026.
 
 ## What stays open
 
@@ -274,5 +222,9 @@ earlier probes now expect of the same bytes, is in
   text.
 - An end with an id and no boundary reports nothing; its waits stay owed for the next
   end with a boundary or heard once.
-- An end heard before an earlier end of its run has a journal may share a mark with it:
-  both are interim, once (pending marks).
+- An end heard before an earlier end of its run is recorded done may share a mark with
+  it: both are interim, once (pending marks).
+- A process killed in the milliseconds between two steps of an end can cost a task shown
+  once more as owed until the next end, a lost report main asks for again, or a kept
+  answer after an interruption carried by the next turn's report (the owner, October 17
+  and 18, 2026).

@@ -17,13 +17,10 @@ internal/core/registry/                       session record, name publishing, l
 internal/core/registry/registrytest/          for tests: the boot a session of this build carries
 internal/infra/proc/                          /proc: identity, liveness, job-control state, lineage, namespaces, owner and initial environment
 internal/infra/boottime/                      the boot clock, comparable across processes and never set back
-internal/core/mail/                           message, status, sender-side write, the locked sweep and settlement, turn ends and the read's acknowledgment
-internal/core/mail/decisionmodel/             four fixed worlds of the operator decision and their expected outcomes, apart from the code
+internal/core/mail/                           message, status, sender-side write, the locked sweep and settlement, turn ends
 internal/core/mail/mailtest/                  for tests outside mail: the paths and bytes of its records, each checked against mail
 internal/core/receipt/                        the journal of the mail operations a journaled shell command runs: keys, records, frozen reads
-internal/core/authority/                      a run's wrapper answering for the decisions on reports addressed to the run
 internal/core/control/                        a main's control request to a run and its answer, as files
-internal/core/person/                         whether a process runs outside every session and may decide as the person: the strict scan
 internal/core/role/                           the role catalogue: flag, briefing line, reporting duty
 internal/core/brief/                          text injected into an agent, independent of transport
 internal/core/session/                        optional, epoch-scoped observations of a harness (telemetry)
@@ -44,7 +41,6 @@ docs/                                         the documentation, and the tests t
 test/workflow/                                the workflow suite: end-to-end scenarios against fixtures
 test/workflow/record/                         the record format a suite run prints and the summarizer reads
 test/leaserig/                                the room's build lease raced between real builds of rewake, each paused at a named step
-test/decisionrig/                             decisions asked of real sessions' wrappers by real processes below them and outside, each wrapper paused or killed at a named step
 tools/checksummary/                           summarizes a suite run into a few lines and summary.json
 tools/release/                                the release gate: checks, builds with pack.sh, publishes only when told
 tools/protogen/                               writes the mod protocol's Go and TypeScript types from its schema; its test fails when a checked-in file differs

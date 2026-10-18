@@ -3,7 +3,6 @@ package mail
 import (
 	"context"
 	"os"
-	"slices"
 	"testing"
 	"time"
 
@@ -46,49 +45,9 @@ func newTwoSessionLab(t *testing.T) twoSessionLab {
 	return twoSessionLab{dir: dir, web: web, run: registry.RunEpoch(4194000, 7, registrytest.Boot(t))}
 }
 
-// owe records that api's run read the tasks from web.
-func (l twoSessionLab) owe(t *testing.T, tasks ...string) {
-	t.Helper()
-	for _, task := range tasks {
-		if err := markAwaiting(l.dir, "api", l.run, "web", l.web.Epoch(), task); err != nil {
-			t.Fatal(err)
-		}
-	}
-}
-
 // report is a report of api's run to web answering tasks.
 func (l twoSessionLab) report(kind Kind, tasks ...string) Message {
 	return Message{ID: NewID(), From: "api", FromEpoch: l.run, To: "web", ToEpoch: l.web.Epoch(), Kind: kind, Text: "REPORT_TEXT", InReplyTo: tasks, CreatedAt: time.Now()}
-}
-
-func (l twoSessionLab) reconcile(t *testing.T) error {
-	t.Helper()
-	return withLock(l.dir, "api", func() error { return Reconcile(context.Background(), l.dir, "api") })
-}
-
-// copies counts web's letters with id.
-func (l twoSessionLab) copies(t *testing.T, id string) int {
-	t.Helper()
-	letters, err := List(l.dir, "web")
-	if err != nil {
-		t.Fatal(err)
-	}
-	count := 0
-	for _, letter := range letters {
-		if letter.ID == id {
-			count++
-		}
-	}
-	return count
-}
-
-func (l twoSessionLab) owes(t *testing.T, task string) bool {
-	t.Helper()
-	waiters, err := ReadWaiters(l.dir, "api", l.run)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return slices.ContainsFunc(waiters, func(w Waiter) bool { return slices.Contains(w.Messages, task) })
 }
 
 // session publishes a running session under name.

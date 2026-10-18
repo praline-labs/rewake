@@ -71,11 +71,6 @@ func handleInbox(ctx *Context, call Call) error {
 			failure = err
 			return nil
 		}
-		if !peek {
-			if failure = mailboxStopped(dir, session.Name); failure != nil {
-				return nil
-			}
-		}
 		messages, err := mail.AvailableUnread(dir, session.Name, epoch)
 		if err != nil {
 			failure = failf("could not read the inbox of %s: %v", session.Name, err)
@@ -120,17 +115,6 @@ func handleInbox(ctx *Context, call Call) error {
 		return failf("could not lock the inbox of %s: %v", session.Name, err)
 	}
 	return failure
-}
-
-// mailboxStopped answers the stop of a mailbox whose records nothing can
-// decide (docs/turn-end-recovery.md#the-stop): a read
-// would change it, so none is made, and the answer names the cause and the
-// way out. Letters go on arriving, and a peek shows them.
-func mailboxStopped(dir, name string) error {
-	if err := mail.MailboxStopped(dir, name); err != nil {
-		return failf("%v", err)
-	}
-	return nil
 }
 
 // mailAdmitted refuses the mail of a run whose launch asked to resume a
@@ -194,9 +178,6 @@ func letterHead(message messageView) []string {
 	lines = append(lines,
 		fmt.Sprintf("from %s · %s · %s%s", message.From, mail.KindOf(message.Message), message.CreatedAt.Local().Format("15:04:05"), relation(message.Message)),
 	)
-	if d := message.ResentBy; d != nil {
-		lines = append(lines, fmt.Sprintf("sent again by decision %s of %s: report %s went unproven, and this copy may repeat what you read already", d.ID, deciderText(d.By), d.Report))
-	}
 	return lines
 }
 

@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/core/mail"
-	"github.com/praline-labs/rewake/internal/core/registry"
 )
 
 // questionKind is a task its sender waits for: send blocks until the session
@@ -37,7 +36,7 @@ func answerQuestion(ctx *Context, question sent) error {
 	// hold expired, the session ended — and then no answer is coming. Waiting
 	// out the deadline for one would block the asker for nothing.
 	refused := make(chan refusal, 1)
-	go watchRefusal(wait, refusalWatch{dir: question.dir, to: target.Name, id: model.ID, self: question.self.Name, epoch: question.epoch}, refused, cancel)
+	go watchRefusal(wait, refusalWatch{dir: question.dir, to: target.Name, id: model.ID}, refused, cancel)
 
 	_, found, err := mail.AwaitAnswer(wait, question.dir, question.self.Name, question.epoch, model.ID, func(answer mail.Message) error {
 		model.State, model.Answer = string(mail.Read), answer.Text
@@ -71,9 +70,6 @@ func answerQuestion(ctx *Context, question sent) error {
 	if !found {
 		select {
 		case why := <-refused:
-			if why.closed != nil {
-				return printClosed(ctx, target, model, why.closed)
-			}
 			model.State, model.Via, model.Detail = string(mail.Failed), why.status.Via, why.status.Detail
 			return printDelivery(ctx, target, model)
 		default:
@@ -96,28 +92,21 @@ func answerQuestion(ctx *Context, question sent) error {
 	return nil
 }
 
-// closedState is the state of a question a decision closed: neither
-// answered nor failed in delivery.
-const closedState = "closed"
-
 // refusalPoll is how often a waiting question looks at its own status.
 const refusalPoll = 250 * time.Millisecond
 
-// refusal is why no answer is coming: the question failed, or a decision on
-// the report that answers it closed the wait without proving it arrived.
+// refusal is why no answer is coming: the question failed.
 type refusal struct {
 	status mail.Status
-	closed *mail.DecisionMark
 }
 
-// refusalWatch names the question a wait watches and the run that asked it.
+// refusalWatch names the question a wait watches.
 type refusalWatch struct {
-	dir, to, id, self, epoch string
+	dir, to, id string
 }
 
 // watchRefusal ends the wait for an answer once the question itself has
-// failed, or once a decision closed it: the report the receiver owes was
-// decided and its tail ran, so the wait is over with nothing to print.
+// failed.
 func watchRefusal(ctx context.Context, w refusalWatch, refused chan<- refusal, stop func()) {
 	ticker := time.NewTicker(refusalPoll)
 	defer ticker.Stop()
@@ -128,31 +117,10 @@ func watchRefusal(ctx context.Context, w refusalWatch, refused chan<- refusal, s
 			stop()
 			return
 		}
-		if mark, ok := mail.DecisionOn(w.dir, w.to, w.id, w.self, w.epoch); ok && mark.Closed {
-			refused <- refusal{closed: &mark}
-			stop()
-			return
-		}
 		select {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
 		}
 	}
-}
-
-// printClosed answers a question a decision closed: no answer text, since
-// none is proven to have reached this run, and none is coming.
-func printClosed(ctx *Context, target registry.Session, model sendModel, mark *mail.DecisionMark) error {
-	model.State, model.Decided = closedState, awaitedDecisionOf(mark)
-	model.Detail = fmt.Sprintf("closed by decision %s of %s on report %s, delivery unproven: no answer is proven to have reached you, and none is coming", mark.Decision, deciderText(model.Decided.By), mark.Report)
-	if mark.Resent != "" {
-		model.Detail += fmt.Sprintf("; the report went again as %s and arrives as an ordinary report", mark.Resent)
-	}
-	if err := printValue(ctx, model, func() []string {
-		return []string{fmt.Sprintf("Rewake: the question to %s was %s.", target.Name, model.Detail)}
-	}); err != nil {
-		return err
-	}
-	return &ExitCodeError{Code: ExitFailed}
 }

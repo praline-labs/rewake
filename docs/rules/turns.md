@@ -28,7 +28,6 @@ that they are checked like the rest ([stage3-tests.md](../archive/v2/stage3-test
   - `internal/core/mail/confirm_test.go` `TestTheInterimRecordOfAnotherRun`
   - `internal/core/mail/pending_test.go` `TestAnInterimReportSettlesNothing`
   - `internal/host/delivery/pending_test.go` `TestAnInterimReportIsNotTakenByAWaitingQuestion`
-  - `internal/core/mail/journal_unknown_test.go` `TestAnInterimEndReplacesAnEndedRunsRecord`
   - `internal/cli/inbox_awaited_test.go` `TestAwaitedTakesTheLatestInterimOrStop`
   - `test/workflow/awaited_view_test.go` `TestAwaitedView`
   - `test/workflow/pending_report_test.go` `TestPendingReport`

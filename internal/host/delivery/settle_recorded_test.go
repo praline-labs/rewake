@@ -125,32 +125,21 @@ func TestARestartSettlesALateRefusalLeftUnread(t *testing.T) {
 	}
 }
 
-// A settling under the lock that leaves the letter — an open stop names it,
-// or its archive cannot be written — has not settled it. The passes find it
-// again by its status and its copy, at the retry interval, without writing
-// the status again, and settle it once the stop is resolved or the archive
-// works.
+// A settling under the lock that leaves the letter — its archive cannot be
+// written — has not settled it. The passes find it again by its status and its
+// copy, at the retry interval, without writing the status again, and settle it
+// once the archive works.
 func TestASettlingCutShortIsSettledOnceItCan(t *testing.T) {
-	for _, blocker := range []string{"an open stop names the letter", "the archive cannot be written"} {
+	for _, blocker := range []string{"the archive cannot be written"} {
 		t.Run(blocker, func(t *testing.T) {
 			lab := newTwoSessionLab(t)
 			server, letter, lock := lateRefusal(t, lab)
 			if err := os.Chmod(lock, 0o600); err != nil {
 				t.Fatal(err)
 			}
-			var release func() error
-			if blocker == "an open stop names the letter" {
-				if err := withLock(lab.dir, letter.To, func() error {
-					release = stopNaming(t, lab.dir, letter.To, unreadCopy(lab, letter))
-					return nil
-				}); err != nil {
-					t.Fatal(err)
-				}
-			} else {
-				done := state.DonePath(lab.dir, letter.To)
-				writeRaw(t, done, "not a directory")
-				release = func() error { return os.Remove(done) }
-			}
+			done := state.DonePath(lab.dir, letter.To)
+			writeRaw(t, done, "not a directory")
+			release := func() error { return os.Remove(done) }
 			status, err := os.ReadFile(mailtest.StatusPath(lab.dir, letter.To, letter.ID))
 			if err != nil {
 				t.Fatal(err)
@@ -232,7 +221,6 @@ func TestALetterReadableOnPurposeStaysUnread(t *testing.T) {
 		"delivered": recorded(mail.Result{State: mail.Delivered}),
 		"report":    recorded(mail.Result{State: mail.Failed, ReportAvailable: true}),
 		"withdrawn": recorded(mail.Result{State: mail.Failed, Withdrawn: true, Detail: "withdrawn by api"}),
-		"in parts":  claimedFailure,
 		"unreadable": func(t *testing.T, lab twoSessionLab, letter mail.Message) {
 			writeRaw(t, mailtest.StatusPath(lab.dir, letter.To, letter.ID), "{")
 		},
@@ -280,10 +268,4 @@ func recorded(result mail.Result) func(t *testing.T, lab twoSessionLab, letter m
 			t.Fatal(err)
 		}
 	}
-}
-
-func claimedFailure(t *testing.T, lab twoSessionLab, letter mail.Message) {
-	t.Helper()
-	recorded(mail.Result{State: mail.Failed, Detail: "refused while it was being read"})(t, lab, letter)
-	writeRaw(t, filepath.Join(mailtest.ClaimsPath(lab.dir, letter.To), letter.ID), "a read")
 }

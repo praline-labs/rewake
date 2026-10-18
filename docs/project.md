@@ -88,14 +88,14 @@ Each principle names where it comes from.
   as that session and serves only it: there is nothing to start, stop or
   recover, and no state where the sessions exist but a service has died.
   ([design.md](design.md#processes), [v2/design.md](v2/design.md#what-does-not-change).)
-- **An outcome that cannot be proven is never guessed — in what is built.** Every effect of
-  the mailbox is proven done, proven not done, or unknown; an unknown is kept and stated as
-  such, and only evidence — or a decision recorded as a decision — settles it.
-  ([v2/design-rules.md](v2/design-rules.md#effects-e1e8); the owner's decision, recorded
-  in [v2/design-rules.md](v2/design-rules.md#an-operator-decision-on-an-unknown-outcome).)
-  Decided by the owner, October 17, 2026: this mechanics — `decide`, stops, the turn-end
-  journals, the build lease, epochs — is frozen as built; a new feature is not bound by it,
-  and a report lost in a rare case is asked for again by main.
+- **Simple steps, retried from the disk.** A turn's end writes its reports, then clears the
+  waits they answer, then records itself done, all under the sender's mailbox lock; a retry runs
+  the same steps from what is on disk. A record that cannot be read fails the operation that met
+  it, which is retried, and stops nothing else. Decided by the owner, October 18, 2026: the
+  mechanics of unknown outcomes — `decide`, stops, journals before effects — is replaced by
+  this; no reliability mechanism is added without a live failure that needs it, and a report
+  lost when a process is killed between two steps is asked for again by main.
+  ([delivery-turn-end.md](delivery-turn-end.md#the-end-of-a-turn).)
 - **A working product over guarantees and process.** Decided by the owner, October 17, 2026:
   a step is done when it works live and breaks no existing test. A test is written where a
   breakage would not be seen live or would be seen too late, where it already happened, for a
@@ -149,18 +149,12 @@ take back a message nobody has read yet, or replace its text. See
 [delivery.md](delivery.md#kinds), [flow-endings.md](flow-endings.md) and
 [delivery-sent.md](delivery-sent.md).
 
-**Exactly one report per task.** Every task gets exactly one report — never none, never
-two. A session that stops before its work is done says what it still waits for, and the
+**One report per task.** In ordinary work every task gets exactly one report — never none,
+never two; only a process killed between two steps of a turn's end can lose one, and main asks
+again. A session that stops before its work is done says what it still waits for, and the
 report follows when the work is done. Who owes whom a report, and who waits on whom, is
 always on record. See
 [delivery-owed.md](delivery-owed.md) and [turn-outcomes.md](turn-outcomes.md).
-
-**An outcome that cannot be proven is stated as such.** When rewake cannot prove whether
-a report arrived, it says so; nothing is guessed or discarded, and nothing that depends on
-that outcome goes ahead until it is settled. Only evidence, or a decision recorded by the
-report's recipient or the person, settles it. A decision is kept as a decision, marked
-unproven, never as evidence; deciding that the report did not arrive sends it again.
-See [v2/design-rules.md](v2/design-rules.md#an-operator-decision-on-an-unknown-outcome).
 
 **Waking an idle session.** A recipient is told in one line, with a preview, that mail is
 waiting. An idle session wakes for it; a busy one is steered where its harness allows.
@@ -200,8 +194,7 @@ them, is one build of rewake; another build is refused, not mixed in. See [v2/de
 — it does not stand between them and its terminal — and never types into anyone's
 screen; a worker main starts runs in a terminal rewake holds and shows only in main's panel
 and through `rewake attach`. It does not edit the person's harness configuration; it
-does not read transcripts; it runs no service of its own beside the sessions; it does not
-guess an outcome it cannot prove.
+does not read transcripts; it runs no service of its own beside the sessions.
 
 **How the project is checked.** A change lands only when the project's checks pass —
 formatting, static analysis and the tests. An end-to-end suite runs rewake against a
@@ -216,7 +209,7 @@ By the kind of work. Every document is on [the map](README.md); the current plan
 - **Picking up the current work**: [v2/README.md](v2/README.md), then
   [roadmap/README.md](roadmap/README.md) — what is done, what comes next, the open
   reviews.
-- **Changing the core** — mail, reports, turn ends, stops: [flow.md](flow.md), then
+- **Changing the core** — mail, reports, turn ends: [flow.md](flow.md), then
   [v2/design-rules.md](v2/design-rules.md), [delivery.md](delivery.md) and the
   documents it links to, [mailbox-records.md](mailbox-records.md).
 - **Changing an adapter or adding a harness**: [v2/design-api.md](v2/design-api.md),

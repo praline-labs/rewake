@@ -8,11 +8,11 @@ import (
 	"time"
 )
 
-// The journal that took a held end's kept answer names that end in every form
-// it takes, and a retention sweep while its run lives keeps it: the held end
-// confirmed again learns it was published with its continuation, however late.
+// The done journal that took a held end's kept answer names that end, and a
+// retention sweep while its run lives keeps it: the held end confirmed again
+// learns it was published with its continuation, however late.
 func TestAJournalThatTookAHeldEndNamesItInEveryForm(t *testing.T) {
-	dir, epoch, report := journalLab(t)
+	dir, epoch, _ := journalLab(t)
 	if err := KeepAnswer(dir, "api", epoch, "the held answer", "held-op", "the reason"); err != nil {
 		t.Fatal(err)
 	}
@@ -20,7 +20,7 @@ func TestAJournalThatTookAHeldEndNamesItInEveryForm(t *testing.T) {
 	if err != nil || !ok || taken.Held != "held-op" {
 		t.Fatalf("the kept answer: %+v %v %v", taken, ok, err)
 	}
-	if err := WriteJournal(dir, "api", "end", TurnJournal{Epoch: epoch, Reports: []Message{report}, Kept: &taken.Version, Held: taken.Held}); err != nil {
+	if err := writeDoneJournal(dir, "api", "end", TurnJournal{Epoch: epoch, Op: "end", Held: taken.Held, Done: true}); err != nil {
 		t.Fatal(err)
 	}
 	held := func(form string) {
@@ -31,17 +31,6 @@ func TestAJournalThatTookAHeldEndNamesItInEveryForm(t *testing.T) {
 		if got, _ := HeldEndTaken(dir, "api", "another-epoch", "held-op"); got {
 			t.Fatalf("%s: another run's end was taken for this one", form)
 		}
-	}
-	held("open")
-	if err := finishAll(t, dir); err != nil {
-		t.Fatal(err)
-	}
-	raw, err := os.ReadFile(filepath.Join(JournalPath(dir, "api"), "end"+doneSuffix))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if journal, err := parseJournal("end", raw); err != nil || !journal.Done || journal.Held != "held-op" {
-		t.Fatalf("the done journal: %+v %v", journal, err)
 	}
 	held("done")
 	old := time.Now().Add(-keepFinished - time.Hour)

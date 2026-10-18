@@ -18,8 +18,7 @@ import (
 // started, and a random id, so a later mark never writes over an earlier one.
 // No turn end removes a mark: the evidence an earlier end's retry needs is
 // never destroyed by a later end. A mark stays for its run's life, and goes
-// when the run's records are swept (sweepMarks). Being used is no effect: the
-// journal of the end records the mark that decided it.
+// when the run's records are swept (sweepMarks). Being used is no effect.
 //
 // A mark belongs to the turn whose window holds its At: from just after the
 // turn's start to its end, inclusive (TurnWindowStart). Marks change only
@@ -146,9 +145,8 @@ func sweepMarks(dir, name, live string) {
 	if err != nil {
 		return
 	}
-	kept := keptByStopOf(dir, name)
 	for _, run := range runs {
-		if run.Name() != live && !kept.keeps(filepath.Join(root, run.Name())) {
+		if run.Name() != live {
 			_ = state.RemoveAll(filepath.Join(root, run.Name()))
 		}
 	}

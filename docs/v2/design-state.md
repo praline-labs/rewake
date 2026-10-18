@@ -27,8 +27,10 @@ migration and the Claude Code MCP injection needed:
   socket keeps the short form in `sock/` — removed with the run, or, after a run killed
   outright, by a later launch once that run is proven dead (L3,
   [stage3-rundir.md](../archive/v2/stage3-rundir.md));
-- unchanged: sessions, mailboxes with their journals, receipts, marks, claims and once
-  records, control requests, letters, threads where an adapter uses them.
+- unchanged: sessions, mailboxes with their turn journals, receipts, marks and the once
+  records of journaled heads-ups, control requests, letters, threads where an adapter uses
+  them; the claims of reads in parts and the once records of reports went on October 18,
+  2026 ([delivery-turn-end.md](../delivery-turn-end.md#the-end-of-a-turn)).
 
 The worktrees and their records stay where they are, in the user's data directory
 (`~/.local/share/rewake/worktrees`, `docs/worktree.md`), outside the base. They

@@ -40,9 +40,6 @@ func OncePath(dir, to, epoch, id string) string {
 	return filepath.Join(state.InboxPath(dir, to), "once", epoch, id)
 }
 
-// ClaimsPath is the directory of a mailbox's reads in parts.
-func ClaimsPath(dir, name string) string { return filepath.Join(state.InboxPath(dir, name), "claims") }
-
 // AnswerReceiptsPath is the directory of the receipts of answers taken.
 func AnswerReceiptsPath(dir, name string) string {
 	return filepath.Join(state.InboxPath(dir, name), "received")

@@ -47,9 +47,6 @@ func documentedForms(launch string) []formCase {
 		{[]string{"worktree", "prune"}, view},
 		{[]string{"worktree"}, view},
 		{[]string{"inbox", "--owed", "--peek"}, view},
-		{[]string{"decide", "api"}, view},
-		{[]string{"decide", "api", "--json"}, view},
-		{[]string{"decide", "--help"}, view},
 		{[]string{"space", "list"}, view},
 		{[]string{"space", "list", "--json"}, view},
 		// Refused by the handler before any read.
@@ -57,9 +54,6 @@ func documentedForms(launch string) []formCase {
 		{[]string{"space", "open"}, view},
 		{[]string{"attach", "api"}, view},
 		// Refused by the handler before any read.
-		{[]string{"decide", "api", "--arrived"}, view},
-		{[]string{"decide", "api", "1790370984617481194-8d4ddd85c8f1"}, view},
-		{[]string{"decide", "api", "1790370984617481194-8d4ddd85c8f1", "--arrived", "--not-arrived"}, view},
 
 		{[]string{launch}, change},
 		{[]string{"--room", "work", "--name", "api", launch}, change},
@@ -77,8 +71,6 @@ func documentedForms(launch string) []formCase {
 		{[]string{"worktree", "rm", "fix-login"}, change},
 		{[]string{"worktree", "land", "fix-login", "--into", "release"}, change},
 		{[]string{"worktree", "finish", "fix-login"}, change},
-		{[]string{"decide", "api", "1790370984617481194-8d4ddd85c8f1", "--arrived"}, change},
-		{[]string{"decide", "api", "1790370984617481194-8d4ddd85c8f1", "--not-arrived", "--json"}, change},
 		{[]string{"space", "open", "api", "--harness", launch}, change},
 		{[]string{"space", "open", "api", "--alias", "worker"}, change},
 	}

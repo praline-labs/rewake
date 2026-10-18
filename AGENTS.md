@@ -100,12 +100,30 @@ seam's tests stay while they do not get in the way. A test clearly redundant, sl
 may be removed when it gets in the way, one at a time — never a clean-up for its own sake.
 A brief to a writer or a reviewer states this criterion.
 
-### Guarantees
+### Build for failures that were seen
 
-The mechanics of `decide`, stops, the turn-end journals, the build lease and epochs are
-frozen: not extended, not redone. A new feature need not fit the model of proven, disproven
-or unknown; a report lost in a rare case is acceptable, main asks again. The mod gets no new
-reliability mechanism without a live failure that needs it.
+The owner's rule, taken when the mechanics of unknown outcomes — thousands of lines of code
+and tests, no live case — gave way to a simple order of steps
+([roadmap](docs/roadmap/2026-10-18-simple-turn-end.md)):
+
+- A protective mechanism is built for a failure seen in real work, or one that would lose or
+  duplicate mail unseen. "What if the process is killed between two writes" is a known limit
+  written in one line, not a reason for a mechanism.
+- The cost of a mistake sets the depth: when main asking again or restarting a worker is cheaper
+  than a mechanism, no mechanism is built.
+- The simple solution first: a lock, an atomic write, a deterministic id, a retry of the same
+  steps. Unknown states, journals before effects, operator decisions, matrices of worlds or
+  crashes come only by the owner's decision after a live case.
+- A review looks for breakage, not for imaginable orders of events: such a finding without a
+  live case is a note or a known limit, never a new round.
+- Stop and simplify when the tests of a mechanism outgrow its code, when each review round finds
+  "another way to lose", when a feature needs numbered rules, a world model or a scenario
+  generator, or when a mechanism can stop work that would otherwise have gone through.
+
+The turn end itself: under the sender's mailbox lock it writes its reports, then clears the waits
+they answer, and records itself done last; a retry runs the same steps from the disk
+([docs/delivery-turn-end.md](docs/delivery-turn-end.md#the-end-of-a-turn)). The build lease and
+epochs stay as they are.
 
 ## Adding a harness
 
@@ -183,10 +201,9 @@ are [docs/rules/state.md](docs/rules/state.md):
 - **The fault seam**, the `rewaketest` build of `internal/infra/state`, takes faults from
   `REWAKE_FAULT` (`internal/infra/state/fault_build.go`); a release is never built with it.
 
-An outcome rewake cannot prove stops the mailbox until evidence settles it or a decision is
-recorded: `rewake decide <name> <report> --arrived | --not-arrived`, kept as a decision, never
-as evidence; "not arrived" sends the report again
-([docs/rules/effects.md](docs/rules/effects.md), D1–D8).
+A record that cannot be read fails the operation that met it, which is retried; it stops
+nothing else, and no command settles a mailbox by hand
+([docs/rules/effects.md](docs/rules/effects.md)).
 
 ## Code
 

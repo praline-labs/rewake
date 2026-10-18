@@ -139,26 +139,25 @@ leaves the briefing alone to ask for the mark.
   the mailbox lock: `interim.json` holds the run's last word on the work — the epoch,
   the end's operation and its end time, and either the pending line of an interim end
   or that a finished or failed end settled it; a stop leaves it, as a stop leaves the
-  waits. Writing it is a step of the turn end's journal
-  ([delivery-turn-end.md](delivery-turn-end.md)), so an end that dies after its journal
-  is on record still leaves the interim end on record. Of two ends of one run the later
-  by end time wins, whatever order their retries come in; the journal of an ended run,
-  completed while the next run takes over, leaves the record of the run holding the name
-  alone, and one that cannot be read stops the journal rather than being written over
-  ([turn-end-recovery.md](turn-end-recovery.md#the-interim-record)). `kept.json` holds
+  waits. Writing it is a step of the turn end, taken before the end is recorded done
+  ([delivery-turn-end.md](delivery-turn-end.md#the-end-of-a-turn)). Of two ends of one run
+  the later by end time wins, whatever order their retries come in; the end of an ended
+  run, completed while the next run takes over, leaves the record of the run holding the
+  name alone, and one that cannot be read fails the end with an error, to be retried,
+  rather than being written over. `kept.json` holds
   the held answer, the held end's operation and its reason.
 - **The same end confirmed again** — its answer lost — gets the same reason, and nothing
-  is published or kept again; once a continuation took the kept answer, its journal
-  names the held end in every form it takes, and the held end confirmed again is
-  answered as published ([turn-end-recovery.md](turn-end-recovery.md#a-held-end-confirmed-again)).
+  is published or kept again; once a continuation took the kept answer, its done record
+  names the held end (`HeldEndTaken`), and the held end confirmed again is answered as
+  published ([turn-end-recovery.md](turn-end-recovery.md#a-held-end-confirmed-again)).
 - **The report keeps the held answer.** The continuation's end carries only what the
   model said after the hold, so the next turn end heard puts the kept answer into its
   own outcome: a finish gives the kept answer, then the continuation; a pending mark
   made in the continuation gives the mark's line, the kept answer, then the
   continuation; a failure gives its error, then the kept answer; a stop gives its line,
   then the kept answer, with the waits open as after any stop. The answer is dropped
-  once that outcome is published, not before, as a step of the turn end's journal
-  ([delivery-turn-end.md](delivery-turn-end.md)); each kept answer has its own version,
+  once that outcome is published, not before, as a step of the turn end
+  ([delivery-turn-end.md](delivery-turn-end.md#the-end-of-a-turn)); each kept answer has its own version,
   and the step drops the version the outcome carried and never a later one.
 - **A hold is not an end.** A held end publishes nothing and journals no end of the
   run, so a mark the continuation makes falls within the turn its end takes it from.

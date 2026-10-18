@@ -28,16 +28,7 @@ the answer in the same command.
 5. **When the sender is gone** — timeout (exit 3), kill, or crash — the mark
    goes stale within three seconds and the wrapper announces the report the
    ordinary way. Nothing is lost, only blocked for a while. A send that ends
-   on its own takes its mark away under the lock, unless an open occurrence of
-   its mailbox's stop names the mark: it then stays, no longer refreshed, as
-   evidence the occurrence waits to read
-   ([mailbox-records.md](mailbox-records.md#the-stop-on-record)).
-6. **When a decision closes it** — the report that answers the question went out
-   unproven and was decided ([stage3-decision.md](v2/stage3-decision.md#the-command)),
-   and the tail of that turn recorded the closure of the wait — the waiting send ends
-   with exit 1, state `closed` and the decision in `decided`, and prints no answer: none
-   is proven to have reached it. A resend for "did not arrive" arrives later as an
-   ordinary report.
+   on its own takes its mark away under the lock.
 
 ## Act 7. A notify, when nothing is owed
 

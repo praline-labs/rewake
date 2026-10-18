@@ -8,6 +8,8 @@ Citations are to `ab8d752` (S16 landed). The Codex side's readiness review of Oc
 2026, adopted by main on October 12 with its decisions D1–D12, corrected this plan; the
 corrections are written in here, not kept beside it.
 
+Since October 18, 2026 the stops and decisions described here (`rewake decide`, `host/decide.go`, `test/decisionrig`, the run's authority socket) are removed ([delivery-turn-end.md](../delivery-turn-end.md#the-end-of-a-turn)).
+
 ## The sequence
 
 S17 lands as seven commits, in three parts each reviewed and accepted on the Codex side

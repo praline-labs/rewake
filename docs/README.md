@@ -32,16 +32,16 @@ Sessions and launches:
 Mail and reports:
 
 - [delivery.md](delivery.md) — sending and reading at the level of files: the message record, task, question, notify, the lock, the servicing loop.
-- [delivery-turn-end.md](delivery-turn-end.md) — a finished turn becoming a report: `turn-ended`, the report's derived id, what a retry replays.
+- [delivery-turn-end.md](delivery-turn-end.md) — a finished turn becoming a report: the order of its steps, the report's derived id, what a retry finds.
 - [delivery-owed.md](delivery-owed.md) — `rewake inbox --owed` and `--awaited`: what a session still owes and what a run still waits on.
 - [delivery-sent.md](delivery-sent.md) — `rewake withdraw`, `rewake edit` and `send --to`: what a sender can still do with a sent message.
 - [delivery-adapters.md](delivery-adapters.md) — how a notice reaches a harness: the Claude Code socket line and receipts, the pi extension, startup gates.
 - [inbox-groups.md](inbox-groups.md) — grouped incoming mail: the session table, `--peek`, `--message <id>`, the window that fixes a group.
-- [mailbox-records.md](mailbox-records.md) — every kind of file a mailbox holds, the reading before any effect, the stop on record.
+- [mailbox-records.md](mailbox-records.md) — every kind of file a mailbox holds, a reference kept by hand.
 - [turn-outcomes.md](turn-outcomes.md) — turn ends that are not an ordinary report: a failed turn, a keyboard stop, `rewake pending`.
 - [report-publication.md](report-publication.md) — capturing and publishing a finished turn's report, the sequence word, receipt keys.
-- [turn-end-recovery.md](turn-end-recovery.md) — how a turn end is recovered: the operation's identity, the read clock, evidence per case.
-- [turn-end-recovery-findings.md](turn-end-recovery-findings.md) — what acceptances and reviews of that recovery found, each with its closing clause.
+- [turn-end-recovery.md](turn-end-recovery.md) — how a turn end is recovered: the operation's identity, the read clock, pending marks, what a retry finds.
+- [turn-end-recovery-findings.md](turn-end-recovery-findings.md) — what acceptances and reviews of the turn-end journals found, a record of mechanics removed on October 18, 2026.
 
 Main and its workers:
 

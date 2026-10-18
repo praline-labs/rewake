@@ -70,7 +70,7 @@ func buildGroups(catalog adapter.Catalog) []Group {
 				Options:        []Option{jsonOption},
 				Examples:       []string{"rewake list", "rewake list --json"},
 				Next:           []string{"rewake send <name> \"text\""},
-				Notes:          []string{sessionStateHelp, "Main is told once per launch when a session becomes available, and when one compacts or leaves; a main started later learns which are already available. Idleness alone resends nothing.", "A session whose mailbox stopped on what nobody can prove is named under the table, with how many reports a decision can settle — listed by rewake decide <name> — and how many causes need the person's repair."},
+				Notes:          []string{sessionStateHelp, "Main is told once per launch when a session becomes available, and when one compacts or leaves; a main started later learns which are already available. Idleness alone resends nothing."},
 				Access:         viewForm,
 				Handler:        handleList,
 			},
@@ -221,7 +221,7 @@ func buildGroups(catalog adapter.Catalog) []Group {
 		},
 	}
 
-	return []Group{run, talk, decideGroup(), steer, spaceGroup(), help}
+	return []Group{run, talk, steer, spaceGroup(), help}
 }
 
 // nestedLaunchHelp is refuseNestedLaunch's rule, on every launch page: a
