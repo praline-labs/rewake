@@ -1,204 +1,41 @@
 package mail
 
 import (
-	"context"
 	"errors"
 	"io/fs"
 	"os"
-	"sync"
 
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
-// The barrier decides by what its effects read, and a stop is worth something
-// only when it is found before the first effect. A second list of what the
-// effects will read, kept beside them, drifts from them whenever an effect
-// learns to read something new. So there is no such list: the barrier first
-// runs its own code as a plan, which reads everything the effects will read
-// and writes nothing, and only a plan with no unknown lets the same code run
-// again for real (docs/mailbox-records.md#the-plan-and-the-seam). Every file
-// the two passes touch goes through one seam, fileAccess, so a test can see
-// every path the plan read and fail each of them in turn.
-
-// fileAccess is every file operation of the barrier and the gates.
-type fileAccess interface {
-	ReadFile(path string) ([]byte, error)
-	ReadDir(path string) ([]fs.DirEntry, error)
-	Stat(path string) (fs.FileInfo, error)
-	// Lstat is what a decision records of a path a read failed on (Q12 of
-	// docs/v2/stage3-decision-build.md): stat follows a link, lstat does not.
-	Lstat(path string) (fs.FileInfo, error)
-	// WriteFile replaces a file in one step (state.WriteAtomic).
-	WriteFile(path string, raw []byte) error
-	// Publish writes a file once (state.PublishExclusive): one that exists
-	// answers state.ErrNameTaken.
-	Publish(path string, raw []byte) error
-	EnsureDir(path string) error
-	Remove(path string) error
-	Rename(from, to string) error
-	SyncDir(path string) error
-	// SyncFile flushes a record's contents (state.SyncFile).
-	SyncFile(path string) error
-	// Lock runs fn under the lock of the mailbox at path
-	// (state.WithMailboxLockAt): the lock file is a file of that mailbox.
-	Lock(ctx context.Context, mailbox string, fn func() error) error
-}
-
-// osAccess reads a record of a mailbox as a regular file and nothing else
-// (state.ReadRegular): a mailbox holds no other kind, the reading stops on
-// one listed as another type, and a reader that ran before that reading — the
-// installation of decisions — must neither follow a link nor wait on a FIFO
-// under the mailbox lock. It lists a directory of its own alone
-// (state.ReadPlainDir): a link where a directory belongs, dangling or not,
-// is refused, never read as an absent directory or as another tree.
-type osAccess struct{}
-
-// maxRecordRead bounds a read of a record: the largest a decision may be.
-const maxRecordRead = maxDecisionBytes
-
-func (osAccess) ReadFile(path string) ([]byte, error)       { return state.ReadRegular(path, maxRecordRead) }
-func (osAccess) ReadDir(path string) ([]fs.DirEntry, error) { return state.ReadPlainDir(path) }
-func (osAccess) Stat(path string) (fs.FileInfo, error)      { return os.Stat(path) }
-func (osAccess) Lstat(path string) (fs.FileInfo, error)     { return os.Lstat(path) }
-func (osAccess) WriteFile(path string, raw []byte) error    { return state.WriteAtomic(path, raw) }
-func (osAccess) Publish(path string, raw []byte) error      { return state.PublishExclusive(path, raw) }
-func (osAccess) EnsureDir(path string) error                { return state.EnsureSubdir(path) }
-func (osAccess) Remove(path string) error                   { return state.Remove(path) }
-func (osAccess) Rename(from, to string) error               { return state.Rename(from, to) }
-func (osAccess) SyncDir(path string) error                  { return state.SyncDir(path) }
-func (osAccess) SyncFile(path string) error                 { return state.SyncFile(path) }
-func (osAccess) Lock(ctx context.Context, mailbox string, fn func() error) error {
-	return state.WithMailboxLockAt(ctx, mailbox, fn)
-}
-
-// testAccess holds, by state directory, the passAccess a test put in place
-// of the file system: one that records what each pass read, or fails a path
-// in one pass or both.
-var testAccess sync.Map
-
-type passAccess struct{ live, plan fileAccess }
-
-func accessFor(dir string, plan bool) fileAccess {
-	if access, ok := testAccess.Load(dir); ok {
-		if plan {
-			return access.(passAccess).plan
-		}
-		return access.(passAccess).live
-	}
-	return osAccess{}
-}
-
-// world is one pass over the mailboxes of a room: the plan, which writes
-// nothing, or the pass that makes the effects.
+// world is the file access of the mailboxes of a room: a record of a mailbox
+// is read as a regular file and nothing else (state.ReadRegular), since a
+// mailbox holds no other kind, and a directory is listed only as itself
+// (state.ReadPlainDir), never through a link.
 type world struct {
-	dir   string
-	files fileAccess
-	plan  bool
-	// held are the open stop occurrences about a report, by its id: such a
-	// report is never recorded moot (stop.go).
-	held map[string]openStop
-	// decided collects, in a plan, the operations it ran through: the
-	// journals and the reports.
-	decided map[string]bool
+	dir string
 }
 
-func live(dir string) world { return world{dir: dir, files: accessFor(dir, false)} }
+func live(dir string) world { return world{dir: dir} }
 
-func planning(dir string) world { return world{dir: dir, files: accessFor(dir, true), plan: true} }
+// maxRecordRead bounds a read of a record of a mailbox.
+const maxRecordRead = 100 << 20
 
-// readFile reads a file of a mailbox. Only a missing file is an absence
-// (rule 6); any other failure leaves what the file says unknown, whichever
-// pass met it, so an effect that meets it stops the mailbox as the plan
-// would have.
-func (w world) readFile(path string) ([]byte, error) {
-	raw, err := w.files.ReadFile(path)
-	return raw, unknownRead(path, err)
-}
+func (w world) readFile(path string) ([]byte, error) { return state.ReadRegular(path, maxRecordRead) }
 
-func (w world) readDir(path string) ([]fs.DirEntry, error) {
-	entries, err := w.files.ReadDir(path)
-	return entries, unknownRead(path, err)
-}
+func (w world) readDir(path string) ([]fs.DirEntry, error) { return state.ReadPlainDir(path) }
 
-func (w world) stat(path string) (fs.FileInfo, error) {
-	info, err := w.files.Stat(path)
-	return info, unknownRead(path, err)
-}
+func (w world) stat(path string) (fs.FileInfo, error) { return os.Stat(path) }
 
-func (w world) lstat(path string) (fs.FileInfo, error) {
-	info, err := w.files.Lstat(path)
-	return info, unknownRead(path, err)
-}
+// writeFile replaces a file in one step (state.WriteAtomic).
+func (w world) writeFile(path string, raw []byte) error { return state.WriteAtomic(path, raw) }
 
-func unknownRead(path string, err error) error {
-	var unknown *UnknownRecordError
-	if err == nil || errors.Is(err, os.ErrNotExist) || errors.As(err, &unknown) {
-		return err
-	}
-	return unknownRecord(path, err)
-}
-
-// The writes do nothing in a plan: it decides as the effects will, and the
-// decisions it keeps in memory are what those writes would have recorded.
-
-func (w world) writeFile(path string, raw []byte) error {
-	if w.plan {
-		return nil
-	}
-	return w.files.WriteFile(path, raw)
-}
-
-func (w world) publish(path string, raw []byte) error {
-	if w.plan {
-		return nil
-	}
-	return w.files.Publish(path, raw)
-}
-
-func (w world) ensureDir(path string) error {
-	if w.plan {
-		return nil
-	}
-	return w.files.EnsureDir(path)
-}
+func (w world) ensureDir(path string) error { return state.EnsureSubdir(path) }
 
 // remove removes a file; one already gone is removed.
 func (w world) remove(path string) error {
-	if w.plan {
-		return nil
-	}
-	if err := w.files.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+	if err := state.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
 	return nil
-}
-
-func (w world) rename(from, to string) error {
-	if w.plan {
-		return nil
-	}
-	return w.files.Rename(from, to)
-}
-
-// lock holds the mailbox lock of name, in the pass that writes; the plan
-// takes no lock, since it writes nothing and decides nothing for good.
-func (w world) lock(ctx context.Context, name string, fn func() error) error {
-	if w.plan {
-		return fn()
-	}
-	return w.files.Lock(ctx, state.InboxPath(w.dir, name), fn)
-}
-
-func (w world) syncDir(path string) error {
-	if w.plan {
-		return nil
-	}
-	return w.files.SyncDir(path)
-}
-
-func (w world) syncFile(path string) error {
-	if w.plan {
-		return nil
-	}
-	return w.files.SyncFile(path)
 }

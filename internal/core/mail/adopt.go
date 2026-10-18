@@ -1,7 +1,6 @@
 package mail
 
 import (
-	"context"
 	"errors"
 	"os"
 	"slices"
@@ -63,12 +62,11 @@ func mayResume(dir string, message Message, run string, wait Waiter) (bool, erro
 // over could not be written: the earlier runs' records must then stay, since
 // sweeping them would lose what they owe.
 //
-// An earlier run's turn end left unfinished is completed first: its reports
-// are out, and a wait they answered, taken over, would be answered again.
+// A task an earlier run answered is not taken over, though its wait still
+// names it: that run died between writing the report and clearing the wait,
+// and the new run would answer it again under its own report's id
+// (answered.go).
 func AdoptWaits(dir, name, epoch, thread string) ([]string, error) {
-	if err := Reconcile(context.Background(), dir, name); err != nil {
-		return nil, err
-	}
 	if thread == "" {
 		return nil, nil
 	}
@@ -89,8 +87,17 @@ func AdoptWaits(dir, name, epoch, thread string) ([]string, error) {
 			return adopted, err
 		}
 		for _, waiter := range waiters {
+			var answered map[string]bool
 			for index, id := range waiter.Messages {
 				if !safeID(id) || !owedStands(run.Name(), waiter, id) || slices.Contains(adopted, id) {
+					continue
+				}
+				if answered == nil {
+					if answered, err = answeredIDs(dir, waiter.Name, waiter.Epoch, name); err != nil {
+						return adopted, err
+					}
+				}
+				if answered[id] {
 					continue
 				}
 				delivered, err := deliveryThread(dir, name, id)

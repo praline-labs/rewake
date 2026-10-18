@@ -1,5 +1,11 @@
 # Turn-end recovery: what the reviews found
 
+A record of mechanics removed on October 18, 2026 by the owner's decision: the turn-end
+journals, the barrier, the stops and the operator decision this document closes findings
+with are gone, replaced by the simple turn end of
+[delivery-turn-end.md](delivery-turn-end.md#the-end-of-a-turn). It is kept for the
+reasoning; its clause names refer to the rules as they stood before.
+
 The findings of the acceptances and reviews of the turn-end recovery, each with the
 clause of rules 7 and 8 that closes it, and what the probes of the earlier
 acceptances expect now. The rules are in [mail-bridge-cli.md](archive/mail-bridge-cli.md); how

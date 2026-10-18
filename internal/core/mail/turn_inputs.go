@@ -18,32 +18,6 @@ type AttemptScope struct {
 	InOwnTurn bool
 }
 
-// ReadEvidence is what was observed of one tool result reaching the model,
-// the evidence a read part needs before it counts as shown.
-type ReadEvidence struct {
-	// CallID is the native call the result answered.
-	CallID string
-	// AnswerDigest names the text the result carried, by the digest the
-	// call recorded with each part before printing it; empty when the
-	// result carried no text to name.
-	AnswerDigest string
-	// Whole says the model got the entire result: anything less
-	// acknowledges nothing.
-	Whole bool
-}
-
-// EndGate orders a read's acknowledgment against the turn ends the process
-// running the session captures
-// (docs/archive/mail-bridge-turns.md#a-turns-end-meets-its-calls). The acknowledgment
-// calls Enter holding the mailbox lock, before its first write: false says an
-// end at or after calledBoot was noted, and nothing may be written. Otherwise
-// it is registered as writing, and calls leave once, whatever its writes did,
-// before it releases the mailbox lock: leave takes the read clock's snapshot
-// that an end captured meanwhile takes as its boundary.
-type EndGate interface {
-	Enter(calledBoot int64) (leave func(), ok bool)
-}
-
 // TurnEnd is a turn end as the core takes it, whichever way it was reported.
 // Whether it ends pending is not part of it: that is decided from the
 // session's mark when its reports are prepared.

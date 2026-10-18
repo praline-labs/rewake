@@ -9,7 +9,7 @@ ordinary report are described.
 ### The end of a turn
 
 Callbacks with a nonempty `agent_id` belong to a nested agent and are ignored
-before touching turn journals or waits. `agent_type` alone
+before touching the turn's records or waits. `agent_type` alone
 does not imply nesting: a root session can select an agent profile.
 
 The harness's adapter hands each turn's end to its wrapper, which passes it to the
@@ -36,79 +36,51 @@ retry comes. An end that names an event and carries no boundary reports nothing,
 attempt, and its waits stay owed. An end heard once — one that names no event — has no
 retry, and its one attempt under the lock is its scope. The pending mark that makes the
 end interim is found in the turn's window: from the later of the turn's start and the
-latest earlier end of the run a journal records (`TurnWindowStart`), to its end. No end
+latest earlier end of the run a done journal records (`TurnWindowStart`), to its end. No end
 removes a mark: marks stay for the run's life ([turn-outcomes.md](turn-outcomes.md)).
 
-The journal, `journal/<op>` (`internal/core/mail/journal.go`), is written before the first
-effect and is the one source of what the end does, and nothing but a journal publishes:
-the complete report batch — recipient epochs, ids, kind, text, timestamps and
-thread-change annotations — then the version of the kept answer the reports carry with
-the operation of the end that was held, the waits to clear, the mark used, and the end's word for the interim record: the pending
-line, or that the end settled the work. Completing publishes each report not yet
-published and records its id, drops the kept answer only when it is still the version
-published, clears only the recorded message ids — later messages remain owed to the next
-result — and records the interim end, never over a record of the same run that ended
-later, nor over the record of another run that holds the name (`internal/core/mail/interim.go`). It then empties the journal to its
-operation, its end time and the held end it took, marks it done and renames it `<op>.done`, so the barrier
-does not read it again while a retry of the same end still finds it completed. A done
-journal is kept while its run lives: a retry comes only from that run, and the next
-end's window opens after it. The live run's sweep looks at them again a day later and
-removes those of ended runs; an unfinished journal is never swept, and a write of one
-that never finished (a dot name) is skipped and swept.
+Decided by the owner, October 18, 2026: the turn-end journals with their plan and seam,
+the stops, the once-marks of reports, the barrier and `rewake decide` are replaced by the
+simple sequence below. No live loss, duplicate, stopped mailbox or decision was ever seen
+in real work, and the mechanics itself stopped a mailbox on a file it did not know. A
+report lost when a process is killed in the milliseconds between two steps is asked for
+again by main.
 
-A turn end that fails or dies anywhere in the sequence leaves its journal unfinished,
-and the barrier completes it under the mailbox lock before a wait is read again
-(`mail.Reconcile`, `internal/core/mail/reconcile.go`): every turn end runs it first, and so
-does adoption, which the server runs at its start. One it cannot complete stops that
-turn end, or that adoption, too. The turn end completes its own journal the same way,
-through the barrier, once it is written. Before any effect the barrier reads every file
-of the mailbox against the list of record kinds, then runs its remaining effects as a
-plan that writes nothing, so whatever they decide by is read first
-([mailbox-records.md](mailbox-records.md#the-plan-and-the-seam)), and changes nothing
-while one of them cannot be told, so a journal never publishes beside an unknown found
-late. The same plan is the stop every other call asks first (`mail.MailboxStopped`): `rewake inbox` and each
-part of a read in parts, `rewake pending`, the acknowledgment of a read, and a question
-taking its answer all refuse while a record cannot be told. The stop is kept on record
-in the mailbox, and goes once a look finds its cause gone, or, for one only an effect
-met, once a barrier has run every effect through. The ids the journal records are its own proof of
-publication, and the recipient keeps one that covers the gap between writing a report
-and recording its id: each report is written under the marks of
-`inbox/<to>/once/<to-epoch>/<id>` that a journaled heads-up uses — `intent` before,
-`published` after — and the sweep settles an intent before it removes the report it
-names. The marks live as long as the recipient's run, which is as long as a journal can
-publish to it, so a journal completed after the recipient has read the report and swept
-it does not publish it again: the sweep retires a letter or a run's marks only under the
-recipient's lock, and only when it reads there that its own run is the live one and the
-marks' run is not; a sweep that cannot take the lock, or a server of a run that has
-ended, retires nothing. A report found written without a mark is marked published
-before the journal goes on. A mark that says neither is unknown: it stops the mailbox before the journal's
-first effect, and stops a heads-up published once, the sweep's removal of the letter and the answer to what a run
-was sent. The recipient's run, the report and its marks are read, and the marks and the
-report written, in one section of the recipient's lock, which a turn end holding its own
-waits for, bounded; a report to the sender's own name is written inside the lock the
-turn end already holds. So a sweep never runs between the look and the write, and an
-attempt that finds the run live there also finds every earlier landing
-([stage3-publication.md](archive/v2/stage3-publication.md#why-it-is-enough)). When the wait
-expires the turn end fails as for any busy mailbox: nothing is written, no stop is
-recorded, and the next barrier publishes the report once. A report whose recipient is a
-run that has ended or was replaced, as read inside that section, is moot: the journal
-records it so, and what it answered is cleared. A report an open occurrence is about is
-the exception: that its run ended says nothing of whether it landed, so the same section
-reads its evidence without admitting the run — the letter in any stage or a published
-mark records it published, an intent with no letter moot, and anything else leaves it
-where it is, its occurrence open ([mailbox-records.md](mailbox-records.md)). A plan that
-reads the same evidence resolves the occurrence, and the report stays held by the resolved
-occurrence until its journal records it: a pass that only looked at the stop, or a process
-stopped between the resolution and the journal's save, leaves the next barrier settling it
-by the same evidence, never moot by its run's end. A report no occurrence was ever about
-keeps the ordinary rule.
-The fallback target is also fixed before publication, never selected again on retry.
+Under the sender's mailbox lock the end runs its steps in one order
+(`publishTurnContext` in `internal/core/mail/turn_reports.go`): it reads the scoped
+waits, the window's pending mark and the hold as above; for each waiter whose run is
+still the live run of its name (read without the name lock's cleanup) it writes the report
+into the recipient's mailbox unless a letter of that id is there in any stage
+(`writeTurnReport`); then it clears the recorded message ids of each wait — later messages
+remain owed to the next result — drops the kept answer only when it is still the version
+carried, and records the interim end, never over a record of the same run that ended
+later, nor over the record of another run that holds the name
+(`internal/core/mail/interim.go`). Last it writes `journal/<op>.done`
+(`internal/core/mail/journal.go`): the operation, its end time and the held end it took.
+A retry of the same event finds it and answers from it; the next end's window opens after
+it. A done journal is kept while its run lives; the live run's sweep removes those of
+ended runs a day later.
 
+Writing the report before clearing the wait is the order that matters: a cleared wait
+counts as answered (`internal/core/mail/awaited.go`), so the other order, cut short,
+would leave an answer on record and no letter. A failure returns at the step it met, and
+a retry of the same event runs the steps again from what the disk says — the wait still
+names what is owed, the report's id is fixed by the wait, and a report found written is
+not written again. Killed before the report is written, the end leaves the wait standing,
+and the sender reads the task as owed, resumable or gone (`rewake inbox --awaited`).
+Killed after, the letter is with the sender already. Two narrow holes are closed in the
+code. The sweep of a recipient keeps a report whose writer's wait still names what it
+answers (`reportStillAwaited` in `internal/core/mail/sweep.go`), so a retry that comes
+after a day still finds the letter. A run that resumes a conversation does not take over
+a wait whose tasks already have a finished or failed report of the name in the sender's
+mailbox (`AdoptWaits`, `internal/core/mail/answered.go`), and a report is not written
+when every task of its wait has one: that run died between writing the report and
+clearing the wait. A failure report to main, which answers no wait, is found again by
+its operation in its id's tail on a retry (`reportOfOp`).
 The report's id is derived from the wait — the reporting run, the waiting run,
 when the wait began, and its message ids — and a report whose id is already in the recipient's
 mailbox, in any stage, is not written again. An end cut off between writing
-and forgetting therefore costs nothing at the next turn: its retry, or whoever completes
-its journal, forgets the same wait. A read retried after its last step failed does not record the
+and forgetting therefore costs nothing at the next turn: its retry forgets the same wait. A read retried after its last step failed does not record the
 wait a second time: the `read` status, written after the wait, says it is a
 retry. Their wrappers announce it:
 `Rewake: cx finished, 1 new message`.

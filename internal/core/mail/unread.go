@@ -184,10 +184,6 @@ func MarkRead(dir, name, epoch string, message Message, reports bool) error {
 	if errors.Is(err, os.ErrNotExist) {
 		err = nil
 	}
-	if err == nil {
-		// Read to the end, by whichever channel: no longer in progress.
-		dropClaim(dir, name, message.ID)
-	}
 	return err
 }
 

@@ -66,8 +66,6 @@ func withdrawRefusal(dir string, message mail.Message, err error, editing bool) 
 		kind = message.Withdrawn.Kind
 	}
 	switch {
-	case errors.Is(err, mail.ErrReadInProgress):
-		return failf("%s is reading your %s %s in parts right now, and part of it may be in front of it already, so it cannot be taken back or replaced; add to it with: rewake send %s \"...\"", message.To, kind, message.ID, message.To)
 	case errors.Is(err, mail.ErrAlreadyRead):
 		next := fmt.Sprintf("rewake send %s \"...\"", message.To)
 		if mail.AsksForWork(message) {

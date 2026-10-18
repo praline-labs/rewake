@@ -118,17 +118,14 @@ func TestAReadStopsOnAStatusItCannotRead(t *testing.T) {
 }
 
 // A withdrawal that cannot tell where the letter stands stops before it writes
-// anything. Here the letter is being read in parts while its waiting copy is
-// still there, as between the notice and its settling: taken for not in
-// unread/, it would be withdrawn from the waiting copy past the claim.
+// anything. Here the letter is announced while its waiting copy is still
+// there, as between the notice and its settling: taken for not in unread/, it
+// would be withdrawn from the waiting copy past the notice.
 func TestAWithdrawalThatCannotLookStopsBeforeWriting(t *testing.T) {
 	dir := stateDir(t)
 	letter := announcedUnread(t, dir, Message{ID: NewID(), From: "web", FromEpoch: "w1", To: "api", ToEpoch: "e1", Kind: Task, Text: "being read", CreatedAt: time.Now()})
 	unread := state.UnreadPath(dir, "api")
 	if err := os.Link(filepath.Join(unread, letter.ID+".json"), filepath.Join(state.InboxPath(dir, "api"), letter.ID+".json")); err != nil {
-		t.Fatal(err)
-	}
-	if err := ClaimRead(dir, "api", letter.ID, "receipt"); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.Chmod(unread, 0); err != nil {
@@ -140,23 +137,6 @@ func TestAWithdrawalThatCannotLookStopsBeforeWriting(t *testing.T) {
 	}
 	if status, known, err := ReadStatus(dir, "api", letter.ID); err != nil || known {
 		t.Fatalf("the stopped withdrawal wrote %+v (%v)", status, err)
-	}
-}
-
-// A claimed letter that cannot be read may be owed: pending cannot say
-// nothing is.
-func TestAClaimedLetterThatCannotBeReadIsNotOwedByNobody(t *testing.T) {
-	dir := stateDir(t)
-	letter := announcedUnread(t, dir, Message{ID: NewID(), From: "web", FromEpoch: "w1", To: "api", ToEpoch: "e1", Kind: Task, Text: "in parts", CreatedAt: time.Now()})
-	if err := ClaimRead(dir, "api", letter.ID, "receipt"); err != nil {
-		t.Fatal(err)
-	}
-	if senders := must(ClaimedOwedBy(dir, "api", "e1")); len(senders) != 1 || senders[0] != "web" {
-		t.Fatalf("a readable claimed letter is owed to %v", senders)
-	}
-	unreadable(t, filepath.Join(state.UnreadPath(dir, "api"), letter.ID+".json"), []byte(`{}`))
-	if senders, err := ClaimedOwedBy(dir, "api", "e1"); err == nil {
-		t.Fatalf("an unreadable claimed letter is owed to %v", senders)
 	}
 }
 

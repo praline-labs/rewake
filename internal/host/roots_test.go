@@ -37,9 +37,6 @@ func TestChildBaseRoundTripAndAuthority(t *testing.T) {
 		if err != nil || got != dir || strings.Count(got, string(filepath.Separator)+"v2"+string(filepath.Separator)) != 1 {
 			t.Fatalf("%s resolves %q, %v; the wrapper's room is %q", who, got, err, dir)
 		}
-		if state.AuthorityAddress(got, fake.launch.Epoch) != state.AuthorityAddress(dir, fake.launch.Epoch) {
-			t.Fatalf("%s asks another authority than the wrapper's", who)
-		}
 	}
 
 	raw, err := os.ReadFile(out)

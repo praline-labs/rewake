@@ -31,9 +31,6 @@ func TestTheLatestTurnStartIsTheLargestReading(t *testing.T) {
 	if other, _ := LatestTurnStart(dir, "api", "e2"); other != 0 {
 		t.Fatalf("another run's start: %d", other)
 	}
-	if err := MailboxStopped(dir, "api"); err != nil {
-		t.Fatalf("the readings stopped the mailbox: %v", err)
-	}
 	if err := RecordTurnStart(dir, "api", "e1", 0); err == nil {
 		t.Fatal("a start without a time was recorded")
 	}

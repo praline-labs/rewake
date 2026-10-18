@@ -1,7 +1,6 @@
 package mail
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -193,12 +192,9 @@ func TestTheWindowOpensAfterTheRunsLatestEarlierEnd(t *testing.T) {
 		"other":   {Epoch: "e2", Op: "other", Ended: 180},
 		"later":   {Epoch: "e1", Op: "later", Ended: 250},
 	} {
-		if err := WriteJournal(dir, "api", id, journal); err != nil {
+		if err := writeDoneJournal(dir, "api", id, journal); err != nil {
 			t.Fatal(err)
 		}
-	}
-	if err := live(dir).finishJournal(context.Background(), "api", "earlier"); err != nil {
-		t.Fatal(err)
 	}
 	for _, started := range []int64{0, 100, 150} {
 		if start, err := TurnWindowStart(dir, "api", "e1", started, 200); err != nil || start != 150 {

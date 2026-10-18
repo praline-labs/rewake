@@ -14,9 +14,9 @@ import (
 
 // gateLab is the race lab's setup built on mail's exported operations, for
 // the tests of the server's own gate around the sweep — the live-run read and
-// the lock (docs/v2/stage3-publication.md): a report R of api's journal has
-// landed in lead's run r by the barrier's code, r has read it, and its age has
-// passed the sweep's cutoff.
+// the lock (docs/v2/stage3-publication.md): a letter R of api's, published
+// once, has landed in lead's run r under its marks, r has read it, and its age
+// has passed the sweep's cutoff.
 type gateLab struct {
 	twoSessionLab
 	lead   *endableRun
@@ -33,18 +33,15 @@ func newGateLab(t *testing.T) gateLab {
 	}
 	lab.lead = startRun(t, lab.dir, "lead")
 	lab.report = mail.Message{ID: mail.NewID(), From: "api", FromEpoch: lab.run, To: "lead", ToEpoch: lab.lead.epoch(), Kind: mail.Finished, Text: "R", CreatedAt: time.Now()}
-	lab.landRead(t, "end", lab.report)
+	lab.landRead(t, lab.report)
 	return lab
 }
 
-// landRead lands report by the barrier, from a journal of api's end, and has
-// its recipient read it long enough ago for the sweep to retire it.
-func (l gateLab) landRead(t *testing.T, journal string, report mail.Message) {
+// landRead publishes report once and has its recipient read it long enough
+// ago for the sweep to retire it.
+func (l gateLab) landRead(t *testing.T, report mail.Message) {
 	t.Helper()
-	if err := mail.WriteJournal(l.dir, report.From, journal, mail.TurnJournal{Epoch: l.run, Op: "end", Ended: 100, Reports: []mail.Message{report}}); err != nil {
-		t.Fatal(err)
-	}
-	if err := l.reconcile(t); err != nil {
+	if _, err := mail.PublishOnce(t.Context(), l.dir, report, nil); err != nil {
 		t.Fatal(err)
 	}
 	read := filepath.Join(state.DonePath(l.dir, report.To), report.ID+".json")
@@ -76,7 +73,7 @@ func TestAStaleSweeperRetiresNothing(t *testing.T) {
 	lab.lead.end()
 	next := startRun(t, lab.dir, "lead")
 	second := mail.Message{ID: mail.NewID(), From: "api", FromEpoch: lab.run, To: "lead", ToEpoch: next.epoch(), Kind: mail.Finished, Text: "R2", CreatedAt: time.Now()}
-	lab.landRead(t, "end-next", second)
+	lab.landRead(t, second)
 	(&Server{Dir: lab.dir, Name: "lead", Epoch: lab.lead.epoch()}).sweepFinished()
 	for _, path := range []string{
 		filepath.Join(state.DonePath(lab.dir, "lead"), second.ID+".json"),

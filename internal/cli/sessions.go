@@ -52,7 +52,7 @@ func handleList(ctx *Context, _ Call) error {
 	for index := range sessions {
 		sessions[index].Room = room
 		sessions[index].Role = role.Of(sessions[index].Role).ID
-		view := sessionView{Session: sessions[index], Stopped: stoppedOf(dir, sessions[index].Name)}
+		view := sessionView{Session: sessions[index]}
 		if !visible {
 			view.MessagingReadyAt = nil
 		}

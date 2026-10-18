@@ -5,12 +5,14 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/core/role"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // turnOp names a turn end's operation from its run and its event
@@ -30,10 +32,16 @@ func turnOp(self registry.Session, event TurnEnd) string {
 	return fmt.Sprintf("%x", sum[:16])
 }
 
-// publishTurnContext writes a turn end's journal before any of its effects
-// and completes it: the journal is the one source of what the end publishes,
-// takes, clears and records (journal.go). The caller holds the mailbox
-// lock and has run the barrier, so no journal of this run is unfinished.
+// publishTurnContext makes a turn end's effects in one order under the
+// mailbox lock the caller holds (docs/delivery-turn-end.md): every report is
+// written, then the waits they answer are cleared, the kept answer they carry
+// is taken and the end's word recorded, and last the end is recorded done
+// (journal.go). Writing before clearing is the order that matters: a wait
+// cleared counts as answered (awaited.go), so the other order, cut short,
+// would leave an answer on record and no letter. A failure returns at the
+// step it met, and a retry of the same event runs the steps again from what
+// the disk says: the wait still names what is owed, a report's id is fixed
+// by its wait, and a report found written is not written again.
 //
 // The scope is the event's (docs/turn-end-recovery.md#the-operation): waits
 // and the kept answer at or below its read boundary, the pending mark in its
@@ -78,39 +86,77 @@ func publishTurnContext(ctx context.Context, dir string, self registry.Session, 
 	if err != nil {
 		return err
 	}
-	journal := TurnJournal{Epoch: self.Epoch(), Op: op, Ended: event.Ended, Reports: reports, Mark: mark}
-	if !event.Stopped && !pending {
-		journal.Clear = reported
+	for _, report := range reports {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		if err := writeTurnReport(dir, self.Name, report); err != nil {
+			return fmt.Errorf("could not write the report %s to %s: %w", report.ID, report.To, err)
+		}
 	}
-	// What the next unmarked turn end is asked about, recorded by the journal
-	// with the rest. A stop says nothing of the work and leaves it as it was;
-	// an end whose time is not known has no place among its run's ends, and
-	// leaves the record in place for the next end heard.
-	if event.Ended != 0 {
-		switch {
-		case pending:
-			journal.Interim = &mark.Text
-		case !event.Stopped:
-			journal.Settles = true
+	if !event.Stopped && !pending {
+		for _, waiter := range reported {
+			if err := ClearAwaiting(dir, self.Name, self.Epoch(), waiter); err != nil {
+				return fmt.Errorf("could not clear what %s was owed: %w", waiter.Name, err)
+			}
 		}
 	}
 	if kept {
 		// Taken once published, and only this version of it: an answer kept
-		// after it is a later turn end's. The held end is named beside it, so
-		// that end confirmed again learns it was published with this one.
-		journal.Kept, journal.Held = &held.Version, held.Held
+		// after it is a later turn end's.
+		if err := live(dir).dropKeptVersion(self.Name, self.Epoch(), held.Version); err != nil {
+			return err
+		}
 	}
-	// Every end whose time is known writes one, done too: its Ended opens the
-	// next end's window (TurnWindowStart).
-	if event.Ended == 0 && len(journal.Reports) == 0 && len(journal.Clear) == 0 && journal.Kept == nil {
+	// What the next unmarked turn end is asked about. A stop says nothing of
+	// the work and leaves it as it was; an end whose time is not known has no
+	// place among its run's ends, and leaves the record in place for the next
+	// end heard.
+	if event.Ended != 0 {
+		var line *string
+		if pending {
+			line = &mark.Text
+		}
+		if err := recordInterim(dir, self.Name, self.Epoch(), op, event.Ended, line, !pending && !event.Stopped); err != nil {
+			return err
+		}
+	}
+	// Every end whose time is known is recorded, one that did nothing too:
+	// its Ended opens the next end's window (TurnWindowStart). The held end
+	// is named beside it, so that end confirmed again learns it was published
+	// with this one (HeldEndTaken).
+	if event.Ended == 0 && len(reports) == 0 && len(reported) == 0 && !kept {
 		return nil
 	}
-	if err := WriteJournal(dir, self.Name, op, journal); err != nil {
+	done := TurnJournal{Epoch: self.Epoch(), Op: op, Ended: event.Ended, Done: true}
+	if kept {
+		done.Held = held.Held
+	}
+	return writeDoneJournal(dir, self.Name, op, done)
+}
+
+// writeTurnReport writes one report into its recipient's mailbox unless it is
+// there already, or the recipient's wait was answered by a report of this
+// name already: a run that resumed a conversation and took over a wait an
+// earlier run answered (answeredAlready). A failed main keeps its own report
+// without waking itself into another failing turn.
+func writeTurnReport(dir, name string, report Message) error {
+	if report.To == name && len(report.InReplyTo) == 0 {
+		return PutLocal(dir, report)
+	}
+	found, err := present(dir, report.To, report.ID)
+	if found || err != nil {
+		// A stage that cannot be searched may hold it: a second copy is the
+		// outcome that cannot be taken back.
 		return err
 	}
-	// The barrier completes it, as any journal: its plan reads what every
-	// effect will decide by before the first one.
-	return Reconcile(ctx, dir, self.Name)
+	if kind := KindOf(report); len(report.InReplyTo) > 0 && (kind == Finished || kind == Error) {
+		answered, err := answeredAlready(dir, report.To, report.ToEpoch, name, report.InReplyTo)
+		if err != nil || answered {
+			return err
+		}
+	}
+	return Put(dir, report)
 }
 
 func prepareTurnReports(dir string, self registry.Session, event TurnEnd, pending bool, currentThread string, waiters []Waiter, op string) ([]Message, []Waiter, error) {
@@ -135,8 +181,9 @@ func prepareTurnReports(dir string, self registry.Session, event TurnEnd, pendin
 	}
 	var reports []Message
 	for _, waiter := range waiters {
-		// A report to an ended run can reach nobody.
-		peer, err := registry.Lookup(dir, waiter.Name)
+		// A report to an ended run can reach nobody. Read without the name
+		// lock's cleanup, which a holder of a mailbox lock must not enter.
+		peer, err := registry.LookupReadOnly(dir, waiter.Name)
 		if err != nil && !errors.Is(err, registry.ErrNotFound) {
 			return nil, nil, err
 		}
@@ -173,18 +220,38 @@ func prepareTurnReports(dir string, self registry.Session, event TurnEnd, pendin
 				}
 			}
 		}
-		reports = append(reports, Message{ID: reportOfOp(op), From: self.Name, FromEpoch: self.Epoch(), To: target.Name, ToEpoch: target.Epoch(), Kind: kind, Text: event.Text, CreatedAt: time.Now()})
+		id, err := reportOfOp(dir, target.Name, op)
+		if err != nil {
+			return nil, nil, err
+		}
+		reports = append(reports, Message{ID: id, From: self.Name, FromEpoch: self.Epoch(), To: target.Name, ToEpoch: target.Epoch(), Kind: kind, Text: event.Text, CreatedAt: time.Now()})
 	}
 	return reports, waiters, nil
 }
 
-// reportOfOp names the report of an operation that answers nothing. The
-// journal records it before it is published, so a retry takes it from there;
-// the time in front keeps the recipient's mailbox in the order mail came in.
-func reportOfOp(op string) string {
+// reportOfOp names the report of an operation that answers nothing. A retry
+// of the operation finds the one an earlier attempt wrote by the operation in
+// its tail; the time in front keeps the recipient's mailbox in the order mail
+// came in.
+func reportOfOp(dir, to, op string) (string, error) {
 	if strings.Contains(op, "-") {
 		// Drawn already in that form, for an end that named no event.
-		return op
+		return op, nil
 	}
-	return fmt.Sprintf("%019d-%s", time.Now().UnixNano(), op[:12])
+	tail := "-" + op[:12] + ".json"
+	for _, directory := range []string{state.InboxPath(dir, to), state.UnreadPath(dir, to), state.DonePath(dir, to)} {
+		entries, err := os.ReadDir(directory)
+		if errors.Is(err, os.ErrNotExist) {
+			continue
+		}
+		if err != nil {
+			return "", err
+		}
+		for _, entry := range entries {
+			if strings.HasSuffix(entry.Name(), tail) {
+				return strings.TrimSuffix(entry.Name(), ".json"), nil
+			}
+		}
+	}
+	return fmt.Sprintf("%019d-%s", time.Now().UnixNano(), op[:12]), nil
 }

@@ -90,12 +90,12 @@ only looks leaves no state behind. [Optional primary observations](session-state
     inbox/<name>/answering/<id> renewable question reservation
     inbox/<name>/received/<id> id of the report successfully printed
     inbox/<name>/retention/<id> reservation release time for reports
-    inbox/<name>/journal/<id>  what a turn end publishes, takes and clears, named by the end (turn-end-recovery.md)
+    inbox/<name>/journal/<id>.done the record a turn end writes last, named by the end (delivery-turn-end.md#the-end-of-a-turn)
     inbox/<name>/threads/<id>  selected delivery thread, when supported
     inbox/<name>/awaiting/<epoch>/<peer> reports owed by this run
     inbox/<name>/pending/      this run's `rewake pending` marks; its last word on the work and a held answer (turn-outcomes.md)
     inbox/<name>/receipts/<epoch>/ journal of the shell's journaled commands, a notify and `rewake pending` (mail-bridge-cli.md)
-    inbox/<name>/once/<epoch>/<id> a journaled notify or a turn end's report written into this mailbox, so a retry writes it once
+    inbox/<name>/once/<epoch>/<id> a journaled notify's heads-up, so a retry writes it once
     sock/<name>.<epoch>.sock   one inbound socket per run
     sock/<name>.<epoch>.reply.sock the wrapper's own: Claude Code's receipts for held lines
     sock/space.<id>.sock       a space host's: the worker's terminal for `rewake attach` (launch.md)

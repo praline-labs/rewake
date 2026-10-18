@@ -176,12 +176,11 @@ owes is read from the mailbox, not remembered: a status that records an outcome 
 copy its outcome takes away. A waiting copy is found by every pass, one for an earlier
 session included; a late refusal whose readable copy is the only one left is found by
 its failed status beside a letter in `unread/` with no waiting copy, at a run's start and
-on every pass. Such a letter is settled once the lock can be taken, an open stop naming
-it is resolved, or its archive can be written, and a restart loses none of it; its
+on every pass. Such a letter is settled once the lock can be taken or its archive can be written, and a restart loses none of it; its
 sender is not told again. Only a refusal owes the archive: a letter held, delivered,
-made readable as a report, withdrawn or being read in parts stays in `unread/`, and a
+made readable as a report or withdrawn stays in `unread/`, and a
 status that does not read decides nothing. The status a settling goes by is the one read
-under the lock that moves the letter: a withdrawal, a read or a claim that came while the
+under the lock that moves the letter: a withdrawal or a read that came while the
 lock was waited for decides, not what was read before it. Sweeping old mail happens under
 the lock too.
 

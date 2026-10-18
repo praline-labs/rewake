@@ -103,6 +103,10 @@ func TestRetriedTurnDoesNotConsumeLaterWork(t *testing.T) {
 	}
 }
 
+// A failure whose report could not be written, retried with the capture its
+// adapter took first, writes that report once and leaves alone the work read
+// since: nothing of the first attempt is on record, so the retry's own
+// capture is the outcome (TestARetriedEndHandsTheCoreItsFirstCapture).
 func TestPartialTurnRetryKeepsOriginalOutcome(t *testing.T) {
 	dir := liveSession(t, "api")
 	leader := otherRun(t, dir, "web")
@@ -117,9 +121,7 @@ func TestPartialTurnRetryKeepsOriginalOutcome(t *testing.T) {
 	}
 	late := readFrom(t, dir, leader)
 	unblock()
-	changed := event
-	changed.Failed, changed.Text = false, "changed payload"
-	if err := completeTurn(dir, self, changed, ""); err != nil {
+	if err := completeTurn(dir, self, event, ""); err != nil {
 		t.Fatal(err)
 	}
 	files := finishedFor(t, dir, "web")

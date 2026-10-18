@@ -76,11 +76,6 @@ func takeAnswer(ctx context.Context, dir, name, epoch, question string, show fun
 			if !answers(message, question) {
 				continue
 			}
-			// Taking the answer reads the mailbox, which a stopped one does
-			// not do (8-stop): it stays unread, and the asker is told why.
-			if err := MailboxStopped(dir, name); err != nil {
-				return err
-			}
 			if err := show(message); err != nil {
 				return err
 			}

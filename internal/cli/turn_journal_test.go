@@ -13,10 +13,11 @@ import (
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
-// A turn end writes down what it is about to do before its first report, and
-// whoever finds it unfinished completes it before a wait is read again
-// (inbox/journal.go). A question's answer is published and cleared the same
-// way as a task's report, so each case runs for both.
+// A turn end writes its reports before it clears the waits they answer, and a
+// wait left standing is answered by the next end or not taken over when its
+// report is out (mail/turn_reports.go, mail/answered.go). A question's answer
+// is published and cleared the same way as a task's report, so each case runs
+// for both.
 
 var journalKinds = []mail.Kind{mail.Task, mail.Question}
 
@@ -64,40 +65,8 @@ func unfinishedJournals(t *testing.T, dir string) int {
 	return count
 }
 
-// A turn end that cannot write down its sequence publishes nothing: published
-// first, a report whose wait is then not cleared would be answered again once
-// a later task joins that wait.
-func TestATurnEndThatCannotRecordItsSequencePublishesNothing(t *testing.T) {
-	for _, kind := range journalKinds {
-		t.Run(string(kind), func(t *testing.T) {
-			dir, self, web := peerSession(t)
-			earlier := readKind(t, dir, web, kind)
-			journals := mail.JournalPath(dir, "api")
-			previous := beforeReports
-			beforeReports = func() { _ = os.WriteFile(journals, []byte("in the way"), 0o600) }
-			t.Cleanup(func() { beforeReports = previous })
-			failed := completeTurn(dir, self, mail.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "first", Text: "the first is done"}, "")
-			beforeReports = previous
-			if failed == nil || answersTo(t, dir, earlier) != 0 {
-				t.Fatalf("published without its journal: %v, %d reports", failed, answersTo(t, dir, earlier))
-			}
-			if err := os.Remove(journals); err != nil {
-				t.Fatal(err)
-			}
-			later := readKind(t, dir, web, kind)
-			if err := completeTurn(dir, self, mail.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "second", Text: "the second is done"}, ""); err != nil {
-				t.Fatal(err)
-			}
-			if answersTo(t, dir, earlier) != 1 || answersTo(t, dir, later) != 1 {
-				t.Fatalf("reports per task: earlier %d, later %d", answersTo(t, dir, earlier), answersTo(t, dir, later))
-			}
-		})
-	}
-}
-
-// A turn end that died after writing its sequence and before its report went
-// out is completed by the next one: the report is published and the wait
-// cleared, and a task read since is reported on its own.
+// A turn end whose report could not be written leaves its wait standing, and
+// the next end answers it: once, with the task read since.
 func TestAnUnpublishedReportIsCompletedByTheNextTurnEnd(t *testing.T) {
 	for _, kind := range journalKinds {
 		t.Run(string(kind), func(t *testing.T) {
@@ -135,9 +104,9 @@ func TestAnUnpublishedReportIsCompletedByTheNextTurnEnd(t *testing.T) {
 	}
 }
 
-// A run that takes over the waits of an ended one completes that run's
-// unfinished turn end first: a wait whose report is out is cleared, not taken
-// over and answered again.
+// A run that takes over the waits of an ended one does not take over a wait
+// whose report that run wrote before it could clear the wait: the task is
+// answered once.
 func TestAnAdoptedWaitWhoseReportIsOutIsNotAnsweredAgain(t *testing.T) {
 	for _, kind := range journalKinds {
 		t.Run(string(kind), func(t *testing.T) {

@@ -108,8 +108,6 @@ func Withdraw(dir string, message Message, replacement *Message) (Withdrawal, er
 		// read by hard link or served from its waiting copy.
 	case known && status.State == Read:
 		return 0, ErrAlreadyRead
-	case readable && Claimed(dir, to, id):
-		return 0, ErrReadInProgress
 	case readable:
 	case waiting && (!known || status.State != Failed):
 	case known && status.State == Failed:

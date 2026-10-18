@@ -12,15 +12,15 @@ import (
 
 // O1: every read and write of the check failing falls to publishing, the
 // behavior without the hold, and keeps nothing. The check's own access is the
-// nth of its path: before the check, the barrier reads the interim record and
-// the lookup of an end on record reads the kept answer, and a failure there
-// stops the end instead, as an unreadable record does.
+// nth of its path: before the check, the lookup of an end on record reads the
+// kept answer, and a failure there stops the end instead, as an unreadable
+// record does.
 func TestEveryFailureOfTheConfirmationCheckFallsToPublishing(t *testing.T) {
 	for _, c := range []struct {
 		name, op, suffix string
 		nth              int
 	}{
-		{"the interim record", state.OpRead, filepath.Join("pending", "interim.json"), 2},
+		{"the interim record", state.OpRead, filepath.Join("pending", "interim.json"), 1},
 		{"the kept answer", state.OpRead, filepath.Join("pending", "kept.json"), 2},
 		{"the kept answer before keeping", state.OpRead, filepath.Join("pending", "kept.json"), 3},
 		{"the sender's record", state.OpRead, filepath.Join("sessions", "web.json"), 1},

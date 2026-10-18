@@ -28,19 +28,11 @@ var removeWaiting = state.Discard
 // copy goes only beside another that stands, and a copy whose archive failed
 // stays where it is for the next pass.
 //
-// Nor does it remove or move a copy an open occurrence of the mailbox's stop
-// names, or one inside a directory an occurrence names (stop.go): that copy
-// is what the occurrence waits to read again, and one settled away would
-// leave its stop to an operator. The letter stays where it is, its outcome
-// recorded, and a pass after the stop is resolved settles it; letters the
-// stop does not name settle as ever.
-//
 // It answers whether the letter now stands where its outcome puts it. A
 // letter it left — named by a stop, or its archive or removal failed — is
 // still owed, and the passes find it again by its status and its copies
 // (settleRecorded), not by anything remembered here.
 func SettleLocked(dir, name, id string, outcome State) bool {
-	kept := keptByStopOf(dir, name)
 	waiting := filepath.Join(state.InboxPath(dir, name), id+".json")
 	switch outcome {
 	case Held:
@@ -51,7 +43,7 @@ func SettleLocked(dir, name, id string, outcome State) bool {
 	case Delivered, Read, withdrawn:
 		// A withdrawal takes the waiting copy itself; one left behind goes
 		// here, and the tombstone stays where its reader will look.
-		if kept.keeps(waiting) || !standsIn(id, state.UnreadPath(dir, name), state.DonePath(dir, name)) {
+		if !standsIn(id, state.UnreadPath(dir, name), state.DonePath(dir, name)) {
 			return Gone(waiting)
 		}
 		if err := removeWaiting(waiting); err == nil {
@@ -60,14 +52,6 @@ func SettleLocked(dir, name, id string, outcome State) bool {
 		return Gone(waiting)
 	default:
 		unread := filepath.Join(state.UnreadPath(dir, name), id+".json")
-		if Claimed(dir, name, id) {
-			// Only a read takes a letter being read out of unread/; a failed
-			// status an earlier run left behind does not. The read settles it.
-			return true
-		}
-		if kept.keeps(waiting) || kept.keeps(unread) || kept.names(filepath.Join(state.DonePath(dir, name), id+".json")) {
-			return false
-		}
 		// A notice taken back after it was reported delivered has lost its
 		// waiting copy; the readable one is then the last, and goes to done/.
 		if err := move(id, state.InboxPath(dir, name), state.DonePath(dir, name)); errors.Is(err, os.ErrNotExist) {

@@ -131,7 +131,7 @@ func markAwaitingSequence(dir, name, epoch, from, fromEpoch, messageID string, s
 // read times follow the sequences, so a record with times has sequences too;
 // a sequence of 0 is one not known, as a missing one is.
 func writeWaiter(file string, waiter Waiter) error {
-	return world{files: osAccess{}}.writeWaiter(file, waiter)
+	return world{}.writeWaiter(file, waiter)
 }
 
 func (w world) writeWaiter(file string, waiter Waiter) error {
@@ -204,7 +204,7 @@ func (w world) readWaiters(name, epoch string) ([]Waiter, error) {
 		}
 		waiter, err := parseWaiter(peer, string(raw))
 		if err != nil {
-			unknown = unknownRecord(filepath.Join(path, peer), err)
+			unknown = err
 			continue
 		}
 		waiters = append(waiters, waiter)
@@ -283,7 +283,7 @@ func (w world) clearAwaiting(name, epoch string, peer Waiter) error {
 	}
 	current, err := parseWaiter(peer.Name, string(raw))
 	if err != nil {
-		return unknownRecord(file, err)
+		return err
 	}
 	if current.same(peer) {
 		return w.remove(file)
@@ -319,16 +319,14 @@ func (w world) clearAwaiting(name, epoch string, peer Waiter) error {
 // for. The delivery server's followEarlierRun calls it inside the mailbox
 // section in which AdoptWaits took over what those runs owe, and only once that
 // succeeded; it takes no lock of its own, since the mailbox lock is not
-// reentrant; its callers are held by internal/layout_callers_test.go. An open
-// stop keeps the waits it names.
+// reentrant; its callers are held by internal/layout_callers_test.go.
 func SweepAwaitingLocked(dir, name, epoch string) {
 	entries, err := os.ReadDir(state.AwaitingPath(dir, name))
 	if err != nil {
 		return
 	}
-	kept := keptByStopOf(dir, name)
 	for _, entry := range entries {
-		if entry.Name() != epoch && !kept.keeps(filepath.Join(state.AwaitingPath(dir, name), entry.Name())) {
+		if entry.Name() != epoch {
 			_ = state.RemoveAll(filepath.Join(state.AwaitingPath(dir, name), entry.Name()))
 		}
 	}
