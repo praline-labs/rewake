@@ -25,7 +25,13 @@ Decided by the owner, October 18, 2026: the harnesses of 2.0 are Claude Code and
 Codex does not return soon. A space is main starting its workers. Decided by the owner later
 the same day: the workers are part of main's Claude Code — a panel lists them and shows the
 chosen worker's screen, keys typed there reach it, and main raises them itself with the model
-and effort it picks.
+and effort it picks. Decided by the owner that evening, after living with the panel: the workers' screens
+move into a host mode of rewake — `rewake claude` started in that mode holds the person's
+terminal and relays main and the workers through it, with a tab bar at the bottom to switch
+between them and a sidebar of workers on the right (its place configurable later), the sidebar
+dropped on a narrow screen where the bottom bar alone navigates. It is a mode of work chosen at
+launch, and the mod's space features are active only in it; once it works, the panel inside
+Claude Code and `rewake attach` go.
 
 **Who calls it.** One person starts the sessions. The commands are called by the agents
 themselves, from their own shell or through the tools their harness offers them. So the
