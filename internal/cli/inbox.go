@@ -33,9 +33,6 @@ func handleInbox(ctx *Context, call Call) error {
 	if err != nil {
 		return err
 	}
-	if mode.next != "" {
-		return continueOutput(ctx, call, mode.next)
-	}
 	peek, selected := mode.peek, mode.selected
 	dir, err := state.Dir()
 	if err != nil {
@@ -62,10 +59,6 @@ func handleInbox(ctx *Context, call Call) error {
 		}
 		return showOwed(ctx, call, dir, session, epoch)
 	}
-	if ctx.scope != nil && !peek {
-		return bridgeRead(ctx, mode, readSite{dir: dir, self: session, epoch: epoch})
-	}
-
 	// Held from looking to marking. Two readers at once — parallel tool calls,
 	// a command run again while the first still prints — would otherwise both
 	// show the same task, and the server must not record a delivery over a read
@@ -192,7 +185,7 @@ func inboxLines(messages []messageView) []string {
 }
 
 // letterHead is what a letter shows above its text: the sender's state for a
-// main, then who sent what when, then the grants it carries.
+// main, then who sent what when.
 func letterHead(message messageView) []string {
 	var lines []string
 	if message.Telemetry != nil {
@@ -204,7 +197,7 @@ func letterHead(message messageView) []string {
 	if d := message.ResentBy; d != nil {
 		lines = append(lines, fmt.Sprintf("sent again by decision %s of %s: report %s went unproven, and this copy may repeat what you read already", d.ID, deciderText(d.By), d.Report))
 	}
-	return append(lines, grantLines(message.Message)...)
+	return lines
 }
 
 // letterBody is the letter's text, with the warning a report from another
@@ -227,14 +220,4 @@ func relation(message mail.Message) string {
 		parts = append(parts, " · replaces "+message.Replaces)
 	}
 	return strings.Join(parts, "")
-}
-
-// grantLines name each directory the task lets its reader write: the roots
-// changed without a word in the terminal, so the reader learns it here.
-func grantLines(message mail.Message) []string {
-	lines := make([]string, 0, len(message.GrantDirs))
-	for _, dir := range message.GrantDirs {
-		lines = append(lines, "grant: write "+dir)
-	}
-	return lines
 }

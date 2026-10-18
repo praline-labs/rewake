@@ -134,7 +134,7 @@ func (s *Server) recordLocked(id string, result mail.Result) (mail.State, error)
 		return current.Outcome(), nil
 	}
 	if result.State != mail.Delivered && result.State != mail.Read && mail.Claimed(s.Dir, s.Name, id) {
-		result = mail.Result{State: mail.Delivered, Via: result.Via, Detail: "being read in parts", GrantApplied: result.GrantApplied}
+		result = mail.Result{State: mail.Delivered, Via: result.Via, Detail: "being read in parts"}
 		s.outcomes[id] = result
 	}
 	if err := mail.WriteStatus(s.Dir, s.Name, id, result); err != nil {

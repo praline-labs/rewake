@@ -42,10 +42,9 @@ func (f *fakeHarness) Examples() []string { return []string{"rewake fake"} }
 func (f *fakeHarness) Notes() []string    { return nil }
 
 // A double takes every flag once: nothing here launches a real harness.
-func (f *fakeHarness) SingleUseFlags() []adapter.Flag   { return nil }
-func (f *fakeHarness) ProtectedDirs() adapter.Protected { return adapter.Protected{} }
-func (f *fakeHarness) Version() adapter.VersionGate     { return adapter.VersionGate{} }
-func (f *fakeHarness) EnvNotInherited() []string        { return f.notInherited }
+func (f *fakeHarness) SingleUseFlags() []adapter.Flag { return nil }
+func (f *fakeHarness) Version() adapter.VersionGate   { return adapter.VersionGate{} }
+func (f *fakeHarness) EnvNotInherited() []string      { return f.notInherited }
 
 // Offers: notices reach the fake, which is its own run's Wake.
 func (f *fakeHarness) Offers() adapter.Offer { return adapter.Offer{Wake: true} }

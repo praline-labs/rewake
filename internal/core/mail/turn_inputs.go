@@ -5,7 +5,7 @@ package mail
 
 // AttemptScope says where an attempt of an operation runs relative to the
 // turn the operation was made in
-// (docs/mail-bridge-turns.md#a-pending-mark-at-its-turns-end). A pending
+// (docs/archive/mail-bridge-turns.md#a-pending-mark-at-its-turns-end). A pending
 // mark speaks for that turn only, and only an attempt shown to run in it
 // writes one.
 type AttemptScope struct {
@@ -34,7 +34,7 @@ type ReadEvidence struct {
 
 // EndGate orders a read's acknowledgment against the turn ends the process
 // running the session captures
-// (docs/mail-bridge-turns.md#a-turns-end-meets-its-calls). The acknowledgment
+// (docs/archive/mail-bridge-turns.md#a-turns-end-meets-its-calls). The acknowledgment
 // calls Enter holding the mailbox lock, before its first write: false says an
 // end at or after calledBoot was noted, and nothing may be written. Otherwise
 // it is registered as writing, and calls leave once, whatever its writes did,

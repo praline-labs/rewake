@@ -1,7 +1,7 @@
 # Turn-end recovery and the protocol cutover, built
 
 Round 10 of the mail-tool stage: the recovery rules accepted on September 30, 2026 —
-rules 7 and 8 of [mail-bridge-cli.md](../mail-bridge-cli.md),
+rules 7 and 8 of [mail-bridge-cli.md](../archive/mail-bridge-cli.md),
 [turn-end-recovery.md](../turn-end-recovery.md) and
 [protocol-cutover.md](../archive/1.x/protocol-cutover.md) — built into the code the same day. How the
 path runs through the code is in [delivery-turn-end.md](../delivery-turn-end.md); the

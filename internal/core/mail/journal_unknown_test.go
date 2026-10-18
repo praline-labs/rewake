@@ -14,7 +14,7 @@ import (
 )
 
 // What the journal cannot recognize is unknown, never permission, and what it
-// finds done is recorded before it goes on (docs/mail-bridge-cli.md, rule 8).
+// finds done is recorded before it goes on (docs/archive/mail-bridge-cli.md, rule 8).
 
 // A report found in the recipient's mailbox without its mark — written by an
 // earlier build, which kept none — is marked published before the journal

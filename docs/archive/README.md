@@ -19,4 +19,6 @@ is no longer there — git history has it.
   remaining work of September ([roadmap-remaining-2026-09.md](roadmap-remaining-2026-09.md)).
 
 The documents of grants and of the mail tool — `grants*.md`, `git-grants.md`,
-`mail-bridge*.md`, `research-mail-tool.md` — move here with their code, when it leaves.
+`mail-bridge*.md`, `research-mail-tool.md`, the tool and channel rules (`rules-tools.md`,
+`rules-channel.md`) and the tool cases of the workflow suite (`testing-tools.md`) — moved
+here with their code on October 18, 2026.

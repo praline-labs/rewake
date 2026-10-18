@@ -69,3 +69,31 @@ func keepThreadRecord(dir, name, id string) bool {
 	owed, err := owedByAnyRun(dir, name, id)
 	return err != nil || owed
 }
+
+// owedByAnyRun says whether a wait record of any run of the name lists the
+// message, and still stands: a run that ended owes it only within the resume
+// window (adopt.go). An error says a wait record could not be read.
+func owedByAnyRun(dir, name, id string) (bool, error) {
+	runs, err := os.ReadDir(state.AwaitingPath(dir, name))
+	if errors.Is(err, os.ErrNotExist) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	for _, run := range runs {
+		if !run.IsDir() {
+			continue
+		}
+		waiters, err := ReadWaiters(dir, name, run.Name())
+		if err != nil {
+			return false, err
+		}
+		for _, waiter := range waiters {
+			if owedStands(run.Name(), waiter, id) {
+				return true, nil
+			}
+		}
+	}
+	return false, nil
+}

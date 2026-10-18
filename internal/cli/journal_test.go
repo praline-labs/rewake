@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"bytes"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -11,9 +10,8 @@ import (
 
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/receipt"
-	"github.com/praline-labs/rewake/internal/infra/boottime"
+	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/infra/state"
-	"github.com/praline-labs/rewake/internal/tool"
 )
 
 // headsUps are the letters with this text waiting in web's mailbox.
@@ -34,89 +32,13 @@ func headsUps(t *testing.T, dir, text string) []mail.Message {
 	return found
 }
 
-// A heads-up repeated in one turn — the harness retried, or the model called
-// again — is published once, and the repeat gets the first call's answer.
-func TestAHeadsUpRepeatedInOneTurnIsPublishedOnce(t *testing.T) {
-	dir, _, _ := toolSession(t)
-	tool := newToolCaller(t)
-	first := tool.run("send", "web", "look", "--notify", "--wait", "0")
-	if first.code == ExitUsage || first.code == ExitFailed {
-		t.Fatalf("first: %+v", first)
-	}
-	again := tool.run("send", "--notify", "--wait=0", "web", "look")
-	if again.code != first.code || !strings.Contains(again.out, "ran earlier") {
-		t.Fatalf("repeat: %+v", again)
-	}
-	if letters := headsUps(t, dir, "look"); len(letters) != 1 {
-		t.Fatalf("one turn published %d letters", len(letters))
-	}
-	tool.turn = "turn-2"
-	if next := tool.run("send", "web", "look", "--notify", "--wait", "0"); strings.Contains(next.out, "ran earlier") {
-		t.Fatalf("another turn joined: %+v", next)
-	}
-	if letters := headsUps(t, dir, "look"); len(letters) != 2 {
-		t.Fatalf("two turns published %d letters", len(letters))
-	}
-}
-
-// expiredCall is a tool call whose answer stopped being wanted before its
-// heads-up was published: what a harness timeout leaves behind.
-func expiredCall(t *testing.T, words ...string) (Call, *Context, *bytes.Buffer, *bytes.Buffer) {
-	t.Helper()
-	result, err := testTable().toolCall(words)
-	if err != nil {
-		t.Fatal(err)
-	}
-	normal := testTable().normalized(result)
-	now := boottime.Now()
-	var out, errOut bytes.Buffer
-	ctx := &Context{Stdout: &out, Stderr: &errOut, scope: &callScope{
-		ticket: tool.Ticket{Conversation: "conversation-1", Turn: "turn-1", CallID: "late-" + mail.NewID(), CalledBoot: now - 2, DeadlineBoot: now - 1, Transport: testTransport, TurnsNeverReused: true, Nonce: "nonce-late", WordsDigest: tool.Digest(normal)},
-		words:  normal, digest: tool.Digest(normal),
-	}, table: testTable()}
-	return result.Call, ctx, &out, &errOut
-}
-
-// A heads-up whose deadline came first is not published; rewake retry
-// publishes it, once, under the id the journal fixed.
-func TestAHeadsUpPastItsDeadlineIsFinishedByRetry(t *testing.T) {
-	dir, self, _ := toolSession(t)
-	call, ctx, out, errOut := expiredCall(t, "send", "web", "late look", "--notify", "--wait", "0")
-	if err := handleSend(ctx, call); err == nil {
-		t.Fatalf("a call past its deadline succeeded: %s", out)
-	}
-	if letters := headsUps(t, dir, "late look"); len(letters) != 0 {
-		t.Fatal("published after the deadline")
-	}
-	records := unresolved(t, dir, self.Epoch(), ctx.scope.digest)
-	if len(records) != 1 || records[0].Phase != receipt.Open || records[0].Notify == nil || !strings.Contains(errOut.String(), "rewake retry "+records[0].Token) {
-		t.Fatalf("records %+v, said %s", records, errOut)
-	}
-	pinned := records[0].Notify.MessageID
-	for range 2 {
-		if code, out, errOut := run("retry", records[0].Token); code == ExitFailed || code == ExitUsage {
-			t.Fatalf("retry: %d %s %s", code, out, errOut)
-		}
-	}
-	letters := headsUps(t, dir, "late look")
-	if len(letters) != 1 || letters[0].ID != pinned {
-		t.Fatalf("retries published %+v, want the one letter %s", letters, pinned)
-	}
-}
-
 // A shell repeating the words of an operation still open does not run them
 // again, however old that operation is: it cannot tell a lost call from a new
 // one, and names the receipt that finishes it. A finished one stands in the
 // way of nothing.
 func TestTheShellRefersAnOpenOperationToItsReceipt(t *testing.T) {
-	dir, self, _ := toolSession(t)
-	call, ctx, _, _ := expiredCall(t, "send", "web", "lost look", "--notify", "--wait", "0")
-	_ = handleSend(ctx, call)
-	records := unresolved(t, dir, self.Epoch(), ctx.scope.digest)
-	if len(records) != 1 {
-		t.Fatalf("records %+v", records)
-	}
-	record := records[0]
+	dir, self, _ := peerSession(t)
+	record := openOperation(t, dir, self, "send", "web", "lost look", "--notify", "--wait", "0")
 	record.Created = time.Now().Add(-48 * time.Hour)
 	if err := receipt.Save(dir, "api", record); err != nil {
 		t.Fatal(err)
@@ -152,59 +74,19 @@ func TestTheShellRefersAnOpenOperationToItsReceipt(t *testing.T) {
 	}
 }
 
-// A mark repeated in one turn is the first mark: its time stays the first
-// call's, so it cannot stretch into a later turn. Without the transport's
-// declaration the repeat cannot show it is in that turn, and says so.
-func TestAPendingMarkRepeatedInOneTurnIsOneMark(t *testing.T) {
-	eachDeclaration(t, func(t *testing.T, reused bool) {
-		dir, self, web := toolSession(t)
-		readFrom(t, dir, web)
-		turnStarted(t, dir, self, markAt-1)
-		tool := newToolCaller(t)
-		tool.reused = reused
-		first := tool.run("pending", "the suite is running")
-		if first.code != ExitOK || !strings.Contains(first.out, "receipt") {
-			t.Fatalf("first mark: %+v", first)
-		}
-		again := tool.run("pending", "the suite is running")
-		switch {
-		case !reused && (again.code != ExitOK || !strings.Contains(again.out, "ran earlier")):
-			t.Fatalf("repeat: %+v", again)
-		case reused && (again.code != ExitFailed || !strings.Contains(again.errOut, "one this call cannot name")):
-			t.Fatalf("a repeat that cannot name its turn: %+v", again)
-		}
-		called := tool.tickets[0].CalledBoot
-		if text, held, err := markWithin(dir, "api", self.Epoch(), called-1, called); err != nil || !held || text != "the suite is running" {
-			t.Fatalf("the mark does not carry the first call's time: %q %v %v", text, held, err)
-		}
-	})
-}
-
-// A refusal is an answer like any other: the same words in the same turn get
-// it again, and another turn asks anew.
-func TestARefusedMarkIsReplayedInItsTurn(t *testing.T) {
-	dir, self, web := toolSession(t)
-	turnStarted(t, dir, self, markAt-1)
-	tool := newToolCaller(t)
-	if refused := tool.run("pending", "the suite is running"); refused.code != ExitUsage {
-		t.Fatalf("a mark with nothing owed: %+v", refused)
-	}
-	readFrom(t, dir, web)
-	if again := tool.run("pending", "the suite is running"); again.code != ExitUsage || !strings.Contains(again.out, "ran earlier") {
-		t.Fatalf("the same words in the same turn: %+v", again)
-	}
-	tool.turn = "turn-2"
-	if next := tool.run("pending", "the suite is running"); next.code != ExitOK || strings.Contains(next.out, "ran earlier") {
-		t.Fatalf("the same words in the next turn: %+v", next)
-	}
-}
-
-// unresolved lists api's unsettled operations with these words.
-func unresolved(t *testing.T, dir, epoch, digest string) []receipt.Record {
+// openOperation journals the words as an operation that began and was never
+// finished: what a call that died before its effect leaves behind.
+func openOperation(t *testing.T, dir string, self registry.Session, words ...string) receipt.Record {
 	t.Helper()
-	records, err := receipt.Unresolved(dir, "api", epoch, digest)
+	result, err := testTable().parse(words)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return records
+	normal := testTable().normalized(result)
+	record, _, err := receipt.Begin(dir, self.Name, receipt.Key{Epoch: self.Epoch(), Digest: receipt.Digest(normal)},
+		receipt.Record{Words: normal, Transport: receipt.Shell})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return record
 }

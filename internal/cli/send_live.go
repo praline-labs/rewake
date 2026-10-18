@@ -19,7 +19,6 @@ const unwoken = "accepted; no notice can reach this session, which reads its mai
 func reportUnwoken(ctx *Context, after sent, message mail.Message) error {
 	model := sendModel{
 		ID: message.ID, To: after.target.Name, From: message.From,
-		GrantGit: message.GrantGit, GrantDirs: message.GrantDirs, AlreadyWritable: after.writable,
 		Addenda: after.addenda, Replaces: message.Replaces, Named: after.named,
 		State: string(mail.Pending), Detail: unwoken,
 	}

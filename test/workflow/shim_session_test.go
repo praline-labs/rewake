@@ -30,9 +30,6 @@ type mailboxNotice struct {
 		Recalls string `json:"recalls"`
 		// Replaces is the message a replacement member takes the place of.
 		Replaces string `json:"replaces"`
-		// Grants are the directories the fixture's adapter offered with the
-		// letter.
-		Grants []string `json:"grants"`
 	} `json:"members"`
 }
 

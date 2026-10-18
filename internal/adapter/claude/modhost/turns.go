@@ -143,15 +143,10 @@ func (s *Server) captured(ctx context.Context, end TurnEndRequest, reason adapte
 	completion := adapter.TurnEnd{
 		Event: eventPrefix + end.EndID, Reason: reason, Answer: answer, Thread: end.Conversation,
 	}
-	if s.turns.EndCapture != nil {
-		completion.Boundary, completion.Ended = s.turns.EndCapture()
-	}
-	if completion.Boundary == nil && s.turns.Capture != nil {
+	if s.turns.Capture != nil {
 		completion.Boundary = s.turns.Capture()
 	}
-	if completion.Ended == 0 {
-		completion.Ended = boottime.Now()
-	}
+	completion.Ended = boottime.Now()
 	s.ends[end.EndID] = &capture{end: completion, digest: digest}
 	return completion, 0, nil
 }

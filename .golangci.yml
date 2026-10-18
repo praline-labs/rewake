@@ -45,20 +45,6 @@ linters:
           deny:
             - pkg: "github.com/praline-labs/rewake/"
               desc: "Import only the layers allowed in docs/rules/layout.md."
-        tool:
-          list-mode: lax
-          files:
-            - "${base-path}/internal/tool/**.go"
-          allow:
-            - "github.com/praline-labs/rewake/internal/tool$"
-            - "github.com/praline-labs/rewake/internal/tool/"
-            - "github.com/praline-labs/rewake/internal/core$"
-            - "github.com/praline-labs/rewake/internal/core/"
-            - "github.com/praline-labs/rewake/internal/infra$"
-            - "github.com/praline-labs/rewake/internal/infra/"
-          deny:
-            - pkg: "github.com/praline-labs/rewake/"
-              desc: "Import only the layers allowed in docs/rules/layout.md."
         adapter-api:
           list-mode: lax
           files:
@@ -79,8 +65,6 @@ linters:
           allow:
             - "github.com/praline-labs/rewake/internal/host$"
             - "github.com/praline-labs/rewake/internal/host/"
-            - "github.com/praline-labs/rewake/internal/tool$"
-            - "github.com/praline-labs/rewake/internal/tool/"
             - "github.com/praline-labs/rewake/internal/core$"
             - "github.com/praline-labs/rewake/internal/core/"
             - "github.com/praline-labs/rewake/internal/infra$"
@@ -98,8 +82,6 @@ linters:
             - "github.com/praline-labs/rewake/internal/cli/"
             - "github.com/praline-labs/rewake/internal/host$"
             - "github.com/praline-labs/rewake/internal/host/"
-            - "github.com/praline-labs/rewake/internal/tool$"
-            - "github.com/praline-labs/rewake/internal/tool/"
             - "github.com/praline-labs/rewake/internal/core$"
             - "github.com/praline-labs/rewake/internal/core/"
             - "github.com/praline-labs/rewake/internal/infra$"
@@ -116,8 +98,6 @@ linters:
             - "${base-path}/internal/adapter/claude/**.go"
           allow:
             - "github.com/praline-labs/rewake/internal/adapter$"
-            - "github.com/praline-labs/rewake/internal/tool$"
-            - "github.com/praline-labs/rewake/internal/tool/"
             - "github.com/praline-labs/rewake/internal/core$"
             - "github.com/praline-labs/rewake/internal/core/"
             - "github.com/praline-labs/rewake/internal/infra$"
@@ -133,8 +113,6 @@ linters:
             - "${base-path}/internal/adapter/fixture/**.go"
           allow:
             - "github.com/praline-labs/rewake/internal/adapter$"
-            - "github.com/praline-labs/rewake/internal/tool$"
-            - "github.com/praline-labs/rewake/internal/tool/"
             - "github.com/praline-labs/rewake/internal/core$"
             - "github.com/praline-labs/rewake/internal/core/"
             - "github.com/praline-labs/rewake/internal/infra$"
@@ -153,8 +131,6 @@ linters:
             - "!${base-path}/internal/adapter/fixture/**.go"
           allow:
             - "github.com/praline-labs/rewake/internal/adapter$"
-            - "github.com/praline-labs/rewake/internal/tool$"
-            - "github.com/praline-labs/rewake/internal/tool/"
             - "github.com/praline-labs/rewake/internal/core$"
             - "github.com/praline-labs/rewake/internal/core/"
             - "github.com/praline-labs/rewake/internal/infra$"

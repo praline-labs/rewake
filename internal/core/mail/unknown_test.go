@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// Rule 6 of docs/mail-bridge-cli.md: a lookup that failed proves nothing is
+// Rule 6 of docs/archive/mail-bridge-cli.md: a lookup that failed proves nothing is
 // absent. These are the lookups on the paths of the mail tool; the mailbox
 // that cannot be searched is in claims_test.go.
 

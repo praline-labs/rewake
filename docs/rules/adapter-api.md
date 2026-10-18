@@ -11,23 +11,21 @@ rules have no numbers: each section below is one rule, with the tests that hold 
 
 An adapter offers named capabilities, each a small interface in `internal/adapter`
 carrying narrow values, never a session record whole: Launch, which is required — an
-adapter without it is no adapter — and Wake, ToolTransport, TurnBoundary, Telemetry,
-Control, Permissions, PersonUI and Spaces, each optional. What an adapter offers is static,
+adapter without it is no adapter — and Wake, TurnBoundary, Telemetry, Control,
+PersonUI and Spaces, each optional. What an adapter offers is static,
 read from the catalogue before a launch (`Offers`); what one run serves is the plan its
 `Launch` returns, and a capability is live for the run only where the offer and the plan
 both carry it, so an offer with nothing in the plan behind it is never taken for served.
 The core does without what is missing and says so rather than pretending: a role that
 owes reports does not launch on a harness that offers no turn boundary, and says from
 when it will; a compaction or an interrupt of a session whose harness does not offer the
-verb, or its focus, is a wrong call, exit 2, with nothing asked; a task granting a
-directory to a session whose harness takes none fails, exit 1, nothing sent; opening a space
+verb, or its focus, is a wrong call, exit 2, with nothing asked; opening a space
 from a role that opens none, or on a harness that offers none, is a wrong call, exit 2, and
 on a run that has not proven its spaces, or has lost them, fails, exit 1; spaces are never
-planned, and a main run on Claude Code has them once its mod's hello is admitted; a clause
-about the harnesses that lack a capability agrees with how many lack it. Every turn end
+planned, and a main run on Claude Code has them once its mod's hello is admitted. Every turn end
 a boundary reports names its event, with its reason; an end with neither an event nor a
 known reason is refused, each reason reports its own outcome, and a turn's start is
-recorded once, opening the turn where the run has a tool.
+recorded once.
 
 Claude Code reports its turns from S4-6: it offers a turn boundary that reports and does not
 hold an end, proven by its run's mod after the harness starts, so a role that owes reports
@@ -47,31 +45,24 @@ Tests:
 - `internal/cli/turn_reporting_test.go` `TestAReportingRoleDoesNotLaunchOnAHarnessThatReportsNoTurns`
 - `internal/cli/steer_test.go` `TestAHarnessThatCannotTakeItIsAWrongCall`
 - `internal/cli/steer_test.go` `TestAVerbTheHarnessDoesNotOfferIsAWrongCall`
-- `internal/cli/send_dir_test.go` `TestASessionThatTakesNoDirectoryIsSentNoGrant`
 - `internal/cli/space_refusal_test.go` `TestASpaceIsRefusedByTheMissingCapability`
 - `internal/adapter/claude/mod_live_test.go` `TestTheSetIsWakeUntilTheHelloThenTheBoundaryAndSpacesOnMain`
 - `internal/adapter/claude/turns_test.go` `TestTheOfferReportsTurnsAfterTheStartAndHoldsNone`
 - `internal/adapter/claude/turns_test.go` `TestAKnownCauseWithholdsTheBoundary`
 - `internal/host/after_start_test.go` `TestAKnownCauseRefusesAReportingRoleBeforeTheStart`
-- `internal/cli/registry_words_test.go` `TestADecliningClauseAgreesWithHowManyDecline`
 - `internal/cli/turn_end_api_test.go` `TestATurnEndWithoutItsEventOrAKnownReasonIsRefused`
 - `internal/cli/turn_end_api_test.go` `TestEachEndReasonReportsItsOutcome`
 - `internal/host/turn_boundary_test.go` `TestTheWrapperPassesEachEndOnWithItsEventAndReason`
-- `internal/host/turn_start_test.go` `TestABoundaryWithAToolRecordsItsStartOnceAndOpensItsTurn`
-- `internal/host/turn_start_test.go` `TestABoundaryWithoutAToolRecordsItsStart`
 
 ## The catalog
 
 `adapter/catalog` has one constructor that returns the catalogue value — the adapters in
 the order the guide shows them — and is the only package that names every adapter;
 `cmd/rewake` builds the value and hands it to the CLI, which hands each launch its
-adapter and the host the interfaces. There is no registry: no adapter package declares
-`init`, and no package-level variable holds adapters outside the constructor. A harness
+adapter and the host the interfaces. A harness
 is fully described or absent: the launch command, the guide's entry, its help page and
 the `harnesses` field of the machine form all derive from the value; each adapter names
-the flags its harness takes at most once, every spelling of them, and its own
-configuration directories, which no task may grant, and the catalogue protects those of
-the harnesses it has no adapter for as well. Each adapter answers whether a launch can name
+the flags its harness takes at most once, every spelling of them. Each adapter answers whether a launch can name
 its conversation — a flag taken once with a value, which its Launch carries with rewake's
 id, or the reason there is none, and then its Launch refuses an id — and one that offers
 spaces has its run report its live set, since spaces are never planned. The fixture harness is in the catalogue only
@@ -79,18 +70,14 @@ in a build with its tag.
 
 Tests:
 - `internal/adapter/catalog/catalog_test.go` `TestEveryHarnessNamesItsSingleUseFlags`
-- `internal/adapter/catalog/catalog_test.go` `TestEveryHarnessNamesItsProtectedDirs`
-- `internal/adapter/catalog/catalog_test.go` `TestTheCatalogueProtectsTheHarnessesItHasNoAdapterFor`
 - `internal/adapter/catalog/catalog_test.go` `TestEveryWorktreeFlagIsTakenOnce`
 - `internal/adapter/catalog/offers_test.go` `TestEveryHarnessAnswersWhetherItNamesItsConversation`
 - `internal/adapter/catalog/offers_test.go` `TestEveryHarnessThatOffersSpacesHasItsRunProveThem`
 - `internal/adapter/claude/conversation_test.go` `TestAConversationIdIsRefusedBesideOneTheArgumentsName`
 - `internal/adapter/catalog/fixture_absent_test.go` `TestTheFixtureIsAbsentWithoutItsTag`
 - `internal/adapter/catalog/fixture_present_test.go` `TestTheFixtureIsPresentWithItsTag`
-- `internal/cli/send_dir_test.go` `TestAGrantRefusesWhatTheCatalogueProtects`
 - `internal/cli/cli_test.go` `TestGuideJSONCarriesTheTable`
 - `internal/cli/cli_test.go` `TestHelpForEveryCommand`
-- `internal/layout_test.go` `TestNoAdapterIsRegistered`
 
 ## Minimum versions
 

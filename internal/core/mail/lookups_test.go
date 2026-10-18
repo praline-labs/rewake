@@ -17,7 +17,7 @@ import (
 
 // The shared lookups answer found, proven absent, or an error: only a file
 // that is not there is absence (rule 6 of
-// docs/mail-bridge-cli.md#the-rules-the-code-holds). These pin the primitives
+// docs/archive/mail-bridge-cli.md#the-rules-the-code-holds). These pin the primitives
 // and the effects nearest to them.
 
 // A letter that cannot be read, or does not parse, may be the one asked for:
@@ -331,7 +331,7 @@ func importedAs(file *ast.File, importPath string) string {
 }
 
 // A wait record whose numbers do not parse is no record of zeros: read so, it
-// would owe nothing and close the task it names, and a grant with it. The
+// would owe nothing and close the task it names. The
 // record from before times were kept, the run alone, still reads.
 func TestADamagedWaitRecordIsNotReadAsZeros(t *testing.T) {
 	dir := stateDir(t)
@@ -352,12 +352,6 @@ func TestADamagedWaitRecordIsNotReadAsZeros(t *testing.T) {
 		}
 		if waiters, err := ReadWaiters(dir, "api", "1.1"); err == nil {
 			t.Fatalf("%q read as %+v", damaged, waiters)
-		}
-		if Settled(dir, "api", letter.ID) {
-			t.Fatalf("%q settled the task", damaged)
-		}
-		if open, found := TaskOpen(dir, "api", letter.ID); !open || !found {
-			t.Fatalf("%q closed the task: open=%v found=%v", damaged, open, found)
 		}
 		if err := markAwaitingSequence(dir, "api", "1.1", "web", "w1", NewID(), 0, 0); err == nil {
 			t.Fatalf("recorded a read over %q", damaged)

@@ -398,8 +398,3 @@ the session is making. Nothing is removed automatically. rm's refusals exit 1, a
 finish's and land's over the same state do; a worktree name that names none exits 2.
 Until September 27, 2026 they exited 2, fixed before finish existed; the owner decided
 that day that a refusal over state exits 1 in every worktree command.
-
-A main's `--grant-git` reaches such a checkout as it does a worktree made by hand: the
-grant reads the conversation's cwd, which is in the checkout, and resolves its private
-and common Git directories
-([research-permissions.md](archive/research-permissions.md#managed-worktrees-and-continuation-permissions)).

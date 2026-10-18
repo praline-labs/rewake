@@ -122,8 +122,6 @@ type Context struct {
 	Stderr io.Writer
 	// JSON asks for the model behind the output instead of the printed lines.
 	JSON bool
-	// scope is the tool call a command runs for, nil in a shell.
-	scope *callScope
 	// access is the class of the form this invocation runs (access.go).
 	access access
 	// op is the receipt a journaled command runs under, and journaling says

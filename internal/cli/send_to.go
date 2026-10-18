@@ -21,9 +21,6 @@ func addendumRoot(call Call, dir string, kind messageKind, target registry.Sessi
 	if kind.kind != mail.Task {
 		return "", &UsageError{Command: call.Command, Message: "--to adds to a task already sent and is a task itself; it excludes " + kind.flag.Flag + "."}
 	}
-	if _, grant := call.Flags["grant-git"]; grant {
-		return "", &UsageError{Command: call.Command, Message: "--to excludes --grant-git: an addendum carries no grant of its own; send a new task with --grant-git instead."}
-	}
 	self, epoch, named, err := sentBySelf(call, dir, reference, fmt.Sprintf("rewake send %s \"...\" --to <id>", target.Name))
 	if err != nil {
 		return "", err
@@ -149,11 +146,6 @@ func addendumRefusal(dir string, self registry.Session, epoch string, root mail.
 		return failf("a decision on %s's report closed your %s %s, delivery unproven; send the addition as a new task: %s", target.Name, mail.KindOf(root), root.ID, next)
 	case item.Stage == mail.StageFailed:
 		return failf("your %s %s was not delivered to %s; send the task again, with the addition, as: %s", mail.KindOf(root), root.ID, target.Name, next)
-	case mail.CarriesGrant(root) && (item.Stage == mail.StageUndelivered || item.Stage == mail.StageHeld):
-		// A task carrying a grant waits for its reader to be idle, and an
-		// addendum does not: it would be read first, and worked on without
-		// the grant (docs/grants.md#delivery).
-		return failf("your %s %s carries a grant and waits for %s to be idle, so an addition would reach it first; change the task itself with: rewake edit %s \"...\"", mail.KindOf(root), root.ID, target.Name, shortRef(root.ID))
 	}
 	return nil
 }

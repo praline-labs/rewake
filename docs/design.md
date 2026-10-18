@@ -94,14 +94,10 @@ only looks leaves no state behind. [Optional primary observations](session-state
     inbox/<name>/threads/<id>  selected delivery thread, when supported
     inbox/<name>/awaiting/<epoch>/<peer> reports owed by this run
     inbox/<name>/pending/      this run's `rewake pending` marks; its last word on the work and a held answer (turn-outcomes.md)
-    inbox/<name>/receipts/<epoch>/ journal of notify, pending, reads in parts and long outputs (mail-bridge-cli.md)
-    inbox/<name>/receipts/<epoch>/calls/<call> the operation a mail tool call holds, by its native call (mail-bridge-server.md); leaves with the mail tool
-    inbox/<name>/receipts/<epoch>/channel/<boot>.<pid> a shell call's outcome for the run's wrapper to fold into the mail channel, removed once folded (mail-bridge-channel.md); leaves with the mail tool
-    inbox/<name>/claims/<id>   a letter a tool read has started showing in parts; leaves with the mail tool
+    inbox/<name>/receipts/<epoch>/ journal of the shell's journaled commands, a notify and `rewake pending` (mail-bridge-cli.md)
     inbox/<name>/once/<epoch>/<id> a journaled notify or a turn end's report written into this mailbox, so a retry writes it once
     sock/<name>.<epoch>.sock   one inbound socket per run
     sock/<name>.<epoch>.reply.sock the wrapper's own: Claude Code's receipts for held lines
-    sock/<name>.<epoch>.ctx    the wrapper's context endpoint for the mail tool's server or transport and its children (mail-bridge-server.md, mail-bridge-transport.md); leaves with the mail tool
     control/<name>.<epoch>/    a main's compact or interrupt request and its answer (remote-control.md)
     run/<name>.<epoch>/        what an adapter writes for one run, removed with the run or, after a kill, by a later launch once the run is proven dead (v2/stage3-state.md)
     letters/<name>/<id>.json   a compaction this main asked for, held by the command while it asks, kept on an answer that leaves the outcome open until its letter goes (remote-control-letter.md)

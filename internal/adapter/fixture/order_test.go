@@ -45,8 +45,8 @@ func TestAnEndCapturesItsBoundaryWhenItsFrameArrives(t *testing.T) {
 	clock.Store(1)
 	seen := make(chan adapter.TurnEnd, 1)
 	handler := adapter.TurnHandler{
-		EndCapture: func() (*mail.ReadBoundary, int64) { return &mail.ReadBoundary{Through: clock.Load()}, 100 },
-		Publish:    func(_ context.Context, completion adapter.TurnEnd) error { seen <- completion; return nil },
+		Capture: func() *mail.ReadBoundary { return &mail.ReadBoundary{Through: clock.Load()} },
+		Publish: func(_ context.Context, completion adapter.TurnEnd) error { seen <- completion; return nil },
 	}
 	_, p := paired(t, handler, Served...)
 	received, release := holdDispatch(t, opTurnEnded)

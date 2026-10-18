@@ -81,9 +81,6 @@ func (s *Server) prepareDelivery(ctx context.Context, message *mail.Message) (re
 				return err
 			}
 			message.DeliveryThread = thread
-			if mail.CarriesGrant(*message) && s.PinGrant != nil {
-				s.PinGrant(*message, thread)
-			}
 		}
 		return mail.LinkUnread(s.Dir, s.Name, message.ID)
 	}

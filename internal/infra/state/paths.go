@@ -58,25 +58,13 @@ func AwaitingPath(dir, name string) string {
 	return filepath.Join(dir, inboxDir, name, awaitingDir)
 }
 
-// ContextPath is where a run's wrapper answers the mail tool's children
-// (docs/archive-1.x/mail-bridge-server.md#who-calls): beside the inbox
-// socket, one per run, and short enough to bind.
-func ContextPath(dir, name, run string) string {
-	path := filepath.Join(dir, socketsDir, name+"."+run+".ctx")
-	if len(path) > 103 {
-		sum := sha256.Sum256([]byte(name + "\x00" + run))
-		path = filepath.Join(dir, socketsDir, fmt.Sprintf("%x.ctx", sum[:12]))
-	}
-	return path
-}
-
-// AuthorityAddress is where a main run's wrapper answers for the grants it
-// registered (docs/grants.md#who-can-grant): an abstract unix socket, named
-// by the state directory and the run. Abstract, because a file in the state
+// AuthorityAddress is where a run's wrapper answers for the decisions on
+// reports addressed to the run (internal/core/authority): an abstract unix
+// socket, named by the state directory and the run. Abstract, because a file in the state
 // directory is one a sandboxed worker could replace with its own listener,
 // and because no path limit applies; the name is checked through its peer
 // either way. Not by the session's name: the run is known before the name is
-// claimed, so the wrapper binds it before its record says it is main.
+// claimed, so the wrapper binds it before its record is written.
 func AuthorityAddress(dir, run string) string {
 	sum := sha256.Sum256([]byte(filepath.Clean(dir) + "\x00" + run))
 	return fmt.Sprintf("@rewake/grant/%x", sum[:16])

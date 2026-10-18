@@ -22,7 +22,7 @@ func reportSent(ctx *Context, after sent, message mail.Message, kind messageKind
 		delivery = min(wait, defaultWait)
 	}
 	status, known := awaitStatus(dir, session.Name, message.ID, delivery, recipientRunning(dir, session))
-	model := sendModel{ID: message.ID, To: session.Name, From: message.From, GrantGit: message.GrantGit, GrantDirs: message.GrantDirs, AlreadyWritable: after.writable, Addenda: after.addenda, Replaces: message.Replaces, Named: after.named}
+	model := sendModel{ID: message.ID, To: session.Name, From: message.From, Addenda: after.addenda, Replaces: message.Replaces, Named: after.named}
 	if ctx.op != nil {
 		model.Receipt = ctx.op.record.Token
 	}
@@ -44,9 +44,6 @@ func reportSent(ctx *Context, after sent, message mail.Message, kind messageKind
 		// calling a fresh delivery lost sends the sender to do it twice.
 		status, known, unknown = mail.ReadStatus(dir, session.Name, message.ID)
 		known = known && unknown == nil
-	}
-	if known {
-		model.GrantApplied = status.GrantApplied
 	}
 	switch {
 	case known && status.State == mail.Read:
@@ -106,7 +103,7 @@ func reportSent(ctx *Context, after sent, message mail.Message, kind messageKind
 		// The id before the wait, which may be long: it is what an edit or an
 		// addendum to this message takes while the sender still waits.
 		if !ctx.JSON {
-			_ = emit(ctx, append(sentGrantLines(session, model), idLines(model)...)...)
+			_ = emit(ctx, idLines(model)...)
 		}
 		after.model = model
 		return kind.after(ctx, after)

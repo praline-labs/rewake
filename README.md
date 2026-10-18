@@ -68,8 +68,8 @@ any terminal to see who is up.
 **Roles and rooms**
 
 - **Roles.** Pick one with `--main`, `--write` or `--general` (the default). Each room
-  has one main: it hands out work and receives reports, and only main can grant access,
-  compact a worker or interrupt one.
+  has one main: it hands out work and receives reports, and only main can compact a
+  worker or interrupt one.
 - **Rooms.** `--room <name>` keeps separate groups of sessions apart. Sessions see and
   address only their own room.
 - **Addresses.** A session's address is `<prefix>-<harness>`, for example `lead-claude`
@@ -83,11 +83,6 @@ any terminal to see who is up.
 - **Compact.** `rewake compact <name> [focus]` compacts an idle worker's conversation,
   optionally telling the summary what to keep.
 - **Interrupt.** `rewake interrupt <name>` stops the worker's current turn, as Esc would.
-
-**Write grants**
-
-- **Directories.** `send --grant-dir <dir>` lets the recipient write a directory outside
-  its workspace while the task is open, and takes it back with the report.
 
 **Parallel work**
 
@@ -154,9 +149,7 @@ launch.
 - One machine, one user. Nothing crosses the network, and messages cannot cross rooms.
 - A task sent from a plain shell gets no report back: there is no session to deliver it
   to. `--question` needs one too.
-- A directory grant on Claude Code spares prompts but is no boundary: an approved shell
-  command writes anywhere anyway. No harness of this build takes `--grant-git`: a write
-  session commits within its own permissions.
+- rewake grants no permissions: a session writes and commits within its own.
 - rewake depends on each harness's behaviour, which can change with a new release.
   What was checked, and on which version, is recorded in `docs/research*.md`.
 

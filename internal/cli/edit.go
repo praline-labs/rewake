@@ -10,7 +10,6 @@ import (
 
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/registry"
-	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -92,15 +91,6 @@ func handleEdit(ctx *Context, call Call) error {
 	replacement := mail.Message{
 		ID: mail.NewID(), From: self.Name, FromEpoch: epoch, To: old.To, ToEpoch: old.ToEpoch,
 		Kind: old.Kind, Text: text, CreatedAt: time.Now(), Replaces: old.ID, AddendumTo: old.AddendumTo,
-	}
-	// A grant goes on only while the sender is still the main that could
-	// give it, and only as this session's wrapper holds it: the letter on
-	// disk may have been rewritten. Its directories are checked again when
-	// the replacement is delivered, as the original's would have been.
-	if self.Role == role.Main.ID {
-		if err := carryGrant(ctx.table.catalog, dir, self, epoch, old, &replacement); err != nil {
-			return err
-		}
 	}
 	if kind.kind == mail.Question {
 		release, err := mail.ReserveAnswer(dir, self.Name, replacement.ID)

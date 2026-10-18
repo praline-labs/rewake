@@ -2,9 +2,7 @@ package cli
 
 import (
 	"fmt"
-	"slices"
 
-	"github.com/praline-labs/rewake/internal/core/grant"
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/core/role"
@@ -15,9 +13,6 @@ import (
 type owedView struct {
 	messageView
 	Kept bool `json:"kept"`
-	// GrantEnded names each directory of the grant rewake has taken back or
-	// found dropped, with the outcome its journal gives.
-	GrantEnded map[string]string `json:"grantEnded,omitempty"`
 	// Decided is the decision on this run's report that answers it: the
 	// report reached nobody provably, and the wait stands until its
 	// operation's tail closes it.
@@ -65,9 +60,8 @@ func showOwed(ctx *Context, call Call, dir string, session registry.Session, epo
 		messages = append(messages, message.Message)
 	}
 	model := owedModel{Session: session.Name, Messages: make([]owedView, 0, len(owed))}
-	journal := grant.Load(dir, session.Name, epoch)
 	for index, view := range viewedMessages(dir, messages) {
-		item := owedView{messageView: view, Kept: owed[index].Kept, GrantEnded: grantEnded(view.Message, journal)}
+		item := owedView{messageView: view, Kept: owed[index].Kept}
 		if mark, ok := mail.DecisionOn(dir, session.Name, view.ID, view.From, view.FromEpoch); ok {
 			item.Decided = awaitedDecisionOf(&mark)
 		}
@@ -123,7 +117,6 @@ func owedLines(messages []owedView) []string {
 		if d := message.Decided; d != nil {
 			lines = append(lines, fmt.Sprintf("decided, still owed: your report %s %s by decision %s of %s, delivery unproven; the wait closes when that turn's tail runs", d.Report, choiceText(d.Choice), d.ID, deciderText(d.By)))
 		}
-		lines = append(lines, owedGrantLines(message.owedView)...)
 		lines = append(lines, message.Text)
 		if message.ThreadChanged {
 			lines = append(lines, mail.ThreadChangedWarning)
@@ -167,35 +160,4 @@ func nestAddenda(messages []owedView) []nestedOwed {
 		}
 	}
 	return ordered
-}
-
-// grantEnded is what the journal says ended of a message's grant.
-func grantEnded(message mail.Message, journal []grant.Entry) map[string]string {
-	var ended map[string]string
-	for _, entry := range journal {
-		if entry.Message == message.ID && !entry.Live() && slices.Contains(message.GrantDirs, entry.Path) {
-			if ended == nil {
-				ended = map[string]string{}
-			}
-			ended[entry.Path] = entry.Outcome
-		}
-	}
-	return ended
-}
-
-// owedGrantLines repeat a task's grant for a session re-reading its work, and
-// say what may have ended since it was read. A turn typed in the terminal
-// replaces the roots, and rewake learns of it only when it comes to take the
-// grant back (docs/grants.md#how-long-a-grant-lives), so a grant it still
-// counts is shown with that caveat rather than as a promise.
-func owedGrantLines(message owedView) []string {
-	lines := make([]string, 0, len(message.GrantDirs))
-	for _, dir := range message.GrantDirs {
-		if outcome, ended := message.GrantEnded[dir]; ended {
-			lines = append(lines, "grant: "+outcome+" "+dir+" — no longer writable; ask main to send it again")
-			continue
-		}
-		lines = append(lines, "grant: write "+dir+" — unless a turn typed in this session's terminal has dropped it since")
-	}
-	return lines
 }

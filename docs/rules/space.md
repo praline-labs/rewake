@@ -59,14 +59,13 @@ and SP8 enter with the one space step that replaces S4-7 to S4-10.
   - `internal/host/wrap_test.go` `TestWhatTheAdapterSaysNotToInheritStaysOut`
 
 - **SP4. Only main's harness process reaches main's space host.** Every request of the mod's
-  protocol is checked by its peer on its own, as T2's transport is; a descendant is refused.
+  protocol is checked by its peer on its own; a descendant is refused.
 
   Held for the mod's socket since S4-5, October 13, 2026: every request is a connection of its
   own, its peer read by `SO_PEERCRED`; only the harness process the host started, alive with
   its start time, is served, a process below it or beside it of the same user is refused
   whatever it asks, a request before the host names the harness waits within a bound, and the
-  peer is checked again before any effect of a hello and again before the answer. Held as well
-  for the endpoint's tool transport.
+  peer is checked again before any effect of a hello and again before the answer.
   The turn's endpoints and the heartbeat follow the same check: the peer is checked again before
   each effect of a start, an end and a poll, and again before the answer
   ([stage4-turns.md](../v2/stage4-turns.md#the-hosts-side)). Held since S4-6, October 16,
@@ -81,8 +80,6 @@ and SP8 enter with the one space step that replaces S4-7 to S4-10.
   - `internal/adapter/claude/modhost/turns_test.go` `TestARequestDelayedAcrossCloseTakesNoEffect`
   - `internal/adapter/claude/modhost/alive_test.go` `TestAPollFromAReplacedHarnessRenewsNothing`
   - `internal/adapter/claude/modhost/alive_test.go` `TestAPollPastTheCloseRenewsNothing`
-  - `internal/host/endpoint/transport_test.go` `TestOnlyTheTransportsOwnProcessIsServed`
-  - `internal/host/endpoint/transport_test.go` `TestAnAnswerGoesOnlyToTheTransportThatAsked`
 
 - **SP7. A kept checkout is never forgotten and never removed by rewake.** A closed space
   whose checkout is still there is listed to main at its start and by `rewake space list`
@@ -105,12 +102,12 @@ and SP8 enter with the one space step that replaces S4-7 to S4-10.
 - **SP9. A hosted worker is never main's descendant.** Its wrapper is reparented away from
   main's wrapper before it is seated, checked by the same ancestry test the authority makes; an
   open that cannot prove it is refused, and nothing the worker controls runs before that proof.
-  So main's decision and grant endpoints refuse the worker's commands by the existing rule, and
+  So main's decision endpoint refuses the worker's commands by the existing rule, and
   no authority rule changes.
 
   Held today in the part that does not change: the ancestry test walks a process's parents
-  to the wrapper and refuses a stranger and a reused pid, and main's decision and grant
-  endpoints refuse a process that does not run below main's wrapper. Known limit, recorded
+  to the wrapper and refuses a stranger and a reused pid, and main's decision
+  endpoint refuses a process that does not run below main's wrapper. Known limit, recorded
   on October 13, 2026, owned by S4-7, which builds the hosted launch: the detached launcher,
   the refusal when main's wrapper is a subreaper, the ancestry proven by the whole chain with
   an unreadable one refusing the open, and the launch gate before anything the worker
@@ -118,5 +115,4 @@ and SP8 enter with the one space step that replaces S4-7 to S4-10.
   Tests:
   - `internal/infra/proc/lineage_test.go` `TestDescendsWalksParentsToTheAncestor`
   - `internal/infra/proc/lineage_test.go` `TestDescendsRefusesAReusedParent`
-  - `internal/core/grant/authority/decide_test.go` `TestAWrapperTakesADecisionOnlyFromBelow`
-  - `internal/core/grant/authority/grantauth_test.go` `TestARegistrationFromOutsideTheWrapperIsRefused`
+  - `internal/core/authority/decide_test.go` `TestAWrapperTakesADecisionOnlyFromBelow`

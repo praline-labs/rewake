@@ -47,7 +47,7 @@ type DecideRequest struct {
 	Expect Subject
 	// DeadlineBoot is when the call that asked stops wanting the answer, on
 	// the boot clock; zero for a caller with no such bound. Past it no record
-	// is written (docs/mail-bridge-cli.md, rule 3).
+	// is written (docs/archive/mail-bridge-cli.md, rule 3).
 	DeadlineBoot int64
 }
 

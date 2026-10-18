@@ -42,13 +42,8 @@ func TestDecisionLeasePrecedesAllLocks(t *testing.T) {
 		if code != ExitFailed || !strings.Contains(errOut, "belongs to build "+build.Short(foreign)) {
 			t.Fatalf("the shell: exit %d, %q", code, errOut)
 		}
-		caller := newToolCaller(t)
-		got := caller.run("decide", "api", lab.report.ID, "--not-arrived")
-		if got.code != ExitFailed || !strings.Contains(got.errOut, "belongs to build "+build.Short(foreign)) {
-			t.Fatalf("the tool: %+v", got)
-		}
-		if len(caller.tickets) != 0 || r.asked != 0 || r.scanned != 0 {
-			t.Fatalf("before the lease: tickets %d, the wrapper asked %d, the person classified %d", len(caller.tickets), r.asked, r.scanned)
+		if r.asked != 0 || r.scanned != 0 {
+			t.Fatalf("before the lease: the wrapper asked %d, the person classified %d", r.asked, r.scanned)
 		}
 		if n := state.NoLeaseRefusals() - refused; n != 0 {
 			t.Errorf("the refused decisions tried %d writes", n)

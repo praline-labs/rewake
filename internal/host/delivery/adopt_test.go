@@ -21,7 +21,7 @@ func owedBy(dir, run string) []string {
 // into another conversation it does not take, and that one is closed.
 func TestAResumedRunTakesOverWhatItsConversationOwes(t *testing.T) {
 	dir := stateDir(t)
-	tasks := grantPending(t, dir, true, true)
+	tasks := pendingTasks(t, dir, 2)
 	readIn(t, dir, "receiver-epoch", "thread-a", tasks[0])
 	readIn(t, dir, "receiver-epoch", "thread-b", tasks[1])
 
@@ -33,9 +33,6 @@ func TestAResumedRunTakesOverWhatItsConversationOwes(t *testing.T) {
 	if owed := owedBy(dir, "receiver-epoch"); len(owed) != 2 {
 		t.Fatalf("the earlier run's waits went before the conversation was known: %v", owed)
 	}
-	if open, found := mail.TaskOpen(dir, "api", tasks[1].ID); !open || !found {
-		t.Fatal("a task the earlier run owes is closed while the new run does not know its conversation")
-	}
 
 	thread = "thread-a"
 	s.followEarlierRun(context.Background())
@@ -44,15 +41,6 @@ func TestAResumedRunTakesOverWhatItsConversationOwes(t *testing.T) {
 	}
 	if owed := owedBy(dir, "receiver-epoch"); len(owed) != 0 {
 		t.Fatalf("the earlier run's waits stayed: %v", owed)
-	}
-	if open, found := mail.TaskOpen(dir, "api", tasks[0].ID); !open || !found {
-		t.Error("the task taken over is closed")
-	}
-	if open, found := mail.TaskOpen(dir, "api", tasks[1].ID); open || !found {
-		t.Error("the task of another conversation is still open")
-	}
-	if mail.Settled(dir, "api", tasks[0].ID) {
-		t.Error("the task taken over is settled")
 	}
 
 	// The sender sees the task taken over as waited on, and the other as
@@ -95,7 +83,7 @@ func TestAResumedRunTakesOverWhatItsConversationOwes(t *testing.T) {
 // the earlier run's waits at once.
 func TestARunWithoutAConversationForgetsTheEarlierWaits(t *testing.T) {
 	dir := stateDir(t)
-	task := grantPending(t, dir, true)[0]
+	task := pendingTasks(t, dir, 1)[0]
 	readIn(t, dir, "receiver-epoch", "thread-a", task)
 	s := batchServer(dir)
 	s.Epoch = "next-epoch"
@@ -105,8 +93,5 @@ func TestARunWithoutAConversationForgetsTheEarlierWaits(t *testing.T) {
 	}
 	if owed := owedBy(dir, "next-epoch"); len(owed) != 0 {
 		t.Fatalf("taken over without a conversation: %v", owed)
-	}
-	if open, _ := mail.TaskOpen(dir, "api", task.ID); open {
-		t.Error("the task is still open")
 	}
 }

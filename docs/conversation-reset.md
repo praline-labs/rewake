@@ -151,12 +151,6 @@ The same on both harnesses unless said.
   0.155.1 ([record](roadmap/2026-09-26-live-checks.md)); on Claude Code it passes the
   fixture case only (HF-10 in [harness-features.md](archive/harness-features.md)). The model in
   the new conversation does not know the task, so that report answers other work.
-- **Grants.** A grant records the conversation it went into
-  (`internal/core/grant/authority/grantauth.go`), and a resume restores it only into that one
-  (`internal/core/grant/authority/resume.go`). A grant made before a clear still works in the same
-  run on Claude Code, since the hook asks the keeper by run. A cold resume of the
-  conversation after the clear would not restore it. On Codex a grant's roots belong to
-  the thread (`internal/adapter/codex/server_dirgrant.go`).
 - **A compaction's hold** on Codex belongs to the thread it was tied to
   (`internal/adapter/codex/gateway/mark.go`).
 - **`inbox --awaited`** shows neither the conversation a task went into nor the current
@@ -255,13 +249,8 @@ to the caller are closed on `done`: the worker's wrapper, which hears the module
 "main-claude cleared the conversation with rewake clear; the task was not finished" —
 as it writes one after an interrupt, so main's `--awaited` is right at once.
 
-**Grants.** A task closed as stopped gives its grant back the usual way
-([grants.md](grants.md)). The directory itself stays in the session's permission
-context after the clear, until that return takes it.
-
 **Deliveries.** From `clear.asked` until the answer, the worker's wrapper holds new
-notices as not yet deliverable, the way a grant waits for an idle session
-(`internal/host/grants.go`). The hold is bounded by the command's own limit, so a lost
+notices as not yet deliverable. The hold is bounded by the command's own limit, so a lost
 answer holds nothing for long. A notice queued in the harness before that goes first:
 its priority `next` runs ahead of the clear's `later`.
 

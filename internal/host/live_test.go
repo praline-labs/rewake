@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/core/grant"
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/core/role"
@@ -44,17 +43,10 @@ func recordedLive(t *testing.T, dir string) registry.Session {
 
 // The record carries each set as the run reports it, the withdrawal at once;
 // a capability lost and made live again leaves the run as it was — its name,
-// epoch and role, and the grants its tasks gave it, which are kept by the
-// name and epoch.
+// epoch and role.
 func TestTheLiveSetIsRecordedAndADropLeavesTheRun(t *testing.T) {
 	dir, session := liveRun(t)
-	granted := []grant.Entry{{Path: dir, Message: "m1", At: time.Now(), Outcome: "granted"}}
-	if err := grant.Save(dir, session.Name, session.Epoch(), granted); err != nil {
-		t.Fatal(err)
-	}
 	live := newLiveSet(dir, session.Name, session.Epoch())
-	var exchanged [][]adapter.Capability
-	live.exchanged = func(set []adapter.Capability) { exchanged = append(exchanged, set) }
 	both := []adapter.Capability{adapter.WakeCapability, adapter.TurnBoundaryCapability}
 	for _, step := range []struct {
 		set  []adapter.Capability
@@ -76,12 +68,6 @@ func TestTheLiveSetIsRecordedAndADropLeavesTheRun(t *testing.T) {
 		if live.has(adapter.TurnBoundaryCapability) != slices.Contains(step.want, "turn-boundary") {
 			t.Fatalf("the run's own view disagrees with its record after %v", step.set)
 		}
-		if entries := grant.Load(dir, session.Name, session.Epoch()); len(entries) != 1 || entries[0].Message != "m1" {
-			t.Fatalf("the grants after %v: %+v", step.set, entries)
-		}
-	}
-	if len(exchanged) != 1 || !slices.Equal(exchanged[0], both) {
-		t.Fatalf("the exchange was heard %v, want once with its own set", exchanged)
 	}
 }
 

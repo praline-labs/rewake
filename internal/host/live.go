@@ -13,7 +13,6 @@ import (
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/core/role"
-	"github.com/praline-labs/rewake/internal/tool"
 )
 
 // noWake is what a letter to a run without a live Wake waits with: written,
@@ -30,8 +29,6 @@ type liveSet struct {
 	dir, name, epoch string
 	// planned is the set of a run that reports none.
 	planned []adapter.Capability
-	// exchanged hears the first report, the readiness exchange's result.
-	exchanged func([]adapter.Capability)
 
 	// writing orders the reports with their records: the run reports one
 	// at a time, and the record written last is the set reported last. What
@@ -89,15 +86,11 @@ func (l *liveSet) report(set []adapter.Capability) {
 		l.publish(attempt == 1)
 	}
 	l.mu.Lock()
-	first := !l.ready
 	l.set, l.ready = slices.Clone(set), true
 	changed := l.changed
 	l.changed = make(chan struct{})
 	l.mu.Unlock()
 	close(changed)
-	if first && l.exchanged != nil {
-		l.exchanged(set)
-	}
 }
 
 // publish writes the set owed, under writing, and leaves it owed when the
@@ -255,9 +248,7 @@ func reserveIfLive(reserver adapter.Reserver, live *liveSet) mail.Reserver {
 
 // threadIfLive asks the run's conversation while its Wake is live. Without
 // it, as when the conversation rests on the Wake and went with it, a letter
-// owed a report is made readable in no conversation rather than failed: the
-// state of a letter whose sender's wrapper did not answer its pin, which
-// holds for this run and is not taken into a resume (host/grants.go). A
+// owed a report is made readable in no conversation rather than failed. A
 // delivery tried again once the Wake is live pins it then.
 func threadIfLive(thread func() (string, error), live *liveSet) func() (string, error) {
 	if thread == nil {
@@ -291,9 +282,6 @@ func plannedLive(offer adapter.Offer, plan adapter.LaunchPlan, controlDir string
 	}
 	if offer.Control.Any() && controlDir != "" {
 		live = append(live, adapter.ControlCapability)
-	}
-	if _, ok := plan.Service.(adapter.ToolTransport[tool.Descriptor]); ok && offer.ToolTransport != "" {
-		live = append(live, adapter.ToolTransportCapability)
 	}
 	return live
 }

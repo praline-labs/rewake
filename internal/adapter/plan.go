@@ -43,14 +43,10 @@ type LaunchRequest struct {
 	// claim and removed — with everything in it — once the run's services,
 	// children and sockets have stopped, or by a later launch once the run
 	// is proven dead (docs/v2/stage3-rundir.md). What the
-	// adapter writes for this run alone goes here; mail, grants, receipts and
+	// adapter writes for this run alone goes here; mail, receipts and
 	// journals do not. No socket goes here: its path could pass the limit a
 	// unix socket allows, so Socket keeps its short form.
 	RunDir string
-	// GrantDirs are directories main confirmed again for the conversation
-	// this launch resumes (Resumer); a harness that takes a directory at
-	// launch is started with them.
-	GrantDirs []string
 	// Version is what the launch read of the harness's version before the
 	// claim (VersionGate); its start runs nothing more to learn it. Empty
 	// for an adapter whose gate has no minimum.
@@ -155,11 +151,6 @@ type Harness interface {
 	// may be repeated, and for a harness that refuses repeats it turns an
 	// alias plus a typed flag into a launch that will not parse.
 	SingleUseFlags() []Flag
-	// ProtectedDirs are where the harness keeps its own metadata: its
-	// configuration, credentials and sessions, and what it keeps inside a
-	// project. rewake never grants a worker write access to them, whichever
-	// harness the worker runs (docs/grants.md).
-	ProtectedDirs() Protected
 	// Version is the gate a launch reads before the claim.
 	Version() VersionGate
 	// EnvNotInherited names the variables a run must not inherit from the

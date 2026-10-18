@@ -19,9 +19,6 @@ type Role struct {
 	// is the exception, so the zero value is a session that reports: a caller
 	// that forgets the role must not switch reports off.
 	Silent bool
-	// GitWrite permits receiving an explicit main-authorized metadata grant.
-	// Eligibility alone never changes permissions at launch or message delivery.
-	GitWrite bool
 	// Spaces says a session of the role opens spaces and its run hosts them
 	// (docs/v2/stage4-space.md): main alone, which hands the work out.
 	Spaces bool
@@ -41,20 +38,18 @@ var General = Role{
 // Main hands out work. It reads every report, so its own turns are reported to
 // nobody: reporting back to the sessions that reported to it would never end.
 var Main = Role{
-	ID:       "main",
-	Summary:  "Hands out work and reads the reports; its own successful turns go to nobody, so reports never wake each other endlessly. Alone may grant a worker a directory or Git metadata with a task; rewake gives it no write permission of its own.",
-	Silent:   true,
-	GitWrite: true,
-	Spaces:   true,
-	Play:     mainPlaybook,
+	ID:      "main",
+	Summary: "Hands out work and reads the reports; its own successful turns go to nobody, so reports never wake each other endlessly. rewake gives it no write permission of its own.",
+	Silent:  true,
+	Spaces:  true,
+	Play:    mainPlaybook,
 }
 
 // Write takes work and can commit changes in its working repository.
 var Write = Role{
-	ID:       "write",
-	Summary:  "As general, and may commit: on a harness that takes a Git grant once main's --grant-git task opens the Git metadata, on one that takes none within its own permissions. The owner's permissions stay as they are.",
-	GitWrite: true,
-	Play:     writePlaybook,
+	ID:      "write",
+	Summary: "As general, and may commit within its own permissions. The owner's permissions stay as they are.",
+	Play:    writePlaybook,
 }
 
 // all lists the roles, the default first.

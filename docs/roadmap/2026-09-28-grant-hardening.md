@@ -57,9 +57,9 @@ reconnaissance found missing there. The worktree findings are the next package.
 ## What stays open
 
 - On Claude Code a message granted a second time is not refused, while
-  [grants.md](../grants.md#taking-a-grant-back) says it is; out of this package's scope.
+  [grants.md](../archive/grants.md#taking-a-grant-back) says it is; out of this package's scope.
 - The hard tier is a list of known places, not every one
-  ([grants.md](../grants.md#what-a-grant-does-not-stop)).
+  ([grants.md](../archive/grants.md#what-a-grant-does-not-stop)).
 - The keeper's journal entry on Claude Code still names the conversation read just
   before the pin, not at it; the two differ only if the conversation changes within
   those milliseconds.

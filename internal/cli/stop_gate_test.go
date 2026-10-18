@@ -19,7 +19,7 @@ import (
 func TestAnUnreadableJournalStopsEveryCall(t *testing.T) {
 	for _, bytes := range []string{"invalid, removed", "valid, closed and reopened"} {
 		t.Run(bytes, func(t *testing.T) {
-			dir, self, web := toolSession(t)
+			dir, self, web := peerSession(t)
 			readKind(t, dir, web, mail.Task)
 			unread := rawUnread(t, dir, "api", map[string]any{"from": "web", "fromEpoch": web.Epoch(), "toEpoch": self.Epoch(), "kind": string(mail.Task), "text": "arrives while stopped"})
 			if err := os.MkdirAll(mail.JournalPath(dir, "api"), 0o700); err != nil {
@@ -69,39 +69,11 @@ func TestAnUnreadableJournalStopsEveryCall(t *testing.T) {
 	}
 }
 
-// A read frozen before the mailbox stopped goes on with no part after it:
-// each part claims its letter as read, and a stopped mailbox reads nothing.
-// The tool's next call is refused already by its acknowledgment of the part
-// before; the shell fetches the rest with no acknowledgment, and the part's
-// own gate is all that stands in its way.
-func TestAReadInPartsStopsWithTheMailbox(t *testing.T) {
-	dir, self, web := toolSession(t)
-	rawUnread(t, dir, "api", map[string]any{"from": "web", "fromEpoch": web.Epoch(), "toEpoch": self.Epoch(), "kind": "task", "text": longText})
-	tool := newToolCaller(t)
-	first := tool.run("inbox")
-	next := nextFrom(first.out)
-	if first.code != ExitOK || next == nil {
-		t.Fatalf("first part: %+v", first)
-	}
-	if err := os.MkdirAll(mail.JournalPath(dir, "api"), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(mail.JournalPath(dir, "api"), "broken"), []byte("{"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if answer := tool.run(next...); answer.code != ExitFailed || !strings.Contains(answer.errOut, "broken") {
-		t.Fatalf("the next part of a stopped mailbox: %+v", answer)
-	}
-	if code, out, errOut := run(next...); code != ExitFailed || !strings.Contains(errOut, "broken") {
-		t.Fatalf("the next part fetched from the shell: %d %s %s", code, out, errOut)
-	}
-}
-
 // The evidence an end's effects decide by stops every later call while it
 // is unknown, not only the end that met it: a kept answer that does not read
 // leaves pending, a read and its parts refused.
 func TestUnknownEvidenceStopsTheCallsAfterTheEnd(t *testing.T) {
-	dir, self, web := toolSession(t)
+	dir, self, web := peerSession(t)
 	readKind(t, dir, web, mail.Task)
 	version := "v1"
 	report := mail.Message{ID: mail.NewID(), From: "api", FromEpoch: self.Epoch(), To: "web", ToEpoch: web.Epoch(), Kind: mail.Finished, Text: "answer"}

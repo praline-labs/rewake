@@ -20,7 +20,8 @@ The order of work set on October 18, 2026 ([its entry](2026-10-18-decision.md)):
 1. The documents brought to that decision.
 2. The deletions: batch A — the delivery hold, the 1.x legacy marks, the keeper and the screen in
    the mod protocol, the clearing of 1.x, the version probe made small — landed
-   ([its entry](2026-10-18-deletions-a.md)); batch B, grants and the mail tool, after the test diet.
+   ([its entry](2026-10-18-deletions-a.md)); batch B, grants and the mail tool, landed after the
+   test diet ([its entry](2026-10-18-deletions-b.md)).
 3. The space on Claude Code, one step: `rewake space open` and `rewake attach`
    ([S4-7](../v2/stage4-space-steps.md#the-build-steps)).
 4. pi's adapter, then a read-only reviewer on it, then pi in a space (stage 4b,
@@ -147,3 +148,4 @@ without a date. Local installation without publishing is in
 | October 17, 2026 | [A lighter development process](2026-10-17-process.md) | by the owner's decision: the tests of `docs/` removed, the layout test kept to the import and registry rules, three levels of checks, which tests to write, one review, the guarantees frozen |
 | October 18, 2026 | [pi next, main starts its workers, a lighter binary](2026-10-18-decision.md) | by the owner's decision: pi instead of Codex, the space as main starting its workers without showing them inside Claude Code, what goes from the code and the new order of work |
 | October 18, 2026 | [Deletions, batch A](2026-10-18-deletions-a.md) | the delivery hold, the old legacy marks, the keeper and the screen of the mod protocol, the clearing of 1.x and the version probe's holder |
+| October 18, 2026 | [Deletions, batch B](2026-10-18-deletions-b.md) | grants, the mail tool with its channel and tool-only read path, their documents archived, `AGENTS.md` shortened |

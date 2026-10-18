@@ -13,7 +13,7 @@ import (
 // The shell's evidence is dated when the state was reached, not when the
 // command that reached it returns: a send may wait for delivery long after
 // its write, and a failure interval that opened meanwhile must not take that
-// write for a recovery (docs/mail-bridge-channel.md#the-shell-observation).
+// write for a recovery (docs/archive/mail-bridge-channel.md#the-shell-observation).
 func TestTheReachKeepsTheTimeItHappened(t *testing.T) {
 	ResetReach()
 	t.Cleanup(ResetReach)

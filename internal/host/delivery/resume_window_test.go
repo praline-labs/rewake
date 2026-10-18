@@ -11,7 +11,7 @@ import (
 // lost for good.
 func TestATaskSweptByARunInAnotherConversationIsLost(t *testing.T) {
 	dir := stateDir(t)
-	task := grantPending(t, dir, true)[0]
+	task := pendingTasks(t, dir, 1)[0]
 	readIn(t, dir, "receiver-epoch", "thread-a", task)
 	s := batchServer(dir)
 	s.Epoch = "next-epoch"

@@ -24,8 +24,8 @@ func TestNewBatchPreservesReservedAnswersAndExpiry(t *testing.T) {
 	}
 	s.drain(context.Background())
 	later := mixedPending(t, dir)
-	expired := message("expired grant")
-	expired.ToEpoch, expired.Kind, expired.GrantGit, expired.CreatedAt = s.Epoch, mail.Task, true, time.Now().Add(-2*DefaultTTL)
+	expired := message("expired task")
+	expired.ToEpoch, expired.Kind, expired.CreatedAt = s.Epoch, mail.Task, time.Now().Add(-2*DefaultTTL)
 	answer := message("reserved report")
 	answer.ToEpoch, answer.Kind, answer.InReplyTo = s.Epoch, mail.Finished, []string{"question"}
 	foreign := message("other epoch")

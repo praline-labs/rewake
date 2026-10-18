@@ -34,7 +34,7 @@ that scheme.
   way the harness was seen to; its settings parser takes the grant hooks, which it had
   refused, so every Claude Code case would have failed at launch. The workflow case
   `claude-grant-dir` with three mutants: `claude-grant-silent`, `claude-grant-unshielded`,
-  `claude-grant-kept` ([testing-cases.md](../testing-cases.md#a-directory-granted-with-a-task)).
+  `claude-grant-kept` ([testing-cases.md](../testing-cases.md)).
 
 ## After review
 

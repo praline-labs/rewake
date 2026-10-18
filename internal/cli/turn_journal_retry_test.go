@@ -76,7 +76,7 @@ func sweepAsServer(t *testing.T, dir string, session registry.Session) {
 // to be asked about, and the mark it used stays too, since no end removes one
 // (docs/turn-end-recovery.md#pending-marks).
 func TestARecoveredPendingEndKeepsItsInterimOnRecord(t *testing.T) {
-	dir, self, web := toolSession(t)
+	dir, self, web := peerSession(t)
 	task := readKind(t, dir, web, mail.Task)
 	if err := markPending(dir, "api", self.Epoch(), "the suite is running", 100); err != nil {
 		t.Fatal(err)
@@ -115,7 +115,7 @@ func TestARecoveredPendingEndKeepsItsInterimOnRecord(t *testing.T) {
 func TestALateRetryAfterTheSweepPublishesNothing(t *testing.T) {
 	for _, kind := range journalKinds {
 		t.Run(string(kind), func(t *testing.T) {
-			dir, self, web := toolSession(t)
+			dir, self, web := peerSession(t)
 			first := readKind(t, dir, web, kind)
 			event := mail.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "first", Text: "FIRST_END_TEXT"}
 			if err := completeTurn(dir, self, event, ""); err != nil {
@@ -141,7 +141,7 @@ func TestALateRetryAfterTheSweepPublishesNothing(t *testing.T) {
 // found owed: a question read after another end reported the original task
 // is not answered with the first end's text.
 func TestARetryAnswersOnlyWhatItsFirstAttemptSaw(t *testing.T) {
-	dir, self, web := toolSession(t)
+	dir, self, web := peerSession(t)
 	original := readKind(t, dir, web, mail.Task)
 	readOnlyJournals(t, dir)
 	event := mail.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "first", Text: "FIRST_END_TEXT"}

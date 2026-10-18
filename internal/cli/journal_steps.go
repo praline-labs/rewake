@@ -4,17 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/receipt"
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
-
-// toolMargin is kept between the last wait of a tool call and its deadline,
-// for the answer to get back before the harness stops waiting.
-const toolMargin = 500 * time.Millisecond
 
 // pinnedNotify is the heads-up a resumed operation fixed earlier, or nil.
 func (op *operation) pinnedNotify() *receipt.NotifyStep {
@@ -33,7 +28,7 @@ func (op *operation) pinnedNotify() *receipt.NotifyStep {
 // unknown and the record is kept as such. A lookup that failed tells nothing,
 // neither whether the run ended nor what its mailbox holds: the operation
 // stays open for a retry.
-func (op *operation) resolveEndedRun(ctx *Context) error {
+func (op *operation) resolveEndedRun() error {
 	step := op.pinnedNotify()
 	if step == nil || step.Published {
 		return nil
@@ -45,11 +40,7 @@ func (op *operation) resolveEndedRun(ctx *Context) error {
 	case err != nil && !errors.Is(err, registry.ErrNotFound):
 		return &unfinishedError{message: fmt.Sprintf("Rewake: could not tell whether the run of %s this heads-up was written for still lives (%v), so nothing was sent; finish it with: rewake retry %s", step.To, err, op.record.Token)}
 	}
-	wait := readerLockWait
-	if ctx.scope != nil {
-		wait = max(time.Millisecond, min(wait, ctx.scope.remaining()))
-	}
-	lockCtx, cancel := context.WithTimeout(context.Background(), wait)
+	lockCtx, cancel := context.WithTimeout(context.Background(), readerLockWait)
 	defer cancel()
 	publication, err := mail.PublicationOf(lockCtx, op.site.dir, step.To, step.ToEpoch, step.MessageID)
 	if err != nil {
@@ -82,22 +73,12 @@ func (op *operation) pinNotify(message *mail.Message) error {
 	return nil
 }
 
-// publish writes a journaled heads-up into its recipient's mailbox once. The
-// deadline is checked under the recipient's lock, just before the write.
-func (op *operation) publish(ctx *Context, message mail.Message) error {
-	wait := readerLockWait
-	if ctx.scope != nil {
-		wait = max(time.Millisecond, min(wait, ctx.scope.remaining()))
-	}
-	lockCtx, cancel := context.WithTimeout(context.Background(), wait)
+// publish writes a journaled heads-up into its recipient's mailbox once.
+func (op *operation) publish(message mail.Message) error {
+	lockCtx, cancel := context.WithTimeout(context.Background(), readerLockWait)
 	defer cancel()
-	_, err := mail.PublishOnce(lockCtx, op.site.dir, message, func() error {
-		return beforeCommit(ctx, op.record.Token, "the heads-up was published")
-	})
-	var unfinished *unfinishedError
+	_, err := mail.PublishOnce(lockCtx, op.site.dir, message, nil)
 	switch {
-	case errors.As(err, &unfinished):
-		return err
 	case errors.Is(err, mail.ErrRecipientEnded):
 		// Read inside the recipient's lock: the retry learns from that run's
 		// mailbox what an earlier attempt did there.

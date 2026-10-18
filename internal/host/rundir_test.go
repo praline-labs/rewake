@@ -202,7 +202,7 @@ func TestRunSocketsFitAtMaximumNames(t *testing.T) {
 	if !state.ValidName(longest) {
 		t.Fatal("the longest name is not a name")
 	}
-	for _, path := range []string{state.SocketPath(room, longest, epoch), state.ContextPath(room, longest, epoch)} {
+	for _, path := range []string{state.SocketPath(room, longest, epoch)} {
 		if len(path) > 103 {
 			t.Errorf("%s is %d bytes, past the 103 a unix socket path allows", path, len(path))
 		}

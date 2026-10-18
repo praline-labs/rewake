@@ -7,8 +7,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/praline-labs/rewake/internal/core/channel"
-	"github.com/praline-labs/rewake/internal/core/grant"
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/core/role"
@@ -37,9 +35,6 @@ func sessionSnapshot(dir, name, epoch string) *session.Snapshot {
 
 type sessionView struct {
 	Telemetry *session.Snapshot `json:"telemetry,omitempty"`
-	// Grants are the directories rewake added to this run's writable roots
-	// for a task, live and ended (docs/grants.md).
-	Grants []grant.Entry `json:"grants,omitempty"`
 	// Stopped is the stop of the session's mailbox, when it has one.
 	Stopped *stoppedView `json:"stopped,omitempty"`
 	registry.Session
@@ -146,9 +141,6 @@ func stateLine(name string, snapshot *session.Snapshot, settings bool) string {
 		if snapshot.SettingsAt != nil && !snapshot.SettingsFresh {
 			line += " (stale)"
 		}
-	}
-	if snapshot.Channel != nil {
-		line += " | " + channel.Label(snapshot.Channel)
 	}
 	if !snapshot.Fresh {
 		line += " | state unavailable/stale"

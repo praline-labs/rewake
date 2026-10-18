@@ -26,20 +26,13 @@ const defaultWait = 5 * time.Second
 
 // sendModel is the machine form of one send.
 type sendModel struct {
-	GrantGit bool `json:"grantGit,omitempty"`
-	// GrantDirs are the directories the task grants, as resolved; GrantApplied
-	// those the recipient's harness took with the notice, and
-	// AlreadyWritable those found in the recipient's workspace, not carried.
-	GrantDirs       []string          `json:"grantDirs,omitempty"`
-	GrantApplied    []string          `json:"grantApplied,omitempty"`
-	AlreadyWritable []string          `json:"alreadyWritable,omitempty"`
-	Telemetry       *session.Snapshot `json:"telemetry,omitempty"`
-	ID              string            `json:"id"`
-	To              string            `json:"to"`
-	From            string            `json:"from"`
-	State           string            `json:"state"`
-	Via             string            `json:"via,omitempty"`
-	Detail          string            `json:"detail,omitempty"`
+	Telemetry *session.Snapshot `json:"telemetry,omitempty"`
+	ID        string            `json:"id"`
+	To        string            `json:"to"`
+	From      string            `json:"from"`
+	State     string            `json:"state"`
+	Via       string            `json:"via,omitempty"`
+	Detail    string            `json:"detail,omitempty"`
 	// Answer is the receiver's last reply, for a question that got one.
 	Answer        string    `json:"answer,omitempty"`
 	Kind          mail.Kind `json:"kind,omitempty"`
@@ -81,18 +74,14 @@ func handleSend(ctx *Context, call Call) error {
 		return err
 	}
 	if kind.kind == mail.Note && !ctx.journaling {
-		// A heads-up is one of the tool's words: its receipt makes a repeat
-		// or a retry publish it once.
+		// A heads-up's receipt makes a retry publish it once.
 		return journaled(ctx, call, handleSend)
-	}
-	if ctx.scope != nil {
-		wait = max(0, min(wait, ctx.scope.remaining()-toolMargin))
 	}
 	// A resumed heads-up is the one its first call fixed: the same run, the
 	// same text, stdin not read again.
 	pinned := false
 	if ctx.op != nil {
-		if err := ctx.op.resolveEndedRun(ctx); err != nil {
+		if err := ctx.op.resolveEndedRun(); err != nil {
 			return err
 		}
 		if step := ctx.op.pinnedNotify(); step != nil {
@@ -139,14 +128,6 @@ func handleSend(ctx *Context, call Call) error {
 		// only its own blocked turn could give.
 		return &UsageError{Command: command, Message: fmt.Sprintf("a session cannot send to itself, and %s is this session: do the work in this turn, or send it to another session from rewake list.", session.Name)}
 	}
-	grantGit, grantErr := requestedGitGrant(ctx.table.catalog, call, self, session, selfErr)
-	if grantErr != nil {
-		return grantErr
-	}
-	grantDirs, grantErr := requestedDirGrants(ctx.table.catalog, call, self, session, selfErr, dir)
-	if grantErr != nil {
-		return grantErr
-	}
 	if kind.needsSession != "" && selfErr != nil {
 		return &UsageError{
 			Command: command,
@@ -183,9 +164,6 @@ func handleSend(ctx *Context, call Call) error {
 
 	message := mail.Message{
 		AddendumTo: addendumTo,
-		GrantGit:   grantGit,
-		GrantDirs:  grantDirs.dirs,
-		GrantBroad: grantDirs.broad,
 		ID:         mail.NewID(),
 		From:       mail.ShellSender,
 		To:         session.Name,
@@ -214,18 +192,15 @@ func handleSend(ctx *Context, call Call) error {
 		}
 		defer release()
 	}
-	if err := registerGrant(ctx.table.catalog, dir, self, epoch, message); err != nil {
-		return err
-	}
 	if journaledSend {
-		err = ctx.op.publish(ctx, message)
+		err = ctx.op.publish(message)
 	} else {
 		err = writeSent(dir, self, epoch, message, session)
 	}
 	if err != nil {
 		return err
 	}
-	after := sent{dir: dir, self: self, epoch: epoch, target: session, deadline: started.Add(wait), writable: grantDirs.writable}
+	after := sent{dir: dir, self: self, epoch: epoch, target: session, deadline: started.Add(wait)}
 	if !session.HasLive(string(adapter.WakeCapability)) {
 		return reportUnwoken(ctx, after, message)
 	}
@@ -236,7 +211,7 @@ func handleSend(ctx *Context, call Call) error {
 func printDelivery(ctx *Context, session registry.Session, model sendModel) error {
 	line := sendLine(session, model)
 	if mail.State(model.State) != mail.Failed && model.ID != "" {
-		line += "\n" + strings.Join(append(sentGrantLines(session, model), idLines(model)...), "\n")
+		line += "\n" + strings.Join(idLines(model), "\n")
 	}
 	switch mail.State(model.State) {
 	case mail.Delivered:
