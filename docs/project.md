@@ -22,8 +22,10 @@ them — whichever harness each session runs on. The main session can also start
 workers itself, so the work begins without the person opening terminals.
 
 Decided by the owner, October 18, 2026: the harnesses of 2.0 are Claude Code and next pi;
-Codex does not return soon. A space is main starting its workers; showing a worker's
-terminal inside Claude Code is not part of it.
+Codex does not return soon. A space is main starting its workers. Decided by the owner later
+the same day: the workers are part of main's Claude Code — a panel lists them and shows the
+chosen worker's screen, keys typed there reach it, and main raises them itself with the model
+and effort it picks.
 
 **Who calls it.** One person starts the sessions. The commands are called by the agents
 themselves, from their own shell or through the tools their harness offers them. So the
@@ -74,7 +76,8 @@ Each principle names where it comes from.
   session the person started themselves — it does not stand between them and its
   terminal — and never types into anyone's screen; it reaches a session only through the
   ways that harness provides. A worker main starts in a space runs in a pseudo-terminal
-  rewake holds, and rewake shows it only to a person who runs `rewake attach`. ([design.md](design.md#scope-of-the-first-version),
+  rewake holds, and rewake shows it in main's Claude Code panel and to a person who runs
+  `rewake attach`; keys reach it only from there. ([design.md](design.md#scope-of-the-first-version),
   [v2/design.md](v2/design.md#what-does-not-change).)
 - **The person's configuration is never edited.** Whatever a session needs is passed as
   options of that one launch. ([v2/design.md](v2/design.md#what-does-not-change),
@@ -135,8 +138,10 @@ between two sessions of one harness. See
 **Main starts its workers.** The main session opens a space: rewake starts a worker on the
 harness main names, in a checkout of its own if asked, outside main's process tree, in a
 pseudo-terminal rewake holds; the worker joins main's room as any session, and ends when
-main's run ends. A person reaches its terminal with `rewake attach`, to answer a prompt the
-worker waits on. (The owner's decision, October 18, 2026.)
+main's run ends. Main's Claude Code shows the workers in a panel of its own — each with its
+model, effort, context and state, and the chosen one's screen, which takes keys — and main
+picks the model and effort when it raises one. A person can also reach a worker's terminal
+with `rewake attach`. (The owner's decisions, October 18, 2026.)
 
 **Messages of several kinds.** A task asks for work and owes a report; a question is a
 task whose sender waits for the answer; a note informs and owes nothing. A sender can
@@ -193,8 +198,8 @@ them, is one build of rewake; another build is refused, not mixed in. See [v2/de
 
 **What it never does.** It never intervenes in a session the person started themselves
 — it does not stand between them and its terminal — and never types into anyone's
-screen; a worker main starts runs in a terminal rewake holds and shows only through
-`rewake attach`. It does not edit the person's harness configuration; it
+screen; a worker main starts runs in a terminal rewake holds and shows only in main's panel
+and through `rewake attach`. It does not edit the person's harness configuration; it
 does not read transcripts; it runs no service of its own beside the sessions; it does not
 guess an outcome it cannot prove.
 
