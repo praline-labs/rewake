@@ -251,7 +251,7 @@ The finality races are unit tests beside the held ones, in
 `internal/host/delivery/withdraw_test.go`; the halfway failures of a withdrawal and an edit in
 `internal/host/delivery/withdraw_failure_test.go`, with the archive holding the tombstone after a
 halfway read, and a waiting copy that will not go in `withdraw_removal_test.go` beside it, built
-with the `rewakefault` tag; the recall's place outside the window in
+with the `rewaketest` tag; the recall's place outside the window in
 `internal/host/delivery/recall_test.go`; the recall's lines and the replacement's in a notice in
 `internal/core/mail/notice_recall_test.go`, and the member entries of a recall and of a
 replacement in `internal/adapter/codex/mailbox_test.go`; the references, refusals, the recall and the

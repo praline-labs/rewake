@@ -1,4 +1,4 @@
-//go:build rewakefault
+//go:build rewaketest
 
 package delivery
 

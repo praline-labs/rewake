@@ -63,7 +63,7 @@ func TestMain(m *testing.M) {
 // both builds carry the same executable name.
 func compile(dir, name string, flags ...string) (image, error) {
 	path := filepath.Join(dir, name, "rewake")
-	args := append([]string{"build", "-tags", "rewakefault"}, flags...)
+	args := append([]string{"build", "-tags", "rewaketest"}, flags...)
 	args = append(args, "-o", path, "../../cmd/rewake")
 	build := exec.Command("go", args...)
 	build.Stdout, build.Stderr = os.Stderr, os.Stderr

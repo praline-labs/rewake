@@ -45,7 +45,7 @@ env -u REWAKE_SESSION -u REWAKE_EPOCH -u REWAKE_DIR -u REWAKE_ROOM \
 The last commit of a step, before it lands on `v2`:
 
 ```bash
-gofumpt -l $(go list -tags rewakefixture -f '{{.Dir}}' ./...)   # empty; the module, not the tree
+gofumpt -l $(go list -tags rewaketest -f '{{.Dir}}' ./...)   # empty; the module, not the tree
 golangci-lint run ./...         # config in .golangci.yml; golangci-lint fmt formats
 env -u REWAKE_SESSION -u REWAKE_EPOCH -u REWAKE_DIR -u REWAKE_ROOM \
   go test -race -shuffle=on -timeout 20m ./...
@@ -67,7 +67,7 @@ core knows no harness, each layer imports only what it may — is held by `depgu
 `test/workflow` runs a built rewake end to end in a private HOME, state directory and PATH.
 Its scenarios skip unless switched on, and with the switch set and none selected the run
 fails; `-run` selects those a change touches, and a change to `internal/adapter/fixture` or
-`test/workflow/fixtureshim*` runs the whole suite, about three minutes. Keep `-v`, or the line
+`test/workflow/fixtureshim*` runs the whole suite, about half a minute after the test diet of October 18, 2026. Keep `-v`, or the line
 naming what ran is invisible; the summarizer prints a few lines and writes the rest to a file:
 
 ```bash
@@ -180,7 +180,7 @@ are [docs/rules/state.md](docs/rules/state.md):
   a write anywhere else under `internal/` unless its table names it with a reason. A test
   that writes a room has it made and leased by `buildtest.Room`
   (`internal/infra/build/buildtest`), as a launch of the test binary would.
-- **The fault seam**, the `rewakefault` build of `internal/infra/state`, takes faults from
+- **The fault seam**, the `rewaketest` build of `internal/infra/state`, takes faults from
   `REWAKE_FAULT` (`internal/infra/state/fault_build.go`); a release is never built with it.
 
 An outcome rewake cannot prove stops the mailbox until evidence settles it or a decision is

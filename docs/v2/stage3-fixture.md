@@ -11,7 +11,7 @@ capabilities in S10 ([stage3-steps.md](../archive/v2/stage3-steps.md)). The suit
 ## The adapter
 
 `internal/harness/fixture` (from S10 `internal/adapter/fixture`), in files under the
-build tag `rewakefixture`, registered by a tagged file of the catalogue — an `init`
+build tag `rewaketest`, registered by a tagged file of the catalogue — an `init`
 under rule 3's exception until S10, a line of the tagged constructor after — so a build
 without the tag has no fixture. The suite builds with the tag; a release never does.
 
@@ -149,7 +149,7 @@ subject in S8, when their Codex half leaves; their behaviour does not change.
 A third value beside the two of `column_test.go:53-74`, `fixtureColumn{harness: "fixture",
 caps: names-delivered-message-ids, observes-mid-turn-arrival}`, and a third element of
 `runInColumns` (`:232-238`), in S5. `buildRewake` and `buildMutant` build with
-`-tags rewakefixture` through `buildFlags` (`timings_test.go:75`). Also in S5,
+`-tags rewaketest` through `buildFlags` (`timings_test.go:75`). Also in S5,
 `TestWithdrawMidTurn` (`sent_withdraw_test.go:39`, Codex-only at `:43`) becomes neutral,
 so it runs on the fixture before the fixture is the gate.
 

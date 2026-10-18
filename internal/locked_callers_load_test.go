@@ -18,7 +18,7 @@ const (
 // The caller check covers the production files of every tag set. It needs
 // their export data to resolve function references, but no test binaries.
 func tagSets() [][]string {
-	return [][]string{nil, {"rewakefault"}, {"rewakefixture"}, {"rewakefault", "rewakefixture"}}
+	return [][]string{nil, {"rewaketest"}}
 }
 
 type build struct{ tags []string }

@@ -1,4 +1,4 @@
-//go:build rewakefault
+//go:build rewaketest
 
 package state
 
@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-// A binary built with the rewakefault tag takes its faults from REWAKE_FAULT,
+// A binary built with the rewaketest tag takes its faults from REWAKE_FAULT,
 // so a test can break a step of a process it does not run itself: the CLI
 // child a tool call starts (docs/archive/mail-bridge-checks.md#testing-without-a-live-harness). A release is
 // never built with the tag, and has no such variable.

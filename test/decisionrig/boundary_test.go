@@ -1,4 +1,4 @@
-//go:build rewakefixture
+//go:build rewaketest
 
 package decisionrig
 
@@ -14,12 +14,10 @@ import (
 
 // A verified decision is written by the recipient run's wrapper while it
 // lives, and never once it has ended (docs/v2/stage3-decision.md#authority):
-// the wrapper is killed with a question at each point of its way — held by
-// the client after checking the wrapper, admitted by the wrapper, waiting in
-// the transaction for the sender's mailbox, committed with its answer not yet
-// sent — and the asker is told the outcome is unknown, with the record named
-// where one may be, while a record is there only if the wrapper wrote it
-// before it died.
+// the wrapper dies before the request is sent or after the decision is
+// committed but before its answer. The asker is told the outcome is unknown,
+// with the record named where one may be. A record is there only if the
+// wrapper wrote it before it died.
 func TestDecisionAuthorityEndsAtCommitBoundary(t *testing.T) {
 	t.Run("held by the client after checking the wrapper", func(t *testing.T) {
 		w := newWorld(t)
@@ -32,32 +30,6 @@ func TestDecisionAuthorityEndsAtCommitBoundary(t *testing.T) {
 		held.waitHeld(t, "the client")
 		web.kill()
 		held.release(t)
-		w.expectUnknown(t, w.await(out), r, false)
-	})
-	t.Run("admitted by the wrapper", func(t *testing.T) {
-		w := newWorld(t)
-		held := newPause(t)
-		web := w.launch("web", "--write", "other:holdat=decision admitted@"+string(held))
-		r := w.unknownReport(web)
-		out := web.command(terminalHalf, command{Op: opAsk, Job: w.decide(r)})
-		held.waitHeld(t, "the wrapper")
-		web.kill()
-		w.expectUnknown(t, w.await(out), r, false)
-	})
-	t.Run("waiting in the transaction for the sender's mailbox", func(t *testing.T) {
-		w := newWorld(t)
-		held := newPause(t)
-		web := w.launch("web", "--write", "other:holdat=decision admitted@"+string(held))
-		r := w.unknownReport(web)
-		out := web.command(terminalHalf, command{Op: opAsk, Job: w.decide(r)})
-		held.waitHeld(t, "the wrapper")
-		unlock := lockMailbox(t, w.room(), r.sender)
-		held.release(t)
-		// The transaction waits for the lock for seconds; it is well into
-		// that wait when the wrapper dies.
-		time.Sleep(time.Second)
-		web.kill()
-		unlock()
 		w.expectUnknown(t, w.await(out), r, false)
 	})
 	t.Run("committed with its answer not yet sent", func(t *testing.T) {

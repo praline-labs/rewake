@@ -126,8 +126,8 @@ One build per room, which T10 restated for a tool call, holds for every writer
   that ends without a new mark, while its senders still run, is asked once before its
   end closes: the core keeps the answer and hands the session a reason to go on; the
   next end publishes that answer with its own, and every failure of the check falls to
-  publishing, the behaviour without it (`cli/turn_hold.go:13-24`; held by
-  `cli/turn_hold_test.go:80,122,149` and `test/workflow/pending_confirm_test.go`). The mechanism is the adapter's TurnBoundary
+  publishing, the behaviour without it (`core/mail/turn_hold.go`; held by
+  `core/mail/turn_hold_test.go` and `test/workflow/pending_confirm_test.go`). The mechanism is the adapter's TurnBoundary
   ([design-api.md](design-api.md#turnboundary)).
 - **Failed and interrupted turns** report as in 1.x (`docs/turn-outcomes.md`, "Failed
   turns", "Interim turn ends"), with the reason taken from the adapter's end event.

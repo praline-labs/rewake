@@ -20,7 +20,7 @@ type bypass struct {
 }
 
 // TestStateWritesHaveNoBypass reads every production file under internal/,
-// whatever build tags it carries, so the four build variants are all covered
+// whatever build tags it carries, so both build variants are covered
 // at once, and fails on a write that does not go through this package.
 func TestStateWritesHaveNoBypass(t *testing.T) {
 	root := filepath.Join(moduleDir(t), "internal")

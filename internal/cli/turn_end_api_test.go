@@ -30,6 +30,9 @@ func endPaths() map[string]endPath {
 // the next end (E7; an end's reason is never guessed, O2).
 func TestATurnEndWithoutItsEventOrAKnownReasonIsRefused(t *testing.T) {
 	ends := map[string]func(*mail.ReadBoundary) adapter.TurnEnd{
+		"no boundary": func(*mail.ReadBoundary) adapter.TurnEnd {
+			return adapter.TurnEnd{Event: "run/A/1", Thread: "A", Reason: adapter.Answered, Answer: "done"}
+		},
 		"no event": func(b *mail.ReadBoundary) adapter.TurnEnd {
 			return adapter.TurnEnd{Thread: "A", Reason: adapter.Answered, Answer: "done", Boundary: b}
 		},

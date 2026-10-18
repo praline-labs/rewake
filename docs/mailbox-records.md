@@ -118,7 +118,7 @@ path whose presence was unknown or a file on its way, and the settling and the r
 beside a stop are in `stop_unknown_test.go`. The delivery server's side is in
 `internal/host/delivery`: a server that cannot take its lock settles nothing, and
 settles it on a later pass that can (`settle_listing_test.go`, built with the
-`rewakefault` tag, and `settle_lock_test.go`); a settling cut short, by the lock, a
+`rewaketest` tag, and `settle_lock_test.go`); a settling cut short, by the lock, a
 stop, a failed archive or a restart, is found again by its status and copies
 (`settle_recorded_test.go`), and settled by the status read under the lock, whatever
 changed while it was waited for (`settle_recheck_test.go`).

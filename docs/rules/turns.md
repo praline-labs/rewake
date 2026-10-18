@@ -12,7 +12,7 @@ that they are checked like the rest ([stage3-tests.md](../archive/v2/stage3-test
   end closes: the core keeps the answer and hands the session a reason to go on; the
   next end publishes that answer with its own, and every failure of the check falls to
   publishing, the behaviour without it (`core/mail/turn_hold.go:12-23`; held by
-  `cli/turn_hold_test.go:80,122,149` and `test/workflow/pending_confirm_test.go`). The mechanism is the adapter's TurnBoundary
+  `core/mail/turn_hold_test.go` and `test/workflow/pending_confirm_test.go`). The mechanism is the adapter's TurnBoundary
   ([design-api.md](../v2/design-api.md#turnboundary)): since S5 an adapter that can hold
   an end confirms it (`cli/completion.go`, `ConfirmCompletion`). An end held once is
   known by its event: confirmed again, it gets the same reason and nothing is published
@@ -32,28 +32,21 @@ that they are checked like the rest ([stage3-tests.md](../archive/v2/stage3-test
   - `internal/cli/inbox_awaited_test.go` `TestAwaitedTakesTheLatestInterimOrStop`
   - `test/workflow/awaited_view_test.go` `TestAwaitedView`
   - `test/workflow/pending_report_test.go` `TestPendingReport`
-  - `internal/cli/turn_hold_test.go` `TestAStopAfterAHoldCarriesTheHeldAnswer`
-  - `internal/cli/turn_hold_test.go` `TestAnUnmarkedEndAfterAnInterimOneIsHeldOnce` — a holdable end handed to the core since S9
-  - `internal/cli/turn_hold_test.go` `TestAContinuationThatMarksPendingKeepsTheTaskOwed` — a holdable end handed to the core since S9
-  - `internal/cli/turn_hold_test.go` `TestAFailureAfterAHoldCarriesTheHeldAnswer` — a holdable end handed to the core since S9
-  - `internal/cli/turn_hold_test.go` `TestAnAnswerHeldAndNeverContinuedGoesWithTheNextEnd` — a holdable end handed to the core since S9
-  - `internal/cli/turn_hold_test.go` `TestATurnEndIsHeldOnlyAfterAnInterimOne` — a holdable end handed to the core since S9
+  - `internal/core/mail/turn_hold_test.go` `TestAStopAfterAHoldCarriesTheHeldAnswer`
+  - `internal/core/mail/turn_hold_test.go` `TestAnUnmarkedEndAfterAnInterimOneIsHeldOnce` — a holdable end handed to the core since S9
+  - `internal/core/mail/turn_hold_test.go` `TestAContinuationThatMarksPendingKeepsTheTaskOwed` — a holdable end handed to the core since S9
+  - `internal/core/mail/turn_hold_test.go` `TestAFailureAfterAHoldCarriesTheHeldAnswer` — a holdable end handed to the core since S9
+  - `internal/core/mail/turn_hold_test.go` `TestAnAnswerHeldAndNeverContinuedGoesWithTheNextEnd` — a holdable end handed to the core since S9
+  - `internal/core/mail/turn_hold_test.go` `TestATurnEndIsHeldOnlyAfterAnInterimOne` — a holdable end handed to the core since S9
   - `test/workflow/pending_confirm_test.go` `TestPendingConfirm` — on the fixture column since S5, the only one since S9
   - `internal/adapter/fixture/turns_test.go` `TestAnEndIsConfirmedWhenItCanBeHeld`
   - `internal/cli/turn_confirm_test.go` `TestAConfirmedEndAfterAnInterimOneIsHeldOnce`
-  - `internal/cli/turn_confirm_test.go` `TestAConfirmedContinuationThatMarksPendingKeepsTheTaskOwed`
-  - `internal/cli/turn_confirm_test.go` `TestAFailedOrStoppedContinuationCarriesTheHeldAnswer`
-  - `internal/cli/turn_confirm_test.go` `TestAnAnswerHeldAndNeverContinuedGoesWithTheNextConfirmedEnd`
-  - `internal/cli/turn_confirm_test.go` `TestAConfirmedEndIsHeldOnlyAfterAnInterimOne`
-  - `internal/cli/turn_confirm_test.go` `TestEveryFailureOfTheConfirmationCheckFallsToPublishing`
+  - `internal/core/mail/turn_hold_failure_test.go` `TestEveryFailureOfTheConfirmationCheckFallsToPublishing`
   - `internal/cli/turn_hold_senders_test.go` `TestOneUnreadableSenderAbandonsTheHold`
   - `internal/cli/turn_hold_senders_test.go` `TestAGoneSenderLeavesTheHoldToTheLiveOne`
   - `internal/cli/turn_hold_senders_test.go` `TestAnUndecodableSenderIsNotTakenForGone`
-  - `internal/cli/turn_confirm_test.go` `TestAConfirmedEndWithoutItsEventIsRefused`
   - `internal/cli/turn_confirm_repeat_test.go` `TestTheSameEndConfirmedAgainGetsTheSameAnswer`
   - `internal/cli/turn_confirm_repeat_test.go` `TestTwoEqualConfirmationsAtOnceHoldOnce`
-  - `internal/cli/turn_confirm_repeat_test.go` `TestAHoldCutByACrashIsHeldOnceWhenConfirmedAgain`
-  - `internal/cli/turn_confirm_repeat_test.go` `TestAHeldEndConfirmedAfterItsContinuationIsPublished`
   - `internal/core/mail/held_end_test.go` `TestAJournalThatTookAHeldEndNamesItInEveryForm`
   - `internal/core/mail/held_end_test.go` `TestAnUnreadableJournalIsNotTakenForNone`
   - `internal/core/mail/held_end_test.go` `TestAHeldEndRaisesTheClockToItsPosition`

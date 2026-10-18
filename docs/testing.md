@@ -13,8 +13,8 @@ and the roadmap records named below for how each piece was built.
 
 | Tier | Runs | Proves | Does not prove | Costs |
 | --- | --- | --- | --- | --- |
-| The step's checks | `gofumpt`, golangci-lint, one `go test -race -shuffle=on ./...` | unit invariants: parsing, publishing races, liveness, inbox order and expiry, the context endpoint's framing, the import rule; the suite's own classifier and summarizer | anything end to end: every workflow scenario skips itself | about ten minutes at `-p 4` on an idle machine on October 17, 2026 (9m50s), before the matrices of `core/mail` were cut — re-measure; no network, no harness, no container. The full set before a publication adds vet and staticcheck over the four build variants and two more `-race` runs with the tags, about half an hour. Since the matrices of `core/mail` were cut on October 18, 2026, that package takes about 55 s under `-race` instead of about 600 s; each test run still carries `-timeout 20m` |
-| Workflow suite (**F**) | a built rewake end to end against a fixture harness, in one column since S9 | that the shared service code delivers, groups, steers and reports as each scenario claims | that the real harness parses, renders or behaves as its fixture does | about three minutes — 3m06s and 3m10s on September 25, 2026, 102 cases six at a time, against 19m22s one after another the same evening; 2m23s eight at a time. The longest cases then were `claude-steered`'s controls, about 30 s each. It fits in `go test`'s default ten minutes, which the documented commands name; no network |
+| The step's checks | `gofumpt`, golangci-lint, one `go test -race -shuffle=on ./...` | unit invariants: parsing, publishing races, liveness, inbox order and expiry, the context endpoint's framing, the import rule; the suite's own classifier and summarizer | anything end to end: every workflow scenario skips itself | the race event stream took 109 s at `-p 4` on an idle machine on October 18, 2026, after the test diet; compilation before the first event and formatting/lint are outside that measurement. No network, no harness, no container. Before a publication, vet and staticcheck check the release and the test variant; one extra tagged `-race` run covers only the packages with tagged files. `core/mail` took 62 s under `-race`; each documented test run still carries `-timeout 20m` |
+| Workflow suite (**F**) | a built rewake end to end against a fixture harness, in one column since S9 | that the shared service code delivers, groups, steers and reports as each scenario claims | that the real harness parses, renders or behaves as its fixture does | 33 s for 21 scenarios on October 18, 2026, after the controls were removed, six cases at a time; the documented ten-minute timeout remains the outer bound; no network |
 
 Two tiers are planned and not built. **P**, a real harness of a named version against a
 local responder instead of a model provider, would catch a change of behaviour that a
@@ -28,7 +28,7 @@ including the owner's own eye on a terminal, is in
 
 ### The fault build inside the test run
 
-A binary built with the `rewakefault` tag reads `REWAKE_FAULT`
+A binary built with the `rewaketest` tag reads `REWAKE_FAULT`
 (`internal/infra/state/fault_build.go`) and logs, ends, fails or holds its process at a durable
 step, or leaves behind a process that keeps its output open past a kill. The neutral rig
 that took its fault cases from the logged steps of clean runs, `test/toolrig`, left with
@@ -45,17 +45,19 @@ The decision rig (`test/decisionrig`) builds rewake with the tag and the fixture
 and launches sessions whose harness is the rig's own test binary as the fixture's program
 ([stage3-decision.md](v2/stage3-decision.md#authority)). The program's two halves start
 askers on command — below the wrapper, in a group or a user namespace of their own, with
-the session's variables changed or cleared, or through a double fork that leaves the tree
-— each asking for a decision through the client, straight at the address, or classifying
-itself as the person. A wrapper is held at the named steps of a decision's way and killed
+the session's variables changed or cleared — each asking for a decision through the client,
+straight at the address, or classifying itself as the person. A wrapper is held at the named steps of a decision's way and killed
 or ended there, an asker at the client's step after it checked the wrapper. It runs only
-with the fixture's tag, since a launch needs the fixture harness.
+with the test tag, since a launch needs the fixture harness. The death cases keep one
+before the decision and one after its commit; the deadline and admitted-decision regressions
+remain whole. The person cases keep an ordinary child and a detached child with a clean
+environment.
 
 The tag also admits one narrow kind of test code into a production package. When a fault
 schedule must cross a package boundary and neither an exported operation, a file
 fixture nor `state.Fault` can build it, the package that owns the step may carry exported
-test operations in a file built only under `rewakefault`, and the tests in the other
-package that use them carry the same tag. They run in the `rewakefault,rewakefixture`
+test operations in a file built only under `rewaketest`, and the tests in the other
+package that use them carry the same tag. They run in the additional tagged
 race run; an untagged build has no such operation. The only such file is
 `internal/core/mail/faultops.go`, decided by S15 for `core/mail` ([stage3-moves.md](archive/v2/stage3-moves.md#s15-the-delivery-server-to-hostdelivery-codex)):
 a waiting copy's removal that fails, and the listing of a mailbox's stops observed.
@@ -69,7 +71,7 @@ session left with the hooks and the plugin it played
 a Claude Code column back. Shared scenarios run across the columns; adapter-specific
 scenarios run on the columns they exercise. The column left is the
 fixture harness — a harness of its own, built
-only under the `rewakefixture` tag, which the suite's rewake is built with
+only under the `rewaketest` tag, which the suite's rewake is built with
 ([stage3-fixture.md](v2/stage3-fixture.md)). **The fixture column is the regression
 gate** since S6 ([stage3-fixture.md](v2/stage3-fixture.md#the-gate-across-the-steps)):
 a red there blocks, and an absent capability there is red too, because a gate that
@@ -120,22 +122,34 @@ to prove that a scenario missing an observation turns the run red.
 
 ### Before a publication to npm
 
-The full set runs every build variant, since production code also builds under two tags:
-`rewakefault` adds the fault seam of the state directory, `rewakefixture` the fixture
-harness the workflow suite runs ([stage3-fixture.md](v2/stage3-fixture.md)):
+The release has no build tag. The test-only `rewaketest` tag enables both the fault
+seam and the fixture harness ([stage3-fixture.md](v2/stage3-fixture.md)); it replaced
+`rewakefault` and `rewakefixture` on October 18, 2026. No release needs either feature.
+The lease rig uses the same tag, though it stops launches before their harness starts.
+
+Run the ordinary checks over the whole module. Run the additional tagged vet,
+staticcheck and race checks only over packages with tagged files: `internal/infra/state`,
+`internal/core/mail`, `internal/host/delivery`, `internal/adapter/catalog`,
+`internal/adapter/fixture` and `test/decisionrig`. This includes tagged test files and
+negative build constraints, so the release/catalogue exclusion is checked in the ordinary
+run and the fixture's presence in the tagged run. The locked-caller check in `internal`
+still loads the whole module in both variants. The list is derived from build constraints,
+not maintained separately:
 
 ```bash
-go vet ./... && go vet -tags rewakefault ./... && go vet -tags rewakefixture ./... &&
-  go vet -tags rewakefault,rewakefixture ./...
-staticcheck ./... && staticcheck -tags rewakefault ./... && staticcheck -tags rewakefixture ./... &&
-  staticcheck -tags rewakefault,rewakefixture ./...
+mapfile -t tagged_packages < <(
+  rg -l '^//go:build .*rewaketest' --glob '*.go' --glob '!archive/**' |
+    xargs -r -n 1 dirname | sort -u | sed 's|^|./|'
+)
+# A missing tag must not turn the additional check into a check of no packages.
+((${#tagged_packages[@]})) || exit 1
+go vet ./... && go vet -tags rewaketest "${tagged_packages[@]}"
+staticcheck ./... && staticcheck -tags rewaketest "${tagged_packages[@]}"
 env -u REWAKE_SESSION -u REWAKE_EPOCH -u REWAKE_DIR -u REWAKE_ROOM \
-  go test -race -shuffle=on -timeout 20m -tags rewakefixture ./...
-env -u REWAKE_SESSION -u REWAKE_EPOCH -u REWAKE_DIR -u REWAKE_ROOM \
-  go test -race -shuffle=on -timeout 20m -tags rewakefault,rewakefixture ./...
+  go test -race -shuffle=on -timeout 20m -tags rewaketest "${tagged_packages[@]}"
 ```
 
-with the whole workflow suite. The tools install into `~/go/bin`, on `PATH`:
+Run the whole workflow suite as well. The tools install into `~/go/bin`, on `PATH`:
 
 ```bash
 go install honnef.co/go/tools/cmd/staticcheck@latest mvdan.cc/gofumpt@latest \

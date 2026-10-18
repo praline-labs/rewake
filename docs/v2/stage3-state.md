@@ -186,7 +186,7 @@ guarded resources:
 - commit 5: the registry's removals; `core/control`'s lock, request, mark and answer files
   and `serve.go`; in `core/mail` a direct write, a truncate without create, a hard link,
   the `RemoveAll`s, an exclusive create and its removal, the touches of retention, and
-  `settle.go`'s function value with its `rewakefault` override; `receipt.go`'s lock, its
+  `settle.go`'s function value with its `rewaketest` override; `receipt.go`'s lock, its
   identity recheck kept; `grant/journal.go`; `host/delivery`'s retention touch;
 - commit 6: the read clock, `core/mail/read_boundary.go` — a shared writable mapping, a
   truncate, a store through an atomic word and a sync of an open descriptor — through
@@ -204,7 +204,7 @@ takes the recipient's mailbox, checks the live epoch through `LookupReadOnly` in
 then reads the proof and publishes, and a seam helper takes no name lock and does not
 take the same mailbox again there.
 
-A static test over `internal/`, in all four build variants, fails on a write outside
+A static test over `internal/`, in both build variants, fails on a write outside
 `infra/state` — a direct call, an alias, a function value, a descriptor's mode or owner, a listen not proven abstract — except in its own table of
 file, effect and reason, which fails on a stale entry; what it reads and excuses is in
 [stage3-state-tests.md](../archive/v2/stage3-state-tests.md#stage-3-the-tests-of-state-and-builds), with the

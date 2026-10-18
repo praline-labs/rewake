@@ -183,12 +183,11 @@ The decision is then recorded as the person's, **unverified**, and both the reci
 run and the room's main are told once. The accepted limit: a process that left a
 session's tree through `setsid` and a double fork, with a clean environment, passes these
 checks and is taken for the person; without the path a room whose recipient run is gone
-would have no way out. `test/decisionrig` shows both sides on real processes: a
-session's command is below it with its variables unset, in a group of its own, and with
-a clean environment there too — its harness places it — while the double fork with a
-clean environment classified as the person on October 12, 2026, adopted by a process
-outside every session; the rig logs what it classifies as, since that depends on the
-adopter.
+would have no way out. `test/decisionrig` keeps two person-classification cases on real
+processes: an ordinary session child and one in a group of its own with a clean environment,
+where its harness places it. On October 12, 2026, a double fork with a clean environment
+classified as the person, adopted by a process outside every session. That observation
+depends on the adopter; its logging-only case left the rig on October 18, 2026.
 
 Every process of the user can write the state directory, so a decision record written by
 hand is no more prevented than a forged letter. The authority keeps an honest worker —

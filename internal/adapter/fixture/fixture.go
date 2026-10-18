@@ -1,9 +1,9 @@
-//go:build rewakefixture
+//go:build rewaketest
 
 // Package fixture is the harness the core is proven on without a real one: a
 // program the workflow suite provides, every capability of which a test can
 // withhold (docs/v2/stage3-fixture.md). It exists only in a build with the
-// rewakefixture tag, which the suite uses and a release never does.
+// rewaketest tag, which the suite uses and a release never does.
 package fixture
 
 import (

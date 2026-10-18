@@ -29,7 +29,7 @@ import another module's package, each dependency its own decision (`AGENTS.md`,
 includes tests and excludes child packages of `terminal`.
 
 The lint run checks the files selected by its build tags, including tests. The
-configured run includes `rewakefixture`; a different tag set is checked with
+configured run includes `rewaketest`; a different tag set is checked with
 `golangci-lint run --build-tags <tags> ./...`. Unlike the former layout test,
 lint does not enumerate eight builds or reject a directory merely for being
 outside the named layers. A new layer is a design change and needs its rule in

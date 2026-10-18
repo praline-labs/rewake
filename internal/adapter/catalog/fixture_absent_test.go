@@ -1,4 +1,4 @@
-//go:build !rewakefixture
+//go:build !rewaketest
 
 package catalog
 
@@ -10,7 +10,7 @@ import (
 func TestTheFixtureIsAbsentWithoutItsTag(t *testing.T) {
 	for _, h := range New().All() {
 		if h.ID() == "fixture" {
-			t.Fatal("the fixture is in a catalog built without rewakefixture")
+			t.Fatal("the fixture is in a catalog built without rewaketest")
 		}
 	}
 }

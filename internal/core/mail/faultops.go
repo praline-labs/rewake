@@ -1,4 +1,4 @@
-//go:build rewakefault
+//go:build rewaketest
 
 package mail
 
@@ -15,7 +15,7 @@ import (
 // package, build the two fault schedules that no exported operation, file or
 // state.Fault reaches: a waiting copy whose removal fails, and the moment the
 // stops of a mailbox are listed (docs/v2/stage3-moves.md, the fault exception
-// (c)). They exist only in a build with the rewakefault tag.
+// (c)). They exist only in a build with the rewaketest tag.
 
 // failingRemovals holds, by path, the attempt counter of each waiting copy
 // whose removal a test made fail.

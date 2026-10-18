@@ -122,7 +122,7 @@ lies in, by cleaned prefix, so another room's write refuses like one outside eve
 a lock's authorization ends the moment it may hold nothing; a view refusal takes
 precedence over a missing lease; every refusal is counted, so a swallowed one still shows.
 A reply socket outside the room is claimed for that one clean path and widens nothing of
-any state. A static test over `internal/`, in all four build variants, fails on a write
+any state. A static test over `internal/`, in both build variants, fails on a write
 outside the state package, except in its own table of file, effect, count and reason,
 which fails on a stale entry.
 

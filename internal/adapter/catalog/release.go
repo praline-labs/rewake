@@ -1,4 +1,4 @@
-//go:build !rewakefixture
+//go:build !rewaketest
 
 package catalog
 

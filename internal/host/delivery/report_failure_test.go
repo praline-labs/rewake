@@ -103,7 +103,7 @@ func TestReportFailureAdmissionAndShutdown(t *testing.T) {
 }
 
 // A failed removal of the waiting copy is the same recovery under the
-// rewakefault tag, in TestReportFailureRecoveryAfterAFailedRemoval.
+// rewaketest tag, in TestReportFailureRecoveryAfterAFailedRemoval.
 func TestReportFailureRecovery(t *testing.T) {
 	for _, fault := range []string{"status", "archive"} {
 		t.Run(fault, func(t *testing.T) {

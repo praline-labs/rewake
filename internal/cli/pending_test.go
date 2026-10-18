@@ -47,16 +47,6 @@ func turnStarted(t *testing.T, dir string, self registry.Session, at int64) {
 	}
 }
 
-// recordedStart is the latest turn start the run has on record.
-func recordedStart(t *testing.T, dir string, self registry.Session) int64 {
-	t.Helper()
-	started, err := mail.LatestTurnStart(dir, self.Name, self.Epoch())
-	if err != nil {
-		t.Fatal(err)
-	}
-	return started
-}
-
 // markAt is the time this test process's `rewake pending` marks carry: the
 // command runs in-process, so its process start is the test binary's.
 var markAt = boottime.ProcessStarted

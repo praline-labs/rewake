@@ -40,8 +40,8 @@ const (
 )
 
 // suiteTags are the build tags of the binary under test:
-// rewakefixture puts the fixture harness in the catalog, for its column.
-const suiteTags = "rewakefixture"
+// rewaketest puts the fixture harness in the catalog, for its column.
+const suiteTags = "rewaketest"
 
 // suiteFlags shorten the waits in the binary under test.
 var suiteFlags = []string{"-ldflags", strings.Join([]string{

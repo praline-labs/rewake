@@ -1,4 +1,4 @@
-//go:build rewakefixture
+//go:build rewaketest
 
 package decisionrig
 
@@ -229,8 +229,7 @@ func serveCommands(dir string, handle func(command)) {
 	}
 }
 
-// startAsker starts the asker a command describes, below this half or, for
-// a double fork, below whatever adopts it.
+// startAsker starts the asker a command describes below this half.
 func startAsker(c command) {
 	j := c.Job
 	j.Out = c.Out
@@ -239,12 +238,8 @@ func startAsker(c command) {
 		_ = writeJSON(c.Out, resultOf(err))
 		return
 	}
-	marker := askerEnv
-	if j.Detach == detachDouble {
-		marker = launcherEnv
-	}
 	cmd := exec.Command(os.Args[0])
-	cmd.Env = append(j.environment(os.Environ()), marker+"="+path)
+	cmd.Env = append(j.environment(os.Environ()), askerEnv+"="+path)
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: j.Detach == detachSetsid}
 	if j.Namespace {
 		cmd.SysProcAttr.Cloneflags = syscall.CLONE_NEWUSER

@@ -1,4 +1,4 @@
-//go:build rewakefixture
+//go:build rewaketest
 
 // Package decisionrig asks a run's wrapper for decisions from real processes
 // (docs/v2/stage3-decision.md#authority): sessions of a built rewake whose
@@ -32,8 +32,6 @@ func TestMain(m *testing.M) {
 	switch {
 	case os.Getenv(askerEnv) != "":
 		os.Exit(runAsker(os.Getenv(askerEnv)))
-	case os.Getenv(launcherEnv) != "":
-		os.Exit(runLauncher(os.Getenv(launcherEnv)))
 	case os.Getenv(programEnv) != "":
 		os.Exit(runProgram(os.Getenv(programEnv), os.Args[1:]))
 	}
@@ -47,7 +45,7 @@ func TestMain(m *testing.M) {
 			return 1
 		}
 		binary = filepath.Join(dir, "rewake")
-		compile := exec.Command("go", "build", "-tags", "rewakefault,rewakefixture", "-o", binary, "../../cmd/rewake")
+		compile := exec.Command("go", "build", "-tags", "rewaketest", "-o", binary, "../../cmd/rewake")
 		compile.Stdout, compile.Stderr = os.Stderr, os.Stderr
 		if err := compile.Run(); err != nil {
 			fmt.Fprintln(os.Stderr, "rewake does not build:", err)

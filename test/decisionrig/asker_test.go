@@ -1,4 +1,4 @@
-//go:build rewakefixture
+//go:build rewaketest
 
 package decisionrig
 
@@ -13,11 +13,9 @@ import (
 	"errors"
 	"net"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/praline-labs/rewake/internal/core/authority"
@@ -26,12 +24,8 @@ import (
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
-// askerEnv names the job of an asker; launcherEnv the job of a process that
-// starts the asker detached and ends at once, so the asker is adopted.
-const (
-	askerEnv    = "DECISIONRIG_ASKER"
-	launcherEnv = "DECISIONRIG_LAUNCHER"
-)
+// askerEnv names the job of an asker.
+const askerEnv = "DECISIONRIG_ASKER"
 
 // How an asker asks.
 const (
@@ -44,11 +38,8 @@ const (
 	modePerson = "person"
 )
 
-// How an asker leaves its parent's tree.
-const (
-	detachSetsid = "setsid"
-	detachDouble = "double"
-)
+// detachSetsid puts an asker in a separate process group.
+const detachSetsid = "setsid"
 
 // job is one asker's question and the process it runs as.
 type job struct {
@@ -115,23 +106,6 @@ func resultOf(err error) result {
 		return result{Kind: kindError, Error: err.Error()}
 	}
 	return result{Kind: "done"}
-}
-
-func runLauncher(path string) int {
-	cmd := exec.Command(os.Args[0])
-	var env []string
-	for _, entry := range os.Environ() {
-		if !strings.HasPrefix(entry, launcherEnv+"=") {
-			env = append(env, entry)
-		}
-	}
-	env = append(env, askerEnv+"="+path)
-	cmd.Env = env
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
-	if err := cmd.Start(); err != nil {
-		return 1
-	}
-	return 0
 }
 
 func runAsker(path string) int {
