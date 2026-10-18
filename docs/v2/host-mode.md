@@ -178,6 +178,18 @@ pass the programs' bytes through.
    - Live check: type into main, start a worker, switch to it, type a line, switch back.
    - Tests: the prefix automaton, the layout arithmetic, and one workflow scenario over the
      fixture.
+   - **Built and checked live, October 18, 2026, Claude Code 2.1.302** (`internal/host/hostmode`,
+     the canvas in `internal/host/terminal/canvas.go`): main and a worker on the cheapest model, the worker opened by
+     `space open`; typed into main, switched with Ctrl+\\ n, a line answered by the worker,
+     Ctrl+\\ m back with main's prompt kept, a resize to 100×30 reaching both, Ctrl+C twice
+     ending main with every mode reset and the space closed. A key typed into main shows in about
+     33 ms: main's screen is taken 16 ms after a change, for the same reason a view waits 30 ms.
+   - **Found live:** the emulator library ends an OSC string at the byte 0x9C even inside a
+     UTF-8 character (x/ansi v0.11.7 and v0.11.8), so Claude Code's title `✳ Claude Code` was
+     drawn over its logo, in every grid. The grid drops the non-ASCII bytes of an OSC string
+     before the emulator; step 4's title forwarding must take that into account.
+   - **Left for later steps:** `CLAUDE_CODE_NO_FLICKER` (step 2); main's last words after it
+     exits — Claude Code's resume line — are drawn on the alternate screen and lost with it.
 2. **Mouse, paste and focus.** The forwarding rules above. Live check: Claude Code's fullscreen
    scroll and its click selection in a worker.
 3. **The sidebar.** The width threshold, `s`, and clicks on it.

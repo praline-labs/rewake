@@ -198,6 +198,7 @@ func fixtureTerminal() int {
 		_ = os.WriteFile(mark, []byte("fixture"), 0o600)
 	}
 	go serveRequests()
+	go fixtureScreen()
 	if code := sendAsAsked(); code != 0 {
 		return code
 	}

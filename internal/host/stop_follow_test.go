@@ -66,7 +66,7 @@ func followOneHarness(t *testing.T) {
 		t.Fatalf("start the harness: %v", err)
 	}
 	_, _ = os.Stdout.WriteString(strconv.Itoa(harness.Process.Pid) + "\n")
-	waitForHarness(harness.Process.Pid)
+	waitForHarness(harness.Process.Pid, followJob)
 }
 
 // startFollower starts the wrapper side in a process of its own and returns its

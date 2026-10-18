@@ -23,3 +23,24 @@ func TestAWideGlyphIsARunOfItsOwn(t *testing.T) {
 		}
 	}
 }
+
+// A title with a character whose UTF-8 holds the byte 0x9C stays a title:
+// the library took that byte for the end of the string and drew the rest of
+// Claude Code's title over its logo. Cut at every offset, as reads come.
+func TestATitleIsNeverDrawn(t *testing.T) {
+	stream := "\x1b]0;✳ Claude Code\x07X\x1b]2;✳ é\x1b\\Y"
+	for cut := 0; cut <= len(stream); cut++ {
+		emulator, err := newVT(Size{Cols: 20, Rows: 1})
+		if err != nil {
+			t.Fatal(err)
+		}
+		vt := emulator.(*vtEmulator)
+		vt.write([]byte(stream[:cut]))
+		vt.write([]byte(stream[cut:]))
+		runs := vt.row(0, 20)
+		_ = vt.stopReplies()
+		if len(runs) == 0 || runs[0].Text[:2] != "XY" {
+			t.Fatalf("cut at %d: row %+v, want XY", cut, runs)
+		}
+	}
+}

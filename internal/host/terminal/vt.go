@@ -23,6 +23,7 @@ type vtEmulator struct {
 	// modes are kept from the mode callbacks, which run inside write, so
 	// they change only under the terminal's lock.
 	modes Modes
+	osc   oscFilter
 }
 
 func newVT(size Size) (emulator, error) {
@@ -80,7 +81,46 @@ func (v *vtEmulator) mouse(m MouseMode, on bool) {
 	}
 }
 
-func (v *vtEmulator) write(p []byte) { _, _ = v.emu.Write(p) }
+func (v *vtEmulator) write(p []byte) { _, _ = v.emu.Write(v.osc.filter(p)) }
+
+// oscFilter drops the bytes above ASCII inside an OSC string. The library's
+// parser (x/ansi v0.11.7 and v0.11.8) ends an OSC string at the byte 0x9C,
+// the 8-bit ST, even inside a UTF-8 character, so Claude Code's title
+// "✳ Claude Code" (✳ is E2 9C B3) ended early and the rest was drawn as
+// text over its logo. A program in a UTF-8 locale never sends a bare 8-bit
+// ST; what the string loses is only its non-ASCII characters, and no OSC
+// the emulator acts on needs them.
+type oscFilter struct{ esc, osc bool }
+
+func (f *oscFilter) filter(p []byte) []byte {
+	out := p
+	copied := false
+	for i, b := range p {
+		drop := false
+		switch {
+		case f.osc:
+			switch b {
+			case 0x07, 0x18, 0x1a:
+				f.osc = false
+			case 0x1b:
+				f.osc, f.esc = false, true
+			}
+			drop = b >= 0x80
+		case f.esc:
+			f.esc = false
+			f.osc = b == ']'
+		case b == 0x1b:
+			f.esc = true
+		}
+		switch {
+		case drop && !copied:
+			out, copied = append([]byte(nil), p[:i]...), true
+		case !drop && copied:
+			out = append(out, b)
+		}
+	}
+	return out
+}
 
 func (v *vtEmulator) resize(size Size) { v.emu.Resize(size.Cols, size.Rows) }
 

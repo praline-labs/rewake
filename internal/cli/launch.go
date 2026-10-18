@@ -14,6 +14,7 @@ import (
 	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/host"
 	"github.com/praline-labs/rewake/internal/host/launch"
+	"github.com/praline-labs/rewake/internal/host/terminal"
 	"github.com/praline-labs/rewake/internal/infra/build"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
@@ -45,6 +46,9 @@ func handleLaunch(h adapter.Harness) func(*Context, Call) error {
 			return err
 		}
 		if err := refuseReportingRole(h, part); err != nil {
+			return err
+		}
+		if err := refuseHost(call, part); err != nil {
 			return err
 		}
 		// The build lease before anything of the room is made or locked, and
@@ -87,6 +91,7 @@ func handleLaunch(h adapter.Harness) func(*Context, Call) error {
 			Name:      call.Flag("name", ""),
 			Args:      args,
 			Intro:     !call.Switch("no-intro"),
+			Host:      call.Switch("host"),
 			Role:      part,
 			Command:   program,
 			OnClaimed: onClaimed,
@@ -232,4 +237,19 @@ func roleSummary() string {
 		descriptions = append(descriptions, label+": "+candidate.Summary)
 	}
 	return "No role flag means general, even in an empty room; only --main makes main, refused while the room has one, and a name never selects a role. " + strings.Join(descriptions, " ")
+}
+
+// refuseHost refuses the host mode where it has nothing to show or nowhere
+// to show it: a role that opens no spaces, or no terminal to hold.
+func refuseHost(call Call, part role.Role) error {
+	if !call.Switch("host") {
+		return nil
+	}
+	if !part.Spaces {
+		return &UsageError{Command: call.Command, Message: "--host shows the workers a main session opens; add --" + role.Main.ID + "."}
+	}
+	if !terminal.IsTerminal(os.Stdin) || !terminal.IsTerminal(os.Stdout) {
+		return &UsageError{Command: call.Command, Message: "--host holds a terminal: standard input and output must both be one."}
+	}
+	return nil
 }

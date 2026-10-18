@@ -41,6 +41,13 @@ var commandOption = Option{
 	Summary: "Start this program, a wrapper script that runs the harness, in place of the harness with the same arguments. A name is looked up on PATH, a path with a slash taken as given; it must be executable.",
 }
 
+// hostOption runs main in the host mode (docs/v2/host-mode.md): a way of
+// running main, not another harness, so a flag rather than a command.
+var hostOption = Option{
+	Flag:    "--host",
+	Summary: "Hold this terminal and show main and each worker it opened above a bar of tabs; Ctrl+\\ then n, p, a digit or m switches. Only for a role that opens spaces, and only on a terminal.",
+}
+
 var roomOption = Option{
 	Flag: "--room", Value: "<name>",
 	Summary: "The room to join; default otherwise. Names are unique within a room.",
@@ -255,6 +262,7 @@ func launchCommand(h adapter.Harness) *Command {
 		Summary:        h.Summary(),
 		Options: append(append([]Option{nameOption, roomOption, commandOption}, roleOptions()...),
 			Option{Flag: "--no-intro", Summary: "Do not add the system-layer briefing."},
+			hostOption,
 		),
 		Examples: append(h.Examples(), roomExample(h)),
 		Next:     []string{"rewake list", "rewake send <name> \"text\""},

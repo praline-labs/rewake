@@ -25,6 +25,18 @@ func followStop(pid int, stopped func(int) bool, stop func()) {
 	_ = syscall.Kill(pid, syscall.SIGCONT)
 }
 
+// followJob follows a harness on the person's terminal into a stop.
+//
+// A harness that stops itself — Ctrl+Z reaches it through the group, but it can
+// also do it on its own — would leave the shell waiting on a wrapper that is
+// still running, with no prompt and no way to bring the job back. So the wrapper
+// stops with it and continues with it, which is what a shell expects of a job.
+func followJob(pid int) { followStop(pid, stillStopped, stopSelf) }
+
+// continueHarness brings back a harness that stopped itself on the host
+// mode's terminal: it is in a session of its own there, so no shell could.
+func continueHarness(pid int) { _ = syscall.Kill(pid, syscall.SIGCONT) }
+
 // stillStopped reports whether a process is in a job-control stop now.
 func stillStopped(pid int) bool {
 	state, err := proc.State(pid)
@@ -108,13 +120,8 @@ func forward(incoming chan os.Signal, process *os.Process, alive func() bool) {
 	}
 }
 
-// waitForHarness waits for the harness and follows it into a stop.
-//
-// A harness that stops itself — Ctrl+Z reaches it through the group, but it can
-// also do it on its own — would leave the shell waiting on a wrapper that is
-// still running, with no prompt and no way to bring the job back. So the wrapper
-// stops with it and continues with it, which is what a shell expects of a job.
-func waitForHarness(pid int) int {
+// waitForHarness waits for the harness and hands each stop to onStop.
+func waitForHarness(pid int, onStop func(int)) int {
 	for {
 		var status syscall.WaitStatus
 		_, err := syscall.Wait4(pid, &status, syscall.WUNTRACED|syscall.WCONTINUED, nil)
@@ -127,7 +134,7 @@ func waitForHarness(pid int) int {
 
 		switch {
 		case status.Stopped():
-			followStop(pid, stillStopped, stopSelf)
+			onStop(pid)
 		case status.Continued():
 			// Both are running again; nothing to do.
 		case status.Signaled():

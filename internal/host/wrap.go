@@ -42,6 +42,9 @@ type Request struct {
 	Intro bool
 	// Command is the program to start in place of the harness's own.
 	Command string
+	// Host runs the harness in the host mode: on a terminal of the wrapper's,
+	// shown with the run's workers above a bar (docs/v2/host-mode.md).
+	Host bool
 
 	// Role is explicit when its ID is set; empty always uses general.
 	Role role.Role
@@ -229,19 +232,14 @@ func Run(ctx context.Context, request Request) (int, error) {
 
 	command := exec.Command(plan.Command, plan.Args...)
 	command.Env = plan.Env
-	command.Stdin, command.Stdout, command.Stderr = os.Stdin, os.Stdout, os.Stderr
-	// The harness stays in the wrapper's process group, which is what makes the
-	// terminal treat it as the program it is: Ctrl+C, Ctrl+Z, window size and
-	// job control all work as they would without rewake in between. Giving it a
-	// group of its own and handing over the terminal was tried, and it broke
-	// exactly that — Ctrl+Z left the terminal with a stopped harness, and
-	// starting rewake in the background took the terminal away from the shell.
-	if err := command.Start(); err != nil {
+	screen, onStop, err := startHarness(request, command, epoch)
+	if err != nil {
 		if errors.Is(err, exec.ErrNotFound) {
 			return 0, fmt.Errorf("%s is not installed or not in PATH", plan.Command)
 		}
 		return 0, err
 	}
+	defer screen.Stop()
 
 	process, _ := plan.Service.(adapter.ProcessService)
 	if start, err := proc.StartTime(command.Process.Pid); err == nil {
@@ -325,7 +323,10 @@ func Run(ctx context.Context, request Request) (int, error) {
 		server.Serve(serveCtx)
 	}()
 
-	code := waitForHarness(command.Process.Pid)
+	code := waitForHarness(command.Process.Pid, onStop)
+	// The person's terminal comes back with the harness's end, not after
+	// the run's cleanup.
+	screen.Stop()
 	// The run begins to end with its harness: no decision is taken from here.
 	life.closeAdmission()
 
