@@ -25,7 +25,7 @@ Sessions and launches:
 - [session-record.md](session-record.md) — the session record: every field, the boot, how a record is published, updated and pruned.
 - [roles.md](roles.md) — roles and names: the catalogue, what each role is told and reports, how a role and a name are chosen.
 - [launch.md](launch.md) — the wrapper's launch sequence, signals, room and role flags, the harness flags, the intro.
-- [launch-defaults.md](launch-defaults.md) — model and effort defaults nobody typed, launch aliases and which flags a typed one replaces.
+- [launch-defaults.md](launch-defaults.md) — model and effort defaults nobody typed, launch aliases and which flags a typed one replaces; the worker catalogue and `space open --alias` ([the step](roadmap/2026-10-18-worker-aliases.md)).
 - [worktree.md](worktree.md) — the checkout `--worktree` gives a launch, `.worktreeinclude`, and `rewake worktree land`, `finish`, `ls`, `rm`.
 - [install.md](install.md) — building and installing locally, the npm dry run, the upgrade from 1.x, the release gate.
 

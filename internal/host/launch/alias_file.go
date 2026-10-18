@@ -1,6 +1,7 @@
 package launch
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -34,13 +35,13 @@ func (s *Set) read(path, description string, user bool) {
 		return
 	}
 	if err != nil {
-		s.Notes = append(s.Notes, "not reading "+description+": "+err.Error())
+		s.unreadable("not reading " + description + ": " + err.Error())
 		return
 	}
 	if !info.Mode().IsRegular() {
 		// A named pipe here would block the launch for ever at open, with no
 		// sign of why — the same hazard the settings file refuses.
-		s.Notes = append(s.Notes, fmt.Sprintf("not reading %s at %s: it is not an ordinary file (%s)", description, path, info.Mode().Type()))
+		s.unreadable(fmt.Sprintf("not reading %s at %s: it is not an ordinary file (%s)", description, path, info.Mode().Type()))
 		return
 	}
 	if user && info.Mode().Perm()&0o077 != 0 {
@@ -52,7 +53,7 @@ func (s *Set) read(path, description string, user bool) {
 	}
 	raw, err := os.ReadFile(path)
 	if err != nil {
-		s.Notes = append(s.Notes, "not reading "+description+": "+err.Error())
+		s.unreadable("not reading " + description + ": " + err.Error())
 		return
 	}
 	var file struct {
@@ -61,7 +62,13 @@ func (s *Set) read(path, description string, user bool) {
 	if err := toml.Unmarshal(raw, &file); err != nil {
 		// Named, not skipped: a file that is there and unreadable is a
 		// mistake somebody wants to hear about.
-		s.Notes = append(s.Notes, fmt.Sprintf("%s at %s could not be read: %v", description, path, err))
+		var decode *toml.DecodeError
+		where := path
+		if errors.As(err, &decode) {
+			line, column := decode.Position()
+			where = fmt.Sprintf("%s:%d:%d", path, line, column)
+		}
+		s.unreadable(fmt.Sprintf("%s at %s could not be read: %v", description, where, err))
 		return
 	}
 	for name, value := range file.Alias {

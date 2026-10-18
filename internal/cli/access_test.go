@@ -35,6 +35,8 @@ func documentedForms(launch string) []formCase {
 		{[]string{"--version", "--json"}, view},
 		{[]string{"list"}, view},
 		{[]string{"list", "--json"}, view},
+		{[]string{"workers"}, view},
+		{[]string{"workers", "--all", "--json"}, view},
 		{[]string{"whoami"}, view},
 		{[]string{"whoami", "--json"}, view},
 		{[]string{"inbox", "--owed"}, view},
@@ -72,6 +74,7 @@ func documentedForms(launch string) []formCase {
 		{[]string{"worktree", "land", "fix-login", "--into", "release"}, change},
 		{[]string{"worktree", "finish", "fix-login"}, change},
 		{[]string{"space", "open", "api", "--harness", launch}, change},
+		{[]string{"space", "open", "api", "--alias", "worker"}, change},
 	}
 	for _, kind := range sendKinds {
 		if kind.flag.Flag != "" {

@@ -30,8 +30,10 @@ reference for a reader of a mailbox, kept by hand.
 
 A file named `.tmp-*`, in any directory, is a write that never finished
 (`state.WriteAtomic`), never a record. A room's mailboxes made by an earlier build may
-still hold `stops/`, `decisions/`, `claims/`, unfinished `journal/<op>` files or
-`journal/resend-*`: no code reads them now, and a room belongs to one build
+still hold `stops/`, `decisions/`, `claims/` or `journal/resend-*`: no code reads them now.
+An unfinished `journal/<op>` file is still looked at by the readers of a run's ends and windows
+(`JournalRecorded`, `HeldEndTaken`, `TurnWindowStart`, `LatestEnd`) and by retention, which take
+only its epoch, end and hold and ignore the rest; a room belongs to one build
 ([v2/design-state.md](v2/design-state.md#one-build-per-room)).
 
 ## The plan and the seam

@@ -13,6 +13,7 @@ import (
 	"io"
 
 	"github.com/praline-labs/rewake/internal/adapter"
+	"github.com/praline-labs/rewake/internal/host/launch"
 )
 
 // Option is a flag of a command, or a global flag.
@@ -130,7 +131,8 @@ type Context struct {
 	journaling bool
 	// table is the command table of this invocation, built from the catalog
 	// the binary handed to Run.
-	table *table
+	table   *table
+	aliases *launch.Set
 }
 
 // Call is one parsed invocation.

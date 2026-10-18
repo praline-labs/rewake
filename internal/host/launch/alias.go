@@ -46,6 +46,10 @@ type Alias struct {
 	// script that runs it. It becomes rewake's --command, so one typed on the
 	// line replaces it like any other of rewake's flags.
 	Command string `toml:"command"`
+	// Main marks a person's main alias, never a worker template.
+	Main        bool          `toml:"main"`
+	Description string        `toml:"description"`
+	Launch      AliasSettings `toml:"launch"`
 }
 
 // CommandFlag is rewake's flag for the program a launch starts, which the
@@ -72,6 +76,8 @@ type Set struct {
 	// alias that makes no sense. They are printed, not swallowed — an alias
 	// silently absent is a launch that silently runs something else.
 	Notes []string
+	// problems distinguish unreadable files from advisory permission notes.
+	problems []string
 }
 
 // Names are the aliases this process knows, in order, for a refusal that says
@@ -299,6 +305,11 @@ func parameterAt(arguments []string, index int, flags []adapter.Flag) (string, i
 // what it expanded to. A launch that fails three layers down, complaining
 // about a flag the person never typed, is worse than no alias at all.
 func (a Alias) check(name, source string, knownHarnesses []string, takesValue func(string) bool) error {
+	for _, value := range []string{a.Description, a.Launch.Model, a.Launch.Effort, a.Launch.Context} {
+		if strings.ContainsAny(value, "\r\n") {
+			return fmt.Errorf("alias %q in %s has a multiline description or launch setting; each must be one line", name, source)
+		}
+	}
 	if a.Harness == "" {
 		return fmt.Errorf("alias %q in %s names no harness; add harness = \"<name>\"", name, source)
 	}

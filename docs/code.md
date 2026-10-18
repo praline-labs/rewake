@@ -73,6 +73,10 @@ type Harness interface {
 `SingleUseFlags` names the flags a harness takes at most once, so an alias and a typed
 flag for the same parameter replace rather than repeat each other. `Version` is the gate the host reads before the
 claim, and `EnvNotInherited` the variables the host leaves out of `LaunchRequest.Env`.
+The optional `LaunchSettingsHarness` translates an alias's model and effort into harness
+flags; context never reaches it. `host/launch` applies those before ordinary alias replacement,
+and builds a space's complete worker command, wrapper and fresh conversation id included.
+`test/launch` checks that command against every registered harness with and without a worktree.
 
 The role texts and the CLI's help name no harness. A help text that needs one takes it
 from the catalogue it was built from (`internal/cli/registry_words.go`): a launch to show. A briefing that

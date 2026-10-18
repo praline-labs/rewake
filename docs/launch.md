@@ -180,19 +180,26 @@ the main checkout at the same time.
 
 `rewake space open <name> --harness <id> [--role write|general] [--worktree[=<name>]] -- <harness
 args>` is main's way to start a worker, built October 18, 2026 (S4-7,
-[the steps](v2/stage4-space-steps.md#the-build-steps)); `--role` is `write` by default. It is a
-change, refused unless main's run has `Spaces` live, and refused for a name whose session is
+[the steps](v2/stage4-space-steps.md#the-build-steps)); `--role` is `write` by default. Alternatively,
+`rewake workers` lists the person's worker aliases, and `space open <name> --alias <alias>`
+uses the alias's harness, role, command wrapper, args and applied settings. `--harness` and
+`--alias` exclude each other, main aliases refuse, and the space owns the name and room;
+`--role` may override the alias's worker role. The optional fields and precedence are in
+[launch-defaults.md](launch-defaults.md#a-catalogue-main-can-open-workers-from).
+Opening is a change, refused unless main's run has `Spaces` live, and refused for a name whose session is
 already alive. It writes the space's record and re-executes rewake as a launcher with
 `Setsid`; the launcher starts the space host and exits. The space host takes the room's build
 lease as any writer, records its own run, and refuses the open — the record closed, the worker
 never started — unless its whole chain of parents reads up to the root without meeting main's
 wrapper ([SP9](rules/space.md)). Then it opens a pseudo-terminal of 120 by 40 with
 `host/terminal`'s pair and starts its own executable there as
-`rewake --name <name> --room <main's room> --<role> <harness> [--worktree…] <harness args>`, in
+`rewake --name <name> --room <main's room> --<role> [--command <wrapper>] <harness> [--worktree…] <harness args>`, in
 main's working directory, with `REWAKE_SESSION`, `REWAKE_EPOCH`, `REWAKE_ROOM`, every
 `REWAKE_BRIDGE_` variable and every catalogue harness's `EnvNotInherited` stripped,
 `REWAKE_DIR` set to main's base and `TERM` set. Where the harness takes a conversation id
-(`ConversationOffer`), a fresh one is appended and recorded. The worker's session is
+(`ConversationOffer`), a fresh one is inserted before any prompt terminator and recorded.
+For pi, `--session-id` names or creates that conversation; it is not by itself a continuation
+and no longer refuses a new worktree. Resume, continue, session and fork flags still do. The worker's session is
 `<name>-<harness>`. The command waits until the record is open and that session is registered
 with the worker's run, at most 30 s, and fails with the record's reason otherwise.
 

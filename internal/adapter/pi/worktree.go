@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/praline-labs/rewake/internal/adapter"
 )
 
 func (harness) WorktreeFlag() string     { return worktreeFlag }
@@ -19,8 +21,12 @@ func (harness) LaunchDirectory(args []string) (string, []string, error) {
 }
 
 func (harness) WorktreeRefusal(args []string) error {
-	if flag := continued(args); flag != "" {
-		return fmt.Errorf("%s names an existing conversation; continue it from its checkout without --worktree", flag)
+	for _, flag := range []string{"--session", "--continue", "-c", "--resume", "-r", "--fork"} {
+		if adapter.HasFlag(args, flag) {
+			return fmt.Errorf("%s names an existing conversation; continue it from its checkout without --worktree", flag)
+		}
 	}
+	// --session-id can create a conversation, unlike the flags above. A
+	// space supplies a fresh random id, not the id of an earlier session.
 	return nil
 }
