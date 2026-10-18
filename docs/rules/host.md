@@ -72,8 +72,6 @@ Tests:
 - `internal/host/session_notices_test.go` `TestDeparturePublicationRetriesWithoutDuplicate`
 - `internal/host/session_notices_test.go` `TestObservedCompactionSurvivesDepartureBeforeNextScan`
 - `internal/host/session_notices_test.go` `TestStateNoticeObserverStaysInRoomAndDoesNotNotifyItself`
-- `internal/host/hold_notices_test.go` `TestMainIsToldOncePerHold`
-- `internal/host/hold_notices_test.go` `TestAChangedCauseIsToldAgain`
 - `internal/host/naming_test.go` `TestLaunchNamesFollowSelectedRoleAndHarness`
 - `internal/host/naming_test.go` `TestExplicitPrefixControlsNameButNotRole`
 - `internal/host/naming_test.go` `TestNamePrefixAndAssembledBoundaries`

@@ -227,7 +227,7 @@ in every run, with the reason in words the diagnostics allow
 ([mail-bridge-launch.md](archive/1.x/mail-bridge-launch.md#the-refusal-and-what-may-be-shown)).
 `rewake list` shows the category's word (`denied`, `tool`, `starting`, `failing`,
 `shell`, `none`, `no tool`); the `--json` forms carry the observations and the block.
-The record lives in session state beside `DeliveryHold`, written by the wrapper only.
+The record lives in session state, written by the wrapper only.
 
 ## Notices
 

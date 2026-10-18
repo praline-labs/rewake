@@ -54,13 +54,6 @@ func sessionTable(room string, sessions []sessionView, visible bool) []string {
 	}
 	_ = writer.Flush()
 	lines = append(lines, strings.TrimSuffix(buffer.String(), "\n"))
-	// A hold does not fit a cell, and it is what main needs to act on: senders
-	// read only pending (docs/archive-1.x/delivery-conversation.md).
-	for _, session := range sessions {
-		if session.Telemetry != nil && session.Telemetry.DeliveryHold != nil {
-			lines = append(lines, fmt.Sprintf("Deliveries to %s wait: %s", session.Name, session.Telemetry.DeliveryHold.Detail))
-		}
-	}
 	for _, session := range sessions {
 		if session.Stopped != nil {
 			lines = append(lines, stoppedLine(session.Name, *session.Stopped))
