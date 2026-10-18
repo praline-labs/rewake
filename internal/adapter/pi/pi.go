@@ -1,12 +1,7 @@
 // Package pi starts pi with a per-run extension carrying notices and turn ends.
 package pi
 
-import (
-	"os"
-	"path/filepath"
-
-	"github.com/praline-labs/rewake/internal/adapter"
-)
+import "github.com/praline-labs/rewake/internal/adapter"
 
 // ID names the harness; MinimumVersion is the first supported extension API.
 const (
@@ -70,17 +65,6 @@ func (harness) SingleUseFlags() []adapter.Flag {
 		{Spellings: []string{"--no-approve", "-na"}},
 		{Spellings: []string{worktreeFlag}},
 	}
-}
-
-func (harness) ProtectedDirs() adapter.Protected {
-	protected := adapter.Protected{Names: []string{".pi"}}
-	if home, err := os.UserHomeDir(); err == nil {
-		protected.Dirs = append(protected.Dirs, filepath.Join(home, ".pi"))
-	}
-	if dir := os.Getenv("PI_CODING_AGENT_DIR"); dir != "" {
-		protected.Dirs = append(protected.Dirs, dir)
-	}
-	return protected
 }
 
 func (harness) Version() adapter.VersionGate {

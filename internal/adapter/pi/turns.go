@@ -25,7 +25,7 @@ func (r *run) serve(l *link) {
 		l.answer(hello, frame{Error: "expected protocol 2 hello with a conversation and state"})
 		return
 	}
-	if r.handler.Publish == nil || (r.handler.Capture == nil && r.handler.EndCapture == nil) {
+	if r.handler.Publish == nil || r.handler.Capture == nil {
 		l.answer(hello, frame{Error: "the host takes no turn ends"})
 		return
 	}
@@ -101,15 +101,10 @@ func (r *run) endTurn(l *link, request frame) (adapter.TurnEnd, error) {
 		return adapter.TurnEnd{}, errors.New("unknown turn outcome")
 	}
 	completion := adapter.TurnEnd{Event: ID + "/" + request.Turn, Thread: thread, Reason: reason, Answer: request.Text, Started: l.started}
-	if r.handler.EndCapture != nil {
-		completion.Boundary, completion.Ended = r.handler.EndCapture()
-	}
-	if completion.Boundary == nil && r.handler.Capture != nil {
+	if r.handler.Capture != nil {
 		completion.Boundary = r.handler.Capture()
 	}
-	if completion.Ended == 0 {
-		completion.Ended = boottime.Now()
-	}
+	completion.Ended = boottime.Now()
 	if err := completion.Check(); err != nil {
 		return adapter.TurnEnd{}, err
 	}
