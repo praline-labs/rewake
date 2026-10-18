@@ -18,8 +18,8 @@ import (
 )
 
 // A kept checkout is reminded while it is there (SP7): with what was found
-// in it and the Git commands that clear it, unlocking first a checkout a dead
-// keeper left locked. A checkout that cannot be looked at is reminded too;
+// in it and the Git commands that clear it, unlocking first a checkout left
+// locked. A checkout that cannot be looked at is reminded too;
 // one seen gone is not, before any change records it cleared.
 func TestAKeptCheckoutIsRemindedUntilItIsGone(t *testing.T) {
 	dir := buildtest.Dir(t)
@@ -61,7 +61,7 @@ func TestAKeptCheckoutIsRemindedUntilItIsGone(t *testing.T) {
 	want := []string{
 		"git worktree unlock " + keptCheckout,
 		"git worktree remove " + keptCheckout,
-		"git branch -d worktree-agent-kept",
+		"git branch -d kept",
 	}
 	if !slices.Equal(reminders[0].Clear, want) {
 		t.Fatalf("clear %q, want %q", reminders[0].Clear, want)

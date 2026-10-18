@@ -61,6 +61,39 @@ func (r Reader) Descends(pid, ancestor int) error {
 	return fmt.Errorf("%w: the chain above process %d does not end", ErrNotDescendant, pid)
 }
 
+// ErrDescendant says a process runs below the one it was checked against.
+var ErrDescendant = errors.New("a descendant")
+
+// Outside shows that pid does not run below ancestor, from its chain of
+// parents read whole up to the first process: nil only when every link reads,
+// none is ancestor and none is a reused pid. Descends cannot answer this: it
+// reports a link it could not read as "not a descendant" too, which for a
+// process that must be shown outside is no evidence. ErrDescendant is a pid
+// below ancestor; any other error is a chain that could not be shown.
+func (r Reader) Outside(pid, ancestor int) error {
+	child, childStart := pid, uint64(0)
+	for range 4096 {
+		if child == ancestor {
+			return fmt.Errorf("%w: process %d runs below %d", ErrDescendant, pid, ancestor)
+		}
+		parent, start, err := r.Parent(child)
+		if err != nil {
+			return fmt.Errorf("cannot read process %d above %d: %w", child, pid, err)
+		}
+		if childStart != 0 && start > childStart {
+			return fmt.Errorf("process %d started after its child, so the chain above %d is not whole", child, pid)
+		}
+		if parent <= 0 {
+			return nil
+		}
+		if parent == child {
+			return fmt.Errorf("process %d is its own parent", child)
+		}
+		child, childStart = parent, start
+	}
+	return fmt.Errorf("the chain above process %d does not end", pid)
+}
+
 // Namespaces names the mount, user and pid namespaces of a process. A
 // sandbox that confines a process with namespaces gives it other ones than
 // the processes outside it, and nothing it runs can take them off. The kernel

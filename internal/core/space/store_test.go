@@ -12,8 +12,8 @@ import (
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
-// opening is a record about to open, as main's wrapper writes it before it
-// starts anything.
+// opening is a record about to open, as rewake space open writes it before
+// it starts anything.
 func opening(t *testing.T, name string) Record {
 	t.Helper()
 	id, err := NewID()
@@ -45,11 +45,14 @@ func created(t *testing.T, dir, name string) Record {
 func seated(t *testing.T, dir, name string) (Record, string) {
 	t.Helper()
 	record := created(t, dir, name)
-	checkout := t.TempDir()
-	if _, err := SetCheckout(dir, record.ID, Checkout{Path: checkout, Branch: "worktree-agent-" + name}); err != nil {
+	if _, err := SetHost(dir, record.ID, "6161.1750.0f0e0d0c-0b0a-4908-8706-050403020100"); err != nil {
 		t.Fatal(err)
 	}
-	opened, err := Opened(dir, record.ID, "5151.1800.0f0e0d0c-0b0a-4908-8706-050403020100")
+	if _, err := Opened(dir, record.ID, "5151.1800.0f0e0d0c-0b0a-4908-8706-050403020100"); err != nil {
+		t.Fatal(err)
+	}
+	checkout := t.TempDir()
+	opened, err := SetCheckout(dir, record.ID, Checkout{Path: checkout, Branch: name})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,34 +111,34 @@ func TestTheRecordIsWrittenOnlyUnderTheRoomsLease(t *testing.T) {
 }
 
 // The states move in one order: opening, open, closing, then kept or
-// closed; the checkout is recorded before the worker's run, a step out of
-// order is refused naming the state, and kept becomes closed only once its
-// checkout is seen gone.
+// closed; the space host is recorded before the worker's run, the checkout
+// once, a step out of order is refused naming the state, and kept becomes
+// closed only once its checkout is seen gone.
 func TestTheStatesMoveInTheirOrder(t *testing.T) {
 	dir := buildtest.Dir(t)
 	record := created(t, dir, "api")
 	var step *StepError
 	if _, err := Opened(dir, record.ID, "5151.1800"); !errors.As(err, &step) || step.State != Opening {
-		t.Fatalf("open before the checkout: %v", err)
+		t.Fatalf("open before the space host: %v", err)
 	}
-	if _, err := SetKeeper(dir, record.ID, "agent-1"); err != nil {
+	if _, err := SetHost(dir, record.ID, "6161.1750"); err != nil {
 		t.Fatal(err)
+	}
+	if _, err := SetHost(dir, record.ID, "6262.1760"); !errors.As(err, &step) {
+		t.Fatalf("a second space host: %v", err)
+	}
+	if got, err := Opened(dir, record.ID, "5151.1800"); err != nil || got.State != Open || got.Worker.Run != "5151.1800" {
+		t.Fatalf("open: %+v, %v", got, err)
 	}
 	if _, err := SetCheckout(dir, record.ID, Checkout{}); !errors.As(err, &step) {
 		t.Fatalf("an empty checkout: %v", err)
 	}
 	checkout := t.TempDir()
-	if _, err := SetCheckout(dir, record.ID, Checkout{Path: checkout, Branch: "worktree-agent-1"}); err != nil {
+	if _, err := SetCheckout(dir, record.ID, Checkout{Path: checkout, Branch: "api"}); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := SetCheckout(dir, record.ID, Checkout{Path: t.TempDir()}); !errors.As(err, &step) {
 		t.Fatalf("a second checkout: %v", err)
-	}
-	if got, err := Opened(dir, record.ID, "5151.1800"); err != nil || got.State != Open || got.Worker.Run != "5151.1800" {
-		t.Fatalf("open: %+v, %v", got, err)
-	}
-	if _, err := SetKeeper(dir, record.ID, "agent-2"); !errors.As(err, &step) || step.State != Open {
-		t.Fatalf("a keeper once open: %v", err)
 	}
 	if got, err := BeginClosing(dir, record.ID, "closed by main"); err != nil || got.State != Closing {
 		t.Fatalf("closing: %+v, %v", got, err)
@@ -166,11 +169,22 @@ func TestTheStatesMoveInTheirOrder(t *testing.T) {
 		t.Fatalf("cleared twice: %v", err)
 	}
 
-	// An open that fails before the worker is seated closes from opening,
-	// its worker never started and no checkout left.
+	// An open that fails before the worker starts closes from opening, its
+	// worker never started and no checkout left; a worker that ran without a
+	// checkout of its own closes with none.
 	failed := created(t, dir, "web")
 	if got, err := Close(dir, failed.ID, observed(WorkerNeverStarted, Seen{Presence: Gone})); err != nil || got.State != Closed {
 		t.Fatalf("a failed open: %+v, %v", got, err)
+	}
+	plain := created(t, dir, "web")
+	if _, err := SetHost(dir, plain.ID, "6161.1750"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Opened(dir, plain.ID, "5252.1810"); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := Close(dir, plain.ID, observed(WorkerEnded, Seen{Presence: Gone})); err != nil || got.State != Closed {
+		t.Fatalf("a worker without a checkout: %+v, %v", got, err)
 	}
 }
 
@@ -208,9 +222,9 @@ func TestARecordClosesOnlyFromAnObservation(t *testing.T) {
 	}
 }
 
-// A crash between two steps leaves the earlier step whole, and the next
-// start closes it from what it observes; a crash at the first write leaves
-// no record and nothing started.
+// A crash between two steps leaves the earlier step whole, which a close
+// from what was observed still ends; a crash at the first write leaves no
+// record and nothing started.
 func TestARecordLeftByACrashBetweenStepsCanBeClosed(t *testing.T) {
 	dir := buildtest.Dir(t)
 	crashAt := func(op string, at string) func() {
@@ -233,8 +247,7 @@ func TestARecordLeftByACrashBetweenStepsCanBeClosed(t *testing.T) {
 	}
 
 	record := created(t, dir, "api")
-	checkout := t.TempDir()
-	if _, err := SetCheckout(dir, record.ID, Checkout{Path: checkout, Branch: "b"}); err != nil {
+	if _, err := SetHost(dir, record.ID, "6161.1750"); err != nil {
 		t.Fatal(err)
 	}
 	restore = crashAt(state.OpWrite, record.ID+".json")
@@ -243,15 +256,13 @@ func TestARecordLeftByACrashBetweenStepsCanBeClosed(t *testing.T) {
 	}
 	restore()
 	left, err := Load(dir, record.ID)
-	if err != nil || left.State != Opening || left.Checkout.Path != checkout {
+	if err != nil || left.State != Opening || left.Host != "6161.1750" {
 		t.Fatalf("the crash left %+v, %v", left, err)
 	}
-	// The next start: main is dead, its gate never opened, the checkout is
-	// there with nothing in it.
-	end := observed(WorkerNeverStarted, Seen{Presence: There, Locked: true})
-	end.Why = "main ended without closing"
-	if got, err := Close(dir, record.ID, end); err != nil || got.State != Kept {
-		t.Fatalf("the next start's close: %+v, %v", got, err)
+	end := observed(WorkerNeverStarted, Seen{Presence: Gone})
+	end.Why = "the space host could not record the worker's run"
+	if got, err := Close(dir, record.ID, end); err != nil || got.State != Closed {
+		t.Fatalf("the close after the crash: %+v, %v", got, err)
 	}
 }
 

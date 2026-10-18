@@ -9,8 +9,9 @@ import (
 )
 
 // check holds what every record says of itself, whatever step wrote it: the
-// worker fixed before it starts, the checkout set before the worker runs,
-// an end exactly when the space is over and one that observed something.
+// worker fixed before it starts, the space host recorded before the worker
+// runs, an end exactly when the space is over and one that observed
+// something.
 // A write that breaks it is refused, and a record read that breaks it is
 // unreadable rather than half believed.
 func (r Record) check() error {
@@ -36,8 +37,8 @@ func (r Record) check() error {
 		return problem("the checkout %q is not absolute", r.Checkout.Path)
 	case r.Checkout.Path == "" && r.Checkout.Branch != "":
 		return problem("a branch without its checkout")
-	case r.State == Open && (r.Checkout.Path == "" || r.Worker.Run == ""):
-		return problem("open without its checkout or its worker's run")
+	case r.State == Open && (r.Host == "" || r.Worker.Run == ""):
+		return problem("open without its space host or its worker's run")
 	case r.State == Closing && r.Closing == "":
 		return problem("closing without why")
 	case r.State.Final() != (r.End != nil):

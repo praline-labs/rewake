@@ -99,6 +99,11 @@ func SpacesPath(dir string) string { return filepath.Join(dir, spacesDir) }
 // space is closed, while the closed record stays for what a restore reads.
 func SpacePath(dir, id string) string { return filepath.Join(dir, spacesDir, id+".json") }
 
+// SpaceSocketPath is where a space host serves its worker's terminal to
+// rewake attach, by the space's id. A space id has no dot, so it never meets
+// a session's socket, whose run does.
+func SpaceSocketPath(dir, id string) string { return SocketPath(dir, "space", id) }
+
 // LettersPath holds the compactions a main asked for with rewake compact whose
 // letter has not gone yet (docs/remote-control.md). It is kept by name, not by
 // run: the next run of that main closes what an earlier one left open.

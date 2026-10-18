@@ -6,5 +6,6 @@
 // one package the emulator library enters (the owner's exception to the
 // dependency rule, docs/v2/stage4-space.md#the-terminal-library), and it
 // knows no harness and no mod: the space host maps its screen onto the
-// protocol.
+// protocol. Plain is the pair alone, with no emulator: the space host of
+// rewake space open relays its bytes to an attached terminal as they come.
 package terminal
