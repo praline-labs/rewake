@@ -102,10 +102,13 @@ A brief to a writer or a reviewer states this criterion.
 
 ### Guarantees
 
-The mechanics of `decide`, stops, the turn-end journals, the build lease and epochs are
-frozen: not extended, not redone. A new feature need not fit the model of proven, disproven
-or unknown; a report lost in a rare case is acceptable, main asks again. The mod gets no new
-reliability mechanism without a live failure that needs it.
+The turn end stays simple: under the sender's mailbox lock it writes its reports, then
+clears the waits they answer, and records itself done last; a retry runs the same steps
+from the disk ([docs/delivery-turn-end.md](docs/delivery-turn-end.md#the-end-of-a-turn)).
+A report lost when a process is killed between two steps is acceptable, main asks again.
+The build lease and epochs are frozen: not extended, not redone. No journal, stop, decision
+or other reliability mechanism is added to the mail core or the mod without a live failure
+that needs it.
 
 ## Adding a harness
 
@@ -183,10 +186,9 @@ are [docs/rules/state.md](docs/rules/state.md):
 - **The fault seam**, the `rewaketest` build of `internal/infra/state`, takes faults from
   `REWAKE_FAULT` (`internal/infra/state/fault_build.go`); a release is never built with it.
 
-An outcome rewake cannot prove stops the mailbox until evidence settles it or a decision is
-recorded: `rewake decide <name> <report> --arrived | --not-arrived`, kept as a decision, never
-as evidence; "not arrived" sends the report again
-([docs/rules/effects.md](docs/rules/effects.md), D1–D8).
+A record that cannot be read fails the operation that met it, which is retried; it stops
+nothing else, and no command settles a mailbox by hand
+([docs/rules/effects.md](docs/rules/effects.md)).
 
 ## Code
 

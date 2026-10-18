@@ -21,7 +21,7 @@ func (w world) putLocal(message Message) error {
 		path := filepath.Join(directory, message.ID+".json")
 		info, err := w.stat(path)
 		if err == nil && !info.Mode().IsRegular() {
-			return unknownRecord(path, fmt.Errorf("%s, where a letter belongs, is not a regular file", path))
+			return fmt.Errorf("%s, where a letter belongs, is not a regular file", path)
 		}
 		if err == nil {
 			return nil

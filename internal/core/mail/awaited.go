@@ -29,10 +29,6 @@ const (
 	StageStopped Stage = "stopped"
 	// StageFailed will not be delivered, so no report is coming.
 	StageFailed Stage = "failed"
-	// StageClosed is read, and a decision on the report that answers it
-	// closed the wait: no report is proven to have reached its sender, and
-	// none is coming.
-	StageClosed Stage = "closed"
 )
 
 // RecipientRun is what became of the run a message was written for.
@@ -63,9 +59,6 @@ type AwaitedMessage struct {
 	// the name in another conversation sweeps the wait, it is not lost, and
 	// sending it again could get the work done twice.
 	Resumable bool
-	// Decided is the decision on a report that answers it: still owed until
-	// the tail of the report's operation closes the wait, StageClosed after.
-	Decided *DecisionMark
 }
 
 // Gone says no report can come, because the run it was written for is over
@@ -163,17 +156,6 @@ func placed(dir string, message Message, reports []Message, wait Waiter, runOf f
 			item.Run = runOf(message.To, run)
 			if wait, err = waiterFor(dir, message.To, run, message.From, message.FromEpoch); err != nil {
 				return item, false, err
-			}
-		}
-	}
-	if item.read() {
-		// A decision speaks before the wait does: a wait its tail cleared
-		// is closed, never answered, and one still standing is owed.
-		if mark, ok := DecisionOn(dir, message.To, message.ID, message.From, message.FromEpoch); ok {
-			item.Decided = &mark
-			if mark.Closed && !slices.Contains(wait.Messages, message.ID) {
-				item.Stage, item.Run = StageClosed, RunLive
-				return item, false, nil
 			}
 		}
 	}

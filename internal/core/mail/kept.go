@@ -63,7 +63,7 @@ func (w world) readKept(name, epoch string) (keptRecord, bool, error) {
 	}
 	var record keptRecord
 	if err := json.Unmarshal(raw, &record); err != nil {
-		return keptRecord{}, false, unknownRecord(keptPath(dir, name), fmt.Errorf("the kept answer %s is not readable: %w", keptPath(dir, name), err))
+		return keptRecord{}, false, fmt.Errorf("the kept answer %s is not readable: %w", keptPath(dir, name), err)
 	}
 	if record.Epoch != epoch {
 		return keptRecord{}, false, nil
@@ -99,7 +99,7 @@ func KeptAnswer(dir, name, epoch string) (string, bool, error) {
 }
 
 // KeptTaken is the kept answer a turn end takes: its text, the version the
-// end's journal names to take it, and the operation of the end that was held.
+// end drops it by, and the operation of the end that was held.
 type KeptTaken struct {
 	Text, Version, Held string
 }
@@ -107,7 +107,7 @@ type KeptTaken struct {
 // KeptAnswerThrough answers this run's kept answer that a turn end takes: for
 // an end with a read boundary, only one kept at or below through; for an end
 // heard once (through nil), whatever it finds, since nothing can be kept
-// between its reading and its journal, which share the lock.
+// between its reading and its effects, which share the lock.
 func KeptAnswerThrough(dir, name, epoch string, through *uint64) (KeptTaken, bool, error) {
 	record, ok, err := readKept(dir, name, epoch)
 	if err != nil || !ok {

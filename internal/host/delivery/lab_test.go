@@ -2,7 +2,6 @@ package delivery
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -48,23 +47,6 @@ func reserve(t *testing.T, dir, question string) func() {
 	return release
 }
 
-// announcedUnread leaves a letter where a serving process leaves one it has
-// announced: readable, and no longer waiting.
-func announcedUnread(t *testing.T, dir string, message mail.Message) mail.Message {
-	t.Helper()
-	if err := state.EnsureSubdir(state.InboxPath(dir, message.To)); err != nil {
-		t.Fatal(err)
-	}
-	if err := state.EnsureSubdir(state.UnreadPath(dir, message.To)); err != nil {
-		t.Fatal(err)
-	}
-	encoded, _ := json.Marshal(message)
-	if err := os.WriteFile(filepath.Join(state.UnreadPath(dir, message.To), message.ID+".json"), encoded, 0o600); err != nil {
-		t.Fatal(err)
-	}
-	return message
-}
-
 func writeRaw(t *testing.T, path, raw string) {
 	t.Helper()
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
@@ -101,7 +83,6 @@ func stateDir(t *testing.T) string {
 	}
 	t.Setenv(state.DirEnv, dir)
 	resolved := buildtest.Current(t)
-	checkRecordKinds(t, resolved)
 	return resolved
 }
 
@@ -141,33 +122,6 @@ func (r *endableRun) end() {
 	r.once.Do(func() {
 		_ = r.child.Process.Kill()
 		_ = r.child.Wait()
-	})
-}
-
-// Every test of this package makes its state directory through stateDir,
-// which checks, once the test is over and before the directory goes, that
-// every file its writers left in any mailbox is of a kind the list names
-// (records.go): a writer that adds a path without adding its kind fails here
-// rather than stopping every mailbox its first file lands in.
-func checkRecordKinds(t *testing.T, dir string) {
-	t.Helper()
-	t.Cleanup(func() {
-		entries, err := os.ReadDir(state.InboxesPath(dir))
-		if err != nil {
-			return
-		}
-		for _, entry := range entries {
-			if !entry.IsDir() {
-				continue
-			}
-			unlisted, err := mail.UnlistedRecords(dir, entry.Name())
-			if err != nil {
-				continue
-			}
-			for _, path := range unlisted {
-				t.Errorf("a writer left %s in the mailbox of %s, which is no kind of record on the list", path, entry.Name())
-			}
-		}
 	})
 }
 
@@ -217,11 +171,6 @@ func newTwoSessionLab(t *testing.T) twoSessionLab {
 // report is a report of api's run to web answering tasks.
 func (l twoSessionLab) report(kind mail.Kind, tasks ...string) mail.Message {
 	return mail.Message{ID: mail.NewID(), From: "api", FromEpoch: l.run, To: "web", ToEpoch: l.web.Epoch(), Kind: kind, Text: "REPORT_TEXT", InReplyTo: tasks, CreatedAt: time.Now()}
-}
-
-func (l twoSessionLab) reconcile(t *testing.T) error {
-	t.Helper()
-	return withLock(l.dir, "api", func() error { return mail.Reconcile(context.Background(), l.dir, "api") })
 }
 
 func withLock(dir, name string, fn func() error) error {

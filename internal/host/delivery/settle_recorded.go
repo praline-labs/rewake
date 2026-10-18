@@ -69,7 +69,7 @@ func (s *Server) settleUnreadOnly(id string) {
 		}
 		return
 	}
-	if !known || !owesArchive(status) || mail.Claimed(s.Dir, s.Name, id) {
+	if !known || !owesArchive(status) {
 		return
 	}
 	s.attempts[id] = time.Now()

@@ -25,7 +25,6 @@ import (
 // that could not be read stays, and the next sweep decides it.
 func SweepFinishedLocked(dir, name, epoch string) {
 	cutoff := time.Now().Add(-keepFinished)
-	kept := keptByStopOf(dir, name)
 	receipts, receiptsErr := retainedReceipts(dir, name)
 	// A task read a day ago and still worked on is still owed, and rewake
 	// inbox --owed must be able to show it again.
@@ -40,7 +39,7 @@ func SweepFinishedLocked(dir, name, epoch string) {
 			continue
 		}
 		for _, entry := range entries {
-			if entry.IsDir() || kept.keeps(filepath.Join(directory, entry.Name())) {
+			if entry.IsDir() {
 				continue
 			}
 			// In the mailbox itself only statuses are old news; a message still
@@ -69,10 +68,6 @@ func SweepFinishedLocked(dir, name, epoch string) {
 			if directory == answerReceiptsPath(dir, name) && (receiptsErr != nil || receipts[entry.Name()]) {
 				continue
 			}
-			if directory == state.UnreadPath(dir, name) && Claimed(dir, name, strings.TrimSuffix(entry.Name(), ".json")) {
-				// Being read in parts: what the agent saw of it is uncertain.
-				continue
-			}
 			if (directory == state.DonePath(dir, name) || directory == state.UnreadPath(dir, name)) &&
 				reportStillAwaited(dir, name, filepath.Join(directory, entry.Name())) {
 				// Its writer's wait still names what it answers: the end that
@@ -94,15 +89,11 @@ func SweepFinishedLocked(dir, name, epoch string) {
 			_ = state.Remove(filepath.Join(directory, entry.Name()))
 		}
 	}
-	sweepClaims(dir, name, cutoff)
 	sweepOnce(dir, name, epoch)
 	sweepTurnRecords(dir, name, epoch, cutoff)
 	sweepMarks(dir, name, epoch)
-	// The receipts sweep their own records under their own locks: one an
-	// open occurrence names keeps all of them.
-	if !kept.keeps(filepath.Join(state.InboxPath(dir, name), "receipts")) {
-		receipt.Sweep(dir, name, epoch, cutoff, func(id string) bool { return stillUnread(dir, name, id) })
-	}
+	// The receipts sweep their own records under their own locks.
+	receipt.Sweep(dir, name, epoch, cutoff, func(id string) bool { return stillUnread(dir, name, id) })
 }
 
 // reportStillAwaited says whether the letter at path is a report whose writer's
@@ -133,6 +124,16 @@ func reportStillAwaited(dir, name, path string) bool {
 		return true
 	}
 	return waiter.Epoch == letter.ToEpoch && slices.ContainsFunc(letter.InReplyTo, func(id string) bool { return slices.Contains(waiter.Messages, id) })
+}
+
+// stillUnread says whether a letter is still in unread/. A copy that cannot be
+// looked at is not proven gone.
+func stillUnread(dir, name, id string) bool {
+	if !safeID(id) {
+		return false
+	}
+	_, err := os.Stat(filepath.Join(state.UnreadPath(dir, name), id+".json"))
+	return !errors.Is(err, os.ErrNotExist)
 }
 
 // keepFinished is how long a delivered or refused message and its status are

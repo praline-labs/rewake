@@ -46,12 +46,11 @@ internal/
   infra/                 state root and paths, locks, the fault seam, proc, boottime, buildtime
   core/                  knows no harness
     mail/                letters, tasks, reports, owed, awaited, questions, notes, withdraw, edit;
-                         turn-end journals, marks, read clock, stop, the reconcile barrier, the seam
+                         turn ends and their done journals, marks, the read clock
     receipt/             call operations and their records
     registry/            sessions, names, liveness, epochs, the live capabilities of a run
     session/             the session-state snapshot
     role/  brief/        roles, playbooks, briefings — harness words come from the adapter
-    authority/           the run's unforgeable authority, which a decision is verified by
     control/             compact, interrupt and clear as request files
   adapter/               the capability interfaces and the values they exchange; no implementation
     catalog/             the one place that names every adapter; a value, not a registry
@@ -145,6 +144,8 @@ tools leave it.
    original evidence kept, and "did not arrive" sends the report again. Its authority,
    retry rules and tests are designed in stage 3's rules
    ([design-rules.md](design-rules.md#an-operator-decision-on-an-unknown-outcome)).
+   Removed October 18, 2026, with the stop and `rewake decide`: an unreadable record no
+   longer stops a mailbox ([delivery-turn-end.md](../delivery-turn-end.md#the-end-of-a-turn)).
 5. **No Codex code on `v2` between stages 3 and 5**: the Codex packages leave the `v2`
    tree at stage 3 (they stay on `main` and in history as reference), so the builds of
    stages 3 and 4 launch Claude Code only ([design-codex.md](../archive/v2/design-codex.md#meanwhile)).

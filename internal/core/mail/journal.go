@@ -1,85 +1,39 @@
 package mail
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
-	"slices"
-	"strings"
 
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
-// A turn end publishes its reports, takes the kept answer they carry, clears
-// the waits they answer, and records whether it was interim. These cannot be
-// one step, and between them the mailbox says a task is still owed that was
-// reported already: a task read since from the same sender joins that wait,
-// and the next report answers the old task a second time. So the whole
-// operation is written down before its first effect, and nothing but the
-// journal publishes: whoever finds it unfinished completes it under the
-// mailbox lock before a wait is read again (Reconcile). A journal is named by
-// its operation — the run and the event (docs/turn-end-recovery.md) — so a
-// retry that finds it finds its own.
-//
-// A completed journal is kept, emptied to its operation and its Ended and
-// marked done, for as long as the run that wrote it: a retry, however late,
-// learns that its end was completed rather than prepare it again, and the
-// next end's window opens after this one (TurnWindowStart). It is renamed
-// with doneSuffix, so the barrier does not read it again; the sweep of the
-// live run removes those of ended runs (sweepTurnRecords).
+// A turn end is recorded done as its last step (publishTurnContext), at
+// journal/<op>.done, named by its operation — the run and the event
+// (docs/turn-end-recovery.md) — so a retry of the same event finds its own
+// and answers from it rather than run again. The record is kept for as long
+// as the run that wrote it: however late a retry comes it learns its end was
+// completed, and the next end's window opens after this one
+// (TurnWindowStart). The sweep of the live run removes those of ended runs
+// (sweepTurnRecords).
 
-// TurnJournal is what one turn end is about to do: publish Reports, take the
-// kept answer of version Kept when it is set, then clear Clear from the waits
-// of the run Epoch and record whether the end was interim.
+// TurnJournal is the record of a turn end done: its run and operation, when it
+// ended, and the end held earlier whose kept answer it took.
 type TurnJournal struct {
 	Epoch string
 	// Op names the operation, from its run and its event.
 	Op string `json:",omitempty"`
-	// Ended is when the turn ended on the boot clock, kept after the journal
-	// is done. Zero for an end whose time is not known — the outcomes the
-	// gateway reports with none — which has no place among its run's ends.
-	Ended   int64     `json:",omitempty"`
-	Reports []Message `json:",omitempty"`
-	Clear   []Waiter  `json:",omitempty"`
-	// Kept is the version of the kept answer the reports carry; nil when they
-	// carry none.
-	Kept *string `json:",omitempty"`
-	// Held is the operation of the end whose kept answer this one takes: an
-	// end held earlier, which a retry may confirm again. It stays in every
-	// form the journal takes, done included, so that retry learns its end was
+	// Ended is when the turn ended on the boot clock. Zero for an end whose
+	// time is not known — the outcomes the gateway reports with none — which
+	// has no place among its run's ends.
+	Ended int64 `json:",omitempty"`
+	// Held is the operation of the end whose kept answer this one took: an
+	// end held earlier, which a retry may confirm again, learning it was
 	// published with its continuation (HeldEndTaken).
 	Held string `json:",omitempty"`
-	// Mark is the pending mark that made the end interim. Using it is no
-	// effect: it stays for its run's life.
-	Mark *Mark `json:",omitempty"`
-	// Interim is the pending line of an interim end, recorded as this run's
-	// last word for the next unmarked end to be asked about; Settles records
-	// that the end settled the work.
-	Interim *string `json:",omitempty"`
-	Settles bool    `json:",omitempty"`
-	// Published lists the reports this journal has put in their mailboxes.
-	// The recipient keeps the proof as well (publishMarked), which covers a
-	// report put there whose entry here was never written.
-	Published []string `json:",omitempty"`
-	// Moot lists the reports that can reach nobody: their run ended.
-	Moot []string `json:",omitempty"`
-	// Decided lists the reports whose step a decision closed: an operator's
-	// choice on an unknown outcome, never evidence that the report arrived
-	// (decision.go).
-	Decided []DecidedStep `json:",omitempty"`
-	Done    bool          `json:",omitempty"`
-	// Summary is what came of a resend's report, kept in the done form of a
-	// journal a decision installed (ResendJournal); nil in every other.
-	Summary *ResendSummary `json:",omitempty"`
-}
-
-// DecidedStep is a report's step closed by the decision named.
-type DecidedStep struct {
-	Report   string
-	Decision string
+	Done bool   `json:",omitempty"`
 }
 
 // JournalPath holds the turn journals of a mailbox, one per turn end.
@@ -87,17 +41,7 @@ func JournalPath(dir, name string) string {
 	return filepath.Join(state.InboxPath(dir, name), "journal")
 }
 
-// WriteJournal records a turn end's operation under id before any of it is
-// done.
-func WriteJournal(dir, name, id string, journal TurnJournal) error {
-	if err := state.EnsureSubdir(JournalPath(dir, name)); err != nil {
-		return err
-	}
-	return writeJournalFile(filepath.Join(JournalPath(dir, name), id), journal)
-}
-
-// writeDoneJournal records the turn end op of name as done: what a retry of the
-// same event and the next end's window read (JournalRecorded, TurnWindowStart).
+// writeDoneJournal records the turn end op of name as done.
 func writeDoneJournal(dir, name, op string, journal TurnJournal) error {
 	if err := state.EnsureSubdir(JournalPath(dir, name)); err != nil {
 		return err
@@ -106,60 +50,30 @@ func writeDoneJournal(dir, name, op string, journal TurnJournal) error {
 }
 
 func writeJournalFile(path string, journal TurnJournal) error {
-	return world{files: osAccess{}}.writeJournalFile(path, journal)
-}
-
-func (w world) writeJournalFile(path string, journal TurnJournal) error {
 	raw, err := json.Marshal(journal)
 	if err != nil {
 		return err
 	}
-	return w.writeFile(path, raw)
+	return state.WriteAtomic(path, raw)
 }
 
 func readJournalFile(path string) (TurnJournal, error) {
-	return world{files: osAccess{}}.readJournalFile(path)
-}
-
-func (w world) readJournalFile(path string) (TurnJournal, error) {
-	raw, err := w.readFile(path)
+	raw, err := live("").readFile(path)
 	if err != nil {
 		return TurnJournal{}, err
 	}
 	return parseJournal(path, raw)
 }
 
+// parseJournal reads a journal by the fields it still needs: a field it does
+// not know — one an earlier build wrote — is passed over. One that does not
+// parse may be this run's, and is an error.
 func parseJournal(path string, raw []byte) (TurnJournal, error) {
-	name := strings.TrimSuffix(filepath.Base(path), doneSuffix)
-	if strings.HasPrefix(name, resendPrefix) {
-		journal, _, err := parseResend(path, name, raw)
-		return journal, err
-	}
 	var journal TurnJournal
 	if err := json.Unmarshal(raw, &journal); err != nil {
-		return TurnJournal{}, unknownRecord(path, fmt.Errorf("the turn journal %s is not readable: %w", path, err))
-	}
-	if err := journal.checkDecided(name); err != nil {
-		return TurnJournal{}, unknownRecord(path, fmt.Errorf("the turn journal %s does not hold together: %w", path, err))
+		return TurnJournal{}, fmt.Errorf("the turn journal %s is not readable: %w", path, err)
 	}
 	return journal, nil
-}
-
-// checkDecided holds what a journal says of decisions to its name: a summary
-// only in a journal a decision installed, and a decided step only for a
-// decision.
-func (j TurnJournal) checkDecided(name string) error {
-	seen := map[string]bool{}
-	for _, step := range j.Decided {
-		if !freshID.MatchString(step.Decision) || !boundedID(step.Report) || seen[step.Report] {
-			return fmt.Errorf("it names a step decided by %q, or one step twice", step.Decision)
-		}
-		seen[step.Report] = true
-	}
-	if j.Summary == nil {
-		return nil
-	}
-	return j.Summary.check(name)
 }
 
 // doneSuffix names a completed journal.
@@ -177,9 +91,9 @@ func JournalRecorded(dir, name, id string) (bool, error) {
 	return false, nil
 }
 
-// HeldEndTaken says whether a journal of run epoch, open or done, took the kept
-// answer of the end held as op: that end was published with its continuation.
-// A journal that cannot be read may be that one, and is an error.
+// HeldEndTaken says whether a journal of run epoch took the kept answer of the
+// end held as op: that end was published with its continuation. A journal
+// that cannot be read may be that one, and is an error.
 func HeldEndTaken(dir, name, epoch, op string) (bool, error) {
 	entries, err := os.ReadDir(JournalPath(dir, name))
 	if errors.Is(err, os.ErrNotExist) || op == "" {
@@ -201,91 +115,6 @@ func HeldEndTaken(dir, name, epoch, op string) (bool, error) {
 		}
 	}
 	return false, nil
-}
-
-// finishJournal completes the operation recorded under id and marks it done;
-// an error leaves the rest for the next attempt. A journal done already, or
-// never written, needs nothing. Only the barrier runs it, after its plan
-// (Reconcile).
-func (w world) finishJournal(ctx context.Context, name, id string) error {
-	path := filepath.Join(JournalPath(w.dir, name), id)
-	journal, err := w.readJournalFile(path)
-	if errors.Is(err, os.ErrNotExist) {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-	if journal.Done {
-		return w.retireJournal(path)
-	}
-	save := func() error { return w.writeJournalFile(path, journal) }
-	if err := w.completeJournal(ctx, name, id, &journal, save); err != nil {
-		return err
-	}
-	// Done in place first: an end that dies before the rename leaves a journal
-	// that reads as done, not one whose operation would be run again.
-	done := TurnJournal{Epoch: journal.Epoch, Op: journal.Op, Ended: journal.Ended, Held: journal.Held, Done: true, Summary: resendSummary(id, journal)}
-	if err := w.writeJournalFile(path, done); err != nil {
-		return err
-	}
-	return w.retireJournal(path)
-}
-
-// completeJournal runs every step of a journal not done yet, saving its
-// progress after each report. A step saved as decided is held to its
-// decision first, in the plan as in the effects. A decided report's closure is written after the tail and before the done
-// rewrite, so it records only a tail that ran.
-func (w world) completeJournal(ctx context.Context, name, id string, journal *TurnJournal, save func() error) error {
-	for _, step := range journal.Decided {
-		if err := w.decidedBy(name, id, *journal, step); err != nil {
-			return inOp(step.Report, err)
-		}
-	}
-	for _, report := range journal.Reports {
-		if slices.Contains(journal.Published, report.ID) || slices.Contains(journal.Moot, report.ID) || journal.decided(report.ID) {
-			continue
-		}
-		if err := ctx.Err(); err != nil {
-			return err
-		}
-		if err := w.deliverReport(ctx, name, id, save, journal, report); err != nil {
-			return err
-		}
-	}
-	if err := w.finishSteps(ctx, name, *journal); err != nil {
-		return err
-	}
-	return w.closeDecided(name, id, *journal)
-}
-
-// finishSteps takes the kept answer, clears the waits and records the
-// interim end.
-func (w world) finishSteps(ctx context.Context, name string, journal TurnJournal) error {
-	if journal.Kept != nil {
-		if err := ctx.Err(); err != nil {
-			return err
-		}
-		if err := w.dropKeptVersion(name, journal.Epoch, *journal.Kept); err != nil {
-			return err
-		}
-	}
-	for _, waiter := range journal.Clear {
-		if err := ctx.Err(); err != nil {
-			return err
-		}
-		if err := w.clearAwaiting(name, journal.Epoch, waiter); err != nil {
-			return fmt.Errorf("could not clear what %s was owed: %w", waiter.Name, err)
-		}
-	}
-	return w.recordInterim(name, journal.Epoch, journal.Op, journal.Ended, journal.Interim, journal.Settles)
-}
-
-func (w world) retireJournal(path string) error {
-	if err := w.rename(path, path+doneSuffix); err != nil {
-		return err
-	}
-	return w.syncDir(filepath.Dir(path))
 }
 
 // TurnWindowStart is where the window of a turn end of run epoch opens

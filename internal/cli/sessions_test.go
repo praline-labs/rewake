@@ -55,7 +55,6 @@ func liveSession(t *testing.T, name string) string {
 	if err != nil {
 		t.Fatalf("state.Dir: %v", err)
 	}
-	checkRecordKinds(t, resolved)
 
 	start, err := proc.StartTime(os.Getpid())
 	if err != nil {

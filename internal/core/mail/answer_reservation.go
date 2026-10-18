@@ -43,18 +43,14 @@ func ReserveAnswer(dir, name, question string) (func(), error) {
 }
 
 // releaseMark takes a reservation's mark away once its command ends, under
-// the mailbox lock, unless an open occurrence of the mailbox's stop names it
-// (stop.go): the mark is then evidence the occurrence waits to read again.
-// A mark left behind is no longer refreshed, so its lease runs out as a
+// the mailbox lock. A mark left behind is no longer refreshed, so its lease runs out as a
 // stopped process's would, and the sweep retires it once nothing names it. A
 // lock that cannot be taken leaves the mark to the sweep the same way.
 func releaseMark(dir, name, mark string) {
-	ctx, cancel := context.WithTimeout(context.Background(), recipientLockWait)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	_ = state.WithMailboxLock(ctx, dir, name, func() error {
-		if !keptByStopOf(dir, name).keeps(mark) {
-			removeMark(dir, name, mark)
-		}
+		removeMark(dir, name, mark)
 		return nil
 	})
 }

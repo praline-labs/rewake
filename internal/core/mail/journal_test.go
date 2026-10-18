@@ -1,7 +1,6 @@
 package mail
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -10,11 +9,9 @@ import (
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/core/registry/registrytest"
 	"github.com/praline-labs/rewake/internal/infra/proc"
-	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
-// journalLab is api owing web one question, with the journal of the turn end
-// answering it written and nothing of it done.
+// journalLab is api owing web one question, with the report that answers it.
 func journalLab(t *testing.T) (string, string, Message) {
 	t.Helper()
 	dir := stateDir(t)
@@ -35,54 +32,18 @@ func journalLab(t *testing.T) (string, string, Message) {
 		t.Fatalf("the wait: %v %v", waiters, err)
 	}
 	report := Message{ID: ReportID("api", epoch, waiters[0]), From: "api", FromEpoch: epoch, To: "web", ToEpoch: web.Epoch(), Kind: Finished, Text: "the answer", InReplyTo: []string{"question"}, CreatedAt: time.Now()}
-	if err := WriteJournal(dir, "api", "end", TurnJournal{Epoch: epoch, Reports: []Message{report}, Clear: waiters}); err != nil {
-		t.Fatal(err)
-	}
 	return dir, epoch, report
 }
 
-func finishAll(t *testing.T, dir string) error {
-	t.Helper()
-	return state.WithMailboxLock(context.Background(), dir, "api", func() error {
-		return Reconcile(context.Background(), dir, "api")
-	})
-}
-
-// A journal takes the kept answer it carried and no other: an answer kept
-// after it is a later turn end's.
-func TestAJournalTakesOnlyTheAnswerItCarried(t *testing.T) {
-	dir, epoch, report := journalLab(t)
-	if err := KeepAnswer(dir, "api", epoch, "the carried answer", "", ""); err != nil {
-		t.Fatal(err)
-	}
-	taken, _, err := KeptAnswerThrough(dir, "api", epoch, nil)
-	version := taken.Version
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := WriteJournal(dir, "api", "end", TurnJournal{Epoch: epoch, Reports: []Message{report}, Kept: &version}); err != nil {
-		t.Fatal(err)
-	}
-	if err := KeepAnswer(dir, "api", epoch, "a later answer", "", ""); err != nil {
-		t.Fatal(err)
-	}
-	if err := finishAll(t, dir); err != nil {
-		t.Fatal(err)
-	}
-	if text, kept, err := KeptAnswer(dir, "api", epoch); err != nil || !kept || text != "a later answer" {
-		t.Fatalf("the journal took a later answer: %q %v %v", text, kept, err)
-	}
-}
-
-// A completed journal is kept while the run that wrote it lives, for a retry
-// of its turn end to find however late, and goes once another run holds the
-// name. An unfinished one stays, whoever's.
+// A done journal is kept while the run that wrote it lives, for a retry of its
+// turn end to find however late, and goes once another run holds the name. A
+// journal an earlier build left unfinished goes by its run the same way.
 func TestADoneJournalIsKeptWhileItsRunLives(t *testing.T) {
 	dir, epoch, _ := journalLab(t)
-	if err := finishAll(t, dir); err != nil {
+	if err := writeDoneJournal(dir, "api", "end", TurnJournal{Epoch: epoch, Op: "end", Done: true}); err != nil {
 		t.Fatal(err)
 	}
-	if err := WriteJournal(dir, "api", "unfinished", TurnJournal{Epoch: "ended-epoch", Clear: []Waiter{{Name: "web", Epoch: "gone"}}}); err != nil {
+	if err := writeJournalFile(filepath.Join(JournalPath(dir, "api"), "unfinished"), TurnJournal{Epoch: epoch}); err != nil {
 		t.Fatal(err)
 	}
 	old := time.Now().Add(-keepFinished - time.Hour)
@@ -100,22 +61,35 @@ func TestADoneJournalIsKeptWhileItsRunLives(t *testing.T) {
 	}
 	age()
 	sweepTurnRecords(dir, "api", "next-epoch", time.Now().Add(-keepFinished))
-	if recorded, _ := JournalRecorded(dir, "api", "end"); recorded {
-		t.Error("an ended run's done journal was kept")
-	}
-	if recorded, _ := JournalRecorded(dir, "api", "unfinished"); !recorded {
-		t.Error("an unfinished journal was swept")
+	for _, op := range []string{"end", "unfinished"} {
+		if recorded, _ := JournalRecorded(dir, "api", op); recorded {
+			t.Errorf("an ended run's journal %s was kept", op)
+		}
 	}
 }
 
 // A write of a journal that never finished is not a journal: read as one, it
-// would stop every turn end of the mailbox.
+// would fail every turn end of the mailbox.
 func TestAnAbandonedJournalWriteIsNotAJournal(t *testing.T) {
-	dir, _, _ := journalLab(t)
+	dir, epoch, _ := journalLab(t)
+	if err := os.MkdirAll(JournalPath(dir, "api"), 0o700); err != nil {
+		t.Fatal(err)
+	}
 	if err := os.WriteFile(filepath.Join(JournalPath(dir, "api"), ".tmp-123"), []byte("{\"Epo"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := finishAll(t, dir); err != nil {
+	if _, err := TurnWindowStart(dir, "api", epoch, 0, 100); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// A journal an earlier build wrote, with fields this one no longer knows, is
+// read by the fields it still needs.
+func TestAJournalOfAnEarlierBuildIsReadByWhatItNeeds(t *testing.T) {
+	dir, epoch, _ := journalLab(t)
+	raw := `{"Epoch":"` + epoch + `","Op":"old","Ended":150,"Reports":[{"id":"r"}],"Published":["r"],"Decided":[{"Report":"r","Decision":"d"}],"Done":true}`
+	writeRaw(t, filepath.Join(JournalPath(dir, "api"), "old"+doneSuffix), raw)
+	if start, err := TurnWindowStart(dir, "api", epoch, 0, 200); err != nil || start != 150 {
+		t.Fatalf("the window opens at %d: %v", start, err)
 	}
 }

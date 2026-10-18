@@ -10,8 +10,6 @@ const (
 )
 
 var bypassExceptions = []bypass{
-	{"internal/core/authority/server.go", "net.ListenUnix", 1, "the run's authority binds an abstract socket, which makes no file"},
-
 	{"internal/host/terminal/pty.go", "os.OpenFile", 2, "a pseudo-terminal's master and side, device nodes opened read and write, which make no file"},
 
 	{"internal/host/worktree/recordfile.go", "os.CreateTemp", 1, worktreeOutside + ": the worktree records"},

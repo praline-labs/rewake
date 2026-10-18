@@ -6,12 +6,11 @@ which 1.x rule each comes from is in [revision-rules.md](../archive/v2/revision-
 here is stated independently of the code: what the system guarantees, not how one file
 does it. Created in stage 3's first step, S1 ([stage3.md](../archive/v2/stage3.md#documents)).
 
-- [effects.md](effects.md) — **E1–E8**, the effects of a mail operation: unknown effects
-  never discarded, locks, checks in the critical section, one durable read, the size
-  bound, three outcomes, identity and scope, evidence and the stop; and **D1–D8**, the
-  operator decision on an unknown outcome: who decides, what it records, its write under
-  the locks, recovery, the resend and its effects installed once. Open it before changing
-  how mail is written, read, published, stopped or decided.
+- [effects.md](effects.md) — **E1–E8**, the effects of a mail operation: effects undone
+  only on evidence, locks, checks under the lock, one durable read, the size bound, three
+  outcomes of a lookup, identity and scope, and the order of a turn end's steps; D1–D8, the
+  operator decision, were removed on October 18, 2026. Open it before changing how mail is
+  written, read or published.
 - [turns.md](turns.md) — **O1–O2**, turn outcomes: an interim wake that must not close a
   task early, failed and interrupted turns.
 - [launch.md](launch.md) — **L1–L3**, what a launch adds: the mail and nothing else, where
@@ -42,8 +41,7 @@ met. A clause the code does not hold is stated in the rule's text as a known lim
 ```markdown
 - **E4. A read's completion is one durable fact every channel shares.** ...
   Tests:
-  - `internal/core/mail/claims_test.go` `TestTheSweepKeepsALetterBeingRead`
-  - `internal/core/mail/claims_test.go` `TestALetterBeingReadInPartsCannotBeTakenBack`
+  - `internal/core/mail/unread_test.go` `TestReadingHandsEachMessageOnce`
 ```
 
 A move rewrites the paths in the same commit. Tests that hold only the 1.x migration,

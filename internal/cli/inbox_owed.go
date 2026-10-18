@@ -13,10 +13,6 @@ import (
 type owedView struct {
 	messageView
 	Kept bool `json:"kept"`
-	// Decided is the decision on this run's report that answers it: the
-	// report reached nobody provably, and the wait stands until its
-	// operation's tail closes it.
-	Decided *awaitedDecision `json:"decided,omitempty"`
 }
 
 type owedModel struct {
@@ -61,11 +57,7 @@ func showOwed(ctx *Context, call Call, dir string, session registry.Session, epo
 	}
 	model := owedModel{Session: session.Name, Messages: make([]owedView, 0, len(owed))}
 	for index, view := range viewedMessages(dir, messages) {
-		item := owedView{messageView: view, Kept: owed[index].Kept}
-		if mark, ok := mail.DecisionOn(dir, session.Name, view.ID, view.From, view.FromEpoch); ok {
-			item.Decided = awaitedDecisionOf(&mark)
-		}
-		model.Messages = append(model.Messages, item)
+		model.Messages = append(model.Messages, owedView{messageView: view, Kept: owed[index].Kept})
 	}
 	listed := make(map[string]bool, len(owed))
 	for _, message := range owed {
@@ -114,9 +106,6 @@ func owedLines(messages []owedView) []string {
 			heading = fmt.Sprintf("+ addendum from %s · %s", message.From, message.CreatedAt.Local().Format("15:04:05"))
 		}
 		lines = append(lines, heading)
-		if d := message.Decided; d != nil {
-			lines = append(lines, fmt.Sprintf("decided, still owed: your report %s %s by decision %s of %s, delivery unproven; the wait closes when that turn's tail runs", d.Report, choiceText(d.Choice), d.ID, deciderText(d.By)))
-		}
 		lines = append(lines, message.Text)
 		if message.ThreadChanged {
 			lines = append(lines, mail.ThreadChangedWarning)

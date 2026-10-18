@@ -59,11 +59,10 @@ func EndTurn(parent context.Context, dir string, self registry.Session, event Tu
 		op := turnOp(self, event)
 		if event.ID != "" {
 			// An end on record is answered from the record, never run again: a
-			// done journal of it; a hold of it,
-			// answered with the same reason and nothing kept again; or a
-			// journal that took its kept answer, so it was published with its
-			// continuation. Only an end of another identity takes a kept
-			// answer.
+			// done journal of it; a hold of it, answered with the same reason
+			// and nothing kept again; or a journal that took its kept answer,
+			// so it was published with its continuation. Only an end of
+			// another identity takes a kept answer.
 			recorded, err := JournalRecorded(dir, self.Name, op)
 			if err != nil || recorded {
 				return err

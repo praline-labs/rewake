@@ -40,7 +40,7 @@ const (
 var PublicationStep func(step string, message Message)
 
 func (w world) publicationStep(step string, message Message) {
-	if !w.plan && PublicationStep != nil {
+	if PublicationStep != nil {
 		PublicationStep(step, message)
 	}
 }
@@ -60,7 +60,7 @@ func (w world) readOnceMark(path string) (string, error) {
 		return "", err
 	}
 	if string(mark) != onceIntent && string(mark) != oncePublished {
-		return "", unknownRecord(path, fmt.Errorf("the publication mark %s says neither %s nor %s", path, onceIntent, oncePublished))
+		return "", fmt.Errorf("the publication mark %s says neither %s nor %s", path, onceIntent, oncePublished)
 	}
 	return string(mark), nil
 }
@@ -161,7 +161,7 @@ func (w world) present(to, id string) (bool, error) {
 		case err == nil && info.Mode().IsRegular():
 			return true, nil
 		case err == nil:
-			unknown = unknownRecord(path, fmt.Errorf("%s, where a letter belongs, is not a regular file", path))
+			unknown = fmt.Errorf("%s, where a letter belongs, is not a regular file", path)
 		case !errors.Is(err, os.ErrNotExist):
 			unknown = err
 		}
@@ -250,9 +250,8 @@ func sweepOnce(dir, name, live string) {
 	if err != nil {
 		return
 	}
-	kept := keptByStopOf(dir, name)
 	for _, run := range runs {
-		if run.Name() != live && !kept.keeps(filepath.Join(root, run.Name())) {
+		if run.Name() != live {
 			_ = state.RemoveAll(filepath.Join(root, run.Name()))
 		}
 	}

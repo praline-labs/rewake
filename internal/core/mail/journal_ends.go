@@ -39,7 +39,7 @@ func latestEnd(dir, name, epoch string) (int64, bool, error) {
 		return 0, false, nil
 	}
 	if err != nil {
-		return 0, false, unknownRecord(JournalPath(dir, name), err)
+		return 0, false, err
 	}
 	latest := int64(0)
 	for _, entry := range entries {

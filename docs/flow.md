@@ -34,10 +34,9 @@ inbox/<name>/awaiting/<epoch>/<peer>   who is owed a report by this run
 inbox/<name>/answering/<id>      a send --question is waiting for this answer
 inbox/<name>/received/<id>       id of the report printed for this question
 inbox/<name>/retention/<id>      fixed release time for a reserved report
-inbox/<name>/journal/<id>        what a turn end publishes, takes and clears, named by the end; <id>.done while its run lives
+inbox/<name>/journal/<op>.done   a turn end recorded done, written last, named by the end; kept while its run lives
 inbox/<name>/pending/            this run's pending marks, its last word on the work, a held answer
-inbox/<name>/once/<epoch>/<id>   a letter's publication mark: intent, then published
-inbox/<name>/stops/<key>/<occ>   one occurrence of a stop's cause; <occ>.resolved names its evidence
+inbox/<name>/once/<epoch>/<id>   a heads-up's publication mark: intent, then published
 inbox/<name>/threads/<id>        selected delivery thread, when supported
 inbox/<name>/.lock               the mailbox lock, one flock for every state change
                                  (every kind a mailbox holds: docs/mailbox-records.md)
@@ -259,29 +258,28 @@ why it was refused or failed — comes later as a notify from the worker
 The harness itself says when a turn is over, through its adapter in the wrapper: the
 fixture's program with an end frame, Claude Code through the mod's `turn/end`
 ([stage4-turns.md](v2/stage4-turns.md)). Every adapter's end goes through the same internal
-reporting function and turn journals. A subagent's turn is not reported and changes none of the
+reporting function. A subagent's turn is not reported and changes none of the
 session's waits.
 
 1. **Who is owed.** Under the lock, the turn end reads
    `awaiting/<own epoch>/`. A silent role emits no successful reports;
-   failure callbacks still route errors. First the barrier completes what an
-   earlier end left unfinished (`mail.Reconcile`); an unknown it cannot decide stops the
-   mailbox until a later look finds its cause gone, or, for a report nobody can prove
-   arrived, until a decision settles it: main's note of the stop names the recipient run,
-   which decides from its own shell, or the person from outside every
-   session, with `rewake decide <name> <report> --arrived | --not-arrived`; `rewake list`
-   names the stopped session ([stage3-decision.md](v2/stage3-decision.md#the-command)). An identified turn carries its read boundary, and its
-   journal records the full report batch and what it clears before any report goes out
-   ([delivery-turn-end.md](delivery-turn-end.md#the-end-of-a-turn)).
+   failure callbacks still route errors. An identified turn carries its read boundary,
+   and only waits read at or below it are this end's
+   ([delivery-turn-end.md](delivery-turn-end.md#the-end-of-a-turn)). Since October 18,
+   2026, by the owner's decision, there is no barrier, no stopped mailbox and no
+   `rewake decide`: a step that fails returns an error, and a retry or the next end runs
+   the steps again.
 2. **The report.** For each waiting run, a `finished` message into that
    sender's mailbox: text is the final reply, `inReplyTo` lists the messages
    read from that run since the last report, `toEpoch` is that run — not
    whoever holds the name now. The id is derived from the wait, so a retried
-   end writes the same report once. A retry finds its journal and completes it, and
-   answers nothing read above its boundary even when new work arrived between attempts.
-3. **Forget the reported messages** after all reports are written, as the journal's
-   next step; the journal is then marked done. Cleanup matches the original run and
-   wait; newly read messages remain owed to the next result.
+   end finds the report written and does not write it again, and answers nothing read
+   above its boundary even when new work arrived between attempts.
+3. **Forget the reported messages** after all reports are written — never before, since
+   a cleared wait counts as answered; then the end is recorded done
+   (`journal/<op>.done`), which a retry of the same event is answered from. Cleanup
+   matches the original run and wait; newly read messages remain owed to the next
+   result.
 4. **The sender is woken** by its own wrapper, through Act 3, with
    `Rewake: write-claude finished, 1 new message(s)`. The sender reads it with
    `rewake inbox`; a `finished` asks for nothing back, so the exchange ends
