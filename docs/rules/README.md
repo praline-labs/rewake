@@ -17,8 +17,8 @@ does it. Created in stage 3's first step, S1 ([stage3.md](../archive/v2/stage3.m
 - [launch.md](launch.md) — **L1–L3**, what a launch adds: the mail and nothing else, where
   and never what, nothing past the run.
 - [space.md](space.md) — **SP1–SP9**, the first working space of stage 4: a hosted worker,
-  its record, its keeper and its closing. A rule enters in the step that builds its test;
-  SP3, SP4 and SP9 are in force from S4-2, SP2 and SP7 from S4-3. Open it before changing how a space or a hosted
+  its record and its closing. A rule enters in the step that builds its test;
+  SP3, SP4 and SP9 are in force from S4-2, SP2 and SP7 from S4-3, SP1 from S4-7. Open it before changing how a space or a hosted
   launch behaves.
 - [host.md](host.md) — the host's tests, rules without a number.
 - [layout.md](layout.md) — the layout, rules without a number: what each layer may

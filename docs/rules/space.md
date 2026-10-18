@@ -1,6 +1,6 @@
 # Rules: the first working space, SP1–SP9
 
-What a space guarantees: a hosted worker, its record, its keeper and its closing, in the
+What a space guarantees: a hosted worker, its record and its closing, in the
 wording of [stage4-space-steps.md](../v2/stage4-space-steps.md#rules-before-code), the
 second half of the design in [stage4-space.md](../v2/stage4-space.md). Written in stage 4's
 step S4-2, October 13, 2026.
@@ -13,7 +13,34 @@ built the record ([stage4-space-record.md](../v2/stage4-space-record.md)). Since
 decision of October 18, 2026 SP5 and SP6, the keeper's seat and its keys, are not built, and SP1
 and SP8 enter with the one space step that replaces S4-7 to S4-10.
 
+**What the space step changed, October 18, 2026** (S4-7, [the entry](../roadmap/2026-10-18-space.md)).
+A space is main starting a worker: `rewake space open` runs a detached space host, which runs an
+ordinary launch of the worker in a pseudo-terminal it owns, watches main's run and ends the
+worker when that run ends. There is no keeper, no screen, no keys and no liveness pipe, and the
+space host takes no request of the mod: its only socket is `rewake attach`'s, the person's own
+terminal relayed to the worker's, open to any process of the user as every room file is. So SP1
+is held by the space host's watch, SP3 by the environment it builds, SP9 by its own position
+outside main's run before the worker starts; SP4 stays the rule of main's mod socket. SP8 — the
+next start closing a record left open — is not built: a record is closed by its space host,
+and one whose space host died with the machine stays open in the listing.
+
 ## The rules
+
+- **SP1. A space lives no longer than its main.** When main's run ends — by its harness
+  ending or by its wrapper being killed, SIGKILL included — every worker of its spaces is ended
+  within a bound, by a process that no signal of that shutdown reaches, which records the end
+  it saw. A conversation that ends while the process goes on (`clear`, `resume`) closes
+  nothing.
+
+  Held since S4-7, October 18, 2026: the space host, a process outside main's run, reads main's
+  run once a second; once it reads ended, it sends the worker's process group SIGHUP, after a
+  second SIGTERM, after five more SIGKILL, waits up to two seconds for the group to be gone, and
+  closes the record with the worker seen ended and the signal that ended it. A worker that ends
+  by itself closes the space the same way, with its exit and its last line. Main's run read as
+  unknown ends nothing.
+  Tests:
+  - `internal/host/spacehost/stop_test.go` `TestTheCloseSequenceEndsAWorkerThatIgnoresHangupAndTerm`
+  - `test/workflow/fixture_space_test.go` `TestFixtureSpace`
 
 - **SP2. The record comes first.** A space's record — the worker's harness, name, role,
   session id where the harness takes one, the checkout's path and branch — is written before
@@ -28,11 +55,14 @@ and SP8 enter with the one space step that replaces S4-7 to S4-10.
   not to be looked at — and refuses one that says nothing of either or contradicts the record,
   and a record on disk whose end omits the checkout's observation does not read; and a crash
   between two steps
-  leaves the earlier one whole, which a later close finishes. Known limit, recorded on October
-  13, 2026, owned by S4-7, which builds the open: each step written by main's wrapper before
-  the act it names — the worker's launch, its gate, the open's answer; and by S4-9, which builds
-  closing: the observations a close records made by the host.
+  leaves the earlier one whole, which a later close finishes. Since S4-7, October 18, 2026, the
+  steps are the space host's: it records its own run before anything is checked, the worker's
+  run once the worker's wrapper is started, and the checkout once the worker's session claims
+  one; `rewake space open` answers only once the record is open and the worker's session is
+  registered with that run. A close records the worker seen ended or never started and what
+  was then seen of the checkout. The format on disk is held by its own test.
   Tests:
+  - `internal/core/space/format_test.go` `TestTheRecordsFormatOnDisk`
   - `internal/core/space/store_test.go` `TestTheRecordIsWrittenOnlyUnderTheRoomsLease`
   - `internal/core/space/store_test.go` `TestTheStatesMoveInTheirOrder`
   - `internal/core/space/store_test.go` `TestARecordClosesOnlyFromAnObservation`
@@ -43,18 +73,17 @@ and SP8 enter with the one space step that replaces S4-7 to S4-10.
 - **SP3. A hosted launch inherits nothing of a session.** Its environment carries no variable
   that names main's session or a transport of main's run, and none of the worker harness's
   `EnvNotInherited`; what it carries of rewake's identity and transport is set fresh by the
-  host — the base of main's checked room, the room, the liveness descriptor — while the person's
-  preferences pass as they are. It runs the wrapper's own image and joins main's room under
-  main's base.
+  host — the base of main's checked room and the room — while the person's preferences pass as
+  they are. It runs the wrapper's own image and joins main's room under main's base.
 
-  Held today for an ordinary launch, whose environment the hosted one starts from: the
-  session's identity reaches the harness from the wrapper that runs it, never from a parent
-  session, and what the adapter says its runs must not inherit stays out while the rest
-  passes. Known limit, recorded on October 13, 2026, owned by S4-7, which builds the hosted
-  launch: the transport variables left out (`REWAKE_MOD_SOCKET`, every `REWAKE_BRIDGE_`
-  variable), the base set from main's checked room, the liveness descriptor, the wrapper's
-  own image and the join of main's room under main's base.
+  Held since S4-7, October 18, 2026: the space host strips `REWAKE_SESSION`, `REWAKE_EPOCH`,
+  `REWAKE_ROOM`, `REWAKE_DIR`, its own spec, every `REWAKE_BRIDGE_` variable and every catalogue
+  harness's `EnvNotInherited` (which carries `REWAKE_MOD_SOCKET`), sets `REWAKE_DIR` to the base
+  of main's room — refusing a base that is not absolute, so the default is never taken — and
+  `TERM`, and runs its own executable as `rewake <harness> --name --<role> --room`. From there
+  the worker is an ordinary launch, whose identity reaches its harness from its own wrapper.
   Tests:
+  - `internal/host/spacehost/env_test.go` `TestTheWorkerGetsMainsBaseAndNothingOfItsSession`
   - `internal/host/wrap_test.go` `TestSessionEnvironmentReachesTheHarness`
   - `internal/host/wrap_test.go` `TestWhatTheAdapterSaysNotToInheritStaysOut`
 
@@ -81,6 +110,9 @@ and SP8 enter with the one space step that replaces S4-7 to S4-10.
   - `internal/adapter/claude/modhost/alive_test.go` `TestAPollFromAReplacedHarnessRenewsNothing`
   - `internal/adapter/claude/modhost/alive_test.go` `TestAPollPastTheCloseRenewsNothing`
 
+  Since S4-7, October 18, 2026, the space host is no endpoint of the mod: it takes no request
+  of main's harness, and its attach socket relays a terminal and decides nothing.
+
 - **SP7. A kept checkout is never forgotten and never removed by rewake.** A closed space
   whose checkout is still there is listed to main at its start and by `rewake space list`
   until the checkout is gone; rewake removes no checkout.
@@ -89,9 +121,9 @@ and SP8 enter with the one space step that replaces S4-7 to S4-10.
   not be looked at; a kept checkout is reminded while it is there, and while it
   cannot be looked at, with what was found in it and the Git commands that clear it; one seen
   gone is not; `rewake space list` shows it beside the open and closed spaces; and the package
-  that keeps the records runs no command and removes no file. Known limit, recorded on October
-  13, 2026, owned by S4-9, which builds closing: the reminder to main at its start, and a
-  closing that removes no checkout.
+  that keeps the records runs no command and removes no file; the space host's closing removes
+  none either (S4-7, October 18, 2026). Known limit, recorded on October 13, 2026: the reminder
+  to main at its start.
   Tests:
   - `internal/core/space/list_test.go` `TestAKeptCheckoutIsRemindedUntilItIsGone`
   - `internal/core/space/list_test.go` `TestAnUnknownCheckoutIsReminded`
@@ -99,20 +131,21 @@ and SP8 enter with the one space step that replaces S4-7 to S4-10.
   - `internal/core/space/list_test.go` `TestThePackageRemovesNoCheckout`
   - `internal/cli/space_test.go` `TestSpaceListShowsOpenClosedAndKept`
 
-- **SP9. A hosted worker is never main's descendant.** Its wrapper is reparented away from
-  main's wrapper before it is seated, checked by the same ancestry test the authority makes; an
-  open that cannot prove it is refused, and nothing the worker controls runs before that proof.
-  So main's decision endpoint refuses the worker's commands by the existing rule, and
-  no authority rule changes.
+- **SP9. A hosted worker is never main's descendant.** Its space host runs outside main's run,
+  checked before the worker starts; an open that cannot show it is refused, and nothing the
+  worker controls runs before that check. So main's decision endpoint refuses the worker's
+  commands by the existing rule, and no authority rule changes.
 
-  Held today in the part that does not change: the ancestry test walks a process's parents
-  to the wrapper and refuses a stranger and a reused pid, and main's decision
-  endpoint refuses a process that does not run below main's wrapper. Known limit, recorded
-  on October 13, 2026, owned by S4-7, which builds the hosted launch: the detached launcher,
-  the refusal when main's wrapper is a subreaper, the ancestry proven by the whole chain with
-  an unreadable one refusing the open, and the launch gate before anything the worker
-  controls.
+  Held since S4-7, October 18, 2026: `rewake space open` re-executes rewake as a launcher in a
+  session of its own, which starts the space host and exits; the space host waits until the
+  launcher has left as its parent, then reads its whole chain of parents up to the root: one
+  that meets main's wrapper, a parent started after its child, a loop or an unreadable link
+  refuse, so a wrapper that is a subreaper and adopted it refuses too. A refusal closes the
+  record with the worker never started and says why; the worker's wrapper is started only
+  after it. The ancestry test the authority makes is unchanged.
   Tests:
   - `internal/infra/proc/lineage_test.go` `TestDescendsWalksParentsToTheAncestor`
   - `internal/infra/proc/lineage_test.go` `TestDescendsRefusesAReusedParent`
+  - `internal/infra/proc/lineage_test.go` `TestOutsideIsShownOnlyFromAWholeChain`
+  - `internal/host/spacehost/host_test.go` `TestASpaceHostBelowMainStartsNoWorker`
   - `internal/core/authority/decide_test.go` `TestAWrapperTakesADecisionOnlyFromBelow`

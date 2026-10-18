@@ -23,7 +23,8 @@ The order of work set on October 18, 2026 ([its entry](2026-10-18-decision.md)):
    ([its entry](2026-10-18-deletions-a.md)); batch B, grants and the mail tool, landed after the
    test diet ([its entry](2026-10-18-deletions-b.md)).
 3. The space on Claude Code, one step: `rewake space open` and `rewake attach`
-   ([S4-7](../v2/stage4-space-steps.md#the-build-steps)).
+   ([S4-7](../v2/stage4-space-steps.md#the-build-steps)); built on branch `space`, waiting for
+   the review and main's live acceptance ([its entry](2026-10-18-space.md)).
 4. pi's adapter, then a read-only reviewer on it, then pi in a space (stage 4b,
    [the stage plan](../v2/design.md#the-stage-plan-from-here)).
 5. Compaction and context on the mod and on pi; then the room can move to 2.0.
@@ -149,3 +150,4 @@ without a date. Local installation without publishing is in
 | October 18, 2026 | [pi next, main starts its workers, a lighter binary](2026-10-18-decision.md) | by the owner's decision: pi instead of Codex, the space as main starting its workers without showing them inside Claude Code, what goes from the code and the new order of work |
 | October 18, 2026 | [Deletions, batch A](2026-10-18-deletions-a.md) | the delivery hold, the old legacy marks, the keeper and the screen of the mod protocol, the clearing of 1.x and the version probe's holder |
 | October 18, 2026 | [Deletions, batch B](2026-10-18-deletions-b.md) | grants, the mail tool with its channel and tool-only read path, their documents archived, `AGENTS.md` shortened |
+| October 18, 2026 | [The space: main starts its workers](2026-10-18-space.md) | S4-7 built, not yet accepted: `rewake space open` through a detached space host with a pseudo-terminal, closing when main's run ends, `rewake attach`; the record's `keeper` replaced by `host` |

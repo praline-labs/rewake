@@ -58,8 +58,9 @@ nothing — emptying one is as deliberate as removing it, and removing both
 session's shell goes. A live record behind it is not required — a worker can remove or rewrite its
 own — so a shell left over from a session that has ended is refused too, and a new
 shell is the way out. `--help` on a launch word still prints the help page. Main starts a
-worker with its own command, `rewake space open`, planned in
-[S4-7](v2/stage4-space-steps.md#the-build-steps), not this path. The
+worker with its own command, `rewake space open`, not this path: a detached space host,
+outside main's run, runs the worker's launch with the session's variables stripped
+([A space for a worker](#a-space-for-a-worker)). The
 rule is on every launch page's notes and in main's playbook, so a main learns it before
 it tries.
 
@@ -148,6 +149,38 @@ a terminal outside any session. The main session then takes the accepted work wi
 `rewake worktree finish <topic>`, rather than making one by hand with `git worktree add`.
 A writer's uncommitted edits then never mix with what is being checked or committed in
 the main checkout at the same time.
+
+### A space for a worker
+
+`rewake space open <name> --harness <id> [--role write|general] [--worktree[=<name>]] -- <harness
+args>` is main's way to start a worker, built October 18, 2026 (S4-7,
+[the steps](v2/stage4-space-steps.md#the-build-steps)); `--role` is `write` by default. It is a
+change, refused unless main's run has `Spaces` live, and refused for a name whose session is
+already alive. It writes the space's record and re-executes rewake as a launcher with
+`Setsid`; the launcher starts the space host and exits. The space host takes the room's build
+lease as any writer, records its own run, and refuses the open — the record closed, the worker
+never started — unless its whole chain of parents reads up to the root without meeting main's
+wrapper ([SP9](rules/space.md)). Then it opens a pseudo-terminal of 120 by 40 with
+`host/terminal`'s pair and starts its own executable there as
+`rewake --name <name> --room <main's room> --<role> <harness> [--worktree…] <harness args>`, in
+main's working directory, with `REWAKE_SESSION`, `REWAKE_EPOCH`, `REWAKE_ROOM`, every
+`REWAKE_BRIDGE_` variable and every catalogue harness's `EnvNotInherited` stripped,
+`REWAKE_DIR` set to main's base and `TERM` set. Where the harness takes a conversation id
+(`ConversationOffer`), a fresh one is appended and recorded. The worker's session is
+`<name>-<harness>`. The command waits until the record is open and that session is registered
+with the worker's run, at most 30 s, and fails with the record's reason otherwise.
+
+What a harness needs to start unattended — Claude Code's folder trust, a permission mode — main
+passes after `--`; nothing types into the worker. `rewake attach <name>` relays the person's
+terminal to the worker's over `sock/space.<id>.sock`, in raw mode, the size following the
+window and resized once on attach so a full-screen harness repaints; one terminal at a time,
+`Ctrl-\` detaches.
+
+The space host reads main's run once a second (`ObserveRun` through `space.MainRuns`). Once
+it reads ended it sends SIGHUP to the worker's process group, SIGTERM after 1 s, SIGKILL after
+5 s more, waits up to 2 s for the group to be gone, records the end it observed and exits; a
+run read as unknown ends nothing. Its standard streams are `/dev/null`: what goes wrong shows in
+the record's end or as the open's timeout.
 
 ### The intro
 
