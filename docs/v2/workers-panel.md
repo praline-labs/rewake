@@ -49,7 +49,11 @@ The Raster encoding is the adapter's, since a Raster is Claude Code's: a palette
 xterm's RGB, the default stays `0x01000000`, inverse swaps the two (a default turned into the
 other's place takes a fixed grey), a space of any kind becomes the plain one, a wide glyph, a
 non-BMP, private-use or control character becomes `?` (a wide glyph's second cell a blank), and
-the visible cursor is drawn inverse. Bold, dim, italic and
+the visible cursor is drawn inverse. Which glyph is wide is the emulator's word, not a table of
+blocks: the emulator gives a wide glyph a run of its own, two columns for one glyph, and a run
+whose columns do not match its glyphs draws every character outside ASCII as `?`. A block table
+let wide symbols of the BMP such as U+2705 through as one cell, and Claude Code refused the whole
+screen over one (the panel's review, October 18, 2026). Bold, dim, italic and
 underline are lost: a Raster has no attributes.
 
 **The mod.** `/workers` opens the pane `rewake-workers` with the focus; the mod also opens it by

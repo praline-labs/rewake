@@ -103,13 +103,16 @@ func (v *vtEmulator) look() look {
 }
 
 // row is one row as runs: a new run where the style changes, a wide glyph
-// counted as its width, the cell after it, which only holds its place,
-// skipped. A wide glyph cut by the right edge is drawn as a blank, so the
-// runs add up to the width.
+// a run of its own counted as its width, the cell after it, which only holds
+// its place, skipped. So a run of one glyph over two columns is how a reader
+// learns a glyph is wide: the emulator's width, not a reader's guess (the
+// workers' pane draws each cell of its Raster from it). A wide glyph cut by
+// the right edge is drawn as a blank, so the runs add up to the width.
 func (v *vtEmulator) row(y, width int) []Run {
 	var runs []Run
 	var text strings.Builder
 	var open Run
+	wide := false
 	flush := func() {
 		if open.Cols > 0 {
 			open.Text = text.String()
@@ -137,10 +140,11 @@ func (v *vtEmulator) row(y, width int) []Run {
 		if x+next.Cols > width {
 			next.Cols, content = width-x, strings.Repeat(" ", width-x)
 		}
-		if open.Cols == 0 || next.Fg != open.Fg || next.Bg != open.Bg || next.Attrs != open.Attrs {
+		if open.Cols == 0 || next.Fg != open.Fg || next.Bg != open.Bg || next.Attrs != open.Attrs || wide || next.Cols > 1 {
 			flush()
 			open = Run{Fg: next.Fg, Bg: next.Bg, Attrs: next.Attrs}
 		}
+		wide = next.Cols > 1
 		text.WriteString(content)
 		open.Cols += next.Cols
 		x += next.Cols

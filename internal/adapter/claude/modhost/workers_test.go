@@ -149,9 +149,12 @@ func TestARunOfNoSpacesAnswersNoPane(t *testing.T) {
 	}
 }
 
-// A run's glyphs become cells a Raster takes: a wide glyph a mark and a
-// blank, a combining mark none, a private-use glyph the mark, and the run
-// keeps its width.
+// A run's glyphs become cells a Raster takes: a wide glyph, which the
+// emulator gives a run of its own, a mark and a blank; a combining mark none;
+// a private-use glyph the mark; in a run that is not the emulator's, whose
+// columns do not match its glyphs, every character outside ASCII the mark —
+// a wide symbol of the BMP such as U+2705 included, which Claude Code would
+// refuse the whole screen over; and the run keeps its width.
 func TestGlyphsKeepTheirRunsWidth(t *testing.T) {
 	for _, c := range []struct {
 		text string
@@ -159,7 +162,10 @@ func TestGlyphsKeepTheirRunsWidth(t *testing.T) {
 		want string
 	}{
 		{"ab", 2, "ab"},
-		{"界x", 3, "? x"},
+		{"界", 2, "? "},
+		{"✅", 2, "? "},
+		{"界x", 3, "?x "},
+		{"✅x", 3, "?x "},
 		{"é", 1, "e"},
 		{"", 1, "?"},
 		{"abc", 2, "ab"},
@@ -170,4 +176,29 @@ func TestGlyphsKeepTheirRunsWidth(t *testing.T) {
 			t.Errorf("glyphs(%q, %d) = %q, want %q", c.text, c.cols, got, c.want)
 		}
 	}
+}
+
+// A view nobody names for its idle time is closed even when no other space
+// is asked for: a closed pane asks for none.
+func TestALoneIdleViewIsClosed(t *testing.T) {
+	server, _ := serving(t)
+	host := &spaces{}
+	server.ShowSpaces(host)
+	server.mu.Lock()
+	server.pane.idle = 20 * time.Millisecond
+	server.mu.Unlock()
+	if _, err := server.screenOf("s1"); err != nil {
+		t.Fatal(err)
+	}
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		host.mu.Lock()
+		closed := host.closed
+		host.mu.Unlock()
+		if closed == 1 {
+			return
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	t.Fatal("the lone view stayed open past its idle time")
 }

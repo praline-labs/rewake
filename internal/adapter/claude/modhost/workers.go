@@ -90,7 +90,28 @@ func (s *Server) screenOf(space string) (adapter.ScreenView, error) {
 		w.open = map[string]*openView{}
 	}
 	w.open[space] = &openView{view: view, last: now}
+	s.retireIdle(space, view, w.idleFor())
 	return view, nil
+}
+
+// retireIdle closes the view of space once no request has named it for
+// idle, whether or not another space is asked for: a pane closed asks for
+// none, and its last view would otherwise stay open for the run's life.
+func (s *Server) retireIdle(space string, view adapter.ScreenView, after time.Duration) {
+	time.AfterFunc(after, func() {
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		open := s.pane.open[space]
+		if open == nil || open.view != view {
+			return
+		}
+		if left := s.pane.idleFor() - time.Since(open.last); left > 0 {
+			s.retireIdle(space, view, left)
+			return
+		}
+		_ = open.view.Close()
+		delete(s.pane.open, space)
+	})
 }
 
 // drop closes the view of space when it is still view: one whose connection

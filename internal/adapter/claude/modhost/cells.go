@@ -67,10 +67,13 @@ func cells(s adapter.Screen) string {
 
 // glyphs is a run's text as exactly cols code points of one cell each.
 // Combining marks, joiners and variation selectors join the glyph before
-// them and take no cell; a glyph the run has more columns for than single
-// cells is taken as wide, by its block; whatever still does not add up is
-// cut or padded with blanks, so the run keeps its width and the row stays
-// aligned.
+// them and take no cell. The emulator gives a wide glyph a run of its own
+// (terminal's row), so a run of one glyph over two columns is a wide glyph,
+// drawn as the mark and a blank. A run of more glyphs than that whose
+// columns do not match its glyphs is not the emulator's: none of its
+// characters outside ASCII is trusted to be one cell wide, each is drawn as
+// the mark, and what still does not add up is cut or padded with blanks, so
+// the run keeps its width and the row stays aligned.
 func glyphs(text string, cols int) []rune {
 	var bases []rune
 	for _, r := range text {
@@ -79,15 +82,21 @@ func glyphs(text string, cols int) []rune {
 		}
 		bases = append(bases, r)
 	}
-	wide := cols - len(bases)
 	out := make([]rune, 0, cols)
-	for _, r := range bases {
-		if wide > 0 && wideBlock(r) {
-			out = append(out, mark, ' ')
-			wide--
-			continue
+	switch {
+	case len(bases) == 1 && cols == 2:
+		out = append(out, mark, ' ')
+	case len(bases) == cols:
+		for _, r := range bases {
+			out = append(out, single(r))
 		}
-		out = append(out, single(r))
+	default:
+		for _, r := range bases {
+			if r >= 0x80 {
+				r = mark
+			}
+			out = append(out, single(r))
+		}
 	}
 	for len(out) < cols {
 		out = append(out, ' ')
@@ -98,18 +107,6 @@ func glyphs(text string, cols int) []rune {
 // joins says r joins the glyph before it rather than take a cell.
 func joins(r rune) bool {
 	return unicode.In(r, unicode.Mn, unicode.Me) || r == 0x200d || r >= 0xfe00 && r <= 0xfe0f || r >= 0xe0100 && r <= 0xe01ef
-}
-
-// wideBlock says r is of a block drawn two cells wide: the East Asian
-// scripts, the fullwidth forms and the pictographs.
-func wideBlock(r rune) bool {
-	switch {
-	case r >= 0x1100 && r <= 0x115f, r >= 0x2e80 && r <= 0xa4cf, r >= 0xac00 && r <= 0xd7a3,
-		r >= 0xf900 && r <= 0xfaff, r >= 0xfe30 && r <= 0xfe4f, r >= 0xff00 && r <= 0xff60,
-		r >= 0xffe0 && r <= 0xffe6, r >= 0x1f000:
-		return true
-	}
-	return false
 }
 
 // single is r as a Raster may hold it: a printable character of the BMP
