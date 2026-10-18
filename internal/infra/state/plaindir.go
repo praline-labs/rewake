@@ -29,16 +29,3 @@ func ReadPlainDir(path string) ([]os.DirEntry, error) {
 	slices.SortFunc(entries, func(a, b os.DirEntry) int { return strings.Compare(a.Name(), b.Name()) })
 	return entries, nil
 }
-
-// plainDir refuses a path that is not a directory of its own: a symlink is
-// never followed out of the base.
-func plainDir(path string) error {
-	info, err := os.Lstat(path)
-	if err != nil {
-		return err
-	}
-	if !info.IsDir() {
-		return fmt.Errorf("%s is not a directory", path)
-	}
-	return nil
-}
