@@ -446,3 +446,23 @@ worker on haiku:
   blinked at that rate. Taken 30 ms after the change, every frame of a working worker had the
   cursor shown, and the frames halved. With the worker working, each closing way above held in
   repeated tries.
+
+### The pane's prefix, size and colors (later the same day, 2.1.302)
+
+Driven through a pseudo-terminal of 200 by 50 (and 120 by 50), fullscreen on and off, main and
+two Claude Code workers on haiku opened from main's shell mode:
+
+- Alt+a reaches a `Client` holding the keyboard. `$.ui.close` of the pane's own id called from the
+  `ui.message` hook closes it, and the keyboard returns to the prompt: letters typed next showed
+  in main's composer.
+- `$.ui.open` of an open id with other `rows` and `columns` and no `focus` resizes the pane and
+  leaves the keyboard with the `Client`. `columns: 1000` docked the pane at 175 of 200 columns
+  and 95 of 120, the transcript keeping 24; omitted, the dock took the share (88 of 200). Inline
+  (fullscreen off) `rows: 1000` gave 38 body rows of 50.
+- Fullscreen off, a click on the pane gave the `Client` no keyboard: the keys stayed the prompt's.
+- Colors: the worker's `claude` ran with `TERM=xterm-256color` and `COLORTERM=truecolor`. With
+  the outer Claude Code under `COLORTERM=truecolor` (as the owner's main runs), the worker's RGB
+  `d77757` and `ffc107` were drawn `dd7755` and `ffbb00` — a Raster's color on a step of `0x11`
+  per channel; with no `COLORTERM` there, `d7875f` and `ffaf00`, the 256-color palette. After
+  dim was drawn as color, the status line's `5h` went from `999999` to `666666`; bold red and
+  blue became `ff0000` and `5555ff`; the bold default `Claude Code v2.1.302` stays the default.

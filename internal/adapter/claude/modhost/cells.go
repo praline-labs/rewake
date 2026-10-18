@@ -15,7 +15,8 @@ import (
 // point that is not a printable width-1 character of the BMP. So every cell
 // is made one: a wide glyph is drawn as a mark in its first cell and a blank
 // in its second, and anything else unprintable as the mark. A Raster has no
-// attributes: inverse is drawn, the rest is lost.
+// attributes: inverse is drawn, dim as a darker and bold as a brighter
+// foreground, the rest is lost.
 
 const (
 	// defaultColor is a Raster's terminal default.
@@ -24,6 +25,9 @@ const (
 	// in each other's place, inverse, where the default would be both.
 	lightGrey uint32 = 0xd0d0d0
 	darkGrey  uint32 = 0x1e1e1e
+	// dimGrey is a dim default foreground: a terminal draws it at half its
+	// brightness, and this grey reads on a dark and a light background alike.
+	dimGrey uint32 = 0x808080
 	// mark is drawn for a glyph a Raster cannot hold.
 	mark = '?'
 )
@@ -50,7 +54,7 @@ func cells(s adapter.Screen) string {
 			col++
 		}
 		for _, run := range line {
-			fg, bg := rgbOf(run.Fg), rgbOf(run.Bg)
+			fg, bg := foreground(run.Fg, run.Attrs), rgbOf(run.Bg)
 			if run.Attrs&adapter.Inverse != 0 {
 				fg, bg = inverse(fg, bg)
 			}
@@ -132,6 +136,34 @@ func inverse(fg, bg uint32) (uint32, uint32) {
 		bg = darkGrey
 	}
 	return bg, fg
+}
+
+// foreground is a run's foreground with its bold and dim drawn as color, as
+// a terminal does: bold one of the eight basic colors as its bright one, any
+// other brighter, and dim darker; a bold default stays the default, whose
+// brightness the Raster does not know.
+func foreground(c adapter.ScreenColor, attrs adapter.ScreenAttrs) uint32 {
+	bold, dim := attrs&adapter.Bold != 0, attrs&adapter.Dim != 0
+	if bold && c.Kind == adapter.IndexedColor && c.Index < 8 {
+		c.Index += 8
+		bold = false
+	}
+	rgb := rgbOf(c)
+	switch {
+	case rgb == defaultColor && dim:
+		return dimGrey
+	case rgb == defaultColor:
+		return rgb
+	case dim:
+		return scale(rgb, func(v uint32) uint32 { return v * 2 / 3 })
+	case bold:
+		return scale(rgb, func(v uint32) uint32 { return v + (255-v)/3 })
+	}
+	return rgb
+}
+
+func scale(rgb uint32, f func(uint32) uint32) uint32 {
+	return f(rgb>>16&0xff)<<16 | f(rgb>>8&0xff)<<8 | f(rgb&0xff)
 }
 
 func rgbOf(c adapter.ScreenColor) uint32 {

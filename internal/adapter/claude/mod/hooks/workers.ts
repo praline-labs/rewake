@@ -16,12 +16,19 @@ export const listOpenMs = 2000
 export const listClosedMs = 5000
 // A blit refused because the pane is not drawn waits this long.
 const unmountedMs = 1000
+// A worker is never sized below this: a narrower pane shows its screen
+// cropped rather than squeeze the program into a few columns.
+export const minColumns = 100
+export const minRows = 30
 
-// Shown is what a blit or a redraw of the pane needs from the harness: the
-// pane's id and the Raster's key are fixed.
+// Shown is what a blit, a redraw or a close of the pane needs from the
+// harness: the pane's id and the Raster's key are fixed.
 export interface Shown {
   blit(cells: string, columns: number, rows: number): Promise<{ deny?: string }>
   redraw(): void
+  close(): void
+  // size opens the open pane again at its full or its compact size.
+  size(compact: boolean): void
 }
 
 // Screen is the chosen worker's screen as the Raster draws it.
@@ -41,6 +48,8 @@ export class Workers {
   // them, so the pane says so rather than show a last screen.
   ended = new Map<string, string>()
   isOpen = false
+  // compact is the pane's size the prefix chose; /workers opens it full.
+  compact = false
   // size is the screen's size the pane's body leaves, once a drawing said.
   size?: { columns: number; rows: number }
   private sized?: { space: string; columns: number; rows: number }
@@ -118,9 +127,10 @@ export class Workers {
     const space = this.chosen
     const size = this.size
     if (space === undefined || size === undefined || this.ended.has(space)) return
-    if (this.sized?.space === space && this.sized.columns === size.columns && this.sized.rows === size.rows) return
-    this.sized = { space, ...size }
-    const request: ResizeRequest = { loadId: this.loadId, space, ...size }
+    const wanted = { columns: Math.max(minColumns, size.columns), rows: Math.max(minRows, size.rows) }
+    if (this.sized?.space === space && this.sized.columns === wanted.columns && this.sized.rows === wanted.rows) return
+    this.sized = { space, ...wanted }
+    const request: ResizeRequest = { loadId: this.loadId, space, ...wanted }
     void this.host.post(paths.workersResize, request).catch(() => { /* The next size sends again. */ })
   }
 
@@ -178,7 +188,8 @@ export class Workers {
       this.shown.redraw()
       return 0
     }
-    const blitted = await this.shown.blit(answer.cells, answer.columns, answer.rows)
+    const view = this.view(this.screen)
+    const blitted = await this.shown.blit(view.cells, view.columns, view.rows)
     if (blitted.deny !== undefined) {
       // Not drawn now — another pane in front, a view switched: the next
       // drawing takes the screen from here.
@@ -195,21 +206,52 @@ export class Workers {
   }
 
   // take types what a key surface posted that it did not type before: the
-  // surface's instance and, in order, its keys, each with its number. It
-  // answers the last number taken, for the surface to drop what it holds.
+  // surface's instance and, in order, its keys and the pane's commands, each
+  // with its number. It answers the last number taken, for the surface to
+  // drop what it holds.
   take(data: unknown): number | undefined {
     const batch = data as { from?: unknown; keys?: unknown } | undefined
     if (typeof batch?.from !== 'string' || !Array.isArray(batch.keys)) return undefined
     let last = this.taken.get(batch.from) ?? 0
-    for (const item of batch.keys as { n?: unknown; keys?: unknown }[]) {
-      if (typeof item?.n === 'number' && item.n > last && typeof item.keys === 'string') {
-        this.type(item.keys)
-        last = item.n
-      }
+    for (const item of batch.keys as { n?: unknown; keys?: unknown; choose?: unknown; close?: unknown; size?: unknown }[]) {
+      if (typeof item?.n !== 'number' || item.n <= last) continue
+      if (typeof item.keys === 'string') this.type(item.keys)
+      else if (typeof item.choose === 'number') this.chooseNth(item.choose)
+      else if (item.close === true) this.closeByKey()
+      else if (item.size === true) this.toggleSize()
+      else continue
+      last = item.n
     }
     this.taken.set(batch.from, last)
     if (this.taken.size > 16) this.taken.delete(this.taken.keys().next().value!)
     return last
+  }
+
+  // view is a screen as the pane's body shows it: cropped to the body, its
+  // bottom rows kept, where a program keeps its prompt.
+  view(screen: { columns: number; rows: number; cells: string }) {
+    return this.size === undefined ? screen : crop(screen, this.size.columns, this.size.rows)
+  }
+
+  // toggleSize switches the pane between its full and its compact size.
+  private toggleSize() {
+    if (!this.isOpen) return
+    this.compact = !this.compact
+    this.shown.size(this.compact)
+  }
+
+  // chooseNth chooses the worker of a digit, as its button's hotkey does.
+  private chooseNth(digit: number) {
+    const space = this.workers.slice(0, 9)[digit - 1]?.space
+    if (space !== undefined && this.choose(space)) this.shown.redraw()
+  }
+
+  // closeByKey closes the pane from its prefix; marking it closed here does
+  // not lean on the ui.close hook hearing a close raised inside another hook.
+  private closeByKey() {
+    if (!this.isOpen) return
+    this.closes()
+    this.shown.close()
   }
 
   chosenName(): string {
@@ -226,6 +268,24 @@ export class Workers {
       .then(() => this.host.post(paths.workersKeys, request))
       .then(() => undefined, () => { this.host.log('rewake: keys did not reach the worker') })
   }
+}
+
+// crop cuts a screen of Raster cells, 12 bytes each, to its left columns
+// and its bottom rows.
+export function crop(screen: { columns: number; rows: number; cells: string }, columns: number, rows: number) {
+  columns = Math.min(columns, screen.columns)
+  rows = Math.min(rows, screen.rows)
+  if (columns === screen.columns && rows === screen.rows) return screen
+  const from = Uint8Array.from(atob(screen.cells), (ch) => ch.charCodeAt(0))
+  const out = new Uint8Array(columns * rows * 12)
+  const top = screen.rows - rows
+  for (let row = 0; row < rows; row++) {
+    const at = ((top + row) * screen.columns) * 12
+    out.set(from.subarray(at, at + columns * 12), row * columns * 12)
+  }
+  let binary = ''
+  for (const byte of out) binary += String.fromCharCode(byte)
+  return { columns, rows, cells: btoa(binary) }
 }
 
 // line is one worker as the pane lists it.

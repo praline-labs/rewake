@@ -331,9 +331,9 @@ the command answers once that run is registered, within 30 s.
 Main sends `api-claude` a task, and its report comes back as in Acts 2 to 5. Main's Claude Code
 shows the worker in its pane "Workers" — opened by `/workers` alone — with its model, context
 and activity, and its screen live; a click on the screen gives it the keys, typing goes to the
-worker, Escape hands them back to the prompt and a second Escape there, or the pane's ✕, closes
-it, and Alt+a then `c`, `e` or `x` sends Ctrl+C, Escape or
-Ctrl+X ([workers-panel.md](v2/workers-panel.md)). The person can also reach the worker's
+worker, and Alt+a starts the pane's prefix: then `q` closes the pane and returns the keys to
+main's prompt, a digit chooses a worker, `z` switches the pane's size, and `c`, `e` or `x` sends
+Ctrl+C, Escape or Ctrl+X ([workers-panel.md](v2/workers-panel.md)). The person can also reach the worker's
 terminal with `rewake attach api` from a terminal of their own, and leaves with `Ctrl-\`; the
 worker keeps running.
 

@@ -178,6 +178,31 @@ func TestGlyphsKeepTheirRunsWidth(t *testing.T) {
 	}
 }
 
+// Bold and dim, which a Raster cannot draw, are drawn as a brighter and a
+// darker foreground.
+func TestBoldAndDimBecomeColor(t *testing.T) {
+	red := adapter.ScreenColor{Kind: adapter.IndexedColor, Index: 1}
+	orange := adapter.ScreenColor{Kind: adapter.RGBColor, R: 0xd7, G: 0x77, B: 0x57}
+	for _, c := range []struct {
+		color adapter.ScreenColor
+		attrs adapter.ScreenAttrs
+		want  uint32
+	}{
+		{adapter.ScreenColor{}, 0, defaultColor},
+		{adapter.ScreenColor{}, adapter.Dim, dimGrey},
+		{adapter.ScreenColor{}, adapter.Bold, defaultColor},
+		{red, 0, 0xcd0000},
+		{red, adapter.Bold, 0xff0000},
+		{orange, 0, 0xd77757},
+		{orange, adapter.Dim, 0x8f4f3a},
+		{orange, adapter.Bold, 0xe4a48f},
+	} {
+		if got := foreground(c.color, c.attrs); got != c.want {
+			t.Errorf("foreground(%+v, %d) = %06x, want %06x", c.color, c.attrs, got, c.want)
+		}
+	}
+}
+
 // A view nobody names for its idle time is closed even when no other space
 // is asked for: a closed pane asks for none.
 func TestALoneIdleViewIsClosed(t *testing.T) {

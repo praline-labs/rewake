@@ -30,6 +30,7 @@ const pane = (rows = 4) => ({
 function harness(on: any) {
   const opened: any[] = []
   const blits: any[] = []
+  const closed: any[] = []
   on('command.register', () => ({ value: undefined }))
   on('ui.open', (_: any, e: any) => {
     opened.push(e)
@@ -40,9 +41,12 @@ function harness(on: any) {
     return { value: {} }
   })
   on('ui.invalidate', () => ({ value: undefined }))
-  on('ui.close', () => ({ value: undefined }))
+  on('ui.close', (_: any, e: any) => {
+    closed.push(e)
+    return { value: undefined }
+  })
   on('ui.message', () => ({}))
-  return { opened, blits }
+  return { opened, blits, closed }
 }
 
 test("a main's pane opens on /workers alone, with its first worker, draws its screen and blits the next", async ($, on) => {
@@ -63,7 +67,7 @@ test("a main's pane opens on /workers alone, with its first worker, draws its sc
   expect(ui.opened).toEqual([])
   const answer = await $.command.run({ command: 'workers', args: '' } as any)
   expect(ui.opened.map((one) => [one.id, one.focus, one.closeOnEscape])).toEqual([['rewake-workers', true, true]])
-  expect(answer.text).toMatch(/click the screen to type to api; Esc returns to the prompt/)
+  expect(answer.text).toMatch(/click the screen to type to api; there Alt\+a then q closes the pane/)
   await run.clock.settle()
   const drawn = await $.ui.mount(pane())
   expect(await drawn.find({ type: 'Button', text: /api {2}claude {2}m1 {2}ctx 34% {2}working/ })).toBeDefined()
@@ -71,7 +75,7 @@ test("a main's pane opens on /workers alone, with its first worker, draws its sc
   await run.clock.settle()
   expect(ui.blits.map((one) => [one.requestId, one.key, one.cells])).toEqual([['rewake-workers', 'screen', cells]])
   expect(run.sent.filter((one) => one.path === '/v1/workers/resize').map((one) => one.body)).toEqual([
-    { loadId: run.hellos()[0].body.loadId, space: 's1', columns: 4, rows: 2 },
+    { loadId: run.hellos()[0].body.loadId, space: 's1', columns: 100, rows: 30 },
   ])
   expect(run.sent.filter((one) => one.path === '/v1/workers/screen').map((one) => one.body.after).slice(0, 3)).toEqual([0, 1, 2])
 })
@@ -100,12 +104,48 @@ test('keys typed in the key line reach the chosen worker in order, Escape and Ct
   await drawn.unmount()
   const again = await $.ui.mount(pane(5))
   expect(await again.find({ type: 'Button', text: /▸ web/ })).toBeDefined()
-  for (const key of [{ key: 'l' }, { key: 's' }, { key: 'return' }, { key: 'a', meta: true }, { key: 'e' }, { key: 'a', meta: true }, { key: 'c' }, { key: 'a', meta: true }, { key: 'q' }]) {
+  for (const key of [{ key: 'l' }, { key: 's' }, { key: 'return' }, { key: 'a', meta: true }, { key: 'e' }, { key: 'a', meta: true }, { key: 'c' }, { key: 'a', meta: true }, { key: 'z' }]) {
     await again.key({ key: 'keys', ...key } as any)
   }
   await run.clock.settle()
   const typed = run.sent.filter((one) => one.path === '/v1/workers/keys').map((one) => [one.body.space, one.body.keys])
   expect(typed).toEqual([['s2', 'l'], ['s2', 's'], ['s2', '\r'], ['s2', '\x1b'], ['s2', '\x03']])
+})
+
+test('the prefix chooses a worker by its digit and closes the pane, with no Escape', async ($, on) => {
+  const run = world(on, {
+    replies: {
+      '/v1/hello': [main],
+      '/v1/workers/list': [listed(api, web)],
+      '/v1/workers/screen': [screen(1), async () => {
+        await run.clock.sleep(holdMs)
+        return screen(1)
+      }],
+      '/v1/workers/resize': [{ status: 200, text: '{}' }],
+      '/v1/workers/keys': [{ status: 200, text: '{}' }],
+    },
+  })
+  const ui = harness(on)
+  await start($)
+  await run.clock.settle()
+  await $.command.run({ command: 'workers', args: '' } as any)
+  await run.clock.settle()
+  const drawn = await $.ui.mount(pane(5))
+  expect(JSON.stringify(await drawn.drawn({ in: 'keys' }))).toContain('Alt+a: q close · 1-9 worker')
+  for (const key of [{ key: 'a', meta: true }, { key: '2' }, { key: 'w' }]) {
+    await drawn.key({ key: 'keys', ...key } as any)
+  }
+  await run.clock.settle()
+  await drawn.unmount()
+  const again = await $.ui.mount(pane(5))
+  expect(await again.find({ type: 'Button', text: /▸ web/ })).toBeDefined()
+  for (const key of [{ key: 'a', meta: true }, { key: 'q' }]) {
+    await again.key({ key: 'keys', ...key } as any)
+  }
+  await run.clock.settle()
+  const typed = run.sent.filter((one) => one.path === '/v1/workers/keys').map((one) => [one.body.space, one.body.keys])
+  expect(typed).toEqual([['s2', 'w']])
+  expect(ui.closed.map((one) => one.id)).toEqual(['rewake-workers'])
 })
 
 test('a worker whose screen ended is said to have ended, and no key goes to it', async ($, on) => {
