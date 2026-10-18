@@ -3,7 +3,10 @@
 The documents of the 2.0 rebuild, made on the `v2` branch. The plan they follow and the
 owner's decisions of October 5, 2026 are summed up at the head of
 [revision.md](revision.md); stage 2, the design, builds on what the revision decided
-and starts at [design.md](design.md).
+and starts at [design.md](design.md). The plan from here follows the owner's decision of
+October 18, 2026 — pi after Claude Code, Codex not soon, a space as main starting its workers
+without showing them inside Claude Code ([the stage plan](design.md#the-stage-plan-from-here),
+[its entry](../roadmap/2026-10-18-decision.md)).
 
 - [revision.md](revision.md) — stage 1, the revision of 1.x: what each part of 1.x
   becomes in 2.0 (carry over, change, Codex-only, rewrite as mod, drop), the 2.0 layout
@@ -145,11 +148,13 @@ Stage 4, Claude Code's adapter as one mod:
 - [stage4-space.md](stage4-space.md) — the design of the first working space, October 13,
   2026, for review before code: the pieces and where they live, the terminal library
   weighed, the protocol between the mod and the host, the keeper, the worker's hosted launch,
-  reports, keys and the screen as styled text, closing, restore, the commands. Open it before
-  building any part of the space.
+  reports, keys and the screen as styled text, closing, restore, the commands. Its keeper, screen
+  and keys are superseded by the decision of October 18, 2026; open it for the hosted launch and
+  the record.
 - [stage4-space-steps.md](stage4-space-steps.md) — its second half: what the tests and the
   workflow suite can hold and what only a live check shows, the rules SP1–SP9 and the step each
-  enters `docs/rules/` in, the build steps S4-1 to S4-10 with their acceptance, and the open questions.
+  enters `docs/rules/` in, the build steps S4-1 to S4-6 and the one space step S4-7 that replaced
+  S4-7 to S4-10 on October 18, 2026, and the open questions.
 - [stage4-turns.md](stage4-turns.md) — the design of S4-6, built and accepted October 16, 2026
   ([the record](../roadmap/2026-10-16-stage4-s4-6.md)): a Claude Code
   worker's turns reported through the mod without holding, the end retried under its id and

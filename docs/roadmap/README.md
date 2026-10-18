@@ -2,8 +2,8 @@
 
 Work for `docs/design.md` closes only after its acceptance criterion passes. This folder
 holds the roadmap as one file per entry, each named by the day it closed and headed by
-the words its section carried; this index lists them all. What is still open is named
-below; the order of what comes next is in [work-queue.md](../work-queue.md). The
+the words its section carried; this index lists them all. What is still open, and the
+order of what comes next, are below. The
 transport milestones of September 17 stay in
 [transport-milestones-2026-09-17.md](../transport-milestones-2026-09-17.md), which
 preserves owned-server acceptance, continuation permissions, lost reports, naming and
@@ -15,43 +15,28 @@ refusal on September 17, 2026 cleared after recipient restart.
 
 ## How the work is run
 
-- One step, one commit; commit message short, subject line only, in English.
-- Before every commit, the five checks listed in `AGENTS.md` are green: the
-  formatter over the module's package list, `go vet`, `staticcheck`,
-  `golangci-lint` and the race-detected, shuffled test run with the session's
-  `REWAKE_*` variables cleared. `AGENTS.md` says why two of them take the form
-  they do; this file does not repeat the commands, so they cannot drift here.
-  No failing check is waived.
-- Live runs happen in a separate `/tmp` directory, with their own `REWAKE_DIR`.
-  The user's working harness sessions are left untouched.
-- Live Codex runs spend subscription quota: cheap model, short messages, no
-  more than one turn per check. Warn the owner before a run that spends quota.
-- After milestones 3 and 5, a separate review agent passes over the diff:
-  looking for defects and for checks that stay green on broken code. Findings get
-  fixed before the next milestone.
-- A milestone marked **live criterion** is accepted by running the real
-  harnesses, not by tests.
-- The working rules on delegation, the review chain and what the write session
-  may commit were set by the owner on September 17–21, 2026 and live in
-  `AGENTS.md`, under "Delegation and review" and "Commits".
+The process is `AGENTS.md`'s: the checks, which tests to write, one review on blockers, the
+commits. A step closes when it works live and breaks no existing test, and lands here as one
+entry of at most ten lines. Live runs use their own `REWAKE_DIR` and never touch the owner's
+sessions.
 
 ## Open right now
 
-- [Milestone 6. Ready for daily use](2026-09-16-milestone-06-ready-for-daily-use.md)
-  — the publication is not done; the file keeps what is.
-- Stage 4 of 2.0 — Claude Code's adapter as one mod; opened on October 13, 2026 with the
-  audit of what Claude Code and a mod already do ([stage4-audit.md](../v2/stage4-audit.md)),
-  reviewed and recorded in [its entry](2026-10-13-stage4-audit.md); the probe's first runs
-  — P11's first half, P12b, P15a — and the owner's decisions they led to are in
-  [their entry](2026-10-13-stage4-probe-1.md), P15b's real pseudo-terminal in
-  [its own](2026-10-13-stage4-probe-2.md), the first working space's design and its review in
-  [theirs](2026-10-13-stage4-space-design.md). Then stage 4b, pi's adapter,
-  and stage 5, Codex's entry point, by the owner's decision of the same day
-  ([the stage plan](../v2/design.md#the-stage-plan-from-here)).
-  Stage 3 is closed: [its closing entry](2026-10-13-stage3-s19.md) says what it built.
-- [The workflow suite](2026-09-21-workflow-suite.md) — in progress since
-  September 21, 2026; what exists and what remains are listed there and in
-  [work-queue.md](../work-queue.md).
+The order of work set on October 18, 2026 ([its entry](2026-10-18-decision.md)):
+
+1. The documents brought to that decision.
+2. The deletions: the delivery hold, the 1.x legacy marks, the keeper and the screen in the mod
+   protocol, grants, the mail tool, the clearing of 1.x, the version probe made small.
+3. The space on Claude Code, one step: `rewake space open` and `rewake attach`
+   ([S4-7](../v2/stage4-space-steps.md#the-build-steps)).
+4. pi's adapter, then a read-only reviewer on it, then pi in a space (stage 4b,
+   [the stage plan](../v2/design.md#the-stage-plan-from-here)).
+5. Compaction and context on the mod and on pi; then the room can move to 2.0.
+6. The test diet, alongside from the start.
+
+[Milestone 6](2026-09-16-milestone-06-ready-for-daily-use.md) of 1.x keeps its open
+publication. Stage 3 of 2.0 is closed ([its entry](2026-10-13-stage3-s19.md)); stage 4's
+steps so far are the entries of October 13–17 below.
 
 ## Entries
 

@@ -9,8 +9,9 @@ A rule enters this document in the step that builds the test holding it, as the 
 names it ([the build steps](../v2/stage4-space-steps.md#the-build-steps)); until then it
 stands in the design alone. Decided by main, October 13, 2026: SP3, SP4 and SP9 are here
 from S4-2, each held in the part an existing test holds; SP2 and SP7 entered with S4-3, which
-built the record ([stage4-space-record.md](../v2/stage4-space-record.md)); SP5 enters with
-S4-7, SP6 with S4-8, SP1 and SP8 with S4-9.
+built the record ([stage4-space-record.md](../v2/stage4-space-record.md)). Since the owner's
+decision of October 18, 2026 SP5 and SP6, the keeper's seat and its keys, are not built, and SP1
+and SP8 enter with the one space step that replaces S4-7 to S4-10.
 
 ## The rules
 

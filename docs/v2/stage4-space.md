@@ -1,5 +1,11 @@
 # Stage 4: the first working space
 
+**Superseded October 18, 2026** by the owner's decision: a space is main starting its workers,
+not shown inside Claude Code, so the keeper, the screen as styled text, the keys and the prefix
+below are not built; the one step that replaces them is in
+[stage4-space-steps.md](stage4-space-steps.md#the-build-steps), and this design stays as the
+record of the hosted launch, the record and the reasoning behind them.
+
 The design of stage 4's first end to end, written October 13, 2026 on branch
 `s4-space-design`, for review before any code. It rests on the owner's target
 ([stage4-audit.md](stage4-audit.md#the-target-a-space)), the owner's answers 7–9
