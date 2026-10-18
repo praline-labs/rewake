@@ -149,8 +149,7 @@ the message may be a hard link in two directories, the preview has shown its fir
 already, and read is final only while an id's text never changes. The old id becomes a
 tombstone with `withdrawn.replacedBy` and the text `Rewake: <sender> replaced its <kind>
 of HH:MM:SS before you read it; disregard its notice and read the replacement, <id>.`;
-the new letter carries `replaces: <old id>`, keeps the kind and any `addendumTo`, and
-keeps `grantGit` only while the caller is still the main that could grant it. It is
+the new letter carries `replaces: <old id>` and keeps the kind and any `addendumTo`. It is
 announced as any letter is, with its own preview, and the reader finds the tombstone and
 the replacement together, in id order. The replacement is written first, under the same
 lock, so the server cannot make it readable before the tombstone is in place; if the
@@ -228,8 +227,8 @@ its own until the next turn end; a report never waits for addenda still on the w
 
 It is refused with exit 1, each with a ready line, when the task went to another
 recipient, is withdrawn, is a note, was already reported on (send it as a new task),
-failed, or its recipient's run has ended; and with exit 2 beside `--notify`, `--question`
-or `--grant-git`. An id that `rewake edit` replaced adds to its replacement.
+failed, or its recipient's run has ended; and with exit 2 beside `--notify` or
+`--question`. An id that `rewake edit` replaced adds to its replacement.
 
 The checks are made twice: once without a lock, for a quick refusal, and again under the
 recipient's mailbox lock, with the addendum written under the same hold. The turn end

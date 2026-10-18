@@ -15,7 +15,7 @@ import (
 // A letter a tool call started showing in parts is being read: part of its
 // text may be in front of the agent already, so it is no longer unread text a
 // sender may take back or replace, and it is not read either until every part
-// was shown whole (docs/mail-bridge.md#bounded-output-and-the-read-boundary).
+// was shown whole (docs/archive/mail-bridge.md#bounded-output-and-the-read-boundary).
 // The claim says so to withdraw, edit and the sweep; reading the letter to the
 // end, by the tool or the shell, removes it.
 

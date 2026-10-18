@@ -1,6 +1,6 @@
 # Every record of a mailbox
 
-Rule 8 of [mail-bridge-cli.md](mail-bridge-cli.md#the-rules-the-code-holds) stops a
+Rule 8 of [mail-bridge-cli.md](archive/mail-bridge-cli.md#the-rules-the-code-holds) stops a
 mailbox on an unknown before any effect. That holds only if nothing an effect decides by
 is left for the effect to find: an effect that meets an unknown after an earlier effect
 of the same barrier went through has let that one through beside it. Acceptance after
@@ -91,33 +91,15 @@ writer that adds a path without adding its kind fails there, before its first fi
 stops every mailbox it lands in; a directory no kind names or holds counts as such a
 path.
 
-What the plan reads is found by watching it, not by a list
-(`TestEveryReadOfThePlanStopsBeforeTheFirstEffect`, `plan_faults_test.go`). Scenes built
-as the tests of each effect build them — two journals to two recipients, a report
-recorded moot, the steps of a journal, two journals that clear parts of one wait and share the kept answer and the interim
-line, and a record of every kind — each run once through a seam that records every read.
-Then each read of the plan is failed in turn, in both passes, with every fault that
-applies: a path that cannot be followed, one closed to reading, a directory where a file
-belongs, and, for a kind whose content is parsed, content that does not parse. Nothing
-may change but the stop on record, and the gate before the barrier, the barrier and the
-gate after it all answer stopped. Each read the effects make is failed again in the
-effects alone: the stop is an effect's, a retry that meets it again keeps it, and a
-barrier past it ends where the scene ends without it. Each read the effects make is then
-paired with each read of the plan: the first fails the effects, and once they have
-failed, the second fails the plan the barrier makes to explain it. The record and the
-answer must keep both causes, the effect's as what an effect met; the gate must still
-answer stopped once the second is gone; and only a barrier past both ends the stop where
-the scene ends. Each pair is run once more with both writes of the stop failing, and the
-answer must still name both causes and both failed writes.
-Then every write the barrier makes, as the seam records them — in the scene as it is, in
-a run where an effect stops, and in one where the plan after it stops too — fails once,
-and the next attempt goes through: nothing may be lost or done twice, the stop on record
-is never weaker than what the barrier knew, and the gate stays closed until the effects
-ran through. Every read of the effects must be one the plan made, and every kind the
-walk opens must be read by some scene. A read added to an effect later is on the list
-the next run. One that goes around the seam is caught by a last run of each scene with
-the room's mailboxes moved aside: the seam follows them, and a read around it meets a
-file where they were, so the scene does not end as it does in place.
+What the plan reads is held by one smoke since October 18, 2026, when the generated matrix
+of scenes, faults and pairs was cut by the owner's decision (`TestPlanFaultSmoke`,
+`plan_faults_test.go`): an ended sender's unfinished `end` journal — one report to a live
+recipient and the wait its completion clears — runs clean, then with one fault at the journal
+read for each of a path that cannot be followed, one closed to reading, a directory where a
+file belongs and content that does not parse, in both passes and in the effects alone; it
+must stop before any effect, keep the stop on a retry and converge once the tree is clean. One
+failed rename of the journal's completion must stop too, and its clean retry leave exactly one
+copy of the report.
 
 Three older tests stay beside it (`records_test.go`, `late_unknown_test.go`): a
 directory and a link at a sample path of every kind on the list stop the reading; the

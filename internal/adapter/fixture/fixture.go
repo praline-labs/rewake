@@ -64,16 +64,6 @@ func (fixtureHarness) SingleUseFlags() []adapter.Flag {
 	}
 }
 
-// ProtectedDirs: the program keeps its configuration under the home and
-// nothing inside a project.
-func (fixtureHarness) ProtectedDirs() adapter.Protected {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return adapter.Protected{}
-	}
-	return adapter.Protected{Dirs: []string{filepath.Join(home, configDir)}}
-}
-
 // ownFlags are the program's flags a caller may not pass: the adapter passes
 // each one itself.
 var ownFlags = []string{"--session", "--room", "--role", "--connect"}
@@ -111,13 +101,8 @@ func (fixtureHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan,
 		if settings.brief {
 			notes = append(notes, "not adding the rewake briefing: the fixture's configuration in "+settings.path+" sets one")
 		} else {
-			// Built once the exchange shows whether the tool is live, which
-			// decides the transport sentence.
 			context := request.BriefContext()
-			run.brief = func(tool bool) string {
-				context.Tool = tool
-				return brief.Intro(context)
-			}
+			run.brief = func() string { return brief.Intro(context) }
 		}
 	}
 	// The run serves its control directory itself, carrying each request to
@@ -134,17 +119,7 @@ func (fixtureHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan,
 	}, nil
 }
 
-// Offers: what the program can serve — every capability a test can withhold
-// — and the core's part of a directory grant.
-//
-// Permissions.Dir: a directory granted with a task reaches the program with
-// the letter that carries it, once the wrapper has checked it again and main's
-// wrapper has confirmed it, and the program says it was offered one. Applying
-// it to what the program may write, and taking it back, is the Permissions
-// capability stage 6 designs (docs/v2/design-api.md#permissions); here the
-// fixture holds the core's part of a grant on the gate column. ReachesWrapper:
-// the program runs its commands without a sandbox of its own, so a fixture
-// main's send reaches its wrapper and can grant.
+// Offers: what the program can serve — every capability a test can withhold.
 //
 // Control: the fixture offers it while no product adapter does: Claude Code's
 // served side left with its plugin module in S9, and stage 4 gives a real
@@ -163,16 +138,14 @@ func (fixtureHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan,
 // launch that names one is refused.
 func (fixtureHarness) Offers() adapter.Offer {
 	return adapter.Offer{
-		Wake:          true,
-		ToolTransport: Transport,
-		TurnBoundary:  adapter.TurnBoundaryOffer{Reports: true, HoldsEnd: true},
-		Telemetry:     true,
+		Wake:         true,
+		TurnBoundary: adapter.TurnBoundaryOffer{Reports: true, HoldsEnd: true},
+		Telemetry:    true,
 		Control: adapter.ControlOffer{
 			Compact: true, Interrupt: true, CompactFocus: true,
 			InterruptTrace: "the fixture ends the turn saying who interrupted it",
 		},
-		Permissions: adapter.PermissionsOffer{Dir: true, ReachesWrapper: true},
-		Spaces:      false,
+		Spaces: false,
 		Conversation: adapter.ConversationOffer{
 			Unnamed: "the fixture keeps one conversation per run and takes no id for it",
 		},

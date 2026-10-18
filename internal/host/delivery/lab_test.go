@@ -75,17 +75,16 @@ func writeRaw(t *testing.T, path, raw string) {
 	}
 }
 
-func grantPending(t *testing.T, dir string, grants ...bool) []mail.Message {
+// pendingTasks writes count tasks from one sender's run, a second apart, that
+// wait in the inbox.
+func pendingTasks(t *testing.T, dir string, count int) []mail.Message {
 	t.Helper()
 	var result []mail.Message
 	start := time.Now().Add(-time.Minute)
-	for index, granted := range grants {
+	for index := range count {
 		m := message(fmt.Sprintf("task %d", index))
 		m.Kind, m.FromEpoch, m.ToEpoch = mail.Task, "sender-epoch", "receiver-epoch"
 		m.CreatedAt = start.Add(time.Duration(index) * time.Second)
-		if granted {
-			m.GrantDirs = []string{"/work/lib"}
-		}
 		if err := mail.Put(dir, m); err != nil {
 			t.Fatal(err)
 		}

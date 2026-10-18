@@ -35,16 +35,6 @@ func (agentHarness) SingleUseFlags() []adapter.Flag {
 	}
 }
 
-// ProtectedDirs: a directory under the home and a name inside a project,
-// read when asked, so a test's HOME is the one they lie under.
-func (agentHarness) ProtectedDirs() adapter.Protected {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return adapter.Protected{Names: []string{".agentcfg"}}
-	}
-	return adapter.Protected{Dirs: []string{filepath.Join(home, ".agentcfg")}, Names: []string{".agentcfg"}}
-}
-
 func (agentHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, error) {
 	return adapter.LaunchPlan{Command: request.Program(agentID), Args: request.Args, Env: request.Env}, nil
 }
@@ -54,10 +44,8 @@ func (agentHarness) Version() adapter.VersionGate { return adapter.VersionGate{}
 
 func (agentHarness) EnvNotInherited() []string { return nil }
 
-// Offers: Launch alone, and a main on it can grant.
-func (agentHarness) Offers() adapter.Offer {
-	return adapter.Offer{Permissions: adapter.PermissionsOffer{ReachesWrapper: true}}
-}
+// Offers: Launch alone.
+func (agentHarness) Offers() adapter.Offer { return adapter.Offer{} }
 
 func (agentHarness) WorktreeFlag() string { return "--worktree" }
 

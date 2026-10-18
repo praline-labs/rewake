@@ -3,8 +3,6 @@ package cli
 import (
 	"bytes"
 	"encoding/json"
-	"os"
-	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -13,16 +11,8 @@ import (
 	"github.com/praline-labs/rewake/internal/core/role"
 )
 
-// testCatalog is the catalog the tests run against: the test agent, and
-// what the catalog declares for a harness it has no adapter for, read when
-// asked so a test's HOME is the one it lies under.
-func testCatalog() adapter.Catalog {
-	foreign := adapter.Protected{Names: []string{".othercfg"}}
-	if home, err := os.UserHomeDir(); err == nil {
-		foreign.Dirs = []string{filepath.Join(home, ".othercfg")}
-	}
-	return adapter.NewCatalog(foreign, agentHarness{})
-}
+// testCatalog is the catalog the tests run against: the test agent.
+func testCatalog() adapter.Catalog { return adapter.NewCatalog(agentHarness{}) }
 
 // testTable is the command table built from it, for the tests that read the
 // table rather than run a command.
@@ -39,14 +29,13 @@ func runOn(c adapter.Catalog, argv ...string) (int, string, string) {
 }
 
 // remap is a catalog with each adapter replaced as replace says: a stub
-// that offers or withholds what no adapter of it does. It protects what base
-// does.
+// that offers or withholds what no adapter of it does.
 func remap(base adapter.Catalog, replace func(adapter.Harness) adapter.Harness) adapter.Catalog {
 	var adapters []adapter.Harness
 	for _, h := range base.All() {
 		adapters = append(adapters, replace(h))
 	}
-	return adapter.NewCatalog(base.Protected(), adapters...)
+	return adapter.NewCatalog(adapters...)
 }
 
 func TestNoArgumentsPrintsGuide(t *testing.T) {

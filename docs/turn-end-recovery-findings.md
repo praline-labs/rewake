@@ -2,7 +2,7 @@
 
 The findings of the acceptances and reviews of the turn-end recovery, each with the
 clause of rules 7 and 8 that closes it, and what the probes of the earlier
-acceptances expect now. The rules are in [mail-bridge-cli.md](mail-bridge-cli.md); how
+acceptances expect now. The rules are in [mail-bridge-cli.md](archive/mail-bridge-cli.md); how
 recovery keeps them is in [turn-end-recovery.md](turn-end-recovery.md), whose clause
 names (7-journal, 8-stop and the rest) this document uses.
 

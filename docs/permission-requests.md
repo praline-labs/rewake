@@ -9,6 +9,10 @@ on are marked with where they were seen, with file and line in
 [permission-requests-sources.md](permission-requests-sources.md), and what is still a
 guess is listed at the end. Since S9, October 11, 2026, rewake registers no hook on
 Claude Code and its grant hook is gone, so the Claude Code half below waits for stage 4.
+Grants left the code by the owner's decision of October 18, 2026
+([grants.md](archive/grants.md)): what this design takes from them — a write a grant
+allows, the fallback of a task carrying `--grant-dir`, the scheme a decision rests on — is
+gone with them, and the design stands as a record until it is taken up again.
 
 ## What the owner decided
 
@@ -88,7 +92,7 @@ Rewake cannot tell a dangerous command from a safe one, and does not try to judg
 commands in general. It marks what it can recognize, and a marked request is not offered
 to main for `allow`:
 
-- a file write into the hard tier of [grants.md](grants.md#the-hard-tier), or into a
+- a file write into the hard tier of [grants.md](archive/grants.md#the-hard-tier), or into a
   `.git`, `.claude`, `.codex` or `.agents` directory at any depth;
 - a command whose first word is `rm`, `rmdir`, `shred` or `dd`, or that runs
   `git push` with `-f`/`--force`/`--force-with-lease`, `git reset --hard`, `git clean`,
@@ -315,7 +319,7 @@ decision and waits up to 5 seconds for the worker's wrapper to take it.
 ## Security
 
 A decision is one the worker cannot forge, by the scheme grants already use
-([grants-authority.md](grants-authority.md)). `rewake permission` registers the decision
+([grants-authority.md](archive/grants-authority.md)). `rewake permission` registers the decision
 with main's wrapper, which takes it only from a process below itself; the worker's wrapper
 waits on main's wrapper for it and believes only the process main's run names, in its own
 namespaces. Nothing written to the state directory counts: a sandboxed Codex worker can
@@ -368,7 +372,7 @@ What the sources settle is said with each; what is left is the owner's choice.
 - **The owner's list**: the recognized deletions, force pushes and protected paths above,
   or a shorter one with main's judgment for the rest.
 - **A worker under a Codex main**: settled that a Codex main cannot answer — its sandbox
-  refuses the socket ([grants-authority.md](grants-authority.md)). Left: its workers'
+  refuses the socket ([grants-authority.md](archive/grants-authority.md)). Left: its workers'
   requests behave as today, or are refused at once with the next step.
 - **Auto mode**: settled that a classifier refusal never becomes a PermissionRequest; a
   worker in auto mode reaches main only through the fallbacks above. Left: whether

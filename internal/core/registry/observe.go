@@ -21,23 +21,6 @@ func LookupReadOnly(dir, name string) (Session, error) {
 	return session, nil
 }
 
-// WorkDirs lists where the live sessions of every room under a state root
-// work, without cleaning up after ended ones. A grant that reaches one of them
-// reaches that session's own configuration too (docs/grants.md#the-broad-tier).
-func WorkDirs(root string) []string {
-	rooms, _ := state.RoomDirs(root)
-	var dirs []string
-	for _, room := range rooms {
-		sessions, _ := ListReadOnly(room)
-		for _, session := range sessions {
-			if session.CWD != "" {
-				dirs = append(dirs, session.CWD)
-			}
-		}
-	}
-	return dirs
-}
-
 // UnreadableRecord is a session record that cannot be read: whether its
 // session runs is unknown.
 type UnreadableRecord struct {

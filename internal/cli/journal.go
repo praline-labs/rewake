@@ -2,31 +2,30 @@ package cli
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/praline-labs/rewake/internal/core/receipt"
+	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/infra/state"
-	"github.com/praline-labs/rewake/internal/tool"
 )
 
-// A command that changes something through the tool's words — a heads-up, a
-// pending mark — runs under a receipt (docs/mail-bridge-cli.md#receipts):
-// journaled before its effect, finished with its answer. The same words in the
-// same turn find that receipt and get its answer or finish its steps; a tool
-// call that timed out is finished by rewake retry <receipt>. The shell uses the
-// same journal. It knows no native turn, so its calls are never joined by their
-// words, and a shell call whose words match an operation still open does not
-// run beside it: it names the receipt that finishes it.
+// A command that changes something — a heads-up, a pending mark — runs under a
+// receipt: journaled before its effect, finished with its answer, and an
+// operation left open is finished by rewake retry <receipt>. The shell knows
+// no native turn, so its calls are never joined by their words, and a call
+// whose words match an operation still open does not run beside it: it names
+// the receipt that finishes it.
 
 // operation is a command running under its receipt.
 type operation struct {
 	site   readSite
 	record receipt.Record
 	// first says this attempt is the call that created the record, the one
-	// attempt that runs in the operation's own turn whatever the transport
-	// (docs/mail-bridge-turns.md#a-pending-mark-at-its-turns-end).
+	// attempt that runs in the operation's own turn.
 	first bool
 }
 
@@ -59,18 +58,11 @@ func journaled(ctx *Context, call Call, handler func(*Context, Call) error) erro
 	}
 	site := readSite{dir: dir, self: self, epoch: epoch}
 	words := ctx.table.normalized(parsed{Call: call})
-	digest := tool.Digest(words)
+	digest := receipt.Digest(words)
 	key := receipt.Key{Epoch: epoch, Digest: digest}
 	fresh := receipt.Record{Words: words, Transport: receipt.Shell}
-	if scope := ctx.scope; scope != nil {
-		key.Conversation, key.Turn = scope.ticket.Conversation, scope.ticket.Turn
-		fresh.Transport, fresh.CalledBoot = scope.ticket.Transport, scope.ticket.CalledBoot
-		fresh.TurnsNeverReused = scope.ticket.TurnsNeverReused
-	}
-	// The same words in the same turn join their operation. Anything else —
-	// the shell, or a tool call whose turn holds no operation of these words
-	// — first stops at one of an earlier call that is not settled
-	// (docs/mail-bridge-turns.md#the-turn-a-call-belongs-to).
+	// The same words in the same turn join their operation. Anything else
+	// first stops at one of an earlier call that is not settled.
 	_, found, err := receipt.Joined(dir, self.Name, key)
 	if err != nil {
 		return failf("could not read this run's receipts (%v), so whether these words began an operation that is not finished is unknown; nothing was done", err)
@@ -88,10 +80,9 @@ func journaled(ctx *Context, call Call, handler func(*Context, Call) error) erro
 }
 
 // unresolvedBefore stops a call whose words match an operation of this run
-// whose effect is not settled and which it does not join: a shell call, or a
-// tool call of a later turn. It may be the one a tool call lost with its
-// answer, or one that is running now, or an earlier call's that stopped short,
-// or one whose effect nobody can tell any more; neither caller can tell which.
+// whose effect is not settled and which it does not join. It may be one that
+// is running now, or an earlier call's that stopped short, or one whose effect
+// nobody can tell any more; the caller cannot tell which.
 // Doing it again beside that one is the outcome that cannot be taken back, so
 // the call is accepted and not done, and names the receipt — whatever its age.
 // A journal that cannot be read may hold such an operation, so it stops the
@@ -123,7 +114,7 @@ func unresolvedBefore(site readSite, digest string) error {
 // runOperation holds the record and runs the handler once, or replays the
 // answer a finished operation gave.
 func runOperation(ctx *Context, call Call, handler func(*Context, Call) error, site readSite, token string, first bool) error {
-	release, err := lockOperation(ctx, site, token)
+	release, err := lockOperation(site, token)
 	if err != nil {
 		return err
 	}
@@ -132,15 +123,12 @@ func runOperation(ctx *Context, call Call, handler func(*Context, Call) error, s
 	if err != nil {
 		return failf("could not read the receipt %s: %v", token, err)
 	}
-	if ctx.scope != nil && !contains(record.Calls, ctx.scope.ticket.CallID) {
-		record.Calls = append(record.Calls, ctx.scope.ticket.CallID)
-	}
 	op := &operation{site: site, record: record, first: first}
 	if record.Phase == receipt.Done && record.Outcome != nil {
 		return replay(ctx, op)
 	}
 	var out, errOut bytes.Buffer
-	inner := &Context{Stdout: &out, Stderr: &errOut, JSON: ctx.JSON, scope: ctx.scope, op: op, journaling: true, table: ctx.table}
+	inner := &Context{Stdout: &out, Stderr: &errOut, JSON: ctx.JSON, op: op, journaling: true, table: ctx.table}
 	failure := handler(inner, call)
 	code := ExitOK
 	if failure != nil {
@@ -163,9 +151,6 @@ func runOperation(ctx *Context, call Call, handler func(*Context, Call) error, s
 	}
 	_, _ = ctx.Stdout.Write(out.Bytes())
 	_, _ = ctx.Stderr.Write(errOut.Bytes())
-	if ctx.scope != nil && !ctx.JSON {
-		_, _ = fmt.Fprintf(ctx.Stdout, "Rewake: receipt %s.\n", op.record.Token)
-	}
 	if saveErr != nil && code == ExitOK {
 		_, _ = fmt.Fprintln(ctx.Stderr, saveErr.Error())
 		return &ExitCodeError{Code: ExitFailed}
@@ -180,7 +165,7 @@ func runOperation(ctx *Context, call Call, handler func(*Context, Call) error, s
 // of its words gets: the effect happened once.
 func replay(ctx *Context, op *operation) error {
 	_ = op.save()
-	if step := op.record.Pending; step != nil && step.Marked && !inOwnTurn(ctx, op) {
+	if step := op.record.Pending; step != nil && step.Marked && !inOwnTurn(op) {
 		// The mark speaks for its own turn only: told to a later one, it
 		// would say that turn waits when it does not.
 		return failf("these words marked a turn earlier (receipt %s), and this mark was for an earlier turn, or one this call cannot name; this turn is not marked by it", op.record.Token)
@@ -197,20 +182,48 @@ func replay(ctx *Context, op *operation) error {
 	return nil
 }
 
-// beforeCommit refuses to take an effect once the call's answer is no longer
-// wanted: a result that arrives after the harness gave up on it is one the
-// model never sees, and the operation stays open for rewake retry <token>.
-// It is called inside the critical section, just before the effect: a check
-// made before a lock wait is stale once the lock is held.
-func beforeCommit(ctx *Context, token, what string) error {
-	if ctx.scope == nil || ctx.scope.remaining() > 0 {
-		return nil
-	}
-	return beforeCommitRefusal(token, what)
+// readSite is the run an operation belongs to.
+type readSite struct {
+	dir   string
+	self  registry.Session
+	epoch string
 }
 
-// beforeCommitRefusal is the answer of a call whose deadline came before
-// what it was to do, found here or by the writer that does it.
-func beforeCommitRefusal(token, what string) error {
-	return &unfinishedError{message: fmt.Sprintf("Rewake: this tool call's deadline came before %s, so it was not done; do it with: rewake retry %s", what, token)}
+// lockOperation holds a record for as long as the call's answer is wanted.
+// Every path that holds a record comes through here.
+func lockOperation(site readSite, token string) (func(), error) {
+	lockCtx, cancel := context.WithTimeout(context.Background(), readerLockWait)
+	defer cancel()
+	release, err := receipt.Lock(lockCtx, site.dir, site.self.Name, site.epoch, token)
+	if errors.Is(err, receipt.ErrBusy) {
+		return nil, &PendingError{Message: fmt.Sprintf("Rewake: the same operation is running in another call right now; its answer: rewake retry %s", token)}
+	}
+	if err != nil {
+		return nil, failf("could not lock the receipt %s: %v", token, err)
+	}
+	return release, nil
+}
+
+// normalized is the canonical form of a call: the command, its flags sorted
+// with their values inline, then its positionals after --. Two spellings of
+// one call normalize alike; texts stay exactly as given.
+func (t *table) normalized(result parsed) []string {
+	call := result.Call
+	words := []string{call.Command.Name}
+	names := make([]string, 0, len(call.Flags))
+	for name := range call.Flags {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		if t.takesValue(call.Command, name) {
+			words = append(words, "--"+name+"="+call.Flags[name])
+		} else {
+			words = append(words, "--"+name)
+		}
+	}
+	if len(call.Positionals) > 0 {
+		words = append(append(words, "--"), call.Positionals...)
+	}
+	return words
 }

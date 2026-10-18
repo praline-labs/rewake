@@ -21,7 +21,7 @@ import (
 func allLive() []string {
 	return []string{
 		string(adapter.WakeCapability), string(adapter.TurnBoundaryCapability), string(adapter.TelemetryCapability),
-		string(adapter.ControlCapability), string(adapter.ToolTransportCapability),
+		string(adapter.ControlCapability),
 	}
 }
 

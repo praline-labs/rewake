@@ -64,7 +64,7 @@ var retryLine = regexp.MustCompile(`rewake retry ([0-9a-f]+)`)
 
 func newHeadsUpLab(t *testing.T) *headsUpLab {
 	t.Helper()
-	dir, self, _ := toolSession(t)
+	dir, self, _ := peerSession(t)
 	web, child := webRun(t, dir)
 	lab := &headsUpLab{dir: dir, self: self, web: child, r: web.Epoch()}
 	receipts := filepath.Join(state.InboxPath(dir, "api"), "receipts") + string(filepath.Separator)
@@ -88,13 +88,13 @@ func newHeadsUpLab(t *testing.T) *headsUpLab {
 		return nil
 	}
 	t.Cleanup(func() { state.Fault = nil })
-	sent := newToolCaller(t).run("send", "web", "look", "--notify", "--wait", "0")
+	_, sentOut, sentErr := run("send", "web", "look", "--notify", "--wait", "0")
 	lab.mu.Lock()
 	failing = false
 	lab.mu.Unlock()
-	token := retryLine.FindStringSubmatch(sent.out + sent.errOut)
+	token := retryLine.FindStringSubmatch(sentOut + sentErr)
 	if !failed || token == nil {
-		t.Fatalf("the heads-up's save did not fail after it landed: %+v", sent)
+		t.Fatalf("the heads-up's save did not fail after it landed: %s%s", sentOut, sentErr)
 	}
 	lab.token = token[1]
 	record, err := receipt.Load(dir, "api", self.Epoch(), lab.token)

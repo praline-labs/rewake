@@ -60,7 +60,7 @@ func TestCLIResolvesDefaultGeneralAndPreservesExplicitCapabilities(t *testing.T)
 				}
 				intro := brief.Intro(got.BriefContext())
 				if scenario.name == "default" || scenario.name == "main prefix" {
-					for _, want := range []string{"role general", "default general", "no role flag", "end your turn", "grants no Git metadata access"} {
+					for _, want := range []string{"role general", "default general", "no role flag", "end your turn", "committing is a write session's"} {
 						if !strings.Contains(intro, want) {
 							t.Fatalf("intro lacks %q: %s", want, intro)
 						}

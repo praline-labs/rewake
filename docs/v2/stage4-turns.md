@@ -66,7 +66,7 @@ the report says why.
 
 **The start.** At `turn.start` the mod sends `turn/start` with the conversation
 (`$.session.id()`) and the turn id, once, awaited in the hook, and does not retry it: with no
-start time and no mail tool on Claude Code yet, a lost start costs nothing
+start time and no mail tool on Claude Code, a lost start costs nothing
 ([the start time](#the-start-time)).
 
 **The end.** At `turn.complete` the mod makes the end — a fresh random `endId`, the
@@ -367,7 +367,7 @@ named and not built on. Two consequences, stated as limits
 
 - **No start proves a turn ended.** A shell `rewake pending` whose turn's end was lost cannot
   learn from a later start that its turn ended; only a later end on record shows it
-  ([mail-bridge-turns.md](../mail-bridge-turns.md#a-pending-mark-at-its-turns-end)).
+  ([mail-bridge-turns.md](../archive/mail-bridge-turns.md#a-pending-mark-at-its-turns-end)).
 - **A window reaches back to the last end on record.** An end with `Started` zero has the
   window from the previous end of the run's journal to its own `Ended`
   (`core/mail/journal.go`, `TurnWindowStart`). When an earlier turn's end never reached the

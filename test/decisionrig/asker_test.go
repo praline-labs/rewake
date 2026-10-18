@@ -20,7 +20,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/core/grant/authority"
+	"github.com/praline-labs/rewake/internal/core/authority"
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/person"
 	"github.com/praline-labs/rewake/internal/infra/state"
@@ -40,8 +40,6 @@ const (
 	// modeRaw writes the decision's request straight to the address,
 	// skipping every check the client makes of the listener.
 	modeRaw = "raw"
-	// modeRegister writes a grant's registration straight to the address.
-	modeRegister = "register"
 	// modePerson classifies the asker as the person or not.
 	modePerson = "person"
 )
@@ -59,7 +57,6 @@ type job struct {
 	Run     authority.Run      `json:"run"`
 	Ask     mail.DecideRequest `json:"ask"`
 	Path    string             `json:"path,omitempty"`
-	Grant   authority.Grant    `json:"grant"`
 	Root    string             `json:"root,omitempty"`
 	// Pause holds the asker at the client's "decision asked" step: checked
 	// the wrapper, connected, the question not yet sent.
@@ -170,8 +167,6 @@ func ask(j job) result {
 		return raw(j.Address, map[string]any{"op": "decide", "decide": map[string]any{
 			"sender": j.Ask.Sender, "report": j.Ask.Report, "choice": j.Ask.Choice, "expect": j.Ask.Expect,
 		}})
-	case modeRegister:
-		return raw(j.Address, map[string]any{"op": "register", "grant": j.Grant})
 	case modePerson:
 		err := person.Classify(j.Root)
 		var below *person.BelowError

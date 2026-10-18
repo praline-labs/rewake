@@ -16,9 +16,6 @@ decision settles the stop without being evidence.
   recorded as done is no proof it was not done; age decides nothing — who continues an
   operation is decided by its scope or its receipt. (M1 rule 1.)
   Tests:
-  - `internal/cli/bridge_rules_test.go` `TestAnUncertainPublicationIsNotDiscarded`
-  - `internal/cli/bridge_rules_test.go` `TestAHeadsUpToAnEndedRunWithNothingLeftStaysUnknown`
-  - `internal/cli/bridge_rules_test.go` `TestAnOpenOperationIsNotBypassedByAge`
   - `internal/core/mail/settle_copy_test.go` `TestAFailedArchiveKeepsTheLastCopy`
   - `internal/core/mail/settle_copy_test.go` `TestSettlingADeliveredLetterKeepsItsOnlyCopy`
   - `internal/core/mail/settle_copy_test.go` `TestAnIntentWhoseLetterIsRefusedKeepsItsProof`
@@ -31,7 +28,6 @@ decision settles the stop without being evidence.
   - `internal/core/mail/claims_test.go` `TestAMailboxThatCannotBeSearchedProvesNothing`
   - `internal/core/mail/journal_test.go` `TestAJournalDoesNotRepublishASweptReport`
   - `internal/core/mail/journal_test.go` `TestAReportWhoseEntryFailedIsNotRepublishedAfterTheSweep`
-  - `internal/cli/journal_test.go` `TestAHeadsUpPastItsDeadlineIsFinishedByRetry`
   - `internal/cli/journal_test.go` `TestTheShellRefersAnOpenOperationToItsReceipt`
   - `internal/core/receipt/receipt_test.go` `TestUnresolvedFindsOpenOperations`
   - `internal/core/receipt/receipt_test.go` `TestSweepKeepsWhatARecoveryReads`
@@ -52,12 +48,6 @@ decision settles the stop without being evidence.
   before the effect, and again on a retry**, which is a new call with its own deadline
   and transport and the same limits. (M1 rule 3.)
   Tests:
-  - `internal/cli/bridge_rules_test.go` `TestAnExpiredReadShowsAndClaimsNothing`
-  - `internal/cli/bridge_rules_test.go` `TestAPendingMarkIsNotMadeAfterItsDeadline`
-  - `internal/cli/bridge_rules_test.go` `TestAContinuationRefreshesALetterBeforeAnyPart`
-  - `internal/cli/bridge_rules_test.go` `TestAToolRetryKeepsToTheToolSurface`
-  - `internal/cli/bridge_rules_test.go` `TestAShellRetryDoesNotReadStdinAgain`
-  - `internal/cli/decide_deadline_test.go` `TestAToolDecisionStopsAtItsDeadline`
   - `test/decisionrig/deadline_test.go` `TestTheWrapperWritesNoDecisionPastTheCallsDeadline`
   - `internal/cli/addendum_test.go` `TestAnAddendumIsAskedAgainUnderTheLock`
   - `internal/cli/addendum_test.go` `TestAnAddendumsEditIsAskedAgainUnderTheLock`
@@ -74,7 +64,6 @@ decision settles the stop without being evidence.
   - `internal/core/mail/publication_race_test.go` `TestAdmissionIsInsideTheSection`
   - `internal/cli/publication_race_test.go` `TestTheSweepWaitsForAHeadsUpsEvidence`
   - `internal/cli/publication_race_test.go` `TestAHeadsUpsAdmissionIsInsideTheSection`
-  - `internal/host/channel_publication_test.go` `TestANoticeForAMainThatEndsAtItsLockIsDropped`
   - `internal/core/mail/publication_bounds_test.go` `TestAFirstLandingAcrossRunEndIsWrittenOnce`
   - `internal/core/mail/publication_bounds_test.go` `TestABusyRecipientFailsTheTurnWithoutAStop`
   - `internal/core/mail/publication_bounds_test.go` `TestTwoMailboxesPublishingToEachOtherDoNotDeadlock`
@@ -94,41 +83,20 @@ decision settles the stop without being evidence.
   `unread/` only by being read once a part of it was shown, and never comes back; a late
   acknowledgment finds it read and marks nothing. (M1 rule 4.)
   Tests:
-  - `internal/cli/bridge_rules_test.go` `TestALateAcknowledgmentOwesNothingTwice`
-  - `internal/cli/bridge_rules_test.go` `TestALetterReadElsewhereShowsAsGone`
   - `internal/core/mail/claims_test.go` `TestALetterBeingReadInPartsCannotBeTakenBack`
   - `internal/core/mail/claims_test.go` `TestTheSweepKeepsALetterBeingRead`
   - `internal/core/mail/claims_test.go` `TestALetterIsPublishedOnceAcrossReadAndSweep`
   - `internal/host/delivery/claims_test.go` `TestTheServerKeepsALetterBeingRead`
-  - `internal/cli/bridge_read_test.go` `TestAToolReadIsReadOnlyWhenEveryPartArrived`
-  - `internal/cli/bridge_read_test.go` `TestARepeatedToolReadInOneTurnIsTheSameRead`
-  - `internal/cli/bridge_read_test.go` `TestTheShellFinishesALostToolRead`
-  - `internal/cli/bridge_read_test.go` `TestPendingCountsALetterBeingRead`
-  - `internal/cli/bridge_lookups_test.go` `TestAClaimedLetterThatCannotBeReadLeavesTheMarkOpen`
-  - `internal/cli/bridge_lookups_test.go` `TestAnAcknowledgmentDoesNotWriteOverAWaiterItCannotRead`
-  - `internal/cli/bridge_lookups_test.go` `TestARetriedAcknowledgmentStopsOnAStatusItCannotRead`
   - `internal/core/mail/unread_test.go` `TestReadingHandsEachMessageOnce`
   - `internal/host/delivery/unread_test.go` `TestAReadDuringAPendingNoticeStands`
   - `internal/host/delivery/unread_test.go` `TestAReadIsNotUndoneByTheNoticeResult`
   - `internal/cli/read_test.go` `TestSendCountsAReadMessageAsDelivered`
   - `internal/cli/read_test.go` `TestTwoReadersAtOnceShowATaskOnce`
-  - `internal/cli/stop_gate_test.go` `TestAReadInPartsStopsWithTheMailbox`
-  - `test/toolrig/gaps_test.go` `TestAReadIsOneFactAcrossTheToolAndTheShell`
 
 - **E5. The size bound holds on the final encoded bytes of every answer, in one place**;
-  every text part names its letter, part, count and byte range. (M1 rule 5.)
-  Tests:
-  - `internal/tool/ticket_test.go` `TestOnlyAWholeResultIsEvidence`
-  - `internal/tool/ticket_test.go` `TestCutKeepsCharactersAndBounds`
-  - `internal/cli/bridge_rules_test.go` `TestAnEscapedDiagnosticFits`
-  - `internal/cli/bridge_rules_test.go` `TestAnAnswerThatCannotBeKeptStillFits`
-  - `internal/cli/bridge_rules_test.go` `TestEveryTextPartNamesItself`
-  - `internal/cli/bridge_tool_test.go` `TestALongAnswerComesInParts`
-  - `internal/host/endpoint/answer_test.go` `TestTheEncoderReplacesAnAnswerThatDoesNotFit`
-  - `internal/host/endpoint/answer_test.go` `TestAChildsOutputIsCapped`
-  - `internal/host/endpoint/answer_test.go` `TestOnlyTheEncoderAnswers`
-  - `internal/host/endpoint/answer_test.go` `FuzzEveryAnswerFits`
-  - `internal/host/endpoint/answer_test.go` `FuzzRequestsAreBounded`
+  every text part names its letter, part, count and byte range. (M1 rule 5.) Since
+  October 18, 2026 no answer is cut: the bound and its parts were the mail tool's, and the
+  shell prints a read whole.
 
 - **E6. A check has three outcomes: found, proven absent, unknown.** "No such file"
   proves absence. When recording a stop's original observation, Lstat finding a
@@ -157,18 +125,9 @@ decision settles the stop without being evidence.
   - `internal/core/mail/records_test.go` `TestANonRegularEntryAtEveryRecordPathStops`
   - `internal/core/mail/records_test.go` `TestUnlistedRecordsNamesAStrayDirectory`
   - `internal/core/mail/journal_unknown_test.go` `TestAnUnreadableInterimStopsTheJournal`
-  - `internal/cli/bridge_unknown_test.go` `TestARefusedReadIsReplayedInItsTurn`
-  - `internal/cli/bridge_unknown_test.go` `TestALetterThatCannotBeLookedUpIsNotShown`
-  - `internal/cli/bridge_unknown_test.go` `TestAWaiterThatCannotBeReadLeavesTheMarkOpen`
-  - `internal/cli/bridge_unknown_test.go` `TestARecipientThatCannotBeLookedUpIsNotAnEndedRun`
-  - `internal/cli/bridge_lookups_test.go` `TestAReadThatCouldNotSeeTheLetterFreezesNothing`
-  - `internal/cli/bridge_lookups_test.go` `TestAKeptAnswerThatCannotBeReadIsNotDropped`
-  - `internal/cli/bridge_lookups_test.go` `TestAnUnreadableResultIsNotFailedWhenTheNameMovesOn`
-  - `internal/cli/bridge_lookups_test.go` `TestAClearingThatFailedIsFinishedBeforeTheNextReport`
   - `internal/core/mail/confirm_test.go` `TestAnUnreadableKeptAnswerIsNotWrittenOver`
   - `internal/core/mail/settle_copy_test.go` `TestAPublishedMarkDoesNotOutweighAStageThatCannotBeSearched`
   - `internal/cli/awaited_unknown_test.go` `TestAwaitedTakesAnUnreadableRecipientForLive`
-  - `internal/cli/owed_grant_unknown_test.go` `TestAnUnreadableGrantJournalDoesNotEndTheGrant`
   - `internal/cli/list_unknown_test.go` `TestListShowsAnUnreadableSessionAsUnknown`
   - `internal/core/mail/stop_unknown_test.go` `TestANotADirectoryOnTheWayRecordsThePathAbsent`
 
@@ -316,9 +275,8 @@ decision settles the stop without being evidence.
   - `internal/core/mail/stop_writes_test.go` `TestAFailedResolutionReachesTheCaller`
   - `internal/core/mail/answer_stop_test.go` `TestAStoppedMailboxDoesNotTakeAnAnswer`
   - `internal/cli/stop_gate_test.go` `TestAnUnreadableJournalStopsEveryCall`
-  - `internal/cli/stop_gate_test.go` `TestAReadInPartsStopsWithTheMailbox`
   - `internal/cli/stop_gate_test.go` `TestUnknownEvidenceStopsTheCallsAfterTheEnd`
-  - `internal/core/mail/plan_faults_test.go` `TestEveryReadOfThePlanStopsBeforeTheFirstEffect`
+  - `internal/core/mail/plan_faults_test.go` `TestPlanFaultSmoke`
   - `internal/core/mail/journal_test.go` `TestADoneJournalIsKeptWhileItsRunLives`
   - `internal/cli/turn_journal_retry_test.go` `TestALateRetryAfterTheSweepPublishesNothing`
   - `internal/core/receipt/receipt_test.go` `TestSweepKeepsWhatARecoveryReads`
@@ -411,11 +369,11 @@ what a decision may settle instead.
   - `test/decisionrig/boundary_test.go` `TestDecisionAuthorityEndsAtCommitBoundary`
   - `internal/core/person/person_test.go` `TestPersonDecisionFailsClosed`
   - `test/decisionrig/person_test.go` `TestPersonDecisionOnRealProcesses`
-  - `internal/core/grant/authority/decide_test.go` `TestAWrapperTakesADecisionOnlyFromBelow`
-  - `internal/core/grant/authority/decide_test.go` `TestTheAskerBelievesOnlyTheRecipientsWrapper`
   - `internal/cli/decide_test.go` `TestDecideBelowTheRecipientAsksItsWrapper`
   - `internal/cli/decide_test.go` `TestDecideRefusesWhoMayNot`
-  - `internal/cli/decide_form_test.go` `TestDecisionFormAccessAndToolExclusion`
+  - `internal/core/authority/decide_test.go` `TestAWrapperTakesADecisionOnlyFromBelow`
+  - `internal/core/authority/decide_test.go` `TestTheAskerBelievesOnlyTheRecipientsWrapper`
+  - `internal/cli/decide_form_test.go` `TestDecisionFormAccess`
   - `internal/core/mail/decision_decide_notes_test.go` `TestDecideFreezesANoteToTheRoomsMain`
   - `internal/core/mail/decision_decide_notes_test.go` `TestDecideRefusesWhileTheRoomsMainCannotBeJudged`
   - `internal/core/mail/decision_liveness_test.go` `TestDecisionNoteToARunNotKnownToHaveEndedStaysOwed`
@@ -499,4 +457,3 @@ what a decision may settle instead.
   - `internal/core/mail/decision_recovery_test.go` `TestDecisionPrecedesAllRecoveryEvidence`
   - `internal/core/mail/decision_final_lock_test.go` `TestDecisionFinalEvidenceIsLockedThroughCommit`
   - `internal/core/mail/decision_world_test.go` `TestDecisionCopiesFollowWorldTruth`
-  - `internal/core/mail/decision_matrix_test.go` `TestDecisionDurabilityAtEveryCut`

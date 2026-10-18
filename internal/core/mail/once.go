@@ -13,7 +13,7 @@ import (
 )
 
 // A journaled heads-up is published at most once, however often a retry asks
-// (docs/mail-bridge.md#receipts-retries-and-deadlines). PutOnce alone cannot
+// (docs/archive/mail-bridge.md#receipts-retries-and-deadlines). PutOnce alone cannot
 // promise that: finished mail is swept after a day, and a retry that came later
 // would find no copy and write the letter again. So the recipient's mailbox
 // keeps a mark per published id, for the run the letter was written for:
@@ -48,7 +48,7 @@ func (w world) publicationStep(step string, message Message) {
 // readOnceMark answers the mark at path: "" when there is none, onceIntent or
 // oncePublished. Anything else — a mark that cannot be read, or one that says
 // neither — is an error: it proves no letter absent, so nothing may be written
-// over it, published on it, or removed by it (docs/mail-bridge-cli.md, rule 8).
+// over it, published on it, or removed by it (docs/archive/mail-bridge-cli.md, rule 8).
 func (w world) readOnceMark(path string) (string, error) {
 	mark, err := w.readFile(path)
 	// Only a missing file proves no mark (rule 6): a path that cannot be

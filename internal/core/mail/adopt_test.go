@@ -2,7 +2,9 @@ package mail
 
 import (
 	"context"
+	"fmt"
 	"testing"
+	"time"
 
 	"github.com/praline-labs/rewake/internal/core/mail/mailtest"
 	"github.com/praline-labs/rewake/internal/infra/state"
@@ -24,26 +26,20 @@ func readIn(t *testing.T, dir, run, thread string, m Message) {
 	}
 }
 
-// Whether a task is open, as main's wrapper asks it of a grant it holds.
-func TestTaskOpenFollowsTheTask(t *testing.T) {
-	dir := stateDir(t)
-	tasks := grantPending(t, dir, true, true, true)
-	if open, found := TaskOpen(dir, "api", tasks[0].ID); !open || !found {
-		t.Error("a task on its way is not open")
+// pendingTasks writes count tasks from one sender's run, a second apart, that
+// wait in the inbox.
+func pendingTasks(t *testing.T, dir string, count int) []Message {
+	t.Helper()
+	var result []Message
+	start := time.Now().Add(-time.Minute)
+	for index := range count {
+		m := message(fmt.Sprintf("task %d", index))
+		m.Kind, m.FromEpoch, m.ToEpoch = Task, "sender-epoch", "receiver-epoch"
+		m.CreatedAt = start.Add(time.Duration(index) * time.Second)
+		if err := Put(dir, m); err != nil {
+			t.Fatal(err)
+		}
+		result = append(result, m)
 	}
-	if err := WriteStatus(dir, "api", tasks[1].ID, Result{State: Failed}); err != nil {
-		t.Fatal(err)
-	}
-	if open, found := TaskOpen(dir, "api", tasks[1].ID); open || !found {
-		t.Error("a failed task is open")
-	}
-	if err := WriteStatus(dir, "api", tasks[2].ID, Result{State: Delivered, Withdrawn: true}); err != nil {
-		t.Fatal(err)
-	}
-	if open, found := TaskOpen(dir, "api", tasks[2].ID); open || !found {
-		t.Error("a task taken back is open")
-	}
-	if _, found := TaskOpen(dir, "api", NewID()); found {
-		t.Error("a message never written was found")
-	}
+	return result
 }

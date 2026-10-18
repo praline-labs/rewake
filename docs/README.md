@@ -51,21 +51,6 @@ Main and its workers:
 - [remote-control-letter.md](remote-control-letter.md) — the letter that ends a compaction main asked for and the record that owes it.
 - [remote-control-tests.md](remote-control-tests.md) — the tests of `compact` and `interrupt`, file by file.
 
-Leaving with their code (owner decision, October 18, 2026):
-
-- [grants.md](grants.md) — `--grant-dir` and `--grant-dir-broad`: the tiers, the idle wait, the journal.
-- [grants-authority.md](grants-authority.md) — who can grant, and how main's wrapper holds and confirms a grant.
-- [grants-resume.md](grants-resume.md) — a grant after a cold resume.
-- [git-grants.md](git-grants.md) — `--grant-git`: who may attach it and to whom.
-- [mail-bridge.md](mail-bridge.md) — the mail tool's design: one tool carrying CLI words, its operations, approval and refusals.
-- [mail-bridge-cli.md](mail-bridge-cli.md) — the CLI side of the mail tool: bridge mode, bounded parts, the receipt journal.
-- [mail-bridge-transport.md](mail-bridge-transport.md) — the tool carried by a harness's own process: descriptors, endpoint, ticket.
-- [mail-bridge-turns.md](mail-bridge-turns.md) — which turn a tool call belongs to, reads acknowledged on the answer, every wait's bound.
-- [mail-bridge-checks.md](mail-bridge-checks.md) — building and checking the mail tool: tests without a live harness, the live checks.
-- [mail-bridge-channel.md](mail-bridge-channel.md) — the run's mail channel: tool and shell observations, generations, notices.
-- [mail-bridge-channel-failures.md](mail-bridge-channel-failures.md) — the channel's failure points, one row each.
-- [mail-bridge-live.md](mail-bridge-live.md) — the plan of the mail tool's live checks in scratch project folders.
-
 Designs not built:
 
 - [permission-requests.md](permission-requests.md) — a worker's permission request held while main answers with `rewake permission`.
@@ -89,14 +74,12 @@ Each fact carries where it was verified; they age with harness versions.
 - [research-pi.md](research-pi.md) — pi 1.2.0 launch and extension facts, mock probes, telemetry and control, the adapter protocol and its limits.
 - [research-launch.md](research-launch.md) — what an installed binary answers: model and effort catalogues, repeatable flags, npm packages.
 - [research-worktree.md](research-worktree.md) — Claude Code's own worktree beside rewake's: continuations, trust, `.worktreeinclude`.
-- [research-mail-tool.md](research-mail-tool.md) — what each harness did with the mail tool server; leaves with the mail tool.
 - [prior-art.md](prior-art.md) — how other tools deliver messages between agents, what to borrow and what to avoid.
 
 ## Testing
 
-- [testing.md](testing.md) — the entry point: the tiers, reading a summary and a red case, adding a scenario, a control or a column.
+- [testing.md](testing.md) — the entry point: the tiers, the full set before a publication, reading a summary and a red case, adding a scenario or a column.
 - [testing-cases.md](testing-cases.md) — what each end-to-end case claims, with its sessions, the fixture's play and its controls.
-- [testing-tools.md](testing-tools.md) — the workflow cases that call rewake through the fixture's tool transport.
 - [testing-pool.md](testing-pool.md) — how the workflow suite runs cases side by side: `-parallel`, the pool, owner labels, the sweep.
 - [check-runner.md](check-runner.md) — the requirements the workflow suite answers: one command, evidence tiers, the output contract.
 

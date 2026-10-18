@@ -1,6 +1,6 @@
 # Recovering a turn end
 
-Rules 7 and 8 of [mail-bridge-cli.md](mail-bridge-cli.md) say what recovery may do; this
+Rules 7 and 8 of [mail-bridge-cli.md](archive/mail-bridge-cli.md) say what recovery may do; this
 document says how, for every record the code reads. It was written on September 30,
 2026, before the code that follows it, which landed the same day
 (`internal/core/mail/journal.go`, `reconcile.go`, `interim.go`, `kept.go`,

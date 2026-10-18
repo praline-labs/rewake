@@ -3,11 +3,9 @@
 package decisionrig
 
 import (
-	"strings"
 	"testing"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/core/grant/authority"
 	"github.com/praline-labs/rewake/internal/core/mail"
 	snapshot "github.com/praline-labs/rewake/internal/core/session"
 )
@@ -18,9 +16,9 @@ import (
 // refused with nothing written — another worker's command, with the
 // recipient's variables or without, through the client or written straight to
 // the address; the recipient's own command in a namespace of its own; a
-// listener other than the run's wrapper; a grant at a worker's address; and,
-// once the run is replaced, its successor under the same name. A compaction
-// and a dropped link leave the run what it was, and so its authority.
+// listener other than the run's wrapper; and, once the run is replaced, its
+// successor under the same name. A compaction and a dropped link leave the
+// run what it was, and so its authority.
 //
 // Each question is about a report of its own, so a refusal is read as nothing
 // written rather than as a decision made before it.
@@ -81,13 +79,6 @@ func TestDecisionAuthorityWithProcesses(t *testing.T) {
 		if !c.want(got) || written != wantWritten || written && (d.ID != got.ID || !verified(d.By, web)) {
 			t.Errorf("%s: answered %+v; a decision written %v: %+v", c.name, got, written, d)
 		}
-	}
-
-	// A worker's address takes no grant, from its own command either.
-	grant := authority.Grant{ID: mail.NewID(), To: peer.name, ToEpoch: peer.epoch, Dirs: []string{w.home}}
-	if got := web.do(terminalHalf, command{Op: opAsk, Job: job{Mode: modeRegister, Address: web.address(), Grant: grant}}); got.Kind != kindError ||
-		!strings.Contains(got.Error, "not a main") {
-		t.Errorf("a grant registered at a worker's address: %+v", got)
 	}
 
 	// A compaction the program reports is counted, and the run decides after it.

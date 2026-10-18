@@ -32,7 +32,7 @@ var ErrTurnEnded = errors.New("the call's turn ended before its read was acknowl
 
 // ackBudget bounds what an acknowledgment waits for before its check: the
 // record's lock and the mailbox lock together. It is never checked after: a
-// write begun is finished (docs/mail-bridge-turns.md#waits-and-their-bounds).
+// write begun is finished (docs/archive/mail-bridge-turns.md#waits-and-their-bounds).
 const ackBudget = 2 * time.Second
 
 // Acknowledge records that the tool call named in the evidence reached

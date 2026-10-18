@@ -9,7 +9,7 @@ import (
 )
 
 // Fault is the one test hook of the state directory's file operations
-// (docs/mail-bridge-checks.md#testing-without-a-live-harness). Every write,
+// (docs/archive/mail-bridge-checks.md#testing-without-a-live-harness). Every write,
 // removal and read that goes through this package asks it first, with the
 // operation and the path: a test learns the order of a call's durable steps
 // from it, and makes any one of them fail or end the process. Nil in every

@@ -7,7 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/core/receipt"
 	"github.com/praline-labs/rewake/internal/infra/build"
 	"github.com/praline-labs/rewake/internal/infra/build/buildtest"
 	"github.com/praline-labs/rewake/internal/infra/state"
@@ -58,11 +57,10 @@ func TestChangeFormsOnAnEmptyBaseCreateNothing(t *testing.T) {
 	}
 }
 
-// Both routes take the room's lease before anything else: in a room of
-// another build a shell change and a tool call are refused, the tool call
-// before its ticket is confirmed, and no message is written.
-func TestBothRoutesRefuseAnotherBuildsRoom(t *testing.T) {
-	dir, _, web := toolSession(t)
+// A change takes the room's lease before anything else: in a room of another
+// build it is refused, and no message is written.
+func TestAChangeRefusesAnotherBuildsRoom(t *testing.T) {
+	dir, _, web := peerSession(t)
 	foreign := strings.Repeat("ab", 32)
 	if err := os.WriteFile(filepath.Join(dir, "build"), []byte(foreign+"\n"), 0o600); err != nil {
 		t.Fatal(err)
@@ -71,28 +69,19 @@ func TestBothRoutesRefuseAnotherBuildsRoom(t *testing.T) {
 	if code != ExitFailed || !strings.Contains(errOut, "belongs to build "+build.Short(foreign)) {
 		t.Fatalf("the shell: exit %d, %q", code, errOut)
 	}
-	caller := newToolCaller(t)
-	got := caller.run("send", "web", "hello", "--notify", "--wait", "0")
-	if got.code != ExitFailed || !strings.Contains(got.errOut, "belongs to build "+build.Short(foreign)) {
-		t.Fatalf("the tool: %+v", got)
-	}
-	if len(caller.tickets) != 0 {
-		t.Fatal("the tool call's ticket was confirmed before the lease")
-	}
 	if files, _ := filepath.Glob(filepath.Join(state.InboxPath(dir, web.Name), "*.json")); len(files) != 0 {
 		t.Fatalf("a message was written: %v", files)
 	}
 }
 
-// A change whose lease could not be taken is refused before its scope, and
-// leaves no shell observation in the room it could not acquire: not even the
-// failure to reach the state, though the receipts are writable — the lock
-// that refused it is unreadable, in a room of this build or another's.
-func TestAFailedLeaseLeavesNoShellObservation(t *testing.T) {
+// A change whose lease could not be taken is refused before its scope and
+// tries no write in the room it could not acquire, though the receipts are
+// writable — the lock that refused it is unreadable, in a room of this build
+// or another's.
+func TestAFailedLeaseWritesNothing(t *testing.T) {
 	for _, foreign := range []bool{false, true} {
-		// Held, the test's own lease would let a stray observation land, and
-		// the notes show it; released, enforcement refuses it, and the count of
-		// refusals shows the attempt.
+		// Held, the test's own lease would let a stray write land; released,
+		// enforcement refuses it, and the count of refusals shows the attempt.
 		for _, held := range []bool{true, false} {
 			dir := liveSession(t, "api")
 			epoch := epochOf(t, dir, "api")
@@ -118,14 +107,6 @@ func TestAFailedLeaseLeavesNoShellObservation(t *testing.T) {
 			}
 			if refused := state.NoLeaseRefusals() - before; refused != 0 {
 				t.Fatalf("foreign %v, held %v: the refused call tried %d writes", foreign, held, refused)
-			}
-			if !held {
-				// Reading the notes takes them, a write: a launch's lease again,
-				// which switches a foreign build back to this one.
-				launched(t, os.Getenv(state.DirEnv), state.CurrentRoom())
-			}
-			if notes := receipt.TakeShell(dir, "api", epoch); len(notes) != 0 {
-				t.Fatalf("foreign %v, held %v: the refused call wrote shell notes: %+v", foreign, held, notes)
 			}
 		}
 	}

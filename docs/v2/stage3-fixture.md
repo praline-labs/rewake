@@ -138,7 +138,7 @@ the neutral scenarios are written against that protocol, not against a harness:
   `connect()` is refused (`sandboxed`), by the program re-executed under
   `RW_SHIM_SANDBOXED` installing a seccomp filter before it becomes rewake, as a harness
   that sandboxes its shell leaves it (`fixture-decide-sandboxed`,
-  [testing-cases.md](../testing-cases.md#a-decision-from-a-sandboxed-shell)).
+  [testing-cases.md](../testing-cases.md)).
 
 The files of that protocol that carry a harness's name and serve every column — the
 `RW_SHIM_*` constants, `sendAsAsked`, the session handle `codexSession` — are renamed by

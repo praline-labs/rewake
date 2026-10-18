@@ -54,11 +54,6 @@ func formAccess(result parsed) access {
 	return result.Call.Command.Access(result.Call)
 }
 
-// toolAccess is the class of every authorized tool call, whatever its words:
-// its bounded answer may be kept for continuing (freezeOutput), so it writes
-// the room even when its command alone would not.
-const toolAccess = accessChange
-
 // inboxAccess classifies inbox by the mode its handler will take. A call its
 // selection refuses writes nothing; --owed and --awaited show what is there;
 // every other mode reads, marks or continues, and --peek takes the mailbox

@@ -12,15 +12,8 @@ type Context struct {
 	Room   string
 	Role   role.Role
 	Reason string
-	// Tool says the run has the mail tool: the briefing then carries the
-	// whole transport sentence, and the first clause alone otherwise. A run
-	// that builds its briefing after its readiness exchange sets it from the
-	// live tool capability (the fixture's); one whose briefing goes on the
-	// harness's command line has proven nothing yet and leaves it false.
-	Tool bool
 	// Harness is what the session's own harness adds: the sentences the
-	// role texts need about it — how it commits, how a grant behaves on it —
-	// which the role texts, naming no harness, leave to its adapter
+	// role texts need about it — how it commits, say — which the role texts, naming no harness, leave to its adapter
 	// (docs/v2/design-api.md#launch). Empty adds nothing.
 	Harness role.Section
 }

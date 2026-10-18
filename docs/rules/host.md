@@ -2,7 +2,7 @@
 
 The host is the wrapper a session runs under: its launch lifetime, the claim of its name,
 signals, availability, departure, the notices it sends, the delivery loop, its worktree,
-the launch aliases and the endpoint the adapters reach
+and the launch aliases
 ([design.md](../v2/design.md#the-layout)). Its rules have no numbers of their own: they
 are the 1.x rules of [launch.md](../launch.md) and [delivery.md](../delivery.md) the
 wrapper carries, and each block below names the tests that hold them
@@ -105,7 +105,7 @@ one without a live TurnBoundary fails, exit 1, nothing sent; a compaction or an 
 of one without a live Control fails, exit 1, nothing asked; a launch of a role that owes
 reports waits for its TurnBoundary up to the readiness bound and is refused after.
 Liveness never changes the run: a capability withdrawn and made live again leaves its
-epoch, name, role and grants as they were. A set whose write fails is not taken for
+epoch, name and role as they were. A set whose write fails is not taken for
 recorded: the run's own view takes it at once, and the record is written again, once at
 once and then with retries, until it lands or the run ends — never once the record has
 become a later run's. Since S11.
@@ -158,44 +158,6 @@ Tests:
 - `internal/cli/live_set_test.go` `TestSteeringARunWithoutALiveControlFails`
 - `internal/adapter/fixture/live_test.go` `TestTheRunReportsItsLiveSetAsItChanges`
 - `internal/adapter/fixture/live_test.go` `TestTheFirstReportLeavesOutWhatTheExchangeDidNotProve`
-- `internal/adapter/fixture/live_test.go` `TestTheBriefingFollowsTheLiveTool`
+- `internal/adapter/fixture/live_test.go` `TestTheBriefingIsHandedOverOnce`
 - `internal/adapter/fixture/live_test.go` `TestControlIsCarriedOnlyWhileLive`
 - `test/workflow/fixture_live_test.go` `TestFixtureLive`
-
-## Grants
-
-The three steps of the unforgeable grant carry over unchanged (`docs/grants-authority.md`,
-"The scheme": at send, at delivery, when main does not answer), in `core/grant`
-with the wrapper's side in `host`. Applying a grant is the Permissions capability.
-What no grant reaches comes from the catalogue: every adapter's own configuration, and
-what the catalogue declares for a harness the build has no adapter for — `~/.codex`,
-`.codex` and `.agents` until stage 5 (decided 2026-10-11) — so the core names none.
-
-Tests:
-- `internal/adapter/catalog/catalog_test.go` `TestTheCatalogueProtectsTheHarnessesItHasNoAdapterFor`
-- `internal/cli/send_dir_test.go` `TestAGrantRefusesWhatTheCatalogueProtects` — a grant into a checkout still refuses those names there, and those directories under the home
-- `internal/core/grant/authority/grantauth_test.go` `TestAGrantRegisteredFromBelowIsConfirmed`
-- `internal/core/grant/authority/grantauth_test.go` `TestARegistrationFromOutsideTheWrapperIsRefused`
-- `internal/core/grant/authority/grantauth_test.go` `TestAConfirmationSettlesOnlyForItsRun`
-- `internal/core/grant/authority/grantauth_test.go` `TestAConfirmationFromAnotherProcessIsRefused`
-- `internal/core/grant/authority/grantauth_test.go` `TestAWrapperNotThereIsUnreachable`
-- `internal/core/grant/authority/grantauth_test.go` `TestAFullAuthorityRefusesAndKeepsWhatItHolds`
-- `internal/core/grant/authority/grantauth_test.go` `TestAGrantOutlivingItsWaitIsForgotten`
-- `internal/core/grant/authority/grantauth_test.go` `TestClosingFreesTheAddress`
-- `internal/core/grant/authority/grantauth_test.go` `TestABoundAddressIsNotTakenOver`
-- `internal/core/grant/authority/grantauth_test.go` `TestAConfirmationFromOtherNamespacesIsRefused`
-- `internal/core/grant/authority/checks_test.go` `TestAnAnswerFromAnotherLiveProcessIsRefused`
-- `internal/core/grant/authority/checks_test.go` `TestGrantsDifferingOnlyInBreadthOrGitAreNotTheSame`
-- `internal/core/grant/authority/checks_test.go` `TestARunInASandboxOfItsOwnIsNotItsWrapper`
-- `internal/core/grant/authority/checks_test.go` `TestAnAnswerNamingAnotherGrantIsNotTaken`
-- `internal/core/grant/authority/helper_test.go` `TestARegistrationFromOtherNamespacesIsRefused`
-- `internal/core/grant/authority/helper_test.go` `TestARegistrationGoesOnlyToTheCallersWrapper`
-- `internal/core/grant/authority/resume_test.go` `TestAGrantIsHeldWhileItsTaskIsOpen`
-- `internal/core/grant/authority/resume_test.go` `TestAGrantGoesOnlyIntoTheConversationItWasDeliveredTo`
-- `internal/core/grant/authority/resume_test.go` `TestAConfirmByAnotherProcessDeliversNothing`
-- `internal/core/grant/authority/resume_test.go` `TestAGrantConfirmedWithNoConversationIsNotHandedOver`
-- `internal/host/grants_test.go` `TestAGrantIsConfirmedWithTheMainThatSentIt`
-- `internal/host/grants_test.go` `TestMainHoldsTheConversationTheLetterWasPinnedTo`
-- `internal/host/grant_checks_test.go` `TestAGrantWhoseDirectoryBecameALinkIsRefusedBeforeMainIsAsked`
-- `internal/host/grant_checks_test.go` `TestAGrantFromAnInvalidSenderNameIsRefused`
-- `internal/host/grant_checks_test.go` `TestAGrantWhoseMainHasEndedFailsNamingThatMain`

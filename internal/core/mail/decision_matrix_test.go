@@ -2,7 +2,6 @@ package mail
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -12,13 +11,8 @@ import (
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
-// The decision's worlds (docs/v2/stage3-decision-manifest.md), each run
-// clean and then once per durable step of its clean run: killed there, and
-// with that step's flush failed. What a cut leaves is whole or absent before
-// anything runs again, each run is checked against the model, and every
-// decision's durable marker against the flushes it stands on. The
-// five checks run the generated pair cover of every partition; with
-// REWAKE_DECISION_MATRIX=full every feasible world runs.
+// Four fixed worlds retain the recovery checks at every durable cut,
+// including the flush ordering that a completed run alone cannot prove.
 func TestDecisionDurabilityAtEveryCut(t *testing.T) {
 	plays := map[string]func(*testing.T, dm.World, matrixCut) []string{
 		"decision":    playDecision,
@@ -26,42 +20,18 @@ func TestDecisionDurabilityAtEveryCut(t *testing.T) {
 		"mailbox":     playMailbox,
 		"generations": playGenerations,
 	}
-	full := os.Getenv(matrixEnv) == "full"
-	for _, p := range dm.Partitions() {
-		play, ok := plays[p.Name]
+	for _, w := range dm.Worlds() {
+		play, ok := plays[w.Partition]
 		if !ok {
-			t.Fatalf("the partition %s has no play", p.Name)
+			t.Fatalf("the world %s has no play", w.Name)
 		}
-		worlds := p.PairCover()
-		if full {
-			worlds = p.All()
-		}
-		t.Run(p.Name, func(t *testing.T) {
-			for _, w := range worlds {
-				runWorld(t, w, full, play)
-			}
-		})
+		runWorld(t, w, play)
 	}
-}
-
-// matrixEnv selects the whole matrix rather than its pair cover.
-const matrixEnv = "REWAKE_DECISION_MATRIX"
-
-// cleanOnly says the five checks run a world clean only: the chain of 40,
-// each generation the same durable steps as the one before, whose cuts are
-// thousands of runs of seconds each
-// (docs/v2/stage3-decision-manifest.md#clean-runs-and-crash-cuts). The full
-// matrix cuts every step of it too.
-func cleanOnly(w dm.World, full bool) bool {
-	return !full && w.Value("generations") == dm.ChainOfForty
 }
 
 // cutsOf are a world's cuts: every step killed, and each one a flush may
 // fail at flushed as well.
-func cutsOf(w dm.World, steps []string, full bool) []matrixCut {
-	if cleanOnly(w, full) {
-		return nil
-	}
+func cutsOf(steps []string) []matrixCut {
 	var cuts []matrixCut
 	for i, step := range steps {
 		cuts = append(cuts, matrixCut{at: i + 1})
@@ -72,8 +42,8 @@ func cutsOf(w dm.World, steps []string, full bool) []matrixCut {
 	return cuts
 }
 
-func runWorld(t *testing.T, w dm.World, full bool, play func(*testing.T, dm.World, matrixCut) []string) {
-	t.Run(strings.Join(w.Values, ","), func(t *testing.T) {
+func runWorld(t *testing.T, w dm.World, play func(*testing.T, dm.World, matrixCut) []string) {
+	t.Run(w.Name, func(t *testing.T) {
 		t.Parallel()
 		var steps []string
 		if !t.Run("clean", func(t *testing.T) {
@@ -83,7 +53,7 @@ func runWorld(t *testing.T, w dm.World, full bool, play func(*testing.T, dm.Worl
 		}) {
 			return
 		}
-		for _, cut := range cutsOf(w, steps, full) {
+		for _, cut := range cutsOf(steps) {
 			mode := "kill"
 			if cut.flush {
 				mode = "flush"

@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/tool"
 )
 
 // The exchange between the adapter and its program: one JSON object per line
@@ -34,13 +33,10 @@ const (
 	opReserve     = "reserve"
 	opDeliver     = "deliver"
 	opRelease     = "release"
-	opToolCall    = "tool-call"
-	opToolResult  = "tool-result"
 	opCompacted   = "compacted"
 	opThread      = "thread"
 	opBrief       = "brief"
 	opControl     = "control"
-	opToolDenied  = "tool-denied"
 )
 
 // The capabilities a program may serve, as its hello names them: the API's
@@ -51,15 +47,11 @@ const (
 	TurnBoundary = string(adapter.TurnBoundaryCapability)
 	Telemetry    = string(adapter.TelemetryCapability)
 	Control      = string(adapter.ControlCapability)
-	// ToolTransport is the harness's side of the mail tool's calls
-	// (tool.go): the program registers the tools it is offered and asks the
-	// wrapper's endpoint to run each call.
-	ToolTransport = string(adapter.ToolTransportCapability)
 )
 
 // Served is every capability a program can serve, in the order a hello
 // lists them.
-var Served = []string{Wake, TurnBoundary, Telemetry, Control, ToolTransport}
+var Served = []string{Wake, TurnBoundary, Telemetry, Control}
 
 // The outcomes a turn's end reports.
 const (
@@ -107,24 +99,6 @@ type Frame struct {
 	Members []Member `json:"members,omitempty"`
 	Steered bool     `json:"steered,omitempty"`
 
-	// The tool transport's probe offers the tools and the endpoint their
-	// calls go to; its answer names the tools registered and their digest.
-	Tools    []tool.Descriptor `json:"tools,omitempty"`
-	Endpoint string            `json:"endpoint,omitempty"`
-	Names    []string          `json:"names,omitempty"`
-	Digest   string            `json:"digest,omitempty"`
-
-	// A tool call the program observed, by its own id, and the result it
-	// handed the model for it: its texts, whether it failed, and whether the
-	// program cut or replaced it so that no text is the whole answer.
-	Call      string          `json:"call,omitempty"`
-	Tool      string          `json:"tool,omitempty"`
-	Arguments json.RawMessage `json:"arguments,omitempty"`
-	Nested    bool            `json:"nested,omitempty"`
-	Texts     []string        `json:"texts,omitempty"`
-	IsError   bool            `json:"isError,omitempty"`
-	Shortened bool            `json:"shortened,omitempty"`
-
 	// A control request carried to the program: its action and focus, with
 	// its id and asker below; the answer's Outcome, Reason and Detail.
 	Action string `json:"action,omitempty"`
@@ -149,9 +123,6 @@ type Member struct {
 	ToEpoch   string `json:"toEpoch,omitempty"`
 	Recalls   string `json:"recalls,omitempty"`
 	Replaces  string `json:"replaces,omitempty"`
-	// Grants are the directories granted with the letter, which its wrapper
-	// rechecked and main's confirmed before the delivery.
-	Grants []string `json:"grants,omitempty"`
 }
 
 // maxFrame bounds one line: a notice, its members and a turn's text.

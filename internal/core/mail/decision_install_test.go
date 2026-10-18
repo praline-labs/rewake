@@ -8,9 +8,7 @@ import (
 )
 
 // The installation is the barrier's before its plan, stopped or not, and a
-// note that cannot be told stops nothing, so the scenes of
-// TestEveryReadOfThePlanStopsBeforeTheFirstEffect take a decision installed.
-// Here the installation itself is cut: every write a barrier makes for an
+// note that cannot be told stops nothing. The installation itself is cut: every write a barrier makes for an
 // uninstalled decision is broken once, and every read of its effects fails
 // once in the effects alone. Whatever failed, the barriers after it end where
 // the scene ends without it: the resend linked once and run once, the note
@@ -46,7 +44,7 @@ func TestDecisionInstallationSurvivesEveryBrokenWrite(t *testing.T) {
 	for _, write := range base.written {
 		dir := fresh(t, template, work)
 		label := "write " + write.String() + " fails once"
-		if run := writeRun(dir, "api", &write, nil, false); !run.broke {
+		if run := writeRun(dir, "api", &write, nil); !run.broke {
 			t.Errorf("%s: the barrier did not make it again", label)
 			continue
 		}
@@ -65,7 +63,7 @@ func TestDecisionInstallationSurvivesEveryBrokenWrite(t *testing.T) {
 		}
 		fault := seamFault{at: read, kind: "no access"}
 		dir := fresh(t, template, work)
-		writeRun(dir, "api", nil, &fault, false)
+		writeRun(dir, "api", nil, &fault)
 		converges(t, dir, "in the effects, "+fault.label())
 	}
 	t.Logf("%d writes broken once, %d reads failed in the effects", len(base.written), len(base.applied))

@@ -100,7 +100,7 @@ func TestWriteIsALaunchRole(t *testing.T) {
 		t.Fatal(err)
 	}
 	part, err := chosenRole(result.Call)
-	if err != nil || part.ID != "write" || !part.GitWrite || part.Silent {
+	if err != nil || part.ID != "write" || part.Silent {
 		t.Fatalf("role=%+v err=%v", part, err)
 	}
 	code, _, errOut := run("--write", "list")

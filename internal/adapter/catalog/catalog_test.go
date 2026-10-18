@@ -1,7 +1,6 @@
 package catalog
 
 import (
-	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -40,43 +39,6 @@ func TestEveryHarnessNamesItsSingleUseFlags(t *testing.T) {
 				}
 			}
 		})
-	}
-}
-
-// A registered harness has to name where it keeps its own configuration. An
-// empty list is the cheapest way to satisfy the method, and it would let main
-// grant a worker the directory that decides what that harness runs.
-func TestEveryHarnessNamesItsProtectedDirs(t *testing.T) {
-	for _, h := range New().All() {
-		t.Run(h.ID(), func(t *testing.T) {
-			dirs := h.ProtectedDirs().Dirs
-			if len(dirs) == 0 {
-				t.Fatal("no protected directories: a grant could reach this harness's own configuration")
-			}
-			for _, dir := range dirs {
-				if !filepath.IsAbs(dir) {
-					t.Fatalf("%q is not absolute: the hard tier drops it", dir)
-				}
-			}
-		})
-	}
-}
-
-// The metadata directories of harnesses this build has no adapter for are
-// the catalog's to declare, so the core is handed them and names none: a
-// grant into a checkout still refuses another harness's own directories
-// (docs/grants.md). Stage 5's Codex adapter takes them over.
-func TestTheCatalogueProtectsTheHarnessesItHasNoAdapterFor(t *testing.T) {
-	home := t.TempDir()
-	t.Setenv("HOME", home)
-	protected := New().Protected()
-	for _, name := range []string{".codex", ".agents"} {
-		if !slices.Contains(protected.Names, name) {
-			t.Errorf("%s is not among the protected names %v", name, protected.Names)
-		}
-	}
-	if want := filepath.Join(home, ".codex"); !slices.Contains(protected.Dirs, want) {
-		t.Errorf("%s is not among the protected directories %v", want, protected.Dirs)
 	}
 }
 

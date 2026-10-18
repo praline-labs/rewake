@@ -1,6 +1,6 @@
 /*
 Package receipt is the journal of the mail operations a run performed through
-the words a tool call may carry (docs/mail-bridge.md#receipts-retries-and-deadlines).
+a journaled shell command (docs/archive/mail-bridge.md#receipts-retries-and-deadlines).
 
 An operation is journaled before it changes anything, and its record holds what
 it has done so far and what it answered. A repeated call finds the record by its
@@ -31,6 +31,14 @@ import (
 
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
+
+// Digest identifies a call's normalized words: the same words, the same
+// digest, which a key and the shell's search for an unsettled operation take.
+func Digest(words []string) string {
+	encoded, _ := json.Marshal(words)
+	sum := sha256.Sum256(encoded)
+	return hex.EncodeToString(sum[:])
+}
 
 // Key scopes an operation. Two calls with the same key are one operation.
 type Key struct {

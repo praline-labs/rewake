@@ -131,7 +131,7 @@ func TestEditSendsAReplacementInOneStep(t *testing.T) {
 func TestAnAddendumGoesWithItsTask(t *testing.T) {
 	dir, web := sender(t)
 	root := sendOK(t, "api", "rerun the smoke")
-	for _, refused := range [][]string{{"--notify"}, {"--question"}, {"--grant-git"}} {
+	for _, refused := range [][]string{{"--notify"}, {"--question"}} {
 		if code, _, errOut := run(append([]string{"send", "api", "also lint", "--to", root}, refused...)...); code != ExitUsage {
 			t.Errorf("--to %v: %d %q", refused, code, errOut)
 		}
@@ -262,4 +262,12 @@ func TestAnEditAfterTheNoticeSendsNoRecall(t *testing.T) {
 	if told := recalls(t, dir); len(told) != 0 {
 		t.Fatalf("an edit sent a recall: %+v", told)
 	}
+}
+
+// must is a lookup's answer in a test that set up nothing it could not read.
+func must[T any](value T, err error) T {
+	if err != nil {
+		panic(err)
+	}
+	return value
 }

@@ -13,9 +13,9 @@ The design:
   owner's answers. Open it first.
 - [design-api.md](design-api.md) — the adapter API: the capabilities, offered and live, what
   the core does without each, the catalogue as a value, minimum versions and the legacy mark.
-- [design-rules.md](design-rules.md) — the core rules restated for 2.0: effects E1–E8, the
-  guarantees of every tool transport T1–T11, turn outcomes, the channel record C1–C8, what a
-  launch adds L1–L3, grants.
+- [design-rules.md](design-rules.md) — the core rules restated for 2.0: effects E1–E8, turn
+  outcomes, what a launch adds L1–L3; the tool transport's T1–T11, the channel record's
+  C1–C8 and grants left with their code on October 18, 2026.
 - [design-claude.md](design-claude.md) — the Claude Code adapter as one mod: loading, what
   happens when it does not load, the turn boundary, telemetry, control, wake, and the stage 4
   probe P1–P16 with what it answered.

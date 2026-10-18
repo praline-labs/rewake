@@ -1,11 +1,11 @@
 # Stage M3 of the mail tool: the live checks, run
 
-October 4, 2026. The live checks of [mail-bridge-live.md](../mail-bridge-live.md) ran
+October 4, 2026. The live checks of [mail-bridge-live.md](../archive/mail-bridge-live.md) ran
 the same day on build 916f888 in the owner's logins: codex-cli 0.159.0 and Claude Code
 2.1.284, a cheap model at low effort, about 20 Codex turns and about $1.6 of Claude Code.
 The case-by-case results are in
-[the run of October 4, 2026](../mail-bridge-live.md#the-run-of-october-4-2026), the facts
-about the harnesses in [research-mail-tool.md](../research-mail-tool.md). The four
+[the run of October 4, 2026](../archive/mail-bridge-live.md#the-run-of-october-4-2026), the facts
+about the harnesses in [research-mail-tool.md](../archive/research-mail-tool.md). The four
 findings that needed code are built under revised rules and accepted after four rounds
 of fixes; the stage is not closed, since the live checks of those rules and several gates
 stay open ([below](#open)).
@@ -53,7 +53,7 @@ passes, and built the same day ([below](#the-revised-rules-built)):
   a `--command` wrapper too ([the owner's decision](#the-owners-decision-on-the-claude-code-version));
   an unknown version keeps every gate open. The L5 bounds sit in a per-version table beside `closedGates`.
 - A dead server is "server gone" on Claude Code as on Codex, told once to worker and
-  main, main's notice naming `/mcp` ([the channel](../mail-bridge-channel.md#the-tool-observation)).
+  main, main's notice naming `/mcp` ([the channel](../archive/mail-bridge-channel.md#the-tool-observation)).
 - Claude Code's hello timer opens at the first SessionStart, which comes after every
   startup dialog, together with the servers' start (live, scratch configuration).
 - A Codex request whose `_meta.threadId` is not the primary thread is an agent's call,
@@ -62,7 +62,7 @@ passes, and built the same day ([below](#the-revised-rules-built)):
 - A managed `managed-mcp.json` present in any form means no tool and no name check;
   G6 closes once the code takes it.
 - The cases still unrun and the live checks the revised rules need are in
-  [mail-bridge-live.md](../mail-bridge-live.md#what-stays-unrun-and-what-it-leaves-open).
+  [mail-bridge-live.md](../archive/mail-bridge-live.md#what-stays-unrun-and-what-it-leaves-open).
 
 ## The owner's decision on the Claude Code version
 
@@ -89,7 +89,7 @@ and says how in its own *as built*:
   the first SessionStart, conversation connections bound by `_meta.threadId`, other
   threads' calls refused before any wait, and the selection transition
   ([as built](../archive/1.x/mail-bridge-channel-codex.md#as-built)). Every row of
-  [the failure table](../mail-bridge-channel-failures.md) is held by a test named after
+  [the failure table](../archive/mail-bridge-channel-failures.md) is held by a test named after
   it, and the selection is a generated space against an oracle written from the rules.
 
 ## Four rounds of fixes
@@ -153,7 +153,7 @@ duplicated them.
 ## Open
 
 The live checks still to run
-([mail-bridge-live.md](../mail-bridge-live.md#what-stays-unrun-and-what-it-leaves-open)):
+([mail-bridge-live.md](../archive/mail-bridge-live.md#what-stays-unrun-and-what-it-leaves-open)):
 
 - G6 in its container: a launch with the managed file present starts without the tool,
   and the tool returns once the file is gone.

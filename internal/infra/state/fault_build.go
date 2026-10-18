@@ -16,7 +16,7 @@ import (
 
 // A binary built with the rewakefault tag takes its faults from REWAKE_FAULT,
 // so a test can break a step of a process it does not run itself: the CLI
-// child a tool call starts (docs/mail-bridge-checks.md#testing-without-a-live-harness). A release is
+// child a tool call starts (docs/archive/mail-bridge-checks.md#testing-without-a-live-harness). A release is
 // never built with the tag, and has no such variable.
 //
 // The value is a list of role:action=argument separated by semicolons. The

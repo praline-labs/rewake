@@ -14,7 +14,7 @@ import (
 // retry prepares from the same event, so a question read since is above its
 // boundary and not answered with its text.
 func TestARetryWhoseFirstAttemptRecordedNothingKeepsItsScope(t *testing.T) {
-	dir, self, web := toolSession(t)
+	dir, self, web := peerSession(t)
 	original := readKind(t, dir, web, mail.Task)
 	readOnlyJournals(t, dir)
 	event := mail.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "first", Text: "FIRST_END_TEXT"}
@@ -35,7 +35,7 @@ func TestARetryWhoseFirstAttemptRecordedNothingKeepsItsScope(t *testing.T) {
 // answer kept after it.
 func TestARetryTakesOnlyTheAnswerItsFirstAttemptSaw(t *testing.T) {
 	t.Run("kept since", func(t *testing.T) {
-		dir, self, web := toolSession(t)
+		dir, self, web := peerSession(t)
 		readKind(t, dir, web, mail.Task)
 		readOnlyJournals(t, dir)
 		event := mail.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "first", Text: "FIRST_END_TEXT"}
@@ -59,7 +59,7 @@ func TestARetryTakesOnlyTheAnswerItsFirstAttemptSaw(t *testing.T) {
 		}
 	})
 	t.Run("seen", func(t *testing.T) {
-		dir, self, web := toolSession(t)
+		dir, self, web := peerSession(t)
 		task := readKind(t, dir, web, mail.Task)
 		if err := mail.KeepAnswer(dir, "api", self.Epoch(), "HELD_BEFORE_THE_END", "", ""); err != nil {
 			t.Fatal(err)
@@ -91,7 +91,7 @@ func TestARetryTakesOnlyTheAnswerItsFirstAttemptSaw(t *testing.T) {
 // written, has a boundary below the task read since: its retry does not take
 // that task for its own.
 func TestAnEndWithNothingOwedKeepsItsScopeOnRetry(t *testing.T) {
-	dir, self, web := toolSession(t)
+	dir, self, web := peerSession(t)
 	readOnlyJournals(t, dir)
 	event := mail.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "first", Text: "FIRST_END_TEXT", Ended: 5}
 	if completeTurn(dir, self, event, "") == nil {

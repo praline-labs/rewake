@@ -71,7 +71,7 @@ func unfinishedJournals(t *testing.T, dir string) int {
 func TestATurnEndThatCannotRecordItsSequencePublishesNothing(t *testing.T) {
 	for _, kind := range journalKinds {
 		t.Run(string(kind), func(t *testing.T) {
-			dir, self, web := toolSession(t)
+			dir, self, web := peerSession(t)
 			earlier := readKind(t, dir, web, kind)
 			journals := mail.JournalPath(dir, "api")
 			previous := beforeReports
@@ -102,7 +102,7 @@ func TestATurnEndThatCannotRecordItsSequencePublishesNothing(t *testing.T) {
 func TestAnUnpublishedReportIsCompletedByTheNextTurnEnd(t *testing.T) {
 	for _, kind := range journalKinds {
 		t.Run(string(kind), func(t *testing.T) {
-			dir, self, web := toolSession(t)
+			dir, self, web := peerSession(t)
 			earlier := readKind(t, dir, web, kind)
 			mailbox := state.InboxPath(dir, "web")
 			if err := state.EnsureSubdir(mailbox); err != nil {
@@ -142,7 +142,7 @@ func TestAnUnpublishedReportIsCompletedByTheNextTurnEnd(t *testing.T) {
 func TestAnAdoptedWaitWhoseReportIsOutIsNotAnsweredAgain(t *testing.T) {
 	for _, kind := range journalKinds {
 		t.Run(string(kind), func(t *testing.T) {
-			dir, old, web := toolSession(t)
+			dir, old, web := peerSession(t)
 			id := readKind(t, dir, web, kind)
 			// The waits read but take no change: the plan finds nothing
 			// unknown, and the clearing fails once the report is out.
@@ -217,7 +217,7 @@ func writableJournals(t *testing.T, dir string) {
 func TestAnEndWhoseJournalFailedIsPreparedAgainOnRetry(t *testing.T) {
 	for _, kind := range journalKinds {
 		t.Run(string(kind), func(t *testing.T) {
-			dir, self, web := toolSession(t)
+			dir, self, web := peerSession(t)
 			earlier := readKind(t, dir, web, kind)
 			readOnlyJournals(t, dir)
 			event := mail.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "first", Text: "the first is done"}
@@ -241,7 +241,7 @@ func TestAnEndWhoseJournalFailedIsPreparedAgainOnRetry(t *testing.T) {
 func TestAnEndRecordedBeforeItsEffectsIsNotPreparedAgain(t *testing.T) {
 	for _, kind := range journalKinds {
 		t.Run(string(kind), func(t *testing.T) {
-			dir, self, web := toolSession(t)
+			dir, self, web := peerSession(t)
 			earlier := readKind(t, dir, web, kind)
 			event := mail.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "first", Text: "the first is done"}
 			// The journal is written, and its first report cannot be: the
@@ -269,7 +269,7 @@ func TestAnEndRecordedBeforeItsEffectsIsNotPreparedAgain(t *testing.T) {
 // wait not cleared.
 func failFirstClear(t *testing.T, kept string) (string, registry.Session, registry.Session, mail.TurnEnd) {
 	t.Helper()
-	dir, self, web := toolSession(t)
+	dir, self, web := peerSession(t)
 	readKind(t, dir, web, mail.Question)
 	if kept != "" {
 		if err := mail.KeepAnswer(dir, "api", self.Epoch(), kept, "", ""); err != nil {
@@ -330,7 +330,7 @@ func TestALateRetryKeepsALaterAnswer(t *testing.T) {
 // The pending mark is taken only once the journal is on record: an end whose
 // journal failed is still pending on retry, not reported as finished.
 func TestAPendingEndWhoseJournalFailedStaysPending(t *testing.T) {
-	dir, self, web := toolSession(t)
+	dir, self, web := peerSession(t)
 	earlier := readKind(t, dir, web, mail.Task)
 	if err := markPending(dir, "api", self.Epoch(), "the suite is running", 100); err != nil {
 		t.Fatal(err)

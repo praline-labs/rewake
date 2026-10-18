@@ -297,10 +297,6 @@ func decisionRefusal(ctx *Context, call Call, dir, name, report string, err erro
 		return failf("%s", text)
 	case mail.DecisionEffectFailed:
 		return printDecided(ctx, dir, name, mail.DecideAnswer{Decision: mail.Decision{Subject: mail.Subject{Report: report}}}, refusal)
-	case mail.DecisionExpired:
-		if ctx.op != nil {
-			return beforeCommitRefusal(ctx.op.record.Token, "the decision was written")
-		}
 	case mail.DecisionUncertain:
 		text = fmt.Sprintf("Rewake: whether report %s of %s was decided is unknown (%v); the record would be %s. The same words again find it or decide.", report, name, refusal.Err, refusal.Path)
 	}

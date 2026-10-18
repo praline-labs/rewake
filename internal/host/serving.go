@@ -17,7 +17,7 @@ import (
 // and returns what stops them, in the reverse order. closeService closes the
 // plan's service once: Run owns it from the moment the plan is returned, and
 // a stop here only brings that close before the read clock's.
-func startServing(ctx context.Context, request Request, self registry.Session, name, epoch string, plan adapter.LaunchPlan, tool *mailTool, live *liveSet, closeService func()) (func(), error) {
+func startServing(ctx context.Context, request Request, self registry.Session, name, epoch string, plan adapter.LaunchPlan, live *liveSet, closeService func()) (func(), error) {
 	var stops []func()
 	stop := func() {
 		for i := len(stops) - 1; i >= 0; i-- {
@@ -36,16 +36,21 @@ func startServing(ctx context.Context, request Request, self registry.Session, n
 		stops = append(stops, clock.Close)
 		// A timed start is the evidence a pending mark of an earlier turn
 		// is judged by when that turn's end was lost
-		// (docs/mail-bridge-turns.md#a-pending-mark-at-its-turns-end); a
+		// (docs/archive/mail-bridge-turns.md#a-pending-mark-at-its-turns-end); a
 		// start that cannot be recorded leaves the mark unproven, which
 		// fails to the side of a report.
 		record := func(at int64) { _ = mail.RecordTurnStart(request.Dir, name, epoch, at) }
-		handler := tool.handler(record, clock.Snapshot, func(ctx context.Context, end adapter.TurnEnd) error {
+		handler := adapter.TurnHandler{Capture: clock.Snapshot, Publish: func(ctx context.Context, end adapter.TurnEnd) error {
 			if request.OnTurn != nil {
 				return request.OnTurn(ctx, reportSession, end)
 			}
 			return nil
-		})
+		}}
+		handler.Started = func(_, _ string, at int64) {
+			if at > 0 {
+				record(at)
+			}
+		}
 		if request.OnConfirm != nil {
 			handler.Confirm = func(ctx context.Context, end adapter.TurnEnd) (string, error) {
 				return request.OnConfirm(ctx, reportSession, end)
@@ -75,14 +80,8 @@ func startServing(ctx context.Context, request Request, self registry.Session, n
 		live.report(live.planned)
 	}
 
-	// The channel record is shown whether or not anything else of the
-	// session is observed: whoami prints it in every run.
-	var observed func() session.Snapshot
 	if plan.Telemetry != nil {
-		observed = plan.Telemetry.SessionState
-	}
-	if observed != nil || tool.keeper != nil {
-		stops = append(stops, session.Start(ctx, request.Dir, name, epoch, tool.keeper.source(epoch, observed), live.workers))
+		stops = append(stops, session.Start(ctx, request.Dir, name, epoch, plan.Telemetry.SessionState, live.workers))
 	}
 	return stop, nil
 }

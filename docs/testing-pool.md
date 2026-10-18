@@ -74,7 +74,7 @@ hundred runs under a parallel `-race` load.
 
 The suite's binary runs seven of the product's waits shorter than a release, set at
 build through `-ldflags -X` on string variables read by `internal/infra/buildtime`, for the
-binary under test and every mutant alike (`suiteFlags` in
+binary under test (`suiteFlags` in
 `test/workflow/timings_test.go`). A release sets none of them, and the code is the same;
 only these numbers differ, so the suite does not run these values at their real length:
 

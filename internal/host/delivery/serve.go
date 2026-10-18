@@ -70,13 +70,6 @@ type Server struct {
 	// Opened is closed once the harness can take its first notice. Until then
 	// mail waits, pending, and goes out right after. Nil means from the start.
 	Opened <-chan struct{}
-	// CheckGrant checks a message's granted directories again before it
-	// becomes readable (docs/grants.md). Nil refuses every directory grant.
-	CheckGrant func(mail.Message) error
-	// PinGrant tells the sender of a granted task the conversation its letter
-	// is pinned to, under the mailbox lock as the letter becomes readable. Nil
-	// tells nobody.
-	PinGrant func(message mail.Message, thread string)
 
 	// attempts remembers when each pending message was last tried.
 	attempts map[string]time.Time

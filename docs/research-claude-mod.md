@@ -37,7 +37,7 @@ key sent sooner was lost).
 
 Whether `$.http.fetch` with `socketPath` connects from the harness process itself, which
 every check of the mod's endpoint rests on
-([design-claude.md](v2/design-claude.md#how-a-tool-call-runs)). Two runs, both on October 13,
+([design-claude.md](v2/design-claude.md#the-socket-and-its-peer)). Two runs, both on October 13,
 2026, Claude Code 2.1.296.
 
 ### The probe's kit, extended (`Na99qK`)

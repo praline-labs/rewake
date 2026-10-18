@@ -35,9 +35,8 @@ func TestDifferentImagesWithSameVersionCannotShareRoom(t *testing.T) {
 
 // A byte-identical copy of the binary — another path, another inode — is the
 // same build: it joins a room the original holds, as a writer and as a
-// launch, and the room's build stays. (The tool's peer check takes a copy
-// the same way: host/endpoint's TestPeerCheckIsTheBuildsContent.)
-func TestArtifactCopyCanJoinRoomAndUseTools(t *testing.T) {
+// launch, and the room's build stays.
+func TestArtifactCopyCanJoinRoom(t *testing.T) {
 	w := newWorld(t)
 	w.heldAt(buildA, "default", "leased", launch("default")...)
 	copied := copyOf(t, buildA)

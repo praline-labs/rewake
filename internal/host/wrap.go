@@ -32,9 +32,6 @@ import (
 type Request struct {
 	// Harness is what to run.
 	Harness adapter.Harness
-	// Protected is what no task may grant the session to write: the
-	// catalog's set, every adapter's and the foreign ones it declares.
-	Protected adapter.Protected
 	// Dir is the room-scoped state directory.
 	Dir string
 	// Name is the requested prefix; empty uses the role and picks a free address.
@@ -53,8 +50,6 @@ type Request struct {
 	// OnConfirm runs an end the adapter may hold open, beside OnTurn
 	// (adapter.TurnHandler.Confirm).
 	OnConfirm func(context.Context, registry.Session, adapter.TurnEnd) (string, error)
-	// MailTool serves the mail tool's endpoint; nil serves none.
-	MailTool *MailTool
 	// OnClaimed hears the session once its name is claimed, before the
 	// harness is planned: whatever was prepared for the launch learns whose
 	// it is. An error ends the launch.
@@ -115,7 +110,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	authority := listenAuthority(request.Dir, registry.RunEpoch(self, selfStart, boot), self, request.Role.ID == role.Main.ID)
+	authority := listenAuthority(request.Dir, registry.RunEpoch(self, selfStart, boot), self)
 	if authority != nil {
 		defer authority.Close()
 		go authority.Serve(ctx)
@@ -175,11 +170,6 @@ func Run(ctx context.Context, request Request) (int, error) {
 		}
 	}
 
-	// Before the harness: a resumed conversation's grants are given at launch.
-	restored := resumeGrants(request.Dir, name, epoch, request.Harness, request.Args, request.Protected)
-
-	tool := startMailTool(request, name, epoch)
-	defer tool.close()
 	live := newLiveSet(request.Dir, name, epoch)
 	live.workers = &life.workers
 	defer live.stop()
@@ -199,7 +189,6 @@ func Run(ctx context.Context, request Request) (int, error) {
 
 		ControlDir: controlDir,
 		RunDir:     runDir,
-		GrantDirs:  restored.dirs(),
 		Version:    version,
 	}
 	launchRequest.Env = launch.SessionEnv(launchRequest, request.Harness.EnvNotInherited())
@@ -211,10 +200,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 	// closed once, before the run's directory goes.
 	closeService := closeOnce(plan.Service)
 	defer closeService()
-	plan.Notes = append(plan.Notes, restored.notes...)
-	tool.attach(plan)
 	live.planned = plannedLive(request.Harness.Offers(), plan, controlDir)
-	live.exchanged = tool.exchanged
 	_, _ = fmt.Fprintf(os.Stderr, "rewake: room %s, role %s: %s\n", session.Room, session.Role, session.RoleReason)
 	for _, note := range plan.Notes {
 		// Said once, on stderr, before the harness takes over the screen: these
@@ -240,7 +226,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 	if counter, ok := plan.Service.(adapter.WorkerCounter); ok {
 		counter.CountWorkers(runWorkers{life: life})
 	}
-	stopServing, err := startServing(ctx, request, session, name, epoch, plan, tool, live, closeService)
+	stopServing, err := startServing(ctx, request, session, name, epoch, plan, live, closeService)
 	if err != nil {
 		return 0, err
 	}
@@ -269,7 +255,6 @@ func Run(ctx context.Context, request Request) (int, error) {
 	}
 
 	process, _ := plan.Service.(adapter.ProcessService)
-	tool.started(command.Process.Pid, process)
 	if start, err := proc.StartTime(command.Process.Pid); err == nil {
 		session.HarnessPID = command.Process.Pid
 		session.HarnessStart = start
@@ -285,13 +270,12 @@ func Run(ctx context.Context, request Request) (int, error) {
 	if process != nil {
 		watchCtx, stopWatching := context.WithCancel(ctx)
 		defer stopWatching()
-		go stopWithProcess(watchCtx, process, command.Process, session.HarnessStart, tool.keeper.exited)
+		go stopWithProcess(watchCtx, process, command.Process, session.HarnessStart)
 	}
 	harnessStart := session.HarnessStart
-	tool.keeper.started(ctx, func() bool { return proc.Alive(command.Process.Pid, harnessStart) })
 	go forward(signals, command.Process, func() bool {
 		return proc.Alive(command.Process.Pid, harnessStart)
-	}, tool.keeper.exited)
+	})
 
 	serveCtx, stopServing := context.WithCancel(ctx)
 	defer stopServing()
@@ -340,10 +324,8 @@ func Run(ctx context.Context, request Request) (int, error) {
 			// changed hands, has no business in there.
 			Owns: func() bool { return registry.OwnsName(request.Dir, name, epoch) },
 			// A burst of letters that ask for nothing wakes the session once.
-			Window:     delivery.Coalescing,
-			CheckGrant: checkGrant(request.Dir, name, epoch, request.Protected),
-			PinGrant:   pinGrant(request.Dir, name, epoch),
-			Deliver:    wakeIfLive(plan.Wake, live),
+			Window:  delivery.Coalescing,
+			Deliver: wakeIfLive(plan.Wake, live),
 		}
 		if reserver, ok := plan.Wake.(adapter.Reserver); ok {
 			server.Reserve = reserveIfLive(reserver, live)
@@ -357,7 +339,6 @@ func Run(ctx context.Context, request Request) (int, error) {
 	code := waitForHarness(command.Process.Pid)
 	// The run begins to end with its harness: no decision is taken from here.
 	life.closeAdmission()
-	tool.keeper.exited()
 
 	// Stop serving before the record goes away, and let the server refuse what
 	// is still waiting: a sender blocked on a status should be told the session

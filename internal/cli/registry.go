@@ -124,9 +124,8 @@ func buildGroups(catalog adapter.Catalog) []Group {
 					{Flag: "--message", Value: "<id>", Summary: "Read only this unread message; an answer reserved for a waiting send stays with it."},
 					{Flag: "--owed", Summary: "Show again, in full, the tasks and questions you read and have not reported on; changes nothing."},
 					{Flag: "--awaited", Summary: "The tasks and questions this run sent that have no report yet, by recipient, with where each stands; changes nothing."},
-					{Flag: "--next", Value: "<token>", Summary: "The next part of a read or an output too long for one tool result, by the token its last part printed."},
 				},
-				Examples: []string{"rewake inbox", "rewake inbox --json", "rewake inbox --peek", "rewake inbox --peek --json", "rewake inbox --message=1780000000000000000-012345abcdef", "rewake inbox --owed", "rewake inbox --owed --json", "rewake inbox --awaited", "rewake inbox --awaited --json", "rewake inbox --next=0123456789abcdef01234567.0.1"},
+				Examples: []string{"rewake inbox", "rewake inbox --json", "rewake inbox --peek", "rewake inbox --peek --json", "rewake inbox --message=1780000000000000000-012345abcdef", "rewake inbox --owed", "rewake inbox --owed --json", "rewake inbox --awaited", "rewake inbox --awaited --json"},
 				Next:     []string{"rewake send <name> \"text\""},
 				Notes: []string{
 					"--peek and --message exclude each other. A peek shows no bodies, even in JSON, and creates no read receipt or report obligation.",
@@ -134,7 +133,6 @@ func buildGroups(catalog adapter.Catalog) []Group {
 					"--awaited goes alone, in any role; after a compaction, main runs it to see what it is still owed. Each message shows its id, kind, time, first line and state: not delivered yet, held, delivered and unread, read, pending, or stopped, with who stopped it — the keyboard, or a main by name. A recipient that ended owing a read task reads \"<name> ended; a resume of <name> in its conversation may still report\" for a day from the read: a resume under that name takes the task over, so do not resend it yet. After that day, once a new run of the name in another conversation swept it, for a task never read, or for a recipient replaced by a new run, it reads \"no report coming\". --json carries the full text. Only this run's tasks and questions are listed.",
 					"Answer a task or a question by ending your turn with the result: the final message goes back to the sender by itself. Nothing else is answered.",
 					"A verified main sees the sender's state line above each of its messages; rewake list --help says what it holds.",
-					"--next goes alone and works from the shell as from the rewake tool: a part printed in a shell is read by being printed.",
 				},
 				Access:  inboxAccess,
 				Handler: handleInbox,
@@ -318,7 +316,7 @@ func notes() []Note {
 		},
 		{
 			Title: "A waiting message is announced, not pasted",
-			Body:  "A notice is one line, \"Rewake: <session> <kind>, <n> new message(s)\" — with a 🟢 in front where the harness shows plain text, a red circle for an error, yellow for a stopped turn — and a preview of the author's first line, about 100 columns; a task's or a question's preview ends with \"(a preview only: run rewake inbox)\", and the message is read with rewake inbox before any work on it. Ready mail is announced at once, starting or steering a turn, without waiting for a peek or a finished turn. Mail arriving within the first 150 ms joins the notice; later mail goes with the next, never into one already accepted. A notice's members are fixed, each keeping its own sender and obligation, and old unread mail is not announced again. A grant, of a directory or of Git metadata, goes only with the notice of the task or question that carries it. rewake inbox --peek previews, --message <id> reads one, plain inbox reads all. Start every message and final reply with one line stating its point.",
+			Body:  "A notice is one line, \"Rewake: <session> <kind>, <n> new message(s)\" — with a 🟢 in front where the harness shows plain text, a red circle for an error, yellow for a stopped turn — and a preview of the author's first line, about 100 columns; a task's or a question's preview ends with \"(a preview only: run rewake inbox)\", and the message is read with rewake inbox before any work on it. Ready mail is announced at once, starting or steering a turn, without waiting for a peek or a finished turn. Mail arriving within the first 150 ms joins the notice; later mail goes with the next, never into one already accepted. A notice's members are fixed, each keeping its own sender and obligation, and old unread mail is not announced again. rewake inbox --peek previews, --message <id> reads one, plain inbox reads all. Start every message and final reply with one line stating its point.",
 		},
 		{
 			Title: "Rewake's own lines mostly start with Rewake:",

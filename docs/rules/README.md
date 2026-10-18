@@ -14,18 +14,13 @@ does it. Created in stage 3's first step, S1 ([stage3.md](../archive/v2/stage3.m
   how mail is written, read, published, stopped or decided.
 - [turns.md](turns.md) — **O1–O2**, turn outcomes: an interim wake that must not close a
   task early, failed and interrupted turns.
-- [tools.md](tools.md) — **T1–T11**, what binds every tool transport: bindings, one
-  operation per call, bounds, a read only on proof, commits stopping at the turn's end, one
-  build per room.
-- [channel.md](channel.md) — **C1–C8**, the channel record of a run: observations, what
-  proves a channel works, silence, event order, notices, policy refusals.
 - [launch.md](launch.md) — **L1–L3**, what a launch adds: the mail and nothing else, where
   and never what, nothing past the run.
 - [space.md](space.md) — **SP1–SP9**, the first working space of stage 4: a hosted worker,
   its record, its keeper and its closing. A rule enters in the step that builds its test;
   SP3, SP4 and SP9 are in force from S4-2, SP2 and SP7 from S4-3. Open it before changing how a space or a hosted
   launch behaves.
-- [host.md](host.md) — the host's tests and the grant scheme, rules without a number.
+- [host.md](host.md) — the host's tests, rules without a number.
 - [layout.md](layout.md) — the layout, rules without a number: what each layer may
   import and no registry of adapters.
 - [adapter-api.md](adapter-api.md) — the adapter API, rules without a number: the
@@ -47,7 +42,7 @@ met. A clause the code does not hold is stated in the rule's text as a known lim
 ```markdown
 - **E4. A read's completion is one durable fact every channel shares.** ...
   Tests:
-  - `internal/cli/bridge_rules_test.go` `TestALateAcknowledgmentOwesNothingTwice`
+  - `internal/core/mail/claims_test.go` `TestTheSweepKeepsALetterBeingRead`
   - `internal/core/mail/claims_test.go` `TestALetterBeingReadInPartsCannotBeTakenBack`
 ```
 

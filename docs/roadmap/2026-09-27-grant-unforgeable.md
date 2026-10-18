@@ -8,7 +8,7 @@ the state directory, which a Codex worker in `workspace-write` can write: it cou
 or erase the journal and escape revocation. `--grant-git` had the same hole. The owner
 chose on September 27, 2026 a grant the recipient cannot forge (variant B), paused
 stage 2 for it, and settled the details with the sketch the same day
-([grants.md](../grants.md#what-the-owner-decided)).
+([grants.md](../archive/grants.md#what-the-owner-decided)).
 
 ## What was found
 
@@ -45,7 +45,7 @@ stage 2 for it, and settled the details with the sketch the same day
 - **A Codex main cannot grant.** Its sandbox refuses `connect()` on a unix socket; both
   `--grant-dir` and `--grant-git` are refused with the reason. `--grant-git` from a
   Codex main is a regression of this change, written in
-  [git-grants.md](../git-grants.md).
+  [git-grants.md](../archive/git-grants.md).
 - **No subreaper.** A Codex worker's commands run in namespaces of their own
   ([research-codex.md](../archive/research-codex.md#the-sandboxs-namespaces)); a session that
   mentions `use_legacy_landlock`, which runs them beside rewake, is refused a grant.
@@ -77,7 +77,7 @@ The workflow case `codex-grant-forgery` tries five forgeries against a running m
 a send with main's variables, the same from a process detached through `setsid`, a
 registration written straight to main's address, a letter written by hand and a letter
 another listener confirms — and none reaches the worker's roots. Its three mutants each break what they name
-([testing-cases.md](../testing-cases.md#a-directory-granted-with-a-task)).
+([testing-cases.md](../testing-cases.md)).
 `codex-grant-dir` now has a Claude Code main and grants a directory outside `/tmp`.
 
 ## After review
@@ -106,7 +106,7 @@ review-claude found one medium point and three low ones, fixed the same day:
 
 - A Claude Code worker has no boundary: outside a sandbox it can forge a registry
   record, start a listener and leave main's tree. Written in
-  [grants.md](../grants.md#what-a-grant-does-not-stop).
+  [grants.md](../archive/grants.md#what-a-grant-does-not-stop).
 - The workflow suite cannot exercise the namespace checks, its processes sharing them;
   unit tests do, the registration's in a real user namespace.
 - A grant from a Codex main, a journal keyed by thread for a cold resume, and whether

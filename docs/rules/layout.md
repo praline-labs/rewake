@@ -14,12 +14,11 @@ these same boundaries:
 |---|---|
 | `infra/*` | the standard library and other `infra` packages, acyclic |
 | `core/*` | `infra` |
-| `tool` | `core`, `infra` |
 | `adapter` | `core`, `infra` — the values the interfaces carry |
-| `adapter/<name>` | `adapter`, `tool`, `core`, `infra`; never another adapter |
+| `adapter/<name>` | `adapter`, `core`, `infra`; never another adapter |
 | `adapter/catalog` | `adapter` and every `adapter/<name>` |
-| `host` | `adapter` (the interfaces), `tool`, `core`, `infra`; never an adapter |
-| `cli` | `host`, `adapter`, `tool`, `core`, `infra`; never `adapter/catalog` or an adapter |
+| `host` | `adapter` (the interfaces), `core`, `infra`; never an adapter |
+| `cli` | `host`, `adapter`, `core`, `infra`; never `adapter/catalog` or an adapter |
 | `cmd/rewake` | `cli`, `adapter/catalog` |
 
 Every layer may import the standard library. Every layer but `infra` may also
@@ -46,7 +45,7 @@ run unlocked with no warning from the lock itself.
 
 ## Harness names outside the adapters
 
-No Go file under `core`, `tool`, `host`, `cli` or `infra` names a harness — its id or
+No Go file under `core`, `host`, `cli` or `infra` names a harness — its id or
 title, or a word that belongs to one harness such as `mcp__`, `CLAUDE_`, `app-server`,
 `.claude`, `.codex`, `.agents` — in an identifier, a string or a comment: a comment that
 explains core code by one harness's behaviour is the first step toward a branch on it.

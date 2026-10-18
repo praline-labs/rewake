@@ -18,15 +18,10 @@ internal/core/registry/registrytest/          for tests: the boot a session of t
 internal/infra/proc/                          /proc: identity, liveness, job-control state, lineage, namespaces, owner and initial environment
 internal/infra/boottime/                      the boot clock, comparable across processes and never set back
 internal/core/mail/                           message, status, sender-side write, the locked sweep and settlement, turn ends and the read's acknowledgment
-internal/core/mail/decisionmodel/             the operator decision's worlds and their expected outcomes, apart from the code (docs/archive/v2/stage3-decision-manifest.md)
+internal/core/mail/decisionmodel/             four fixed worlds of the operator decision and their expected outcomes, apart from the code
 internal/core/mail/mailtest/                  for tests outside mail: the paths and bytes of its records, each checked against mail
-internal/core/receipt/                        the journal of mail operations run through the tool's words: keys, records, frozen reads
-internal/tool/                                what the CLI and the context endpoint share: the ticket, result bounds, cutting parts, the gate against a turn's end
-internal/host/endpoint/                       the wrapper's context endpoint: hellos, tickets, completions, a transport's calls
-internal/core/channel/                        the run's mail channel: tool and shell observations, the block, display and notices
-internal/core/grant/                          which directories a task may grant, and the journal of what was granted
-internal/core/grant/authority/                main's wrapper holding the grants its commands registered, and confirming them
-internal/core/grant/authority/authoritytest/  for tests: a helper process that is a recipient's run, confirms its grants at delivery and ends
+internal/core/receipt/                        the journal of the mail operations a journaled shell command runs: keys, records, frozen reads
+internal/core/authority/                      a run's wrapper answering for the decisions on reports addressed to the run
 internal/core/control/                        a main's control request to a run and its answer, as files
 internal/core/person/                         whether a process runs outside every session and may decide as the person: the strict scan
 internal/core/role/                           the role catalogue: flag, briefing line, reporting duty
@@ -48,7 +43,6 @@ scripts/                                      packaging scripts and the tests of
 docs/                                         the documentation, and the tests that keep it true to the tree
 test/workflow/                                the workflow suite: end-to-end scenarios against fixtures
 test/workflow/record/                         the record format a suite run prints and the summarizer reads
-test/toolrig/                                 the neutral rig: the tool path's oracles on the fixture's program and the host endpoint; the delivery server against the fixture's reservation, the test playing the program
 test/leaserig/                                the room's build lease raced between real builds of rewake, each paused at a named step
 test/decisionrig/                             decisions asked of real sessions' wrappers by real processes below them and outside, each wrapper paused or killed at a named step
 tools/checksummary/                           summarizes a suite run into a few lines and summary.json
@@ -73,7 +67,6 @@ type Harness interface {
     Examples() []string
     Notes() []string
     SingleUseFlags() []Flag
-    ProtectedDirs() Protected
     Version() VersionGate
     EnvNotInherited() []string
     Offers() Offer
@@ -82,28 +75,23 @@ type Harness interface {
 ```
 
 `SingleUseFlags` names the flags a harness takes at most once, so an alias and a typed
-flag for the same parameter replace rather than repeat each other. `ProtectedDirs` names
-the harness's own configuration, which no task may grant a session to write
-([grants.md](grants.md)): `Dirs`, absolute directories outside any project, and `Names`,
-the directories it keeps inside one. `Version` is the gate the host reads before the
+flag for the same parameter replace rather than repeat each other. `Version` is the gate the host reads before the
 claim, and `EnvNotInherited` the variables the host leaves out of `LaunchRequest.Env`.
 
 The role texts and the CLI's help name no harness. A help text that needs one takes it
-from the catalogue it was built from (`internal/cli/registry_words.go`): which harnesses
-lack a grant, the metadata names a grant refuses, a launch to show. A briefing that
+from the catalogue it was built from (`internal/cli/registry_words.go`): a launch to show. A briefing that
 needs a sentence about its own harness — how a session on it commits — gets it from the
 adapter that builds it, as `brief.Context.Harness`, a section after the role's own; the
 Claude Code adapter tells a role that may commit that it does so within its own
 permissions.
 
 What an adapter offers beyond Launch is a value, `Offers()` (`internal/adapter/offer.go`),
-known before any launch: whether it wakes a session, the tool transport it carries,
-whether it reports turn ends and can hold one, whether it collects telemetry, which
-Control verbs it takes (`rewake compact`, `rewake interrupt`, a compaction's focus), and
-which Permissions it serves (a directory into a running session, Git metadata, a main's
-grant reaching its wrapper). The CLI asks this value, through `Catalog.Offers(id)`, before
-it writes anything: a verb or a grant the target's adapter does not offer is refused
-there ([remote-control.md](remote-control.md), [grants.md](grants.md#who-can-grant)).
+known before any launch: whether it wakes a session, whether it reports turn ends and can
+hold one, whether it collects telemetry, which Control verbs it takes (`rewake compact`,
+`rewake interrupt`, a compaction's focus), whether it shows the person the session's mail
+state, and whether its runs can host spaces. The CLI asks this value, through
+`Catalog.Offers(id)`, before it writes anything: a verb the target's adapter does not offer
+is refused there ([remote-control.md](remote-control.md)).
 That an adapter offers a capability says nothing of one run; what a run serves is its
 `LaunchPlan`, and what it made live in its exchange it reports through `LiveReporter`
 (`internal/adapter/run.go`): the whole set once the exchange has run and again at every
@@ -119,9 +107,7 @@ asserts on the adapter: `Service`, started before the harness and closed with it
 `mail.Notice` and never `message.Text`, a `Reserver` and a `Receiver` where the run
 answers before the letter; `TurnBoundary`, handed a `TurnHandler` before the service
 starts; `Telemetry`; and `Thread`, the run's conversation. A run without a `Wake`
-answers each delivery that no notice can reach the session. A tool transport is the
-service's `ToolTransport`, generic over the descriptor so the API names no tool-layer
-type. An adapter that follows the conversation from the outside is a `ThreadTracker`,
+answers each delivery that no notice can reach the session. An adapter that follows the conversation from the outside is a `ThreadTracker`,
 given the run's process; one that continues a conversation a launch names is a
 `Resumer`.
 
@@ -132,25 +118,19 @@ The core refuses an end that names no event or no reason it knows, and derives t
 report from the reason: answered reports finished, aborted stopped, failed and refused
 an error ([turn-outcomes.md](turn-outcomes.md)). An adapter that can hold an end
 confirms it through `TurnHandler.Confirm` rather than publishing it, so the core can
-continue the turn instead of closing it. A turn's start goes to `TurnHandler.Started`,
-tool or none: the wrapper records a timed start (`mail.RecordTurnStart`) and, where the
-run has a mail tool, opens the turn in the endpoint's table from the same call, so the
-tool's input (`ToolInput`) carries a turn's end, the calls and their results, and no
-start.
+continue the turn instead of closing it. A turn's start goes to `TurnHandler.Started`:
+the wrapper records a timed start (`mail.RecordTurnStart`).
 
 The adapters reach the CLI as one value. `catalog.New()` returns an `adapter.Catalog` in
 guide order; `cmd/rewake` builds it and passes it to `cli.Run`, which derives the command
 table from it for that invocation. No package holds adapters at package level and none
-registers one from `init` (rule 3 of [design.md](v2/design.md#the-test-that-holds-it)),
-so a test builds a catalogue of its own. `Catalog.Protected()` is the set the grant rules
-receive: every adapter's `ProtectedDirs`, and what the catalogue declares for harnesses
-this build has no adapter for — `~/.codex`, `.codex` and `.agents` until stage 5's
-adapter declares them itself.
+registers one from `init` ([design.md](v2/design.md#what-holds-it)),
+so a test builds a catalogue of its own.
 
 The fixture offers every capability the core has a part in, in a build that carries it,
-so the workflow suite holds the core's part of control, grants and worktrees on its gate
-column ([testing-cases.md](testing-cases.md)); Claude Code offers Wake and a main's grant
-reaching its wrapper.
+so the workflow suite holds the core's part of control and worktrees
+([testing-cases.md](testing-cases.md)); Claude Code offers Wake, a turn boundary that
+reports and spaces.
 
 A harness that gives rewake's worktree to a launch implements `WorktreeHarness` —
 `WorktreeFlag()`, the spelling the launch command takes for itself;

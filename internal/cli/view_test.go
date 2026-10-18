@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -196,47 +195,5 @@ func TestViewWriteAttemptFailsEvenIfIgnored(t *testing.T) {
 	}
 	if err := state.WriteAtomic(path, []byte("x")); err != nil {
 		t.Fatalf("after the view: %v", err)
-	}
-}
-
-// TestToolOutputContinuationHoldsLease holds D2's scope: a tool call whose
-// answer is too long to print whole keeps the rest for continuing, a write
-// after its handler returned, and that write — every write of the call — is
-// made while the call holds its room's lease, which goes only after it.
-func TestToolOutputContinuationHoldsLease(t *testing.T) {
-	dir, _, _ := toolSession(t)
-	caller := newToolCaller(t)
-	var steps []string
-	state.Fault = func(op, path string) error {
-		switch op {
-		case state.OpRead, state.OpStep:
-		case state.OpNote:
-			steps = append(steps, op+" "+path)
-		default:
-			steps = append(steps, fmt.Sprintf("%s %s leased=%v", op, strings.TrimPrefix(path, dir), state.Leased(dir)))
-		}
-		return nil
-	}
-	t.Cleanup(func() { state.Fault = nil })
-	answer := caller.run("send", "--help", "--json")
-	state.Fault = nil
-	if answer.code != ExitOK || !strings.Contains(answer.out, "nextWords") {
-		t.Fatalf("no continuation: %d %s %s", answer.code, answer.out, answer.errOut)
-	}
-	kept, released := false, false
-	for _, step := range steps {
-		switch {
-		case step == state.OpNote+" lease release":
-			released = true
-		case released:
-			t.Fatalf("%q after the lease went: %v", step, steps)
-		case !strings.HasSuffix(step, "leased=true"):
-			t.Fatalf("%q without the lease: %v", step, steps)
-		case strings.Contains(step, "/receipts/"):
-			kept = true
-		}
-	}
-	if !kept || !released {
-		t.Fatalf("the continuation kept %v, the lease released %v: %v", kept, released, steps)
 	}
 }

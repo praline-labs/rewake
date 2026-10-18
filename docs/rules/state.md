@@ -5,7 +5,7 @@ state and through what, and that the state of 1.x is left alone. The design is
 [design-state.md](../v2/design-state.md); how stage 3 built it, with every caller and
 every write it routes, is [stage3-state.md](../v2/stage3-state.md), and the run directory, which goes
 with its run, is L3 in [launch.md](launch.md). The rules have no numbers: each section
-below is one rule, with the tests that hold it. That a tool call keeps the same build is T10 in [tools.md](tools.md).
+below is one rule, with the tests that hold it.
 
 ## The state root
 
@@ -15,9 +15,9 @@ keeps everything under its root `v2/`, and each room at `v2/rooms/<room>`, so 1.
 reads 2.0's records and 2.0 never reads the 1.x tree. The inverse is checked,
 never counted: a room's root is its grandparent only when its parent is named `rooms` and
 its grandparent `v2`, an error otherwise, and every caller handles that error rather than
-substituting the ambient `REWAKE_DIR`. A child of the wrapper — a shell of the session, a
-tool call's CLI — resolves the same room from the base the wrapper exported, byte for
-byte, so a grant authority's address, which hashes the room, is the wrapper's. **No
+substituting the ambient `REWAKE_DIR`. A child of the wrapper — a shell of the session —
+resolves the same room from the base the wrapper exported, byte for byte, so the run's
+authority's address, which hashes the room, is the wrapper's. **No
 resolver creates anything**: the base, the root and the room are made only by a launch's
 bootstrap, under the room's lease, each level flushed, recovering after a failure at any
 step and refusing a component that exists but is unsafe. The worktrees and their records
@@ -29,7 +29,7 @@ Tests:
 - `internal/cli/roots_test.go` `TestTwoRoomsUseOnlyV2`
 - `internal/cli/roots_test.go` `TestWorktreeOwnerRootIsChecked`
 - `internal/cli/roots_test.go` `TestOrdinaryCommandsNeverTouchLegacyTree`
-- `internal/host/roots_test.go` `TestChildBaseRoundTripAndGrantAuthority`
+- `internal/host/roots_test.go` `TestChildBaseRoundTripAndAuthority`
 - `internal/cli/lease_test.go` `TestChangeFormsOnAnEmptyBaseCreateNothing`
 - `test/leaserig/lease_test.go` `TestBootstrapRecoversAfterEveryStep`
 - `internal/infra/state/bootstrap_test.go` `TestBootstrapRefusesUnsafeExistingComponents`
@@ -63,7 +63,7 @@ Tests:
 - `internal/infra/build/id_test.go` `TestUnreadableImageHasNoEffects`
 - `internal/cli/lease_test.go` `TestVersionJSONCarriesBuildID`
 - `test/leaserig/lease_test.go` `TestDifferentImagesWithSameVersionCannotShareRoom`
-- `test/leaserig/lease_test.go` `TestArtifactCopyCanJoinRoomAndUseTools`
+- `test/leaserig/lease_test.go` `TestArtifactCopyCanJoinRoom`
 
 ## The room's lease
 
@@ -107,14 +107,11 @@ Tests:
 
 **Forms, not commands, are classified**, `view` or `change`, from the parsed call before
 the handler and before anything that can prune; a form is the command plus the flags and
-verbs that change what it does, so `inbox` and `inbox --owed` are two. Every authorized
-tool call is a change, whatever its words, since its bounded answer may keep a
-continuation; a call refused before it parses has no form, takes no lease and writes
-nothing. One invocation is one scope: the lease is held from the class through the
-handler, the shell's observation and the printing of the answer, or, through the tool,
-through the ticket's confirmation and the bounded answer; a lease refused ends it before
-the handler, with no shell observation either. **A view writes nothing** — no temporary
-or lock file, no pruning, no observation, on error paths too — takes no lease and waits
+verbs that change what it does, so `inbox` and `inbox --owed` are two. A call refused
+before it parses has no form, takes no lease and writes nothing. One invocation is one
+scope: the lease is held from the class through the handler and the printing of the
+answer; a lease refused ends it before the handler. **A view writes nothing** — no
+temporary or lock file, no pruning, on error paths too — takes no lease and waits
 for none; a missing base, root or room gives the ordinary empty answer; a view of another
 build says so once on stderr. It is not a consistent snapshot across files. **A view
 cannot write by accident**: in view mode every write primitive of the state package
@@ -141,7 +138,7 @@ Tests:
 - `internal/infra/state/lease_guard_test.go` `TestCrossRoomAndReleasedLeaseCannotWrite`
 - `internal/infra/state/lease_guard_test.go` `TestAnAuthorizationDiesWithItsLock`
 - `internal/cli/change_lease_test.go` `TestEveryChangeFormHoldsLeaseThroughItsLastEffect`
-- `internal/cli/lease_test.go` `TestAFailedLeaseLeavesNoShellObservation`
+- `internal/cli/lease_test.go` `TestAFailedLeaseWritesNothing`
 - `internal/infra/state/bypass_test.go` `TestStateWritesHaveNoBypass`
 - `internal/infra/state/bypass_test.go` `TestTheBypassCheckSeesEveryWrite`
 - `internal/infra/state/bypass_test.go` `TestTheBypassTableFailsOnAStaleEntry`

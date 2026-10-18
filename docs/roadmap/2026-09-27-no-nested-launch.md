@@ -32,7 +32,7 @@ September 27, 2026. Found by review-claude after stage 2 of the directory grant
   ([research-launch.md](../research-launch.md#hook-options-and-settings-order-that-rewakes-launch-layer-relies-on)).
 - The grant hook's command carries `--rewake-allowed` exactly when the launch added the
   rule, the hook passes it with the call, and only then is a plain `rewake` command
-  forcible ([grants.md](../grants.md#claude-code)). The payload cannot claim it.
+  forcible ([grants.md](../archive/grants.md#claude-code)). The payload cannot claim it.
 - `grants.md` says what a command's question does while a grant is taken back: every
   shell command asks the person until the first read or plain `rewake` command, which
   for a worker under orchestration is the `rewake inbox` of its next turn.

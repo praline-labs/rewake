@@ -91,9 +91,7 @@ or expired members invalidate that attempt; a later pass rebuilds the eligible s
 A read racing after dispatch remains final. Fixed counts describe dispatch membership,
 not a continuously changing count of unread mail.
 
-[Explicit Git grants](git-grants.md) wait with their task's unannounced batch. There
-is no permissions-only input for an old notice. Only actual eligible
-members can supply grant intent to the native request. Shared admission remains
+Shared admission remains
 bounded to three seconds; notification failures retain the existing no-blind-replay
 and report-retention behavior.
 
@@ -122,10 +120,7 @@ empty `input` plus [standalone mailbox `toolOutput`](archive/1.x/native-mailbox.
 steering can acknowledge the same native turn for several distinct groups.
 Every member shares that ACK, while normal actual reads and causal boundaries still
 decide which assignments a completion answers. No new native protocol or renderer
-is introduced. Git metadata roots are considered only for an admitted member carrying an explicit
-main-authorized grant, with recipient eligibility checked separately. No-flag tasks, report-only groups and ordinary
-roles receive no new grant; an arbitrary first member never decides group permissions.
-The current local roots are still read without history and extended additively.
+is introduced.
 
 The wrapper remembers all accepted member outcomes before writing any individual
 status. A failed status write cannot replay another group. Actual reads remain final
@@ -139,7 +134,7 @@ mutated. Cancellation uses the existing shutdown refusal and report-retention pa
 Local tests cover mixed simultaneous arrivals, readiness-wait accumulation,
 in-flight ACK arrivals forming the next exact group, and active same-turn delivery
 without peek or terminal events. Spaced arrivals dispatch independently. Idle first
-input, explicit mixed grants, body-free peek, selected/read-all consumption, leases,
+input, body-free peek, selected/read-all consumption, leases,
 TTL, cancellation, output/status failures and no old-unread replay remain covered.
 Outcome tests preserve normal/error/stopped reports, including before-ACK native
 terminals and their observed status ordering. Late-main discovery remains grouped.

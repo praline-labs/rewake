@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -36,7 +35,6 @@ func (s *fixtureSession) delivered(frame, reply fixtureFrame) fixtureFrame {
 		return reply
 	}
 	s.recordDelivered(notice)
-	s.recordGrants(notice)
 	s.turn.mu.Lock()
 	if open := s.turn.open; open != "" {
 		steered := s.turn.steered
@@ -86,12 +84,7 @@ func (s *fixtureSession) work(id string, notice mailboxNotice) {
 
 	var text string
 	var err error
-	// The calls the scenario asks for: a read through the tool is the turn's
-	// read; any other call comes after the shell's, as a task's work would.
-	calls := s.toolCalls()
 	switch {
-	case readsThroughTool(calls):
-		text = s.callTools(id, calls)
 	case os.Getenv(shimReadEach) != "":
 		text, err = s.readEach(notice)
 	default:
@@ -99,9 +92,6 @@ func (s *fixtureSession) work(id string, notice mailboxNotice) {
 	}
 	if err != nil {
 		text = "could not read the mailbox: " + err.Error()
-	}
-	if len(calls) > 0 && !readsThroughTool(calls) {
-		s.callTools(id, calls)
 	}
 	s.recordTurn(id + " " + firstLine(text))
 	if held := s.holdOpen(id); held != "" {
@@ -220,19 +210,5 @@ func (s *fixtureSession) dropIfDone() {
 	if done {
 		s.recordTurnEvent("dropped", "", strconv.Itoa(limit))
 		_ = s.conn.Close()
-	}
-}
-
-// grantEventKind is the event a delivery that offered granted directories
-// leaves: its turn field names the letter, its detail the directories.
-const grantEventKind = "grant"
-
-// recordGrants writes down every letter of a delivery that came with granted
-// directories: what the core let reach the session.
-func (s *fixtureSession) recordGrants(notice mailboxNotice) {
-	for _, member := range notice.Members {
-		if len(member.Grants) > 0 {
-			s.recordTurnEvent(grantEventKind, member.ID, strings.Join(member.Grants, " "))
-		}
 	}
 }

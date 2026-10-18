@@ -123,13 +123,6 @@ func (p *seamProbe) met(op, path string) *seamFault {
 	return nil
 }
 
-// arm puts fault in place from now on, counting only the hits it meets.
-func (p *seamProbe) arm(fault *seamFault) {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	p.fault, p.hits = fault, 0
-}
-
 func (p *seamProbe) failure(op, path string, fault *seamFault) error {
 	errno := map[string]syscall.Errno{"not a directory": syscall.ENOTDIR, "no access": syscall.EACCES, "a directory": syscall.EISDIR}[fault.kind]
 	return &fs.PathError{Op: op, Path: path, Err: errno}
@@ -247,46 +240,6 @@ func (directoryInfo) ModTime() time.Time { return time.Time{} }
 func (directoryInfo) IsDir() bool        { return true }
 func (directoryInfo) Sys() any           { return nil }
 func (d directoryInfo) String() string   { return fs.FormatFileInfo(d) }
-
-// remapped is the file system with the room's mailboxes moved aside: the seam
-// finds them where they went, and anything that goes around the seam meets
-// the file left where they were.
-type remapped struct{ from, to string }
-
-func (r remapped) at(path string) string {
-	if path == r.from || strings.HasPrefix(path, r.from+string(filepath.Separator)) {
-		return r.to + strings.TrimPrefix(path, r.from)
-	}
-	return path
-}
-
-func (r remapped) ReadFile(path string) ([]byte, error) { return osAccess{}.ReadFile(r.at(path)) }
-
-func (r remapped) ReadDir(path string) ([]fs.DirEntry, error) { return osAccess{}.ReadDir(r.at(path)) }
-func (r remapped) Stat(path string) (fs.FileInfo, error)      { return osAccess{}.Stat(r.at(path)) }
-func (r remapped) Lstat(path string) (fs.FileInfo, error)     { return osAccess{}.Lstat(r.at(path)) }
-
-func (r remapped) WriteFile(path string, raw []byte) error {
-	return osAccess{}.WriteFile(r.at(path), raw)
-}
-
-func (r remapped) Publish(path string, raw []byte) error {
-	return osAccess{}.Publish(r.at(path), raw)
-}
-
-func (r remapped) EnsureDir(path string) error { return osAccess{}.EnsureDir(r.at(path)) }
-
-func (r remapped) Remove(path string) error { return osAccess{}.Remove(r.at(path)) }
-
-func (r remapped) Rename(from, to string) error { return osAccess{}.Rename(r.at(from), r.at(to)) }
-
-func (r remapped) SyncDir(path string) error { return osAccess{}.SyncDir(r.at(path)) }
-
-func (r remapped) SyncFile(path string) error { return osAccess{}.SyncFile(r.at(path)) }
-
-func (r remapped) Lock(ctx context.Context, mailbox string, fn func() error) error {
-	return osAccess{}.Lock(ctx, r.at(mailbox), fn)
-}
 
 // probeDir makes an empty state directory a parallel test may use: it sets
 // no environment, which only a test of its own may.

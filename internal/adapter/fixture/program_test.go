@@ -14,8 +14,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/praline-labs/rewake/internal/tool"
 )
 
 // The package's tests run the adapter against this test binary, started again
@@ -25,17 +23,15 @@ import (
 // ask of it, each switch an environment variable.
 const (
 	programEnv   = "FIXTURE_TEST_PROGRAM"
-	switchNo     = "FIXTURE_TEST_NO"          // capabilities left out of the hello, comma-separated
-	switchFail   = "FIXTURE_TEST_FAIL_PROBE"  // a capability served whose probe fails
-	switchDrop   = "FIXTURE_TEST_DROP"        // close the socket once the probes are answered
-	switchAgain  = "FIXTURE_TEST_RECONNECT"   // after the drop, connect again from the same process
-	switchHelper = "FIXTURE_TEST_HELPER"      // say hello from a child, in the program's name
-	switchSilent = "FIXTURE_TEST_SILENT"      // connect and never say hello
-	switchOrphan = "FIXTURE_TEST_ORPHAN"      // once probed, leave the socket to a child and exit
-	switchMute   = "FIXTURE_TEST_MUTE_PROBE"  // a capability served whose probe is never answered
-	switchOther  = "FIXTURE_TEST_OTHER_TOOLS" // register tools other than those offered
-	switchProof  = "FIXTURE_TEST_UNPROVEN"    // a tool transport that cannot show its results
-	switchBrief  = "FIXTURE_TEST_BRIEF_FILE"  // where the briefing the adapter hands over is written
+	switchNo     = "FIXTURE_TEST_NO"         // capabilities left out of the hello, comma-separated
+	switchFail   = "FIXTURE_TEST_FAIL_PROBE" // a capability served whose probe fails
+	switchDrop   = "FIXTURE_TEST_DROP"       // close the socket once the probes are answered
+	switchAgain  = "FIXTURE_TEST_RECONNECT"  // after the drop, connect again from the same process
+	switchHelper = "FIXTURE_TEST_HELPER"     // say hello from a child, in the program's name
+	switchSilent = "FIXTURE_TEST_SILENT"     // connect and never say hello
+	switchOrphan = "FIXTURE_TEST_ORPHAN"     // once probed, leave the socket to a child and exit
+	switchMute   = "FIXTURE_TEST_MUTE_PROBE" // a capability served whose probe is never answered
+	switchBrief  = "FIXTURE_TEST_BRIEF_FILE" // where the briefing the adapter hands over is written
 	childEnv     = "FIXTURE_TEST_CHILD_OF"
 	programThrd  = "fixture-test-thread"
 )
@@ -132,9 +128,6 @@ func speak(socket string, pid int, drop bool) error {
 				continue
 			}
 			reply.State = map[string]string{TurnBoundary: "idle", Telemetry: "none", Control: "ready"}[frame.Capability]
-			if frame.Capability == ToolTransport {
-				reply = registered(reply, frame.Tools)
-			}
 			if frame.Capability == os.Getenv(switchFail) {
 				reply.OK, reply.Error = false, "withheld"
 			}
@@ -173,20 +166,4 @@ func speak(socket string, pid int, drop bool) error {
 			return conn.Close()
 		}
 	}
-}
-
-// registered is a tool transport's answer to its probe: the tools it
-// registered, by name and digest, and whether it can show its results.
-func registered(reply Frame, tools []tool.Descriptor) Frame {
-	if os.Getenv(switchOther) != "" {
-		tools = tools[1:]
-	}
-	for _, tool := range tools {
-		reply.Names = append(reply.Names, tool.Name)
-	}
-	reply.Digest, reply.State = tool.DescriptorsDigest(tools), ToolProven
-	if os.Getenv(switchProof) != "" {
-		reply.State = ToolUnproven
-	}
-	return reply
 }

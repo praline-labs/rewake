@@ -6,15 +6,15 @@ harness version before updating, and how to extend the suite. It describes the c
 it is. For depth it links to the documents where each decision was argued:
 [check-runner.md](check-runner.md) for the evidence contract,
 [check-runner-proposal.md](archive/check-runner-proposal.md) for why the suite has its shape,
-[check-runner-scenarios.md](archive/check-runner-scenarios.md) for each scenario's invariant
-and controls, and the roadmap records named below for how each piece was built.
+[check-runner-scenarios.md](archive/check-runner-scenarios.md) for each scenario's invariant,
+and the roadmap records named below for how each piece was built.
 
 ## The tiers
 
 | Tier | Runs | Proves | Does not prove | Costs |
 | --- | --- | --- | --- | --- |
-| The step's checks | `gofumpt`, golangci-lint, one `go test -race -shuffle=on ./...` | unit invariants: parsing, publishing races, liveness, inbox order and expiry, the context endpoint's framing, the import rule; the suite's own classifier and summarizer | anything end to end: every workflow scenario skips itself | about ten minutes at `-p 4` on an idle machine — 9m50s on October 17, 2026 — nearly all of it the `-race` test run; no network, no harness, no container. The full set before a publication adds vet and staticcheck over the four build variants and two more `-race` runs with the tags, about half an hour. Each test run carries `-timeout 20m`: `core/mail`'s `TestEveryReadOfThePlanStopsBeforeTheFirstEffect` takes about 290 s alone and about 450 s under `-race` beside other work, and `go test`'s default ten minutes killed the untagged run at `-p 4` on October 16, 2026 |
-| Workflow suite (**F**) | a built rewake end to end against a fixture harness, in one column since S9, with negative controls: some mutate the product, the others change the fixture's world | that the shared service code delivers, groups, steers and reports as each scenario claims, and that each claim can fail | that the real harness parses, renders or behaves as its fixture does | about three minutes — 3m06s and 3m10s on September 25, 2026, 102 cases six at a time, against 19m22s one after another the same evening; 2m23s eight at a time. The longest cases then were `claude-steered`'s controls, about 30 s each. It fits in `go test`'s default ten minutes, which the documented commands name; no network |
+| The step's checks | `gofumpt`, golangci-lint, one `go test -race -shuffle=on ./...` | unit invariants: parsing, publishing races, liveness, inbox order and expiry, the context endpoint's framing, the import rule; the suite's own classifier and summarizer | anything end to end: every workflow scenario skips itself | about ten minutes at `-p 4` on an idle machine on October 17, 2026 (9m50s), before the matrices of `core/mail` were cut — re-measure; no network, no harness, no container. The full set before a publication adds vet and staticcheck over the four build variants and two more `-race` runs with the tags, about half an hour. Since the matrices of `core/mail` were cut on October 18, 2026, that package takes about 55 s under `-race` instead of about 600 s; each test run still carries `-timeout 20m` |
+| Workflow suite (**F**) | a built rewake end to end against a fixture harness, in one column since S9 | that the shared service code delivers, groups, steers and reports as each scenario claims | that the real harness parses, renders or behaves as its fixture does | about three minutes — 3m06s and 3m10s on September 25, 2026, 102 cases six at a time, against 19m22s one after another the same evening; 2m23s eight at a time. The longest cases then were `claude-steered`'s controls, about 30 s each. It fits in `go test`'s default ten minutes, which the documented commands name; no network |
 
 Two tiers are planned and not built. **P**, a real harness of a named version against a
 local responder instead of a model provider, would catch a change of behaviour that a
@@ -28,13 +28,11 @@ including the owner's own eye on a terminal, is in
 
 ### The fault build inside the test run
 
-The neutral rig's tests (`test/toolrig`) build rewake themselves, with the `rewakefault`
-tag, while `go test` runs. A binary of that build reads `REWAKE_FAULT`
+A binary built with the `rewakefault` tag reads `REWAKE_FAULT`
 (`internal/infra/state/fault_build.go`) and logs, ends, fails or holds its process at a durable
-step, or leaves behind a process that keeps its output open past a kill, so the fault
-tests take their cases from the logged steps of clean runs rather than from a list kept
-by hand ([mail-bridge-checks.md](mail-bridge-checks.md#how-the-checks-are-built)). A
-release build never reads the variable.
+step, or leaves behind a process that keeps its output open past a kill. The neutral rig
+that took its fault cases from the logged steps of clean runs, `test/toolrig`, left with
+the mail tool on October 18, 2026. A release build never reads the variable.
 
 The lease rig (`test/leaserig`) builds rewake twice the same way, the second with a build
 time passed in, so the two builds share a version and differ in content, and races the
@@ -51,7 +49,7 @@ the session's variables changed or cleared, or through a double fork that leaves
 — each asking for a decision through the client, straight at the address, or classifying
 itself as the person. A wrapper is held at the named steps of a decision's way and killed
 or ended there, an asker at the client's step after it checked the wrapper. It runs only
-with the fixture's tag, as the toolrig does, since a launch needs the fixture harness.
+with the fixture's tag, since a launch needs the fixture harness.
 
 The tag also admits one narrow kind of test code into a production package. When a fault
 schedule must cross a package boundary and neither an exported operation, a file
@@ -69,7 +67,7 @@ S9, October 11, 2026, there is one: the column of a fixture that played a Claude
 session left with the hooks and the plugin it played
 ([testing-cases.md](testing-cases.md#the-retired-claude-code-column)), and stage 4 brings
 a Claude Code column back. Shared scenarios run across the columns; adapter-specific
-scenarios and controls run on the columns they exercise. The column left is the
+scenarios run on the columns they exercise. The column left is the
 fixture harness — a harness of its own, built
 only under the `rewakefixture` tag, which the suite's rewake is built with
 ([stage3-fixture.md](v2/stage3-fixture.md)). **The fixture column is the regression
@@ -80,22 +78,20 @@ and its program can withhold each capability. Until S9 **Claude Code was a searc
 column**: a red there was a finding to investigate, and an absent capability was
 reported as `unsupported`, by name; a search column returned with stage 4 takes that
 meaning again. The gate is a field of the
-column (`gate` in `test/workflow/column_test.go`), set on exactly one; the gate declares
-every registered capability but those its exception table names, each with its reason
-and the step that retires it — since S8 none: conversation selection, Codex's own, left
-with it. The summary
+column (`gate` in `test/workflow/column_test.go`), set on exactly one. The summary
 names the column of every result and promotes none; ending the asymmetry is the owner's
 decision, recorded in [harness-features.md](archive/harness-features.md).
 
 ## Running it
 
-The commands live in one place, the [Checks section of AGENTS.md](../AGENTS.md#checks),
-which every agent session loads. Three levels, by the owner's decision of October 17, 2026:
-a commit while a step goes on builds, vets and passes the tests of the packages it touched;
-the last commit of a step, before it lands on `v2`, passes `gofumpt`, golangci-lint, one
+The commands of a commit and of a step live in the [Checks section of
+AGENTS.md](../AGENTS.md#checks), which every agent session loads; the full set before a
+publication is [below](#before-a-publication-to-npm). Three levels, by the owner's
+decision of October 17, 2026: a commit while a step goes on builds, vets and passes the
+tests of the packages it touched; the last commit of a step, before it lands on `v2`, passes `gofumpt`, golangci-lint, one
 `go test -race` over the whole tree and the workflow scenarios the change touches; the full
-set — every build variant, vet and staticcheck over each, the tagged `-race` runs, the whole
-workflow suite and the crosswise check — runs only before a publication to npm. A step is
+set — every build variant, vet and staticcheck over each, the tagged `-race` runs and the whole
+workflow suite — runs only before a publication to npm. A step is
 done when it works live and breaks no existing test.
 What follows is what their variables and flags do, and when each run is the right one.
 
@@ -119,26 +115,43 @@ suite's binary runs seven of the product's waits shorter than a release.
 leaves its neighbours alone, and which values the suite does not run at their real
 length.
 
-**`REWAKE_WORKFLOW_CROSS=1`** with `-run Crosswise` turns on the crosswise checks: each
-control's observations are run again in every other control's world — under the other
-product mutants and under the other fixture switches — and each must stand, so a control
-that breaks on somebody else's change is caught. Each pair is a case of its own in the
-pool, so its 75 cases take about a minute and a quarter — 1m17s on September 25, 2026,
-against 7m02s one pair after another. It runs before a publication, not on every step.
-
 `REWAKE_WORKFLOW_SELFCHECK` is not for people: the suite sets it on a child of itself
 to prove that a scenario missing an observation turns the run red.
+
+### Before a publication to npm
+
+The full set runs every build variant, since production code also builds under two tags:
+`rewakefault` adds the fault seam of the state directory, `rewakefixture` the fixture
+harness the workflow suite runs ([stage3-fixture.md](v2/stage3-fixture.md)):
+
+```bash
+go vet ./... && go vet -tags rewakefault ./... && go vet -tags rewakefixture ./... &&
+  go vet -tags rewakefault,rewakefixture ./...
+staticcheck ./... && staticcheck -tags rewakefault ./... && staticcheck -tags rewakefixture ./... &&
+  staticcheck -tags rewakefault,rewakefixture ./...
+env -u REWAKE_SESSION -u REWAKE_EPOCH -u REWAKE_DIR -u REWAKE_ROOM \
+  go test -race -shuffle=on -timeout 20m -tags rewakefixture ./...
+env -u REWAKE_SESSION -u REWAKE_EPOCH -u REWAKE_DIR -u REWAKE_ROOM \
+  go test -race -shuffle=on -timeout 20m -tags rewakefault,rewakefixture ./...
+```
+
+with the whole workflow suite. The tools install into `~/go/bin`, on `PATH`:
+
+```bash
+go install honnef.co/go/tools/cmd/staticcheck@latest mvdan.cc/gofumpt@latest \
+  github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
+```
 
 ### The stand-in API
 
 Until S8, October 8, 2026, `tools/standin` answered for the model API a Claude Code
 harness talks to, replying with a call of the 1.x mail tool's MCP name, so a live check of
 that tool could run in a scratch configuration with no login. It served the live checks of
-stage 3 ([mail-bridge-live.md](mail-bridge-live.md)). The fixes of S8's review moved it to
+stage 3 ([mail-bridge-live.md](archive/mail-bridge-live.md)). The fixes of S8's review moved it to
 the 1.x archive with the MCP contract it answered
 ([archive/1.x/codex](../archive/1.x/codex/README.md)); no product launch offers that tool.
-Stage 4 rebuilds a stand-in for the mod's live checks, answering with a call of the tool
-contract that stage defines.
+The stand-in stage 4 was to rebuild for the mod's live checks, answering with a call of
+the mod's tool, has nothing to answer since the mail tool left on October 18, 2026.
 
 ## Checking a new harness version before updating
 
@@ -179,8 +192,7 @@ failed tests are listed. `summary.json` holds all of it,
 every case and every observation, under `.rewake-checks/`, which git ignores.
 
 A red case keeps its directory: `/tmp/rewake-case-*` with the private HOME, state
-directory and shim records of that case, or `/tmp/rewake-mutant-*` with `failure.txt`
-and `build.log` when a mutant could not be built. A green case removes its own. Read the
+directory and shim records of that case. A green case removes its own. Read the
 evidence before deleting it. Each session the case started wrote its standard error to
 `<name>.stderr` in that HOME — the wrapper's refusals, the fixture's complaints — and a
 red case keeps those files cut to 64 KiB, their first and last halves, so a session
@@ -204,28 +216,14 @@ and a case that has not finished has no verdict yet.
 an observation the code forgot to make is `incomplete`, not silently absent. It runs
 through `runInColumns`, and anything a column cannot show goes through
 `col.unsupported` with a capability registered by `capability(...)` — per observation,
-not per case. The gate column must declare every registered capability but those in
-its exception table (`column_gate_test.go`), and an exception that no longer matches
-fails too. A control runs on the gate column (`gateColumn()`) unless it breaks a path
-only another column has. Waits are anchored on a condition the case can observe (`Await`, `waitFor`),
+not per case. Waits are anchored on a condition the case can observe (`Await`, `waitFor`),
 never on a sleep: a sleep makes a slow machine look like a defect and a lost wakeup look
 like slowness.
 
-**A control** proves the scenario can fail. The existing controls stay while they do not
-get in the way; a new scenario does not need one per observation (the owner's decision of
-October 17, 2026). A control breaks one claim, in one of two ways: a
-product mutant, built by `buildMutant` in `mutant_test.go` with its edits through the
-toolchain's overlay, inside a started case, refusing an edit that does not match exactly
-once; or a switch that changes the fixture's world. A mutant is preferred wherever one
-can be built, because it shows the scenario catching a broken rewake rather than a
-misbehaving peer, and most controls are mutants. Which control belongs to which
-scenario is the table in [testing-cases.md](testing-cases.md#every-control), kept by
-hand; a count written here would go stale with the next mutant, as the list that stood
-here did. A control names the observation it must break; the crosswise check, before a
-publication, runs every control's observations in every other control's world and
-requires them to stand, so a control that breaks on somebody else's change is caught. Each control answers in three values — broken, not
-broken, cannot judge — and a record that is unreadable or empty is "cannot judge", never
-"not broken".
+**Controls** — product mutants and switches of the fixture's world, each proving that a
+scenario could fail — and the crosswise check that ran each control's observations in
+every other control's world left the suite with the test diet of October 18, 2026; a new
+scenario does not bring them back.
 
 **A fixture** is stricter than the harness it plays, never looser: a fixture that
 accepts what the harness refuses lets a scenario pass on a product the harness would
@@ -239,9 +237,8 @@ exchange, each switch, the versions, L1, L2 and E3, is `internal/adapter/fixture
 
 ### The cases
 
-What each case claims, with its controls, is in [testing-cases.md](testing-cases.md):
-launching and reporting, the worktrees, a directory granted with a task, actions on a
-sent message, conversations and the inbound gate, and the Claude Code column retired in
+What each case claims is in [testing-cases.md](testing-cases.md):
+launching and reporting, the worktrees, actions on a sent message, conversations and the inbound gate, and the Claude Code column retired in
 S9 with the telemetry budgets and the plugin's cases it ran.
 
 ## Traps this suite has already paid for
@@ -276,10 +273,6 @@ S9 with the telemetry budgets and the plugin's cases it ran.
   exit 2. When the coalescing window made heads-ups wait, three steered and interrupted
   cases crossed the line. Such a worker is launched with `staysUp`, and a finding that
   expects a refusal names its text, not only its exit code (September 25, 2026).
-- **An anchor weaker than its judgement.** The consuming-overview control waited for one
-  read attempt while the Codex column's judgement needs two, and the second comes at the
-  next delivery: red 5 of 20 alone. It now anchors on both there, and was 0 of 20
-  (September 23, 2026).
 - **A record read between two of its writes.** The Claude Code fixture records a
   delivery and then the overview it read for it; batch-arrival's wait for a delivery
   once landed in between under a full run and failed the case in half a second. A wait
@@ -301,15 +294,8 @@ S9 with the telemetry budgets and the plugin's cases it ran.
   refuses, and the module that passed every case was silent live; the fixture now
   checks the call as the binary does
   ([2026-09-23-claude-plugin.md](roadmap/2026-09-23-claude-plugin.md)).
-- **A control that passed for the wrong reason.** The replay control stayed green on the
-  socket column until replays were found by arithmetic rather than by id
-  ([2026-09-22-fixture-claude-code.md](roadmap/2026-09-22-fixture-claude-code.md)).
-- **A mutant built before its case.** A failed build published no record, and the only
-  evidence was deleted on the way out; mutants now build inside a started case.
 - **The gate losing an observation.** One line removed from the gate's table turned an
   observation `unsupported` and the run stayed green; unsupported is now red there.
-- **A shared deadline.** Twelve crosswise pairs in one case exhausted its clock and the
-  last pair was blamed; each pair is its own subtest.
 - **The five checks reaching outside.** The direct shape tests were not behind the suite
   switch, so every ordinary `go test ./...` ran the installed Codex with the owner's HOME,
   and with a version named it contacted the registry and started a container; they need

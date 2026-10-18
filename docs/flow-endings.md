@@ -58,9 +58,6 @@ wrapper (which then forwards it to a harness still alive a moment later).
    <name> in its conversation may still report", and a resume of that conversation
    under the name takes the wait over and reports
    ([delivery-owed.md](delivery-owed.md#what-others-owe-you-rewake-inbox---awaited)).
-   Its grant goes with the wait: main's wrapper keeps it while the task is open and
-   confirms it to the resumed run, and a main that has ended restores nothing
-   ([grants-resume.md](grants-resume.md)).
 2. The record and the socket are removed; a later `list` will not show the
    name, and a `send` to it gets exit 2.
 3. The wrapper exits with the harness's exit code.
