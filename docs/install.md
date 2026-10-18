@@ -61,6 +61,102 @@ rewake rather than to a process in between. It follows the symlink npm installs
 first — resolving the link is the difference between finding the binary and
 reporting it missing.
 
+## Trying 2.0 beside 1.0.3
+
+This is for working on 2.0 for a while without touching the installed 1.0.3: the `rewake`
+command from npm keeps working as it is, and 2.0 runs under another name, `rewake2`, with
+state of its own. No knowledge of Go is needed beyond having it installed.
+
+**Once: what is needed.** Go 1.25 or newer (`go version` prints it; otherwise install it from
+<https://go.dev/dl/>), Git, and this repository checked out. `~/.local/bin` must be on `PATH`,
+as it already is when 1.0.3 was installed there.
+
+**Build 2.0.** In a terminal, from the checkout:
+
+```bash
+git switch v2
+git pull
+mkdir -p ~/.local/share/rewake2
+go build -ldflags "-X github.com/praline-labs/rewake/internal/cli.built=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  -o ~/.local/share/rewake2/rewake.new ./cmd/rewake
+mv -f ~/.local/share/rewake2/rewake.new ~/.local/share/rewake2/rewake
+```
+
+To update later, run the same lines again; sessions already running keep the build they
+started with.
+
+**Once: the `rewake2` command.** Create the file `~/.local/bin/rewake2` with these lines:
+
+```sh
+#!/bin/sh
+export REWAKE_DIR="$HOME/.rewake2"
+export REWAKE_WORKTREES="$HOME/.rewake2-worktrees"
+exec "$HOME/.local/share/rewake2/rewake" "$@"
+```
+
+and make it runnable: `chmod +x ~/.local/bin/rewake2`. Check it: `rewake2 --version` prints a
+line with `build` and the time of your build (the version number still reads 1.0.3 until 2.0 is
+released), and `rewake2 list` says no sessions are running.
+
+Why a script and not a binary named `rewake2`: the script gives every 2.0 command its own state
+base (`REWAKE_DIR`) and its own place for `--worktree` checkouts (`REWAKE_WORKTREES`), so
+nothing of 1.0.3's is read or written. And the binary itself is named `rewake`, in a directory
+of its own: inside a session the agent types `rewake inbox`, `rewake send` and so on, and a
+launch puts the directory of the binary that started it first on the session's `PATH`, so in a
+2.0 session `rewake` is 2.0 and in a 1.0.3 session it stays 1.0.3.
+
+**Start a room.** Each session in a terminal of its own — your own terminal, not a shell an
+agent runs: started inside a rewake session, a launch refuses and exits 2. Start main first,
+in the project's directory:
+
+```bash
+rewake2 --main claude
+```
+
+Then workers, each in another terminal:
+
+```bash
+rewake2 --write claude
+rewake2 pi
+```
+
+They are `main-claude`, `write-claude` and `general-pi`; `--name api` makes the second one
+`api-claude`. Sessions of 2.0 find each other by the state base and the room: every `rewake2`
+uses the same base, and the room is `default` unless `--room <name>` names another. They never
+see sessions of 1.0.3, nor 1.0.3 theirs.
+
+From main, a worker can also be started without a terminal of your own: ask main to open a
+space, and it runs `rewake space open api --harness claude` (or `--harness pi`); the worker
+`api-claude` joins the room and ends when main ends. To see its screen and answer what it asks,
+run `rewake2 attach api` in a terminal of your own; `Ctrl-\` leaves it running.
+`rewake2 space list` shows the spaces and what they left.
+
+**Go back to 1.0.3.** End the 2.0 sessions as usual (`/exit` in each; a space's worker ends
+with its main). Then remove what 2.0 added:
+
+```bash
+rm ~/.local/bin/rewake2
+rm -rf ~/.local/share/rewake2 ~/.rewake2
+```
+
+Remove `~/.rewake2-worktrees` too once nothing in the checkouts there is wanted;
+`rewake2 worktree ls` lists them while `rewake2` still exists. Nothing of 1.0.3 was changed:
+`rewake --version` still says 1.0.3, and its sessions start as before.
+
+**Known limits.** What 2.0 does not do yet, or no longer does:
+
+- Codex is not supported: `rewake2 codex` is an unknown command. Claude Code (2.1.287 or newer)
+  and pi are.
+- pi needs pi 1.2.0 or newer; an older one is refused at the start, naming the version.
+- No grants: main cannot give a worker a directory or Git permissions through rewake. A
+  worker has what its own launch gives it, such as the harness's permission flags.
+- No mail tool: sessions read and send mail with the `rewake` command in their shell, so a
+  harness that may run no shell commands cannot take part.
+- A main started in print mode (`claude -p`) gets no report: it exits before a worker's turn
+  ends.
+- 2.0 reads the launch aliases of 1.0.3 (`~/.config/rewake/aliases.toml` and a project's
+  `.rewake.toml`) and writes nothing there; an alias that starts Codex fails as `codex` does.
+
 ## Upgrading from 1.x
 
 rewake 2.0 does not read the state of 1.x and carries none of its mail over. Before the
