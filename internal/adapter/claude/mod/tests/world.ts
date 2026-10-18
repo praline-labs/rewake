@@ -23,6 +23,7 @@ interface Sent {
 export function world(
   on: any,
   given: {
+    usage?: () => unknown
     replies?: Record<string, Reply[]>
     store?: Record<string, unknown>
     env?: Record<string, string>
@@ -47,6 +48,8 @@ export function world(
     '/v1/hello': [admitted],
     '/v1/turn/start': [{ status: 200, text: '{"turnId":"t"}' }],
     '/v1/turn/end': ['receipt'],
+    '/v1/mod/state': [{ status: 200, text: '{}' }],
+    '/v1/mod/control': [{ status: 200, text: '{}' }],
     '/v1/mod/ended': [{ status: 200, text: '{"ended":[]}' }],
     // A poll is held as the endpoint holds it, then renewed.
     '/v1/mod/alive': [held],
@@ -79,6 +82,8 @@ export function world(
   })
   on('session.start', () => ({ cwd: '/work' }))
   on('session.id', () => ({ value: 'conversation-1' }))
+  on('session.usage', () => ({ value: { context: given.usage?.() ?? { window: 100000, tokens: 25000, percent: 25 }, rateLimits: [] } }))
+  on('session.model', () => ({ value: 'test-model' }))
   on('session.version', () => ({ value: { version: '2.1.296', base: '2.1.296' } }))
   on('turn.start', (_: any, e: any) => ({ turnId: e.turnId }))
   on('turn.complete', (_: any, e: any) => ({ text: e.answer }))

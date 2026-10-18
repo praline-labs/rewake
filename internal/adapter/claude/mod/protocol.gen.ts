@@ -25,6 +25,10 @@ export const paths = {
   // modEnded asks which of the runs whose unacknowledged ends the harness's store keeps rewake
   // proves ended, so an admitted load may remove their entries; it changes nothing on the host.
   modEnded: "/v1/mod/ended",
+  // modState reports current native state.
+  modState: "/v1/mod/state",
+  // modControl acknowledges a control request or reports its final outcome.
+  modControl: "/v1/mod/control",
 } as const
 
 /** What each endpoint is asked and answers. */
@@ -32,8 +36,10 @@ export interface Endpoints {
   "/v1/hello": { request: HelloRequest; answer: HelloAnswer }
   "/v1/turn/start": { request: TurnStartRequest; answer: Receipt }
   "/v1/turn/end": { request: TurnEndRequest; answer: Receipt }
-  "/v1/mod/alive": { request: AliveRequest; answer: Done }
+  "/v1/mod/alive": { request: AliveRequest; answer: AliveAnswer }
   "/v1/mod/ended": { request: EndedRequest; answer: EndedAnswer }
+  "/v1/mod/state": { request: StateRequest; answer: Done }
+  "/v1/mod/control": { request: ControlReply; answer: Done }
 }
 
 /** The protocol's bounds. */
@@ -164,4 +170,76 @@ export interface Receipt {
   turnId: string
   // endId is the end taken; absent for a start.
   endId?: string
+}
+
+// ControlCommand is one command for the current heartbeat generation.
+export interface ControlCommand {
+  // id identifies the request.
+  id: string
+  // action is compact or interrupt.
+  action: string
+  // from names the requester.
+  from: string
+  // focus is the optional compaction focus.
+  focus: string
+  // conversation names the selected conversation.
+  conversation: string
+}
+
+// AliveAnswer may carry one command; the next heartbeat never waits for its completion.
+export interface AliveAnswer {
+  // control is the command dispatched once to this generation.
+  control?: ControlCommand
+}
+
+// StateRequest is a complete current observation, without transcript content.
+export interface StateRequest {
+  // loadId names the current load.
+  loadId: string
+  // generation names its live heartbeat generation.
+  generation: number
+  // sequence orders samples within the load.
+  sequence: number
+  // conversation is the selected conversation.
+  conversation: string
+  // activity is working or idle.
+  activity: string
+  // model is the configured model, absent when unknown.
+  model?: string
+  // tokens is current input context usage, absent when unknown.
+  tokens?: number
+  // window is the context window, absent when unknown.
+  window?: number
+  // percent is the filled percentage, absent when unknown.
+  percent?: number
+  // compacting says a native compaction is in progress.
+  compacting: boolean
+  // compactions counts completed compactions observed by this load.
+  compactions: number
+  // request names the latest completed compaction request, empty for native compaction.
+  request: string
+  // from names its requester, empty for native compaction.
+  from: string
+}
+
+// ControlReply is an initial or final result for a dispatched command.
+export interface ControlReply {
+  // loadId names the current load.
+  loadId: string
+  // generation names its live heartbeat generation.
+  generation: number
+  // id identifies the command.
+  id: string
+  // outcome is requested, done, refused or failed.
+  outcome: string
+  // reason is the fixed control reason, when known.
+  reason: string
+  // detail explains the outcome without transcript content.
+  detail: string
+  // open says the native outcome is not yet known.
+  open: boolean
+  // tokensBefore is context usage before compaction, when supplied.
+  tokensBefore?: number
+  // tokensAfter is context usage after compaction, when supplied.
+  tokensAfter?: number
 }

@@ -47,13 +47,25 @@
       "path": "mod/alive",
       "description": "is the heartbeat of an admitted load: a poll held for aliveHoldSeconds and sent again as soon as it is answered; a poll of a lapsed or older generation of the current load is refused with 409, on which the newest generation's chain says hello again, and a poll of a superseded load with 410, on which it stops.",
       "request": {"$ref": "#/$defs/AliveRequest"},
-      "answer": {"$ref": "#/$defs/Done"}
+      "answer": {"$ref": "#/$defs/AliveAnswer"}
     },
     {
       "path": "mod/ended",
       "description": "asks which of the runs whose unacknowledged ends the harness's store keeps rewake proves ended, so an admitted load may remove their entries; it changes nothing on the host.",
       "request": {"$ref": "#/$defs/EndedRequest"},
       "answer": {"$ref": "#/$defs/EndedAnswer"}
+    },
+    {
+      "path": "mod/state",
+      "description": "reports current native state.",
+      "request": {"$ref": "#/$defs/StateRequest"},
+      "answer": {"$ref": "#/$defs/Done"}
+    },
+    {
+      "path": "mod/control",
+      "description": "acknowledges a control request or reports its final outcome.",
+      "request": {"$ref": "#/$defs/ControlReply"},
+      "answer": {"$ref": "#/$defs/Done"}
     }
   ],
   "$defs": {
@@ -164,6 +176,66 @@
         "endId": {"type": "string", "description": "is the end taken; absent for a start."}
       },
       "required": ["turnId"],
+      "additionalProperties": false
+    },
+    "ControlCommand": {
+      "type": "object",
+      "description": "is one command for the current heartbeat generation.",
+      "properties": {
+        "id": {"type": "string", "description": "identifies the request."},
+        "action": {"type": "string", "description": "is compact or interrupt."},
+        "from": {"type": "string", "description": "names the requester."},
+        "focus": {"type": "string", "description": "is the optional compaction focus."},
+        "conversation": {"type": "string", "description": "names the selected conversation."}
+      },
+      "required": ["id", "action", "from", "focus", "conversation"],
+      "additionalProperties": false
+    },
+    "AliveAnswer": {
+      "type": "object",
+      "description": "may carry one command; the next heartbeat never waits for its completion.",
+      "properties": {
+        "control": {"$ref": "#/$defs/ControlCommand", "description": "is the command dispatched once to this generation."}
+      },
+      "required": [],
+      "additionalProperties": false
+    },
+    "StateRequest": {
+      "type": "object",
+      "description": "is a complete current observation, without transcript content.",
+      "properties": {
+        "loadId": {"type": "string", "description": "names the current load."},
+        "generation": {"type": "integer", "description": "names its live heartbeat generation."},
+        "sequence": {"type": "integer", "description": "orders samples within the load."},
+        "conversation": {"type": "string", "description": "is the selected conversation."},
+        "activity": {"type": "string", "description": "is working or idle."},
+        "model": {"type": "string", "description": "is the configured model, absent when unknown."},
+        "tokens": {"type": "integer", "description": "is current input context usage, absent when unknown."},
+        "window": {"type": "integer", "description": "is the context window, absent when unknown."},
+        "percent": {"type": "integer", "description": "is the filled percentage, absent when unknown."},
+        "compacting": {"type": "boolean", "description": "says a native compaction is in progress."},
+        "compactions": {"type": "integer", "description": "counts completed compactions observed by this load."},
+        "request": {"type": "string", "description": "names the latest completed compaction request, empty for native compaction."},
+        "from": {"type": "string", "description": "names its requester, empty for native compaction."}
+      },
+      "required": ["loadId", "generation", "sequence", "conversation", "activity", "compacting", "compactions", "request", "from"],
+      "additionalProperties": false
+    },
+    "ControlReply": {
+      "type": "object",
+      "description": "is an initial or final result for a dispatched command.",
+      "properties": {
+        "loadId": {"type": "string", "description": "names the current load."},
+        "generation": {"type": "integer", "description": "names its live heartbeat generation."},
+        "id": {"type": "string", "description": "identifies the command."},
+        "outcome": {"type": "string", "description": "is requested, done, refused or failed."},
+        "reason": {"type": "string", "description": "is the fixed control reason, when known."},
+        "detail": {"type": "string", "description": "explains the outcome without transcript content."},
+        "open": {"type": "boolean", "description": "says the native outcome is not yet known."},
+        "tokensBefore": {"type": "integer", "description": "is context usage before compaction, when supplied."},
+        "tokensAfter": {"type": "integer", "description": "is context usage after compaction, when supplied."}
+      },
+      "required": ["loadId", "generation", "id", "outcome", "reason", "detail", "open"],
       "additionalProperties": false
     }
   }

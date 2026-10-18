@@ -20,8 +20,8 @@ version history are the skill's ([where the API facts live](#where-the-api-facts
 | Launch | `claude` with one `--plugin-dir` | interactive first launch in an untrusted directory |
 | Wake | one of three candidates | P1 decides |
 | TurnBoundary | `turn.start` and `turn.complete`, reported without holding (S4-6); `classic.Stop` with `block` later | P3, for the hold |
-| Telemetry | `session.measure`, `$.session.usage()` | P6 |
-| Control | `$.session.compact`, `$.turn.abort`, clear by `$.command.run` | P7 |
+| Telemetry | context and configured model through the mod | built October 18, 2026; live acceptance pending |
+| Control | compact with focus and interrupt through the mod | built October 18, 2026; live acceptance pending; no clear |
 | PersonUI | stage 6: `$.ui.status`, panes | stage 6 |
 | Spaces | a main run's hello admitted, answered `hostsSpaces`; a worker named by `--session-id <uuid>` | P4 |
 
@@ -141,9 +141,8 @@ secret first. The threat is the one 1.x tickets answer — a model's command imi
 tool; a process of the same user rewriting the mod's files is outside it.
 
 The same holds for the endpoint's other callers in the mod — the hello, turn events,
-control answers. The stream child of [Control](#control) is a descendant,
-so it carries no authority: it only signals that something is waiting, and the mod
-fetches the request and posts the answer itself.
+state samples and control answers. Control uses the same heartbeat socket and peer check;
+no helper process carries a request or its authority.
 
 ## The turn boundary
 
@@ -166,44 +165,50 @@ stop is marked. The skill's types allow it; that the chain works live — the or
 
 ## Telemetry
 
-`session.measure` after each turn and on a change of limits, and `$.session.usage()` on
-start. The mod forwards both; the adapter folds them into `core/session`. The person's
-status line is not wrapped (answer 4): the tap and its parser go.
+Built October 18, 2026: the mod samples native context and the configured model after its
+hello, on `session.measure`, at the main turn's start and end, at compaction boundaries,
+and after each heartbeat answer. It sends complete samples through `mod/state`, with the
+load, heartbeat generation, selected conversation and a load-local sequence. The host
+accepts only its current live generation and newer samples; unknown tokens clear an older
+reading. It publishes cached observations through `core/session.Snapshot`, without reading
+transcripts, wrapping the person's status line or measuring a full context breakdown.
+The native model window and percentage are used as given; effort and rate limits remain
+unknown or absent. A lapse makes every field stale until a new generation supplies a sample.
 
-The design hoped `percent` was measured against the auto-compact threshold, so the 1.x
-window parser (`telemetry/window.go`) could go (answer 5). The skill says otherwise:
-`percent` is against the model's window, and only the costlier usage call with a
-breakdown measures against the compaction window. So the parser goes only if that call
-is acceptable; P6 asks that, and the cadence of `session.measure` in practice.
+Completed compactions have a load-local count; the host folds its increases into the run's
+count and bounded notification events. A reload keeps the run's count and marks coverage
+partial. Native manual and automatic compactions are observed through the mod's event hook;
+remote ones through the native call's result, so re-entry cannot count one twice. A skipped
+or failed compaction clears the in-progress state and adds no completion. Managed-policy
+limits and the tests' scope are in [the parity record](../research-claude-parity.md).
 
 ## Control
 
-| Verb | How | Known limit |
-|---|---|---|
-| compact | `$.session.compact({ instructions })` | the host refuses during a turn (`plugin.js`); the skill says the call itself rejects while a turn runs |
-| interrupt | `$.turn.abort({ turnId })` | the running turn's id only |
-| clear | `$.command.run` with the clear command, as [conversation-reset.md](../conversation-reset.md) designs it | P7 (*to verify*) |
+Built October 18, 2026: compact with optional focus and interrupt. Clear is not offered.
+`control.Serve` reads the existing request directory; the host queues the request for the
+current load and generation and wakes its held `mod/alive` poll. An `AliveAnswer` carries
+at most one `ControlCommand`, dispatched once. The poll chain immediately renews while the
+command runs separately. `mod/control` carries its initial and final answers, matched to
+that dispatched id and generation. These two endpoints and `mod/state` use the generated
+mod protocol and the same peer checks as the hello; no new journal or durable outbox is added.
 
-The earlier text here said no call to clear exists; the skill documents `$.command.run`,
-which runs a slash command queued until idle. The design's decision is not changed by
-that: P7 asks whether the clear command works live through it and whether it raises
-`turn.start` and `turn.complete`; if not, Control offers no clear.
+Compaction refuses a running main turn or another operation in flight. The mod returns
+`requested`, passes the focus to native compaction, and later returns `done` with native
+before/after counts when supplied, or a refusal or failure. The host keeps that final result
+in the existing compaction outcomes for main's letter. It never sends the summary.
 
-Requests reach the mod by a stream, not by polling (answer 6): the mod starts one child
-with `$.process.spawn` at `session.start`, which holds a connection to the endpoint and
-prints a line whenever something waits. The line is a hint only — no request, no
-content, no authority: the child is a descendant of the harness, which a model's command
-can be too ([the socket and its peer](#the-socket-and-its-peer)). On a hint the mod fetches the
-request itself and answers through the endpoint, each request checked on its own. A
-lost hint costs time, not a request: the mod also asks at each turn event and on a slow
-timer. The request files of `core/control` stay the transport between sessions. The
-child is started from the wrapper's own image, `/proc/<wrapper pid>/exe`, so it is the
-wrapper's build even after the file at the install path is replaced (T10). The skill
-says such a child dies when its module unloads or reloads, and that a reload runs
-`session.start` again; so the mod starts the child at every `session.start`. The first
-probe saw such a child end at a reload and at the harness's exit
-([the record](../research-claude-mod.md#p11-a-process-the-mod-starts)); whether it lives across turns, and
-through a `session.end` without an exit, is P10.
+Interrupt names the running main turn and waits for its matching `aborted` completion.
+The stopped report names the requester, and the mod appends that actor to native history
+without starting a turn. A normally completed turn refuses the interrupt. A missing end
+after three seconds gives an open failure; an end heard later still carries the actor.
+
+The host waits five seconds for a control acknowledgement. A command not dispatched by then
+is removed and refused; one already dispatched has an unknown outcome and is not repeated.
+An old generation cannot take commands or update state, even though its durable turn ends
+remain acceptable under the separate outbox protocol. A reload or failed final post can
+lose a compaction outcome; main asks again, as the current product policy permits.
+Telemetry and Control are live only while the admitted hello's heartbeat holds, alongside
+the turn boundary; Control also needs the run's control directory.
 
 ## Wake and delivery
 

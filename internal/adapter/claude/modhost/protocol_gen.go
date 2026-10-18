@@ -17,12 +17,17 @@ const (
 	// PathModAlive is the heartbeat of an admitted load: a poll held for aliveHoldSeconds and sent
 	// again as soon as it is answered; a poll of a lapsed or older generation of the current load
 	// is refused with 409, on which the newest generation's chain says hello again, and a poll of
-	// a superseded load with 410, on which it stops. Asked AliveRequest, answered Done.
+	// a superseded load with 410, on which it stops. Asked AliveRequest, answered AliveAnswer.
 	PathModAlive = "/v1/mod/alive"
 	// PathModEnded asks which of the runs whose unacknowledged ends the harness's store keeps
 	// rewake proves ended, so an admitted load may remove their entries; it changes nothing on the
 	// host. Asked EndedRequest, answered EndedAnswer.
 	PathModEnded = "/v1/mod/ended"
+	// PathModState reports current native state. Asked StateRequest, answered Done.
+	PathModState = "/v1/mod/state"
+	// PathModControl acknowledges a control request or reports its final outcome. Asked
+	// ControlReply, answered Done.
+	PathModControl = "/v1/mod/control"
 )
 
 // The protocol's bounds.
@@ -177,4 +182,100 @@ type Receipt struct {
 
 	// EndID is the end taken; absent for a start.
 	EndID *string `json:"endId,omitempty"`
+}
+
+// ControlCommand is one command for the current heartbeat generation.
+type ControlCommand struct {
+	// ID identifies the request.
+	ID string `json:"id"`
+
+	// Action is compact or interrupt.
+	Action string `json:"action"`
+
+	// From names the requester.
+	From string `json:"from"`
+
+	// Focus is the optional compaction focus.
+	Focus string `json:"focus"`
+
+	// Conversation names the selected conversation.
+	Conversation string `json:"conversation"`
+}
+
+// AliveAnswer may carry one command; the next heartbeat never waits for its completion.
+type AliveAnswer struct {
+	// Control is the command dispatched once to this generation.
+	Control *ControlCommand `json:"control,omitempty"`
+}
+
+// StateRequest is a complete current observation, without transcript content.
+type StateRequest struct {
+	// LoadID names the current load.
+	LoadID string `json:"loadId"`
+
+	// Generation names its live heartbeat generation.
+	Generation int `json:"generation"`
+
+	// Sequence orders samples within the load.
+	Sequence int `json:"sequence"`
+
+	// Conversation is the selected conversation.
+	Conversation string `json:"conversation"`
+
+	// Activity is working or idle.
+	Activity string `json:"activity"`
+
+	// Model is the configured model, absent when unknown.
+	Model *string `json:"model,omitempty"`
+
+	// Tokens is current input context usage, absent when unknown.
+	Tokens *int `json:"tokens,omitempty"`
+
+	// Window is the context window, absent when unknown.
+	Window *int `json:"window,omitempty"`
+
+	// Percent is the filled percentage, absent when unknown.
+	Percent *int `json:"percent,omitempty"`
+
+	// Compacting says a native compaction is in progress.
+	Compacting bool `json:"compacting"`
+
+	// Compactions counts completed compactions observed by this load.
+	Compactions int `json:"compactions"`
+
+	// Request names the latest completed compaction request, empty for native compaction.
+	Request string `json:"request"`
+
+	// From names its requester, empty for native compaction.
+	From string `json:"from"`
+}
+
+// ControlReply is an initial or final result for a dispatched command.
+type ControlReply struct {
+	// LoadID names the current load.
+	LoadID string `json:"loadId"`
+
+	// Generation names its live heartbeat generation.
+	Generation int `json:"generation"`
+
+	// ID identifies the command.
+	ID string `json:"id"`
+
+	// Outcome is requested, done, refused or failed.
+	Outcome string `json:"outcome"`
+
+	// Reason is the fixed control reason, when known.
+	Reason string `json:"reason"`
+
+	// Detail explains the outcome without transcript content.
+	Detail string `json:"detail"`
+
+	// Open says the native outcome is not yet known.
+	Open bool `json:"open"`
+
+	// TokensBefore is context usage before compaction, when supplied.
+	TokensBefore *int `json:"tokensBefore,omitempty"`
+
+	// TokensAfter is context usage after compaction, when supplied.
+	TokensAfter *int `json:"tokensAfter,omitempty"`
 }

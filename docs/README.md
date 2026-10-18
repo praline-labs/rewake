@@ -69,6 +69,7 @@ Each fact carries where it was verified; they age with harness versions.
 
 - [research.md](research.md) — what only a running Claude Code session shows: the socket line, waking an idle session, the inbound gate.
 - [research-claude-control.md](research-claude-control.md) — what reaches a running Claude Code session from outside besides a message.
+- [research-claude-parity.md](research-claude-parity.md) — context, compaction and interrupt through the mod: checks on 2.1.302 and live acceptance still open.
 - [research-claude-actions.md](research-claude-actions.md) — what a function-hooks plugin can do to its own session: compact, abort, reload.
 - [research-claude-mod.md](research-claude-mod.md) — the dated records of stage 4's live probe of the mod on Claude Code.
 - [research-pi.md](research-pi.md) — pi 1.2.0 launch and extension facts, mock probes, telemetry and control, the adapter protocol and its limits.
