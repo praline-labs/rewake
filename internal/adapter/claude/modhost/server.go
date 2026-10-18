@@ -60,6 +60,7 @@ type Config struct {
 type Server struct {
 	cfg        Config
 	management management
+	pane       pane
 
 	mu      sync.Mutex
 	harness adapter.RunProcess
@@ -205,6 +206,7 @@ func (s *Server) Close() {
 		if s.current != nil {
 			s.current.disarm()
 		}
+		s.pane.closeViews()
 		s.mu.Unlock()
 		close(s.stop)
 		if s.http == nil {
@@ -331,13 +333,17 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 // endpoints is the protocol's paths and what serves each.
 func (s *Server) endpoints() map[string]http.HandlerFunc {
 	return map[string]http.HandlerFunc{
-		PathHello:      s.hello,
-		PathTurnStart:  s.turnStart,
-		PathTurnEnd:    s.turnEnd,
-		PathModEnded:   s.ended,
-		PathModAlive:   s.alive,
-		PathModState:   s.state,
-		PathModControl: s.controlReply,
+		PathHello:         s.hello,
+		PathTurnStart:     s.turnStart,
+		PathTurnEnd:       s.turnEnd,
+		PathModEnded:      s.ended,
+		PathModAlive:      s.alive,
+		PathModState:      s.state,
+		PathModControl:    s.controlReply,
+		PathWorkersList:   s.workersList,
+		PathWorkersScreen: s.workersScreen,
+		PathWorkersKeys:   s.workersKeys,
+		PathWorkersResize: s.workersResize,
 	}
 }
 

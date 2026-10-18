@@ -46,6 +46,7 @@ Mail and reports:
 Main and its workers:
 
 - [session-state.md](session-state.md) — the telemetry line main sees for its workers: context, model and effort, compactions, staleness.
+- [v2/workers-panel.md](v2/workers-panel.md) — the workers' pane in main's Claude Code: the space host's view, the `workers/*` endpoints, the pane and its keys.
 - [session-activity.md](session-activity.md) — activity labels, compaction notices, a worker's departure or replacement announced to main.
 - [remote-control.md](remote-control.md) — `rewake compact` and `rewake interrupt`: who may call them, refusals, the control directory.
 - [remote-control-letter.md](remote-control-letter.md) — the letter that ends a compaction main asked for and the record that owes it.

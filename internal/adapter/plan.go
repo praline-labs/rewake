@@ -111,6 +111,9 @@ type LaunchPlan struct {
 	// Live reports what the run proves of the capabilities above; without
 	// it the run's live set is what the plan carries, from its start.
 	Live LiveReporter
+	// Spaces shows the spaces the run opens to the person; without it, or
+	// for a role that opens none, nothing is shown but by rewake attach.
+	Spaces SpacePanel
 }
 
 // Program is the executable a launch starts: the one named with --command, or

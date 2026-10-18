@@ -23,7 +23,11 @@ these same boundaries:
 
 Every layer may import the standard library. Every layer but `infra` may also
 import another module's package, each dependency its own decision (`AGENTS.md`,
-"Code").
+"Code"). `github.com/charmbracelet/` stays confined to
+`internal/host/terminal`, the package it was taken for
+([stage4-space.md](../v2/stage4-space.md#the-terminal-library)), restored there on
+October 18, 2026 for the workers' panel ([workers-panel.md](../v2/workers-panel.md)).
+The confinement includes tests and excludes child packages of `terminal`.
 
 The lint run checks the files selected by its build tags, including tests. The
 configured run includes `rewaketest`; a different tag set is checked with

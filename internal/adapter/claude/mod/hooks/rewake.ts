@@ -11,6 +11,8 @@ import { Management } from './management.ts'
 import { Heartbeat } from './heartbeat.ts'
 import { Outbox, cut, listed, loadKey, newId, nextDelay } from './outbox.ts'
 import type { Host } from './outbox.ts'
+import { Workers, paneId } from './workers.ts'
+import { drawPane } from './pane.ts'
 
 // The harness's reasons, mapped to the protocol's.
 const reasons: Record<string, EndReason> = {
@@ -90,6 +92,9 @@ interface Load {
   outbox: Outbox
   heartbeat: Heartbeat
   management: Management
+  workers: Workers
+  // command registers /workers, for a run that hosts spaces.
+  command: () => Promise<void>
   // run is the wrapper's answer to this load's hello: undefined until it
   // comes, and when no wrapper answered, which later steps read as "not live".
   run?: HelloAnswer
@@ -109,6 +114,10 @@ async function hello(load: Load, request: HelloRequest, delay: number, renumbere
       load.run = JSON.parse(answer.text) as HelloAnswer
       load.management.admit(load.run.generation)
       load.heartbeat.begin(load.run.generation)
+      if (load.run.hostsSpaces) {
+        load.workers.begin()
+        try { await load.command() } catch { /* The pane still opens by itself. */ }
+      }
       await load.outbox.admit()
       return
     }
@@ -177,6 +186,17 @@ export const register: Register = (on) => {
         abort: (turnId) => $.turn.abort({ turnId }),
         trace: (text) => $.session.append({ message: { type: 'user', content: [{ type: 'text', text }] } }),
       }, loadId),
+      workers: new Workers(host, {
+        blit: (cells, columns, rows) => $.ui.blit({ requestId: paneId, key: 'screen', columns, rows, cells }),
+        redraw: () => { $.ui.invalidate('ui.render') },
+        open: async () => {
+          await $.ui.open({ id: paneId, title: 'Workers', rows: 40 })
+          current.workers.opens()
+        },
+      }, loadId),
+      command: async () => {
+        await $.command.register({ name: 'workers', description: "Show the workers of main's spaces, their screens and keys", immediate: true })
+      },
       // A lapsed generation's chain says the load's latest hello again.
       heartbeat: new Heartbeat(host, loadId, () => {
         if (latest !== undefined) {
@@ -269,4 +289,29 @@ export const register: Register = (on) => {
     }
   })
 
+  on('command.run', { command: 'workers' }, async ($) => {
+    if (!load?.run?.hostsSpaces) {
+      return { text: 'This session opens no spaces: the workers pane is main\'s.' }
+    }
+    await $.ui.open({ id: paneId, title: 'Workers', rows: 40, focus: true })
+    load.workers.opens()
+    return { text: '' }
+  })
+
+  on('ui.close', async ($, e, next) => {
+    if (e.id === paneId) load?.workers.closes()
+    return next(e)
+  })
+
+  // The key surface posts every key not yet acknowledged, since a post a
+  // later one replaces in the same frame is never delivered; the answer's
+  // props acknowledge what was taken, and a key is typed once.
+  on('ui.message', async ($, e, next) => {
+    await next(e)
+    if (e.requestId !== paneId || !load) return {}
+    const acked = load.workers.take(e.data)
+    return acked === undefined ? {} : { props: { name: load.workers.chosenName(), acked } }
+  })
+
+  on('ui.render', { component: 'Pane', requestId: paneId }, async ($, e) => drawPane($, e, load?.workers))
 }

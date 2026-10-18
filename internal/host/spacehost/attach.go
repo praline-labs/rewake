@@ -38,11 +38,14 @@ func Attach(socket string, in, out *os.File) (detached bool, err error) {
 	}
 	defer func() { _ = conn.Close() }()
 	answer := make([]byte, 1)
-	_ = conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+	_ = conn.SetDeadline(time.Now().Add(5 * time.Second))
+	if _, err := conn.Write([]byte{modeAttach}); err != nil {
+		return false, fmt.Errorf("the space host did not take the attach: %w", err)
+	}
 	if _, err := io.ReadFull(conn, answer); err != nil {
 		return false, fmt.Errorf("the space host did not take the attach: %w", err)
 	}
-	_ = conn.SetReadDeadline(time.Time{})
+	_ = conn.SetDeadline(time.Time{})
 	if answer[0] != accepted {
 		return false, ErrBusy
 	}

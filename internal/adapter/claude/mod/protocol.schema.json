@@ -19,6 +19,18 @@
       "value": 15,
       "description": "is how long the endpoint holds a mod/alive poll before it answers; the mod sends the next at once."
     },
+    "screenHoldSeconds": {
+      "value": 15,
+      "description": "is how long the endpoint holds a workers/screen poll whose screen has not changed before it answers the same screen; the mod sends the next at once."
+    },
+    "viewIdleSeconds": {
+      "value": 30,
+      "description": "is how long the endpoint keeps a worker's screen open with no workers request naming it; the next one opens it again."
+    },
+    "maxScreenSide": {
+      "value": 512,
+      "description": "is the most columns or rows workers/resize takes, a Raster's widest."
+    },
     "aliveLapseSeconds": {
       "value": 30,
       "description": "is how long the endpoint waits for the next mod/alive poll, from the last one's arrival or the hello's, before the load's heartbeat lapses and what the mod proved is withdrawn."
@@ -66,9 +78,115 @@
       "description": "acknowledges a control request or reports its final outcome.",
       "request": {"$ref": "#/$defs/ControlReply"},
       "answer": {"$ref": "#/$defs/Done"}
+    },
+    {
+      "path": "workers/list",
+      "description": "lists the workers of the spaces this run opened that are not over, for the workers' pane (docs/v2/workers-panel.md); served only to a run that hosts spaces, 404 otherwise.",
+      "request": {"$ref": "#/$defs/WorkersRequest"},
+      "answer": {"$ref": "#/$defs/WorkersAnswer"}
+    },
+    {
+      "path": "workers/screen",
+      "description": "is a long poll of one worker's screen: answered once its sequence passes the one asked, or after screenHoldSeconds with the same; 404 names a worker not listed or whose screen cannot be reached.",
+      "request": {"$ref": "#/$defs/ScreenRequest"},
+      "answer": {"$ref": "#/$defs/ScreenAnswer"}
+    },
+    {
+      "path": "workers/keys",
+      "description": "types into one worker, answered once the keys are written to its terminal.",
+      "request": {"$ref": "#/$defs/KeysRequest"},
+      "answer": {"$ref": "#/$defs/Done"}
+    },
+    {
+      "path": "workers/resize",
+      "description": "sets one worker's terminal size, the pane's body less its own lines; the last size set, here or by rewake attach, stands.",
+      "request": {"$ref": "#/$defs/ResizeRequest"},
+      "answer": {"$ref": "#/$defs/Done"}
     }
   ],
   "$defs": {
+    "WorkersRequest": {
+      "type": "object",
+      "description": "asks for the workers.",
+      "properties": {
+        "loadId": {"type": "string", "description": "is the admitted load asking."}
+      },
+      "required": ["loadId"],
+      "additionalProperties": false
+    },
+    "WorkersAnswer": {
+      "type": "object",
+      "description": "is the workers, in the order their spaces opened.",
+      "properties": {
+        "workers": {"type": "array", "items": {"$ref": "#/$defs/Worker"}, "description": "are the workers listed."}
+      },
+      "required": ["workers"],
+      "additionalProperties": false
+    },
+    "Worker": {
+      "type": "object",
+      "description": "is one space's worker, as rewake list knows it; a field nobody observed is absent.",
+      "properties": {
+        "space": {"type": "string", "description": "is the space's id, which the other workers requests name."},
+        "name": {"type": "string", "description": "is the space's name."},
+        "session": {"type": "string", "description": "is the worker's session name."},
+        "harness": {"type": "string", "description": "is the worker's harness, by its adapter id."},
+        "state": {"type": "string", "description": "is the space's state: opening, open or closing."},
+        "activity": {"type": "string", "description": "is the worker's turn, working or idle."},
+        "model": {"type": "string", "description": "is the worker's configured model."},
+        "effort": {"type": "string", "description": "is the worker's configured reasoning effort."},
+        "percent": {"type": "integer", "description": "is how full the worker's context is."}
+      },
+      "required": ["space", "name", "session", "harness", "state"],
+      "additionalProperties": false
+    },
+    "ScreenRequest": {
+      "type": "object",
+      "description": "asks for one worker's screen once it is past a sequence.",
+      "properties": {
+        "loadId": {"type": "string", "description": "is the admitted load asking."},
+        "space": {"type": "string", "description": "names the worker by its space."},
+        "after": {"type": "integer", "description": "is the sequence of the screen the mod has, 0 for none."}
+      },
+      "required": ["loadId", "space", "after"],
+      "additionalProperties": false
+    },
+    "ScreenAnswer": {
+      "type": "object",
+      "description": "is a worker's whole screen as a Raster draws it.",
+      "properties": {
+        "seq": {"type": "integer", "description": "is the screen's sequence, the after of the next poll."},
+        "columns": {"type": "integer", "description": "is the screen's width in cells."},
+        "rows": {"type": "integer", "description": "is the screen's height in cells."},
+        "cells": {"type": "string", "description": "is every cell, row-major, as a Raster's cells: base64 of little-endian u32 triplets, a width-1 code point, the foreground and the background as 0x00RRGGBB or 0x01000000 for the default; the visible cursor is drawn inverse."},
+        "ended": {"type": "boolean", "description": "says the worker's output is over: the screen changes no more."}
+      },
+      "required": ["seq", "columns", "rows", "cells", "ended"],
+      "additionalProperties": false
+    },
+    "KeysRequest": {
+      "type": "object",
+      "description": "is what to type into one worker.",
+      "properties": {
+        "loadId": {"type": "string", "description": "is the admitted load asking."},
+        "space": {"type": "string", "description": "names the worker by its space."},
+        "keys": {"type": "string", "description": "are the bytes a terminal sends for the keys, as UTF-8."}
+      },
+      "required": ["loadId", "space", "keys"],
+      "additionalProperties": false
+    },
+    "ResizeRequest": {
+      "type": "object",
+      "description": "is a size for one worker's terminal.",
+      "properties": {
+        "loadId": {"type": "string", "description": "is the admitted load asking."},
+        "space": {"type": "string", "description": "names the worker by its space."},
+        "columns": {"type": "integer", "description": "is the width, 1 to maxScreenSide."},
+        "rows": {"type": "integer", "description": "is the height, 1 to maxScreenSide."}
+      },
+      "required": ["loadId", "space", "columns", "rows"],
+      "additionalProperties": false
+    },
     "Refusal": {
       "type": "object",
       "description": "is the answer of an endpoint that did not do what was asked, with a status other than 200.",

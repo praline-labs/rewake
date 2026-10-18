@@ -82,6 +82,11 @@ func (h *host) start() error {
 		return h.never(err.Error())
 	}
 	defer func() { _ = pty.Close() }()
+	grid, err := terminal.NewGrid(h.spec.Size)
+	if err != nil {
+		return h.never(err.Error())
+	}
+	defer func() { _ = grid.Close() }()
 	cmd, err := h.command()
 	if err == nil {
 		err = pty.Prepare(cmd)
@@ -96,8 +101,9 @@ func (h *host) start() error {
 	reaped := make(chan struct{})
 	var waited error
 	go func() { waited = cmd.Wait(); close(reaped) }()
-	r := &relay{pty: pty}
+	r := &relay{pty: pty, grid: grid}
 	go r.pump()
+	go r.answer()
 	defer r.close()
 
 	workerRun, err := childRun(cmd.Process.Pid)

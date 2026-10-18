@@ -45,6 +45,7 @@ sock/<name>.<epoch>.sock         Claude Code's inbound socket for this run
 sock/<name>.<epoch>.reply.sock   where that run's wrapper hears what the socket did with a line
 spaces/<id>.json                 a space main opened: its worker, its space host, its end
 sock/space.<id>.sock             the worker's terminal, served by its space host to rewake attach
+                                 and, as a view of its screen, to main's wrapper for its panel
 ```
 
 ## Act 1. A session starts
@@ -327,9 +328,13 @@ base and none of main's session in its environment. From there the worker is any
 1 for it, its record `sessions/api-claude.json`. The space host records the worker's run, open;
 the command answers once that run is registered, within 30 s.
 
-Main sends `api-claude` a task, and its report comes back as in Acts 2 to 5. The person reaches
-the worker's terminal with `rewake attach api` from a terminal of their own — to accept a
-dialog, answer a prompt — and leaves with `Ctrl-\`; the worker keeps running.
+Main sends `api-claude` a task, and its report comes back as in Acts 2 to 5. Main's Claude Code
+shows the worker in its pane "Workers" — opened by itself on 144 columns and more, or by
+`/workers` — with its model, context and activity, and its screen live; a click on the key line
+under the screen types into the worker, and Alt+a then `c`, `e` or `x` sends Ctrl+C, Escape or
+Ctrl+X ([workers-panel.md](v2/workers-panel.md)). The person can also reach the worker's
+terminal with `rewake attach api` from a terminal of their own, and leaves with `Ctrl-\`; the
+worker keeps running.
 
 The space host reads main's run once a second. When it reads ended — main exited, crashed or
 its wrapper was killed — it sends the worker's process group SIGHUP, SIGTERM after a second and

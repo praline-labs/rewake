@@ -22,7 +22,10 @@ terminal relayed to the worker's, open to any process of the user as every room 
 is held by the space host's watch, SP3 by the environment it builds, SP9 by its own position
 outside main's run before the worker starts; SP4 stays the rule of main's mod socket. SP8 — the
 next start closing a record left open — is not built: a record is closed by its space host,
-and one whose space host died with the machine stays open in the listing.
+and one whose space host died with the machine stays open in the listing. Later that day the
+owner decided on main's panel: the same socket also serves a view of the worker's screen, which
+main's wrapper relays to its mod ([workers-panel.md](../v2/workers-panel.md)); the space host
+still takes no request of the mod itself.
 
 ## The rules
 

@@ -405,3 +405,20 @@ standalone `sleep 60` is refused in the foreground on this build ("Blocked: stan
 sleep in its place an Escape typed 17 s in reached main as `stopped`. And on the first run the
 worker read the file itself instead of starting a subagent, which the script's answer check
 could not tell; it now asks for the Agent tool and checks the screen for its call.
+
+## The workers' pane (October 18, 2026, 2.1.302)
+
+What building [the workers' pane](v2/workers-panel.md) showed of the mod API:
+
+- A `Client` drawn by a function in a file the hooks module imports (`hooks/pane.ts`) is found:
+  `claude plugin validate` lists `hooks/keys.ts` among the surface modules, and it loads live.
+- The test kit refuses a whole pane over one `Raster` cell outside the BMP, naming the cell's
+  index ("cell 0 holds code point …, beyond the Basic Multilingual Plane"); a no-break space drawn
+  as itself was not tried, the host draws every space as U+0020.
+- Live, main at 200 by 50: the pane the mod opened by itself docked beside the transcript; a
+  `Raster` of the dock's `bodyColumns` by its `bodyRows` less two drew a nested Claude Code, and
+  `$.ui.blit` repainted it as the worker drew. After a click on the `Client`, letters, Enter and
+  Alt+a reached it; Alt+a then `c` delivered Ctrl+C to the worker, clearing its prompt.
+- A `Client` posting one key per post lost a letter of text typed 30 ms apart: one post a frame
+  is delivered, and a later one replaces one not yet delivered (as the `ui.message` type says).
+  Posting every unacknowledged key, acknowledged through the answer's `props`, lost none at 10 ms.

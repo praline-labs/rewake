@@ -197,10 +197,14 @@ main's working directory, with `REWAKE_SESSION`, `REWAKE_EPOCH`, `REWAKE_ROOM`, 
 with the worker's run, at most 30 s, and fails with the record's reason otherwise.
 
 What a harness needs to start unattended — Claude Code's folder trust, a permission mode — main
-passes after `--`; nothing types into the worker. `rewake attach <name>` relays the person's
+passes after `--`; rewake types nothing into the worker on its own, only the person's keys from
+main's panel or an attach. `rewake attach <name>` relays the person's
 terminal to the worker's over `sock/space.<id>.sock`, in raw mode, the size following the
 window and resized once on attach so a full-screen harness repaints; one terminal at a time,
-`Ctrl-\` detaches.
+`Ctrl-\` detaches. The same socket serves a view of the worker's screen, kept by the space
+host's emulator from the worker's output, to main's wrapper for main's panel; a view never makes
+attach busy, and the last size set, by either, is the worker's
+([workers-panel.md](v2/workers-panel.md)).
 
 The space host reads main's run once a second (`ObserveRun` through `space.MainRuns`). Once
 it reads ended it sends SIGHUP to the worker's process group, SIGTERM after 1 s, SIGKILL after

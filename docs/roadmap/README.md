@@ -155,3 +155,4 @@ without a date. Local installation without publishing is in
 | October 18, 2026 | [Compact, interrupt and context for a Claude Code worker](2026-10-18-claude-parity.md) | through the mod: context and model, compaction with a focus, interrupt; live on 2.1.302; open: effort, rate limits |
 | October 18, 2026 | [The terminal emulator removed](2026-10-18-emulator.md) | `internal/host/terminal` keeps the pseudo-terminal and raw mode; `charmbracelet/x/vt` and its modules left `go.mod` |
 | October 18, 2026 | [Trying 2.0 beside 1.0.3](2026-10-18-try-2.md) | the section of `install.md` that runs 2.0 as `rewake2` with its own state, checked as far as a shell goes |
+| October 18, 2026 | [The workers' panel](2026-10-18-panel.md) | main's pane lists the workers and shows the chosen one's screen live, taking keys; the emulator back behind a `Grid`; live on 2.1.302; built, not yet accepted |

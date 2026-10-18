@@ -10,6 +10,7 @@ import (
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/core/session"
+	"github.com/praline-labs/rewake/internal/host/spacehost"
 )
 
 // startServing starts what serves the session beside the harness — the run's
@@ -64,6 +65,9 @@ func startServing(ctx context.Context, request Request, self registry.Session, n
 	// is up.
 	if plan.Live != nil {
 		plan.Live.ReportLive(live.report)
+	}
+	if plan.Spaces != nil {
+		plan.Spaces.ShowSpaces(spacehost.Panel{Dir: request.Dir, Main: epoch})
 	}
 	if plan.Service != nil {
 		// Before the harness: its first word goes to an address that has to

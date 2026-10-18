@@ -234,6 +234,12 @@ commit into the new one (T2, T7). The skill names `classic.SessionStart`, which 
 after a clear, a resume and a fork (the branch) with its source, as the natural carrier of that
 telling; the choice between it and the end event is for stage 4.
 
+## The workers' pane
+
+Main's mod draws the workers of its run's spaces in a pane of its own, their screens as a
+`Raster` and their keys through a `Client`, over the `workers/*` endpoints its run's wrapper
+serves to a run that hosts spaces: [workers-panel.md](workers-panel.md).
+
 ## What the mod never does
 
 It reads no transcript and no prompt text (`turn.start`'s `text` is not forwarded); it
