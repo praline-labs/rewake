@@ -313,10 +313,6 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 		refuse(w, http.StatusNotFound, "no endpoint "+r.URL.Path)
 		return
 	}
-	if endpoint == nil {
-		refuse(w, http.StatusNotImplemented, r.URL.Path+" is not in this build")
-		return
-	}
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
 		refuse(w, http.StatusMethodNotAllowed, "every endpoint is a POST")
@@ -325,21 +321,14 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 	endpoint(w, r)
 }
 
-// endpoints is the protocol's paths and what serves each; nil for one a later
-// step brings.
+// endpoints is the protocol's paths and what serves each.
 func (s *Server) endpoints() map[string]http.HandlerFunc {
 	return map[string]http.HandlerFunc{
-		PathHello:          s.hello,
-		PathTurnStart:      s.turnStart,
-		PathTurnEnd:        s.turnEnd,
-		PathModEnded:       s.ended,
-		PathModAlive:       s.alive,
-		PathEvents:         nil,
-		PathSpaceHold:      nil,
-		PathSpaceScreen:    nil,
-		PathSpaceKeys:      nil,
-		PathSpaceResize:    nil,
-		PathSessionClosing: nil,
+		PathHello:     s.hello,
+		PathTurnStart: s.turnStart,
+		PathTurnEnd:   s.turnEnd,
+		PathModEnded:  s.ended,
+		PathModAlive:  s.alive,
 	}
 }
 

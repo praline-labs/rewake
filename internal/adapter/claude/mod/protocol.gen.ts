@@ -25,19 +25,6 @@ export const paths = {
   // modEnded asks which of the runs whose unacknowledged ends the harness's store keeps rewake
   // proves ended, so an admitted load may remove their entries; it changes nothing on the host.
   modEnded: "/v1/mod/ended",
-  // events is main's mod's loop of polls for the spaces to open.
-  events: "/v1/events",
-  // spaceHold is the keeper's held call, polled until the space is released.
-  spaceHold: "/v1/space/hold",
-  // spaceScreen polls the worker's screen while the keeper's row is drawn.
-  spaceScreen: "/v1/space/screen",
-  // spaceKeys writes the key surface's keys into the worker's terminal.
-  spaceKeys: "/v1/space/keys",
-  // spaceResize sets the worker's terminal to the row's size.
-  spaceResize: "/v1/space/resize",
-  // sessionClosing tells the wrapper at session.end that the harness exits; the wrapper takes
-  // over the shutdown.
-  sessionClosing: "/v1/session/closing",
 } as const
 
 /** What each endpoint is asked and answers. */
@@ -47,12 +34,6 @@ export interface Endpoints {
   "/v1/turn/end": { request: TurnEndRequest; answer: Receipt }
   "/v1/mod/alive": { request: AliveRequest; answer: Done }
   "/v1/mod/ended": { request: EndedRequest; answer: EndedAnswer }
-  "/v1/events": { request: EventsRequest; answer: EventsAnswer }
-  "/v1/space/hold": { request: HoldRequest; answer: HoldAnswer }
-  "/v1/space/screen": { request: ScreenRequest; answer: ScreenAnswer }
-  "/v1/space/keys": { request: KeysRequest; answer: Done }
-  "/v1/space/resize": { request: ResizeRequest; answer: Done }
-  "/v1/session/closing": { request: ClosingRequest; answer: Done }
 }
 
 /** The protocol's bounds. */
@@ -60,9 +41,6 @@ export const bounds = {
   // maxBodyBytes is the largest request body the endpoint reads; a longer one is refused before
   // it is parsed.
   maxBodyBytes: 65536,
-  // maxScreenChars is the most characters a screen answer carries: what a key surface's props
-  // allow, less a margin.
-  maxScreenChars: 96000,
   // maxWaitSeconds is the longest the endpoint holds a request before it answers, since the
   // mod's fetch gives up after 30 seconds; a longer wait is a loop of polls.
   maxWaitSeconds: 20,
@@ -186,177 +164,4 @@ export interface Receipt {
   turnId: string
   // endId is the end taken; absent for a start.
   endId?: string
-}
-
-// EventsRequest asks for the spaces to open after the last one the mod saw, and reports the
-// keepers it spawned since.
-export interface EventsRequest {
-  // loadId is the load polling.
-  loadId: string
-  // after is the sequence of the last open the mod saw; 0 when it saw none.
-  after: number
-  // spawned are the keepers spawned since the last poll; absent when none.
-  spawned?: Spawn[]
-}
-
-// Spawn is what came of one keeper's spawn: its agent id, or why it failed.
-export interface Spawn {
-  // space is the space whose keeper it is.
-  space: string
-  // agentId is the spawn's agent id; absent when the spawn failed.
-  agentId?: string
-  // error is why the spawn failed; absent when it succeeded.
-  error?: string
-}
-
-// EventsAnswer is the spaces to open since the mod's last poll, given within the bound wait;
-// empty when none came.
-export interface EventsAnswer {
-  // opens are the spaces whose keepers the mod spawns, in order.
-  opens: SpaceOpen[]
-}
-
-// SpaceOpen is one space to open: the mod spawns its keeper.
-export interface SpaceOpen {
-  // seq orders the opens; the next poll's after.
-  seq: number
-  // space is the space's id, which the keeper's prompt carries into its hold.
-  space: string
-  // name is the space's name, the keeper's description in the tasks list.
-  name: string
-}
-
-// HoldRequest is one poll of a keeper's held call.
-export interface HoldRequest {
-  // loadId is the load holding.
-  loadId: string
-  // space is the space the keeper's prompt named.
-  space: string
-  // agentId is the agent id of the call.
-  agentId: string
-  // toolUseId is the tool use id of the call.
-  toolUseId: string
-}
-
-// HoldAnswer is the state of a keeper's held call.
-export interface HoldAnswer {
-  // state says whether to poll again, end the call, or answer it at once as a duplicate.
-  state: HoldState
-  // name is the space's name, for the call's result.
-  name: string
-}
-
-// HoldState is a held call's state: held polls again, released ends the call, duplicate is
-// another call of a space already held, answered at once and seating nothing.
-export type HoldState = "held" | "released" | "duplicate"
-
-// ScreenRequest asks for the worker's screen changed since the screen the mod has.
-export interface ScreenRequest {
-  // loadId is the load drawing.
-  loadId: string
-  // space is the space whose screen is drawn.
-  space: string
-  // after is the sequence of the screen the mod has; 0 when it has none.
-  after: number
-}
-
-// ScreenAnswer is the worker's screen, given within the bound wait: the rows changed since the
-// mod's screen, so a quiet screen costs nothing.
-export interface ScreenAnswer {
-  // seq is this screen's sequence; the next poll's after.
-  seq: number
-  // cols is the screen's width in columns.
-  cols: number
-  // rows is the screen's height in rows.
-  rows: number
-  // cursor is where the cursor is.
-  cursor: Cursor
-  // changed are the rows changed since the mod's screen; every row when it had none.
-  changed: ScreenRow[]
-  // alive says whether the worker still runs.
-  alive: boolean
-  // exit is how the worker ended; absent while it runs.
-  exit?: Exit
-}
-
-// Cursor is the cursor of the screen.
-export interface Cursor {
-  // row is its row, from 0.
-  row: number
-  // col is its column, from 0.
-  col: number
-  // visible says whether the worker shows it.
-  visible: boolean
-}
-
-// ScreenRow is one row of the screen as styled runs.
-export interface ScreenRow {
-  // row is the row's index, from 0.
-  row: number
-  // runs are the row's runs, left to right, covering its width.
-  runs: Run[]
-}
-
-// Run is a stretch of a row in one style.
-export interface Run {
-  // text is the run's text.
-  text: string
-  // cols is how many columns the run covers, a wide glyph counted as two.
-  cols: number
-  // fg is the foreground; absent for the terminal's default.
-  fg?: Color
-  // bg is the background; absent for the terminal's default.
-  bg?: Color
-  // attrs are the run's attributes; absent when none.
-  attrs?: Attr[]
-}
-
-// Color is a color: a palette index or a direct color, exactly one of the two.
-export interface Color {
-  // index is the palette index, 0 to 255.
-  index?: number
-  // rgb is the direct color as #rrggbb.
-  rgb?: string
-}
-
-// Attr is an attribute of a run.
-export type Attr = "bold" | "dim" | "italic" | "underline" | "inverse" | "strikethrough"
-
-// Exit is how the worker's process ended: its code, or the signal that ended it.
-export interface Exit {
-  // code is the exit code; absent when a signal ended it.
-  code?: number
-  // signal is the signal's name; absent when it exited.
-  signal?: string
-}
-
-// KeysRequest is keys for the worker's terminal, as the bytes a terminal sends.
-export interface KeysRequest {
-  // loadId is the load sending.
-  loadId: string
-  // space is the space whose worker gets them.
-  space: string
-  // bytes are the bytes as text: the key surface sends text and control bytes, never anything
-  // else.
-  bytes: string
-}
-
-// ResizeRequest is the size of the keeper's row, which the worker's terminal takes.
-export interface ResizeRequest {
-  // loadId is the load drawing.
-  loadId: string
-  // space is the space whose terminal is resized.
-  space: string
-  // cols is the width in columns.
-  cols: number
-  // rows is the height in rows.
-  rows: number
-}
-
-// ClosingRequest tells the wrapper that the harness's process exits.
-export interface ClosingRequest {
-  // loadId is the load closing.
-  loadId: string
-  // reason is session.end's reason, as the harness gives it.
-  reason: string
 }
