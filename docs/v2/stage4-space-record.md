@@ -52,8 +52,9 @@ naming the state, and every step is written before the act it names is answered 
 - **SetHost**: in `opening` only, once — the space host's own run.
 - **Opened**: `opening` to `open`, with the worker's run; refused without the space host's
   run, written once the worker's wrapper is started and before the open is answered.
-- **SetCheckout**: in `opening` or `open`, once, when the worker's session is seen to claim a
-  worktree.
+- **SetCheckout**: in any state not over, once, when the worker's session is seen to claim a
+  worktree — `closing` included, since the worker can claim it after the space host last
+  looked.
 - **BeginClosing**: `opening` or `open` to `closing`, with why; a second one keeps the
   first, since main's exit is seen both by its mod and by its harness ending.
 - **Close**: any state not over to `kept`, when the checkout was found still there or could

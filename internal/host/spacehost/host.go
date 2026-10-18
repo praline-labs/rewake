@@ -70,6 +70,13 @@ func (h *host) start() error {
 	if space.MainRuns(record) != proc.IdentityAlive {
 		return h.never("main's run had ended, or could not be told from here, before the worker started")
 	}
+	// The terminal is served before the worker starts: an open answered with
+	// no way for the person to reach a prompt would leave the worker stuck.
+	listener, err := state.Listen(state.SpaceSocketPath(h.spec.Dir, h.spec.ID))
+	if err != nil {
+		return h.never("the worker's terminal could not be served for rewake attach: " + err.Error())
+	}
+	defer func() { _ = listener.Close() }()
 	pty, err := terminal.OpenPlain(h.spec.Size)
 	if err != nil {
 		return h.never(err.Error())
@@ -101,23 +108,25 @@ func (h *host) start() error {
 		stopGroup(cmd.Process.Pid, reaped, stopping)
 		return h.never("the worker was started and stopped: its run could not be recorded: " + err.Error())
 	}
-	if listener, err := state.Listen(state.SpaceSocketPath(h.spec.Dir, h.spec.ID)); err == nil {
-		defer func() { _ = listener.Close() }()
-		go r.serve(listener)
-	}
-	why := h.watch(reaped, workerRun)
+	go r.serve(listener)
+	why := h.watch(reaped)
 	if why == "" {
 		why = "the worker exited by itself" + exitWords(waited)
 		if line := r.lastLine(); line != "" {
 			why += "; its last line: " + line
 		}
-	} else if record, err := space.BeginClosing(h.spec.Dir, h.spec.ID, why); err == nil {
+	}
+	if record, err := space.BeginClosing(h.spec.Dir, h.spec.ID, why); err == nil {
 		h.record = record
 	}
-	if took := stopGroup(cmd.Process.Pid, reaped, stopping); took != "nothing" && took != "" {
+	switch took := stopGroup(cmd.Process.Pid, reaped, stopping); took {
+	case "":
+		// Not seen gone, so not seen to end: the record stays closing
+		// rather than claim an end nobody observed.
+		return errors.New("the space stays closing: the worker's process group was still there after SIGKILL")
+	case "nothing":
+	default:
 		why += "; the worker's process group ended after " + took
-	} else if took == "" {
-		why += "; the worker's process group was still there after SIGKILL"
 	}
 	return h.close(why)
 }
@@ -126,7 +135,7 @@ func (h *host) start() error {
 // cause, or the worker exits by itself; it fills the record's checkout once
 // the worker's session claims one. It says why the space closes, empty for a
 // worker that exited by itself.
-func (h *host) watch(reaped <-chan struct{}, workerRun string) string {
+func (h *host) watch(reaped <-chan struct{}) string {
 	tick := time.NewTicker(time.Second)
 	defer tick.Stop()
 	for {
@@ -139,13 +148,24 @@ func (h *host) watch(reaped <-chan struct{}, workerRun string) string {
 			return "main's run ended"
 		}
 		if h.spec.Worktree && h.record.Checkout.Path == "" {
-			if checkout, ok := claimedCheckout(h.spec.Dir, workerRun); ok {
-				if record, err := space.SetCheckout(h.spec.Dir, h.spec.ID, checkout); err == nil {
-					h.record = record
-				}
-			}
+			_ = h.captureCheckout()
 		}
 	}
+}
+
+// captureCheckout records the checkout the worker's session claimed, if it
+// claimed one yet.
+func (h *host) captureCheckout() error {
+	checkout, found, err := claimedCheckout(h.spec.Dir, h.record.Worker.Run)
+	if err != nil || !found {
+		return err
+	}
+	record, err := space.SetCheckout(h.spec.Dir, h.spec.ID, checkout)
+	if err != nil {
+		return err
+	}
+	h.record = record
+	return nil
 }
 
 // never closes the record of a worker that did not start.
@@ -156,13 +176,14 @@ func (h *host) never(why string) error {
 	return errors.Join(errors.New(why), err)
 }
 
-// close records the worker's observed end and its checkout as found.
+// close records the worker's observed end and its checkout as found. The
+// worker may claim its checkout up to its end, after the last poll, so the
+// capture is made once more here; one that fails leaves the space closing,
+// never closed as if it had made none.
 func (h *host) close(why string) error {
 	if h.spec.Worktree && h.record.Checkout.Path == "" {
-		if checkout, ok := claimedCheckout(h.spec.Dir, h.record.Worker.Run); ok {
-			if record, err := space.SetCheckout(h.spec.Dir, h.spec.ID, checkout); err == nil {
-				h.record = record
-			}
+		if err := h.captureCheckout(); err != nil {
+			return fmt.Errorf("the space stays closing: its checkout could not be captured: %w", err)
 		}
 	}
 	_, err := space.Close(h.spec.Dir, h.spec.ID, space.End{

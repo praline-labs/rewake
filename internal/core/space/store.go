@@ -96,10 +96,12 @@ func SetHost(dir, id, hostRun string) (Record, error) {
 }
 
 // SetCheckout records the worktree the worker's launch made, once its
-// session is seen there; once recorded it does not change.
+// session is seen there; once recorded it does not change. Closing takes it
+// too: the worker can claim its checkout after the space host last looked,
+// and the close must not find it unrecorded.
 func SetCheckout(dir, id string, checkout Checkout) (Record, error) {
 	return change(dir, id, "recording the checkout", func(r *Record) error {
-		if (r.State != Opening && r.State != Open) || checkout.Path == "" || (r.Checkout.Path != "" && r.Checkout != checkout) {
+		if r.State.Final() || checkout.Path == "" || (r.Checkout.Path != "" && r.Checkout != checkout) {
 			return errStep
 		}
 		r.Checkout = checkout

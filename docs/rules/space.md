@@ -35,7 +35,8 @@ and one whose space host died with the machine stays open in the listing.
   Held since S4-7, October 18, 2026: the space host, a process outside main's run, reads main's
   run once a second; once it reads ended, it sends the worker's process group SIGHUP, after a
   second SIGTERM, after five more SIGKILL, waits up to two seconds for the group to be gone, and
-  closes the record with the worker seen ended and the signal that ended it. A worker that ends
+  closes the record with the worker seen ended and the signal that ended it; a group still
+  there after SIGKILL leaves the record closing, since no end was seen. A worker that ends
   by itself closes the space the same way, with its exit and its last line. Main's run read as
   unknown ends nothing.
   Tests:
@@ -60,9 +61,12 @@ and one whose space host died with the machine stays open in the listing.
   run once the worker's wrapper is started, and the checkout once the worker's session claims
   one; `rewake space open` answers only once the record is open and the worker's session is
   registered with that run. A close records the worker seen ended or never started and what
-  was then seen of the checkout. The format on disk is held by its own test.
+  was then seen of the checkout; with `--worktree` it looks for the claimed checkout once more,
+  closing included, and a look that fails leaves the record closing, never closed as a space
+  that made none. The format on disk is held by its own test.
   Tests:
   - `internal/core/space/format_test.go` `TestTheRecordsFormatOnDisk`
+  - `internal/host/spacehost/close_test.go` `TestACheckoutClaimedBeforeAnyPollIsKeptWhenMainEndsFirst`
   - `internal/core/space/store_test.go` `TestTheRecordIsWrittenOnlyUnderTheRoomsLease`
   - `internal/core/space/store_test.go` `TestTheStatesMoveInTheirOrder`
   - `internal/core/space/store_test.go` `TestARecordClosesOnlyFromAnObservation`

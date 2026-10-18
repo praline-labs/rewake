@@ -205,7 +205,9 @@ window and resized once on attach so a full-screen harness repaints; one termina
 The space host reads main's run once a second (`ObserveRun` through `space.MainRuns`). Once
 it reads ended it sends SIGHUP to the worker's process group, SIGTERM after 1 s, SIGKILL after
 5 s more, waits up to 2 s for the group to be gone, records the end it observed and exits; a
-run read as unknown ends nothing. Its standard streams are `/dev/null`: what goes wrong shows in
+run read as unknown ends nothing. A group not seen gone, or a checkout that could not be looked
+for, leaves the record closing rather than record an end nobody saw. The attach socket is
+listened on before the worker starts; an open that cannot serve it is refused. Its standard streams are `/dev/null`: what goes wrong shows in
 the record's end or as the open's timeout.
 
 ### The intro
