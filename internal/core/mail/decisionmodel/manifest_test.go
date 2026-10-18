@@ -13,7 +13,7 @@ import (
 // its feasible worlds, its pairs and the size of its pair cover. A change of a
 // value or an exclusion that the manifest does not follow fails here.
 func TestTheManifestCountsAreTheModels(t *testing.T) {
-	raw, err := os.ReadFile(filepath.Join("..", "..", "..", "..", "docs", "v2", "stage3-decision-manifest.md"))
+	raw, err := os.ReadFile(filepath.Join("..", "..", "..", "..", "docs", "archive", "v2", "stage3-decision-manifest.md"))
 	if err != nil {
 		t.Fatal(err)
 	}
