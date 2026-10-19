@@ -53,6 +53,7 @@ Main and its workers:
 
 Designs not built:
 
+- [v2/worker-profile.md](v2/worker-profile.md) — rewake's own Claude Code worker profile by launch options, and `rewake claude` as main's whole launch, workers raised only by main.
 - [permission-requests.md](permission-requests.md) — a worker's permission request or question carried to main, answered with `rewake answer`, the first answer winning.
 - [permission-requests-sources.md](permission-requests-sources.md) — the live probe on Claude Code 2.1.302 and the pi facts behind it.
 - [conversation-reset.md](conversation-reset.md) — `rewake clear` from main and a conversation marker in `list` and notices.
