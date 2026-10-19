@@ -1,0 +1,64 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.15/schema.json",
+  "root": true,
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  "files": {
+    "ignoreUnknown": true,
+    "includes": [
+      "shell/src/**/*.{ts,tsx}",
+      "internal/adapter/claude/mod/**/*.ts",
+      "internal/adapter/pi/**/*.ts",
+      "!internal/adapter/claude/mod/protocol.gen.ts",
+      "!**/node_modules",
+      "!archive",
+      "!docs/archive",
+      "!.scratch",
+      "!.shift"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended"
+    }
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "double",
+      "semicolons": "always",
+      "trailingCommas": "all"
+    }
+  },
+  "assist": {
+    "enabled": true,
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["shell/src/main.tsx"],
+      "linter": { "rules": { "a11y": { "noStaticElementInteractions": "off" } } }
+    },
+    {
+      "includes": ["shell/src/ending.ts", "shell/src/keys.ts", "shell/src/scan.ts"],
+      "linter": { "rules": { "suspicious": { "noControlCharactersInRegex": "off" } } }
+    },
+    {
+      "includes": ["internal/adapter/claude/mod/tests/**"],
+      "linter": { "rules": { "suspicious": { "noExplicitAny": "off" } } }
+    }
+  ]
+}

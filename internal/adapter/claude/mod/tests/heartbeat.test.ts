@@ -139,7 +139,7 @@ function handHost() {
   }
   const tick = async () => {
     const due = timers.splice(0)
-    due.forEach((fn) => fn())
+    for (const fn of due) fn()
     await new Promise((resolve) => setTimeout(resolve, 0))
   }
   return { host, posts, timers, tick }
