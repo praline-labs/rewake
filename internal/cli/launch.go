@@ -95,6 +95,7 @@ func handleLaunch(h adapter.Harness) func(*Context, Call) error {
 			Shell:      inShell,
 			Role:       id.part,
 			RoleReason: id.reason,
+			Template:   id.template,
 			Command:    program,
 			OnClaimed:  onClaimed,
 			Lease:      lease,
@@ -190,5 +191,5 @@ func roleSummary() string {
 	for _, candidate := range role.All() {
 		descriptions = append(descriptions, candidate.ID+": "+candidate.Summary)
 	}
-	return "A person starts only main: rewake <harness> is main in the room of its directory, and a second main there is refused. Workers are raised by main alone, with rewake space open --alias <alias> or --harness <harness> --role write|general. " + strings.Join(descriptions, " ")
+	return "A person starts only main: rewake <harness> is main in the room of its directory, and a second main there is refused. Workers are raised by main alone, with rewake space open --alias <alias>, from a template of rewake workers. " + strings.Join(descriptions, " ")
 }

@@ -51,7 +51,7 @@ func handleSpaceOpen(ctx *Context, call Call) error {
 		return &UsageError{Command: call.Command, Message: fmt.Sprintf(format, args...)}
 	}
 	if len(call.Positionals) < 2 {
-		return usage("space open needs the space's name: rewake space open api --harness claude.")
+		return usage("space open needs the space's name: rewake space open api --alias <alias>.")
 	}
 	name := call.Positionals[1]
 	dir, err := state.Dir()
@@ -106,6 +106,7 @@ func handleSpaceOpen(ctx *Context, call Call) error {
 	if err != nil {
 		return failf("%v", err)
 	}
+	spec.Template = target.template
 	_, spec.Worktree = call.Flags["worktree"]
 	if taker, ok := h.(adapter.WorktreeHarness); ok {
 		spec.Worktree = spec.Worktree || adapter.HasFlag(target.args, taker.WorktreeFlag())

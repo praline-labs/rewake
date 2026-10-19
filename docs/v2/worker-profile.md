@@ -23,7 +23,7 @@ still shows as `Project`). Launch options do all of it and keep the person's dir
 | --- | --- | --- |
 | drops the person's user layer: `settings.json` (hooks, status line, plugins, permissions, env, model, language), user skills, user MCP servers of `~/.claude.json`, the user `CLAUDE.md` | `--setting-sources project,local` | yes |
 | drops the person's `CLAUDE.md` read as an ancestor's | `claudeMdExcludes: ["<config dir>/CLAUDE.md"]` in `--settings` | yes |
-| carries the profile's settings; precedence is user < project < local < flag < policy | `--settings <run dir>/worker-settings.json` | yes |
+| carries the profile's settings; precedence is user < project < local < flag < policy | `--settings` of the service folder's `settings.json` | yes |
 | the profile's skills, as a plugin (skills appear as `<plugin>:<skill>`) | `--plugin-dir` of the profile's plugins folder | yes |
 | the profile's MCP servers | `--mcp-config` | from help |
 | the worker's instructions | folded into the one `--append-system-prompt` after rewake's briefing | from help |
@@ -44,33 +44,39 @@ with the user source off, `--autocompact` holds unless the project's settings se
 ## The profile
 
 **Every Claude Code worker gets it; main never.** It is the worker role's, not an alias's: a
-`space open --harness claude` and an alias both get it; main is exactly the person's Claude Code.
+worker raised from any alias gets it; main is exactly the person's Claude Code.
 
 **rewake's defaults**, with no file of the person's: the user layer off and the ancestor exclude
-above; `autoMemoryEnabled: false`, since a worker is short-lived and the auto-memory of a project
-is main's (sharing the directory with main otherwise mixes them); `env` with
+above; the auto-memory, off until October 19, 2026 and since then one per template and project
+(step 5); `env` with
 `DISABLE_AUTOUPDATER=1` (a worker must not update Claude Code under a running room) and
 `DISABLE_FEEDBACK_COMMAND=1` (no survey in an unattended pane); `Bash(rewake:*)` as today;
 and the owner's off-list of October 19, 2026 — subagents (`Agent`), `ScheduleWakeup` and cron,
 `SendMessage`, `ListAgents`, the worktree and plan-mode tools, `PushNotification`,
 `RemoteTrigger`, `Artifact`, workflows, remote control, prompt suggestions, away summaries, idle
 compaction, spinner tips, the feedback survey, IDE auto-connect and the claude.ai connectors —
-listed setting by setting in [launch.md](../launch.md#claude-code). A denied tool comes back only
-through rewake's own key, `{"rewake": {"keep": [<tools>]}}`, since an allow cannot undo a deny;
-everything else through the person's value in `settings.json`.
+listed setting by setting in [launch.md](../launch.md#claude-code). They are written into the
+service folder's `settings.json`, which the person edits to turn one back on — `"Agent"` taken
+out of `permissions.deny` — and which a newer build brings up to its defaults without undoing
+the person's changes (below).
 
 **The person's profile**, optional, in rewake's own directory beside pi's,
 `~/.config/rewake/claude/worker/`, never in the state directory. A worker's launch makes what
-of it is missing — the folder (0700), `settings.json` holding `{}`, an empty `CLAUDE.md`,
-`skills/` and `.claude-plugin/plugin.json` naming the plugin `worker` — and never changes what
-is there (the owner's decision, October 19, 2026); the folder itself is passed as
+of it is missing — the folder (0700), an empty `CLAUDE.md`, `skills/` and
+`.claude-plugin/plugin.json` naming the plugin `worker` — and never changes what is there but
+`settings.json` (the owner's decisions, October 19, 2026); the folder itself is passed as
 `--plugin-dir`, so a skill placed or symlinked into `skills/` loads as `worker:<skill>`. An entry
 of the wrong kind refuses the launch naming the path:
 
-- `settings.json` — merged over rewake's defaults (objects key by key, the person's value wins;
-  `claudeMdExcludes` and `permissions.deny` are appended to, never replaced), passed as the run's one `--settings`, a
-  JSON string, so nothing is written.
-  Where the person's permissions allow-list, `env`, model per effort, `skillOverrides` go.
+- `settings.json` — the whole of the worker's settings, passed as the run's one `--settings`
+  as the file it is (the owner's decision, October 19, 2026, in place of a JSON string of the
+  defaults merged with the person's file). rewake writes its defaults there on the first launch
+  and marks the file `"rewake": {"defaults": <n>}`; a build with newer defaults runs only the
+  steps after the file's version — adding what each brings where the file has no value,
+  taking out what each retires where the file still holds rewake's value — so a default the
+  person removed stays removed. The rule, the refusals and the write are in
+  [launch.md](../launch.md#claude-code). Where the person's permissions allow-list, `env`,
+  model per effort, `skillOverrides` go, beside rewake's defaults.
 - `CLAUDE.md` — the worker's instructions, after rewake's briefing.
 - `skills/` — the worker's own skills, each folder or symlink one skill of the plugin `worker`.
 - `plugins/` — each child a whole plugin, loaded with `--plugin-dir`.
@@ -81,7 +87,8 @@ files; it does not know where the person's instructions and skills are built fro
 profile is the person's: the owner's installers get a target writing these paths.
 
 **Context per worker.** The alias field `launch.context` is applied on Claude Code as
-`--autocompact <value>`, for main and workers alike, checked by rewake as `auto` or 100k–1M
+`--autocompact <value>` for the workers main raises with it — aliases are main's worker
+catalogue only, so main has none — checked by rewake as `auto` or 100k–1M
 written `300k`, `1M` or `200000` — Claude Code itself reads the leading number of anything —
 and stays shown-only on a harness with no such flag (`AppliesContext`). `launch.apply = false`
 went with the wrapper it served (step 2).
@@ -97,8 +104,9 @@ configuration Claude Code starts with, as it did before. A wrapper that moves
   `--write`, `--general`, `--name` (main is `main-<harness>`, one per room), `--shell` and
   `--room`.
 - **The shell by default** whenever standard input and output are both terminals and the
-  adapter offers spaces, with no flag to turn it off; otherwise main runs plain (`claude -p`, a
-  script, and pi, which without spaces has no shell and no workers). This changes "the shell,
+  adapter offers spaces, with no flag to turn it off; otherwise main runs plain — a script or a
+  pipe, and pi, which without spaces has no shell and no workers. `-p` does not decide it: what
+  counts is whether both streams are terminals. This changes "the shell,
   chosen at launch" in `project.md`: the owner's decision, recorded there in step 3.
 - **The room is the launch directory** (the owner's decision, October 19, 2026). Its identity is
   the working directory resolved with symlinks followed; the person never names a room. On disk
@@ -118,10 +126,12 @@ configuration Claude Code starts with, as it did before. A wrapper that moves
   it `main = true` and main's aliases. An alias keeps `harness`, `command`, `args`, `description`
   and `launch`; its `rewake` list becomes one field `role = "write" | "general"`, since nothing
   else in it means anything for a space. A file with the old fields is refused naming them.
-  `rewake workers` and `space open --alias | --harness [--role]` stay; the user/project rule
-  stays: a project alias names no role and no command.
+  `rewake workers` and `space open --alias` stay — the only way to raise a worker since
+  `--harness` and `--role` went (decision 8); the user/project rule stays: a project alias names
+  no role and no command.
 - **How the space host still launches a worker.** It runs `rewake [--command <wrapper>]
-  <harness> <args>` with `REWAKE_SPACE=<room>/<space id>` and no name, room or role flag; the
+  <harness> <args>` with `REWAKE_SPACE=<room>/<space id>` and `REWAKE_SPACE_TEMPLATE=<alias>`,
+  the alias that names the worker's memory, and no name, room or role flag; the
   launch is that worker only when the variable names a space that is `opening`, or `open` on the
   launch's own run, whose host is its parent process — taking the name, role and room from the
   record — and refuses otherwise, pointing to `rewake space open`. The space record is not
@@ -136,12 +146,17 @@ Main's, October 19, 2026, on the design's questions; the room's identity is the 
 1. The shell by default whenever standard input and output are a terminal; no `--no-shell`.
 2. A second `rewake claude` in the same directory is refused, exit 1.
 3. The workflow suite's direct worker launches stay, in the `rewaketest` build only.
-4. A worker's auto-memory is off by default.
+4. A worker's auto-memory is off by default. Superseded the same day by the owner: Claude
+   Code's own auto-memory, one per worker template and project (step 5).
 5. The claude.ai connectors stay for workers: no `--strict-mcp-config` by default. Superseded the
    same day by the owner: they are off for workers, through `disableClaudeAiConnectors`, and the
    project's `.mcp.json` servers stay.
 6. `rewake pi` is main too; without spaces it runs without the shell and without workers.
 7. One profile for every Claude Code worker; named profiles only when needed.
+8. The owner's, October 19, 2026: a worker is raised only from a template. `space open` requires
+   `--alias`; `--harness` and `--role` are gone, the role is the alias's, and the `default`
+   memory of a worker opened without an alias with them
+   ([the entry](../roadmap/2026-10-19-worker-from-template.md)).
 
 ## Steps
 
@@ -181,3 +196,32 @@ Main's, October 19, 2026, on the design's questions; the room's identity is the 
 
    `--alias` was not run: the owner's `aliases.toml` is still in the old form, which step 2
    refuses, and is rewritten with main at landing.
+4. **The settings as a file** — built ([its entry](../roadmap/2026-10-19-worker-settings-file.md)):
+   the folder's `settings.json` passed as it is, rewake's defaults written and migrated by
+   version, `rewake.keep` and the merge gone. `claudeMdExcludes` lives in the file: the one
+   path that needs it is `~/.claude/CLAUDE.md` of the home the folder lies in, and a
+   `CLAUDE_CONFIG_DIR` elsewhere is not read with the user source off (probed on 2.1.302), so
+   no launch-time addition is left. Checked live with haiku, a private HOME and `REWAKE_DIR`:
+
+   | check | seen |
+   | --- | --- |
+   | a worker over a copy of the owner's `{}` | the file rewritten with every default at version 1, the launch noting it |
+   | its tools and `/context` | no `Agent`, `ScheduleWakeup`, `SendMessage`, `ListAgents`, worktree, plan-mode, push, trigger or `Artifact`; System tools 2.7k, main's 6.7k |
+   | `"Agent"` taken out of the file, the worker started again | `Agent` among its tools, System tools 4.5k; the file byte for byte the same |
+   | Claude Code at a terminal with the file | no warning of the `rewake` key |
+5. **The worker's memory** — built ([its entry](../roadmap/2026-10-19-worker-memory.md)):
+   `autoMemoryEnabled: false` retired in defaults version 2; each launch lays
+   `autoMemoryEnabled: true` and `autoMemoryDirectory` over the folder's settings in a copy in
+   the run's directory, the directory
+   `~/.config/rewake/claude/worker/memory/<project>/<template>/` ([launch.md](../launch.md#claude-code));
+   the alias reaches the launch as `REWAKE_SPACE_TEMPLATE` from the space host, no new record
+   field. Checked live with haiku, a private HOME and `REWAKE_DIR`, a `-p` main in a probe
+   repository opening two spaces with `--worktree`:
+
+   | check | seen |
+   | --- | --- |
+   | a version-1 file with `autoMemoryEnabled: false` and only `Agent` denied | version 2, the key gone, the deny list as the person left it |
+   | `space open wa --alias haiku-a --worktree`, `wb --alias haiku-b --worktree` | two checkouts; each worker's `--settings` a run-directory copy, `autoMemoryDirectory` `…/memory/repo-d9ecc4f0fee9/haiku-a` and `…/haiku-b`, both made 0700 |
+   | `/context` with each worker's settings in its checkout | `AutoMem …/haiku-a/MEMORY.md` and `…/haiku-b/MEMORY.md`, each seeded with one line |
+   | a haiku call asking each for the code word in its memory | `HERON` for template A, `OSPREY` for B |
+

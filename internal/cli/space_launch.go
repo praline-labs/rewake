@@ -3,7 +3,6 @@ package cli
 import (
 	"fmt"
 	"slices"
-	"strings"
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/core/role"
@@ -16,6 +15,8 @@ type workerTarget struct {
 	args    []string
 	command string
 	noIntro bool
+	// template is the alias the worker was raised from.
+	template string
 }
 
 func (ctx *Context) spaceTarget(call Call) (workerTarget, error) {
@@ -25,37 +26,23 @@ func (ctx *Context) spaceTarget(call Call) (workerTarget, error) {
 	if checkout, given := call.Flags["worktree"]; given && checkout == "" {
 		return refuse("--worktree= needs a name; use --worktree for a generated name.")
 	}
-	_, byHarness := call.Flags["harness"]
+	// A worker is raised only from a template (the owner's decision,
+	// October 19, 2026): the alias names its harness and its role.
 	alias, byAlias := call.Flags["alias"]
-	if byHarness == byAlias {
-		return refuse("space open needs exactly one of --harness or --alias; use rewake workers to choose an alias.")
+	if !byAlias || alias == "" {
+		return refuse("space open needs --alias <alias>; rewake workers lists them.")
 	}
-	target := workerTarget{part: role.Write, args: slices.Clone(call.Positionals[2:])}
-	if byAlias {
-		if err := ctx.launchAliases().Err(); err != nil {
-			return refuse("%v", err)
-		}
-		template, err := ctx.launchAliases().Template(alias, ctx.table.catalog)
-		if err != nil {
-			return refuse("%v", err)
-		}
-		target.harness, target.part, target.command = template.Harness, template.Role, template.Command
-		target.args = launch.MergeArguments(template.Args, target.args, target.harness.SingleUseFlags())
-	} else {
-		var found bool
-		target.harness, found = ctx.table.catalog.Find(call.Flag("harness", ""))
-		if !found {
-			return refuse("space open needs --harness, one of: %s.", strings.Join(ctx.table.catalog.IDs(), ", "))
-		}
+	if err := ctx.launchAliases().Err(); err != nil {
+		return refuse("%v", err)
 	}
-	if selected, given := call.Flags["role"]; given {
-		var found bool
-		target.part, found = role.Find(selected)
-		if !found || target.part.Spaces {
-			return refuse("--role takes a worker's role, not %q: %s or %s.", selected, role.Write.ID, role.General.ID)
-		}
+	template, err := ctx.launchAliases().Template(alias, ctx.table.catalog)
+	if err != nil {
+		return refuse("%v", err)
 	}
-	return target, nil
+	return workerTarget{
+		harness: template.Harness, part: template.Role, command: template.Command, template: alias,
+		args: launch.MergeArguments(template.Args, slices.Clone(call.Positionals[2:]), template.Harness.SingleUseFlags()),
+	}, nil
 }
 
 // workerLaunch builds the complete ordinary launch, including settings and

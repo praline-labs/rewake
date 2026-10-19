@@ -150,9 +150,9 @@ column. An alias that makes no sense — no harness or an unknown one, a role th
 worker's, settings on a harness with no flags for them — refuses it too, naming the alias.
 
 `rewake space open api --alias claude-write -- <more harness args>` starts the alias's harness,
-role, command, arguments and applied settings. `--alias` and `--harness` exclude each other; the
-space names the worker, and its room is main's whatever the checkout; an explicit `--role`
-overrides the alias's. Applied
+role, command, arguments and applied settings; `--alias` is required, since a worker is raised
+only from a template (October 19, 2026), and there is no `--harness` or `--role` beside it. The
+space names the worker, and its room is main's whatever the checkout. Applied
 settings replace older copies in `args`, and flags after `--` replace those in turn; environment
 defaults fill what neither supplied. Under a `command` wrapper whose settings set
 `CLAUDE_CODE_AUTO_COMPACT_WINDOW`, that value wins over `--autocompact`; without one a worker's

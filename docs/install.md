@@ -154,8 +154,8 @@ rewake2 claude
 
 It is `main-claude`, in the room of that directory, and runs in rewake's shell. A second
 `rewake2 claude` in the same directory is refused; another directory is another room. Workers
-are raised by main alone: ask it for one, and it runs `rewake space open api --alias <alias>` or
-`--harness claude`; the worker `api-claude` joins main's room and ends when main ends. From 120
+are raised by main alone: ask it for one, and it runs `rewake space open api --alias <alias>` with an alias of
+`rewake workers`; the worker `api-claude` joins main's room and ends when main ends. From 120
 columns the chosen worker shows beside main, and `Ctrl-\` then `n` or a digit chooses it.
 `rewake2 pi` is main on pi, without the shell and without workers. Sessions of 2.0 never see
 sessions of 1.0.3, nor 1.0.3 theirs.

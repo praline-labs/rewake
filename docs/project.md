@@ -31,7 +31,7 @@ on OpenTUI with Solid, inside the person's terminal, so its layout can be custom
 is the directory it is started in, with one main per directory; workers are raised only by main,
 later also from the shell; a Claude Code worker runs with rewake's own profile, which turns off
 by default what an unattended worker should not use, and reads a service folder of rewake's where
-the person adds instructions and skills.
+the person adds instructions and skills and edits the settings file that holds those defaults.
 
 **Who calls it.** One person starts the main session; main starts the rest. The commands are called by the agents
 themselves, from their own shell or through the tools their harness offers them. So the
@@ -86,7 +86,8 @@ Each principle names where it comes from.
 - **The person's configuration is never edited.** Whatever a session needs is passed as
   options of that one launch; what rewake keeps for itself — the worker's service folder, the
   bundled pi's directory — lives under rewake's own directory, which it creates and never
-  overwrites. ([v2/design.md](v2/design.md#what-does-not-change),
+  overwrites, but for the worker's settings file, where it writes its defaults and later adds
+  only newer ones (the owner's decision, October 19, 2026). ([v2/design.md](v2/design.md#what-does-not-change),
   [v2/design-rules.md](v2/design-rules.md#what-a-launch-adds-l1l3).)
 - **Transcript contents are not read.** ([design.md](design.md#scope-of-the-first-version),
   [v2/design.md](v2/design.md#what-does-not-change).)

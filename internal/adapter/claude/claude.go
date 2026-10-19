@@ -26,7 +26,7 @@ const ID = "claude"
 const socketFlag = "--messaging-socket-path"
 
 // introFlag adds to the system prompt for one launch. It appends, so the user's
-// own configuration is untouched.
+// own configuration is untouched; a second one replaces the first.
 const introFlag = "--append-system-prompt"
 
 // modelFlag and effortFlag are how Claude Code takes these for one session.
@@ -131,10 +131,10 @@ func (claudeHarness) Notes() []string {
 	return []string{
 		"Messages arrive through the session's inbox socket within seconds and wake an idle session.",
 		"Each turn's end reaches rewake through the rewake mod, which rewake writes into the run's directory and loads for that launch alone; a task or question to the session fails until the mod's hello is admitted, and a role that owes reports refuses to start when rewake knows the mod will not load.",
-		"A worker — any role but main — starts with rewake's worker profile in place of the person's user layer: --setting-sources project,local and one --settings with auto-memory off and the person's own CLAUDE.md left out, plus ~/.config/rewake/claude/worker/ when present: settings.json merged in, plugins/ as --plugin-dir, mcp.json as --mcp-config, CLAUDE.md after the briefing. A worker's own --settings or --setting-sources is refused; under --command the wrapper decides and the profile is not applied.",
+		"A worker — any role but main — starts with rewake's worker profile in place of the person's user layer (--setting-sources project,local) and the service folder ~/.config/rewake/claude/worker/, whose missing entries the launch makes without overwriting what is there: skills or symlinks to them in skills/, loaded as worker:<skill>; instructions in CLAUDE.md, after the briefing; whole plugins in plugins/; MCP servers in mcp.json. Its settings.json is the worker's one --settings, written by rewake with its defaults — subagents, Claude Code's own messaging, waking itself, worktree and plan-mode tools, workflows, the claude.ai connectors and other features of an unattended pane off, the person's own CLAUDE.md left out — which the person edits: taking \"Agent\" out of permissions.deny gives subagents back. A newer rewake adds only its newer defaults and keeps the person's changes. A worker has Claude Code's own auto-memory, one per alias and project, in the folder's memory/<project>/<alias>/, unless settings.json sets autoMemoryEnabled false. A worker's own --settings or --setting-sources is refused; under --command the wrapper decides and the profile is not applied.",
 		"A turn's end is not held open: a turn that ends after rewake pending without a new mark closes the task as answered.",
 		"A launch through --command reaches the mod only when the command ends by exec-ing claude: a wrapper that runs it as a child is never admitted, and the session takes no tasks.",
-		"Arguments after claude reach it as written, beside the flags rewake adds for delivery, except: a --help first asks rewake for this page; --worktree is rewake's, below; and a typed flag replaces an alias's copy of it.",
+		"Arguments after claude reach it as written, beside the flags rewake adds for delivery, except: a --append-system-prompt of the caller's is kept, joined after rewake's briefing and a worker's CLAUDE.md into the one such flag Claude Code reads, and --no-intro drops only the briefing; a --help first asks rewake for this page; --worktree is rewake's, below; and a typed flag replaces an alias's copy of it.",
 		"--worktree starts the session in a new checkout of HEAD on a new branch under rewake's worktree directory, at the same place within the repository; --worktree=<name> names both, and a name after a space is refused, since it would reach claude as the prompt. rewake worktree --help says how to land and remove it. It starts a new conversation only: --continue or -c, --resume or -r, --from-pr, --teleport, --fork-session, the attach and respawn commands, Claude Code's own -w and --tmux, --cloud and --environment are refused beside it. -w alone stays Claude Code's own worktree, inside the repository.",
 	}
 }
@@ -243,19 +243,24 @@ func (claudeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, 
 	}
 	notes = append(notes, worker.notes...)
 	args = adapter.AddFlags(args, worker.args...)
-	if !adapter.HasFlag(args, introFlag) {
-		var parts []string
-		if request.Intro {
-			parts = append(parts, brief.Intro(request.BriefContext()))
+	// Claude Code keeps only the last --append-system-prompt (probed on
+	// 2.1.302), so the caller's own joins the briefing in the one rewake adds
+	// rather than replacing it.
+	var parts []string
+	if request.Intro {
+		parts = append(parts, brief.Intro(request.BriefContext()))
+	}
+	if worker.instructions != "" {
+		parts = append(parts, worker.instructions)
+	}
+	if own := adapter.FlagValues(args, introFlag); len(own) > 0 {
+		args = withoutFlag(args, introFlag)
+		if text := own[len(own)-1]; text != "" {
+			parts = append(parts, text)
 		}
-		if worker.instructions != "" {
-			parts = append(parts, worker.instructions)
-		}
-		if len(parts) > 0 {
-			args = adapter.AddFlags(args, introFlag, strings.Join(parts, "\n\n"))
-		}
-	} else if worker.instructions != "" {
-		notes = append(notes, "the worker profile's CLAUDE.md is not added: the arguments carry their own "+introFlag)
+	}
+	if len(parts) > 0 {
+		args = adapter.AddFlags(args, introFlag, strings.Join(parts, "\n\n"))
 	}
 	if len(adapter.FlagValues(args, toolFlag, toolFlagKebab)) == 0 {
 		args = adapter.AddFlags(args, toolFlag, "Bash(rewake:*)")
@@ -343,4 +348,20 @@ func flagValue(args []string, flag string) string {
 		}
 	}
 	return ""
+}
+
+// withoutFlag drops every use of a flag before the terminator, with its value
+// when the value is the next argument.
+func withoutFlag(args []string, flag string) []string {
+	visible := adapter.BeforeTerminator(args)
+	out := make([]string, 0, len(args))
+	for index := 0; index < len(visible); index++ {
+		_, separate, ok := adapter.MatchFlag(visible[index], flag)
+		if !ok {
+			out = append(out, visible[index])
+		} else if separate {
+			index++
+		}
+	}
+	return append(out, args[len(visible):]...)
 }

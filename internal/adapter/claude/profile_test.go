@@ -30,14 +30,19 @@ func profileLaunch(t *testing.T, home string, part role.Role, command string, en
 	})
 }
 
+// settingsOf reads the one settings file the launch passes.
 func settingsOf(t *testing.T, args []string) map[string]any {
 	t.Helper()
 	values := adapter.FlagValues(args, settingsFlag)
 	if len(values) != 1 {
 		t.Fatalf("want one %s, got %v in %q", settingsFlag, values, args)
 	}
+	raw, err := os.ReadFile(values[0])
+	if err != nil {
+		t.Fatal(err)
+	}
 	var settings map[string]any
-	if err := json.Unmarshal([]byte(values[0]), &settings); err != nil {
+	if err := json.Unmarshal(raw, &settings); err != nil {
 		t.Fatalf("settings are not JSON: %v", err)
 	}
 	return settings
@@ -53,9 +58,13 @@ func TestWorkerProfileDefaults(t *testing.T) {
 		if got := adapter.FlagValues(plan.Args, settingSourcesFlag); !slices.Equal(got, []string{workerSources}) {
 			t.Fatalf("%s: setting sources %v", part.ID, got)
 		}
+		dir := filepath.Join(home, ".config", "rewake", "claude", "worker")
+		if got := adapter.FlagValues(plan.Args, settingsFlag); !slices.Equal(got, []string{filepath.Join(dir, "settings.json")}) {
+			t.Fatalf("%s: settings %v", part.ID, got)
+		}
 		settings := settingsOf(t, plan.Args)
-		excludes := []any{"/elsewhere/CLAUDE.md", filepath.Join(home, ".claude", "CLAUDE.md")}
-		if settings["autoMemoryEnabled"] != false || !slices.Equal(settings["claudeMdExcludes"].([]any), excludes) {
+		excludes := []any{filepath.Join(home, ".claude", "CLAUDE.md")}
+		if _, memory := settings["autoMemoryEnabled"]; memory || !slices.Equal(settings["claudeMdExcludes"].([]any), excludes) || settings[rewakeKey].(map[string]any)["defaults"] != float64(defaultsVersion) {
 			t.Fatalf("%s: settings %v", part.ID, settings)
 		}
 		if deny := settings["permissions"].(map[string]any)["deny"].([]any); len(deny) != len(deniedTools) || deny[0] != "Agent" {
@@ -65,7 +74,6 @@ func TestWorkerProfileDefaults(t *testing.T) {
 		if settings["disableWorkflows"] != true || settings["idleCompaction"] != false || settings["disableClaudeAiConnectors"] != true || env["CLAUDE_CODE_DISABLE_CRON"] != "1" {
 			t.Fatalf("%s: the off-list: %v", part.ID, settings)
 		}
-		dir := filepath.Join(home, ".config", "rewake", "claude", "worker")
 		if adapter.HasFlag(plan.Args, mcpConfigFlag) || !slices.Contains(adapter.FlagValues(plan.Args, pluginDirFlag), dir) || slices.Contains(adapter.FlagValues(plan.Args, pluginDirFlag), filepath.Join(dir, "plugins")) {
 			t.Fatalf("%s: the folder's parts: %q", part.ID, plan.Args)
 		}
@@ -76,7 +84,7 @@ func TestWorkerProfileDefaults(t *testing.T) {
 }
 
 // A worker's launch makes the service folder: private, a plugin of its
-// own with an empty skills/, empty settings and instructions.
+// own with an empty skills/ and instructions, and rewake's settings.
 func TestTheServiceFolderIsMade(t *testing.T) {
 	home := t.TempDir()
 	if _, err := profileLaunch(t, home, role.Write, "", nil); err != nil {
@@ -94,14 +102,16 @@ func TestTheServiceFolderIsMade(t *testing.T) {
 	if err := json.Unmarshal(raw, &manifest); err != nil || manifest["name"] != profilePlugin {
 		t.Fatalf("plugin.json %q: %v", raw, err)
 	}
-	for name, want := range map[string]string{"settings.json": "{}\n", "CLAUDE.md": ""} {
-		if raw, err := os.ReadFile(filepath.Join(dir, name)); err != nil || string(raw) != want {
-			t.Fatalf("%s = %q, %v", name, raw, err)
-		}
+	if raw, err := os.ReadFile(filepath.Join(dir, "CLAUDE.md")); err != nil || len(raw) != 0 {
+		t.Fatalf("CLAUDE.md = %q, %v", raw, err)
+	}
+	if info, err := os.Stat(filepath.Join(dir, "settings.json")); err != nil || info.Mode().Perm() != 0o600 {
+		t.Fatalf("settings.json: %v %v", info, err)
 	}
 }
 
-// What the person put in the folder stays as it was.
+// What the person put in the folder stays as it was; settings.json only
+// gains rewake's defaults.
 func TestTheServiceFolderIsNeverOverwritten(t *testing.T) {
 	home := t.TempDir()
 	dir := filepath.Join(home, ".config", "rewake", "claude", "worker")
@@ -109,7 +119,6 @@ func TestTheServiceFolderIsNeverOverwritten(t *testing.T) {
 		t.Fatal(err)
 	}
 	own := map[string]string{
-		"settings.json":              `{"language": "x"}`,
 		"CLAUDE.md":                  "Mine.",
 		".claude-plugin/plugin.json": `{"name": "mine"}`,
 	}
@@ -121,8 +130,15 @@ func TestTheServiceFolderIsNeverOverwritten(t *testing.T) {
 	if err := os.Symlink(t.TempDir(), filepath.Join(dir, "skills")); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := profileLaunch(t, home, role.General, "", nil); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "settings.json"), []byte(`{"language": "x"}`), 0o600); err != nil {
 		t.Fatal(err)
+	}
+	plan, err := profileLaunch(t, home, role.General, "", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if settings := settingsOf(t, plan.Args); settings["language"] != "x" || settings["idleCompaction"] != false {
+		t.Errorf("settings.json became %v", settings)
 	}
 	for name, text := range own {
 		if raw, _ := os.ReadFile(filepath.Join(dir, name)); string(raw) != text {
@@ -131,57 +147,6 @@ func TestTheServiceFolderIsNeverOverwritten(t *testing.T) {
 	}
 	if info, err := os.Lstat(filepath.Join(dir, "skills")); err != nil || info.Mode()&os.ModeSymlink == 0 {
 		t.Errorf("the linked skills/ was replaced: %v", err)
-	}
-}
-
-// The person's denials add to rewake's; only rewake's own key gives a
-// denied tool back, and it is not passed on.
-func TestADeniedToolComesBackOnlyByRewakesKey(t *testing.T) {
-	rest := func(drop ...string) []any {
-		var out []any
-		for _, tool := range deniedTools {
-			if !slices.Contains(drop, tool) {
-				out = append(out, tool)
-			}
-		}
-		return out
-	}
-	for text, want := range map[string][]any{
-		`{"permissions": {"deny": ["WebFetch"], "allow": ["Agent"]}}`:            append(rest(), "WebFetch"),
-		`{"rewake": {"keep": ["Agent", "SendMessage"]}}`:                         rest("Agent", "SendMessage"),
-		`{"rewake": {"keep": ["Agent"]}, "permissions": {"deny": ["WebFetch"]}}`: append(rest("Agent"), "WebFetch"),
-		`{"rewake": {"keep": []}, "env": {"CLAUDE_CODE_DISABLE_CRON": "0"}}`:     rest(),
-	} {
-		home := t.TempDir()
-		dir := filepath.Join(home, ".config", "rewake", "claude", "worker")
-		if err := os.MkdirAll(dir, 0o700); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(filepath.Join(dir, "settings.json"), []byte(text), 0o600); err != nil {
-			t.Fatal(err)
-		}
-		plan, err := profileLaunch(t, home, role.Write, "", nil)
-		if err != nil {
-			t.Fatalf("%s: %v", text, err)
-		}
-		settings := settingsOf(t, plan.Args)
-		deny := settings["permissions"].(map[string]any)["deny"].([]any)
-		if _, passed := settings[rewakeKey]; passed || !slices.Equal(deny, want) {
-			t.Errorf("%s: settings %v", text, settings)
-		}
-	}
-	home := t.TempDir()
-	dir := filepath.Join(home, ".config", "rewake", "claude", "worker")
-	if err := os.MkdirAll(dir, 0o700); err != nil {
-		t.Fatal(err)
-	}
-	for _, text := range []string{`{"rewake": true}`, `{"rewake": {"subagents": true}}`, `{"rewake": {"keep": ["Bash"]}}`, `{"rewake": {"keep": "Agent"}}`, `{"permissions": {"deny": "Agent"}}`} {
-		if err := os.WriteFile(filepath.Join(dir, "settings.json"), []byte(text), 0o600); err != nil {
-			t.Fatal(err)
-		}
-		if _, err := profileLaunch(t, home, role.Write, "", nil); err == nil {
-			t.Errorf("%s was accepted", text)
-		}
 	}
 }
 
@@ -209,5 +174,56 @@ func TestContextWindow(t *testing.T) {
 	args, err := New().(claudeHarness).LaunchSettings("", "", "300k")
 	if err != nil || !slices.Equal(args, []string{autocompactFlag, "300k"}) {
 		t.Fatalf("context as a flag: %v, %v", args, err)
+	}
+}
+
+// A caller's own --append-system-prompt once replaced the briefing and the
+// worker's CLAUDE.md, since Claude Code reads only the last one: it joins
+// them in the one rewake adds, and --no-intro drops only the briefing.
+func TestTheCallersAppendedPromptJoinsTheBriefing(t *testing.T) {
+	home := t.TempDir()
+	dir := filepath.Join(home, ".config", "rewake", "claude", "worker")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "CLAUDE.md"), []byte("WORKER-MARK"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range []struct {
+		part  role.Role
+		intro bool
+		args  []string
+		want  []string
+	}{
+		{role.Main, true, []string{"--append-system-prompt", "FIRST-MARK", "--append-system-prompt=MINE-MARK"}, []string{`session "api"`, "MINE-MARK"}},
+		{role.Write, true, []string{"--append-system-prompt", "MINE-MARK", "--", "--append-system-prompt"}, []string{`session "api"`, "WORKER-MARK", "MINE-MARK"}},
+		{role.Write, false, []string{"--append-system-prompt", "MINE-MARK"}, []string{"WORKER-MARK", "MINE-MARK"}},
+	} {
+		t.Setenv("HOME", home)
+		plan, err := New().Launch(adapter.LaunchRequest{
+			Name: "api", Dir: t.TempDir(), Args: c.args, Intro: c.intro, Role: c.part,
+			Socket: filepath.Join(t.TempDir(), "api.sock"), Env: []string{"HOME=" + home},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		texts := adapter.FlagValues(plan.Args, introFlag)
+		if len(texts) != 1 || strings.Contains(texts[0], "FIRST-MARK") {
+			t.Fatalf("%v: %q", c.args, texts)
+		}
+		at := -1
+		for _, part := range c.want {
+			next := strings.Index(texts[0], part)
+			if next <= at {
+				t.Fatalf("%v: %q not after what precedes it in %q", c.args, part, texts[0])
+			}
+			at = next
+		}
+		if !c.intro && strings.Contains(texts[0], `session "api"`) {
+			t.Fatalf("--no-intro kept the briefing: %q", texts[0])
+		}
+		if c.args[len(c.args)-1] == "--append-system-prompt" && plan.Args[len(plan.Args)-1] != "--append-system-prompt" {
+			t.Fatalf("the prompt after -- was touched: %q", plan.Args)
+		}
 	}
 }

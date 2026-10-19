@@ -212,6 +212,9 @@ func (h *host) command() (*exec.Cmd, error) {
 		return nil, err
 	}
 	env = append(env, WorkerSpaceEnv+"="+h.spec.Room+"/"+h.spec.ID)
+	if h.spec.Template != "" {
+		env = append(env, WorkerTemplateEnv+"="+h.spec.Template)
+	}
 	cmd := exec.Command(self, h.spec.Args...)
 	cmd.Dir, cmd.Env = h.spec.Cwd, env
 	return cmd, nil

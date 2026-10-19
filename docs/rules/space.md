@@ -89,8 +89,9 @@ shell replaced the host mode: the socket serves the raw stream only, to the shel
   `REWAKE_ROOM`, `REWAKE_DIR`, its own spec, every `REWAKE_BRIDGE_` variable and every catalogue
   harness's `EnvNotInherited` (which carries `REWAKE_MOD_SOCKET`), sets `REWAKE_DIR` to the base
   of main's room — refusing a base that is not absolute, so the default is never taken — and
-  `TERM`, and runs its own executable as `rewake <harness>` with `REWAKE_SPACE=<room>/<space id>`, which the
-  launch believes only from its parent, that space's host, and takes the name, role and room
+  `TERM`, and runs its own executable as `rewake <harness>` with `REWAKE_SPACE=<room>/<space id>`
+  and `REWAKE_SPACE_TEMPLATE=<alias>`, the alias every space is opened with, carried in the
+  host's spec, not the record. The launch believes them only from its parent, that space's host, and takes the name, role and room
   from the space's record (October 19, 2026). From there the worker is an ordinary launch,
   whose identity reaches its harness from its own wrapper.
   Tests:
