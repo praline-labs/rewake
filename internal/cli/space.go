@@ -7,7 +7,6 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/core/space"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/infra/state"
@@ -28,30 +27,27 @@ func spaceGroup() Group {
 			MaxPositionals: Variadic,
 			Summary:        "List this room's spaces, or, from main, open one: start a worker that lives no longer than main's run.",
 			Options: []Option{
-				{Flag: "--harness", Value: "<harness>", Summary: "open: the worker's harness; excludes --alias."},
-				{Flag: "--alias", Value: "<alias>", Summary: "open: a worker alias from rewake workers; supplies its harness, role, wrapper and arguments; excludes --harness."},
-				{Flag: "--role", Value: "<role>", Summary: "open: override the alias's role; without an alias, " + role.Write.ID + " by default; " + role.General.ID + " works too."},
+				{Flag: "--alias", Value: "<alias>", Summary: "open, required: the worker's template from rewake workers; supplies its harness, role, wrapper and arguments."},
 				{Flag: "--worktree", Summary: "open: start the worker in a new worktree, as the harness's own --worktree launch does; --worktree=<name> names it."},
 				jsonOption,
 			},
 			Examples: []string{
 				"rewake space list", "rewake space list --json",
-				"rewake space open api --harness claude",
 				"rewake space open api --alias claude-write",
 				"rewake space open api --alias claude-write -- --effort low",
-				"rewake space open api --harness claude --worktree=fix-login -- --permission-mode acceptEdits",
-				"rewake space open docs --harness claude --role general --json",
+				"rewake space open api --alias claude-write --worktree=fix-login -- --permission-mode acceptEdits",
+				"rewake space open docs --alias claude-general --json",
 			},
 			Next: []string{"rewake send <name>-<harness> \"text\""},
 			Notes: []string{
-				"--alias starts the worker an alias of rewake workers describes: its harness, role, command and arguments, with its model and effort, and its context where the harness has a flag for it. The space names the worker and its room; --role overrides the alias's role. Harness flags after -- replace the alias's single-use ones.",
+				"A worker is raised only from a template: --alias starts the worker an alias of rewake workers describes — its harness, role, command and arguments, with its model and effort, and its context where the harness has a flag for it. The space names the worker and its room. Harness flags after -- replace the alias's single-use ones.",
 				"open is main's: refused from any other role, and from a run whose spaces are not live. The worker is an ordinary launch of rewake in main's room whatever its checkout, named <name>-<harness>, started in main's working directory; the only way to start one, since a person's rewake <harness> is always main. Everything after the name goes to its harness — permission flags, a model. rewake types nothing into the worker on its own: what it needs to start unattended goes there; the person types into it from main's shell, where main runs whenever it was started on a terminal, which shows each worker's terminal beside main's. rewake chooses the session id of a harness that takes one and keeps it in the record.",
 				"The worker runs in a pseudo-terminal of a space host, a rewake process detached from main and no descendant of it. The space host checks main's run once a second; once that run has ended — by /exit, a crash or a kill — it sends the worker's process group SIGHUP, then SIGTERM after a second, then SIGKILL after five more, records what it observed, and exits.",
 				"open answers once the worker's session is registered, within 30 seconds, or says why the space did not open — a worker that exited at once is named with the last line it wrote.",
 				"Each space shows its main, its worker's name, harness and role, the session id rewake chose for the worker's conversation (none for a harness that takes none), its checkout and branch. A closed space keeps them.",
 				"States: opening — the record is written, the worker not yet started; open — the worker runs; closing; closed — over, no checkout left; kept — over, its checkout left. A space not over whose main has ended reads \"main ended\"; one whose main cannot be told from here reads \"main unknown\".",
 				"A kept checkout is listed with what was found in it — changes, commits, a Git lock, or that it could not be looked at — and the Git commands that clear it once what is wanted is merged; each refuses rather than lose work. It stays listed until the checkout is gone, and one that cannot be looked at stays too. rewake removes none.",
-				"Exit 0 listed or opened; 1 the spaces could not be read, or the space did not open; 2 a wrong call — not main, no such harness or role, a name that cannot be one.",
+				"Exit 0 listed or opened; 1 the spaces could not be read, or the space did not open; 2 a wrong call — not main, no --alias or no such alias, a name that cannot be one.",
 			},
 			Access:  spaceAccess,
 			Handler: handleSpace,
@@ -101,11 +97,11 @@ func handleSpace(ctx *Context, call Call) error {
 	case verb == "open":
 		return handleSpaceOpen(ctx, call)
 	case verb != "list":
-		return &UsageError{Command: call.Command, Message: fmt.Sprintf("space needs list or open, got %q: rewake space list, or rewake space open api --harness claude.", verb)}
+		return &UsageError{Command: call.Command, Message: fmt.Sprintf("space needs list or open, got %q: rewake space list, or rewake space open api --alias <alias>.", verb)}
 	case len(call.Positionals) > 1:
 		return &UsageError{Command: call.Command, Message: "space list takes no other argument."}
 	}
-	for _, flag := range []string{"harness", "alias", "role", "worktree"} {
+	for _, flag := range []string{"alias", "worktree"} {
 		if _, given := call.Flags[flag]; given {
 			return &UsageError{Command: call.Command, Message: fmt.Sprintf("--%s belongs to space open.", flag)}
 		}

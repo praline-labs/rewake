@@ -48,11 +48,10 @@ func TestMemoryIsPerProjectAndTemplate(t *testing.T) {
 	}
 	sonnet, _ := memoryDir("/f", filepath.Join(top, "wt"), "sonnet-medium-write")
 	plain, _ := memoryDir("/f", other, "opus-high-write")
-	none, _ := memoryDir("/f", repo, "")
-	if filepath.Dir(sonnet) != filepath.Dir(want) || sonnet == want || filepath.Dir(plain) == filepath.Dir(want) || filepath.Base(none) != defaultTemplate {
-		t.Fatalf("templates %s, %s; another project %s; no alias %s", want, sonnet, plain, none)
+	if filepath.Dir(sonnet) != filepath.Dir(want) || sonnet == want || filepath.Dir(plain) == filepath.Dir(want) {
+		t.Fatalf("templates %s, %s; another project %s", want, sonnet, plain)
 	}
-	for _, bad := range []string{"../x", "a/b", ".hidden"} {
+	for _, bad := range []string{"", "../x", "a/b", ".hidden"} {
 		if _, err := memoryDir("/f", repo, bad); err == nil {
 			t.Errorf("%q named a directory", bad)
 		}
@@ -92,7 +91,8 @@ func TestMemoryDefaultRetired(t *testing.T) {
 }
 
 // A worker's launch passes a copy in its run directory with memory on, the
-// directory made private; with the person's false it passes the file.
+// directory made private; with the person's false, or raised from no
+// template, it passes the file.
 func TestLaunchSettingsWithMemory(t *testing.T) {
 	base, err := os.MkdirTemp("", "mt")
 	if err != nil {
@@ -112,5 +112,8 @@ func TestLaunchSettingsWithMemory(t *testing.T) {
 	}
 	if passed, _, err := launchSettings("/f/settings.json", map[string]any{"autoMemoryEnabled": false}, folder, runDir, "opus"); err != nil || passed != "/f/settings.json" {
 		t.Fatalf("the person's false: %s %v", passed, err)
+	}
+	if passed, _, err := launchSettings("/f/settings.json", map[string]any{}, folder, runDir, ""); err != nil || passed != "/f/settings.json" {
+		t.Fatalf("no template: %s %v", passed, err)
 	}
 }

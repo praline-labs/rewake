@@ -270,8 +270,8 @@ func flow(catalog adapter.Catalog) []FlowStep {
 			continue
 		}
 		steps = append(steps, FlowStep{
-			Command: fmt.Sprintf("rewake space open helper --harness %s --role %s", h.ID(), role.General.ID),
-			Summary: fmt.Sprintf("From main, raise the worker helper-%s with role %s in main's room; only main starts workers.", h.ID(), role.General.ID),
+			Command: fmt.Sprintf("rewake space open helper --alias %s-%s", h.ID(), role.General.ID),
+			Summary: fmt.Sprintf("From main, raise the worker helper-%s in main's room from the template %s-%s of rewake workers, which names its harness and role; only main starts workers.", h.ID(), h.ID(), role.General.ID),
 		}, FlowStep{
 			Command: fmt.Sprintf("rewake send helper-%s \"pull and rerun the smoke\"", h.ID()),
 			Summary: "Give that exact address a task; its report comes back when the turn ends.",

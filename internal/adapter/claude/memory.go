@@ -18,19 +18,12 @@ import (
 // autoMemoryDirectory from --settings, an absolute path only — a relative
 // one is ignored for its shared default (probed on 2.1.302).
 
-// defaultTemplate names the memory of workers opened by --harness, with no
-// alias.
-const defaultTemplate = "default"
-
 // templateName is what a template may be called to name a directory.
 var templateName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*$`)
 
 // memoryDir is the memory of the template's workers in the project of the
 // directory they start in: <folder>/memory/<project>/<template>.
 func memoryDir(folder, cwd, template string) (string, error) {
-	if template == "" {
-		template = defaultTemplate
-	}
 	if !templateName.MatchString(template) {
 		return "", fmt.Errorf("the alias %q cannot name a worker's memory directory: letters, digits, dot, dash or underscore", template)
 	}
@@ -80,8 +73,12 @@ func withMemory(settings map[string]any, dir string) (map[string]any, bool) {
 // settings.json, or, with memory on, a copy in the run's directory with the
 // two memory keys laid over it, since --settings is single-use. The memory
 // directory is made private before Claude Code would make it. With no run
-// directory to write in, the worker starts without memory, noted.
+// directory to write in, the worker starts without memory, noted. A worker
+// raised from no template — only a test build's direct launch — has none.
 func launchSettings(path string, settings map[string]any, folder, runDir, template string) (string, []string, error) {
+	if template == "" {
+		return path, nil, nil
+	}
 	if runDir == "" {
 		return path, []string{"no worker memory: the launch has no run directory to write its settings in"}, nil
 	}

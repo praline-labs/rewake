@@ -72,7 +72,6 @@ func documentedForms(launch string) []formCase {
 		{[]string{"worktree", "rm", "fix-login"}, change},
 		{[]string{"worktree", "land", "fix-login", "--into", "release"}, change},
 		{[]string{"worktree", "finish", "fix-login"}, change},
-		{[]string{"space", "open", "api", "--harness", launch}, change},
 		{[]string{"space", "open", "api", "--alias", "worker"}, change},
 	}
 	for _, kind := range sendKinds {

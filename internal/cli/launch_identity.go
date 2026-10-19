@@ -26,7 +26,7 @@ type launchIdentity struct {
 	directory string
 	part      role.Role
 	reason    string
-	// template is the alias of the worker's space, empty for --harness.
+	// template is the alias the worker's space was opened with.
 	template string
 }
 

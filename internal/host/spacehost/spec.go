@@ -51,7 +51,7 @@ type Spec struct {
 	// harness's EnvNotInherited, main's markers among them.
 	Strip []string `json:"strip,omitempty"`
 	// Template is the alias the space was opened with, given to the worker's
-	// launch as WorkerTemplateEnv; empty for --harness.
+	// launch as WorkerTemplateEnv.
 	Template string `json:"template,omitempty"`
 	// Worktree says the launch makes a worktree, which the record names once
 	// the worker's session claims it.

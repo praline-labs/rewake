@@ -14,9 +14,9 @@ for each role; harness adapters only pass the rendered strings. The record keeps
 
 | role | started by | turns reported | its playbook says |
 |---|---|---|---|
-| `general` | main, `space open --role general` | yes | take work, end your turn with the result; no Git metadata |
+| `general` | main, `space open --alias` of an alias with `role = "general"` or none | yes | take work, end your turn with the result; no Git metadata |
 | `main` | the person, `rewake <harness>` | no | hand out work, read reports; you cannot start sessions |
-| `write` | main, `space open` (the default role) | yes | take work, end your turn with the result; you can commit when authorized |
+| `write` | main, `space open --alias` of an alias with `role = "write"` | yes | take work, end your turn with the result; you can commit when authorized |
 
 The briefing carries the role's whole playbook, the text of
 [what a session is told](#what-a-session-is-told); the last column only names its

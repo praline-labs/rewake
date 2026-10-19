@@ -191,7 +191,7 @@ rewake --command my-claude claude
     the last element as a readable slug and 12 hex digits of the SHA-256 of the resolved path
     — so every worktree of one repository, and any directory in it, shares it, as Claude Code
     keys its own; outside Git it is the launch directory. `<template>` is the alias the space
-    was opened with, `default` for `space open --harness claude`; an alias that cannot name a
+    was opened with, which every space has; an alias that cannot name a
     directory (only letters, digits, dot, dash and underscore, not starting with a dot)
     refuses the launch. Parallel workers of one template share the directory; the last write
     of a fact wins. Since `--settings` is single-use, the launch writes
@@ -326,13 +326,13 @@ the main checkout at the same time.
 
 ### A space for a worker
 
-`rewake space open <name> --harness <id> [--role write|general] [--worktree[=<name>]] -- <harness
-args>` is main's way to start a worker, built October 18, 2026 (S4-7,
-[the steps](v2/stage4-space-steps.md#the-build-steps)); `--role` is `write` by default. Alternatively,
-`rewake workers` lists the person's worker aliases, and `space open <name> --alias <alias>`
-uses the alias's harness, role, command wrapper, args and applied settings. `--harness` and
-`--alias` exclude each other, and the space owns the name and room; `--role` may override the
-alias's worker role. The fields and precedence are in
+`rewake space open <name> --alias <alias> [--worktree[=<name>]] -- <harness args>` is main's way
+to start a worker, built October 18, 2026 (S4-7,
+[the steps](v2/stage4-space-steps.md#the-build-steps)). A worker is raised only from a template
+(the owner's decision, October 19, 2026): `--alias` is required, `rewake workers` lists the
+person's worker aliases, and the alias supplies the harness, role, command wrapper, args and
+applied settings; `--harness` and `--role` are gone, a call with either refused as an unknown
+flag. The space owns the name and room. The fields and precedence are in
 [launch-defaults.md](launch-defaults.md#the-worker-catalogue).
 Opening is a change, refused unless main's run has `Spaces` live, and refused for a name whose session is
 already alive. It writes the space's record and re-executes rewake as a launcher with

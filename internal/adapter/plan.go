@@ -62,8 +62,8 @@ type LaunchRequest struct {
 	// a conversation that does not exist.
 	Conversation string
 	// Template is the worker catalogue's alias a space was opened with, empty
-	// for a worker opened by --harness and for main: an adapter may keep what
-	// one template's workers share, its memory on Claude Code
+	// for main and for a test build's direct worker launch: an adapter may
+	// keep what one template's workers share, its memory on Claude Code
 	// (docs/v2/worker-profile.md).
 	Template string
 	// Shell says the run is main's in rewake's shell, drawn on a pane whose

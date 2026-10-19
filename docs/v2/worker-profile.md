@@ -44,7 +44,7 @@ with the user source off, `--autocompact` holds unless the project's settings se
 ## The profile
 
 **Every Claude Code worker gets it; main never.** It is the worker role's, not an alias's: a
-`space open --harness claude` and an alias both get it; main is exactly the person's Claude Code.
+worker raised from any alias gets it; main is exactly the person's Claude Code.
 
 **rewake's defaults**, with no file of the person's: the user layer off and the ancestor exclude
 above; the auto-memory, off until October 19, 2026 and since then one per template and project
@@ -126,11 +126,12 @@ configuration Claude Code starts with, as it did before. A wrapper that moves
   it `main = true` and main's aliases. An alias keeps `harness`, `command`, `args`, `description`
   and `launch`; its `rewake` list becomes one field `role = "write" | "general"`, since nothing
   else in it means anything for a space. A file with the old fields is refused naming them.
-  `rewake workers` and `space open --alias | --harness [--role]` stay; the user/project rule
-  stays: a project alias names no role and no command.
+  `rewake workers` and `space open --alias` stay — the only way to raise a worker since
+  `--harness` and `--role` went (decision 8); the user/project rule stays: a project alias names
+  no role and no command.
 - **How the space host still launches a worker.** It runs `rewake [--command <wrapper>]
-  <harness> <args>` with `REWAKE_SPACE=<room>/<space id>` (and `REWAKE_SPACE_TEMPLATE=<alias>`
-  for an alias, which names the worker's memory) and no name, room or role flag; the
+  <harness> <args>` with `REWAKE_SPACE=<room>/<space id>` and `REWAKE_SPACE_TEMPLATE=<alias>`,
+  the alias that names the worker's memory, and no name, room or role flag; the
   launch is that worker only when the variable names a space that is `opening`, or `open` on the
   launch's own run, whose host is its parent process — taking the name, role and room from the
   record — and refuses otherwise, pointing to `rewake space open`. The space record is not
@@ -152,6 +153,10 @@ Main's, October 19, 2026, on the design's questions; the room's identity is the 
    project's `.mcp.json` servers stay.
 6. `rewake pi` is main too; without spaces it runs without the shell and without workers.
 7. One profile for every Claude Code worker; named profiles only when needed.
+8. The owner's, October 19, 2026: a worker is raised only from a template. `space open` requires
+   `--alias`; `--harness` and `--role` are gone, the role is the alias's, and the `default`
+   memory of a worker opened without an alias with them
+   ([the entry](../roadmap/2026-10-19-worker-from-template.md)).
 
 ## Steps
 

@@ -53,7 +53,7 @@ sock/space.<id>.sock             the worker's screen, served by its space host t
 the owner runs it from a terminal outside any session, and a launch from a shell inside a
 rewake session is refused with exit 2 before any step below
 ([launch.md](launch.md#no-session-inside-a-session)). Main raises the receiver, api-claude, with
-`rewake space open api --harness claude` ([A space](#a-space-main-starts-a-worker)); that worker's launch goes through the
+`rewake space open api --alias claude-write` ([A space](#a-space-main-starts-a-worker)); that worker's launch goes through the
 same steps, with its name, role and room from the space's record.
 
 1. **The directory.** The wrapper resolves the `REWAKE_DIR` base, its root `v2/` and
@@ -322,8 +322,8 @@ has held it once, through the adapter, to ask whether the work is done.
 
 Main can read `rewake workers` and run `rewake space open api --alias claude-write --worktree
 -- <harness args>` from its shell, while its run has `Spaces` live. The alias supplies its
-worker wrapper, role and applied settings; an alias is no launch of its own. `--harness claude` remains
-the direct form without an alias. Listing is a view for any role, not a launch. Opening writes the record, `spaces/<id>.json`, opening,
+harness, worker wrapper, role and applied settings; an alias is no launch of its own, and a
+worker is raised only from one. Listing is a view for any role, not a launch. Opening writes the record, `spaces/<id>.json`, opening,
 and re-executes rewake as a launcher in a session of its own; the launcher starts the
 **space host** and exits, so the space host is nobody's child in main's tree. The space host
 records its own run, checks that its chain of parents does not meet main's wrapper — or closes

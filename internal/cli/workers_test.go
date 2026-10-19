@@ -121,10 +121,10 @@ effort = "high"
 context = "large"
 `)
 	ctx := &Context{table: newTable(adapter.NewCatalog(workerSettingsHarness{}))}
+	// A worker comes only from a template, which names its harness and role.
 	for _, argv := range [][]string{
+		{"space", "open", "api"},
 		{"space", "open", "api", "--alias", "nothing"},
-		{"space", "open", "api", "--alias", "agent-write", "--role", "main"},
-		{"space", "open", "api", "--alias", "agent-write", "--harness", "agent"},
 		{"space", "open", "api", "--alias", "agent-write", "--worktree="},
 	} {
 		parsed, err := ctx.table.parse(argv)
@@ -135,7 +135,12 @@ context = "large"
 			t.Fatalf("accepted %v", argv)
 		}
 	}
-	parsed, err := ctx.table.parse([]string{"space", "open", "api", "--alias", "agent-write", "--role", "general", "--", "--effort", "low"})
+	for _, flag := range []string{"--harness", "--role"} {
+		if _, err := ctx.table.parse([]string{"space", "open", "api", "--alias", "agent-write", flag, "agent"}); err == nil {
+			t.Fatalf("%s parsed", flag)
+		}
+	}
+	parsed, err := ctx.table.parse([]string{"space", "open", "api", "--alias", "agent-write", "--", "--effort", "low"})
 	if err != nil {
 		t.Fatal(err)
 	}
