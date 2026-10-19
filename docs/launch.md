@@ -164,11 +164,12 @@ name in the person's environment does not reach the run.
 The adapter embeds `extension.ts` and its management module, writing both in the run
 directory. It adds `-e <extension.ts>` and, unless `--no-intro`, its briefing through the
 repeatable `--append-system-prompt`. `-e` adds rewake's extension to those pi finds: the
-person's, packages and built-ins load as without rewake, and a project's resources load
-once pi's project trust allows them — in a project with `.pi` resources or `.agents/skills`
-and no saved decision, pi asks in its own screen before any extension loads, so the run is
-not ready for tasks until the person answers (`/trust` saves the answer in the directory
-above). The socket path is passed in `REWAKE_PI_SOCKET`; nothing is injected as a first
+person's, packages and built-ins load as without rewake, and so do a project's resources:
+in a project with `.pi` resources or `.agents/skills` pi would otherwise ask whether to trust
+it before any extension loads, rewake's included, and the run would wait for a person. By the
+owner's decision of October 19, 2026 the adapter adds `--approve`, pi's trust for that one
+process, which saves nothing to `trust.json`; a launch whose own arguments carry `-a`,
+`--approve`, `-na` or `--no-approve` keeps its choice. The socket path is passed in `REWAKE_PI_SOCKET`; nothing is injected as a first
 user message.
 
 A new conversation named by rewake is passed as `--session-id <uuid>`. A conflicting

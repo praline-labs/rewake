@@ -164,3 +164,37 @@ func TestAnExistingAgentDirectoryIsMadePrivate(t *testing.T) {
 		t.Errorf("the agent directory: %v, %v", info, err)
 	}
 }
+
+// A project with its own resources would hold the run on pi's trust prompt
+// until a person answered; the launch trusts it unless its arguments decide.
+func TestPiTrustsTheProjectUnlessTheLaunchDecides(t *testing.T) {
+	for _, tc := range []struct {
+		args []string
+		want []string
+	}{
+		{nil, []string{"--approve"}},
+		{[]string{"-na"}, []string{"-na"}},
+		{[]string{"--no-approve"}, []string{"--no-approve"}},
+		{[]string{"-a"}, []string{"-a"}},
+		{[]string{"--", "-na"}, []string{"--approve", "-na"}},
+	} {
+		request := launchRequest(t)
+		request.Args = tc.args
+		plan, err := harness{}.Launch(request)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var got []string
+		for _, arg := range plan.Args {
+			if slices.Contains([]string{"--approve", "-a", "--no-approve", "-na"}, arg) {
+				got = append(got, arg)
+			}
+		}
+		if !slices.Equal(got, tc.want) {
+			t.Errorf("launch %q: trust flags %q, want %q", tc.args, got, tc.want)
+		}
+		if terminator := slices.Index(plan.Args, "--"); terminator >= 0 && slices.Index(plan.Args, "--approve") > terminator {
+			t.Errorf("launch %q: --approve after the terminator: %q", tc.args, plan.Args)
+		}
+	}
+}

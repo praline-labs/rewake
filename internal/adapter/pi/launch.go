@@ -37,6 +37,14 @@ func (harness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, error)
 	if request.Intro {
 		args = adapter.AddFlags(args, "--append-system-prompt", brief.Intro(request.BriefContext()))
 	}
+	// A project with its own pi resources makes pi ask whether to trust it
+	// before any extension loads, rewake's included, and the run waits for a
+	// person. The owner's decision of October 19, 2026: trust it by default.
+	// --approve decides for this process only and saves nothing; a choice in
+	// the launch's own arguments stands.
+	if len(adapter.FlagValues(args, "--approve", "-a", "--no-approve", "-na")) == 0 {
+		args = adapter.AddFlags(args, "--approve")
+	}
 	dir, err := agentDir()
 	if err != nil {
 		return adapter.LaunchPlan{}, err

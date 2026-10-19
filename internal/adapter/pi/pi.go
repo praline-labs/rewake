@@ -34,7 +34,7 @@ func (harness) Notes() []string {
 	return []string{
 		"Notices wake an idle session and steer a busy one after its current tool batch. The per-run extension carries notices and reports through a local socket.",
 		"rewake starts the pi installed with it, " + PinnedVersion + ", with node (Node.js " + NodeMinimum + " or later); a pi of another version there refuses the launch. A pi named with --command starts at " + MinimumVersion + " or later, with a note when it is not " + PinnedVersion + ". REWAKE_PI names a pi package or entry script for a build npm did not install.",
-		"pi keeps its login, settings, extensions, skills, prompts, themes, packages and sessions in ~/.config/rewake/pi/agent, apart from the person's own pi; log in once there with /login. Its extensions, the project's included, load beside rewake's; project resources ask for trust as pi does.",
+		"pi keeps its login, settings, extensions, skills, prompts, themes, packages and sessions in ~/.config/rewake/pi/agent, apart from the person's own pi; log in once there with /login. Its extensions, the project's included, load beside rewake's: the launch adds --approve, so a project's resources are trusted for that run without pi's prompt, unless it passes -na or -a itself.",
 		"Tasks and questions are accepted after the extension connects from the harness process. A --command wrapper must exec pi, not start it as a child.",
 		"A turn ends at agent_settled, after automatic retries and queued work. Its end is not held open; use rewake pending before an interim end.",
 		"Context, model and thinking level come from the native session. Compact accepts an optional focus and refuses a running turn; interrupt stops a running turn. Limits are not reported.",

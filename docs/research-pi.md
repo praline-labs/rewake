@@ -23,6 +23,12 @@ Read in the package's `docs/cli.md`, `docs/extensions.md`, `CHANGELOG.md` and
   edit a trust record. The adapter passed both flags until October 19, 2026, when the
   bundled pi dropped them so the person's and the project's extensions load
   ([below](#the-bundled-pi)); `-e` alone adds rewake's entry to those pi finds.
+- `-a` / `--approve` trusts project-local resources for that process: `parseArgs` sets
+  `projectTrustOverride`, the last of `-a`/`-na` winning, and `resolveProjectTrusted`
+  (`dist/core/project-trust.js`) returns it before any extension's `project_trust`, saved
+  decision or `defaultProjectTrust`, writing nothing. The adapter adds it since October 19,
+  2026 unless the launch names either flag. Read on 1.3.0; 1.2.0's `dist/cli/args.js` has
+  both flags.
 - `--append-system-prompt` is repeatable. The adapter appends its briefing even when the
   caller already supplied one. `--no-intro` suppresses only rewake's briefing.
 - `--session-id` opens or creates the named conversation. The native CLI rejects it with
@@ -241,7 +247,9 @@ the 1.3.0 package (`docs/cli.md`, `docs/security.md`, `docs/settings.md`, `dist/
   check. `node cli.js --version` prints `1.3.0` and writes nothing to HOME.
 - Project trust: without `-a`/`-na`, an extension handling `project_trust` or a saved decision,
   `defaultProjectTrust` (`"ask"` by default) applies; the interactive prompt comes before any
-  extension loads, the user-level and rewake's included.
+  extension loads, the user-level and rewake's included. `defaultProjectTrust` is read only
+  from the agent directory's `settings.json`, with no flag or variable, so the adapter passes
+  `--approve` instead ([above](#launch-and-extension-lifetime)).
 
 **[live]** October 19, 2026, the branch's build placed as npm places it, beside pi 1.3.0 in one
 `node_modules`, a private HOME and `REWAKE_DIR` under `/tmp`, no login, worker
@@ -257,7 +265,7 @@ with the person's own HOME for its login:
 | the directory's mode | a fresh HOME: the launch made `~/.config/rewake/pi/agent` 0700 (and the missing parents); one made before at 0755 is made 0700 |
 | a foreign setting | `~/.pi/agent/settings.json` and an inherited `PI_CODING_AGENT_DIR` both holding `{"httpProxy":"not-a-url"}`, which makes a plain `--version` exit 1: the shipped copy and a `--command` pi both started; neither foreign directory was written |
 | a turn without login | pi printed `Provider is not configured: openai-codex`; the turn ended `stopReason: error`, and main's inbox got an `error` report from the worker 0.2 s later, empty text. The question stayed open: the model never read its inbox, so the report did not answer it |
-| a project with `.pi/extensions` | pi's "Trust project folder?" prompt; no extension loaded and the boundary did not go live within 60 s, until answered |
+| a project with `.pi/extensions` | pi's "Trust project folder?" prompt; no extension loaded and the boundary did not go live within 60 s, until answered — the launch has added `--approve` since (below) |
 | `REWAKE_PI` at the person's pi 1.2.0 | refused before the claim: `pi 1.2.0 was found where rewake's own copy should be; this rewake runs pi 1.3.0: reinstall rewake, or name another program with --command` |
 | `--command` at that pi | started, with the note `pi 1.2.0 named with --command is not the 1.3.0 this rewake was checked with` |
 | no `node` on `PATH` | `pi runs on Node.js 22.19.0 or later, and no node is on PATH` |
@@ -268,3 +276,10 @@ which the run had none of by decision: it is the owner's check after `/login`; t
 itself is the adapter's, live since October 18. `tools/release`'s dry run installed the entry
 from its local registry with pi from the public one: `npm installs
 @earendil-works/pi-coding-agent@1.3.0 beside the command, and it runs under node`.
+
+**[live]** October 19, 2026, after `--approve`: an ordinary `rewake pi` on a pty, pi 1.3.0
+through `REWAKE_PI`, a private HOME and `REWAKE_DIR` under `/tmp`, no login, in a project whose
+`.pi/extensions/marker.ts` writes a file on `session_start`. No trust prompt; the project's
+extension wrote its marker and the boundary was live 0.8 s after the start; nothing was written
+to `trust.json` or `~/.pi`. The same build without the change showed "Trust project folder?" with
+neither within 25 s. With `-na` typed, no prompt, the boundary live and the marker not written.
