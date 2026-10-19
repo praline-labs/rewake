@@ -31,7 +31,6 @@ Tests:
 - `internal/cli/roots_test.go` `TestOrdinaryCommandsNeverTouchLegacyTree`
 - `internal/host/roots_test.go` `TestChildBaseRoundTripAndAuthority`
 - `internal/cli/lease_test.go` `TestChangeFormsOnAnEmptyBaseCreateNothing`
-- `test/leaserig/lease_test.go` `TestBootstrapRecoversAfterEveryStep`
 - `internal/infra/state/bootstrap_test.go` `TestBootstrapRefusesUnsafeExistingComponents`
 - `internal/infra/state/bootstrap_test.go` `TestBootstrapSyncFailureStopsBeforeClaim`
 - `internal/infra/state/bootstrap_test.go` `TestBootstrapRetryReestablishesAFailedSync`

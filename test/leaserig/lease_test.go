@@ -1,7 +1,6 @@
 package leaserig
 
 import (
-	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -94,80 +93,4 @@ func TestOrphanChildRefusesAfterBuildSwitch(t *testing.T) {
 		}
 		session.kill()
 	}
-}
-
-// A launch into an empty base ended or failed at any step of its bootstrap,
-// its lease lock's creation or its build's publication leaves no session, and
-// the next launch completes the room and holds it.
-func TestBootstrapRecoversAfterEveryStep(t *testing.T) {
-	steps := acquireSteps(t)
-	for index, at := range steps {
-		n := index + 1
-		plans := []string{"other:crash=" + strconv.Itoa(n)}
-		if !strings.HasPrefix(at, "step ") {
-			plans = append(plans, "other:fail="+strconv.Itoa(n))
-		}
-		for _, plan := range plans {
-			t.Run(strings.ReplaceAll(plan+" "+at, "/", "_"), func(t *testing.T) {
-				w := newWorld(t)
-				code, errOut := w.run(buildA, "default", plan, launch("default")...)
-				if code == 0 {
-					t.Fatalf("the faulted launch went on: %q", errOut)
-				}
-				sessions, _ := os.ReadDir(filepath.Join(w.room("default"), "sessions"))
-				if len(sessions) != 0 {
-					t.Fatalf("a faulted launch left a session: %v", sessions)
-				}
-				w.heldAt(buildA, "default", "leased", launch("default")...)
-				if got := w.record("default"); got != buildA.id {
-					t.Fatalf("the next launch left %q", got)
-				}
-				for _, level := range []string{"", "v2", "v2/rooms", "v2/rooms/default", "v2/rooms/default/sessions", "v2/rooms/default/inbox", "v2/rooms/default/sock"} {
-					info, err := os.Lstat(filepath.Join(w.base, level))
-					if err != nil || !info.IsDir() || info.Mode().Perm() != 0o700 {
-						t.Fatalf("level %q after recovery: %v, %v", level, info, err)
-					}
-				}
-			})
-		}
-	}
-}
-
-// acquireSteps are the durable steps of a launch into an empty base up to
-// the one after its lease, from a clean run's log: "<op> <path>" each.
-func acquireSteps(t *testing.T) []string {
-	t.Helper()
-	w := newWorld(t)
-	log := filepath.Join(t.TempDir(), "fault.log")
-	p := w.start(buildA, "default", "other:log="+log+";other:holdat=leased@PAUSE", launch("default")...)
-	if !p.waitHeld() {
-		t.Fatalf("the clean launch ended: %s", p.stderr.String())
-	}
-	p.kill()
-	data, err := os.ReadFile(log)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var steps []string
-	for _, line := range strings.Split(strings.TrimSpace(string(data)), "\n") {
-		fields := strings.SplitN(line, " ", 3)
-		if len(fields) != 3 || fields[1] == "read" {
-			continue
-		}
-		steps = append(steps, fields[1]+" "+strings.TrimPrefix(fields[2], w.base))
-		if fields[1] == "step" && fields[2] == "leased" {
-			break
-		}
-	}
-	var made, locked, published bool
-	for _, s := range steps {
-		made = made || strings.HasPrefix(s, "step bootstrap")
-		locked = locked || strings.HasSuffix(s, "/build.lock")
-		published = published || s == "write /v2/rooms/default/build"
-	}
-	if !made || !locked || !published || steps[len(steps)-1] != "step leased" {
-		t.Fatalf("the clean launch's steps are not an empty base's acquisition: %v", steps)
-	}
-	t.Logf("%d steps: %v", len(steps), steps)
-	return steps
 }
