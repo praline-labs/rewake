@@ -274,7 +274,7 @@ func (claudeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, 
 			Socket: modSocket, Role: request.Role.ID, Record: filepath.Join(request.RunDir, "hello.json"), Wait: harnessWait,
 			ControlDir: request.ControlDir, Epoch: request.Epoch,
 			Live: run.transition, Ended: runEnded,
-			Asked: askedOf(request),
+			Asked: askedOf(request), Effort: flagValue(args, effortFlag),
 		})
 		service, live, turns, telemetry = run, run, run, run.server
 	}

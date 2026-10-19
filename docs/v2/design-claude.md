@@ -173,8 +173,10 @@ load, heartbeat generation, selected conversation and a load-local sequence. The
 accepts only its current live generation and newer samples; unknown tokens clear an older
 reading. It publishes cached observations through `core/session.Snapshot`, without reading
 transcripts, wrapping the person's status line or measuring a full context breakdown.
-The native model window and percentage are used as given; effort and rate limits remain
-unknown or absent. A lapse makes every field stale until a new generation supplies a sample.
+The native model window and percentage are used as given. Effort is what the latest
+main-loop `turn.step` asked for, kept by the host across loads; before one, the launch's
+`--effort`, marked as the launch's (`reasoningEffortSource`), or unknown. Rate limits remain
+absent. A lapse makes every field stale until a new generation supplies a sample.
 
 Completed compactions have a load-local count; the host folds its increases into the run's
 count and bounded notification events. A reload keeps the run's count and marks coverage

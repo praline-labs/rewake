@@ -331,6 +331,7 @@
         "conversation": {"type": "string", "description": "is the selected conversation."},
         "activity": {"type": "string", "description": "is working or idle."},
         "model": {"type": "string", "description": "is the configured model, absent when unknown."},
+        "effort": {"type": "string", "description": "is the reasoning effort the latest main-loop request of this load asked for, absent until one is seen."},
         "tokens": {"type": "integer", "description": "is current input context usage, absent when unknown."},
         "window": {"type": "integer", "description": "is the context window, absent when unknown."},
         "percent": {"type": "integer", "description": "is the filled percentage, absent when unknown."},

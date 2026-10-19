@@ -372,6 +372,10 @@ type StateRequest struct {
 	// Model is the configured model, absent when unknown.
 	Model *string `json:"model,omitempty"`
 
+	// Effort is the reasoning effort the latest main-loop request of this load asked for, absent
+	// until one is seen.
+	Effort *string `json:"effort,omitempty"`
+
 	// Tokens is current input context usage, absent when unknown.
 	Tokens *int `json:"tokens,omitempty"`
 

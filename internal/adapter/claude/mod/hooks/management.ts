@@ -24,6 +24,7 @@ export class Management {
   private compactions = 0;
   private last = { request: "", from: "" };
   private turn?: string;
+  private effort?: string;
   private compacting = false;
   private remote?: ControlCommand;
   private interrupt?: { command: ControlCommand; turn: string; generation: number };
@@ -43,6 +44,14 @@ export class Management {
 
   started(turnId: string) {
     this.turn = turnId;
+    this.changed();
+  }
+
+  // A main-loop request names the effort the session runs at now; the person
+  // may change it between turns, and no other source of the engine says it.
+  effortSeen(effort: string | number | undefined) {
+    if (effort === undefined || String(effort) === this.effort) return;
+    this.effort = String(effort);
     this.changed();
   }
 
@@ -87,6 +96,7 @@ export class Management {
       activity: this.turn ? "working" : "idle",
       compacting: this.compacting,
       compactions: this.compactions,
+      effort: this.effort,
       ...this.last,
     };
     this.sending = this.sending

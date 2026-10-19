@@ -255,6 +255,14 @@ export const register: Register = (on) => {
     return started;
   });
 
+  // The effort a main-loop request asks for is the session's live setting:
+  // neither its configuration rows nor its settings file follow a change made
+  // during the session (docs/research-claude-mod.md#effort). Only observed.
+  on("turn.step", async function* ($, e, next) {
+    if (e.agentId === undefined) load?.management.effortSeen(e.effort);
+    return yield* next(e);
+  });
+
   // A turn's end of the main loop goes to the outbox; a subagent's, which
   // carries its agent id, is not the session's turn and is not sent.
   on("turn.complete", async ($, e, next) => {

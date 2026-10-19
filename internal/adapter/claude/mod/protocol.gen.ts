@@ -313,6 +313,9 @@ export interface StateRequest {
   activity: string
   // model is the configured model, absent when unknown.
   model?: string
+  // effort is the reasoning effort the latest main-loop request of this load asked for, absent
+  // until one is seen.
+  effort?: string
   // tokens is current input context usage, absent when unknown.
   tokens?: number
   // window is the context window, absent when unknown.

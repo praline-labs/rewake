@@ -188,7 +188,11 @@ may be displayed with explicit labels; cached data is not a fresh measurement.
 Added back through the mod on October 18, 2026: context, configured model, activity and
 compaction state use the existing snapshot; its observations stay fresh only while the
 current mod's heartbeat holds. The native context window and percentage are copied without
-the older gateway formula above. Effort stays unknown, and rate limits are not copied.
+the older gateway formula above. Effort is the one the main loop's latest model request asked
+for, seen by the mod since October 19, 2026; until the first such request it is the launch's
+own `--effort`, shown as `"high" (launch)` and in JSON with `reasoningEffortSource: "launch"`,
+and unknown when the launch passed none. A change made in the session shows from its next
+request ([the probe](research-claude-mod.md#effort)). Rate limits are not copied.
 The source and test-kit check on 2.1.302, with live acceptance pending, is in
 [the parity record](research-claude-parity.md).
 

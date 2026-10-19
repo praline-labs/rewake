@@ -52,6 +52,9 @@ type Config struct {
 	// it shows and its deadline (asks.go); nil for a run main does not
 	// answer for, whose requests stay the person's at the screen.
 	Asked func(id string, offer asking.Offer, deadline time.Time) error
+	// Effort is the reasoning effort the launch passed, empty when it passed
+	// none: shown, marked, until the mod sees a request of the main loop.
+	Effort string
 }
 
 // Server is the wrapper's end of the mod's protocol for one run. Every

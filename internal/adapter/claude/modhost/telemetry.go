@@ -14,9 +14,12 @@ type observations struct {
 	localCount int
 	count      uint64
 	partial    bool
-	snapshot   session.Snapshot
-	events     []session.CompactionEvent
-	outcomes   []session.CompactionOutcome
+	// effort is the latest a mod saw the main loop ask for, kept across
+	// loads: a reload forgets it until the next request.
+	effort   string
+	snapshot session.Snapshot
+	events   []session.CompactionEvent
+	outcomes []session.CompactionOutcome
 }
 
 // currentGeneration excludes old loads, even though their durable turn ends
@@ -76,6 +79,17 @@ func (s *Server) observeLocked(sample StateRequest) {
 	snapshot.Fresh, snapshot.ActivityFresh, snapshot.SettingsFresh, snapshot.ContextFresh = true, true, true, true
 	snapshot.Activity, snapshot.Model = &sample.Activity, sample.Model
 	snapshot.Compacting = &sample.Compacting
+	if sample.Effort != nil && *sample.Effort != "" {
+		observed.effort = *sample.Effort
+	}
+	switch {
+	case observed.effort != "":
+		effort := observed.effort
+		snapshot.Effort = &effort
+	case s.cfg.Effort != "":
+		effort := s.cfg.Effort
+		snapshot.Effort, snapshot.EffortSource = &effort, session.EffortFromLaunch
+	}
 	snapshot.Interruptions = session.InterruptionsObserved
 	snapshot.ContextUsed, snapshot.ContextWindow = tokenCount(sample.Tokens), tokenCount(sample.Window)
 	if snapshot.ContextWindow != nil && *snapshot.ContextWindow == 0 {

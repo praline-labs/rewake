@@ -190,3 +190,45 @@ test("a skipped remote compaction has a final refusal and no completion count", 
   expect(results(run).map((one: any) => one.outcome)).toEqual(["requested", "refused"]);
   expect(states(run).at(-1)).toMatchObject({ compactions: 0, compacting: false });
 });
+
+test("effort is the main loop's latest request's, sampled when it changes; a subagent's is not the session's", async ($, on) => {
+  const run = world(on);
+  on("turn.step", async function* (_: any, e: any) {
+    yield { kind: "text", index: 0, text: "" };
+    return {
+      turnId: e.turnId,
+      index: e.index,
+      answer: "",
+      toolUses: [],
+      stopReason: "end_turn",
+      usage: null,
+    };
+  });
+  const step = async (fields: object) => {
+    const stream = $.turn.step({
+      turnId: "t",
+      index: 0,
+      model: "test-model",
+      messageCount: 1,
+      ...fields,
+    } as any);
+    let next = await stream.next();
+    while (next.done !== true) next = await stream.next();
+  };
+  await start($);
+  await run.clock.settle();
+  expect(states(run).at(-1).effort).toBeUndefined();
+  await step({ effort: "max", agentId: "child" });
+  await run.clock.settle();
+  expect(states(run).at(-1).effort).toBeUndefined();
+  await step({ effort: "low" });
+  await run.clock.settle();
+  const count = states(run).length;
+  expect(states(run).at(-1).effort).toBe("low");
+  await step({ effort: "low", index: 1 });
+  await run.clock.settle();
+  expect(states(run).length).toBe(count);
+  await step({ effort: "high", index: 2 });
+  await run.clock.settle();
+  expect(states(run).at(-1).effort).toBe("high");
+});

@@ -29,10 +29,13 @@ type Snapshot struct {
 	ContextAt        *time.Time        `json:"contextObservedAt"`
 	Model            *string           `json:"configuredModel"`
 	Effort           *string           `json:"configuredReasoningEffort"`
-	SettingsAt       *time.Time        `json:"settingsObservedAt"`
-	Compactions      *uint64           `json:"completedCompactions"`
-	Compacting       *bool             `json:"compactionInProgress"`
-	Coverage         string            `json:"compactionCoverage"`
+	// EffortSource is EffortFromLaunch when Effort is what the launch passed,
+	// not what the harness was seen to run at; empty when observed.
+	EffortSource string     `json:"reasoningEffortSource,omitempty"`
+	SettingsAt   *time.Time `json:"settingsObservedAt"`
+	Compactions  *uint64    `json:"completedCompactions"`
+	Compacting   *bool      `json:"compactionInProgress"`
+	Coverage     string     `json:"compactionCoverage"`
 	// Interruptions says whether a turn a person interrupts is heard:
 	// observed, unobserved, or empty while nobody can tell yet.
 	Interruptions string `json:"interruptions,omitempty"`
@@ -46,6 +49,10 @@ type Snapshot struct {
 	// clock can be stepped by seconds between the two.
 	PublishedBoot int64 `json:"publishedBoot,omitempty"`
 }
+
+// EffortFromLaunch marks an effort taken from the launch's flag: the person
+// may have changed it since, and nothing observed says so yet.
+const EffortFromLaunch = "launch"
 
 // Values of Snapshot.Interruptions.
 const (
