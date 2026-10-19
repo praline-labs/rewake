@@ -9,25 +9,31 @@ links are kept current like any other.
 ## The essence
 
 rewake lets interactive coding-agent sessions on one machine work together. A person
-starts an agent through it — `rewake claude`, and next `rewake pi` — and gets the
-ordinary program in their terminal; rewake registers the session under a name, and any other
-session writes to it with `rewake send <name> "text"`. The recipient is told in one line
+starts the main session through it — `rewake claude` with Claude Code's own flags — and gets
+the program in rewake's shell in their terminal; main raises its workers itself. rewake
+registers every session under a name, and any other session writes to it with
+`rewake send <name> "text"`. The recipient is told in one line
 that a message is waiting, which wakes it when it is idle, and reads the text itself.
 
 The problem it solves: several agent sessions doing one piece of work — one handing out
 tasks, others doing them — have no shared channel of their own. Without one, the person
 carries every message between terminals by hand, and nothing records who owes whom an
 answer. rewake gives them that channel and that record, with no service to run beside
-them — whichever harness each session runs on. The main session can also start its
-workers itself, so the work begins without the person opening terminals.
+them — whichever harness each session runs on. The main session starts its workers itself,
+so the work begins without the person opening terminals; the person never starts a worker.
 
 Decided by the owner, October 18, 2026: the harnesses of 2.0 are Claude Code and next pi;
 Codex does not return soon. A space is main starting its workers with the model and effort it
-picks; their screens are shown by the shell of rewake, chosen at launch, never inside
-Claude Code's own interface. Decided October 19, 2026: the shell is an application in TypeScript
+picks; their screens are shown by the shell of rewake, never inside Claude Code's own
+interface. Decided October 19, 2026: the shell is an application in TypeScript
 on OpenTUI with Solid, inside the person's terminal, so its layout can be customized; no web UI.
+`rewake claude` is always the main session, in the shell whenever it runs in a terminal; the room
+is the directory it is started in, with one main per directory; workers are raised only by main,
+later also from the shell; a Claude Code worker runs with rewake's own profile, which turns off
+by default what an unattended worker should not use, and reads a service folder of rewake's where
+the person adds instructions and skills.
 
-**Who calls it.** One person starts the sessions. The commands are called by the agents
+**Who calls it.** One person starts the main session; main starts the rest. The commands are called by the agents
 themselves, from their own shell or through the tools their harness offers them. So the
 caller of almost every command is a program reading the output, not a person reading a
 screen, and that shapes the whole interface.
@@ -72,15 +78,15 @@ Each principle names where it comes from.
   do, and a new harness is added without touching the core. (The owner's decisions,
   recorded in [v2/design-api.md](v2/design-api.md#why-capabilities) and
   [v2/design.md](v2/design.md#the-import-rule).)
-- **Delivery only through what a harness offers itself.** rewake never intervenes in a
-  session the person started themselves — it does not stand between them and its
-  terminal — and never types into anyone's screen; it reaches a session only through the
-  ways that harness provides. A worker main starts in a space runs in a pseudo-terminal
-  rewake holds, and the shell, which the person chooses at launch, shows it and passes keys
-  to it. ([design.md](design.md#scope-of-the-first-version),
+- **Delivery only through what a harness offers itself.** rewake never types into anyone's
+  screen; it reaches a session only through the ways that harness provides. Main runs in a
+  pane of rewake's shell and a worker in a pseudo-terminal rewake holds; the shell shows them
+  and passes the person's keys to them, nothing else. ([design.md](design.md#scope-of-the-first-version),
   [v2/design.md](v2/design.md#what-does-not-change).)
 - **The person's configuration is never edited.** Whatever a session needs is passed as
-  options of that one launch. ([v2/design.md](v2/design.md#what-does-not-change),
+  options of that one launch; what rewake keeps for itself — the worker's service folder, the
+  bundled pi's directory — lives under rewake's own directory, which it creates and never
+  overwrites. ([v2/design.md](v2/design.md#what-does-not-change),
   [v2/design-rules.md](v2/design-rules.md#what-a-launch-adds-l1l3).)
 - **Transcript contents are not read.** ([design.md](design.md#scope-of-the-first-version),
   [v2/design.md](v2/design.md#what-does-not-change).)
@@ -120,7 +126,8 @@ Each principle names where it comes from.
 
 **Sessions, rooms, names and roles.** A session started through rewake is registered
 under a name unique in its room; rooms keep separate groups of sessions apart, with no
-address across them. Each session has a role: the main session hands out work and reads
+address across them. A room is the directory main was started in, and its workers belong to
+it wherever their checkouts are. Each session has a role: the main session hands out work and reads
 what comes back; the others take work and answer it. See [design.md](design.md#rooms)
 and [roles.md](roles.md).
 
@@ -138,14 +145,13 @@ between two sessions of one harness. See
 **Main starts its workers.** The main session opens a space: rewake starts a worker on the
 harness main names, with the model and effort main picks and in a checkout of its own if
 asked, outside main's process tree, in a pseudo-terminal rewake holds; the worker joins main's
-room as any session, and ends when main's run ends. In the shell — `rewake --shell claude` —
-main runs in the shell's own terminal pane and each worker's pane is fed from the pseudo-terminal
+room as any session, and ends when main's run ends. In the shell, which `rewake claude` starts
+whenever it runs in a terminal, main runs in the shell's own terminal pane and each worker's pane is fed from the pseudo-terminal
 rewake holds for it: main shows on the left and the chosen worker's live screen on the right, a
 tab bar at the bottom chooses the worker, and the focus moves between them by a click or the
 prefix's arrows; on a narrow screen the bar switches the whole window between them. The layout
 leaves room for a modal over both panes. Closing the shell, or its terminal, ends main and with
-it its workers; nothing runs on unseen. An ordinary launch stays transparent. (The owner's
-decisions, October 18 and 19, 2026.)
+it its workers; nothing runs on unseen. (The owner's decisions, October 18 and 19, 2026.)
 
 **Messages of several kinds.** A task asks for work and owes a report; a question is a
 task whose sender waits for the answer; a note informs and owes nothing. A sender can
@@ -202,10 +208,8 @@ sessions working on one repository do not step on each other. See
 **One build per room.** Every session of a room, and every rewake process acting for
 them, is one build of rewake; another build is refused, not mixed in. See [v2/design-state.md](v2/design-state.md#one-build-per-room).
 
-**What it never does.** It never intervenes in a session the person started themselves
-— it does not stand between them and its terminal — and never types into anyone's
-screen; a worker main starts runs in a terminal rewake holds and shows only in the shell the
-person chose. It does not edit the person's harness configuration; it
+**What it never does.** It never types into anyone's screen; main and the workers it starts
+show only in rewake's shell. It does not edit the person's harness configuration; it
 does not read transcripts; it runs no service of its own beside the sessions.
 
 **How the project is checked.** A change lands only when the project's checks pass —
