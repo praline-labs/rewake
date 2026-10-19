@@ -40,7 +40,7 @@ mark that lasts until an explicit "done".
      another hook will block.
 - **The live facts** it rests on, probed that day on Claude Code 2.1.280 in a private
   HOME with a stand-in API, are in
-  [research-claude-control.md](../research-claude-control.md#a-stop-hook-that-holds-the-turn).
+  research-claude-control.md.
 - Codex is untouched: its turn end cannot be held through the gateway, and there (a) and
   (d) remain.
 

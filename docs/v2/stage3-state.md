@@ -92,30 +92,24 @@ they spell gain `v2/` in commit 3 through one helper per package, not by hand. A
 writes a room has it made by `buildtest.Room` (`internal/infra/build/buildtest`): the
 acquisition of a launch of the test binary, since no resolver makes a room any more, and
 the test holds that lease shared until it ends, as a session holds its room's
-(`buildtest.Established` releases it at once, `buildtest.Release` before a switch); the
-tool rig, whose room belongs to the binary it built, bootstraps the room, records that
-binary's id and holds the lease itself, and the workflow suite names its rooms through
-`Isolation.Room`. `test/toolrig/fault_test.go` normalizes and matches
-`/rooms/default/...`, and its fault oracle stops matching without `v2`; the suite's
-mutation paths are proved to fail again after the change.
+(`buildtest.Established` releases it at once, `buildtest.Release` before a switch), and the
+workflow suite names its rooms through `Isolation.Room`.
 
 ## What is a writer
 
 **Forms, not commands, are classified.** Each parsed form carries its class, `view` or
 `change`; a form is the command plus the flags and verbs that change what it does, so
 `inbox` and `inbox --owed` are two forms. The class is read from the parsed call before
-the handler and before anything that can prune; a table test fails on a form without one,
-`decide`'s two forms included ([stage3-decision.md](stage3-decision.md#the-command),
-classified in S18). There is no `clear` command:
+the handler and before anything that can prune; a table test fails on a form without one.
+There is no `clear` command:
 conversation reset is not built, and no lease entry is added for it or for the hidden
 hook and server commands removed in S8 and S9.
 
 | Class | Forms | Why |
 |---|---|---|
-| change | a launch, with or without `--worktree`; `send` in every kind; `withdraw`; `edit`; `inbox`, `inbox --message`, `inbox --next`; `pending`; `retry`; `compact`, `interrupt`; `worktree rm`, `land`, `finish`; `decide <name> <report>` with one choice | they write the room |
+| change | a launch, with or without `--worktree`; `send` in every kind; `withdraw`; `edit`; `inbox`, `inbox --message`; `pending`; `retry`; `compact`, `interrupt`; `worktree rm`, `land`, `finish` | they write the room |
 | change | `inbox --peek` | it takes the mailbox lock (`cli/inbox.go:76`), which orders it against a read in progress; taking the lock is a write, so it holds a lease rather than losing the lock |
-| change | **every authorized tool call**, whatever its words, `--help` included | its binding and its bounded answer may keep a continuation (`freezeOutput` in `cli/output_parts.go`, held by `TestALongAnswerComesInParts`), so it is classified before authorization can prune and holds the lease through the bounded output; no read-only continuation store is designed in S17 |
-| view | bare `rewake`, `guide`, `--help`, `<command> --help`, `--version`, each with `--json`; `list`; `whoami`; `inbox --owed`, `inbox --awaited`; `worktree ls`, and a `worktree` call with no change verb, which its handler refuses before any effect; `decide <name>`, and a `decide` without exactly a report and one choice, refused before any read; `space list`, added in stage 4, and a `space` call without it, refused before any read | they answer from what is there |
+| view | bare `rewake`, `guide`, `--help`, `<command> --help`, `--version`, each with `--json`; `list`; `whoami`; `inbox --owed`, `inbox --awaited`; `worktree ls`, and a `worktree` call with no change verb, which its handler refuses before any effect; `space list`, added in stage 4, and a `space` call without it, refused before any read | they answer from what is there |
 
 A call refused before it parses — an unknown command or flag, a stray argument, an alias
 that does not expand — has no form: it is answered before the state is reached, takes no
@@ -289,9 +283,6 @@ wrapper's exit: `Run` may return first, and the lease then goes when that worker
 or with the process, and the run's directory with it ([stage3-rundir.md](../archive/v2/stage3-rundir.md);
 `TestRunKeepsTheLeaseAndItsDirectoryUntilItsWorkersStop`,
 `TestALiveSetWritesNothingAfterItsStop`, `TestAStoppedWorkerCountsUntilItsLastWrite`). A
-decision asked from below the wrapper (S18) is a worker admitted under that count, none
-once its harness ended, done before the hold goes (`host/decide.go`; `test/decisionrig`;
-`TestAnAdmittedTransactionKeepsTheLeaseUntilItFinishes`). A
 stopped live set starts no write; the channel keeper's heartbeat, the endpoint, delivery
 and the fixture's backend are joined by their stops. A worktree change form takes
 the selected room's lease; its Git locks still protect the checkout. Looking at sessions

@@ -74,72 +74,9 @@ mounts (`_raiseSessionStart`), not by `/clear`: the module is not reloaded, and 
 timers keep running — read, not seen.
 
 **Seen live before** (2.1.280, September 23, 2026,
-[research-claude-control.md](research-claude-control.md#interrupting-a-turn-and-changing-the-conversation)):
+[research.md](research.md#interrupting-a-turn-commands-and-the-stop-hook)):
 SessionEnd `clear` with the old id, then SessionStart `clear` with a new one and no
 `model`; the wrapper's socket survived, and a delivery and its Stop worked after it.
-
-**What a conversation's start tells rewake.** SessionStart's `source` is `startup`,
-`resume`, `clear`, `compact` or — new in 2.1.280 — `fork`. A resume or fork adds
-`seconds_since_last_response` and the context size of the resumed transcript. SessionEnd's
-`reason` is `clear`, `resume`, `logout`, `prompt_input_exit` or `other`. So rewake can tell
-a new conversation from a cleared, resumed or forked one; `compact` keeps the conversation.
-
-**What rewake does with it today.**
-
-- The collector's conversation is the last `session_id` any event carried
-  (`internal/adapter/claude/telemetry/state.go`), published as `primaryThread`.
-- It decodes `source` only to leave the activity alone on `compact`, and does not decode
-  SessionEnd's `reason` at all (`decode.go`).
-- The count of compactions is the run's, not the conversation's.
-- `rewake list` shows the wrapper's age; `--json` shows `primaryThread` to main only.
-
-## Codex: the facts
-
-**`/new` and `/clear` in the terminal.** Both start a thread with `thread/start` and then
-replace the terminal's own chat view and primary thread
-(`tui/src/app/session_lifecycle.rs:1069`, `:1012` in 0.155.1). `/clear` also clears the
-screen and sends `sessionStartSource: "clear"` (`tui/src/app/event_dispatch.rs:351-390`);
-`/new` and the start at launch send none (`event_dispatch.rs:133`,
-`tui/src/app_server_session.rs:1679-1684`).
-The field has two values, `startup` and `clear` (`app-server-protocol/src/protocol/v2/thread.rs:50`).
-Both commands are refused while a task runs (`tui/src/slash_command.rs:241`, `:260`;
-`:208`, `:226` in 0.155.1), seen live for `/new` on 0.155.1
-([research-codex-live-checks.md](archive/research-codex-live-checks.md)).
-
-**Nothing else can make the terminal switch.** The terminal changes its thread only
-inside the handling of its own request's reply. A `thread/started` for a thread it does
-not know is dropped once it has a primary thread (`tui/src/app/app_server_events.rs:417-437`).
-No server request asks the terminal to switch or clear (`server_request_definitions!`
-in `app-server-protocol/src/protocol/common.rs`). So a wrapper could start a thread, but
-not make it the one the terminal shows and reads into. Forging a reply to a request the
-terminal did not send is outside rewake's rules: it acts only through handles a harness
-offers.
-
-**`thread/revert` is not a way either.** It exists in both releases (`thread/rollback` in
-0.155.1 only). It keeps the thread's id and replaces the persisted history of a paginated
-thread with the part before a given turn, reloading the thread
-(`app-server/src/request_processors/thread_processor.rs:2111`). The terminal refreshes its
-view only after its own revert (`event_dispatch.rs:680-735`); a `thread/reverted` it did
-not ask for is ignored (`tui/src/chatwidget/protocol.rs:348`), so the screen would go on
-showing a conversation the model no longer has.
-
-**What a conversation's start tells rewake.** The gateway sits between the terminal and
-the server and sees the terminal's own requests
-(`internal/adapter/codex/gateway/state.go`). It binds a conversation only on a successful
-reply to a request it recognized as the terminal's selection, and a generation counter
-keeps an old reply from binding after a newer selection. From the request it can tell:
-
-- a start at launch — the request id starts with `startup-thread-start-`;
-- a later `/new` — another `thread/start`;
-- a `/clear` — `thread/start` with `sessionStartSource: "clear"`, which the gateway does
-  not read yet (`gateway/metadata.go`);
-- a resume — `thread/resume`, apart from a reconnect to the same thread;
-- a fork — `thread/fork` (`gateway/fork.go`).
-
-The reply's thread carries `createdAt`, in Unix seconds, in both releases
-(`app-server-protocol/src/protocol/v2/thread_data.rs:252`). The gateway's `fresh` means
-"started here and has run no turn", used to refuse an empty compaction; the snapshot's
-`fresh` means the observation is recent. Neither is a conversation marker.
 
 ## What a change of conversation leaves in rewake
 
@@ -151,8 +88,6 @@ The same on both harnesses unless said.
   0.155.1 ([record](roadmap/2026-09-26-live-checks.md)); on Claude Code it passes the
   fixture case only (HF-10 in [harness-features.md](archive/harness-features.md)). The model in
   the new conversation does not know the task, so that report answers other work.
-- **A compaction's hold** on Codex belongs to the thread it was tied to
-  (`internal/adapter/codex/gateway/mark.go`).
 - **`inbox --awaited`** shows neither the conversation a task went into nor the current
   one (`internal/cli/inbox_awaited.go`).
 
@@ -161,21 +96,20 @@ The same on both harnesses unless said.
 **The model.** The snapshot gains `conversation`. Only main sees it, like the rest of
 the telemetry. `primaryThread` stays as it is.
 
-| Field | Meaning | Claude Code | Codex |
-| --- | --- | --- | --- |
-| `id` | the conversation now | the last `session_id` | the bound thread |
-| `began` | how it came: `started`, `new`, `cleared`, `resumed`, `forked`, `unknown` | SessionStart `source`; `startup` is `started` | the recognized request, as above |
-| `since` | when rewake first saw it in this run | the event's time | the binding's time |
-| `by` | the main whose `rewake clear` made it | the module's word | — |
-| `createdAt` | when the conversation was created | — | the reply's `createdAt` |
-| `quietFor` | for a resume, seconds since its last response | `seconds_since_last_response` | — |
-| `turns` | turns this run saw in it | own `turn.start` | `turn/started` on the thread |
-| `compactions` | compactions this run saw in it | as now, reset on a change | as now, reset on a change |
-| `changes` | conversation changes in this run | counted | counted |
+| Field | Meaning | Claude Code |
+| --- | --- | --- |
+| `id` | the conversation now | the last `session_id` |
+| `began` | how it came: `started`, `new`, `cleared`, `resumed`, `forked`, `unknown` | SessionStart `source`; `startup` is `started` |
+| `since` | when rewake first saw it in this run | the event's time |
+| `by` | the main whose `rewake clear` made it | the module's word |
+| `quietFor` | for a resume, seconds since its last response | `seconds_since_last_response` |
+| `turns` | turns this run saw in it | own `turn.start` |
+| `compactions` | compactions this run saw in it | as now, reset on a change |
+| `changes` | conversation changes in this run | counted |
 
 `turns` counts only what this run saw. For `resumed` or `forked` it is not the
-conversation's history, and the text says "seen". A reconnect to the same Codex thread is
-not a change. On Claude Code a SessionStart with source `compact` keeps the conversation,
+conversation's history, and the text says "seen". On Claude Code a SessionStart with source
+`compact` keeps the conversation,
 and `/new` is always `cleared`, since it is the same command.
 
 **`rewake list`.** The main's view adds a `Conversation` column after `Compactions`:
@@ -214,12 +148,6 @@ In the command table under "STEER A SESSION". The call is checked whole before a
 is written, as `compact` and `interrupt` are: only main may call it; the target is a
 running session of the same room, not the caller; its harness can clear. Each of these
 is exit 2 and writes nothing.
-
-**On Codex** the harness cannot clear, so the call is refused at that check with exit 2
-and the next step: start a new worker with `rewake codex`, or ask the owner to type
-`/new` in the worker's terminal. No thread is created first. Once Codex offers a way to
-switch its terminal, the same contract applies there: idle only, and success only once
-the new thread is started and confirmed selected.
 
 **On Claude Code** the request goes through the control directory, and the module gains
 an action `clear`:
@@ -295,10 +223,6 @@ from `$.clock.every`, and `--add-dir` to an extra directory. Then:
 5. A socket line sent during a turn before the clear reaches the first request of the
    new conversation.
 
-On Codex, one idle run of the terminal through a test gateway, with no turn and so no
-quota: the terminal's `/clear` request carries `sessionStartSource: "clear"`, `/new`
-none, and the launch's id starts with `startup-thread-start-`.
-
 ## Owner choices still open
 
 1. **Tasks owed to the caller** on a clear: closed as `stopped` at once, or left owed
@@ -306,13 +230,8 @@ none, and the launch's id starts with `startup-thread-start-`.
 2. **Tasks owed to other sessions**: refuse the clear, or clear and close them as
    stopped with a word to their senders. Recommended: refuse. Main can see who waits
    and settle it first.
-3. **Codex until it can switch its terminal**: ship `rewake clear` for Claude Code now,
-   with an honest refusal on Codex, or wait for parity. The owner decided on
-   September 24, 2026 that remote control behaves the same on both harnesses.
-   Recommended: ship with the refusal. The refusal is the same predictable answer every
-   time, and the marker, which is the fix for what went wrong, works on both.
-4. **A notice for a change main did not ask for**: yes for a clear, new or resume at the
+3. **A notice for a change main did not ask for**: yes for a clear, new or resume at the
    worker's keyboard, and the first conversation in the availability notice.
    Recommended as written.
-5. **Holding deliveries during a clear**: hold, bounded by the command's limit, or let
+4. **Holding deliveries during a clear**: hold, bounded by the command's limit, or let
    notices go into whichever conversation takes them. Recommended: hold.

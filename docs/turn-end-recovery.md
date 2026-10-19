@@ -208,13 +208,6 @@ it, and stops nothing else.
 | Wait record | unreadable | the end fails, and nothing writes over it |
 | Report letter | read and older than a day, its writer's wait still naming what it answers | kept by the sweep, so a late retry finds it |
 
-## What the reviews found
-
-Which clause closed each finding of the earlier acceptances and reviews of the journals,
-and what the earlier probes expected, is in
-[turn-end-recovery-findings.md](turn-end-recovery-findings.md), a record of the mechanics
-removed on October 18, 2026.
-
 ## What stays open
 
 - The answer of a held turn whose run ended is never published: if that run's end never

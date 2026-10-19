@@ -7,7 +7,7 @@ task stayed owed and the next unrelated turn end settled it as `finished`
 ([traps.md](../traps.md#an-interrupted-claude-code-task-is-reported-finished-with-an-unrelated-answer)).
 review-claude's research of the same day found that a function-hooks plugin does hear
 it: `turn.complete` with reason `aborted`
-([research-claude-control.md](../research-claude-control.md#what-a-function-hooks-plugin-hears)).
+(research-claude-control.md).
 
 **What was built** ([claude-plugin.md](../archive/1.x/claude-plugin.md)):
 
@@ -63,7 +63,7 @@ harness, in a private HOME with a stand-in API, and found the plugin silent ther
   response. A zero count now reads unknown, a compaction drops the fill counted before
   it, and a status line started before it is not taken.
 - The live observations are in
-  [research-claude-control.md](../research-claude-control.md#what-a-function-hooks-plugin-hears).
+  research-claude-control.md.
 
 **The owner's decisions before the commit**, September 23, 2026:
 
@@ -78,7 +78,7 @@ harness, in a private HOME with a stand-in API, and found the plugin silent ther
   skill line it adds, about 390 characters per request, is accepted. write-claude's
   research of the built-ins and of how `enabledPlugins` merges across settings layers —
   key by key, the person's own entries kept — is in
-  [research-claude-control.md](../research-claude-control.md#built-in-plugins-and-what-the-switch-adds);
+  research-claude-control.md;
   `pluginUsage` for `rewake@inline` turned out to come from `--plugin-dir`, not from the
   switch ([claude-plugin.md](../archive/1.x/claude-plugin.md#limits)).
 

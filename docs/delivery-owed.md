@@ -23,9 +23,6 @@ more stands alone, its heading naming the task (`· addendum to <id>`). The task
 the one as it is now: an addendum to a task `rewake edit` replaced goes under the
 replacement, and `addendumTo` names it (`mail.CurrentTask`, [delivery-sent.md](delivery-sent.md#edit-rewake-edit-id-text)).
 Only the rendering nests: `--json` keeps the flat list, each addendum with its `addendumTo`.
-A message the session's own report was decided on, while the tail of that turn has not
-run, is shown with `decided, still owed: your report <R> …`: the wait stays until the
-tail clears it, and `--json` carries the decision as `decided`.
 It is the task a session is working on, from the mailbox rather than from memory,
 which is what a session needs after a context compaction: a summary retells the brief
 and can drop an item. The write and general playbooks tell it to re-read
@@ -81,20 +78,10 @@ is then placed:
 | `owed` — read, being worked on | status `read` (or in `done/` with the status swept), and the recipient's `awaiting/<its run>/<this name>` names this run and the id |
 | `pending` | read and owed, and the latest interim report on it came after any stop |
 | `stopped` | read and owed, and the latest report on it is a stop; the text form prints the stop's own words after `stopped:`, which say whether the person at the keyboard or a main with `rewake interrupt` stopped it |
+| `failed` — no report coming | status `failed` |
 
 "Latest" is by the report's `createdAt`, the id only breaking a tie: every report on one
 wait carries the wait's time prefix, and what follows it is a hash.
-| `failed` — no report coming | status `failed` |
-| `closed` — closed by decision D, delivery unproven | read, its wait record no longer names it, and a decision on the report that answers it ([stage3-decision.md](v2/stage3-decision.md#the-command)) recorded the closure of that wait: no report is proven to have reached this run, and none is coming |
-
-A report decided while the tail of its turn has not run yet leaves the wait in place: the
-message keeps its stage and the line says `decided, still owed: report <R> arrived` (or
-`did not arrive`) `by decision <D> of <who>`, with `delivery unproven` or `sent again as
-<R'>`. A decision is read only once its record is durable, and its closure only from the
-record the tail writes (`mail.DecisionOn`), so a missing wait is never shown as delivered.
-A resend that lands is an ordinary report and settles the message as one; the reader's
-`rewake inbox` heads it `sent again by decision <D> of <who>`, since the first copy may
-have reached it too (`mail.ResentBy`, `resentBy` in `--json`).
 
 A `finished` or `error` report in this run's own mailbox that names the id in
 `inReplyTo` settles it — from any run of the recipient, since a run that resumed the
@@ -139,9 +126,7 @@ the current one, an edit's replacement included, as for `--owed`. Nothing awaite
 `Rewake: nobody owes you a report.` `--json` carries each message whole: `id`, `kind`,
 `createdAt`, `state`, `detail` (the hold or failure reason, or the interim or stop
 report's text), `gone` (`ended` or `replaced`, only when lost), `resumable`, `addendumTo`
-for an addendum, `decided` (the decision, its decider, `closed` and `delivery:
-"unproven"`) when a decision answers it, and the
-full `text`. A withdrawn message is a note from then on and is not listed.
+for an addendum, and the full `text`. A withdrawn message is a note from then on and is not listed.
 
 It only reads, like `--owed`: no lock, no status, nothing marked, nothing sent, and a
 registry lookup that does not prune a dead record. A message caught between two

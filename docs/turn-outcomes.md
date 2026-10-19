@@ -112,7 +112,7 @@ catches the mark forgotten on a turn a finished subagent woke — three tasks we
 early that way that day — without a marker the worker must remember: the turn end stays
 the report by default, as decided on September 23. The section keeps its name from
 where it began: Claude Code's Stop hook held the end until S9, October 11, 2026, when
-the hooks left ([research-claude-control.md](research-claude-control.md#a-stop-hook-that-holds-the-turn)
+the hooks left ([research.md](research.md#interrupting-a-turn-commands-and-the-stop-hook)
 has how the harness took the hold). Since S5 the same check runs for any adapter that
 can hold an end open, and in this build that is the fixture's; an adapter that cannot
 leaves the briefing alone to ask for the mark.

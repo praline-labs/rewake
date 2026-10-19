@@ -11,7 +11,7 @@ package workflow
 //
 // They are not equal in what a red result means, either. The fixture is the
 // regression gate: the harness the core is proven on, where every observation
-// has to be made (docs/v2/stage3-fixture.md#the-gate-across-the-steps). The
+// has to be made (docs/testing.md#three-columns-three-meanings). The
 // Claude Code column searched beside it until S9, when Claude Code's hooks
 // left; it returns with stage 4. Which column is the gate is a field of the
 // column, set on exactly one, and the summary names the column of every red;
@@ -53,7 +53,7 @@ func isGate(harness string) bool {
 // one table answers every question about what a column can show.
 var (
 	// fixtureColumn is the harness the core is proven on without a real one
-	// (docs/v2/stage3-fixture.md), and the gate: it names its members and
+	// (docs/testing.md#the-fixtures-readiness-exchange), and the gate: it names its members and
 	// steers into a running turn.
 	fixtureColumn = column{harness: "fixture", gate: true, caps: map[string]bool{
 		capabilityNamesMembers: true,

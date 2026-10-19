@@ -61,7 +61,7 @@ The stand-in streams text and calls no tools.
   holds only the continuation's text. The ninth block in a row is overridden and the
   turn ends; `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` moves that limit. An Esc during the
   continuation fires neither Stop nor StopFailure
-  ([research-claude-actions.md](../research-claude-actions.md#holding-a-turns-end-from-the-stop-hook)).
+  (research-claude-actions.md).
 - **`rewake claude -w probe`** launches, registers and takes deliveries; Claude Code runs
   in `.claude/worktrees/probe` while `rewake list` and the session record show the
   launch directory, and `/exit` removes the worktree and its branch

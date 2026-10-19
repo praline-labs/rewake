@@ -54,8 +54,8 @@ October 17, 2026.
 its bound. The oldest supported version is recorded below and raised only by an owner
 decision, written in the same row with its date. It is not a version an adapter pins as
 last observed working to choose whether a launch prints a note; an older installed
-version may still be supported. When the row is raised, the test turns every
-mark below the new floor red, and those marks are removed in the same change.
+version may still be supported. When the row is raised, every mark below the new floor
+is found by the search above and removed in the same change.
 
 **A `rewake` mark** is due when nothing written by a build before its date can still
 be read. The state directory is under `/tmp` unless `REWAKE_DIR` moves it, and what is

@@ -4,9 +4,9 @@ The live records of stage 4's probe ([design-claude.md](v2/design-claude.md#the-
 what a mod loaded for one run was seen to do inside an interactive Claude Code session —
 start processes, hold a subagent with a worktree of its own, draw into that subagent's
 transcript and take keys there, and show a real pseudo-terminal's screen in it with a
-harness running inside. Kept apart from
-[research-claude-control.md](research-claude-control.md), which records 2.1.280's
-function-hooks plugin, because these are records of the mod API's era and of one probe.
+harness running inside. Kept apart from the facts of 2.1.280's function-hooks plugin
+([research.md](research.md#interrupting-a-turn-commands-and-the-stop-hook)), because these are
+records of the mod API's era and of one probe.
 
 Each section is a dated record of what was seen, with the run it was seen in. It is not a
 statement of the mod API: the `mods` skill holds that, and where a record and the skill
@@ -408,7 +408,7 @@ could not tell; it now asks for the Agent tool and checks the screen for its cal
 
 ## The workers' pane (October 18, 2026, 2.1.302)
 
-What building [the workers' pane](v2/workers-panel.md) showed of the mod API:
+What building [the workers' pane](archive/v2/workers-panel.md) showed of the mod API:
 
 - A `Client` drawn by a function in a file the hooks module imports (`hooks/pane.ts`) is found:
   `claude plugin validate` lists `hooks/keys.ts` among the surface modules, and it loads live.

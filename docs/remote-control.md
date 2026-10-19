@@ -3,9 +3,8 @@
 A main session acts on a running worker without a person at its keyboard: it compacts
 the worker's conversation, or interrupts the worker's turn. It was built as stage 2 of
 rewake's function-hooks plugin for Claude Code ([claude-plugin.md](archive/1.x/claude-plugin.md)
-is stage 1, which only listened). What the harness offers for it is in
-[research-claude-actions.md](research-claude-actions.md)
-and, for Codex, [research-protocol.md](archive/research-protocol.md#compaction-and-interrupt-on-request).
+is stage 1, which only listened). What the harness offered for it, for Codex, is in
+[research-protocol.md](archive/research-protocol.md#compaction-and-interrupt-on-request).
 
 Built on September 24, 2026 for Claude Code, with unit and module tests and a workflow
 case, and the same day for Codex (part B), where the wrapper serves the requests itself
@@ -53,8 +52,7 @@ main was sent a compaction notice for a compaction it had asked for itself.
 from the working tree, by review-codex in a private state directory: a compaction of an
 idle session, one refused as `in a turn` during a turn, an interrupt reported as stopped
 by main, a delivery held pending during a compaction and delivered after it, a focus
-refused with exit 2, and an ordinary task after them. The run scenario by scenario is in
-[the roadmap entry](roadmap/2026-09-24-remote-control-codex.md).
+refused with exit 2, and an ordinary task after them.
 
 **Non-blocking since September 25, 2026** (owner decision below): `rewake compact`
 returns once the compaction has started — or answers `requested` when its start was not
@@ -188,7 +186,7 @@ had read it in the same instant acted after `not answering` was reported.
 **An asker cut short** — an Esc or Ctrl+C on main ends its Bash tool's command with
 SIGTERM, and SIGKILL 1.5 s later if it is still alive (seen live and read in the binary,
 Claude Code 2.1.280, September 24, 2026,
-[research-claude-control.md](research-claude-control.md#a-second-probe-signals-and-hooks-around-an-interruption)),
+[research.md](research.md#interrupting-a-turn-commands-and-the-stop-hook)),
 or the call is terminated otherwise — stops waiting on SIGTERM or SIGINT, withdraws the
 request on the way out and reports that the wait was cut short: refused as `cut short`
 before a pickup, `failed` after one. So a stalled target that resumes later finds nothing

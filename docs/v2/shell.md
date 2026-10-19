@@ -54,16 +54,14 @@ mode:
   DECNKM (the application keypad), bracketed paste 2004, focus 1004, mouse 9, 1000, 1002, 1003
   and 1006, modifyOtherKeys, and the kitty stack as one push per entry in order, so a later pop
   finds what the program pushed before. A client that attached late without the modes would lose
-  Shift+Enter — Superset's bug, the lesson of the research. The modes are read without draining
-  the emulator's events (`look` takes them), so a copy or bell meant for another client is not
-  lost.
+  Shift+Enter — Superset's bug, the lesson of the research.
 - **The cut is safe inside a sequence.** A pty read has no sequence boundary, so a commit can end
   inside one: after `ESC [ ? 2004` the emulator shows paste still off, and the `h` comes later.
   The grid keeps the bytes committed since its parser last stood in the ground state, and the
   preamble ends with them, so the widget's parser finishes the sequence from the live bytes as the
   host's did. Without it a late widget kept paste off and sent a paste of two lines bare, with a
   carriage return (rev-pi's probe against the widget, October 19, 2026).
-- The client writes the frames the view takes today: `i` keys, `r` a size; the last size wins.
+- The client writes two frames: `i` keys, `r` a size; the last size wins.
   A client more than 4096 pieces behind is dropped, its stream closed rather than given a gap; the
   shell attaches again a second later, on its widget reset and seeded anew.
 - **The host keeps answering the program's queries**, as it must while nobody is attached; the

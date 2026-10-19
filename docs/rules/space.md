@@ -120,7 +120,8 @@ shell replaced the host mode: the socket serves the raw stream only, to the shel
   - `internal/adapter/claude/modhost/alive_test.go` `TestAPollPastTheCloseRenewsNothing`
 
   Since S4-7, October 18, 2026, the space host is no endpoint of the mod: it takes no request
-  of main's harness, and its view socket serves a screen and keys and decides nothing.
+  of main's harness, and its socket serves the worker's raw stream to the shell and decides
+  nothing.
 
 - **SP7. A kept checkout is never forgotten and never removed by rewake.** A closed space
   whose checkout is still there is listed to main at its start and by `rewake space list`
@@ -142,8 +143,8 @@ shell replaced the host mode: the socket serves the raw stream only, to the shel
 
 - **SP9. A hosted worker is never main's descendant.** Its space host runs outside main's run,
   checked before the worker starts; an open that cannot show it is refused, and nothing the
-  worker controls runs before that check. So main's decision endpoint refuses the worker's
-  commands by the existing rule, and no authority rule changes.
+  worker controls runs before that check. So no signal of main's shutdown reaches the process
+  that ends the worker (SP1).
 
   Held since S4-7, October 18, 2026: `rewake space open` re-executes rewake as a launcher in a
   session of its own, which starts the space host and exits; the space host waits until the
@@ -151,10 +152,7 @@ shell replaced the host mode: the socket serves the raw stream only, to the shel
   that meets main's wrapper, a parent started after its child, a loop or an unreadable link
   refuse, so a wrapper that is a subreaper and adopted it refuses too. A refusal closes the
   record with the worker never started and says why; the worker's wrapper is started only
-  after it. The ancestry test the authority makes is unchanged.
+  after it.
   Tests:
-  - `internal/infra/proc/lineage_test.go` `TestDescendsWalksParentsToTheAncestor`
-  - `internal/infra/proc/lineage_test.go` `TestDescendsRefusesAReusedParent`
   - `internal/infra/proc/lineage_test.go` `TestOutsideIsShownOnlyFromAWholeChain`
   - `internal/host/spacehost/host_test.go` `TestASpaceHostBelowMainStartsNoWorker`
-  - `internal/core/authority/decide_test.go` `TestAWrapperTakesADecisionOnlyFromBelow`

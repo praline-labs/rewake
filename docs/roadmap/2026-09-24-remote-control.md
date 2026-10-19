@@ -3,8 +3,7 @@
 Stage 2 of rewake's function-hooks plugin, part A: `rewake compact` and
 `rewake interrupt`, the request path they share, and the Claude Code side of it. Stage 1
 only listened ([2026-09-23-claude-plugin.md](2026-09-23-claude-plugin.md)); this one acts
-on the session. Part B, the Codex side, followed the same day
-([2026-09-24-remote-control-codex.md](2026-09-24-remote-control-codex.md)). The design as built is in
+on the session. Part B, the Codex side, followed the same day. The design as built is in
 [remote-control.md](../remote-control.md).
 
 **The owner's decisions**, recorded where they apply:
@@ -26,7 +25,7 @@ on the session. Part B, the Codex side, followed the same day
 
 **The research.** review-claude probed Claude Code 2.1.280 live against a stand-in API
 and read the binary and the Codex schemas the same morning; the facts are in
-[research-claude-actions.md](../research-claude-actions.md#compaction-abort-polling) and
+research-claude-actions.md and
 [research-protocol.md](../archive/research-protocol.md#compaction-and-interrupt-on-request):
 
 - `$.session.compact()` or `({ instructions })` compacts an idle session, runs the
@@ -127,7 +126,7 @@ five checks do not run it. review-claude re-ran `43a1f62` afterwards:
   had no test at the command's level: a mutant that waited on a plain context survived.
   The probe found what main's Esc does to a command it runs: SIGTERM to the command's
   whole tree on Esc and on Ctrl+C alike, never SIGINT, and SIGKILL 1.5 s later
-  ([research-claude-control.md](../research-claude-control.md#a-second-probe-signals-and-hooks-around-an-interruption)).
+  (research-claude-control.md).
   Fixed after A2, in a commit of its own:
   - a test that sends the command SIGTERM during the pickup and expects the request
     withdrawn;

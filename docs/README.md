@@ -41,7 +41,6 @@ Mail and reports:
 - [turn-outcomes.md](turn-outcomes.md) — turn ends that are not an ordinary report: a failed turn, a keyboard stop, `rewake pending`.
 - [report-publication.md](report-publication.md) — capturing and publishing a finished turn's report, the sequence word, receipt keys.
 - [turn-end-recovery.md](turn-end-recovery.md) — how a turn end is recovered: the operation's identity, the read clock, pending marks, what a retry finds.
-- [turn-end-recovery-findings.md](turn-end-recovery-findings.md) — what acceptances and reviews of the turn-end journals found, a record of mechanics removed on October 18, 2026.
 
 Main and its workers:
 
@@ -69,9 +68,7 @@ The rules and the code:
 Each fact carries where it was verified; they age with harness versions.
 
 - [research.md](research.md) — what only a running Claude Code session shows: the socket line, waking an idle session, the inbound gate.
-- [research-claude-control.md](research-claude-control.md) — what reaches a running Claude Code session from outside besides a message.
 - [research-claude-parity.md](research-claude-parity.md) — context, compaction and interrupt through the mod: checks on 2.1.302 and live acceptance still open.
-- [research-claude-actions.md](research-claude-actions.md) — what a function-hooks plugin can do to its own session: compact, abort, reload.
 - [research-claude-mod.md](research-claude-mod.md) — the dated records of stage 4's live probe of the mod on Claude Code.
 - [research-pi.md](research-pi.md) — pi 1.2.0 launch and extension facts, mock probes, telemetry and control, the adapter protocol and its limits.
 - [research-launch.md](research-launch.md) — what an installed binary answers: model and effort catalogues, repeatable flags, npm packages.
