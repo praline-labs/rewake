@@ -26,7 +26,7 @@ type Canvas struct {
 }
 
 // Frame is one composed screen: the shown program's rows in the region at
-// the top left, and the bar on the last row.
+// the top left, the sidebar's right of it, and the bar on the last row.
 type Frame struct {
 	Region Size
 	Rows   [][]Run
@@ -36,6 +36,9 @@ type Frame struct {
 	// on the person's terminal, its mouse mode chooses only whether motion
 	// without a button is reported (hostModes).
 	Modes Modes
+	// Side are the sidebar's rows, drawn right of the region down its height
+	// when the region is narrower than the canvas.
+	Side [][]Run
 	// Bar is drawn on the canvas's last row when it lies below the region.
 	Bar []Run
 }
@@ -93,10 +96,17 @@ func (c *Canvas) Draw(f Frame) error {
 		if y < len(f.Rows) {
 			runs = f.Rows[y]
 		}
-		c.line(y, min(f.Region.Cols, c.size.Cols), runs)
+		c.line(0, y, min(f.Region.Cols, c.size.Cols), runs)
+		if side := c.size.Cols - f.Region.Cols; side > 0 {
+			var runs []Run
+			if y < len(f.Side) {
+				runs = f.Side[y]
+			}
+			c.line(f.Region.Cols, y, side, runs)
+		}
 	}
 	if bar := c.size.Rows - 1; bar >= f.Region.Rows {
-		c.line(bar, c.size.Cols, f.Bar)
+		c.line(0, bar, c.size.Cols, f.Bar)
 	}
 	if c.shown && c.buf.TouchedLines() > 0 {
 		_, _ = c.r.WriteString(ansi.HideCursor)
@@ -120,20 +130,21 @@ func (c *Canvas) Draw(f Frame) error {
 	return c.r.Flush()
 }
 
-// line sets row y from runs over width columns, blanks past the runs' end.
-func (c *Canvas) line(y, width int, runs []Run) {
+// line sets row y from column from on, out of runs over width columns,
+// blanks past the runs' end.
+func (c *Canvas) line(from, y, width int, runs []Run) {
 	x := 0
 	for _, run := range runs {
 		for _, cell := range cellsOf(run) {
 			if x+cell.Width > width {
 				break
 			}
-			c.buf.SetCell(x, y, &cell)
+			c.buf.SetCell(from+x, y, &cell)
 			x += cell.Width
 		}
 	}
 	for ; x < width; x++ {
-		c.buf.SetCell(x, y, &uv.EmptyCell)
+		c.buf.SetCell(from+x, y, &uv.EmptyCell)
 	}
 }
 

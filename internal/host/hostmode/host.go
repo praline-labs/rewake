@@ -42,10 +42,12 @@ type Host struct {
 	grid   *terminal.Grid
 	canvas *terminal.Canvas
 	lay    layout
-	tabs   []*tab
-	cur    *tab
-	in     input
-	dirty  bool
+	// sideOff says the person hid the sidebar with the prefix's s.
+	sideOff bool
+	tabs    []*tab
+	cur     *tab
+	in      input
+	dirty   bool
 	// framed says the paste going on reaches its program in brackets,
 	// decided at its start.
 	framed bool
@@ -58,6 +60,7 @@ type Host struct {
 	winch   chan os.Signal
 	opened  chan opened
 	gone    chan string
+	listed  chan []spacehost.Worker
 
 	raw       func() error
 	leaveOnce sync.Once
@@ -74,7 +77,7 @@ func Open(cfg Config) (*Host, error) {
 	if err != nil {
 		return nil, err
 	}
-	lay := layoutFor(size)
+	lay := layoutFor(size, false)
 	pty, err := terminal.OpenPlain(lay.region)
 	if err != nil {
 		return nil, err
@@ -89,6 +92,7 @@ func Open(cfg Config) (*Host, error) {
 		cfg: cfg, pty: pty, grid: grid, lay: lay, ctx: ctx, cancel: cancel,
 		done: make(chan struct{}), updates: make(chan update), keys: make(chan []byte, 16),
 		winch: make(chan os.Signal, 1), opened: make(chan opened), gone: make(chan string),
+		listed: make(chan []spacehost.Worker),
 	}, nil
 }
 

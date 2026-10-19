@@ -7,14 +7,14 @@ import (
 )
 
 func TestTheRegionLeavesTheLastRowToTheBar(t *testing.T) {
-	l := layoutFor(terminal.Size{Cols: 100, Rows: 30})
+	l := layoutFor(terminal.Size{Cols: 100, Rows: 30}, false)
 	if l.region != (terminal.Size{Cols: 100, Rows: 29}) || l.bar != 29 {
 		t.Fatalf("layout %+v", l)
 	}
 	if !l.inRegion(29) || l.inRegion(30) || l.inRegion(0) {
 		t.Fatal("row 29 is the region's last, 30 the bar's")
 	}
-	one := layoutFor(terminal.Size{Cols: 80, Rows: 1})
+	one := layoutFor(terminal.Size{Cols: 80, Rows: 1}, false)
 	if one.region.Rows != 1 || one.bar != -1 {
 		t.Fatalf("a one-row terminal: %+v", one)
 	}
@@ -31,7 +31,7 @@ func cols(runs []terminal.Run) (int, string) {
 
 func TestTheBarNumbersTabsAndMarksTheCurrent(t *testing.T) {
 	labels := []label{{name: "main"}, {name: "w1-claude", current: true}, {name: "w2-pi", ended: true, changed: true}}
-	runs := barRuns(labels, 80)
+	runs := barRuns(labels, 80, hint)
 	n, text := cols(runs)
 	if n != 80 {
 		t.Fatalf("the bar covers %d columns, want 80", n)
@@ -47,17 +47,17 @@ func TestTheBarNumbersTabsAndMarksTheCurrent(t *testing.T) {
 
 func TestANarrowBarCutsTabsAndDropsTheHint(t *testing.T) {
 	labels := []label{{name: "main"}, {name: "w1-claude"}}
-	n, text := cols(barRuns(labels, 12))
+	n, text := cols(barRuns(labels, 12, hint))
 	if n != 12 || text != " 0 main  1 w" {
 		t.Fatalf("bar %q over %d columns", text, n)
 	}
-	if n, _ := cols(barRuns(labels, 0)); n != 0 {
+	if n, _ := cols(barRuns(labels, 0, hint)); n != 0 {
 		t.Fatalf("a bar of no width has %d columns", n)
 	}
 }
 
 func TestAColumnOfTheBarNamesTheTabUnderIt(t *testing.T) {
-	runs := barRuns([]label{{name: "main"}, {name: "w1"}}, 80)
+	runs := barRuns([]label{{name: "main"}, {name: "w1"}}, 80, hint)
 	for col, want := range map[int]int{1: 0, 8: 0, 9: 1, 14: 1, 15: -1, 80: -1} {
 		if got := tabAt(runs, 2, col); got != want {
 			t.Errorf("column %d: tab %d, want %d", col, got, want)

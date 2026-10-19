@@ -59,7 +59,14 @@ pass the programs' bytes through.
 - **The bar.** It holds `main` and each worker's name, with the current tab inverted, an ended
   tab dim, and a mark on a tab whose screen changed since it was last shown.
 - **The sidebar.** It holds what `Panel.Workers()` already joins: name, harness, model, effort,
-  context and state.
+  context and state. It is 28 columns behind a border, right of the region and above the bar.
+  Main takes one row; each worker its numbered name, then harness · model · effort, then its
+  turn (or its space's state while it has none, `ended` once its view ended) and how full its
+  context is; a blank row after each. The current entry is inverted, an ended one dim, as on the
+  bar. A worker that does not fit whole is left out; the bar still has it. The poll that lists
+  the spaces once a second refreshes it. Hiding or showing it resizes every program to the new
+  region, as a resize of the terminal does. The bar's hint names `s` where the sidebar can be
+  shown.
 - **One renderer.** Each frame becomes a cell buffer drawn by `ultraviolet`'s `TerminalRenderer`,
   which diffs against what is on the terminal and degrades colour to the terminal's profile.
   `ultraviolet` is already a direct dependency (`internal/host/terminal/vt.go`), so this adds none.
@@ -229,6 +236,11 @@ pass the programs' bytes through.
      framed, its line break not sending it. At the exit every mode was reset.
    - The copy reaches the person's clipboard only with step 4's OSC 52.
 3. **The sidebar.** The width threshold, `s`, and clicks on it.
+   - **Built and checked live, October 19, 2026, Claude Code 2.1.302**
+     (`internal/host/hostmode/sidebar.go`): on a 130-column terminal main opened a worker by
+     `!rewake space open`; the sidebar listed main and `w1-claude` with its harness, model and
+     `idle`, main's screen drawn 102 columns wide; Ctrl+\\ s hid it and main repainted at 130,
+     Ctrl+\\ s showed it again; a click on the worker's name in the sidebar showed the worker.
 4. **Events and colours.** The `e` frame: OSC 52, title, bell, default colours; the theme's
    indices checked live. Live check: a copy from a
    worker lands in the clipboard.

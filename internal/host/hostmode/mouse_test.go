@@ -70,7 +70,7 @@ func host(modes terminal.Modes) (*Host, *[]string) {
 		}}
 		tabs[i].pic.Modes = modes
 	}
-	return &Host{lay: layoutFor(terminal.Size{Cols: 80, Rows: 10}), tabs: tabs, cur: tabs[0], canvas: terminal.NewCanvas(nopWriter{}, nil, terminal.Size{Cols: 80, Rows: 10})}, &sent
+	return &Host{lay: layoutFor(terminal.Size{Cols: 80, Rows: 10}, false), tabs: tabs, cur: tabs[0], canvas: terminal.NewCanvas(nopWriter{}, nil, terminal.Size{Cols: 80, Rows: 10})}, &sent
 }
 
 type nopWriter struct{}

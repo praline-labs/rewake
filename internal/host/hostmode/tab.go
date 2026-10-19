@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/praline-labs/rewake/internal/host/spacehost"
 	"github.com/praline-labs/rewake/internal/host/terminal"
 )
 
@@ -23,7 +24,9 @@ type tab struct {
 	name string
 	// space is the worker's space id, empty for main.
 	space string
-	pic   terminal.Picture
+	// info is what the worker's space and snapshot said at the last poll.
+	info spacehost.Worker
+	pic  terminal.Picture
 	// seen is the sequence last shown, which tells the bar's change mark.
 	seen uint64
 	// ops are the tab's writes — keys and sizes — done in order by a

@@ -7,21 +7,40 @@ import (
 	"github.com/praline-labs/rewake/internal/host/terminal"
 )
 
+const (
+	// sideWidth is the sidebar's width, its border included.
+	sideWidth = 28
+	// sideFrom is the narrowest terminal that shows the sidebar: below it
+	// the region would be too narrow for a program, and the bar alone
+	// navigates.
+	sideFrom = 120
+)
+
 // layout is where things go on the person's terminal of one size: the
-// region every program is sized to, and the bar's row below it.
+// region every program is sized to at the top left, the sidebar right of
+// it, and the bar's row below both.
 type layout struct {
 	size   terminal.Size
 	region terminal.Size
 	// bar is the bar's row from 0, -1 on a terminal of one row, which shows
 	// the region alone.
 	bar int
+	// side is the sidebar's width, 0 when it is not shown.
+	side int
 }
 
-func layoutFor(size terminal.Size) layout {
-	if size.Rows < 2 {
-		return layout{size: size, region: size, bar: -1}
+// layoutFor lays out a terminal of size, the sidebar shown unless hidden by
+// the person or the terminal is narrower than sideFrom.
+func layoutFor(size terminal.Size, hidden bool) layout {
+	l := layout{size: size, region: size, bar: -1}
+	if size.Rows >= 2 {
+		l.region.Rows, l.bar = size.Rows-1, size.Rows-1
 	}
-	return layout{size: size, region: terminal.Size{Cols: size.Cols, Rows: size.Rows - 1}, bar: size.Rows - 1}
+	if !hidden && size.Cols >= sideFrom {
+		l.side = sideWidth
+		l.region.Cols -= sideWidth
+	}
+	return l
 }
 
 // inRegion says a mouse report at the 1-based row belongs to the shown
@@ -37,14 +56,18 @@ type label struct {
 	changed bool
 }
 
-// hint is said at the bar's right end when there is room for it.
-const hint = " Ctrl+\\ n p 0-9 "
+// The hint is said at the bar's right end when there is room for it, with
+// the sidebar's key where the terminal is wide enough for one.
+const (
+	hint     = " Ctrl+\\ n p 0-9 "
+	sideHint = " Ctrl+\\ n p 0-9 s "
+)
 
 // barRuns lays the tabs out left to right, main first numbered 0, each as
 // " <n> <name> " with a mark when it changed unseen; the current one inverted,
 // an ended one dim. What does not fit the width is cut; the hint takes the
 // right end only when every tab fits beside it.
-func barRuns(labels []label, width int) []terminal.Run {
+func barRuns(labels []label, width int, hint string) []terminal.Run {
 	var runs []terminal.Run
 	used := 0
 	for i, l := range labels {

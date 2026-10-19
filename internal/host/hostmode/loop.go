@@ -13,9 +13,9 @@ type opened struct {
 	view   *spacehost.View
 }
 
-// poll lists main's spaces once a second: a view for each new one, and word
-// of each that went. A space whose view does not connect yet, still opening,
-// is tried again at the next poll.
+// poll lists main's spaces once a second: a view for each new one, word of
+// each that went, and what each says for the sidebar. A space whose view
+// does not connect yet, still opening, is tried again at the next poll.
 func (h *Host) poll() {
 	known := map[string]bool{}
 	tick := time.NewTicker(pollEvery)
@@ -50,6 +50,11 @@ func (h *Host) poll() {
 				case <-h.ctx.Done():
 					return
 				}
+			}
+			select {
+			case h.listed <- workers:
+			case <-h.ctx.Done():
+				return
 			}
 		}
 		select {
@@ -93,6 +98,8 @@ func (h *Host) loop() {
 			h.add(o)
 		case id := <-h.gone:
 			h.remove(id)
+		case workers := <-h.listed:
+			h.refresh(workers)
 		case <-drawTimer.C:
 			drawing = false
 			h.draw()
@@ -156,6 +163,13 @@ func (h *Host) mouse(m mouseEvent) {
 		if p := m.encode(h.modes(), m.col, m.row); p != nil {
 			h.cur.send(p)
 		}
+	case h.lay.inRegion(m.row) && m.col > h.lay.region.Cols:
+		if !m.leftClick() {
+			return
+		}
+		if _, owner := h.sideRows(); m.row-1 < len(owner) && owner[m.row-1] >= 0 {
+			h.show(h.tabs[owner[m.row-1]])
+		}
 	}
 }
 
@@ -185,6 +199,9 @@ func (h *Host) command(c byte) {
 		h.show(h.tabs[0])
 	case c >= '1' && c <= '9' && int(c-'0') < len(h.tabs):
 		h.show(h.tabs[c-'0'])
+	case c == 's' && h.lay.size.Cols >= sideFrom:
+		h.sideOff = !h.sideOff
+		h.relayout(h.lay.size)
 	}
 }
 
@@ -204,8 +221,15 @@ func (h *Host) resize() {
 	if err != nil || size == h.lay.size {
 		return
 	}
-	h.lay = layoutFor(size)
 	h.canvas.Resize(size)
+	h.relayout(size)
+}
+
+// relayout lays the terminal of size out again, the sidebar shown or not,
+// and sizes every program to the new region.
+func (h *Host) relayout(size terminal.Size) {
+	h.lay = layoutFor(size, h.sideOff)
+	h.canvas.Redraw()
 	for _, t := range h.tabs {
 		t.size(h.lay.region)
 	}
@@ -215,6 +239,7 @@ func (h *Host) resize() {
 func (h *Host) add(o opened) {
 	view := o.view
 	t := newTab(o.worker.Session, o.worker.Space, view.Keys, view.Resize, func() { _ = view.Close() })
+	t.info = o.worker
 	t.size(h.lay.region)
 	h.watch(t, view)
 	h.dirty = true
@@ -235,6 +260,18 @@ func (h *Host) remove(space string) {
 	}
 }
 
+// refresh takes what the poll read of each worker, for the sidebar.
+func (h *Host) refresh(workers []spacehost.Worker) {
+	for _, w := range workers {
+		for _, t := range h.tabs {
+			if t.space == w.Space && t.info != w {
+				t.info = w
+				h.dirty = h.dirty || h.lay.side > 0
+			}
+		}
+	}
+}
+
 func (h *Host) label(t *tab) label {
 	return label{name: t.name, current: t == h.cur, ended: t.pic.Ended, changed: t != h.cur && t.pic.Seq != t.seen}
 }
@@ -244,18 +281,31 @@ func (h *Host) barRuns() []terminal.Run {
 	for i, t := range h.tabs {
 		labels[i] = h.label(t)
 	}
-	return barRuns(labels, h.lay.size.Cols)
+	help := hint
+	if h.lay.size.Cols >= sideFrom {
+		help = sideHint
+	}
+	return barRuns(labels, h.lay.size.Cols, help)
+}
+
+func (h *Host) sideRows() ([][]terminal.Run, []int) {
+	entries := make([]entry, len(h.tabs))
+	for i, t := range h.tabs {
+		entries[i] = entry{label: h.label(t), worker: t.space != "", info: t.info}
+	}
+	return sideRows(entries, h.lay.side, h.lay.region.Rows)
 }
 
 func (h *Host) draw() {
 	h.dirty = false
 	bar := h.barRuns()
+	side, _ := h.sideRows()
 	pic := h.cur.pic
 	h.cur.seen = pic.Seq
 	if pic.Ended {
 		pic.Cursor.Visible = false
 	}
 	_ = h.canvas.Draw(terminal.Frame{
-		Region: h.lay.region, Rows: pic.Rows, Cursor: pic.Cursor, Modes: h.modes(), Bar: bar,
+		Region: h.lay.region, Rows: pic.Rows, Cursor: pic.Cursor, Modes: h.modes(), Bar: bar, Side: side,
 	})
 }
