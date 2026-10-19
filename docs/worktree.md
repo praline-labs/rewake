@@ -5,19 +5,16 @@ land, finish, Claude Code's launch and `.worktreeinclude` took it past the proje
 400-line limit. How they are used — the owner starts each writer in one, since a session
 cannot start another, and main lands and finishes it — is said there.
 
-`rewake codex --worktree` and `rewake claude --worktree` give the session a checkout of
-its own, on a branch of its own. Codex's terminal cannot make one under rewake — it
-refuses `--worktree` together with `--remote`, before it creates anything, and rewake
-always starts it with `--remote`
-([research-codex.md](archive/research-codex.md#--worktree-with-a-remote-terminal)) — so the
-launch command takes the flag for itself and never passes it on. Decided by the owner on
-September 26, 2026, as the variant that keeps only the substance of Codex's worktree:
-a checkout made with the public `git worktree add`, and rewake's own record of it.
-Codex's private scheme — its directory layout, a `--no-checkout` add, `config.worktree`,
-the thread binding in the git metadata — is not repeated: it is no contract, and a copy
-would drift from the next version silently. On September 27, 2026 the owner decided that
-the checkout is on a new branch rather than a detached HEAD, that `land` and `finish`
-bring the work back, and that Claude Code launches get the same checkout.
+`rewake claude --worktree` and `rewake pi --worktree` give the session a checkout of
+its own, on a branch of its own, made with the public `git worktree add` and recorded by
+rewake. The launch command takes the flag for itself and never passes it on. Decided by the
+owner on September 26, 2026, for what was then Codex's launch, as the variant that keeps
+only the substance of Codex's worktree: Codex's terminal could not make one under rewake,
+and its private scheme — directory layout, a `--no-checkout` add, `config.worktree`, the
+thread binding in the git metadata — was not repeated, being no contract. On September 27,
+2026 the owner decided that the checkout is on a new branch rather than a detached HEAD,
+that `land` and `finish` bring the work back, and that Claude Code launches get the same
+checkout; pi launches take the flag the same way. Codex does not return soon (October 18, 2026).
 
 ## The launch
 
@@ -34,19 +31,18 @@ bring the work back, and that Claude Code launches get the same checkout.
   which stands for the slash in the directory's name, and everything a shell reads, so
   the name goes into the commands a refusal prints as it is. The length is the longest
   whose record, `<name>.json`, and git's `.lock` beside a branch's last element fit the
-  255 bytes of a file name. For Codex a spaced value is not
-  read: the word after the switch stays the harness's, a prompt most often, as it would
-  be for Codex itself. For Claude Code, whose own flag is `--worktree [name]`, such a
+  255 bytes of a file name. For pi a spaced value is not
+  read: the word after the switch stays the harness's, a prompt most often. For Claude
+  Code, whose own flag is `--worktree [name]`, such a
   word is refused, naming `--worktree=<word>` and `--worktree -- <word>`. The flag after `--` is prompt text and stays. Given twice, or as
-  `--worktree=`, it is a wrong call. For Codex it is Codex's own spelling. For Claude
+  `--worktree=`, it is a wrong call. For Claude
   Code it is the long spelling of its own flag; the short `-w` stays Claude Code's —
   a worktree inside the repository in `.claude/worktrees/<name>`, on a branch
   `worktree-<name>`, which it removes itself on exit
   ([research-launch.md](research-launch.md#a-worktree-at-launch)) — and a launch has one
   worktree, so `-w` or `--tmux`, which needs `-w`, beside `--worktree` is refused.
-- **The checkout.** The repository is the one holding the launch directory — for Codex
-  `-C` or `--cd` when given, else the current one; Claude Code has no such flag, so for
-  it the current one. rewake adds a checkout of its HEAD commit on a new branch of the
+- **The checkout.** The repository is the one holding the launch directory, the current
+  one: neither Claude Code nor pi has a flag that chooses it. rewake adds a checkout of its HEAD commit on a new branch of the
   checkout's name, made when the name is claimed and checked out with
   `git worktree add`: the branch checked out in the source
   stays free, a second launch from the same place does not collide with the first, and
@@ -78,16 +74,11 @@ bring the work back, and that Claude Code launches get the same checkout.
   there (checked September 28, 2026) — so from a linked checkout of it only a root inside
   the Git directory is refused. One place for every repository, so
   `rewake worktree ls` sees them all.
-- **Where the launch starts.** At the launch directory's place within the checkout, as
-  Codex does; at the checkout's top when that directory is not in the commit, an
-  untracked one say. The wrapper changes into it before the session is registered, and
-  for Codex `-C`/`--cd` are taken out of the arguments, so the record and the harness —
-  Codex's terminal and app-server alike — all work there. Relative paths among the
+- **Where the launch starts.** At the launch directory's place within the checkout; at the checkout's top when that directory is not in the commit, an
+  untracked one say. The wrapper changes into it before the session is registered,
+  so the record and the harness work there. Relative paths among the
   harness arguments resolve there too.
-- **Trust.** Codex resolves a linked worktree's trust to its main checkout, so a
-  launch from a trusted repository keeps that trust in its checkout
-  ([research-codex.md](archive/research-codex.md#--worktree-with-a-remote-terminal)). Claude
-  Code keeps trust under the canonical git root, which for a linked worktree is its main
+- **Trust.** Claude Code keeps trust under the canonical git root, which for a linked worktree is its main
   checkout too — read in its source, not checked live
   ([research-worktree.md](research-worktree.md#continuing-a-conversation-and-trust)).
 - **The record** says which repository (its shared Git directory and the checkout the
@@ -103,21 +94,10 @@ bring the work back, and that Claude Code launches get the same checkout.
   the checkout the launch is about to start in. rm and finish refuse such a checkout
   until run where the launch ran, or rm is given `--force`.
 - **A new conversation only.** A continuation is refused with `--worktree`: it continues
-  a conversation in the directory it was started in. For Codex that is `resume` and
-  `fork`. The terminal's `thread/resume` carries a cwd only from its own `-C`/`--cd`,
-  which rewake takes out, and the server then restores the saved one, while the session's
-  workspace roots are already the checkout's: the model would work in one place with its
-  rights named for another (seen on 0.155.1 in a container with the real binaries,
-  September 26, 2026; fork read in the source, not run). Moving the conversation into the
-  checkout — handing the terminal the checkout as its `-C` — is not built: what that does
-  to a continued conversation's permissions
-  ([continuation-permissions.md](archive/continuation-permissions.md)) was not checked. It is
-  asked of the words, not of Codex's grammar: `resume` or `fork` as a whole argument
-  anywhere before `--` refuses. The grammar lets a prompt come before the subcommand and
-  ends an image's joined value (`--image=foo`, `-ifoo`) in its own argument where a
-  separated one runs on, and a parser that followed it missed six forms the 0.155.1
-  terminal takes as a continuation. Neither 0.155.1 nor 0.157.1 has another spelling: no
-  alias, and a bare `--last` is refused by the parser. For Claude Code it is
+  a conversation in the directory it was started in. For pi that is `--session`, `--continue`/`-c`,
+  `--resume`/`-r` and `--fork`; a `--session-id` is no continuation, since a space supplies a
+  fresh random id. Codex's launch refused its `resume` and `fork` as whole
+  arguments before `--` (probed on 0.155.1 and 0.157.1, September 26, 2026). For Claude Code it is
   `--continue`/`-c`, `--resume`/`-r`, `--from-pr`, `--teleport` and `--fork-session`,
   a cluster of short flags in which `c` or `r` acts as a flag, and the subcommands
   `attach` and `respawn`, which open a background session where it was started: a
@@ -134,7 +114,7 @@ bring the work back, and that Claude Code launches get the same checkout.
   goes after `--`, where it is text (decided September 26, 2026). The refusal spells out
   both ways on: a new conversation with `--worktree`, or the continuation where the
   conversation was started — for one begun in a rewake worktree, `rewake worktree ls`
-  names its path, and `rewake codex resume` or `rewake claude --continue` run there
+  names its path, and `rewake claude --continue` runs there
   without `--worktree`.
 - **How git runs.** Every git call rewake makes runs with `GIT_TERMINAL_PROMPT=0` and in
   a session of its own, with no terminal to open, so nothing prompts. Inherited `GIT_*`
@@ -150,9 +130,7 @@ bring the work back, and that Claude Code launches get the same checkout.
   person's branch in their checkout, and the hooks the repository keeps for a merge or a
   ref update run as they would for the person's own `git merge --ff-only`, waited for
   at most a minute ([landing and finishing](#landing-and-finishing)). The same
-  choices were weighed against Codex's own worktree, which turns filters off too
-  ([research-codex.md](archive/research-codex.md#--worktree-with-a-remote-terminal)), and
-  against Claude Code's, which sets `core.hooksPath` in the shared configuration and
+  choices were weighed against Claude Code's, which sets `core.hooksPath` in the shared configuration and
   resets an existing branch with `-B`
   ([research-worktree.md](research-worktree.md#what-else-claude-codes-worktree-does)); rewake does neither.
 - **Refusals** exit 2 and nothing prompts. The session of its own keeps Ctrl-C from
@@ -160,8 +138,7 @@ bring the work back, and that Claude Code launches get the same checkout.
   runs to its end after rewake has gone, and its checkout is left with a record and no
   owner, which `ls` shows and rm removes (kept on purpose, September 26, 2026). Most
   come before anything is made: the flag given twice or as `--worktree=`, a
-  continuation, `-w`, `--tmux`, `--cloud` or `--environment` beside it, Codex's `--remote`, a profile or
-  `--oss`/`--local-provider`, a launch directory that does not resolve, a name out of
+  continuation, `-w`, `--tmux`, `--cloud` or `--environment` beside it, a launch directory that does not resolve, a name out of
   shape, a launch directory outside any working tree, a repository with no commit yet, a
   worktree directory inside the repository. By then the worktree directory itself may
   have been created. A name taken by a checkout, by a directory in its place or by a
@@ -180,7 +157,7 @@ bring the work back, and that Claude Code launches get the same checkout.
   fails removes the checkout it could not finish, but the branch the claim made stays;
   rewake drops it while it is still at the commit and checked out nowhere, and removes
   the directory when it is empty and the record.
-- **After the session** the checkout and its branch stay, as Codex's own would, and a
+- **After the session** the checkout and its branch stay, and a
   line on stderr says where, and how to land, finish or remove it. A launch that fails
   after the checkout was made, or whose harness exits with an error — a resume of a
   conversation that does not exist, say — takes it back when it is still at its commit
@@ -272,9 +249,7 @@ not carry over at all, since its scripts hold absolute paths. Owner decision, Se
 The agent installs them, or the preparation the repository itself describes, best with
 a package manager that keeps a shared cache. rewake builds no preparation command, no
 link to the source's dependencies and no shared directory keyed by a lock file's hash.
-`.worktreeinclude` carries only what it lists, and without it nothing is copied. Codex's
-own worktree carries nothing beyond the commit
-([research-codex.md](archive/research-codex.md#--worktree-with-a-remote-terminal)).
+`.worktreeinclude` carries only what it lists, and without it nothing is copied.
 
 ## Landing and finishing
 
