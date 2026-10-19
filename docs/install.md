@@ -85,6 +85,31 @@ mv -f ~/.local/share/rewake2/rewake.new ~/.local/share/rewake2/rewake
 To update later, run the same lines again; sessions already running keep the build they
 started with.
 
+**Once, for pi: its pinned copy.** pi is part of rewake: the npm package installs the one
+version rewake was checked with, and `rewake pi` starts no other (a `pi` on `PATH` is not used).
+A build from the checkout has no npm install around it, so put that version beside it, where
+the build looks for it — a `node_modules` above its own directory. It needs Node.js 22.19 or
+newer (`node --version`):
+
+```bash
+npm install --prefix ~/.local/share/rewake2 @earendil-works/pi-coding-agent@1.3.0
+```
+
+The version is `PinnedVersion` in `internal/adapter/pi/ship.go`; when an update of the
+checkout changes it, run this line again with the new one, or the start of a pi session
+refuses, naming both versions. `REWAKE_PI=<pi package directory or entry script>` in the
+environment names another copy instead.
+
+**Once, in the first pi session: `/login`.** rewake's pi keeps everything of its own —
+login, settings, extensions, skills, prompts, themes, models, packages, trust decisions,
+sessions — in `~/.config/rewake/pi/agent`, not in `~/.pi`: your own pi is neither read nor
+changed, and nothing is copied from it. Log in there once with `/login`, as in pi. An
+extension, skill or theme you want in rewake's pi goes into that directory's
+`extensions/`, `skills/` or `themes/`, and a package is installed into it with
+`PI_CODING_AGENT_DIR=~/.config/rewake/pi/agent` set for `pi install <source>`. In a
+project with `.pi` resources or `.agents/skills`, pi asks once whether to trust the folder
+before the session is ready for mail; `/trust` keeps the answer.
+
 **Once: the `rewake2` command.** Create the file `~/.local/bin/rewake2` with these lines:
 
 ```sh
@@ -150,7 +175,9 @@ Remove `~/.rewake2-worktrees` too once nothing in the checkouts there is wanted;
 
 - Codex is not supported: `rewake2 codex` is an unknown command. Claude Code (2.1.287 or newer)
   and pi are.
-- pi needs pi 1.2.0 or newer; an older one is refused at the start, naming the version.
+- pi runs only at its pinned version (1.3.0), on Node.js 22.19 or newer; another is refused at
+  the start, naming the version. A pi named with `--command` (an alias's `command`) runs from
+  1.2.0, with a note when it is not the pinned one.
 - No grants: main cannot give a worker a directory or Git permissions through rewake. A
   worker has what its own launch gives it, such as the harness's permission flags.
 - No mail tool: sessions read and send mail with the `rewake` command in their shell, so a
@@ -189,6 +216,15 @@ A deprecation, or anything else that takes a version range, names exact versions
 this layout a range such as `<1.0.2` also matches `1.0.2-linux-x64` and
 `1.0.2-linux-arm64`, since a build's suffix makes it a prerelease that sorts below its
 release, and the mark would land on the builds the current release installs.
+
+Owner decision, October 19, 2026: pi is part of rewake. The entry depends on
+`@earendil-works/pi-coding-agent` at the exact version `scripts/pack.sh` reads from
+`PinnedVersion` in `internal/adapter/pi/ship.go`, so npm installs and updates pi with rewake;
+a launch starts that copy with `node` and refuses any other version
+([launch.md](launch.md#pi)). The gate's install serves pi and its dependencies from the public
+registry beside the release's own packages, and checks that npm put the pinned pi where the
+command looks for it and that it runs. Raising the pin is a change of `PinnedVersion` with the
+checks of [research-pi.md](research-pi.md#the-bundled-pi) run again on the new version.
 
 Every release goes through the gate, `tools/release`:
 

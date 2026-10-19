@@ -64,6 +64,16 @@ JSON
   cp "$root/LICENSE" "$dir/LICENSE"
 done
 
+# pi is shipped as a dependency of the entry at the exact version the binary
+# runs, so npm installs and updates it with rewake; the binary refuses any
+# other copy it finds there. Read from the source, the one place it is set.
+pi_package="$(sed -n 's/^\tPackage *= "\(.*\)"$/\1/p' "$root/internal/adapter/pi/ship.go")"
+pi_version="$(sed -n 's/^\tPinnedVersion *= "\(.*\)"$/\1/p' "$root/internal/adapter/pi/ship.go")"
+if [ -z "$pi_package" ] || [ -z "$pi_version" ]; then
+  echo "pack.sh: could not read pi's package and pinned version from internal/adapter/pi/ship.go" >&2
+  exit 1
+fi
+
 # The entry: the version people install. Each alias is scoped, so no package
 # outside the organization can ever sit where the shim looks for its binary.
 entry="$out/rewake"
@@ -77,6 +87,9 @@ cat > "$entry/package.json" <<JSON
   $repository,
   "bin": { "rewake": "bin/rewake" },
   "files": ["bin/rewake", "README.md", "LICENSE"],
+  "dependencies": {
+    "$pi_package": "$pi_version"
+  },
   "optionalDependencies": {
     "@praline-labs/rewake-linux-x64": "npm:$name@$version-linux-x64",
     "@praline-labs/rewake-linux-arm64": "npm:$name@$version-linux-arm64"

@@ -89,6 +89,11 @@ can be read it refuses, exit 1, saying how the version was asked and what came o
 or above it the launch goes on. A gate is a minimum or nothing — an adapter without one
 reads nothing — and never an exact version. Claude Code's minimum is 2.1.287.
 
+The one exact version is a copy shipped with rewake (owner decision, October 19, 2026):
+pi's, launched without `--command`, runs only at its pinned version, on a runtime at or
+above the runtime's minimum; any other refuses, exit 1, before the claim. A pi named with
+`--command` is held to the minimum, 1.2.0.
+
 Known limits, recorded on October 13, 2026 at stage 3's close, both owned by stage 4,
 where the Claude Code adapter is built: the design's note of a version newer than the last
 one a live check ran on is not built; and the table of oldest supported versions in
@@ -97,6 +102,7 @@ minimums, nor does a test read the two as one fact
 ([design-api.md](../v2/design-api.md#minimum-versions)).
 
 Tests:
+- `internal/host/launch/version_shipped_test.go` `TestTheShippedCopyRunsOnlyAtItsPinnedVersion`
 - `internal/host/launch/version_test.go` `TestAVersionBelowTheMinimumIsRefused`
 - `internal/host/launch/version_test.go` `TestAnUnreadableVersionIsRefused`
 - `internal/host/launch/version_test.go` `TestAVersionRefusalNeverCarriesWhatTheProgramPrinted`

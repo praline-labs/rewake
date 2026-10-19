@@ -227,6 +227,15 @@ launch reads it before the claim (as 1.x does since `aee71ea`):
 Exact versions in gates go (answer 8): a gate is a minimum or nothing. Claude Code's
 minimum is 2.1.287 (decision 1); Codex's is set in stage 5.
 
+**A shipped copy is pinned** (owner decision, October 19, 2026): pi is installed and
+updated with rewake, so the room never runs a pi rewake was not checked with. An adapter
+whose harness ships with rewake implements `adapter.Shipped`: without `--command` the
+launch starts the copy `Locate` finds, reads its runtime's version against the runtime's
+minimum, then the copy's against the gate's `Pinned`, and refuses any other version,
+naming the one found and the pinned one. A program named with `--command` is held to the
+minimum, as above; the adapter notes a version other than the pinned one
+([launch.md](../launch.md#pi)).
+
 **The legacy mark stays as a mechanism with an empty table** (answer 11): the rules of
 `docs/legacy.md` and `docs/legacy_test.go` move to 2.0 unchanged, with no marks and the
 table of oldest supported versions holding the minimums above. The table and the

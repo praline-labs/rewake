@@ -1,9 +1,10 @@
 # pi: the adapter
 
 Verified October 18, 2026 against installed `@earendil-works/pi-coding-agent` 1.2.0.
-This package, not the older reference checkout, is the source for this adapter. The
-minimum supported version is **1.2.0**; the launch version gate refuses older or
-unreadable versions. Main also compared the 1.3.0 package on October 18: its extension
+This package, not the older reference checkout, is the source for this adapter. Since
+October 19, 2026 pi is shipped with rewake at the pinned **1.3.0**, which a launch of the
+shipped copy requires exactly ([below](#the-bundled-pi)); the minimum, **1.2.0**, holds a pi
+named with `--command`, and the gate refuses older or unreadable versions. Main also compared the 1.3.0 package on October 18: its extension
 declarations were byte-identical to 1.2.0 and its changelog contained no extension, event or
 `sendMessage` change. It was read as compatible, not live-probed here. Later releases still
 need that comparison and the probes below before acceptance.
@@ -19,7 +20,9 @@ Read in the package's `docs/cli.md`, `docs/extensions.md`, `CHANGELOG.md` and
   imports are Node built-ins and that sibling module; package imports supply types and
   need no installed dependency beside pi.
 - `-na` / `--no-approve` ignores project-local resources requiring trust. It does not
-  edit a trust record. These two flags intentionally limit discovery for this launch.
+  edit a trust record. The adapter passed both flags until October 19, 2026, when the
+  bundled pi dropped them so the person's and the project's extensions load
+  ([below](#the-bundled-pi)); `-e` alone adds rewake's entry to those pi finds.
 - `--append-system-prompt` is repeatable. The adapter appends its briefing even when the
   caller already supplied one. `--no-intro` suppresses only rewake's briefing.
 - `--session-id` opens or creates the named conversation. The native CLI rejects it with
@@ -209,3 +212,46 @@ was under pi's `keepRecentTokens` (20 000 by default), and after three reads of 
 tokens it started, the next answer showed `compactions 1` with the context down from 15% to 6%,
 and the word the focus named was kept. The compaction's letter goes to main's run, which a
 print-mode main has already ended by then — the same trap as a report to it (`docs/traps.md`).
+
+## The bundled pi
+
+Owner decision, October 19, 2026: pi is part of rewake, pinned, installed and updated with it,
+its login and settings apart from the person's global pi, every feature working there. Read on
+the 1.3.0 package (`docs/cli.md`, `docs/security.md`, `docs/settings.md`, `dist/bundle`):
+
+- `PI_CODING_AGENT_DIR` moves the whole agent directory: `auth.json` (written mode 0600 by
+  `FileAuthStorageBackend`, `join(getAgentDir(), "auth.json")`), settings, models, extensions,
+  skills, prompts, themes, `pi install` packages (its `npm/`), `trust.json` and sessions. It
+  does not move the npm cache (`~/.npm`) a package install uses, ambient credentials such as
+  provider keys in the environment, or a user-level `~/.agents/skills`.
+- `PI_SKIP_VERSION_CHECK=1` stops pi offering its own update; rewake updates the copy.
+- `bin.pi` is `dist/bundle/cli.js`, and `engines.node` is `>=22.19.0`, which pi does not
+  check. `node cli.js --version` prints `1.3.0` and writes nothing to HOME.
+- Project trust: without `-a`/`-na`, an extension handling `project_trust` or a saved decision,
+  `defaultProjectTrust` (`"ask"` by default) applies; the interactive prompt comes before any
+  extension loads, the user-level and rewake's included.
+
+**[live]** October 19, 2026, the branch's build placed as npm places it, beside pi 1.3.0 in one
+`node_modules`, a private HOME and `REWAKE_DIR` under `/tmp`, no login, worker
+`--model openai-codex/gpt-5.3-codex-spark --thinking minimal`, main a print-mode Claude Code
+with the person's own HOME for its login:
+
+| Check | Seen |
+|---|---|
+| the shipped copy starts | pi's screen `v1.3.0`; boundary live within 2 s; the person's pi 1.2.0 on `PATH` not used |
+| rewake's and a third-party extension | `[Extensions] extension.ts, third.ts`; the third-party one, in the isolated `extensions/`, wrote its marker on `session_start` |
+| a `pi install` package | `pi install npm:pi-mcp-adapter` with `PI_CODING_AGENT_DIR` set put it in the isolated `npm/`; the launch listed `extension.ts, pi-mcp-adapter, third.ts`, and the adapter turned off the built-in MCP as it does under a plain pi |
+| where pi writes | only under `~/.config/rewake/pi/agent`: `auth.json` (`{}`, 0600), `settings.json`, `models-store.json`, `sessions/`; no `~/.pi` |
+| the directory's mode | a fresh HOME: the launch made `~/.config/rewake/pi/agent` 0700 (and the missing parents) |
+| a turn without login | pi printed `Provider is not configured: openai-codex`; the turn ended `stopReason: error`, and main's inbox got an `error` report from the worker 0.2 s later, empty text. The question stayed open: the model never read its inbox, so the report did not answer it |
+| a project with `.pi/extensions` | pi's "Trust project folder?" prompt; no extension loaded and the boundary did not go live within 60 s, until answered |
+| `REWAKE_PI` at the person's pi 1.2.0 | refused before the claim: `pi 1.2.0 was found where rewake's own copy should be; this rewake runs pi 1.3.0: reinstall rewake, or name another program with --command` |
+| `--command` at that pi | started, with the note `pi 1.2.0 named with --command is not the 1.3.0 this rewake was checked with` |
+| no `node` on `PATH` | `pi runs on Node.js 22.19.0 or later, and no node is on PATH` |
+| the binary outside any `node_modules` | `the pi installed with rewake is not in any node_modules above <path>; reinstall rewake from npm, set REWAKE_PI to a pi 1.3.0 package, or name a pi with --command` |
+
+A model's answer reaching main through the bundled pi needs a login in the isolated directory,
+which the run had none of by decision: it is the owner's check after `/login`; the answer path
+itself is the adapter's, live since October 18. `tools/release`'s dry run installed the entry
+from its local registry with pi from the public one: `npm installs
+@earendil-works/pi-coding-agent@1.3.0 beside the command, and it runs under node`.

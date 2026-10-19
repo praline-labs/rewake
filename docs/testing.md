@@ -210,6 +210,13 @@ installed version before the claim and refuses one below its minimum; a new vers
 behaviour is checked live, as [research.md](research.md) records. Stage 5 brings a
 version check back with the Codex adapter.
 
+pi is shipped with rewake at a pinned version (`PinnedVersion` in
+`internal/adapter/pi/ship.go`, read by `scripts/pack.sh`), and a launch of the shipped copy
+refuses any other. Before raising it, compare the new package's extension declarations and
+changelog with the pinned one's and rerun the live checks of
+[research-pi.md](research-pi.md#the-bundled-pi) on it, with the new copy installed where a build
+finds it ([install.md](install.md#trying-20-beside-103)).
+
 ## Reading a result
 
 The summarizer prints, and its exit code says, 0 green, 1 red, 2 a wrong call, 3 a

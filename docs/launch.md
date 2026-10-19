@@ -136,17 +136,37 @@ carries none. The context fill and compaction come back through the mod, as pari
 
 ### pi
 
-`rewake pi` requires pi 1.2.0 or newer. The version is checked through the same program
-that will run the session, including a `--command` wrapper. That wrapper must `exec` pi:
-the extension socket admits only the exact harness pid and process start time.
+pi is part of rewake (owner decision, October 19, 2026): a pinned pi, 1.3.0 today, is a
+dependency of rewake's npm package, installed and updated with it ([install.md](install.md)).
+Without `--command`, `rewake pi` starts that copy and no `pi` on `PATH`: it finds the
+package in a `node_modules` above its own executable, as node resolves a dependency, or
+where `REWAKE_PI` names a package directory or entry script (a build npm did not install),
+and runs the entry with `node`. Before the claim it reads `node --version`, refusing below
+22.19.0 (pi's own `engines`, which pi does not check) or with no `node` on `PATH`, then
+the copy's version, refusing any but the pinned one: this build was checked with that one
+([design-api.md](v2/design-api.md#minimum-versions)). A pi named with `--command` is the
+escape hatch: it is held to the minimum, 1.2.0, and starts with a note when it is not the
+pinned version. That wrapper must `exec` pi: the extension socket admits only the exact
+harness pid and process start time; node runs the shipped entry in its own process.
+
+Every pi rewake starts keeps its state in rewake's own directory: the launch sets
+`PI_CODING_AGENT_DIR` to `~/.config/rewake/pi/agent`, made private (0700) by the launch,
+and `PI_SKIP_VERSION_CHECK=1`, since rewake updates the copy. Login (`/login`, kept in its
+`auth.json`), settings, extensions, skills, prompts, themes, models, `pi install` packages,
+trust decisions and sessions live there, apart from the person's own pi, whose `~/.pi` is
+neither read nor changed. Beside the alias file, not in the state directory: it is the
+person's, not a room's, and outlives a cleared temporary directory. A variable of the same
+name in the person's environment does not reach the run.
 
 The adapter embeds `extension.ts` and its management module, writing both in the run
-directory. It adds `-ne -e
-<extension.ts> -na` and, unless `--no-intro`, its briefing through the repeatable
-`--append-system-prompt`. `-ne` disables discovered, configured and built-in extensions;
-explicit `-e` extensions still load. `-na` ignores project resources requiring trust.
-Neither flag edits the person's configuration. The socket path is passed in
-`REWAKE_PI_SOCKET`; nothing is injected as a first user message.
+directory. It adds `-e <extension.ts>` and, unless `--no-intro`, its briefing through the
+repeatable `--append-system-prompt`. `-e` adds rewake's extension to those pi finds: the
+person's, packages and built-ins load as without rewake, and a project's resources load
+once pi's project trust allows them — in a project with `.pi` resources or `.agents/skills`
+and no saved decision, pi asks in its own screen before any extension loads, so the run is
+not ready for tasks until the person answers (`/trust` saves the answer in the directory
+above). The socket path is passed in `REWAKE_PI_SOCKET`; nothing is injected as a first
+user message.
 
 A new conversation named by rewake is passed as `--session-id <uuid>`. A conflicting
 session, resume, continue, fork or `--no-session` option is refused. `--worktree` is

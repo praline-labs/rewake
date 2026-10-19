@@ -51,6 +51,10 @@ type LaunchRequest struct {
 	// claim (VersionGate); its start runs nothing more to learn it. Empty
 	// for an adapter whose gate has no minimum.
 	Version string
+	// Start is the copy of the harness shipped with rewake, located before
+	// the claim (Shipped); empty when Command names another program or the
+	// harness ships none.
+	Start Start
 	// Conversation is the id rewake chose for the new conversation this
 	// launch starts, a UUID, set only where the adapter's offer names
 	// conversations (ConversationOffer). Launch passes it with the offer's
@@ -76,6 +80,32 @@ type LaunchRequest struct {
 type VersionGate struct {
 	Minimum string
 	Args    []string
+	// Pinned is the one version of the copy shipped with rewake (Shipped):
+	// a launch of that copy refuses any other, since only that one was
+	// checked with this build. A program named with --command is held to
+	// Minimum alone.
+	Pinned string
+}
+
+// Shipped is a harness whose pinned copy is installed with rewake and updated
+// with it (docs/install.md). A launch without --command starts that copy and
+// no other program of the same name the person may have.
+type Shipped interface {
+	// Locate finds the shipped copy; its error says what is missing and
+	// refuses the launch before the claim.
+	Locate() (Start, error)
+}
+
+// Start is how a shipped copy is started: a runtime the person installs,
+// the arguments that come before the caller's, and the oldest version of
+// the runtime the copy runs on.
+type Start struct {
+	Command string
+	Args    []string
+	// RuntimeTitle names the runtime as a person knows it; Runtime is its
+	// gate, read before the copy's own version.
+	RuntimeTitle string
+	Runtime      VersionGate
 }
 
 // LaunchPlan is how the wrapper starts the harness, and the capabilities of
@@ -117,13 +147,25 @@ type LaunchPlan struct {
 	Live LiveReporter
 }
 
-// Program is the executable a launch starts: the one named with --command, or
-// the harness's own.
+// Program is the executable a launch starts: the one named with --command, the
+// runtime of the shipped copy, or the harness's own.
 func (r LaunchRequest) Program(own string) string {
 	if r.Command != "" {
 		return r.Command
 	}
+	if r.Start.Command != "" {
+		return r.Start.Command
+	}
 	return own
+}
+
+// Invocation is the program and arguments that start the harness with args:
+// the shipped copy's own arguments come first, and none with --command.
+func (r LaunchRequest) Invocation(own string, args []string) (string, []string) {
+	if r.Command != "" || r.Start.Command == "" {
+		return r.Program(own), args
+	}
+	return r.Start.Command, append(append([]string{}, r.Start.Args...), args...)
 }
 
 // Harness is the Launch capability, which every adapter has: how one

@@ -11,18 +11,26 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
+
+// upstream is where the local registry sends what the release does not hold;
+// a variable so a test can stand in for the public registry.
+var upstream = registry
 
 // localRegistry serves one release to npm from this process, the way the
 // public registry will serve it once published: one packument naming every
 // version with its dist-tags, and the tarballs npm pack made. Only a registry
 // makes npm resolve the entry's npm: aliases and choose a build by os and
 // cpu; an install from tarballs on disk cannot, so without one the gate would
-// prove the files and never the install.
+// prove the files and never the install. Every other package — the pi the
+// entry depends on and its own dependencies — it forwards to the public
+// registry, whose documents name their tarballs there.
 type localRegistry struct {
 	url    string
 	server *http.Server
@@ -70,6 +78,12 @@ func (g *gate) serveRelease(ctx context.Context, dir string) (*localRegistry, er
 		_ = listener.Close()
 		return nil, err
 	}
+	public, err := url.Parse(upstream)
+	if err != nil {
+		_ = listener.Close()
+		return nil, err
+	}
+	forward := &httputil.ReverseProxy{Rewrite: func(r *httputil.ProxyRequest) { r.SetURL(public) }}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		// npm asks for a scoped name with its slash escaped, and Go's router
@@ -83,8 +97,10 @@ func (g *gate) serveRelease(ctx context.Context, dir string) (*localRegistry, er
 			_, _ = w.Write(packument)
 		case tarballs[path] != "":
 			http.ServeFile(w, r, tarballs[path])
-		default:
+		case strings.HasPrefix(path, "/tarballs/"):
 			http.NotFound(w, r)
+		default:
+			forward.ServeHTTP(w, r)
 		}
 	})
 	registry := &localRegistry{url: base, server: &http.Server{Handler: mux, ReadHeaderTimeout: 10 * time.Second}}

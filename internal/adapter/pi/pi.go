@@ -3,13 +3,18 @@ package pi
 
 import "github.com/praline-labs/rewake/internal/adapter"
 
-// ID names the harness; MinimumVersion is the first supported extension API.
+// ID names the harness; MinimumVersion is the first supported extension API,
+// the floor for a pi named with --command.
 const (
 	ID             = "pi"
 	MinimumVersion = "1.2.0"
 	socketEnv      = "REWAKE_PI_SOCKET"
-	sessionIDFlag  = "--session-id"
-	worktreeFlag   = "--worktree"
+	// agentDirEnv moves pi's whole agent directory; skipVersionCheckEnv
+	// keeps pi from offering an update of a copy rewake updates.
+	agentDirEnv         = "PI_CODING_AGENT_DIR"
+	skipVersionCheckEnv = "PI_SKIP_VERSION_CHECK"
+	sessionIDFlag       = "--session-id"
+	worktreeFlag        = "--worktree"
 )
 
 type harness struct{}
@@ -28,7 +33,8 @@ func (harness) Examples() []string {
 func (harness) Notes() []string {
 	return []string{
 		"Notices wake an idle session and steer a busy one after its current tool batch. The per-run extension carries notices and reports through a local socket.",
-		"Discovered, configured and built-in extensions are disabled for this launch; explicit -e extensions still load. Project-local resources requiring trust are ignored. The person's configuration is not edited.",
+		"rewake starts the pi installed with it, " + PinnedVersion + ", with node (Node.js " + NodeMinimum + " or later); a pi of another version there refuses the launch. A pi named with --command starts at " + MinimumVersion + " or later, with a note when it is not " + PinnedVersion + ". REWAKE_PI names a pi package or entry script for a build npm did not install.",
+		"pi keeps its login, settings, extensions, skills, prompts, themes, packages and sessions in ~/.config/rewake/pi/agent, apart from the person's own pi; log in once there with /login. Its extensions, the project's included, load beside rewake's; project resources ask for trust as pi does.",
 		"Tasks and questions are accepted after the extension connects from the harness process. A --command wrapper must exec pi, not start it as a child.",
 		"A turn ends at agent_settled, after automatic retries and queued work. Its end is not held open; use rewake pending before an interim end.",
 		"Context, model and thinking level come from the native session. Compact accepts an optional focus and refuses a running turn; interrupt stops a running turn. Limits are not reported.",
@@ -37,7 +43,7 @@ func (harness) Notes() []string {
 	}
 }
 
-// These flags resolve to one value in the installed 1.2.0 CLI. Resource lists
+// These flags resolve to one value in the 1.3.0 CLI. Resource lists
 // and --append-system-prompt are repeatable and deliberately absent.
 func (harness) SingleUseFlags() []adapter.Flag {
 	return []adapter.Flag{
@@ -68,11 +74,11 @@ func (harness) SingleUseFlags() []adapter.Flag {
 }
 
 func (harness) Version() adapter.VersionGate {
-	return adapter.VersionGate{Minimum: MinimumVersion, Args: []string{"--version"}}
+	return adapter.VersionGate{Minimum: MinimumVersion, Args: []string{"--version"}, Pinned: PinnedVersion}
 }
 
 func (harness) EnvNotInherited() []string {
-	return []string{socketEnv, "PI_CODING_AGENT", "PI_SESSION_ID", "PI_SESSION_FILE", "PI_PROVIDER", "PI_MODEL", "PI_REASONING_LEVEL"}
+	return []string{socketEnv, agentDirEnv, skipVersionCheckEnv, "PI_CODING_AGENT", "PI_SESSION_ID", "PI_SESSION_FILE", "PI_PROVIDER", "PI_MODEL", "PI_REASONING_LEVEL"}
 }
 
 func (harness) Offers() adapter.Offer {

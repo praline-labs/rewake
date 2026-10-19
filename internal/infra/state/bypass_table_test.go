@@ -29,6 +29,8 @@ var bypassExceptions = []bypass{
 	{"internal/host/worktree/worktree.go", "os.MkdirAll", 2, worktreeOutside + ": the directories of checkouts and records"},
 	{"internal/host/worktree/worktree.go", "os.Remove", 4, worktreeOutside + ": a checkout's directory and record, undone"},
 
+	{"internal/adapter/pi/ship.go", "os.MkdirAll", 1, "pi's agent directory, the person's beside the alias file and outside any room: no room's lease covers it"},
+
 	{"internal/core/mail/mailtest/mailtest.go", "os.MkdirAll", 2, testHelper},
 	{"internal/core/registry/registrytest/registrytest.go", "os.MkdirAll", 1, testHelper + ": a 1.x record no 2.0 lease covers"},
 	{"internal/core/registry/registrytest/registrytest.go", "os.WriteFile", 1, testHelper + ": a 1.x record no 2.0 lease covers"},

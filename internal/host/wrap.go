@@ -111,7 +111,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 	}
 	// The version is read before the run is claimed, so a refusal leaves no
 	// record, no session and no socket behind.
-	version, err := readVersion(request, cwd)
+	version, start, err := readVersion(request, cwd)
 	if err != nil {
 		return 0, err
 	}
@@ -184,6 +184,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 		ControlDir: controlDir,
 		RunDir:     runDir,
 		Version:    version,
+		Start:      start,
 		Shell:      request.Shell,
 	}
 	launchRequest.Env = launch.SessionEnv(launchRequest, request.Harness.EnvNotInherited())
