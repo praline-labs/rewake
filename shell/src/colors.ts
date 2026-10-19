@@ -1,6 +1,6 @@
 // The person's colours, asked of their terminal once at start
 // (docs/v2/shell.md): a theme changed while the shell runs is not followed.
-import type { CliRenderer, TerminalColors } from "@opentui/core";
+import type { CliRenderer, OptimizedBuffer, TerminalColors } from "@opentui/core";
 
 export type Seed = {
   // widget is written into every pane's widget before its program's bytes,
@@ -13,19 +13,50 @@ export type Seed = {
   // transparent is set when the terminal gave no background: the panes then
   // leave their default background to the terminal instead of painting black.
   transparent: boolean;
+  // standIn is set when the terminal gave no foreground: the widget's
+  // default foreground is this colour, which keepDefaultForeground turns
+  // back into the terminal's own after the widget draws.
+  standIn?: [number, number, number];
 };
 
+// A terminal inside a multiplexer may answer only part: herdr 0.9.3 answers
+// OSC 4 from its own palette and OSC 10/11 only when it learned its host's
+// colours (seen October 19, 2026).
 export function seedOf(colors: TerminalColors | undefined): Seed {
-  if (!colors) return { widget: "", host: "", transparent: true };
   let widget = "";
-  colors.palette?.forEach((c, i) => {
+  colors?.palette?.forEach((c, i) => {
     if (c) widget += `\x1b]4;${i};${c}\x1b\\`;
   });
-  const fg = colors.defaultForeground ?? "";
-  const bg = colors.defaultBackground ?? "";
-  if (fg) widget += `\x1b]10;${fg}\x1b\\`;
+  const fg = colors?.defaultForeground ?? "";
+  const bg = colors?.defaultBackground ?? "";
   if (bg) widget += `\x1b]11;${bg}\x1b\\`;
-  return { widget, host: fg || bg ? `${fg};${bg}` : "", transparent: !bg };
+  const host = fg || bg ? `${fg};${bg}` : "";
+  if (fg) return { widget: `${widget}\x1b]10;${fg}\x1b\\`, host, transparent: !bg };
+  // Unseeded, the widget writes its default foreground as white; the stand-in
+  // is a grey no palette names, so only the default foreground is drawn in it.
+  const standIn: [number, number, number] = [0xc0, 0xc1, 0xbf];
+  return { widget: `${widget}\x1b]10;rgb:c0/c1/bf\x1b\\`, host, transparent: !bg, standIn };
+}
+
+// keepDefaultForeground gives the cells the widget drew in the stand-in
+// colour the default foreground's intent, so the renderer writes SGR 39 and
+// the terminal draws them in its own colour (docs/v2/shell.md). A colour is
+// four u16 words, the low byte red, green, blue, alpha and the high bytes
+// its meta: the intent (2, default) in the second word's.
+export function keepDefaultForeground(buffer: OptimizedBuffer, rgb: [number, number, number]) {
+  buffer.withBuffers((cells) => {
+    const fg = cells.fg;
+    for (let i = 0; i < fg.length; i += 4) {
+      if (
+        (fg[i]! & 255) !== rgb[0] ||
+        (fg[i + 1]! & 255) !== rgb[1] ||
+        (fg[i + 2]! & 255) !== rgb[2]
+      )
+        continue;
+      if (fg[i]! >> 8 !== 0 || fg[i + 1]! >> 8 !== 0) continue;
+      fg[i + 1] = (fg[i + 1]! & 255) | (2 << 8);
+    }
+  });
 }
 
 const reply = /\](4;\d+|10|11);(?:rgb:([0-9a-f]+)\/([0-9a-f]+)\/([0-9a-f]+)|#([0-9a-f]{6}))/i;

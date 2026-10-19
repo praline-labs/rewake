@@ -101,6 +101,15 @@ mode:
   palette and the default colours are seeded at start, and a theme changed while the shell runs
   is not followed; patching OpenTUI's resolution of indexed colours is not on the plan. Without a
   background reply the panes are `transparentBackground`, so the terminal's own shows, not black.
+  Without a foreground reply the widget would write its default foreground as white (`38;2;255;255;255`)
+  where the program asked for none; the shell seeds it with a stand-in grey no palette names,
+  `#c0c1bf`, and after the widget draws turns the cells in that colour into OpenTUI's
+  default-foreground intent, which the renderer writes as SGR 39, so the terminal draws them in
+  its own colour (`keepDefaultForeground`). A part answer is common inside a multiplexer: herdr
+  0.9.3, the owner's, answers OSC 4 from its own palette and OSC 10/11 only when it learned its
+  host's colours itself, and on October 19, 2026 it answered neither — the owner's shell got the
+  palette alone, `REWAKE_HOST_COLORS` stayed unset, and the panes showed white text on the
+  terminal's background, read as "black" (the owner's check, the same day).
   `renderer.getPalette` is not used: it gives up after a fixed 300 ms of silence before the first
   reply whatever its timeout, and returns nothing without failing (a slow Windows Terminal over
   WSL lost the colours that way; replies delayed 1 and 2 s are now heard).
@@ -108,8 +117,8 @@ mode:
   widget's: the person's default colours reach every host before its program starts —
   `REWAKE_HOST_COLORS=fg;bg` (XParseColor forms) in main's environment, which `space open`
   inherits and the space host reads to seed its grid. The shell takes them from the same
-  `getPalette` answer as the widgets' seed and starts main with them, so the terminal is asked
-  once. Unseeded, a worker on a light terminal hears a black background while its pane shows
+  `askColors` answer as the widgets' seed and starts main with them, so the terminal is asked
+  once; a colour the terminal did not give is left empty, the stand-in foreground included. Unseeded, a worker on a light terminal hears a black background while its pane shows
   white.
 - **Mouse.** The widget forwards the wheel, clicks and drags in the program's mode, and scrolls its
   own scrollback when the program takes no mouse. OpenTUI's own selection starts on a left press

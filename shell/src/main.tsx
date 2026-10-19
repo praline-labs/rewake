@@ -11,7 +11,7 @@ import {
 } from "@opentui/core";
 import { extend, render, useTerminalDimensions } from "@opentui/solid";
 import { createEffect, createSignal, For, Show } from "solid-js";
-import { askColors, seedOf } from "./colors.ts";
+import { askColors, keepDefaultForeground, seedOf } from "./colors.ts";
 import { endMain, tailText, watchTerminal } from "./ending.ts";
 import { type Command, prefixHandler } from "./keys.ts";
 import { pollRoom, type Space } from "./room.ts";
@@ -34,6 +34,8 @@ const cwd = process.env.REWAKE_SHELL_CWD || process.cwd();
 // widget's own mouse forwarding.
 // The id is read at the press: Solid sets the id prop after construction.
 let pressed: (id: string) => void = () => {};
+// standIn is the seed's stand-in foreground, set before any pane is made.
+let standIn: [number, number, number] | undefined;
 class PaneTerminal extends EmbeddedTerminalRenderable {
   constructor(ctx: RenderContext, options: EmbeddedTerminalOptions) {
     const self: { term?: PaneTerminal } = {};
@@ -45,6 +47,11 @@ class PaneTerminal extends EmbeddedTerminalRenderable {
       },
     });
     self.term = this;
+    // The widget draws every cell in an RGB colour; with no foreground from
+    // the terminal its default one goes back to the terminal's own.
+    this.renderAfter = (buffer) => {
+      if (standIn) keepDefaultForeground(buffer, standIn);
+    };
   }
 }
 extend({ pane_terminal: PaneTerminal });
@@ -86,6 +93,7 @@ const renderer = await createCliRenderer({
 });
 const colors = await askColors(renderer);
 const seed = seedOf(colors);
+standIn = seed.standIn;
 
 // feed passes a program's bytes to its pane, after the scanner took what
 // the widget would swallow.
