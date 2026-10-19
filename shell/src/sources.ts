@@ -65,7 +65,7 @@ export function startMain(
   return {
     child,
     write: (data) => {
-      if (!pty.closed) queue!.write(data);
+      if (!pty.closed) queue?.write(data);
     },
     resize: (cols, rows) => {
       if (!pty.closed) pty.resize(cols, rows);

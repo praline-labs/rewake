@@ -92,12 +92,15 @@ mode:
   session takes only the title, the mouse, kitty flags and program status.
 - **OSC 8** is lost.
 - **Indexed colours** are resolved to RGB by the widget. The shell asks the person's terminal for
-  its palette (`renderer.getPalette`; the spike took 16 entries, the call takes up to 256) and
-  default colours at start and writes them into every widget as OSC 4/10/11: checked live,
+  its 16 colours and default colours (`askColors` in `shell/src/colors.ts`: OSC 4/10/11 written once,
+  replies read through `renderer.subscribeOsc` for up to 2.5 s) at start and writes them into every widget as OSC 4/10/11: checked live,
   palette index 6 drew as the terminal's own colour 6. Main's decision of October 19, 2026: the
   palette and the default colours are seeded at start, and a theme changed while the shell runs
-  is not followed; patching OpenTUI's resolution of indexed colours is not on the plan. The
-  default background goes out as an explicit colour (`transparentBackground` untried).
+  is not followed; patching OpenTUI's resolution of indexed colours is not on the plan. Without a
+  background reply the panes are `transparentBackground`, so the terminal's own shows, not black.
+  `renderer.getPalette` is not used: it gives up after a fixed 300 ms of silence before the first
+  reply whatever its timeout, and returns nothing without failing (a slow Windows Terminal over
+  WSL lost the colours that way; replies delayed 1 and 2 s are now heard).
 - **The hosts are seeded too**, since a host-fed program hears the host's answer, not the
   widget's: the person's default colours reach every host before its program starts —
   `REWAKE_HOST_COLORS=fg;bg` (XParseColor forms) in main's environment, which `space open`

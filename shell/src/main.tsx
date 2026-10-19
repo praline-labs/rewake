@@ -11,7 +11,7 @@ import {
 } from "@opentui/core";
 import { extend, render, useTerminalDimensions } from "@opentui/solid";
 import { createEffect, createSignal, For, Show } from "solid-js";
-import { seedOf } from "./colors.ts";
+import { askColors, seedOf } from "./colors.ts";
 import { endMain, tailText, watchTerminal } from "./ending.ts";
 import { type Command, prefixHandler } from "./keys.ts";
 import { pollRoom, type Space } from "./room.ts";
@@ -84,7 +84,7 @@ const renderer = await createCliRenderer({
   useMouse: true,
   prependInputHandlers: [prefixHandler(run)],
 });
-const colors = await renderer.getPalette({ size: 16, timeout: 500 }).catch(() => undefined);
+const colors = await askColors(renderer);
 const seed = seedOf(colors);
 
 // feed passes a program's bytes to its pane, after the scanner took what
@@ -142,7 +142,7 @@ function attach(pane: Pane) {
   const term = pane.term;
   if (!term || !pane.space || ending) return;
   pane.scanner.reset();
-  term.write("\x1bc" + seed.widget);
+  term.write(`\x1bc${seed.widget}`);
   pane.source = connectWorker(
     pane.space.socket,
     { cols: Math.max(term.width, 20), rows: Math.max(term.height, 5) },
@@ -275,6 +275,7 @@ function App() {
           id="main"
           ref={(t: PaneTerminal) => startMainPane(t)}
           visible={shown(mainPane)}
+          transparentBackground={seed.transparent}
           width={widthOf(mainPane)}
           height={height()}
         />
@@ -287,6 +288,7 @@ function App() {
               id={pane.id}
               ref={(t: PaneTerminal) => startWorkerPane(pane, t)}
               visible={shown(pane)}
+              transparentBackground={seed.transparent}
               width={widthOf(pane)}
               height={height()}
             />
@@ -310,7 +312,7 @@ async function finish(code?: number) {
   await Promise.race([renderer.closed, new Promise((resolve) => setTimeout(resolve, 1000))]);
   if (code !== 0 && process.stderr.isTTY) {
     const said = tailText(mainTail);
-    if (said) process.stderr.write(said + "\n");
+    if (said) process.stderr.write(`${said}\n`);
   }
   process.exit(code ?? 1);
 }
