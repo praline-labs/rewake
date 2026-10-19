@@ -121,7 +121,7 @@ func (h *Host) loop() {
 
 // apply takes a tab's new screen. Its events reach the person's terminal
 // whichever tab is shown: a worker's bell or notification is for the person,
-// and only the shown program takes the mouse a copy comes from.
+// and a copy comes from where the person's mouse is.
 func (h *Host) apply(u update) {
 	for _, e := range u.pic.Events {
 		_ = h.canvas.Event(e)
@@ -129,7 +129,7 @@ func (h *Host) apply(u update) {
 	u.pic.Events = nil
 	before := h.label(u.tab)
 	u.tab.pic = u.pic
-	if u.tab == h.cur || h.label(u.tab) != before {
+	if h.shown(u.tab) || h.label(u.tab) != before {
 		h.dirty = true
 	}
 }
@@ -142,90 +142,22 @@ func (h *Host) dispatch(actions []action) {
 		case a.mouse != nil:
 			h.mouse(*a.mouse)
 		case a.paste == pasteOpens:
-			h.framed = h.modes().BracketedPaste
+			h.framed = h.focus.modes().BracketedPaste
 			if h.framed {
-				h.cur.send(pasteStart)
+				h.focus.send(pasteStart)
 			}
 		case a.paste == pasteCloses:
 			if h.framed {
-				h.cur.send(pasteEnd)
+				h.focus.send(pasteEnd)
 			}
 		case len(a.send) > 0:
-			h.cur.send(a.send)
+			h.focus.send(a.send)
 		}
 	}
-}
-
-// mouse routes a report: a click on the bar shows the tab under it, an event
-// in the region goes to the shown program as it asked to hear it, anything
-// else is dropped. The region lies at the terminal's top left, so its cells
-// are the terminal's.
-func (h *Host) mouse(m mouseEvent) {
-	switch {
-	case m.row-1 == h.lay.bar:
-		if !m.leftClick() {
-			return
-		}
-		if i := tabAt(h.barRuns(), len(h.tabs), m.col); i >= 0 {
-			h.show(h.tabs[i])
-		}
-	case h.lay.inRegion(m.row) && m.col >= 1 && m.col <= h.lay.region.Cols:
-		if p := m.encode(h.modes(), m.col, m.row); p != nil {
-			h.cur.send(p)
-		}
-	case h.lay.inRegion(m.row) && m.col > h.lay.region.Cols:
-		if !m.leftClick() {
-			return
-		}
-		if _, owner := h.sideRows(); m.row-1 < len(owner) && owner[m.row-1] >= 0 {
-			h.show(h.tabs[owner[m.row-1]])
-		}
-	}
-}
-
-// modes are the shown program's input modes; an ended one has none.
-func (h *Host) modes() terminal.Modes {
-	if h.cur.pic.Ended {
-		return terminal.Modes{}
-	}
-	return h.cur.pic.Modes
-}
-
-// command runs a key typed after the prefix. A digit naming no tab, and the
-// sidebar's key before there is a sidebar, do nothing.
-func (h *Host) command(c byte) {
-	at := 0
-	for i, t := range h.tabs {
-		if t == h.cur {
-			at = i
-		}
-	}
-	switch {
-	case c == 'n':
-		h.show(h.tabs[(at+1)%len(h.tabs)])
-	case c == 'p':
-		h.show(h.tabs[(at+len(h.tabs)-1)%len(h.tabs)])
-	case c == 'm' || c == '0':
-		h.show(h.tabs[0])
-	case c >= '1' && c <= '9' && int(c-'0') < len(h.tabs):
-		h.show(h.tabs[c-'0'])
-	case c == 's' && h.lay.size.Cols >= sideFrom:
-		h.sideOff = !h.sideOff
-		h.relayout(h.lay.size)
-	}
-}
-
-func (h *Host) show(t *tab) {
-	if t == h.cur {
-		return
-	}
-	h.cur = t
-	h.canvas.Redraw()
-	h.dirty = true
 }
 
 // resize follows the person's terminal: the canvas, then every program to
-// the new region, so a switch never has to tell a program a new size.
+// its new region.
 func (h *Host) resize() {
 	size, err := terminal.SizeOf(h.cfg.Out)
 	if err != nil || size == h.lay.size {
@@ -235,87 +167,53 @@ func (h *Host) resize() {
 	h.relayout(size)
 }
 
-// relayout lays the terminal of size out again, the sidebar shown or not,
-// and sizes every program to the new region.
-func (h *Host) relayout(size terminal.Size) {
-	h.lay = layoutFor(size, h.sideOff)
-	h.canvas.Redraw()
-	for _, t := range h.tabs {
-		t.size(h.lay.region)
-	}
-	h.dirty = true
-}
-
 func (h *Host) add(o opened) {
 	view := o.view
 	t := newTab(o.worker.Session, o.worker.Space, view.Keys, view.Resize, func() { _ = view.Close() })
 	t.info = o.worker
-	t.size(h.lay.region)
 	h.watch(t, view)
-	h.dirty = true
+	if h.chosen == nil {
+		h.chosen = t
+	}
+	h.relayout(h.lay.size)
 }
 
+// remove drops a space's tab; the right half shows the next worker, or main
+// takes the whole width when none is left.
 func (h *Host) remove(space string) {
 	for i, t := range h.tabs {
 		if t.space != space || i == 0 {
 			continue
 		}
-		if t == h.cur {
-			h.show(h.tabs[0])
-		}
 		t.close()
 		h.tabs = append(h.tabs[:i:i], h.tabs[i+1:]...)
-		h.dirty = true
+		if h.grab == t {
+			h.grab = nil
+		}
+		if h.chosen == t {
+			h.chosen = nil
+			if len(h.tabs) > 1 {
+				h.chosen = h.tabs[min(i, len(h.tabs)-1)]
+			}
+		}
+		if h.focus == t {
+			h.focus = h.tabs[0]
+		}
+		h.canvas.Redraw()
+		h.relayout(h.lay.size)
 		return
 	}
 }
 
-// refresh takes what the poll read of each worker, for the sidebar.
+// refresh takes what the poll read of each worker, for its tab's mark.
 func (h *Host) refresh(workers []spacehost.Worker) {
 	for _, w := range workers {
 		for _, t := range h.tabs {
 			if t.space == w.Space && t.info != w {
+				before := h.label(t)
 				t.info = w
-				h.dirty = h.dirty || h.lay.side > 0
+				h.dirty = h.dirty || h.label(t) != before
 			}
 		}
 	}
-}
-
-func (h *Host) label(t *tab) label {
-	return label{name: t.name, current: t == h.cur, ended: t.pic.Ended, changed: t != h.cur && t.pic.Seq != t.seen}
-}
-
-func (h *Host) barRuns() []terminal.Run {
-	labels := make([]label, len(h.tabs))
-	for i, t := range h.tabs {
-		labels[i] = h.label(t)
-	}
-	help := hint
-	if h.lay.size.Cols >= sideFrom {
-		help = sideHint
-	}
-	return barRuns(labels, h.lay.size.Cols, help)
-}
-
-func (h *Host) sideRows() ([][]terminal.Run, []int) {
-	entries := make([]entry, len(h.tabs))
-	for i, t := range h.tabs {
-		entries[i] = entry{label: h.label(t), worker: t.space != "", info: t.info}
-	}
-	return sideRows(entries, h.lay.side, h.lay.region.Rows)
-}
-
-func (h *Host) draw() {
-	h.dirty = false
-	bar := h.barRuns()
-	side, _ := h.sideRows()
-	pic := h.cur.pic
-	h.cur.seen = pic.Seq
-	if pic.Ended {
-		pic.Cursor.Visible = false
-	}
-	_ = h.canvas.Draw(terminal.Frame{
-		Region: h.lay.region, Rows: pic.Rows, Cursor: pic.Cursor, Modes: h.modes(), Bar: bar, Side: side, Title: pic.Title,
-	})
 }

@@ -29,6 +29,8 @@ type tab struct {
 	pic  terminal.Picture
 	// seen is the sequence last shown, which tells the bar's change mark.
 	seen uint64
+	// at is the size the program was last given.
+	at terminal.Size
 	// ops are the tab's writes — keys and sizes — done in order by a
 	// goroutine of its own, so a program that stops reading never holds
 	// the host.
@@ -55,7 +57,22 @@ func newTab(name, space string, keys func([]byte) error, resize func(terminal.Si
 
 func (t *tab) send(p []byte) { t.ops <- func() { _ = t.keys(p) } }
 
-func (t *tab) size(s terminal.Size) { t.ops <- func() { _ = t.resize(s) } }
+// size gives the program s, unless it has it already.
+func (t *tab) size(s terminal.Size) {
+	if s == t.at {
+		return
+	}
+	t.at = s
+	t.ops <- func() { _ = t.resize(s) }
+}
+
+// modes are the program's input modes; an ended one has none.
+func (t *tab) modes() terminal.Modes {
+	if t.pic.Ended {
+		return terminal.Modes{}
+	}
+	return t.pic.Modes
+}
 
 // update is a tab's new screen.
 type update struct {

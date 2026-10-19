@@ -35,7 +35,7 @@ internal/host/                                wrapper: launch, signals, lifecycl
 internal/host/launch/                         a launch's host side: the run's environment, the version read before the claim, the bounded probe, the aliases a short name expands to
 internal/host/delivery/                       the delivery server: the serving loop, notices and their batches, the coalescing window, outcomes and the sweep's lock
 internal/host/terminal/                       a program's pseudo-terminal by the standard library, the size and raw mode of the person's terminal, the screen the program draws with its input modes, keyboard protocols, title and events, and the canvas the host mode draws on, the one package the emulator library enters
-internal/host/hostmode/                       the host mode: main's harness on the host's pseudo-terminal, a view per space, the bar of tabs and the sidebar, the prefix automaton, the terminal's default colours asked at start, the mouse re-encoding and the loop that draws and routes keys, mouse and paste
+internal/host/hostmode/                       the host mode: main's harness on the host's pseudo-terminal, a view per space, the split of main and the chosen worker, the bar of tabs, the focus, the prefix automaton, the terminal's default colours asked at start, the mouse re-encoding and the loop that draws and routes keys, mouse and paste
 internal/host/spacehost/                      the space host: the worker's pseudo-terminal and screen, the space socket's views, the panel of main's spaces
 internal/host/worktree/                       checkouts rewake makes for a launch: git worktree add, records, land, removal
 scripts/                                      packaging scripts and the tests of the npm shim

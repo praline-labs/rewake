@@ -179,8 +179,8 @@ probe ([research-claude-mod.md](../research-claude-mod.md)):
    schema, and the TypeScript types are generated from it.
 
 How a space is shown (the owner's decision, October 18, 2026): a host mode of rewake, chosen
-at launch, holds the person's terminal and relays main and the workers with a bottom tab bar
-and a right sidebar ([project.md](../project.md#what-the-tool-does), "Main starts its
+at launch, holds the person's terminal and relays main and the workers, main on the left and the
+chosen worker on the right above a bottom tab bar ([project.md](../project.md#what-the-tool-does), "Main starts its
 workers"); the mod's space features are active only in that mode. Its design is
 [host-mode.md](host-mode.md).
 

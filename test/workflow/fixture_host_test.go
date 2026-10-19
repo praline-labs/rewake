@@ -17,9 +17,10 @@ import (
 )
 
 // TestFixtureHostMode is the host mode on its main path, on the fixture:
-// main started with --host on a terminal the scenario holds shows its screen
-// above a bar; a space it opens gets a tab; Ctrl+\ n shows the worker and
-// takes its keys, Ctrl+\ m shows main again; main's end gives the terminal
+// main started with --host on a wide terminal the scenario holds shows its
+// screen above a bar; a space it opens gets a tab and the right half of the
+// screen beside main; Ctrl+\ and the right arrow give the worker the keys,
+// Ctrl+\ z gives it the whole screen and back; main's end gives the terminal
 // back. The screen is read the way a person sees it, through an emulator fed
 // from the terminal's master.
 func TestFixtureHostMode(t *testing.T) {
@@ -31,7 +32,9 @@ func TestFixtureHostMode(t *testing.T) {
 		Deadline:     90 * time.Second,
 	})
 	iso := Isolate(t, c, binary)
-	size := terminal.Size{Cols: 100, Rows: 30}
+	// 130 columns split as main's 65, the divider, the worker's 64.
+	size := terminal.Size{Cols: 130, Rows: 30}
+	const workFrom = 66
 	person, err := openPersonTerminal(size)
 	if err != nil {
 		t.Fatal(err)
@@ -79,29 +82,35 @@ func TestFixtureHostMode(t *testing.T) {
 		stopSession(t, c, lead)
 		return
 	}
-	if !shows("the worker's tab", 10*time.Second, func(string) bool { return strings.Contains(person.row(size.Rows-1), " 1 "+worker.name) }) {
-		c.Contradicted(obsHostWorker, "no tab for %s on the bar: %q", worker.name, person.row(size.Rows-1))
+	if !shows("the worker beside main", 10*time.Second, func(string) bool {
+		return strings.Contains(person.row(size.Rows-1), " 1 "+worker.name) &&
+			strings.Contains(person.half(workFrom), "fixture "+worker.name) && strings.Contains(person.text(), "got hello")
+	}) {
+		c.Contradicted(obsHostWorker, "no tab for %s, or no worker beside main: %q", worker.name, person.text())
 		stopSession(t, c, lead)
 		return
 	}
-	person.typed("\x1cn")
-	switched := shows("the worker", 5*time.Second, func(s string) bool { return strings.Contains(s, "fixture "+worker.name) })
+	person.typed("\x1c\x1b[C")
 	person.typed("world\r")
-	switch {
-	case !switched:
-		c.Contradicted(obsHostWorker, "Ctrl+\\ n never showed the worker: %q", person.text())
-	case !shows("the worker's answer", 5*time.Second, func(s string) bool { return strings.Contains(s, "got world") }):
-		c.Contradicted(obsHostWorker, "a line typed into the worker never reached it: %q", person.text())
-	default:
-		c.Observed(obsHostWorker, "a tab for the space, Ctrl+\\ n showed the worker and a line typed reached it")
-	}
-	person.typed("\x1cm")
-	if shows("main again", 5*time.Second, func(s string) bool {
-		return strings.Contains(s, "got hello") && !strings.Contains(s, "fixture "+worker.name)
-	}) {
-		c.Observed(obsHostBack, "Ctrl+\\ m showed main again")
+	if shows("the worker's answer", 5*time.Second, func(string) bool { return strings.Contains(person.half(workFrom), "got world") }) {
+		c.Observed(obsHostWorker, "a tab for the space and the worker beside main, Ctrl+\\ right gave it the keys")
 	} else {
-		c.Contradicted(obsHostBack, "Ctrl+\\ m did not show main: %q", person.text())
+		c.Contradicted(obsHostWorker, "a line typed after Ctrl+\\ right never reached the worker: %q", person.text())
+	}
+	person.typed("\x1cz")
+	zoomed := shows("the worker zoomed", 5*time.Second, func(s string) bool {
+		return strings.Contains(s, "got world") && !strings.Contains(s, "got hello")
+	})
+	person.typed("\x1cz")
+	switch {
+	case !zoomed:
+		c.Contradicted(obsHostZoom, "Ctrl+\\ z did not give the worker the screen: %q", person.text())
+	case shows("the split again", 5*time.Second, func(s string) bool {
+		return strings.Contains(s, "got hello") && strings.Contains(person.half(workFrom), "got world")
+	}):
+		c.Observed(obsHostZoom, "Ctrl+\\ z gave the worker the whole screen, and again the split back")
+	default:
+		c.Contradicted(obsHostZoom, "a second Ctrl+\\ z did not give the split back: %q", person.text())
 	}
 
 	stopSession(t, c, lead)
@@ -120,12 +129,12 @@ func TestFixtureHostMode(t *testing.T) {
 
 const (
 	obsHostMain     = "main started with --host shows its screen above a bar and takes the person's keys"
-	obsHostWorker   = "a space main opens gets a tab, and Ctrl+\\ n shows its worker and sends it the keys"
-	obsHostBack     = "Ctrl+\\ m shows main again"
+	obsHostWorker   = "a space main opens gets a tab and the right half beside main, and Ctrl+\\ right gives its worker the keys"
+	obsHostZoom     = "Ctrl+\\ z gives the focused worker the whole screen and back"
 	obsHostRestored = "main's end gives the person's terminal back"
 )
 
-var fixtureHostObservations = []string{obsHostMain, obsHostWorker, obsHostBack, obsHostRestored}
+var fixtureHostObservations = []string{obsHostMain, obsHostWorker, obsHostZoom, obsHostRestored}
 
 // personTerminal is a terminal the scenario holds as a person would: rewake
 // gets its side, and what rewake draws is kept by an emulator.
@@ -218,6 +227,18 @@ func (p *personTerminal) row(index int) string {
 		}
 	}
 	return ""
+}
+
+// half is the screen from the column from on, counted from 0, a line per
+// row: what the right half of a split shows.
+func (p *personTerminal) half(from int) string {
+	var lines []string
+	for _, line := range strings.Split(p.text(), "\n") {
+		if runes := []rune(line); len(runes) > from {
+			lines = append(lines, string(runes[from:]))
+		}
+	}
+	return strings.Join(lines, "\n")
 }
 
 // text is the whole screen, a line per row.

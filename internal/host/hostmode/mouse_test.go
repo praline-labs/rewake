@@ -67,10 +67,10 @@ func host(modes terminal.Modes) (*Host, *[]string) {
 		tabs[i] = &tab{name: name, ops: make(chan func(), 16), keys: func(p []byte) error {
 			sent = append(sent, name+":"+string(p))
 			return nil
-		}}
+		}, resize: func(terminal.Size) error { return nil }}
 		tabs[i].pic.Modes = modes
 	}
-	return &Host{lay: layoutFor(terminal.Size{Cols: 80, Rows: 10}, false), tabs: tabs, cur: tabs[0], canvas: terminal.NewCanvas(nopWriter{}, nil, terminal.Size{Cols: 80, Rows: 10})}, &sent
+	return &Host{lay: layoutFor(terminal.Size{Cols: 80, Rows: 10}, false), tabs: tabs, focus: tabs[0], chosen: tabs[1], canvas: terminal.NewCanvas(nopWriter{}, nil, terminal.Size{Cols: 80, Rows: 10})}, &sent
 }
 
 type nopWriter struct{}
@@ -90,8 +90,8 @@ func TestAClickOnTheBarShowsItsTabAndNeverReachesTheProgram(t *testing.T) {
 	// The bar reads " 0 main  1 w1 ": the second label covers columns 9-14.
 	h.dispatch(h.in.feed([]byte("\x1b[<0;10;10M\x1b[<0;10;10m"), h.in.heldSince))
 	drain(h)
-	if h.cur != h.tabs[1] || len(*sent) != 0 {
-		t.Fatalf("shown %s, sent %q", h.cur.name, *sent)
+	if h.focus != h.tabs[1] || len(*sent) != 0 {
+		t.Fatalf("shown %s, sent %q", h.focus.name, *sent)
 	}
 	h.dispatch(h.in.feed([]byte("\x1b[<0;3;2M"), h.in.heldSince))
 	drain(h)

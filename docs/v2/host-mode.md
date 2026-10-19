@@ -2,8 +2,10 @@
 
 The owner's decision of October 18, 2026 ([project.md](../project.md#what-the-tool-does), "Main
 starts its workers"): `rewake claude`, started in a host mode, holds the person's terminal and
-shows main's Claude Code and each worker above a bottom tab bar, with a sidebar of workers on the
-right. An ordinary `rewake claude` stays transparent. The bar and the sidebar replace the pane:
+shows main's Claude Code and its workers above a bottom tab bar. Since the owner's decision of
+October 19, 2026, main is on the left and the chosen worker's live screen on the right; the bar
+chooses the worker, and the sidebar of status cards that step 3 built is gone, a misreading of
+the owner's wish. An ordinary `rewake claude` stays transparent. The bar replaced the pane:
 the pane, `/workers`, the `workers/*` endpoints and `rewake attach` were removed outright before
 step 1, so nothing trails behind (the owner's decision, October 18, 2026; the pane's design is
 archived, [workers-panel.md](../archive/v2/workers-panel.md)). The techniques come from
@@ -53,20 +55,21 @@ person's terminal ⇄ host (main's wrapper) ⇄ pty ⇄ main's harness      loca
 The host draws a composed screen on the person's terminal from the emulators' cells. It does not
 pass the programs' bytes through.
 
-- **Layout.** The region is the person's terminal size, minus one row for the bar, minus the
-  sidebar's width (about 28 columns) when the sidebar is shown. The sidebar is shown only at 120
-  columns and wider, and the prefix can hide or show it.
-- **The bar.** It holds `main` and each worker's name, with the current tab inverted, an ended
-  tab dim, and a mark on a tab whose screen changed since it was last shown.
-- **The sidebar.** It holds what `Panel.Workers()` already joins: name, harness, model, effort,
-  context and state. It is 28 columns behind a border, right of the region and above the bar.
-  Main takes one row; each worker its numbered name, then harness · model · effort, then its
-  turn (or its space's state while it has none, `ended` once its view ended) and how full its
-  context is; a blank row after each. The current entry is inverted, an ended one dim, as on the
-  bar. A worker that does not fit whole is left out; the bar still has it. The poll that lists
-  the spaces once a second refreshes it. Hiding or showing it resizes every program to the new
-  region, as a resize of the terminal does. The bar's hint names `s` where the sidebar can be
-  shown.
+- **Layout: the split** (the owner's decision, October 19, 2026). Above the bar's row, from 120
+  columns on and once a worker exists, main takes the left part and the chosen worker the right,
+  a dim divider column between; the worker's part is half of the rest, the narrower one when the
+  width is odd, and a `[host]` configuration of the proportion comes later. Below 120 columns,
+  with no worker, or zoomed, there is no split: the focused program takes the whole width, and
+  the bar switches the window between main and the workers.
+- **Focus.** One program takes the keys: main or the chosen worker. Choosing a worker on the bar
+  focuses it; a click in a part, or Ctrl+\\ ← and →, moves the focus. A program that asked for
+  focus reports (1004) hears that it lost or gained the focus. The keyboard protocols, the
+  modes, the title and the cursor on the person's terminal are the focused program's.
+- **Zoom.** Ctrl+\\ z gives the focused program the whole width and back; nothing else changes.
+- **The bar.** It holds `main` and each worker's name, numbered from 0: the focused tab inverted,
+  the other shown one underlined, an ended tab dim, a `…` on a worker in a turn (from the poll of
+  the spaces once a second), and a `*` on a tab whose screen changed since it was last shown. A
+  click on a tab chooses it. The hint at its right end names the arrows and `z` from 120 columns.
 - **One renderer.** Each frame becomes a cell buffer drawn by `ultraviolet`'s `TerminalRenderer`,
   which diffs against what is on the terminal and degrades colour to the terminal's profile.
   `ultraviolet` is already a direct dependency (`internal/host/terminal/vt.go`), so this adds none.
@@ -79,14 +82,16 @@ pass the programs' bytes through.
   which (v0.4.2, read in the module source) passes a basic colour through on every profile and
   an indexed one on every profile but ANSI, where it maps it to the nearest of the 16. RGB stays
   RGB on a true-colour terminal and becomes the nearest index on a 256-colour one. A default
-  colour stays the terminal's default. The bar and the sidebar use the default and palette
+  colour stays the terminal's default. The bar and the divider use the default and palette
   colours only. A configuration section of the host for its layout and chrome colours comes
-  later; nothing now. The shown program's cursor is placed at its position plus
-  the region's offset, and shown or hidden as the program has it.
-- **Sizes.** Every program's pty, main's and each worker's, is kept at the region's size. A tab
-  switch is then only a full redraw of the other program's buffer: no program is told a new size
-  and none has to repaint.
-  - On a SIGWINCH the host resizes main's pty and grid, and sends an `r` frame on every view.
+  later; nothing now. The focused program's cursor is placed at its position plus
+  its part's column, and shown or hidden as the program has it.
+- **Sizes.** Main's pty is kept at its part's size, every worker's at the workers' part, the
+  chosen one or not. Choosing another worker is then only a redraw of its buffer: no program is
+  told a new size and none has to repaint. A split appearing or going — the first worker, the
+  last one gone, a zoom, a resize across 120 columns — resizes main and every worker.
+  - On a SIGWINCH the host resizes the canvas and lays out again: main's pty and grid, and an
+    `r` frame on every view whose size changed.
   - The last size from any client wins. Once the pane and attach are gone, the host is the
     only client that sizes a worker.
 - **Not passed through.** Because nothing is passed through, a program's queries never reach the
@@ -99,14 +104,14 @@ pass the programs' bytes through.
     777 notifications, and the bell. They are written to the person's terminal from any tab, the
     hidden ones included, once each: a grid keeps the last 32 with their sequence, and a reader
     gets those after the sequence it had, so a view opened late never sets an old copy again.
-  - The title (OSC 0 and 2) is a tab's state: the shown program's is set when it changes or the
+  - The title (OSC 0 and 2) is a tab's state: the focused program's is set when it changes or the
     tab is switched. The host saves the person's title with `CSI 22;0t` on entering and gives it
     back with `CSI 23;0t` on leaving.
 
   OSC 8 hyperlinks are lost until the frames carry them. OSC 4 queries of the palette are answered
   from the library's own palette, not the person's.
 - **Rejected: a scroll-region trick.** The idea is to tell the program a smaller size and place
-  its raw output inside margins. It cannot give a right sidebar, because DECSLRM side margins are
+  its raw output inside margins. It cannot give a split, because DECSLRM side margins are
   rarely supported. Programs reset margins themselves. A switch needs the program to repaint, with
   the orphan replies and the size nudge §2 had to build. The terminal's scrollback would mix
   programs. Its only gain is lower latency. A view frame comes 30 ms after a change, which is
@@ -128,14 +133,17 @@ pass the programs' bytes through.
   - It never matches inside a bracketed paste.
   - A pending prefix lapses after 2 s.
 - **The commands after the prefix:**
-  - `n`/`p`: the next or previous tab;
-  - `1`–`9`: a worker;
-  - `0` or `m`: main;
-  - `s`: hide or show the sidebar;
-  - the prefix again: sends Ctrl+\\ to the shown program;
+  - `n`/`p`: the next or previous tab, from the focused one;
+  - `1`–`9`: a worker, chosen and focused;
+  - `0` or `m`: main, focused;
+  - ← and →: the focus to main or to the chosen worker, the arrow in its legacy, application
+    and CSI forms with no modifier; its release under event types is the host's until another
+    key comes;
+  - `z`: zoom the focused program or end the zoom;
+  - the prefix again: sends Ctrl+\\ to the focused program;
   - any other key: cancels, which is a choice; §2 forwarded both keys.
-- **The person's terminal mirrors the shown program's input modes.** At a switch, and whenever
-  the shown program changes them, the host sets on the person's terminal the program's:
+- **The person's terminal mirrors the focused program's input modes.** At a switch, and whenever
+  the focused program changes them, the host sets on the person's terminal the program's:
   - DECCKM and DECNKM, so Right arrives as `ESC O C` where the program asked for it;
   - bracketed paste 2004;
   - focus 1004;
@@ -144,24 +152,26 @@ pass the programs' bytes through.
   Keys then pass unchanged. At the exit every mode is reset. Step 1 is built this way.
 - **Mouse, from step 2.** The host keeps SGR mouse (1002 with 1006) and bracketed paste on
   the terminal, and stops mirroring the mouse. It asks for 1003, motion without a button,
-  only while the shown program asks for it: Claude Code does, for its hover.
-  - A click on the bar or the sidebar switches tabs.
-  - In the region, mouse events go to the shown program, with the coordinates offset and in the
-    form its modes ask for, but only when the program turned mouse on. Otherwise they are
-    dropped.
+  only while the focused program asks for it: Claude Code does, for its hover.
+  - A click on the bar chooses a tab.
+  - Above the bar, mouse events go to the program under the pointer, focused or not, at the cell
+    of its own part and in the form its modes ask for, but only when the program turned mouse
+    on; otherwise, and on the divider, they are dropped. A left click also focuses the program.
+    While a button is down, every event goes to the program it went down on, held to its part's
+    edge, so a drag across the divider ends where it began.
   In step 1, while mirroring, a mouse event below the region (on the bar) is the host's and is
   never forwarded.
 - **Paste.** A paste reaches the program framed by 200~/201~ only when the program enabled 2004;
   otherwise it goes bare.
 - **Focus events.** These go through when the program asked for them (1004).
-- **Keys.** All other input goes to the shown program unchanged.
+- **Keys.** All other input goes to the focused program unchanged.
 - **The keyboard protocols, mirrored too** (found live by the owner, October 19, 2026: Shift+Enter
   in Claude Code arrived as a plain Enter and sent the message). Every emulator keeps the
   program's kitty keyboard flags — push `CSI > f u`, pop `CSI < n u`, set `CSI = f ; mode u` —
   and its modifyOtherKeys level (`CSI > 4 ; n m`, reset by `CSI > 4 m` or `CSI > 4 n`), and
   answers the query `CSI ? u` from them; the library knows neither. A program that hears no
   answer falls back to legacy keys, which is what Claude Code did behind the emulator.
-  - The person's terminal gets the shown program's flags as one entry pushed over its own
+  - The person's terminal gets the focused program's flags as one entry pushed over its own
     stack, replaced by a pop and a push at a change or a switch, and its modifyOtherKeys level;
     at the exit, and on every signal, the entry is popped only if pushed, so the person's shell
     keeps its own, and modifyOtherKeys is reset to the terminal's setting. Keys then pass
@@ -193,7 +203,7 @@ pass the programs' bytes through.
   - A host-side history view is a later idea, not a step here.
 - **Selection.** A drag in the region is the program's own selection, and its copy reaches the
   terminal clipboard through the forwarded OSC 52. Shift+drag gives the terminal's native
-  selection over the visible composed screen, bar and sidebar included.
+  selection over the visible composed screen, bar and divider included.
 - **Default colours.** The host asks the person's terminal for its default colours at start —
   OSC 10 and 11, then DA1 as the sentinel every terminal answers, waiting at most 300 ms — before
   the harness starts, and seeds main's emulator with them (`SetDefaultForegroundColor`/
@@ -247,7 +257,8 @@ pass the programs' bytes through.
      lines made it say `copied 17 chars to clipboard`; a paste of two lines stayed in its prompt,
      framed, its line break not sending it. At the exit every mode was reset.
    - The copy reaches the person's clipboard only with step 4's OSC 52.
-3. **The sidebar.** The width threshold, `s`, and clicks on it.
+3. **The sidebar.** The width threshold, `s`, and clicks on it. Replaced by the split (step 5)
+   on October 19, 2026, by the owner's decision; its code is gone.
    - **Built and checked live, October 19, 2026, Claude Code 2.1.302**
      (`internal/host/hostmode/sidebar.go`): on a 130-column terminal main opened a worker by
      `!rewake space open`; the sidebar listed main and `w1-claude` with its harness, model and
@@ -265,6 +276,21 @@ pass the programs' bytes through.
      (`colorFor` in `canvas.go`); pi draws its own theme in RGB.
    - Not the design's `e` frame: the events and the title ride in the screen frame, and the
      colours reach workers through the environment (above).
+
+5. **The split** (the owner's decision, October 19, 2026, in place of the sidebar). Main left, the
+   chosen worker right, focus by click or Ctrl+\\ arrows, Ctrl+\\ z, no split below 120 columns,
+   a worker's turn as a mark on its tab.
+   - **Built and checked live, October 19, 2026, Claude Code 2.1.302**
+     (`internal/host/hostmode/split.go`, the panes of `internal/host/terminal/canvas.go`): a
+     program acting as a 130×30 terminal ran `rewake --host --main claude` on the cheapest model;
+     main opened a worker by `!rewake space open`, and the screen split as main's 65 columns,
+     the divider and the worker's 64, each drawn for its width. Text typed went to main;
+     after Ctrl+\\ → to the worker; a click in main's part gave main the keys again; Ctrl+\\ z
+     gave the worker the whole width and back; a click on `0 main` on the bar focused main; at
+     100 columns main alone, Ctrl+\\ 1 the worker alone, and back at 130 the split; `/exit` gave
+     the terminal back and the space closed.
+   - Seen there: under the kitty protocol a terminal sends Ctrl+C as `CSI 99;5u`, and Claude
+     Code 2.1.302 does not take a bare 0x03 as one.
 
 The tests are the subset of §2's checklist that "Which tests to write" keeps: the automaton, a
 restore on every signal, and the routing of mouse and paste by mode.

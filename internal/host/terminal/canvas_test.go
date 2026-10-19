@@ -18,12 +18,11 @@ func TestAnIndexedColorReachesTheTerminalAsAnIndex(t *testing.T) {
 			t.Fatal(err)
 		}
 		err := c.Draw(Frame{
-			Region: Size{Cols: 20, Rows: 2},
-			Rows: [][]Run{{
+			Panes: []Pane{{Size: Size{Cols: 20, Rows: 2}, Rows: [][]Run{{
 				{Text: "a", Cols: 1, Fg: Color{Kind: Indexed, Index: 1}},
 				{Text: "b", Cols: 1, Fg: Color{Kind: Indexed, Index: 123}},
 				{Text: "c", Cols: 1, Bg: Color{Kind: Indexed, Index: 12}},
-			}},
+			}}}},
 			Cursor: Cursor{Row: 0, Col: 3, Visible: true},
 			// A program with no mouse and no paste of its own: the host's
 			// are on all the same.
@@ -65,7 +64,7 @@ func TestTheKeyboardProtocolsAreMirrored(t *testing.T) {
 	}
 	draw := func(m Modes) string {
 		out.Reset()
-		if err := c.Draw(Frame{Region: Size{Cols: 20, Rows: 2}, Modes: m}); err != nil {
+		if err := c.Draw(Frame{Modes: m}); err != nil {
 			t.Fatal(err)
 		}
 		return out.String()
@@ -105,7 +104,7 @@ func TestTheTitleAndEventsReachTheTerminal(t *testing.T) {
 		t.Fatalf("entering: %q", out.String())
 	}
 	out.Reset()
-	if err := c.Draw(Frame{Region: Size{Cols: 20, Rows: 2}, Title: "✳ a"}); err != nil {
+	if err := c.Draw(Frame{Title: "✳ a"}); err != nil {
 		t.Fatal(err)
 	}
 	if err := c.Event(Event{OSC: "52;c;aGk="}); err != nil {

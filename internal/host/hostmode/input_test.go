@@ -149,3 +149,16 @@ func TestThePrefixUnderTheKittyProtocol(t *testing.T) {
 		t.Errorf("sent %q, commands %q", sent, commands)
 	}
 }
+
+// The arrows after the prefix are commands in every form a terminal sends
+// them; the release of a taken arrow is the host's, but only until another
+// key comes, after which a release is the program's.
+func TestThePrefixTakesTheArrows(t *testing.T) {
+	sent, commands := run("\x1c\x1b[C", "\x1c\x1bOD", "\x1b[92;5u\x1b[C\x1b[1;1:3C", "\x1c\x1b[1;5D")
+	if sent != "" || commands != string([]byte{cmdRight, cmdLeft, cmdRight}) {
+		t.Errorf("sent %q, commands %q", sent, commands)
+	}
+	if sent, _ := run("\x1c\x1b[Cx\x1b[1;1:3C"); sent != "x\x1b[1;1:3C" {
+		t.Errorf("a release after another key: sent %q", sent)
+	}
+}

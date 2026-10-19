@@ -12,7 +12,7 @@ import (
 
 // Canvas is the person's terminal as the host mode draws it
 // (docs/v2/host-mode.md): a composed screen on the alternate screen, diffed
-// against what is shown by ultraviolet's renderer, with the shown program's
+// against what is shown by ultraviolet's renderer, with the focused program's
 // key modes mirrored so its keys arrive in the form it asked for, and the
 // mouse and bracketed paste kept on for the host, which routes them.
 type Canvas struct {
@@ -27,24 +27,30 @@ type Canvas struct {
 	title string
 }
 
-// Frame is one composed screen: the shown program's rows in the region at
-// the top left, the sidebar's right of it, and the bar on the last row.
+// Frame is one composed screen: the programs shown side by side above the
+// bar, and the bar on the last row.
 type Frame struct {
-	Region Size
-	Rows   [][]Run
-	// Cursor is in the region's coordinates; one outside it is not shown.
+	// Panes are the programs' screens, left to right; a cell above the bar
+	// no pane covers is blank.
+	Panes []Pane
+	// Cursor is in the canvas's coordinates, shown only above the bar.
 	Cursor Cursor
-	// Modes are the shown program's: its key and focus modes are mirrored
+	// Modes are the focused program's: its key and focus modes are mirrored
 	// on the person's terminal, its mouse mode chooses only whether motion
 	// without a button is reported (hostModes).
 	Modes Modes
-	// Side are the sidebar's rows, drawn right of the region down its height
-	// when the region is narrower than the canvas.
-	Side [][]Run
-	// Bar is drawn on the canvas's last row when it lies below the region.
+	// Bar is drawn on the canvas's last row when it has more than one.
 	Bar []Run
-	// Title is the shown program's, set on the person's terminal.
+	// Title is the focused program's, set on the person's terminal.
 	Title string
+}
+
+// Pane is one program's screen from the canvas's top row at the column Col,
+// of Size; its rows past Size are cut.
+type Pane struct {
+	Col  int
+	Size Size
+	Rows [][]Run
 }
 
 // The title stack of xterm's window operations: the person's title is saved
@@ -99,25 +105,32 @@ func (c *Canvas) Resize(size Size) {
 // program, and nothing of the last is worth diffing against.
 func (c *Canvas) Redraw() { c.r.Erase() }
 
-// Draw shows f: the cells that changed, the modes the shown program set, and
-// its cursor.
+// Draw shows f: the cells that changed, the modes the focused program set,
+// and its cursor.
 func (c *Canvas) Draw(f Frame) error {
-	for y := range min(f.Region.Rows, c.size.Rows) {
-		var runs []Run
-		if y < len(f.Rows) {
-			runs = f.Rows[y]
-		}
-		c.line(0, y, min(f.Region.Cols, c.size.Cols), runs)
-		if side := c.size.Cols - f.Region.Cols; side > 0 {
-			var runs []Run
-			if y < len(f.Side) {
-				runs = f.Side[y]
-			}
-			c.line(f.Region.Cols, y, side, runs)
-		}
+	above := c.size.Rows
+	if above > 1 {
+		above--
+		c.line(0, above, c.size.Cols, f.Bar)
 	}
-	if bar := c.size.Rows - 1; bar >= f.Region.Rows {
-		c.line(0, bar, c.size.Cols, f.Bar)
+	for y := range above {
+		x := 0
+		for _, p := range f.Panes {
+			// Panes come left to right without overlap; one that does
+			// not is left out.
+			if p.Col < x || p.Col >= c.size.Cols {
+				continue
+			}
+			c.line(x, y, p.Col-x, nil)
+			var runs []Run
+			if y < p.Size.Rows && y < len(p.Rows) {
+				runs = p.Rows[y]
+			}
+			width := min(p.Size.Cols, c.size.Cols-p.Col)
+			c.line(p.Col, y, width, runs)
+			x = p.Col + width
+		}
+		c.line(x, y, c.size.Cols-x, nil)
 	}
 	if c.shown && c.buf.TouchedLines() > 0 {
 		_, _ = c.r.WriteString(ansi.HideCursor)
@@ -132,7 +145,7 @@ func (c *Canvas) Draw(f Frame) error {
 		c.title = f.Title
 	}
 	at := f.Cursor
-	if at.Visible && at.Row >= 0 && at.Row < f.Region.Rows && at.Col >= 0 && at.Col < f.Region.Cols {
+	if at.Visible && at.Row >= 0 && at.Row < above && at.Col >= 0 && at.Col < c.size.Cols {
 		c.r.MoveTo(at.Col, at.Row)
 		if !c.shown {
 			_, _ = c.r.WriteString(ansi.ShowCursor)
@@ -235,7 +248,7 @@ func colorFor(c Color) color.Color {
 }
 
 // hostModes are the modes the person's terminal keeps while the program
-// with modes is shown. The keys' forms and focus reports are the program's;
+// with modes has the focus. The keys' forms and focus reports are the program's;
 // the mouse in the SGR form and bracketed paste are the host's, always on,
 // so a click on the bar reaches the host and a paste is known as one
 // whatever the program asked (docs/v2/host-mode.md#input). The keyboard

@@ -7,78 +7,93 @@ import (
 	"github.com/praline-labs/rewake/internal/host/terminal"
 )
 
-const (
-	// sideWidth is the sidebar's width, its border included.
-	sideWidth = 28
-	// sideFrom is the narrowest terminal that shows the sidebar: below it
-	// the region would be too narrow for a program, and the bar alone
-	// navigates.
-	sideFrom = 120
-)
+// splitFrom is the narrowest terminal that shows main and a worker side by
+// side: below it each would be too narrow for a program, and the bar switches
+// the whole window between them.
+const splitFrom = 120
 
-// layout is where things go on the person's terminal of one size: the
-// region every program is sized to at the top left, the sidebar right of
-// it, and the bar's row below both.
+// layout is where things go on the person's terminal of one size: main's
+// region at the left edge, the workers' right of it behind a divider column
+// when split, and the bar's row below both. Unsplit, both regions are the
+// whole terminal above the bar and the focused program takes it.
 type layout struct {
-	size   terminal.Size
-	region terminal.Size
+	size terminal.Size
 	// bar is the bar's row from 0, -1 on a terminal of one row, which shows
 	// the region alone.
 	bar int
-	// side is the sidebar's width, 0 when it is not shown.
-	side int
+	// main and work are the sizes main and every worker are kept at; work
+	// lies from the column workAt, from 0.
+	main, work terminal.Size
+	workAt     int
+	split      bool
 }
 
-// layoutFor lays out a terminal of size, the sidebar shown unless hidden by
-// the person or the terminal is narrower than sideFrom.
-func layoutFor(size terminal.Size, hidden bool) layout {
-	l := layout{size: size, region: size, bar: -1}
+// layoutFor lays out a terminal of size, split when asked and the terminal is
+// at least splitFrom wide: the workers' half is the narrower one when the
+// width is odd, the divider between.
+func layoutFor(size terminal.Size, split bool) layout {
+	region := size
+	l := layout{size: size, bar: -1}
 	if size.Rows >= 2 {
-		l.region.Rows, l.bar = size.Rows-1, size.Rows-1
+		region.Rows, l.bar = size.Rows-1, size.Rows-1
 	}
-	if !hidden && size.Cols >= sideFrom {
-		l.side = sideWidth
-		l.region.Cols -= sideWidth
+	l.main, l.work = region, region
+	if split && size.Cols >= splitFrom {
+		l.split = true
+		l.work.Cols = (size.Cols - 1) / 2
+		l.main.Cols = size.Cols - 1 - l.work.Cols
+		l.workAt = l.main.Cols + 1
 	}
 	return l
 }
 
-// inRegion says a mouse report at the 1-based row belongs to the shown
-// program rather than to the bar.
-func (l layout) inRegion(row int) bool { return row >= 1 && row <= l.region.Rows }
+// inRegion says a mouse report at the 1-based row belongs to a program
+// rather than to the bar.
+func (l layout) inRegion(row int) bool { return row >= 1 && row <= l.main.Rows }
 
 // label is one tab as the bar shows it.
 type label struct {
-	name    string
-	current bool
-	ended   bool
+	name string
+	// focused takes the keys; shown is on the screen without them, the other
+	// half of a split.
+	focused, shown bool
+	ended          bool
+	// busy says the worker is in a turn.
+	busy bool
 	// changed says the screen changed since the tab was last shown.
 	changed bool
 }
 
 // The hint is said at the bar's right end when there is room for it, with
-// the sidebar's key where the terminal is wide enough for one.
+// the focus and zoom keys where the terminal is wide enough for a split.
 const (
-	hint     = " Ctrl+\\ n p 0-9 "
-	sideHint = " Ctrl+\\ n p 0-9 s "
+	hint      = " Ctrl+\\ n p 0-9 "
+	splitHint = " Ctrl+\\ n p 0-9 ← → z "
 )
 
 // barRuns lays the tabs out left to right, main first numbered 0, each as
-// " <n> <name> " with a mark when it changed unseen; the current one inverted,
-// an ended one dim. What does not fit the width is cut; the hint takes the
-// right end only when every tab fits beside it.
+// " <n> <name> " with a mark when the worker is busy and when it changed
+// unseen; the focused one inverted, the other shown one underlined, an ended
+// one dim. What does not fit the width is cut; the hint takes the right end
+// only when every tab fits beside it.
 func barRuns(labels []label, width int, hint string) []terminal.Run {
 	var runs []terminal.Run
 	used := 0
 	for i, l := range labels {
 		text := " " + strconv.Itoa(i) + " " + l.name
+		if l.busy {
+			text += "…"
+		}
 		if l.changed {
 			text += "*"
 		}
 		text += " "
 		var attrs terminal.Attrs
-		if l.current {
+		switch {
+		case l.focused:
 			attrs |= terminal.Inverse | terminal.Bold
+		case l.shown:
+			attrs |= terminal.Underline | terminal.Bold
 		}
 		if l.ended {
 			attrs |= terminal.Dim
@@ -91,10 +106,10 @@ func barRuns(labels []label, width int, hint string) []terminal.Run {
 		runs = append(runs, terminal.Run{Text: text, Cols: cols, Attrs: attrs})
 		used += cols
 	}
-	if gap := width - used - len(hint); gap >= 0 && len(runs) == len(labels) {
+	if gap := width - used - utf8.RuneCountInString(hint); gap >= 0 && len(runs) == len(labels) {
 		runs = append(runs,
 			terminal.Run{Text: spaces(gap), Cols: gap},
-			terminal.Run{Text: hint, Cols: len(hint), Attrs: terminal.Dim})
+			terminal.Run{Text: hint, Cols: utf8.RuneCountInString(hint), Attrs: terminal.Dim})
 	}
 	return runs
 }

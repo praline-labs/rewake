@@ -1,7 +1,8 @@
 // Package hostmode is main's wrapper holding the person's terminal
 // (docs/v2/host-mode.md): main's harness runs on a pseudo-terminal of the
-// host's, each worker in its space host, and the host draws the shown one
-// above a bar of tabs from their emulators, the person's keys going to it.
+// host's, each worker in its space host, and the host draws main and the
+// chosen worker side by side above a bar of tabs from their emulators, the
+// person's keys going to the focused one.
 package hostmode
 
 import (
@@ -42,12 +43,18 @@ type Host struct {
 	grid   *terminal.Grid
 	canvas *terminal.Canvas
 	lay    layout
-	// sideOff says the person hid the sidebar with the prefix's s.
-	sideOff bool
-	tabs    []*tab
-	cur     *tab
-	in      input
-	dirty   bool
+	// zoom says the person had the focused program take the whole terminal
+	// with the prefix's z.
+	zoom bool
+	// tabs are main first, then the workers. focus takes the keys; chosen is
+	// the worker the right half shows, nil while there is none.
+	tabs          []*tab
+	focus, chosen *tab
+	// grab is the program a mouse button went down on, which takes the
+	// motion and the release wherever the pointer goes.
+	grab  *tab
+	in    input
+	dirty bool
 	// framed says the paste going on reaches its program in brackets,
 	// decided at its start.
 	framed bool
@@ -86,11 +93,11 @@ func Open(cfg Config) (*Host, error) {
 		return nil, err
 	}
 	lay := layoutFor(size, false)
-	pty, err := terminal.OpenPlain(lay.region)
+	pty, err := terminal.OpenPlain(lay.main)
 	if err != nil {
 		return nil, err
 	}
-	grid, err := terminal.NewGrid(lay.region)
+	grid, err := terminal.NewGrid(lay.main)
 	if err != nil {
 		_ = pty.Close()
 		return nil, err
@@ -141,8 +148,9 @@ func (h *Host) Start() error {
 		_ = h.pty.Close()
 		_ = h.grid.Close()
 	})
+	main.at = h.lay.main
 	h.watch(main, &gridSource{grid: h.grid})
-	h.cur = main
+	h.focus = main
 	go h.pump()
 	go h.answer()
 	go h.poll()

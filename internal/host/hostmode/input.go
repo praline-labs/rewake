@@ -163,6 +163,12 @@ func (in *input) take(out []action, token []byte, now time.Time) []action {
 		in.taken = 0
 		return out
 	}
+	// Another key ends the wait for that release: a terminal reporting no
+	// releases never sends it, and a later release of the same key is the
+	// program's.
+	if !keyRelease(token) {
+		in.taken = 0
+	}
 	return append(out, action{send: token})
 }
 
@@ -192,20 +198,29 @@ func isPrefix(token []byte) bool {
 }
 
 // command is the command key the token presses, as text or, under the kitty
-// protocol's report of all keys, as CSI u with no modifier.
+// protocol's report of all keys, as CSI u with no modifier; or the left or
+// right arrow with no modifier.
 func command(token []byte) (byte, bool) {
 	if len(token) == 1 && commandKey(token[0]) {
 		return token[0], true
 	}
 	k, ok := parseKitty(token)
-	if !ok || k.mods != 0 || k.event == eventRelease || k.code > 0x7f || !commandKey(byte(k.code)) {
+	if !ok || k.mods != 0 || k.event == eventRelease {
+		return 0, false
+	}
+	switch {
+	case k.code == codeLeft:
+		return cmdLeft, true
+	case k.code == codeRight:
+		return cmdRight, true
+	case k.code > 0x7f || !commandKey(byte(k.code)):
 		return 0, false
 	}
 	return byte(k.code), true
 }
 
 func commandKey(b byte) bool {
-	return b == 'n' || b == 'p' || b == 'm' || b == 's' || (b >= '0' && b <= '9')
+	return b == 'n' || b == 'p' || b == 'm' || b == 'z' || (b >= '0' && b <= '9')
 }
 
 func focusReport(token []byte) bool {

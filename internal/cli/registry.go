@@ -45,7 +45,7 @@ var commandOption = Option{
 // running main, not another harness, so a flag rather than a command.
 var hostOption = Option{
 	Flag:    "--host",
-	Summary: "Hold this terminal and show main and each worker it opened above a bar of tabs; Ctrl+\\ then n, p, a digit or m switches. Only for a role that opens spaces, and only on a terminal.",
+	Summary: "Hold this terminal and show main, from 120 columns with the worker chosen on a bar of tabs beside it; Ctrl+\\ then a digit, n, p or m chooses, an arrow moves the focus, z zooms. Only for a role that opens spaces, and only on a terminal.",
 }
 
 var roomOption = Option{
