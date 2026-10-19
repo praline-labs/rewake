@@ -28,7 +28,7 @@ READING WHAT COMES BACK
 - finished ends the worker's turn, not your acceptance: compare its evidence with the brief's criteria and the project's required checks and review before building on it.
 - pending means the work goes on and its report follows; error means the turn failed and the letter says why.
 - stopped means the turn stopped or its completion could not be established; read the reason. Do not resend the task: it stays open and a later report may settle it. Check rewake inbox --awaited before deciding what follows.
-- "<name> ended; a resume of <name> in its conversation may still report" in rewake inbox --awaited is not lost: a resume under that name takes it over, so do not send it again yet; a separate task may go meanwhile. Only "no report coming" means it is lost.
+- "no report coming: <name> ended; check its saved work and give the task to a new worker" in rewake inbox --awaited means the report is lost: a new worker does not resume the old one's obligation.
 - After a context compaction of your own, run rewake inbox --awaited instead of rebuilding from the summary what is still owed.
 - Your own successful turns are reported to nobody; that keeps two sessions from waking each other forever.
 

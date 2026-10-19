@@ -1,19 +1,19 @@
 /*
 Package role holds what a session is for.
 
-A role is one entry here. The launch flag that selects it, the line it adds to
-the agent's briefing and what the session owes when its turn ends all come from
-the entry, so a new role is one value and one line in the list — the way a
-harness is.
+A role is one entry here. The line it adds to the agent's briefing and what the
+session owes when its turn ends come from the entry, so a new role is one value
+and one line in the list — the way a harness is.
 */
 package role
 
 // Role is what a session is for.
 type Role struct {
-	// ID names the role in a session record and, as --<id>, selects it at
-	// launch. Omitting a role flag always uses general.
+	// ID names the role in a session record and a space. A direct launch is
+	// main; workers take their role from the space. General is the reporting
+	// fallback for an unknown record.
 	ID string
-	// Summary is the help line of the launch flag.
+	// Summary describes the role in the guide.
 	Summary string
 	// Silent says successful turns are reported to nobody. Failures stay visible. It
 	// is the exception, so the zero value is a session that reports: a caller
