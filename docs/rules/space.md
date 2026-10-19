@@ -25,9 +25,9 @@ next start closing a record left open — is not built: a record is closed by it
 and one whose space host died with the machine stays open in the listing. Later that day the
 owner decided on main's panel: the same socket also served a view of the worker's screen, which
 main's wrapper relayed to its mod ([the archived design](../archive/v2/workers-panel.md)). The
-same evening the host mode replaced both the panel and the attach: the socket serves views only,
-to main's wrapper in the host mode ([host-mode.md](../v2/host-mode.md)), and the space host
-still takes no request of the mod.
+same evening the host mode replaced both the panel and the attach, and on October 19, 2026 the
+shell replaced the host mode: the socket serves the raw stream only, to the shell's panes
+([shell.md](../v2/shell.md)), and the space host still takes no request of the mod.
 
 ## The rules
 

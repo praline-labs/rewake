@@ -116,7 +116,7 @@ func waitForState(t *testing.T, pid int, reached func(string) bool, what string)
 	}
 }
 
-// A main in the shell that stops itself is continued, as in the host mode:
+// A main in the shell that stops itself is continued:
 // following it into the stop froze main and its wrapper on the shell's pane,
 // where no shell behind them has an fg. An ordinary run keeps following.
 func TestAShellMainsStopIsContinued(t *testing.T) {
@@ -128,7 +128,7 @@ func TestAShellMainsStopIsContinued(t *testing.T) {
 		{Request{}, followJob},
 	} {
 		command := exec.Command("true")
-		_, onStop, err := startHarness(c.request, command, "")
+		onStop, err := startHarness(c.request, command)
 		if err != nil {
 			t.Fatalf("start: %v", err)
 		}

@@ -43,9 +43,8 @@ inbox/<name>/.lock               the mailbox lock, one flock for every state cha
 sock/<name>.<epoch>.sock         Claude Code's inbound socket for this run
 sock/<name>.<epoch>.reply.sock   where that run's wrapper hears what the socket did with a line
 spaces/<id>.json                 a space main opened: its worker, its space host, its end
-sock/space.<id>.sock             the worker's screen, served by its space host to a host mode's views
-                                 and, as a view of its screen, to main's wrapper for its panel;
-                                 to the shell as a raw stream
+sock/space.<id>.sock             the worker's screen, served by its space host to the shell as a
+                                 raw stream
 ```
 
 ## Act 1. A session starts
@@ -330,12 +329,10 @@ base and none of main's session in its environment. From there the worker is any
 the command answers once that run is registered, within 30 s.
 
 Main sends `api-claude` a task, and its report comes back as in Acts 2 to 5. When main was
-started in the host mode, its wrapper holds the person's terminal and shows main and each worker
-on a tab of its own, drawn from their emulators under a tab bar; Ctrl+\\ then a key switches
-between them, and everything else typed goes to the program shown
-([host-mode.md](v2/host-mode.md)). Started in the shell, `rewake --shell`, main runs on the shell's
-own pty and each worker's pane is fed the raw bytes from its space host's socket
-([shell.md](v2/shell.md)). Without either the worker runs unseen.
+started in the shell, `rewake --shell`, main runs on the shell's own pty and each worker's pane is
+fed the raw bytes from its space host's socket; Ctrl+\\ then a key chooses the worker shown
+beside main, and everything else typed goes to the focused program ([shell.md](v2/shell.md)).
+Without the shell the worker runs unseen.
 
 The space host reads main's run once a second. When it reads ended — main exited, crashed or
 its wrapper was killed — it sends the worker's process group SIGHUP, SIGTERM after a second and

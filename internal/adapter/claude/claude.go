@@ -254,7 +254,7 @@ func (claudeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, 
 	var turns adapter.TurnBoundary
 	var telemetry adapter.Telemetry
 	env := request.Env
-	if request.Host {
+	if request.Shell {
 		env = fullscreen(env)
 	}
 	modSocket := modSocketPath(request)

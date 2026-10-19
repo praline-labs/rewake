@@ -11,8 +11,7 @@ import (
 // replay is the screen and the input modes as bytes a fresh terminal takes
 // to stand where this emulator stands (docs/v2/shell.md): the alternate
 // screen, the screen's cells, the cursor, the title, and every mode a key's
-// bytes depend on. A late client without the modes loses Shift+Enter. It
-// reads the emulator's state, never look, which hands the events out once.
+// bytes depend on. A late client without the modes loses Shift+Enter.
 func (v *vtEmulator) replay() []byte {
 	var b strings.Builder
 	alt := v.emu.IsAltScreen()

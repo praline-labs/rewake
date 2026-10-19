@@ -26,10 +26,8 @@ type vtEmulator struct {
 	// kitty are the kitty keyboard flags saved by pushes (keyboard.go).
 	kitty []uint8
 	osc   oscFilter
-	// title and events are what the program's OSC strings and bells said
-	// for the host mode (osc.go); events are handed out once, by look.
-	title  string
-	events []Event
+	// title is the program's, whole (osc.go).
+	title string
 	// pen is the style text is written in now, followed from the program's
 	// SGR for a late client's preamble (replay.go): the library keeps it
 	// unexported.
@@ -50,7 +48,6 @@ func newVT(size Size) (emulator, error) {
 	emu.SetCallbacks(vt.Callbacks{
 		EnableMode:  func(m ansi.Mode) { v.setMode(m, true) },
 		DisableMode: func(m ansi.Mode) { v.setMode(m, false) },
-		Bell:        func() { v.events = append(v.events, Event{Bell: true}) },
 	})
 	v.osc.done = v.oscSeen
 	// A clipboard request is taken and dropped: there is no clipboard here
@@ -112,8 +109,8 @@ func (v *vtEmulator) replies() io.Reader { return v.emu }
 
 func (v *vtEmulator) stopReplies() error { return v.pipe.Close() }
 
-// look walks the cells rather than parsing Render: the walk is the only way
-// to the runs, and it is cheaper (docs/archive/v2/agent-deck-ideas.md, measured).
+// look is the whole screen as the emulator holds it, for the tests that
+// compare two emulators.
 func (v *vtEmulator) look() look {
 	size := Size{Cols: v.emu.Width(), Rows: v.emu.Height()}
 	rows := make([][]Run, size.Rows)
@@ -123,20 +120,19 @@ func (v *vtEmulator) look() look {
 	pos := v.emu.CursorPosition()
 	modes := v.modes
 	modes.AltScreen = v.emu.IsAltScreen()
-	events := v.events
-	v.events = nil
 	return look{
 		size: size, rows: rows, cursor: Cursor{Row: pos.Y, Col: pos.X, Visible: !v.emu.CursorHidden()}, modes: modes,
-		title: v.title, events: events,
+		title: v.title,
 	}
 }
 
-// row is one row as runs: a new run where the style changes, a wide glyph
-// a run of its own counted as its width, the cell after it, which only holds
-// its place, skipped. So a run of one glyph over two columns is how a reader
-// learns a glyph is wide: the emulator's width, not a reader's guess (the
-// host mode draws each cell of its canvas from it). A wide glyph cut by
-// the right edge is drawn as a blank, so the runs add up to the width.
+// row is one row as runs, walking the cells rather than parsing Render: the
+// walk is the only way to the runs, and it is cheaper
+// (docs/archive/v2/agent-deck-ideas.md, measured). A new run starts where the
+// style changes; a wide glyph is a run of its own counted as its width, the
+// cell after it, which only holds its place, skipped, so the preamble places
+// the next run by the emulator's width, not a client's guess. A wide glyph
+// cut by the right edge is drawn as a blank, so the runs add up to the width.
 func (v *vtEmulator) row(y, width int) []Run {
 	var runs []Run
 	var text strings.Builder

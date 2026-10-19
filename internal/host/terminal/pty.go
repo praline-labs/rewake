@@ -88,15 +88,6 @@ func setSize(f *os.File, size Size) error {
 	return nil
 }
 
-// getSize reads the window size, as the program sees it.
-func getSize(f *os.File) (Size, error) {
-	var ws winsize
-	if err := ioctl(f, syscall.TIOCGWINSZ, unsafe.Pointer(&ws)); err != nil {
-		return Size{}, fmt.Errorf("could not read the pseudo-terminal's size: %w", err)
-	}
-	return Size{Cols: int(ws.cols), Rows: int(ws.rows)}, nil
-}
-
 // ioctl runs one ioctl on f through its raw descriptor, so the runtime's
 // poller keeps owning it.
 func ioctl(f *os.File, request uintptr, arg unsafe.Pointer) error {

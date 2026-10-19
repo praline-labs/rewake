@@ -128,8 +128,10 @@ see sessions of 1.0.3, nor 1.0.3 theirs.
 From main, a worker can also be started without a terminal of your own: ask main to open a
 space, and it runs `rewake space open api --harness claude` (or `--harness pi`); the worker
 `api-claude` joins the room and ends when main ends. To see its screen and answer what it asks,
-start main in the host mode, `rewake2 --host --main claude`: each worker gets a tab under main's,
-and `Ctrl-\` then `n` or a digit switches to it.
+start main in rewake's shell, `rewake2 --shell --main claude`: from 120 columns the chosen worker
+shows beside main, and `Ctrl-\` then `n` or a digit chooses it. Until the shell ships in the
+packages it runs from a checkout of the repository with [Bun](https://bun.sh): `bun install` in
+its `shell/` once, and `REWAKE_SHELL=<checkout>/shell/rewake-shell` in the environment.
 `rewake2 space list` shows the spaces and what they left.
 
 **Go back to 1.0.3.** End the 2.0 sessions as usual (`/exit` in each; a space's worker ends

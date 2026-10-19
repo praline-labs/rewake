@@ -4,12 +4,16 @@ The owner's decision of October 19, 2026: the host mode (`internal/host/hostmode
 written by hand in Go) gives way to a **shell** — an application in TypeScript on OpenTUI
 (`@opentui/core` and `@opentui/solid`, MIT), running inside the person's terminal, with a terminal
 pane per program. Solid is the owner's choice of framework, the same day. No web UI. The layout
-stays the approved one ([host-mode.md](host-mode.md), "Layout"): main left, the chosen worker
-right from 120 columns, the bar choosing the worker, focus by a click or the prefix, zoom; below
-120 columns the bar switches the whole window. The prefix stays Ctrl+\\. Once the shell works the
-host mode is removed. "Checked live" below means the spike of October 19, 2026: Claude Code
+is the one the owner approved for the host mode: from 120 columns, once a worker exists, main on
+the left and the chosen worker on the right, half of the width less a divider column, the
+narrower part when the width is odd; below 120 columns, with no worker, or zoomed, the focused
+program takes the whole width and the bar switches the window between main and the workers. The
+bar numbers `main` 0 and the workers from 1, the focused tab bracketed; a click on a tab or in a
+pane focuses it. The prefix is Ctrl+\\, which no harness binds. The host mode was removed on
+October 19, 2026, deleted rather than archived (the owner's rule: what is no longer needed goes
+at once). "Checked live" below means the spike of October 19, 2026: Claude Code
 2.1.302 and pi 1.2.0 in two panes of `@opentui/core` 0.6.6 on Bun 1.4.0, under a stand-in
-terminal in a pty, as the host mode's steps were checked; the person's own terminal is not yet.
+terminal in a pty; the owner checked step 1 on their own terminal the same day.
 
 ## Who owns which pty
 
@@ -35,7 +39,7 @@ terminal in a pty, as the host mode's steps were checked; the person's own termi
 
 ## How a pane is fed: the raw stream
 
-A new mode `b` (bytes) of the space socket, beside the view mode `v`, which goes with the host
+The space socket's mode `b` (bytes), its only one since the view mode `v` went with the host
 mode:
 
 - On connect, the host writes a **preamble** built from its emulator, then every byte the program
@@ -66,22 +70,22 @@ mode:
   pane's widget answers too, so the shell drops what the widget sends with source `response`
   (the `onData` callback says which) for a host-fed pane — never for main's. What a host-fed
   program hears is the host's answer: DA1, `CSI ? u`, OSC 10/11, DECRQM 2026 as unsupported;
-  XTVERSION, kitty graphics and OSC 4 go unanswered, as in the host mode today. The spike's
+  XTVERSION, kitty graphics and OSC 4 go unanswered. The spike's
   widget answers more (XTVERSION as `libghostty`, a kitty graphics query, OSC 4); that is not
   the host's set, and the widget is not made a second responder to make up for it.
 - Scrollback before the attach is not replayed: Claude Code runs fullscreen
-  (`CLAUDE_CODE_NO_FLICKER=1`, kept from the host mode) and scrolls its own history.
+  (`CLAUDE_CODE_NO_FLICKER=1`, which the claude adapter adds for a shell's main unless the person
+  set it, `LaunchRequest.Shell`; a worker inherits it) and scrolls its own history.
 
 ## What the widget lacks and what the shell does about it
 
 - **OSC 52, title.** The widget swallows them. The shell scans the bytes before `write()` — a
   stateful scanner, since a sequence can split across reads — and calls
   `renderer.copyToClipboardOSC52` and `setTerminalTitle` (the focused pane's). Both checked live.
-- **Bell, OSC 9/99/777 notifications.** OpenTUI offers no way to write them to the terminal; its
-  native session takes only the title, the mouse, kitty flags and program status. A raw write to
-  stdout between frames is untested. Main's decision of October 19, 2026: step 2 first tries that
-  raw write; if it is not clean, an issue goes upstream.
-- **OSC 8** stays lost, as in the host mode.
+- **Bell, OSC 9/99/777 notifications** are not delivered to the person's terminal: the owner's
+  decision of October 19, 2026, for now. OpenTUI offers no way to write them anyway; its native
+  session takes only the title, the mouse, kitty flags and program status.
+- **OSC 8** is lost.
 - **Indexed colours** are resolved to RGB by the widget. The shell asks the person's terminal for
   its palette (`renderer.getPalette`; the spike took 16 entries, the call takes up to 256) and
   default colours at start and writes them into every widget as OSC 4/10/11: checked live,
@@ -90,20 +94,31 @@ mode:
   is not followed; patching OpenTUI's resolution of indexed colours is not on the plan. The
   default background goes out as an explicit colour (`transparentBackground` untried).
 - **The hosts are seeded too**, since a host-fed program hears the host's answer, not the
-  widget's: the person's default colours reach every host before its program starts, as in the
-  host mode — `REWAKE_HOST_COLORS=fg;bg` in main's environment, which `space open` inherits and
-  the space host reads to seed its grid. The shell takes them from the same `getPalette` answer
-  as the widgets' seed and starts main with them, so the terminal is asked once; the host mode's
-  `colors.go` goes with it. Unseeded, a worker on a light terminal hears a black background while
-  its pane shows white.
+  widget's: the person's default colours reach every host before its program starts —
+  `REWAKE_HOST_COLORS=fg;bg` (XParseColor forms) in main's environment, which `space open`
+  inherits and the space host reads to seed its grid. The shell takes them from the same
+  `getPalette` answer as the widgets' seed and starts main with them, so the terminal is asked
+  once. Unseeded, a worker on a light terminal hears a black background while its pane shows
+  white.
 - **Mouse.** The widget forwards the wheel, clicks and drags in the program's mode, and scrolls its
   own scrollback when the program takes no mouse. OpenTUI's own selection starts on a left press
   and takes the drag; so the shell keeps a pane `selectable` only while its program has no mouse
   tracking on (it reads 9/1000/1002/1003 in the same scanner) and copies a finished OpenTUI
   selection through OSC 52. Checked live both ways.
 - **Keys.** OpenTUI pushes kitty flags 5 on the person's terminal itself, parses every key and the
-  widget re-encodes it in the focused program's current mode, so the host mode's mirroring of each
-  program's flags goes away. Key releases reach a program only if the terminal sends them.
+  widget re-encodes it in the focused program's current mode. Key releases reach a program only if
+  the terminal sends them. A space host answers a worker's `CSI ? u` from the flags it follows:
+  unanswered, Claude Code 2.1.302 stays on legacy keys, where Shift+Enter is Enter; answered, it
+  pushes 5 and sets modifyOtherKeys 2, and pi 1.2.0 pushes 7 (seen October 19, 2026). Under the
+  kitty protocol Ctrl+C arrives as `CSI 99;5u`, and Claude Code 2.1.302 does not take a bare 0x03
+  as one.
+- **A title with non-ASCII text.** The emulator library (x/ansi v0.11.7 and v0.11.8) ends an OSC
+  string at the byte 0x9C even inside a UTF-8 character, which drew Claude Code's `✳ Claude Code`
+  over its logo; a host's grid drops the non-ASCII bytes of an OSC string before its emulator and
+  keeps the title whole beside it for the preamble.
+- **The locale.** A program in the C locale draws a wide glyph as question marks, so a space host
+  gives its worker `LC_CTYPE=C.UTF-8` when the locale names no UTF-8 (`terminal.Environ`); main in
+  the shell gets only the shell's `TERM` and `COLORTERM`, and its locale as inherited.
 
 ## Solid: registering the widget, room for a modal
 
@@ -123,8 +138,11 @@ mode:
 
 - **Ctrl+\\** is read in `prependInputHandlers` on raw sequences, before OpenTUI parses them: the
   byte 0x1c, its CSI-u forms with event types and lock bits, its modifyOtherKeys form; it waits two
-  seconds for its command, and the releases of the prefix and of the key taken are swallowed. The commands are the host mode's: `n`/`p`, `0`–`9`, `m`, ← →, `z`, the prefix
-  again. Checked live in the CSI-u form with ← → and `z`.
+  seconds for its command, and the releases of the prefix and of the key taken are swallowed. The
+  commands: `n`/`p` the next or previous tab; `1`–`9` a worker, `0` or `m` main, each focused;
+  ← → the focus to main or to the chosen worker; `z` zooms the focused program or ends the zoom;
+  the prefix again sends Ctrl+\\ to the focused program; any other key cancels. Checked live in
+  the CSI-u form with ← → and `z`.
 - **The room** comes from rewake's own commands, polled once a second: `rewake list --json` for
   each session's activity, model, effort and context, `rewake space --json` for the spaces, which
   gains each open space's socket path so the shell never builds a path itself. A stream comes only
@@ -132,8 +150,9 @@ mode:
 
 ## How rewake starts the shell, and how it ships
 
-- `rewake --shell claude [args]` replaces `--host` (an alias keeps `rewake = ["--shell"]`): the Go
-  launcher checks the role and the terminal as `--host` does and execs the shell as
+- `rewake --shell claude [args]`, or an alias with `rewake = ["--shell"]`: the Go launcher refuses
+  it, exit 2, for a role that opens no spaces and without a terminal on standard input and output,
+  and execs the shell as
   `<shell> --room <room> -- <rewake> <its own arguments>` with `REWAKE_SHELL_MAIN=1`, so no rewake
   process stays between the person's terminal and the shell. The shell runs that command line on
   its pty; that launch, seeing the variable, takes it out of its environment and runs main
@@ -162,12 +181,13 @@ mode:
   processes.
   Done October 19, 2026, with the scanner, the palette seed and the selection rule from step 2,
   small enough to come along ([roadmap](../roadmap/2026-10-19-shell-step1.md)).
-2. **Events and colours.** Bell and notifications settled. Check: a copy from each pane lands in
-  the clipboard of the person's terminal.
+2. **Events and colours.** Bell and notifications settled: not delivered, by the owner's decision.
+  Check: a copy from each pane lands in the clipboard of the person's terminal.
 3. **Shipping**: the compiled shell in the npm packages, found by rewake. Check: an install by the
   release gate starts it.
-4. **The host mode removed**: `internal/host/hostmode`, the canvas, the view mode, `--host`, and
-  their documents to the archive.
+4. **The host mode removed**: `internal/host/hostmode`, the canvas, the view mode, `--host`, the
+  host mode's workflow scenario and its document, deleted. Done October 19, 2026
+  ([roadmap](../roadmap/2026-10-19-host-mode-removed.md)).
 
 Panels that are not terminals (inbox, reports, permission buttons) and the modal come after,
 as ordinary Solid components over the same layout.
