@@ -308,6 +308,9 @@ export default function (pi: ExtensionAPI) {
         .filter((block) => block.type === "text")
         .map((block) => block.text)
         .join("\n");
+      // A failed run ends with an empty text and pi's error in its own field;
+      // the report carries that error, as Claude Code's carries its own.
+      if (turn.text === "") turn.text = assistant.errorMessage ?? "";
       turn.reason = assistant.stopReason;
     }
   });

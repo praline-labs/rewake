@@ -170,7 +170,7 @@ harness pid and rechecks its process start time before accepting the first frame
 | Extension to host | `hello` | `protocol: 2`, `thread`, initial `state`; success makes Wake, TurnBoundary and Telemetry live, plus Control when its directory exists |
 | Host to extension | `wake` | `thread`, `notice`; answer says `ok` and whether it was `steered`, or `pending` while compacting |
 | Extension to host | `turn-start` | `thread`, `turn`; acknowledgment precedes model work |
-| Extension to host | `turn-end` | `thread`, `turn`, `outcome`, `text`; acknowledgment follows publication |
+| Extension to host | `turn-end` | `thread`, `turn`, `outcome`, `text` (the final text, or pi's error message when a failed turn has none); acknowledgment follows publication |
 | Either | `state` | host asks with `thread`; extension answers or pushes `state` with sequence, activity, model, effort, tokens, window, percent and compacting |
 | Host to extension | `control` | `thread`, `action`, `request`, `from`, optional `focus`; answer carries outcome, reason, detail, open and token counts where known |
 | Extension to host | `compacted` | `thread`, event `sequence`, optional remote `request` and `from`; acknowledgment follows counting |
