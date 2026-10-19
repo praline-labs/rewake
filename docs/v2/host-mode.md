@@ -108,8 +108,8 @@ pass the programs' bytes through.
     tab is switched. The host saves the person's title with `CSI 22;0t` on entering and gives it
     back with `CSI 23;0t` on leaving.
 
-  OSC 8 hyperlinks are lost until the frames carry them. OSC 4 queries of the palette are answered
-  from the library's own palette, not the person's.
+  OSC 8 hyperlinks are lost until the frames carry them. OSC 4 queries of the palette go
+  unanswered (a probe of the grid, October 19, 2026).
 - **Rejected: a scroll-region trick.** The idea is to tell the program a smaller size and place
   its raw output inside margins. It cannot give a split, because DECSLRM side margins are
   rarely supported. Programs reset margins themselves. A switch needs the program to repaint, with

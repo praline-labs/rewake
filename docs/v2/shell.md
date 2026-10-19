@@ -13,34 +13,52 @@ terminal in a pty, as the host mode's steps were checked; the person's own termi
 
 ## Who owns which pty
 
-- **Every program runs under a host, and the shell is only a client.** A worker already does:
-  its space host owns its pty and emulator ([space.md](../rules/space.md), SP1 unchanged). Main
-  gets the same — a detached **main host**, the space host's code with no main run to watch, which
-  owns main's pty and ends when main's harness ends. Closing or crashing the shell then ends no
-  session, and the owner can restart a shell they have just edited without losing work. Nothing
-  runs longer than its session, so "no service beside the sessions" holds.
-- **One kind of pane.** Every pane is fed from a host's socket the same way, so the shell has no
-  code for owning a process. The first step still lets the shell start main itself in its own pty
-  (`Bun.spawn` with `terminal`), as the spike did; the main host comes in step 3, if the owner
-  agrees (question 1).
+- **Main's pty is the shell's.** The shell starts main's ordinary wrapper (`rewake claude
+  [args]`, transparent, the launch's options kept) in a pty of its own with `Bun.spawn` and
+  `terminal`, as the spike did, so main's run is that wrapper's and the shell is its terminal.
+  Main's pane gets the widget's answers to main's queries (source `response`), since no other
+  emulator stands between them.
+- **A worker's pty stays its space host's** ([space.md](../rules/space.md), SP1 unchanged); its
+  pane is fed from the host's socket (below).
+- **Closing ends everything** (the owner's decision, October 19, 2026: sessions must not live on
+  unseen; no detach, no re-attach). The shell ends when main ends, and when its own terminal goes —
+  a hangup, or its input at an end. Ending, it closes main's pty, so main hears a hangup, and
+  waits a bound for main's group before SIGTERM and SIGKILL; main's run ends, and each space host,
+  which reads that run, ends its worker. A shell killed outright closes main's pty the same way, by
+  the kernel. In the spike a shell whose terminal was killed kept running with both sessions for
+  minutes, until an explicit SIGHUP: step 1 must fix this.
 
 ## How a pane is fed: the raw stream
 
 A new mode `b` (bytes) of the space socket, beside the view mode `v`, which goes with the host
 mode:
 
-- On connect, the host writes, under the grid's lock and before any live byte, a **preamble**
-  built from its emulator: the alternate screen if on, the screen as ANSI, the cursor's place and
-  visibility, the title, and the modes — DECCKM, bracketed paste 2004, focus 1004, mouse 9, 1000,
-  1002, 1003 and 1006, the kitty flags as one push, modifyOtherKeys. Then every byte the program
-  writes, as it comes. One lock around the snapshot and the subscription loses or repeats no byte.
-  A client that attached late without the modes would lose Shift+Enter — Superset's bug, the
-  lesson of the research.
+- On connect, the host writes a **preamble** built from its emulator, then every byte the program
+  writes after it. The cut is made in `Grid.commit`, under the grid's lock: the snapshot and the
+  client's subscription are taken there, between two committed pieces, so the client gets exactly
+  the bytes the emulator took after the snapshot. Not in `relay.pump`: `Grid.Write` queues, and
+  the holder delays a suffix, so a read of the pty is not the emulator's boundary.
+- **The preamble:** the alternate screen if on, the screen as ANSI, the cursor's place and
+  visibility, the title, and the input modes — DECCKM, DECNKM (the application keypad), bracketed
+  paste 2004, focus 1004, mouse 9, 1000, 1002, 1003 and 1006, modifyOtherKeys, and the kitty
+  stack as one push per entry in order, so a later pop finds what the program pushed before. A
+  client that attached late without the modes would lose Shift+Enter — Superset's bug, the
+  lesson of the research. The modes are read without draining the emulator's events (`look`
+  takes them), so a copy or bell meant for another client is not lost.
+- **The cut is safe inside a sequence.** A pty read has no sequence boundary, so a commit can end
+  inside one: after `ESC [ ? 2004` the emulator shows paste still off, and the `h` comes later.
+  The grid keeps the bytes committed since its parser last stood in the ground state, and the
+  preamble ends with them, so the widget's parser finishes the sequence from the live bytes as the
+  host's did. Without it a late widget kept paste off and sent a paste of two lines bare, with a
+  carriage return (rev-pi's probe against the widget, October 19, 2026).
 - The client writes the frames the view takes today: `i` keys, `r` a size; the last size wins.
 - **The host keeps answering the program's queries**, as it must while nobody is attached; the
   pane's widget answers too, so the shell drops what the widget sends with source `response`
-  (the `onData` callback says which) for a host-fed pane. The spike showed the widget answering
-  DA1, XTVERSION as `libghostty`, `CSI ? u`, DECRQM 2026, a kitty graphics query and OSC 4/10/11.
+  (the `onData` callback says which) for a host-fed pane — never for main's. What a host-fed
+  program hears is the host's answer: DA1, `CSI ? u`, OSC 10/11, DECRQM 2026 as unsupported;
+  XTVERSION, kitty graphics and OSC 4 go unanswered, as in the host mode today. The spike's
+  widget answers more (XTVERSION as `libghostty`, a kitty graphics query, OSC 4); that is not
+  the host's set, and the widget is not made a second responder to make up for it.
 - Scrollback before the attach is not replayed: Claude Code runs fullscreen
   (`CLAUDE_CODE_NO_FLICKER=1`, kept from the host mode) and scrolls its own history.
 
@@ -51,7 +69,7 @@ mode:
   `renderer.copyToClipboardOSC52` and `setTerminalTitle` (the focused pane's). Both checked live.
 - **Bell, OSC 9/99/777 notifications.** OpenTUI offers no way to write them to the terminal; its
   native session takes only the title, the mouse, kitty flags and program status. A raw write to
-  stdout between frames is untested: step 2 settles it or asks upstream (question 4).
+  stdout between frames is untested: step 2 settles it or asks upstream (open for the owner).
 - **OSC 8** stays lost, as in the host mode.
 - **Indexed colours** are resolved to RGB by the widget. The shell asks the person's terminal for
   its palette (`renderer.getPalette`; the spike took 16 entries, the call takes up to 256) and
@@ -59,7 +77,14 @@ mode:
   palette index 6 drew as the terminal's own colour 6. A theme changed while the shell runs is
   not followed, and the default background goes out as an explicit colour
   (`transparentBackground` untried) — the owner's wish of October 18 met at start only
-  (question 3).
+  (open for the owner).
+- **The hosts are seeded too**, since a host-fed program hears the host's answer, not the
+  widget's: the person's default colours reach every host before its program starts, as in the
+  host mode — `REWAKE_HOST_COLORS=fg;bg` in main's environment, which `space open` inherits and
+  the space host reads to seed its grid. rewake asks the terminal for them before it starts the
+  shell (the host mode's `colors.go`, kept when the host mode goes), and the shell starts main
+  with them. Unseeded, a worker on a light terminal hears a black
+  background while its pane shows white.
 - **Mouse.** The widget forwards the wheel, clicks and drags in the program's mode, and scrolls its
   own scrollback when the program takes no mouse. OpenTUI's own selection starts on a left press
   and takes the drag; so the shell keeps a pane `selectable` only while its program has no mouse
@@ -80,9 +105,8 @@ mode:
   zIndex>` centred over the row of panes, mounted under `<Show>`. Opening it blurs the focused pane
   and focuses the modal's input; the panes keep reading their programs and drawing underneath.
   Mouse events over the panes are meant to go to a full-size backdrop below the modal, not to
-  the programs (not yet tried).
-  Closing restores the pane's focus on the next tick, after the modal unmounts — restored at once,
-  the first key after closing was lost.
+  the programs (not yet tried). Closing restores the pane's focus on the next tick, after the
+  modal unmounts — restored at once, the first key after closing was lost.
 
 ## The prefix and the room
 
@@ -97,32 +121,33 @@ mode:
 
 ## How rewake starts the shell, and how it ships
 
-- `rewake --shell claude [args]` replaces `--host` (an alias keeps `rewake = ["--shell"]`); once
-  main has its host, it starts the main host, then runs the shell as a client of the room, and
-  `rewake shell` alone attaches a new shell to a running main (question 2).
+- `rewake --shell claude [args]` replaces `--host` (an alias keeps `rewake = ["--shell"]`): the Go
+  launcher checks the role and the terminal as `--host` does, asks the terminal for its colours,
+  and execs the shell with main's command and `REWAKE_HOST_COLORS`, so no rewake process stays
+  between the person's terminal and the shell.
 - **Shipping.** The person has no Bun. `bun build --compile` with `@opentui/solid/bun-plugin`
   gives one executable with the runtime and OpenTUI's native library inside: built and run in the
   spike, 100 MB, 31 MB compressed. Bun is MIT, but the runtime it embeds carries JavaScriptCore,
-  LGPL-2 — a licence the dependency rule does not name (question 5). It goes into each platform
-  package beside the Go binary (`scripts/pack.sh`), and rewake finds it next to its own
+  LGPL-2 — a licence the dependency rule does not name (open for the owner). It goes into each
+  platform package beside the Go binary (`scripts/pack.sh`), and rewake finds it next to its own
   executable; `REWAKE_SHELL` names another — the owner's edited copy run from source with `bun`.
   The sources live in `shell/` at the repository's root, outside the Go module.
 - **The mod does not change**: it knows nothing of who draws the screen.
 
 ## Steps, each checked live
 
-1. **Main and one worker in two panes.** Go: the `b` mode and its preamble, the socket path in
-  `rewake space --json`. Shell: main in its own pty, the worker from its space host, the split,
-  the bar, the prefix, resize, the shell ending cleanly when its terminal closes — in the spike a
-  shell whose terminal was killed once kept running with both sessions for minutes. Check:
-  Shift+Enter in both, a worker shown after main opened it, a resize across 120 columns.
+1. **Main and one worker in two panes.** Go: the `b` mode, its cut and preamble, the socket path in
+  `rewake space --json`, `--shell` with the colours. Shell: main in its pty, the worker from its
+  space host, the split, the bar, the prefix, resize, and the ending above. Check: Shift+Enter in
+  both, a worker shown after main opened it, a resize across 120 columns, a worker on a light
+  terminal hearing a light background, and the terminal's window closed leaving no shell, main or
+  worker running. Tests: the cut inside a sequence and the preamble's modes, a contract between
+  processes.
 2. **Events and colours.** The scanner, the palette seed, the selection rule, bell and
   notifications settled. Check: a copy from each pane lands in the clipboard.
-3. **Main under its own host**, if the owner agrees. Check: close the shell, main keeps working,
-  `rewake shell` shows it again.
-4. **Shipping**: the compiled shell in the npm packages, found by rewake. Check: an install by the
+3. **Shipping**: the compiled shell in the npm packages, found by rewake. Check: an install by the
   release gate starts it.
-5. **The host mode removed**: `internal/host/hostmode`, the canvas, the view mode, `--host`, and
+4. **The host mode removed**: `internal/host/hostmode`, the canvas, the view mode, `--host`, and
   their documents to the archive.
 
 Panels that are not terminals (inbox, reports, permission buttons) and the modal come after,
