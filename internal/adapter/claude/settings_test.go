@@ -124,13 +124,18 @@ func TestSettingsMigrate(t *testing.T) {
 // as it is; so does a newer build's, which is passed untouched.
 func TestSettingsRefusedOrLeft(t *testing.T) {
 	for text, want := range map[string]string{
-		"{\n  \"a\": 1,\n}\n":                 "line 3",
-		"[1]":                                 "line 1: not a JSON object",
-		"{} {}":                               "more after the object",
-		`{"rewake": {"keep": ["Agent"]}}`:     "rewake.keep is gone",
-		`{"rewake": {"defaults": -1}}`:        "not a version",
-		`{"permissions": {"deny": "Agent"}}`:  "permissions.deny is not a list",
-		"{\n\"rewake\": {\"defaults\": 1.5}}": "not a version",
+		"{\n  \"a\": 1,\n}\n":                     "line 3",
+		"[1]":                                     "line 1: not a JSON object",
+		"{} {}":                                   "more after the object",
+		`{"rewake": {"keep": ["Agent"]}}`:         "rewake.keep is gone",
+		`{"rewake": {"defaults": -1}}`:            "not a version",
+		`{"permissions": {"deny": "Agent"}}`:      "permissions.deny is a string, not a list",
+		`{"autoMemoryEnabled": "not-a-boolean"}`:  "autoMemoryEnabled is a string, not a boolean",
+		`{"permissions": {"deny": [{"a": 1}]}}`:   "permissions.deny holds an object, where each is a string",
+		`{"env": {"DISABLE_AUTOUPDATER": ["1"]}}`: "env.DISABLE_AUTOUPDATER is a list, not a string",
+		`{"env": "x"}`:                            "env is not an object",
+		`{"rewake": {"defaults": 1}, "permissions": {"deny": "Agent"}}`: "permissions.deny is a string",
+		"{\n\"rewake\": {\"defaults\": 1.5}}":                           "not a version",
 	} {
 		dir := settingsFile(t, text)
 		_, _, err := workerSettings(dir, "/home/p")
@@ -170,5 +175,37 @@ func TestSettingsThroughALink(t *testing.T) {
 	}
 	if len(denied(readBack(t, own))) != len(deniedTools) {
 		t.Fatal("the linked file did not get the defaults")
+	}
+}
+
+// A settings.json linking to a file not there yet is refused, the link left
+// as it is, rather than replaced by a file of its own.
+func TestSettingsThroughADanglingLink(t *testing.T) {
+	own := filepath.Join(t.TempDir(), "worker.json")
+	dir := t.TempDir()
+	link := filepath.Join(dir, "settings.json")
+	if err := os.Symlink(own, link); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := workerSettings(dir, "/home/p"); err == nil || !strings.Contains(err.Error(), own) {
+		t.Fatalf("a dangling link was accepted: %v", err)
+	}
+	if target, err := os.Readlink(link); err != nil || target != own {
+		t.Fatalf("the link became %q: %v", target, err)
+	}
+	if _, err := os.Stat(own); !os.IsNotExist(err) {
+		t.Fatalf("the link's target was made: %v", err)
+	}
+}
+
+// Keys no default owns are the person's, whatever they hold.
+func TestSettingsLeaveOtherKeys(t *testing.T) {
+	path, _, err := workerSettings(settingsFile(t, `{"env": {"MINE": 1}, "mine": [1, {}], "permissions": {"allow": "x"}}`), "/home/p")
+	if err != nil {
+		t.Fatal(err)
+	}
+	settings := readBack(t, path)
+	if settings["env"].(map[string]any)["MINE"] != json.Number("1") || len(settings["mine"].([]any)) != 2 || settings["permissions"].(map[string]any)["allow"] != "x" {
+		t.Fatalf("%v", settings)
 	}
 }

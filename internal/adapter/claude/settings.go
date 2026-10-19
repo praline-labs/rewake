@@ -100,17 +100,25 @@ func workerSettings(dir, home string) (string, bool, error) {
 	if _, err := present(path, false); err != nil {
 		return "", false, err
 	}
+	target, err := settingsTarget(path)
+	if err != nil {
+		return "", false, err
+	}
 	settings, version, err := readSettings(path)
 	if err != nil {
 		return "", false, err
 	}
+	defaults := workerDefaults(home)
+	if err := checkShapes(settings, defaults); err != nil {
+		return "", false, fmt.Errorf("the worker profile's %s: %w; Claude Code would ignore the whole file, every default with it, so rewake leaves it as it is", path, err)
+	}
 	if version >= defaultsVersion {
 		return path, false, nil
 	}
-	if err := migrate(settings, version, defaultsVersion, workerDefaults(home)); err != nil {
+	if err := migrate(settings, version, defaultsVersion, defaults); err != nil {
 		return "", false, fmt.Errorf("the worker profile's %s: %w", path, err)
 	}
-	if err := writeSettings(path, settings); err != nil {
+	if err := writeSettings(target, settings); err != nil {
 		return "", false, fmt.Errorf("the worker profile's %s could not be written: %w", path, err)
 	}
 	return path, true, nil
@@ -289,9 +297,24 @@ func objectAt(settings map[string]any, path []string, create bool) (map[string]a
 	return object, nil
 }
 
+// settingsTarget is the file a write of settings.json replaces: the file
+// itself, or through a symlink the file linked to, so a link into the
+// person's own files stays. A link to nothing is refused, never replaced.
+func settingsTarget(path string) (string, error) {
+	info, err := os.Lstat(path)
+	if err != nil || info.Mode()&os.ModeSymlink == 0 {
+		return path, nil
+	}
+	target, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		link, _ := os.Readlink(path)
+		return "", fmt.Errorf("the worker profile's %s links to %s, which cannot be read (%v); write {} there, or remove the link for rewake to make the file", path, link, err)
+	}
+	return target, nil
+}
+
 // writeSettings writes the file as the person reads it: indented, keys in
-// order, nothing escaped that JSON does not need. Through a symlink it
-// replaces the file linked to, so a link into the person's own files stays.
+// order, nothing escaped that JSON does not need.
 func writeSettings(path string, settings map[string]any) error {
 	var out bytes.Buffer
 	encoder := json.NewEncoder(&out)
@@ -299,9 +322,6 @@ func writeSettings(path string, settings map[string]any) error {
 	encoder.SetIndent("", "  ")
 	if err := encoder.Encode(settings); err != nil {
 		return err
-	}
-	if target, err := filepath.EvalSymlinks(path); err == nil {
-		path = target
 	}
 	return replaceFile(path, out.Bytes())
 }

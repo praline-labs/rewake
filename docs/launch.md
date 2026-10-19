@@ -195,10 +195,15 @@ rewake --command my-claude claude
     its directory, the target of a symlink when it is one; the keys come back in order and
     indented, the values as they were. The launch notes that it wrote.
   - **A file rewake cannot read** — not JSON, not one object, a `rewake` key other than
-    `{"defaults": <whole number>}`, a key a default goes under holding another kind — refuses
-    the launch, naming the file and the line, and is never replaced. `rewake.keep` of the
-    build before is refused, naming `permissions.deny` as the way. An entry of the wrong kind
-    in the folder refuses the launch naming the path.
+    `{"defaults": <whole number>}` — refuses the launch, naming the file and the line, and is
+    never replaced. So does, at any version and naming the key, a key one of rewake's defaults
+    owns holding another kind than the default's: a string for `autoMemoryEnabled`, an object
+    in `permissions.deny`, a list for an `env` value, `env` or `permissions` not an object.
+    Claude Code drops a whole settings file over one such value ("These settings files did not
+    load", 2.1.302), every default with it. Keys no default owns are the person's, unchecked.
+    A `settings.json` that is a symlink to nothing is refused, naming its target, and the link
+    left as it is. `rewake.keep` of the build before is refused, naming `permissions.deny` as
+    the way. An entry of the wrong kind in the folder refuses the launch naming the path.
 - Every role launches here since S4-6: the run's mod reports each turn's end once its
   hello is admitted, after the harness starts, and a task to the run fails until then
   ([stage4-turns.md](v2/stage4-turns.md#readiness-and-admission)). A cause the adapter knows
