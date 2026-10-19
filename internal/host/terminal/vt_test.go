@@ -74,3 +74,24 @@ func TestSynchronizedOutputIsAnsweredAsKnown(t *testing.T) {
 	vt.write([]byte("\x1b[?2026h"))
 	ask("\x1b[?2026;1$y")
 }
+
+// XTVERSION is answered with the name the widget gives main's pane: Claude
+// Code sends its mode queries, DECRQM 2026 among them, only after it.
+func TestXTVERSIONIsAnswered(t *testing.T) {
+	emulator, err := newVT(Size{Cols: 8, Rows: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	vt := emulator.(*vtEmulator)
+	defer func() { _ = vt.stopReplies() }()
+	got := make(chan string)
+	go func() {
+		buf := make([]byte, 64)
+		n, _ := vt.replies().Read(buf)
+		got <- string(buf[:n])
+	}()
+	vt.write([]byte("\x1b[>0q"))
+	if g, want := <-got, "\x1bP>|libghostty\x1b\\"; g != want {
+		t.Fatalf("answer %q, want %q", g, want)
+	}
+}

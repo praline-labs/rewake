@@ -61,6 +61,13 @@ func newVT(size Size) (emulator, error) {
 	// emulator draws at once, which is how a terminal that ignores the
 	// batching behaves. A full reset (ESC c) forgets it.
 	_, _ = emu.Write([]byte("\x1b[?2026l"))
+	// XTVERSION is answered as the widget answers it for main's pane. Claude
+	// Code asks DECRQM 2026 and the other mode queries only once it hears a
+	// terminal's name, and without them it sends no synchronized output.
+	emu.RegisterCsiHandler(ansi.Command('>', 0, 'q'), func(ansi.Params) bool {
+		_, _ = io.WriteString(emu.InputPipe(), "\x1bP>|libghostty\x1b\\")
+		return true
+	})
 	v.keyboard()
 	v.followPen()
 	return v, nil
