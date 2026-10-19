@@ -89,6 +89,9 @@ type Outcome struct {
 	Exit   int    `json:"exit"`
 	Stdout string `json:"stdout,omitempty"`
 	Stderr string `json:"stderr,omitempty"`
+	// Model is the answer's model encoded as JSON, whatever form the call
+	// printed, so a retry under --json prints that model and not the lines.
+	Model string `json:"model,omitempty"`
 }
 
 // NotifyStep is a heads-up's progress: its id and text are fixed before it is

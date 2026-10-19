@@ -27,6 +27,8 @@ type operation struct {
 	// first says this attempt is the call that created the record, the one
 	// attempt that runs in the operation's own turn.
 	first bool
+	// model is the answer's model as JSON, kept in the outcome.
+	model string
 }
 
 // save writes the record's progress.
@@ -138,7 +140,7 @@ func runOperation(ctx *Context, call Call, handler func(*Context, Call) error, s
 		// A done answer whose record could not be written is still done:
 		// the record stays open, and finishing it changes nothing again.
 		op.record.Phase = receipt.Done
-		op.record.Outcome = &receipt.Outcome{Exit: code, Stdout: out.String(), Stderr: errOut.String()}
+		op.record.Outcome = &receipt.Outcome{Exit: code, Stdout: out.String(), Stderr: errOut.String(), Model: op.model}
 		if err := receipt.Save(site.dir, site.self.Name, op.record); err != nil {
 			saveErr = failf("done, but its receipt could not be written (%v); record it with: rewake retry %s", err, op.record.Token)
 		}
@@ -168,7 +170,11 @@ func replay(ctx *Context, op *operation) error {
 		_, _ = fmt.Fprintf(ctx.Stdout, "Rewake: these words ran earlier (receipt %s); nothing was done again, and their answer follows.\n", op.record.Token)
 	}
 	outcome := op.record.Outcome
-	_, _ = ctx.Stdout.Write([]byte(outcome.Stdout))
+	if ctx.JSON && outcome.Model != "" {
+		_, _ = fmt.Fprintln(ctx.Stdout, outcome.Model)
+	} else {
+		_, _ = ctx.Stdout.Write([]byte(outcome.Stdout))
+	}
 	_, _ = ctx.Stderr.Write([]byte(outcome.Stderr))
 	if outcome.Exit != ExitOK {
 		return &ExitCodeError{Code: outcome.Exit}

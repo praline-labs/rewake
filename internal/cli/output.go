@@ -22,14 +22,24 @@ func emit(ctx *Context, lines ...string) error {
 	return nil
 }
 
+// keepModel encodes the model as JSON. A journaled operation keeps it beside
+// the text it printed, so a retry under --json can print it.
+func keepModel(ctx *Context, model any) (string, error) {
+	encoded, err := json.MarshalIndent(model, "", "  ")
+	if ctx.op != nil && err == nil {
+		ctx.op.model = string(encoded)
+	}
+	return string(encoded), err
+}
+
 // printValue prints the model as JSON, or the formatted lines.
 func printValue(ctx *Context, model any, lines func() []string) error {
+	encoded, err := keepModel(ctx, model)
+	if err != nil && ctx.JSON {
+		return failf("could not encode the result as JSON: %v", err)
+	}
 	if ctx.JSON {
-		encoded, err := json.MarshalIndent(model, "", "  ")
-		if err != nil {
-			return failf("could not encode the result as JSON: %v", err)
-		}
-		return emit(ctx, string(encoded))
+		return emit(ctx, encoded)
 	}
 	return emit(ctx, lines()...)
 }

@@ -221,12 +221,14 @@ func printDelivery(ctx *Context, session registry.Session, model sendModel) erro
 			_ = printValue(ctx, model, func() []string { return nil })
 			return &PendingError{Message: ""}
 		}
+		_, _ = keepModel(ctx, model)
 		return &PendingError{Message: line}
 	default:
 		if ctx.JSON {
 			_ = printValue(ctx, model, func() []string { return nil })
 			return &FailedError{Message: ""}
 		}
+		_, _ = keepModel(ctx, model)
 		return &FailedError{Message: line}
 	}
 }

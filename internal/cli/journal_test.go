@@ -90,3 +90,19 @@ func openOperation(t *testing.T, dir string, self registry.Session, words ...str
 	}
 	return record
 }
+
+// A retry under --json prints the model of the answer even when the call it
+// retries printed lines: the audit found plain text and exit 3 there.
+func TestRetryJSONPrintsTheModelOfALineAnswer(t *testing.T) {
+	dir, self, _ := peerSession(t)
+	record := openOperation(t, dir, self, "send", "web", "json look", "--notify", "--wait", "0")
+	code, out, errOut := run("retry", record.Token)
+	if code != ExitPending || !strings.Contains(out, "Rewake: pending") {
+		t.Fatalf("the first retry: %d %s %s", code, out, errOut)
+	}
+	code, out, errOut = run("retry", record.Token, "--json")
+	var model map[string]any
+	if err := json.Unmarshal([]byte(out), &model); err != nil || model["to"] != "web" || code != ExitPending {
+		t.Fatalf("retry --json printed %d %q (%v) %s", code, out, err, errOut)
+	}
+}

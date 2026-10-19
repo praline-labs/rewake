@@ -26,11 +26,13 @@ In scope: Claude Code, and next pi (the owner's decision of October 18, 2026); t
 Out of scope: Codex, which does not return soon (the same decision); opencode, grok;
 macOS (needs replacements for `/proc`); delivery receipts from the recipient (added
 later for Claude Code's inbound gate, September 23, 2026 — [delivery-adapters.md](delivery-adapters.md#claude-code-adapter));
-message history; a UI.
+message history. (A UI was out of scope here; the owner's decision of October 19, 2026 made
+it the terminal shell, which main runs in — [v2/shell.md](v2/shell.md).)
 
-Never doing: standing between a person and a session they started, or typing text into
-someone else's screen — a pseudo-terminal only for a worker main starts in a space; editing
-the user's harness configs; reading transcript contents.
+Never doing: typing text into someone else's screen; editing the user's harness configs;
+reading transcript contents. Standing between a person and a session they started was the
+rule of the first version; since October 19, 2026 `rewake claude` runs main in the shell's
+own terminal pane, and a pseudo-terminal is also held for each worker main starts in a space.
 
 ## Design
 

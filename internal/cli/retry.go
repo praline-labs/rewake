@@ -22,6 +22,7 @@ func retryCommand() *Command {
 		Examples:       []string{"rewake retry 0123456789abcdef01234567", "rewake retry 0123456789abcdef01234567 --json"},
 		Notes: []string{
 			"A receipt belongs to the run that printed it and is kept for a day after its operation finished.",
+			"--json prints the answer's model, whatever form the first call printed; without it the answer comes in the form of the first call.",
 			"A finished heads-up or mark prints its answer again and does nothing more; an unfinished one takes its remaining steps, to the same letter id and the same recipient run as the first attempt.",
 		},
 		Access:  changeForm,
@@ -63,9 +64,9 @@ func handleRetry(ctx *Context, call Call) error {
 	default:
 		return failf("the receipt %s is of %s, which has nothing to finish", token, original.Call.Command.Name)
 	}
-	// The operation answers as it was asked to: its first answer, replayed,
-	// is in that form already.
-	ctx.JSON = original.Call.Switch("json")
+	// The retry's own --json asks for the model of the answer, which the
+	// record keeps; without it the operation answers as it first did.
+	ctx.JSON = ctx.JSON || original.Call.Switch("json")
 	ctx.journaling = true
 	return runOperation(ctx, original.Call, handler, site, token, false)
 }
