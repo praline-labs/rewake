@@ -43,7 +43,6 @@ const table: Record<"prefix" | "main" | "worker", Entry[]> = {
     { keys: "Ctrl+\\ →", does: "worker", when: hasWorkers },
     { keys: "Ctrl+\\ n/p", does: "next/previous", when: hasWorkers },
     { keys: "Ctrl+\\ z", does: (c) => (c.zoomed ? "end the zoom" : "zoom"), when: hasWorkers },
-    { keys: "click", does: "a tab or a pane focuses it", when: hasWorkers },
     { keys: "Ctrl+\\", does: "the shell's commands", when: (c) => !hasWorkers(c) },
   ],
   worker: [
