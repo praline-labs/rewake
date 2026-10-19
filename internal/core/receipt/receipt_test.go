@@ -4,8 +4,6 @@ import (
 	"context"
 	"errors"
 	"os"
-	"path/filepath"
-	"sync"
 	"testing"
 	"time"
 
@@ -17,83 +15,25 @@ func journalDir(t *testing.T) string {
 	return buildtest.Dir(t)
 }
 
-var scoped = Key{Epoch: "run1", Conversation: "c", Turn: "t", Digest: "d"}
-
-// Calls racing with one key end in one operation: exactly one creates it,
-// every other joins, and no second record is left behind.
-func TestRacingCallsWithOneKeyJoinOneRecord(t *testing.T) {
-	dir := journalDir(t)
-	const racers = 16
-	tokens := make([]string, racers)
-	created := make([]bool, racers)
-	var group sync.WaitGroup
-	for index := range racers {
-		group.Add(1)
-		go func() {
-			defer group.Done()
-			record, joined, err := Begin(dir, "api", scoped, Record{Words: []string{"inbox"}})
-			if err != nil {
-				t.Errorf("begin: %v", err)
-				return
-			}
-			tokens[index], created[index] = record.Token, !joined
-		}()
-	}
-	group.Wait()
-	owners := 0
-	for index := range racers {
-		if tokens[index] != tokens[0] {
-			t.Fatalf("two operations for one key: %s and %s", tokens[0], tokens[index])
-		}
-		if created[index] {
-			owners++
-		}
-	}
-	if owners != 1 {
-		t.Fatalf("%d calls created the operation", owners)
-	}
-	journal, _ := Path(dir, "api", "run1")
-	records, _ := filepath.Glob(filepath.Join(journal, "*.json"))
-	if len(records) != 1 {
-		t.Fatalf("records left: %v", records)
-	}
-}
+var key = Key{Epoch: "run1", Digest: "d"}
 
 // A shell call has no turn, so the same words are two operations.
-func TestAnUnscopedKeyNeverJoins(t *testing.T) {
+func TestTheSameWordsAreTwoOperations(t *testing.T) {
 	dir := journalDir(t)
-	key := Key{Epoch: "run1", Digest: "d"}
-	first, joined, err := Begin(dir, "api", key, Record{})
-	if err != nil || joined {
-		t.Fatalf("first: %v %v", joined, err)
+	first, err := Begin(dir, "api", key, Record{})
+	if err != nil {
+		t.Fatalf("first: %v", err)
 	}
-	second, joined, err := Begin(dir, "api", key, Record{})
-	if err != nil || joined || second.Token == first.Token {
-		t.Fatalf("second joined the first: %v %v", joined, err)
-	}
-}
-
-// Another conversation, turn or run with the same words is another operation.
-func TestTheKeyScopesByRunConversationAndTurn(t *testing.T) {
-	dir := journalDir(t)
-	first, _, _ := Begin(dir, "api", scoped, Record{})
-	for _, other := range []Key{
-		{Epoch: "run1", Conversation: "c2", Turn: "t", Digest: "d"},
-		{Epoch: "run1", Conversation: "c", Turn: "t2", Digest: "d"},
-		{Epoch: "run1", Conversation: "c", Turn: "t", Digest: "d2"},
-		{Epoch: "run2", Conversation: "c", Turn: "t", Digest: "d"},
-	} {
-		record, joined, err := Begin(dir, "api", other, Record{})
-		if err != nil || joined || record.Token == first.Token {
-			t.Errorf("%+v joined %+v", other, scoped)
-		}
+	second, err := Begin(dir, "api", key, Record{})
+	if err != nil || second.Token == first.Token {
+		t.Fatalf("second joined the first: %v", err)
 	}
 }
 
 // A token names a record of its own run and nothing else.
 func TestATokenBelongsToItsRun(t *testing.T) {
 	dir := journalDir(t)
-	record, _, _ := Begin(dir, "api", scoped, Record{})
+	record, _ := Begin(dir, "api", key, Record{})
 	if _, err := Load(dir, "api", "run2", record.Token); !errors.Is(err, ErrUnknown) {
 		t.Fatalf("another run loads it: %v", err)
 	}
@@ -111,7 +51,7 @@ func TestATokenBelongsToItsRun(t *testing.T) {
 // the next in.
 func TestTheLockHoldsOneCallAtATime(t *testing.T) {
 	dir := journalDir(t)
-	record, _, _ := Begin(dir, "api", scoped, Record{})
+	record, _ := Begin(dir, "api", key, Record{})
 	release, err := Lock(context.Background(), dir, "api", "run1", record.Token)
 	if err != nil {
 		t.Fatal(err)
@@ -135,14 +75,14 @@ func TestTheLockHoldsOneCallAtATime(t *testing.T) {
 // answer.
 func TestUnresolvedFindsOpenOperations(t *testing.T) {
 	dir := journalDir(t)
-	tool, _, _ := Begin(dir, "api", scoped, Record{Transport: "test"})
-	tool.Created = time.Now().Add(-48 * time.Hour)
-	_ = Save(dir, "api", tool)
-	shell, _, _ := Begin(dir, "api", Key{Epoch: "run1", Digest: "d"}, Record{Transport: Shell})
-	finished, _, _ := Begin(dir, "api", Key{Epoch: "run1", Digest: "d"}, Record{Transport: Shell})
+	old, _ := Begin(dir, "api", key, Record{Transport: "test"})
+	old.Created = time.Now().Add(-48 * time.Hour)
+	_ = Save(dir, "api", old)
+	shell, _ := Begin(dir, "api", key, Record{Transport: Shell})
+	finished, _ := Begin(dir, "api", key, Record{Transport: Shell})
 	finished.Phase = Done
 	_ = Save(dir, "api", finished)
-	uncertain, _, _ := Begin(dir, "api", Key{Epoch: "run1", Digest: "d"}, Record{Transport: Shell})
+	uncertain, _ := Begin(dir, "api", key, Record{Transport: Shell})
 	uncertain.Phase, uncertain.Uncertain = Done, true
 	_ = Save(dir, "api", uncertain)
 	records, err := Unresolved(dir, "api", "run1", "d")
@@ -153,7 +93,7 @@ func TestUnresolvedFindsOpenOperations(t *testing.T) {
 	for _, record := range records {
 		found[record.Token] = true
 	}
-	if len(found) != 3 || !found[tool.Token] || !found[shell.Token] || !found[uncertain.Token] {
+	if len(found) != 3 || !found[old.Token] || !found[shell.Token] || !found[uncertain.Token] {
 		t.Fatalf("found %v", found)
 	}
 	journal, _ := Path(dir, "api", "run1")
@@ -166,50 +106,33 @@ func TestUnresolvedFindsOpenOperations(t *testing.T) {
 }
 
 // The sweep drops finished records and other runs' journals once old, and
-// keeps what a recovery still reads: an open record, and a read left in
-// progress.
+// keeps what a recovery still reads: an open record, and one whose effect is
+// unknown.
 func TestSweepKeepsWhatARecoveryReads(t *testing.T) {
 	dir := journalDir(t)
-	done, _, _ := Begin(dir, "api", scoped, Record{})
+	done, _ := Begin(dir, "api", key, Record{})
 	done.Phase = Done
 	_ = Save(dir, "api", done)
-	open, _, _ := Begin(dir, "api", Key{Epoch: "run1", Conversation: "c", Turn: "t", Digest: "open"}, Record{})
-	reading, _, _ := Begin(dir, "api", Key{Epoch: "run1", Conversation: "c", Turn: "t", Digest: "read"}, Record{})
-	reading.Phase = Done
-	reading.Read = &ReadBatch{Letters: []Letter{{ID: "m", Parts: []Part{{Start: 0, End: 1, Shown: []Shown{{CallID: "x"}}}, {Start: 1, End: 2}}}}}
-	_ = Save(dir, "api", reading)
-	other, _, _ := Begin(dir, "api", Key{Epoch: "run0", Digest: "d"}, Record{})
-
-	unread := func(string) bool { return true }
-	uncertain, _, _ := Begin(dir, "api", Key{Epoch: "run1", Conversation: "c", Turn: "t", Digest: "unknown"}, Record{})
+	open, _ := Begin(dir, "api", Key{Epoch: "run1", Digest: "open"}, Record{})
+	other, _ := Begin(dir, "api", Key{Epoch: "run0", Digest: "d"}, Record{})
+	uncertain, _ := Begin(dir, "api", Key{Epoch: "run1", Digest: "unknown"}, Record{})
 	uncertain.Phase, uncertain.Uncertain = Done, true
 	_ = Save(dir, "api", uncertain)
-	Sweep(dir, "api", "run1", time.Now().Add(-time.Hour), unread)
-	for _, token := range []string{done.Token, open.Token, reading.Token} {
+	Sweep(dir, "api", "run1", time.Now().Add(-time.Hour))
+	for _, token := range []string{done.Token, open.Token} {
 		if _, err := Load(dir, "api", "run1", token); err != nil {
 			t.Fatalf("a fresh record went: %v", err)
 		}
 	}
-	Sweep(dir, "api", "run1", time.Now().Add(time.Hour), unread)
+	Sweep(dir, "api", "run1", time.Now().Add(time.Hour))
 	if _, err := Load(dir, "api", "run1", done.Token); !errors.Is(err, ErrUnknown) {
 		t.Errorf("an old finished record stays: %v", err)
-	}
-	if again, joined, _ := Begin(dir, "api", scoped, Record{}); joined || again.Token == done.Token {
-		t.Error("the swept record's key still joins")
 	}
 	if _, err := Load(dir, "api", "run1", open.Token); err != nil {
 		t.Errorf("an open record went: %v", err)
 	}
-	if _, err := Load(dir, "api", "run1", reading.Token); err != nil {
-		t.Errorf("a read in progress went: %v", err)
-	}
 	if _, err := Load(dir, "api", "run1", uncertain.Token); err != nil {
 		t.Errorf("a record whose effect is unknown went: %v", err)
-	}
-	// A letter in progress that was read elsewhere is no longer in progress.
-	Sweep(dir, "api", "run1", time.Now().Add(time.Hour), func(string) bool { return false })
-	if _, err := Load(dir, "api", "run1", reading.Token); !errors.Is(err, ErrUnknown) {
-		t.Errorf("a read whose letter was read elsewhere stays: %v", err)
 	}
 	if _, err := Load(dir, "api", "run0", other.Token); !errors.Is(err, ErrUnknown) {
 		t.Errorf("another run's old journal stays: %v", err)
@@ -221,7 +144,7 @@ func TestSweepKeepsWhatARecoveryReads(t *testing.T) {
 // lock on a file removed under it takes the new one instead.
 func TestTheSweepRespectsAHeldLock(t *testing.T) {
 	dir := journalDir(t)
-	record, _, err := Begin(dir, "api", scoped, Record{})
+	record, err := Begin(dir, "api", key, Record{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -233,7 +156,7 @@ func TestTheSweepRespectsAHeldLock(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	Sweep(dir, "api", "run1", time.Now().Add(time.Hour), func(string) bool { return true })
+	Sweep(dir, "api", "run1", time.Now().Add(time.Hour))
 	if _, err := Load(dir, "api", "run1", record.Token); err != nil {
 		t.Fatalf("the sweep removed a held record: %v", err)
 	}

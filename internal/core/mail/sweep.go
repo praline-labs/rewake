@@ -93,7 +93,7 @@ func SweepFinishedLocked(dir, name, epoch string) {
 	sweepTurnRecords(dir, name, epoch, cutoff)
 	sweepMarks(dir, name, epoch)
 	// The receipts sweep their own records under their own locks.
-	receipt.Sweep(dir, name, epoch, cutoff, func(id string) bool { return stillUnread(dir, name, id) })
+	receipt.Sweep(dir, name, epoch, cutoff)
 }
 
 // reportStillAwaited says whether the letter at path is a report whose writer's
@@ -124,16 +124,6 @@ func reportStillAwaited(dir, name, path string) bool {
 		return true
 	}
 	return waiter.Epoch == letter.ToEpoch && slices.ContainsFunc(letter.InReplyTo, func(id string) bool { return slices.Contains(waiter.Messages, id) })
-}
-
-// stillUnread says whether a letter is still in unread/. A copy that cannot be
-// looked at is not proven gone.
-func stillUnread(dir, name, id string) bool {
-	if !safeID(id) {
-		return false
-	}
-	_, err := os.Stat(filepath.Join(state.UnreadPath(dir, name), id+".json"))
-	return !errors.Is(err, os.ErrNotExist)
 }
 
 // keepFinished is how long a delivered or refused message and its status are

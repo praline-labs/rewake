@@ -3,11 +3,9 @@ Package receipt is the journal of the mail operations a run performed through
 a journaled shell command (docs/archive/mail-bridge.md#receipts-retries-and-deadlines).
 
 An operation is journaled before it changes anything, and its record holds what
-it has done so far and what it answered. A repeated call finds the record by its
-key — the run, the native conversation and turn, and the digest of the
-normalized words — and a timed-out one by its token, so the effect happens once
-whatever the transport lost. Native call ids are not the key: a retry of the
-same words gets a new one.
+it has done so far and what it answered. rewake retry finds the record by its
+token, so the effect happens once whatever the call lost; a call with the same
+words finds the ones not settled by their digest.
 
 Records live beside the mailbox, one directory per run: a token names a record
 of this run and no other, so it cannot reach a replacement's.
@@ -33,30 +31,18 @@ import (
 )
 
 // Digest identifies a call's normalized words: the same words, the same
-// digest, which a key and the shell's search for an unsettled operation take.
+// digest, which the shell's search for an unsettled operation takes.
 func Digest(words []string) string {
 	encoded, _ := json.Marshal(words)
 	sum := sha256.Sum256(encoded)
 	return hex.EncodeToString(sum[:])
 }
 
-// Key scopes an operation. Two calls with the same key are one operation.
+// Key names the run and the words of an operation. A shell call knows no
+// native turn, so two calls with the same key are still two operations.
 type Key struct {
-	Epoch        string
-	Conversation string
-	Turn         string
-	Digest       string
-}
-
-// Scoped says whether the key can join a repeated call. A shell call knows no
-// native turn, so its operations are journaled but never joined by words.
-func (k Key) Scoped() bool {
-	return k.Epoch != "" && k.Conversation != "" && k.Turn != "" && k.Digest != ""
-}
-
-func (k Key) index() string {
-	sum := sha256.Sum256([]byte(k.Epoch + "\x00" + k.Conversation + "\x00" + k.Turn + "\x00" + k.Digest))
-	return "key-" + hex.EncodeToString(sum[:16])
+	Epoch  string
+	Digest string
 }
 
 // Phase is how far an operation got.
@@ -76,20 +62,13 @@ const (
 
 // Record is one operation.
 type Record struct {
-	Version      int      `json:"version"`
-	Token        string   `json:"token"`
-	Epoch        string   `json:"epoch"`
-	Conversation string   `json:"conversation,omitempty"`
-	Turn         string   `json:"turn,omitempty"`
-	Digest       string   `json:"digest"`
-	Words        []string `json:"words"`
-	Transport    string   `json:"transport"`
-	// TurnsNeverReused is the creating call's ticket's declaration: its
-	// transport never gives Turn to another turn.
-	TurnsNeverReused bool     `json:"turnsNeverReused,omitempty"`
-	Calls            []string `json:"calls,omitempty"`
-	CalledBoot       int64    `json:"calledBoot,omitempty"`
-	Phase            Phase    `json:"phase"`
+	Version   int      `json:"version"`
+	Token     string   `json:"token"`
+	Epoch     string   `json:"epoch"`
+	Digest    string   `json:"digest"`
+	Words     []string `json:"words"`
+	Transport string   `json:"transport"`
+	Phase     Phase    `json:"phase"`
 	// Uncertain marks a finished operation whose effect nobody can prove
 	// either way any more; it is kept while its run lives.
 	Uncertain bool      `json:"uncertain,omitempty"`
@@ -97,11 +76,9 @@ type Record struct {
 	Updated   time.Time `json:"updated"`
 	// Outcome is the answer of a finished operation, replayed to a repeat.
 	Outcome *Outcome `json:"outcome,omitempty"`
-	// Notify, Pending, Read and Output hold the steps of each kind.
+	// Notify and Pending hold the steps of each kind.
 	Notify  *NotifyStep  `json:"notify,omitempty"`
 	Pending *PendingStep `json:"pending,omitempty"`
-	Read    *ReadBatch   `json:"read,omitempty"`
-	Output  *FrozenText  `json:"output,omitempty"`
 }
 
 // version is the record format this build writes and reads.
@@ -167,56 +144,29 @@ func Path(dir, name, epoch string) (string, error) {
 
 func recordPath(journal, token string) string { return filepath.Join(journal, token+".json") }
 
-// Begin finds the record of a scoped key, or journals a new one from fresh.
-// It answers whether the record existed: a repeat joins the first call's.
-func Begin(dir, name string, key Key, fresh Record) (Record, bool, error) {
+// Begin journals a new record of key from fresh.
+func Begin(dir, name string, key Key, fresh Record) (Record, error) {
 	journal, err := Path(dir, name, key.Epoch)
 	if err != nil {
-		return Record{}, false, err
+		return Record{}, err
 	}
 	if err := state.EnsureSubdir(filepath.Dir(journal)); err != nil {
-		return Record{}, false, err
+		return Record{}, err
 	}
 	if err := state.EnsureSubdir(journal); err != nil {
-		return Record{}, false, err
-	}
-	if key.Scoped() {
-		if token, err := state.ReadFile(filepath.Join(journal, key.index())); err == nil {
-			record, err := Load(dir, name, key.Epoch, strings.TrimSpace(string(token)))
-			return record, err == nil, err
-		}
+		return Record{}, err
 	}
 	now := time.Now()
 	fresh.Version, fresh.Token, fresh.Phase, fresh.Created, fresh.Updated = version, newToken(), Open, now, now
-	fresh.Epoch, fresh.Conversation, fresh.Turn, fresh.Digest = key.Epoch, key.Conversation, key.Turn, key.Digest
+	fresh.Epoch, fresh.Digest = key.Epoch, key.Digest
 	encoded, err := json.Marshal(fresh)
 	if err != nil {
-		return Record{}, false, err
+		return Record{}, err
 	}
 	if err := state.PublishExclusive(recordPath(journal, fresh.Token), encoded); err != nil {
-		return Record{}, false, err
+		return Record{}, err
 	}
-	if !key.Scoped() {
-		return fresh, false, nil
-	}
-	// The index decides between two calls racing with the same key: the one
-	// whose link lands owns the operation, the other drops its record and
-	// joins.
-	err = state.PublishExclusive(filepath.Join(journal, key.index()), []byte(fresh.Token))
-	if errors.Is(err, state.ErrNameTaken) {
-		_ = state.Remove(recordPath(journal, fresh.Token))
-		token, readErr := state.ReadFile(filepath.Join(journal, key.index()))
-		if readErr != nil {
-			return Record{}, false, readErr
-		}
-		record, loadErr := Load(dir, name, key.Epoch, strings.TrimSpace(string(token)))
-		return record, loadErr == nil, loadErr
-	}
-	if err != nil {
-		_ = state.Remove(recordPath(journal, fresh.Token))
-		return Record{}, false, err
-	}
-	return fresh, false, nil
+	return fresh, nil
 }
 
 // Load reads a record of one run by its token.
@@ -275,11 +225,11 @@ func Lock(ctx context.Context, dir, name, epoch, token string) (func(), error) {
 	for {
 		file, err := state.OpenFile(path, os.O_CREATE|os.O_RDWR, 0o600)
 		if err != nil {
-			return nil, state.NoteReach(err)
+			return nil, err
 		}
 		if err := flock(ctx, file); err != nil {
 			_ = file.Close()
-			return nil, state.NoteReach(err)
+			return nil, err
 		}
 		same, err := samePath(file, path)
 		if same {
@@ -366,7 +316,7 @@ func Unresolved(dir, name, epoch, digest string) ([]Record, error) {
 		if err != nil {
 			return nil, err
 		}
-		if record.Digest != digest || record.Read != nil || record.Output != nil {
+		if record.Digest != digest {
 			continue
 		}
 		if record.Phase == Open || record.Uncertain {

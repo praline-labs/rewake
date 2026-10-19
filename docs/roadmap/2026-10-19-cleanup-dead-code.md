@@ -6,5 +6,5 @@ namespaces, `Descends`, `AllRoomDirs`, `SyncFile`) with their tests; the resume 
 adapter writes and its two checks in `rewake inbox`; `WithoutFlag`, `UnreadCopy`, `OnlyMessages`,
 `RecordPath`, `Session.Reachable`; the wrapper's note-gathering test and the delivery one covered
 by the workflow's `TestBatchArrival`; the lease rig's generated crash matrix. The lease rig's
-concurrent-launch race runs once per world, not three times. Open: the receipt's tool-only
-branches (batch 2) and the obsolete documents.
+concurrent-launch race runs once per world, not three times. The shell receipts keep `send
+--notify` and `pending` and lose the mail tool's keys, bindings, frozen reads and reach observer.

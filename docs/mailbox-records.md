@@ -26,11 +26,13 @@ reference for a reader of a mailbox, kept by hand.
 | `pending/marks/<run>/<time>` | a pending mark | a mark that says what its name says |
 | `once/<run>/<id>` | the publication mark of a heads-up published once (`mail.PublishOnce`); no report has one since October 18, 2026 | `intent` or `published` |
 | `threads/<id>` | a delivery thread | readable |
-| `receipts/<run>/.<token>.lock`, `key-*`, `<token>.json` | a call's receipt lock, key and receipt | nothing; a token; a receipt that says what its place says |
+| `receipts/<run>/.<token>.lock`, `<token>.json` | a call's receipt lock and receipt | nothing; a receipt that says what its place says |
 
 A file named `.tmp-*`, in any directory, is a write that never finished
 (`state.WriteAtomic`), never a record. A room's mailboxes made by an earlier build may
-still hold `stops/`, `decisions/`, `claims/` or `journal/resend-*`: no code reads them now.
+still hold `stops/`, `decisions/`, `claims/`, `journal/resend-*`, or the mail tool's
+`receipts/<run>/key-*` and `receipts/<run>/calls/`: no code reads them now, and an old run's
+receipts directory that holds them stays.
 An unfinished `journal/<op>` file is still looked at by the readers of a run's ends and windows
 (`JournalRecorded`, `HeldEndTaken`, `TurnWindowStart`, `LatestEnd`) and by retention, which take
 only its epoch, end and hold and ignore the rest; a room belongs to one build

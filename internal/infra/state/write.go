@@ -15,7 +15,7 @@ import (
 // before it is published and the directory after, so a crash cannot leave a
 // name pointing at bytes that were never written.
 func WriteAtomic(path string, data []byte) error {
-	return noteReach(writeAtomic(path, data, nil), true)
+	return writeAtomic(path, data, nil)
 }
 
 func writeAtomic(path string, data []byte, points Points) error {
@@ -185,5 +185,5 @@ func PublishExclusiveWith(path string, data []byte, points Points) error {
 
 // WriteAtomicWith is WriteAtomic told each of its points.
 func WriteAtomicWith(path string, data []byte, points Points) error {
-	return noteReach(writeAtomic(path, data, points), true)
+	return writeAtomic(path, data, points)
 }

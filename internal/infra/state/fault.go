@@ -45,7 +45,7 @@ func ReadFile(path string) ([]byte, error) {
 		return nil, err
 	}
 	data, err := os.ReadFile(path)
-	return data, noteReach(err, false)
+	return data, err
 }
 
 // ErrNotRegular is a read of a path that is no regular file: a link, a
@@ -63,7 +63,7 @@ func ReadRegular(path string, limit int64) ([]byte, error) {
 		return nil, err
 	}
 	data, err := readRegular(path, limit)
-	return data, noteReach(err, false)
+	return data, err
 }
 
 func readRegular(path string, limit int64) ([]byte, error) {
@@ -100,7 +100,7 @@ func Remove(path string) error {
 	if err := fault(OpRemove, path); err != nil {
 		return err
 	}
-	return noteReach(os.Remove(path), true)
+	return os.Remove(path)
 }
 
 // Rename moves a file of the state directory to another name in it.
@@ -111,7 +111,7 @@ func Rename(from, to string) error {
 	if err := fault(OpRename, to); err != nil {
 		return err
 	}
-	return noteReach(os.Rename(from, to), true)
+	return os.Rename(from, to)
 }
 
 // AskRead asks Fault about a read of the state directory that another package

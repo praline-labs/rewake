@@ -61,26 +61,20 @@ func journaled(ctx *Context, call Call, handler func(*Context, Call) error) erro
 	digest := receipt.Digest(words)
 	key := receipt.Key{Epoch: epoch, Digest: digest}
 	fresh := receipt.Record{Words: words, Transport: receipt.Shell}
-	// The same words in the same turn join their operation. Anything else
-	// first stops at one of an earlier call that is not settled.
-	_, found, err := receipt.Joined(dir, self.Name, key)
-	if err != nil {
-		return failf("could not read this run's receipts (%v), so whether these words began an operation that is not finished is unknown; nothing was done", err)
+	// A call first stops at an operation of an earlier call with these words
+	// that is not settled.
+	if err := unresolvedBefore(site, digest); err != nil {
+		return err
 	}
-	if !found {
-		if err := unresolvedBefore(site, digest); err != nil {
-			return err
-		}
-	}
-	record, joined, err := receipt.Begin(dir, self.Name, key, fresh)
+	record, err := receipt.Begin(dir, self.Name, key, fresh)
 	if err != nil {
 		return failf("could not journal the call, so it was not made: %v", err)
 	}
-	return runOperation(ctx, call, handler, site, record.Token, !joined)
+	return runOperation(ctx, call, handler, site, record.Token, true)
 }
 
 // unresolvedBefore stops a call whose words match an operation of this run
-// whose effect is not settled and which it does not join. It may be one that
+// whose effect is not settled. It may be one that
 // is running now, or an earlier call's that stopped short, or one whose effect
 // nobody can tell any more; the caller cannot tell which.
 // Doing it again beside that one is the outcome that cannot be taken back, so
@@ -140,7 +134,7 @@ func runOperation(ctx *Context, call Call, handler func(*Context, Call) error, s
 		saveErr = op.save()
 	} else {
 		// Done, or refused with its effect proven absent: either way the
-		// answer is final, and the same words in this turn get it again.
+		// answer is final, and rewake retry gets it again.
 		// A done answer whose record could not be written is still done:
 		// the record stays open, and finishing it changes nothing again.
 		op.record.Phase = receipt.Done
@@ -161,8 +155,8 @@ func runOperation(ctx *Context, call Call, handler func(*Context, Call) error, s
 	return nil
 }
 
-// replay prints the answer a finished operation gave, which is what a repeat
-// of its words gets: the effect happened once.
+// replay prints the answer a finished operation gave, which is what a retry
+// of its receipt gets: the effect happened once.
 func replay(ctx *Context, op *operation) error {
 	_ = op.save()
 	if step := op.record.Pending; step != nil && step.Marked && !inOwnTurn(op) {
