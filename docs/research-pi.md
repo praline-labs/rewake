@@ -230,6 +230,10 @@ the 1.3.0 package (`docs/cli.md`, `docs/security.md`, `docs/settings.md`, `dist/
   skills, prompts, themes, `pi install` packages (its `npm/`), `trust.json` and sessions. It
   does not move the npm cache (`~/.npm`) a package install uses, ambient credentials such as
   provider keys in the environment, or a user-level `~/.agents/skills`.
+- Adding to the bundled pi (owner decision, October 19, 2026): an extension is a file in
+  `<agent dir>/extensions/`, or a package installed with `PI_CODING_AGENT_DIR=<agent dir> pi
+  install npm:<package>`; a skill is a folder with a `SKILL.md` in `<agent dir>/skills/`. The
+  launch makes both folders when missing and touches nothing in them.
 - `PI_SKIP_VERSION_CHECK=1` stops pi offering its own update; rewake updates the copy.
 - A copy (fullscreen selection, `/copy`) goes through `copyToClipboard` (`dist/utils/clipboard.js`):
   on Linux `wl-copy` with `WAYLAND_DISPLAY`, `xclip`/`xsel` with `DISPLAY`; then on WSL OSC 52
