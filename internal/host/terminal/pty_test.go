@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime/debug"
+	"slices"
 	"syscall"
 	"testing"
 )
@@ -78,4 +79,20 @@ func TestAFailedOpenClosesWhatItOpened(t *testing.T) {
 		t.Fatalf("the failed open kept its master: no descriptor is free: %v", err)
 	}
 	_ = syscall.Close(fd)
+}
+
+// A locale with no UTF-8 gets LC_CTYPE=C.UTF-8 in place of its own; a UTF-8
+// one, or an LC_ALL the person set, stays as it is.
+func TestTheLocaleIsMadeUTF8(t *testing.T) {
+	for _, c := range []struct{ env, want []string }{
+		{[]string{"LANG=C", "LC_CTYPE=POSIX"}, []string{"LANG=C", "LC_CTYPE=C.UTF-8"}},
+		{[]string{"PATH=/bin"}, []string{"PATH=/bin", "LC_CTYPE=C.UTF-8"}},
+		{[]string{"LANG=en_US.UTF-8"}, []string{"LANG=en_US.UTF-8"}},
+		{[]string{"LANG=C", "LC_CTYPE=ru_RU.utf8"}, []string{"LANG=C", "LC_CTYPE=ru_RU.utf8"}},
+		{[]string{"LC_ALL=C"}, []string{"LC_ALL=C"}},
+	} {
+		if got := UTF8Locale(c.env); !slices.Equal(got, c.want) {
+			t.Errorf("%q became %q, want %q", c.env, got, c.want)
+		}
+	}
 }

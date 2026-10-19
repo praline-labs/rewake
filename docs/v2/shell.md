@@ -117,8 +117,10 @@ mode:
   over its logo; a host's grid drops the non-ASCII bytes of an OSC string before its emulator and
   keeps the title whole beside it for the preamble.
 - **The locale.** A program in the C locale draws a wide glyph as question marks, so a space host
-  gives its worker `LC_CTYPE=C.UTF-8` when the locale names no UTF-8 (`terminal.Environ`); main in
-  the shell gets only the shell's `TERM` and `COLORTERM`, and its locale as inherited.
+  gives its worker `LC_CTYPE=C.UTF-8` when the locale names no UTF-8 (`terminal.Environ`), and
+  main's wrapper in the shell does the same for main (`terminal.UTF8Locale`), whose workers
+  inherit it. Checked live October 19, 2026: under `LANG=C` main saw `LC_CTYPE=C.UTF-8`, under
+  `LANG=en_US.UTF-8` nothing added.
 
 ## Solid: registering the widget, room for a modal
 
