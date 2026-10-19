@@ -3,7 +3,7 @@
 // apart from the workers'; under them the hints for the current focus.
 import { TextAttributes } from "@opentui/core";
 import { For, Show } from "solid-js";
-import { type Context, hintsFor } from "./hints.ts";
+import { type Context, centring, hintsFor } from "./hints.ts";
 import { ink, inkOr, type Theme } from "./theme.ts";
 
 export type Tab = { id: string; label: string; main: boolean };
@@ -49,13 +49,25 @@ export function Bar(props: {
   );
 }
 
-export function Hints(props: { context: Context; theme: Theme; accent: string }) {
+export function Hints(props: { context: Context; width: number; theme: Theme; accent: string }) {
+  const hints = () => hintsFor(props.context);
   return (
     <text height={1} width="100%" wrapMode="none" fg={props.theme.text}>
-      <For each={hintsFor(props.context)}>
+      {(() => {
+        const lead = hints().lead;
+        return lead ? (
+          <>
+            {" "}
+            <b style={{ fg: props.accent }}>{lead.keys}</b>
+            {` ${lead.does}`}
+          </>
+        ) : null;
+      })()}
+      {centring(props.width, hints().lead, hints().rest)}
+      <For each={hints().rest}>
         {(h, i) => (
           <>
-            {i() > 0 ? "   " : " "}
+            {i() > 0 ? "   " : ""}
             <b style={{ fg: props.accent }}>{h.keys}</b>
             {` ${h.does}`}
           </>

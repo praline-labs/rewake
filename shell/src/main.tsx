@@ -324,6 +324,7 @@ function App() {
             zoomed: zoomed(),
             workers: workers().length,
           }}
+          width={dims().width}
           theme={theme}
           accent={focusedPane() === mainPane ? theme.main : theme.worker}
         />

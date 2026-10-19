@@ -16,6 +16,9 @@ export type Context = {
 export type Hint = { keys: string; does: string };
 
 type Entry = {
+  // lead is the hint pressed to the left edge, where the keys go; the
+  // others are centred in the rest of the line.
+  lead?: boolean;
   keys: string;
   does: string | ((c: Context) => string);
   when?: (c: Context) => boolean;
@@ -36,7 +39,7 @@ const table: Record<"prefix" | "main" | "worker", Entry[]> = {
     { keys: "other", does: "cancel" },
   ],
   main: [
-    { keys: "keys", does: "go to main" },
+    { lead: true, keys: "keys", does: "go to main" },
     { keys: "Ctrl+\\ →", does: "worker", when: hasWorkers },
     { keys: "Ctrl+\\ n/p", does: "next/previous", when: hasWorkers },
     { keys: "Ctrl+\\ z", does: (c) => (c.zoomed ? "end the zoom" : "zoom"), when: hasWorkers },
@@ -44,7 +47,7 @@ const table: Record<"prefix" | "main" | "worker", Entry[]> = {
     { keys: "Ctrl+\\", does: "the shell's commands", when: (c) => !hasWorkers(c) },
   ],
   worker: [
-    { keys: "keys", does: (c) => `go to ${c.name}` },
+    { lead: true, keys: "keys", does: (c) => `go to ${c.name}` },
     { keys: "Ctrl+\\ ←", does: "main" },
     { keys: "Ctrl+\\ n/p", does: "next/previous" },
     { keys: "Ctrl+\\ z", does: (c) => (c.zoomed ? "end the zoom" : "zoom") },
@@ -52,9 +55,24 @@ const table: Record<"prefix" | "main" | "worker", Entry[]> = {
   ],
 };
 
-export function hintsFor(c: Context): Hint[] {
-  const entries = c.prefix ? table.prefix : table[c.focus];
-  return entries
-    .filter((e) => !e.when || e.when(c))
-    .map((e) => ({ keys: e.keys, does: typeof e.does === "string" ? e.does : e.does(c) }));
+export function hintsFor(c: Context): { lead?: Hint; rest: Hint[] } {
+  const entries = (c.prefix ? table.prefix : table[c.focus]).filter((e) => !e.when || e.when(c));
+  const hint = (e: Entry) => ({
+    keys: e.keys,
+    does: typeof e.does === "string" ? e.does : e.does(c),
+  });
+  const lead = entries.find((e) => e.lead);
+  return { lead: lead && hint(lead), rest: entries.filter((e) => !e.lead).map(hint) };
+}
+
+const gap = "   ";
+const widthOf = (h: Hint) => [...h.keys].length + 1 + [...h.does].length;
+
+// centring is the spaces before the rest so it sits in the middle of what
+// the lead leaves; none when it does not fit, so the line is cut at its end.
+export function centring(width: number, lead: Hint | undefined, rest: Hint[]): string {
+  const used = lead ? 1 + widthOf(lead) : 0;
+  const need = rest.reduce((n, h) => n + widthOf(h), 0) + gap.length * Math.max(rest.length - 1, 0);
+  const pad = Math.floor((width - used - need) / 2);
+  return " ".repeat(Math.max(pad, lead ? gap.length : 1));
 }

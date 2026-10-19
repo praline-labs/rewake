@@ -210,7 +210,10 @@ rest, in the wide layout and the narrow one alike.
   seconds pass. A hint is a row of one table keyed by the context (main focused, a worker focused,
   the prefix waiting), kept by a `when` over the focus, the zoom and the number of workers; a new
   hint or a new context is a row there. The keys are drawn in the focused program's colour, the
-  words in the terminal's foreground; a line longer than the width is cut at its end.
+  words in the terminal's foreground. "keys go to <name>" is pressed to the left edge and the
+  other hints are centred in the rest of the width (the owner's wish, October 19, 2026); after
+  Ctrl+\\, with no such hint, they are centred in the whole width. A line longer than the width
+  starts at the left and is cut at its end.
 
 ## How rewake starts the shell, and how it ships
 
