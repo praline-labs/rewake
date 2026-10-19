@@ -22,7 +22,7 @@ func sendCommand(catalog adapter.Catalog) *Command {
 		Examples: sendExamples(catalog),
 		Next:     []string{"rewake inbox"},
 		Notes: []string{
-			"A task is the default: the session works and ends its turn, and its final message comes back to you as a \"Rewake: <session> finished\" line.",
+			"A task is the default: when a session sends it to a reporting worker, the worker's final message comes back as a \"Rewake: <session> finished\" line when it ends its turn. Main owes no successful report, and a plain shell has no mailbox for a reply: use --notify when no answer is required.",
 			"A question blocks until that final message and prints it; run a long one in the background.",
 			fmt.Sprintf("A notify waits up to %s to share one notice with other mail, and send waits with it; a task or a question is announced at once.", delivery.Coalescing.Cap),
 			"A verified main sees the answering session's state line above a question's answer; rewake list --help says what it holds.",

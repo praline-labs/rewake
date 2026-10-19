@@ -20,7 +20,7 @@ var jsonOption = Option{
 
 var globalOptions = []Option{
 	jsonOption,
-	{Flag: "--help", Summary: "Flags, examples and notes for one command."},
+	{Flag: "--help", Summary: "Flags, examples and notes for one command; -h is the same."},
 	{Flag: "--version", Summary: "The version and its build: revision, build or commit time, modified."},
 }
 
@@ -30,7 +30,7 @@ var globalOptions = []Option{
 // not guess that from a program's name, and does not run the program to ask.
 var commandOption = Option{
 	Flag: "--command", Value: "<program>",
-	Summary: "Start this program, a wrapper script that runs the harness, in place of the harness with the same arguments. A name is looked up on PATH, a path with a slash taken as given; it must be executable.",
+	Summary: "Before the harness word only. Start this program, a wrapper script that runs the harness, in place of the harness with the same arguments. A name is looked up on PATH, a path with a slash taken as given; it must be executable.",
 }
 
 // buildGroups builds the command table in guide order. Launch commands are
@@ -118,7 +118,7 @@ func buildGroups(catalog adapter.Catalog) []Group {
 					"--peek and --message exclude each other. A peek shows no bodies, even in JSON, and creates no read receipt or report obligation.",
 					"Mail an earlier run of your name was told of and never read is shown too, marked \"for an earlier run\" (earlierRun in --json); a task or a question in it owes no report, since its sender counts it lost.",
 					"--owed goes alone: after a context compaction, re-read your task there rather than from the summary. It shows only what you read; a last line counts what is still unread (unread in --json), which plain inbox reads. Refused for main, which owes no reports. A task from a plain shell owes none and is not listed.",
-					"--awaited goes alone, in any role; after a compaction, main runs it to see what it is still owed. Each message shows its id, kind, time, first line and state: not delivered yet, held, delivered and unread, read, pending, or stopped, with who stopped it — the keyboard, or a main by name. A recipient that ended owing a read task reads \"<name> ended; a resume of <name> in its conversation may still report\" for a day from the read: a resume under that name takes the task over, so do not resend it yet. After that day, once a new run of the name in another conversation swept it, for a task never read, or for a recipient replaced by a new run, it reads \"no report coming\". --json carries the full text. Only this run's tasks and questions are listed.",
+					"--awaited goes alone, in any role; after a compaction, main runs it to see what it is still owed. Each message shows its id, kind, time, first line and state: not delivered yet, held, delivered and unread, read, pending, or stopped, with who stopped it — the keyboard, or a main by name. A recipient that ended owing a task, never read, or replaced by a new run reads \"no report coming: <name> ended; check its saved work and give the task to a new worker\". --json carries the full text. Only this run's tasks and questions are listed.",
 					"Answer a task or a question by ending your turn with the result: the final message goes back to the sender by itself. Nothing else is answered.",
 					"A verified main sees the sender's state line above each of its messages; rewake list --help says what it holds.",
 				},
@@ -135,7 +135,7 @@ func buildGroups(catalog adapter.Catalog) []Group {
 				Notes: []string{
 					"Without it, the turn's end is the report and the sender stops waiting. Waiting on background work inside the turn beats both.",
 					"It marks only the turn it runs in, and only its normal end: a failed or stopped turn reports as usual.",
-					"Where the harness can continue a turn, an unmarked turn end after a pending one is held once to ask whether the work is done: still waiting — run rewake pending and end the turn; done — end the turn, and the answer already given goes into the report with what follows.",
+					"Neither shipped harness holds an unmarked end for confirmation: mark every normal turn that ends while still waiting; an unmarked normal end reports completion.",
 					"Refused outside a session; for main, whose turns go to nobody; and with no read task or question awaiting a report.",
 				},
 				Access:  changeForm,
@@ -200,8 +200,8 @@ func buildGroups(catalog adapter.Catalog) []Group {
 				Examples:       []string{"rewake answer worker 3f9a once", "rewake answer worker 3f9a session", "rewake answer worker 3f9a refuse \"not on this branch\"", "rewake answer worker 3f9a 2", "rewake answer worker 3f9a 1,3", "rewake answer worker 3f9a \"use the staging database\""},
 				Next:           []string{"rewake inbox"},
 				Notes: []string{
-					"A worker that asks for a permission or asks a question at its screen leaves main a notify: the tool and its input or the question, the choices, the deadline and this command. The request waits two minutes; a person at the worker's screen may answer first, and with no answer by the deadline the worker is refused and told to end with rewake pending.",
-					"A permission takes once (this call), session (this exact call for the rest of the worker's run) or refuse, with a reason after it that the worker's model reads. A question takes the numbers of its options, several as 1,3 where it allows several, or any other text as the answer typed under Other; with several questions, one quoted word each.",
+					"A worker that asks for a permission or asks a question at its screen leaves main a notify: the tool and its input or the question, the choices, the deadline and this command. The request waits two minutes; a person at the worker's screen may answer first, and with no answer by the deadline the worker is refused and told to end with rewake pending. The request bridge is Claude Code's; pi has none built in.",
+					"A permission takes once (this call), session (this exact call until the worker ends or its mod reloads) or refuse, with a reason after it that the worker's model reads. A question takes the numbers of its options, several as 1,3 where it allows several, or any other text as the answer typed under Other; with several questions, one quoted word each.",
 					"Only main answers. Waits up to 5 seconds for the worker to take the answer and up to 15 more for it to confirm; exit 0 taken; 1 refused (no such request, not a choice, answered first at the screen, past its deadline, not answering, another request in flight) or not confirmed; 2 a wrong call.",
 				},
 				Access:  changeForm,
@@ -236,16 +236,16 @@ const launchHelp = "Always main, in the room of the launch directory; refused wi
 // launchCommand builds the command that starts one harness.
 func launchCommand(h adapter.Harness) *Command {
 	notes := append([]string{}, h.Notes()...)
-	notes = append(notes, launchHelp, adapter.SettingsHelp, launch.Help)
+	notes = append(notes, "--command and --no-intro are rewake's only before the harness word; after it they reach the harness. --worktree[=<name>] is rewake's only after it: it makes a new checkout and branch, and =<name> names them.", launchHelp, adapter.SettingsHelp, launch.Help)
 	return &Command{
 		Name:           h.ID(),
 		Args:           "[" + h.ID() + " args...]",
 		MaxPositionals: Variadic,
 		Summary:        h.Summary(),
 		Options: append(directOptions(), commandOption,
-			Option{Flag: "--no-intro", Summary: "Do not add the system-layer briefing."},
+			Option{Flag: "--no-intro", Summary: "Before the harness word only. Do not add the system-layer briefing."},
 		),
-		Examples: h.Examples(),
+		Examples: append(h.Examples(), "rewake --command my-wrapper "+h.ID(), "rewake --no-intro "+h.ID()),
 		Next:     []string{"rewake list", "rewake send <name> \"text\""},
 		Notes:    notes,
 		Raw:      true,
@@ -262,9 +262,13 @@ func flow(catalog adapter.Catalog) []FlowStep {
 	steps := []FlowStep{}
 	last := ""
 	for _, h := range catalog.All() {
+		where := "in rewake's shell when on a terminal"
+		if !h.Offers().Spaces {
+			where = "without the shell or workers"
+		}
 		steps = append(steps, FlowStep{
 			Command: "rewake " + h.ID(),
-			Summary: fmt.Sprintf("Start %s as main-%s in the room of this directory, in rewake's shell when on a terminal; a second main here is refused.", h.Title(), h.ID()),
+			Summary: fmt.Sprintf("Start %s as main-%s in the room of this directory, %s; a second main here is refused.", h.Title(), h.ID(), where),
 		})
 		if !reportsTurns(h) || !h.Offers().Spaces {
 			continue
@@ -273,7 +277,7 @@ func flow(catalog adapter.Catalog) []FlowStep {
 			Command: fmt.Sprintf("rewake space open helper --harness %s --role %s", h.ID(), role.General.ID),
 			Summary: fmt.Sprintf("From main, raise the worker helper-%s with role %s in main's room; only main starts workers.", h.ID(), role.General.ID),
 		}, FlowStep{
-			Command: fmt.Sprintf("rewake send helper-%s \"pull and rerun the smoke\"", h.ID()),
+			Command: fmt.Sprintf("rewake send helper-%s \"rerun the smoke\"", h.ID()),
 			Summary: "Give that exact address a task; its report comes back when the turn ends.",
 		})
 		last = h.ID()
@@ -287,7 +291,7 @@ func flow(catalog adapter.Catalog) []FlowStep {
 	}
 	return append(steps,
 		FlowStep{
-			Command: "rewake edit 8d4ddd85 \"pull and rerun the full suite\"",
+			Command: "rewake edit 8d4ddd85 \"rerun the full suite\"",
 			Summary: "Replace an unread message of yours; rewake withdraw 8d4ddd85 takes it back instead.",
 		},
 		FlowStep{Command: "rewake list", Summary: "See who is running and can be reached."},
@@ -312,7 +316,7 @@ func notes() []Note {
 		},
 		{
 			Title: "A waiting message is announced, not pasted",
-			Body:  "A notice is one line, \"Rewake: <session> <kind>, <n> new message(s)\" — with a 🟢 in front where the harness shows plain text, a red circle for an error, yellow for a stopped turn — and a preview of the author's first line, about 100 columns; a task's or a question's preview ends with \"(a preview only: run rewake inbox)\", and the message is read with rewake inbox before any work on it. Ready mail is announced at once, starting or steering a turn, without waiting for a peek or a finished turn. Mail arriving within the first 150 ms joins the notice; later mail goes with the next, never into one already accepted. A notice's members are fixed, each keeping its own sender and obligation, and old unread mail is not announced again. rewake inbox --peek previews, --message <id> reads one, plain inbox reads all. Start every message and final reply with one line stating its point.",
+			Body:  "A notice is one line, \"Rewake: <session> <kind>, <n> new message(s)\" — and, for a batch, \"Rewake: <n> new messages\"; how it looks is the harness's — and a preview of the author's first line, about 100 columns; a task's or a question's preview ends with \"(a preview only: run rewake inbox)\", and the message is read with rewake inbox before any work on it. Ready mail is announced at once, starting or steering a turn, without waiting for a peek or a finished turn. Mail arriving within the first 150 ms joins the notice; later mail goes with the next, never into one already accepted. A notice's members are fixed, each keeping its own sender and obligation, and old unread mail is not announced again. rewake inbox --peek previews, --message <id> reads one, plain inbox reads all. Start every message and final reply with one line stating its point.",
 		},
 		{
 			Title: "Rewake's own lines mostly start with Rewake:",
