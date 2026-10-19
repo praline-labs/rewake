@@ -277,6 +277,19 @@ function App() {
     !wide() ? dims().width : p === mainPane ? dims().width - 1 - right() : right();
   // The panes leave the two bottom lines to the bar and the hints.
   const height = () => Math.max(dims().height - 2, 1);
+  // A pane sits in a box with a column of padding on each side, so the text
+  // does not touch the edge; the widget's size, and so the program's, is the
+  // inside. A press on the padding chooses the pane like one on its text.
+  const padded = (p: Pane) => ({
+    visible: shown(p),
+    width: widthOf(p),
+    height: height(),
+    paddingLeft: 1,
+    paddingRight: 1,
+    backgroundColor: seed.transparent ? undefined : theme.background,
+    onMouseDown: () => pressed(p.id),
+  });
+  const inner = (p: Pane) => Math.max(widthOf(p) - 2, 1);
   const focusedPane = () => paneOf(focused()) ?? mainPane;
   // The work is hidden as a whole under the closing layer, so a terminal
   // background the shell does not know never lets a pane show through.
@@ -284,27 +297,29 @@ function App() {
     <box width="100%" height="100%">
       <box flexDirection="column" width="100%" height="100%" visible={!closing()}>
         <box flexDirection="row" height={height()}>
-          <pane_terminal
-            id="main"
-            ref={(t: PaneTerminal) => startMainPane(t)}
-            visible={shown(mainPane)}
-            transparentBackground={seed.transparent}
-            width={widthOf(mainPane)}
-            height={height()}
-          />
+          <box {...padded(mainPane)}>
+            <pane_terminal
+              id="main"
+              ref={(t: PaneTerminal) => startMainPane(t)}
+              transparentBackground={seed.transparent}
+              width={inner(mainPane)}
+              height={height()}
+            />
+          </box>
           <Show when={wide()}>
             <box width={1} height={height()} backgroundColor="#444444" />
           </Show>
           <For each={workers()}>
             {(pane) => (
-              <pane_terminal
-                id={pane.id}
-                ref={(t: PaneTerminal) => startWorkerPane(pane, t)}
-                visible={shown(pane)}
-                transparentBackground={seed.transparent}
-                width={widthOf(pane)}
-                height={height()}
-              />
+              <box {...padded(pane)}>
+                <pane_terminal
+                  id={pane.id}
+                  ref={(t: PaneTerminal) => startWorkerPane(pane, t)}
+                  transparentBackground={seed.transparent}
+                  width={inner(pane)}
+                  height={height()}
+                />
+              </box>
             )}
           </For>
         </box>

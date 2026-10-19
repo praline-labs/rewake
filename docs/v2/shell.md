@@ -7,7 +7,8 @@ pane per program. Solid is the owner's choice of framework, the same day. No web
 is the one the owner approved for the host mode: from 120 columns, once a worker exists, main on
 the left and the chosen worker on the right, half of the width less a divider column, the
 narrower part when the width is odd; below 120 columns, with no worker, or zoomed, the focused
-program takes the whole width and the bar switches the window between main and the workers. The
+program takes the whole width and the bar switches the window between main and the workers. Each
+pane keeps a column of padding on both sides; the program's size is the width less two. The
 bar is a button per program and a line of key hints under it ([below](#the-bar)); a click on a
 button or in a pane focuses it. The prefix is Ctrl+\\, which no harness binds. The host mode was
 removed on October 19, 2026, deleted rather than archived (the owner's rule: what is no longer needed
