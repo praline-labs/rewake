@@ -312,8 +312,11 @@ acceptance documents.
   `@earendil-works/pi-coding-agent` in `dependencies` at the exact version the binary pins,
   so npm installs and updates it with rewake, and a launch starts that copy with `node`
   ([launch.md](launch.md#pi)). Claude Code is not shipped; its license leaves it to the person.
-- A non-npm alternative: `go install`, with pi installed beside the binary by hand
-  ([install.md](install.md#trying-20-beside-103)).
+- The shell ships in each platform build as `bin/rewake-shell`, compiled by Bun with its
+  runtime inside, about 99 MB; rewake finds it beside its own executable
+  ([shell.md](v2/shell.md#how-rewake-starts-the-shell-and-how-it-ships)).
+- A non-npm alternative: `go install`, with pi installed and the shell compiled beside the
+  binary by hand ([install.md](install.md#trying-20-beside-103)).
 - Owner decision, September 28, 2026: the repository lives in the GitHub
   organization `praline-labs`, the module path is `github.com/praline-labs/rewake`
   and the npm scope `@praline-labs` (the unscoped name `rewake` belongs to someone

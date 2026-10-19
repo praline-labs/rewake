@@ -114,7 +114,9 @@ func (g *gate) checkInstall(ctx context.Context) {
 		}
 	}
 	if ok {
-		g.shippedPi(ctx, filepath.Join(scratch, "this-machine", "lib", "node_modules"), scratch)
+		modules := filepath.Join(scratch, "this-machine", "lib", "node_modules")
+		g.shippedPi(ctx, modules, scratch)
+		g.installedShell(ctx, modules, p, scratch)
 	}
 	for _, other := range packages {
 		if other.platform == "" || other.platform == p.platform {

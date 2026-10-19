@@ -188,6 +188,9 @@ npm install --global @biomejs/biome@2.5.15
 lefthook install
 ```
 
+The release gate's `scripts/pack.sh` also needs [Bun](https://bun.sh), 1.4 or newer: it
+compiles the shell for each platform package.
+
 ### The stand-in API
 
 Until S8, October 8, 2026, `tools/standin` answered for the model API a Claude Code

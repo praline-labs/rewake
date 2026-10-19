@@ -27,7 +27,8 @@ restart, but does not establish inbox support under deliberate read-only permiss
 
 **To test how it will be installed.** `scripts/pack.sh [version]` builds the npm
 uploads into `dist/npm` — a build per platform plus the entry, all versions of the one
-package `@praline-labs/rewake` — and publishes nothing. The entry reaches its builds
+package `@praline-labs/rewake` — and publishes nothing. It needs [Bun](https://bun.sh), which
+compiles rewake's shell into each platform build beside the binary. The entry reaches its builds
 through `npm:` aliases, which npm resolves only against a registry: an install from the
 tarballs on disk would look for the builds on the public registry. So the install is
 tested by the release gate's dry run, which serves the release from a registry of its
@@ -37,7 +38,8 @@ own on the loopback interface and has npm install it there:
 go run ./tools/release 1.0.2
 ```
 
-It installs the entry globally into a scratch prefix and runs the command, installs each
+It installs the entry globally into a scratch prefix and runs the command and the shell beside
+the binary, installs each
 other build as npm would choose it for that cpu, and installs the entry with
 `--omit=optional` to see the command fail naming the reinstall. That last one goes into
 a project rather than globally: npm 11.17 installs a global package's optional
@@ -100,6 +102,19 @@ checkout changes it, run this line again with the new one, or the start of a pi 
 refuses, naming both versions. `REWAKE_PI=<pi package directory or entry script>` in the
 environment names another copy instead.
 
+**Once, for the shell: its executable.** The npm package carries rewake's shell compiled beside
+the binary; a build from the checkout has none, and `rewake2 --shell` refuses, naming where it
+looked. Compile it there with [Bun](https://bun.sh), from the checkout, and again when an update
+changes `shell/` (`bun-linux-arm64` on an arm64 machine):
+
+```bash
+(cd shell && bun install --frozen-lockfile && bun build.ts bun-linux-x64 ~/.local/share/rewake2/rewake-shell)
+```
+
+To run the shell from its sources instead, as you edit them, put
+`REWAKE_SHELL=<checkout>/shell/rewake-shell` in the environment: it names the shell to run in
+place of the one beside the binary.
+
 **Once, in the first pi session: `/login`.** rewake's pi keeps everything of its own —
 login, settings, extensions, skills, prompts, themes, models, packages, trust decisions,
 sessions — in `~/.config/rewake/pi/agent`, not in `~/.pi`: your own pi is neither read nor
@@ -154,9 +169,7 @@ From main, a worker can also be started without a terminal of your own: ask main
 space, and it runs `rewake space open api --harness claude` (or `--harness pi`); the worker
 `api-claude` joins the room and ends when main ends. To see its screen and answer what it asks,
 start main in rewake's shell, `rewake2 --shell --main claude`: from 120 columns the chosen worker
-shows beside main, and `Ctrl-\` then `n` or a digit chooses it. Until the shell ships in the
-packages it runs from a checkout of the repository with [Bun](https://bun.sh): `bun install` in
-its `shell/` once, and `REWAKE_SHELL=<checkout>/shell/rewake-shell` in the environment.
+shows beside main, and `Ctrl-\` then `n` or a digit chooses it.
 `rewake2 space list` shows the spaces and what they left.
 
 **Go back to 1.0.3.** End the 2.0 sessions as usual (`/exit` in each; a space's worker ends
@@ -246,10 +259,13 @@ Every release goes through the gate, `tools/release`:
    with `scripts/pack.sh`, checks each one's `package.json` and what
    `npm pack --dry-run --json` would upload against an allowlist in both directions,
    and wants the entry's `optionalDependencies` to be exactly the aliases to this
-   release's builds. It reads each platform binary's architecture, runs this machine's
+   release's builds. It reads the architecture of each platform binary and of the shell beside
+   it, runs this machine's
    binary for `--version` — the version, built from HEAD with no local changes — and has
    npm install the release from a registry it serves on the loopback interface: this
-   machine's build alone, whose command then runs, each other build alone for its cpu,
+   machine's build alone, whose command then runs, with the pinned pi beside it running
+   under node and the shell beside the binary drawing a main's output, each other build
+   alone for its cpu,
    and none with `--omit=optional`, whose command then fails naming the reinstall. It
    runs the shim's own tests, `go test ./scripts/`, too. A dry run goes on past a failed
    check, so one run shows every problem, and exits 1 when any failed.

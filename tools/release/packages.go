@@ -42,8 +42,8 @@ type pkg struct {
 // packages in the order they are published: the platform builds first, the
 // entry, which names them, last.
 var packages = []pkg{
-	{dir: "rewake-linux-x64", platform: "linux-x64", cpu: "x64", machine: elf.EM_X86_64, files: []string{"LICENSE", "bin/rewake", "package.json"}},
-	{dir: "rewake-linux-arm64", platform: "linux-arm64", cpu: "arm64", machine: elf.EM_AARCH64, files: []string{"LICENSE", "bin/rewake", "package.json"}},
+	{dir: "rewake-linux-x64", platform: "linux-x64", cpu: "x64", machine: elf.EM_X86_64, files: []string{"LICENSE", "bin/rewake", "bin/rewake-shell", "package.json"}},
+	{dir: "rewake-linux-arm64", platform: "linux-arm64", cpu: "arm64", machine: elf.EM_AARCH64, files: []string{"LICENSE", "bin/rewake", "bin/rewake-shell", "package.json"}},
 	{dir: "rewake", files: []string{"LICENSE", "README.md", "bin/rewake", "package.json"}},
 }
 
@@ -109,7 +109,8 @@ type packed struct {
 }
 
 // checkPackage checks one built upload: its manifest, what it would upload
-// and, for a platform build, the architecture of its binary.
+// and, for a platform build, the architecture of its executables: rewake and
+// the shell beside it.
 func (g *gate) checkPackage(ctx context.Context, p pkg) {
 	dir, ref := g.dist(p), p.ref(g.version)
 	raw, err := os.ReadFile(filepath.Join(dir, "package.json"))
@@ -146,11 +147,17 @@ func (g *gate) checkPackage(ctx context.Context, p pkg) {
 		g.pass("%s: uploads exactly %s, %s packed", ref, strings.Join(p.files, ", "), size(answer[0].Size))
 	}
 
-	if p.cpu != "" {
-		if err := checkMachine(filepath.Join(dir, "bin", "rewake"), p.machine); err != nil {
+	if p.cpu == "" {
+		return
+	}
+	for _, file := range p.files {
+		if !strings.HasPrefix(file, "bin/") {
+			continue
+		}
+		if err := checkMachine(filepath.Join(dir, file), p.machine); err != nil {
 			g.fail("%s: %v", ref, err)
 		} else {
-			g.pass("%s: bin/rewake is a 64-bit %s executable", ref, p.machine)
+			g.pass("%s: %s is a 64-bit %s executable", ref, file, p.machine)
 		}
 	}
 }
@@ -204,7 +211,7 @@ func manifestProblems(p pkg, m manifest, release string) []string {
 }
 
 // fileProblems compares what an upload would carry with its allowlist, both
-// ways, and requires its command to be executable.
+// ways, and requires everything under bin/ to be executable.
 func fileProblems(p pkg, answer packed) []string {
 	var problems []string
 	shipped := map[string]int{}
@@ -228,22 +235,25 @@ func fileProblems(p pkg, answer packed) []string {
 	if len(extra) > 0 {
 		problems = append(problems, "would upload files nobody declared: "+strings.Join(extra, ", "))
 	}
-	if mode, ok := shipped["bin/rewake"]; ok && mode&0o111 == 0 {
-		problems = append(problems, fmt.Sprintf("bin/rewake is not executable (mode %o)", mode))
+	for _, path := range slices.Sorted(maps.Keys(shipped)) {
+		if mode := shipped[path]; strings.HasPrefix(path, "bin/") && mode&0o111 == 0 {
+			problems = append(problems, fmt.Sprintf("%s is not executable (mode %o)", path, mode))
+		}
 	}
 	return problems
 }
 
-// checkMachine reads the binary's ELF header: a package whose binary was
+// checkMachine reads an executable's ELF header: a package whose binary was
 // built for the other architecture installs fine and then cannot run.
 func checkMachine(path string, want elf.Machine) error {
+	name := "bin/" + filepath.Base(path)
 	file, err := elf.Open(path)
 	if err != nil {
-		return fmt.Errorf("bin/rewake is no ELF executable: %w", err)
+		return fmt.Errorf("%s is no ELF executable: %w", name, err)
 	}
 	defer func() { _ = file.Close() }()
 	if file.Class != elf.ELFCLASS64 || file.Machine != want {
-		return fmt.Errorf("bin/rewake is built for %s %s, want %s", file.Class, file.Machine, want)
+		return fmt.Errorf("%s is built for %s %s, want %s", name, file.Class, file.Machine, want)
 	}
 	return nil
 }
