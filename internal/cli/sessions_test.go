@@ -41,6 +41,12 @@ func withoutLive(live []string, gone adapter.Capability) []string {
 // is alive, which is all the sender needs to accept a message.
 func liveSession(t *testing.T, name string) string {
 	t.Helper()
+	return liveSessionAs(t, name, "")
+}
+
+// liveSessionAs is liveSession in a role.
+func liveSessionAs(t *testing.T, name, role string) string {
+	t.Helper()
 	dir := t.TempDir()
 	if err := os.Chmod(dir, 0o700); err != nil {
 		t.Fatalf("chmod: %v", err)
@@ -62,6 +68,7 @@ func liveSession(t *testing.T, name string) string {
 	}
 	session := registry.Session{
 		Name:         name,
+		Role:         role,
 		Harness:      agentID,
 		ServicePID:   os.Getpid(),
 		ServiceStart: start,

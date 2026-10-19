@@ -15,7 +15,7 @@ from the code.
 | **harness** | Claude Code, pi, the ordinary program in the terminal | the session |
 | **agent** | the model inside the harness, calling `rewake send`, `rewake inbox`, `rewake whoami` from its shell | a turn at a time |
 | **sender** | any `rewake send` process: an agent's shell, a person's shell | until the status arrives |
-| **space host** | a detached `rewake` process `rewake space open` starts: owns a worker's terminal, watches main's run, ends the worker after it (A space, below) | as long as its worker and main |
+| **space host** | a detached `rewake` process `rewake space open` starts: owns a worker's terminal, watches main's run, ends the worker after it or when main closes the space (A space, below) | as long as its worker and main |
 | **turn boundary** | the harness's word that a turn ended, which its adapter in the wrapper hands the core; on Claude Code the mod says it (Act 5) | a moment |
 
 There is no daemon. Each wrapper services exactly one mailbox: its own
@@ -343,8 +343,12 @@ Without the shell the worker runs unseen.
 The space host reads main's run once a second. When it reads ended — main exited, crashed or
 its wrapper was killed — it sends the worker's process group SIGHUP, SIGTERM after a second and
 SIGKILL after five more, closes the record with what it saw — the worker ended, its checkout
-there or gone — and exits. A worker that ends by itself closes the space the same way. A
-checkout left behind is listed as kept by `rewake space list` until it is gone
+there or gone — and exits. A worker that ends by itself closes the space the same way, and so
+does one main closes with `rewake space close api`: the command moves the record to closing
+with main's reason, the space host sees it at its next tick and ends the worker by that
+sequence, and the command answers once the record is closed, within 20 s; what the worker still
+owed reads as lost in `--awaited`. A worker is never restarted in place: main closes it and
+opens a new space. A checkout left behind is listed as kept by `rewake space list` until it is gone
 ([space.md](rules/space.md)).
 
 The rest of the flow — a blocking question (Act 6), a notify (Act 7), the session's

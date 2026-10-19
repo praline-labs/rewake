@@ -14,18 +14,19 @@ import (
 
 // The spaces of a room (docs/rules/space.md): a worker main starts in a
 // terminal of its own, in main's room, living no longer than main's run, and
-// the record that stays after it. list is the view; open is main's change.
+// the record that stays after it. list is the view; open and close are
+// main's changes.
 // The person sees a worker's terminal in the shell (docs/v2/shell.md).
 
 func spaceGroup() Group {
 	return Group{
 		Title:   "SPACES",
-		Summary: "A space is a worker main starts with rewake space open: an ordinary session of main's room in a terminal of its own, which ends when main's run ends; its record stays after it closes.",
+		Summary: "A space is a worker main starts with rewake space open: an ordinary session of main's room in a terminal of its own, which ends when main closes it or main's run ends; its record stays after it closes.",
 		Commands: []*Command{workersCommand(), {
 			Name:           "space",
-			Args:           "list | open <name> (--harness <id> | --alias <alias>) [options] [-- <harness args...>]",
+			Args:           "list | open <name> --alias <alias> [options] [-- <harness args...>] | close <name>",
 			MaxPositionals: Variadic,
-			Summary:        "List this room's spaces, or, from main, open one: start a worker that lives no longer than main's run.",
+			Summary:        "List this room's spaces, or, from main, open one — start a worker that lives no longer than main's run — or close one.",
 			Options: []Option{
 				{Flag: "--alias", Value: "<alias>", Summary: "open, required: the worker's template from rewake workers; supplies its harness, role, wrapper and arguments."},
 				{Flag: "--worktree", Summary: "open: start the worker in a new worktree, as the harness's own --worktree launch does; --worktree=<name> names it."},
@@ -37,6 +38,7 @@ func spaceGroup() Group {
 				"rewake space open api --alias claude-write -- --effort low",
 				"rewake space open api --alias claude-write --worktree=fix-login -- --permission-mode acceptEdits",
 				"rewake space open docs --alias claude-general --json",
+				"rewake space close api", "rewake space close api --json",
 			},
 			Next: []string{"rewake send <name>-<harness> \"text\""},
 			Notes: []string{
@@ -44,10 +46,11 @@ func spaceGroup() Group {
 				"open is main's: refused from any other role, and from a run whose spaces are not live. The worker is an ordinary launch of rewake in main's room whatever its checkout, named <name>-<harness>, started in main's working directory; the only way to start one, since a person's rewake <harness> is always main. Put the harness's flags — permission flags, a model — after --; the options before it belong to space open. rewake types nothing into the worker on its own: what it needs to start unattended goes there; the person types into it from main's shell, where main runs whenever it was started on a terminal, which shows each worker's terminal beside main's. rewake chooses the session id of a harness that takes one and keeps it in the record.",
 				"The worker runs in a pseudo-terminal of a space host, a rewake process detached from main and no descendant of it. The space host checks main's run once a second; once that run has ended — by /exit, a crash or a kill — it sends the worker's process group SIGHUP, then SIGTERM after a second, then SIGKILL after five more, records what it observed, and exits.",
 				"open answers once the worker's session is registered, within 30 seconds, or says why the space did not open — a worker that exited at once is named with the last line it wrote.",
+				"close is main's, for a space its own run opened: a worker is never switched or restarted in place; when another is needed, close it and open a new one from a template. close records the space closing with main's reason; its space host, within a second, ends the worker by the same sequence as at main's end and records what it observed. close answers once the space is over, within 20 seconds: closed, or kept with its checkout, which space list then shows. A task the worker still owed reads as lost in rewake inbox --awaited.",
 				"Each space shows its main, its worker's name, harness and role, the session id rewake chose for the worker's conversation (none for a harness that takes none), its checkout and branch. A closed space keeps them.",
 				"States: opening — the record is written, the worker not yet started; open — the worker runs; closing; closed — over, no checkout left; kept — over, its checkout left. A space not over whose main has ended reads \"main ended\"; one whose main cannot be told from here reads \"main unknown\".",
 				"A kept checkout is listed with what was found in it — changes, commits, a Git lock, or that it could not be looked at — and the Git commands that clear it once what is wanted is merged; each refuses rather than lose work. It stays listed until the checkout is gone, and one that cannot be looked at stays too. rewake removes none.",
-				"Exit 0 listed or opened; 1 the spaces could not be read, or the space did not open; 2 a wrong call — not main, no --alias or no such alias, a name that cannot be one.",
+				"Exit 0 listed, opened or closed; 1 the spaces could not be read, the space did not open, or did not close within the bound, or belongs to another run of main; 2 a wrong call — not main, no --alias or no such alias, a name that cannot be one, no open space of that name.",
 			},
 			Access:  spaceAccess,
 			Handler: handleSpace,
@@ -56,11 +59,11 @@ func spaceGroup() Group {
 }
 
 // spaceAccess classifies space by its verb: open writes the record and starts
-// the space host; list, and a verb the handler refuses, only answer.
-// spaceAccess makes open a change once it names a space; a bare open is
-// refused by the handler before anything is read.
+// the space host, close moves the record to closing; list, and a verb the
+// handler refuses, only answer. Open and close are changes once they name a
+// space; a bare one is refused by the handler before anything is read.
 func spaceAccess(call Call) access {
-	if len(call.Positionals) > 1 && call.Positionals[0] == "open" {
+	if len(call.Positionals) > 1 && (call.Positionals[0] == "open" || call.Positionals[0] == "close") {
 		return accessChange
 	}
 	return accessView
@@ -96,8 +99,10 @@ func handleSpace(ctx *Context, call Call) error {
 	switch {
 	case verb == "open":
 		return handleSpaceOpen(ctx, call)
+	case verb == "close":
+		return handleSpaceClose(ctx, call)
 	case verb != "list":
-		return &UsageError{Command: call.Command, Message: fmt.Sprintf("space needs list or open, got %q: rewake space list, or rewake space open api --alias <alias>.", verb)}
+		return &UsageError{Command: call.Command, Message: fmt.Sprintf("space needs list, open or close, got %q: rewake space list, rewake space open api --alias <alias>, or rewake space close api.", verb)}
 	case len(call.Positionals) > 1:
 		return &UsageError{Command: call.Command, Message: "space list takes no other argument."}
 	}

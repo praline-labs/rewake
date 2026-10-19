@@ -1,4 +1,4 @@
-# Rules: the first working space, SP1–SP9
+# Rules: the first working space, SP1–SP10
 
 What a space guarantees: a hosted worker, its record and its closing, in the
 wording of [stage4-space-steps.md](../v2/stage4-space-steps.md#rules-before-code), the
@@ -159,3 +159,16 @@ shell replaced the host mode: the socket serves the raw stream only, to the shel
   Tests:
   - `internal/infra/proc/lineage_test.go` `TestOutsideIsShownOnlyFromAWholeChain`
   - `internal/host/spacehost/host_test.go` `TestASpaceHostBelowMainStartsNoWorker`
+
+- **SP10. Main closes a space through its host.** Main's `rewake space close` ends only a space
+  its own run opened, and only by the record: it moves an open space to closing with main's
+  reason, and the space host, never main, ends the worker by SP1's sequence and closes the record
+  from what it observed, the reason kept. Main signals no process of the worker.
+
+  Held since October 19, 2026: the space host re-reads the record once a second, and one found
+  closing ends its watch with the record's reason; the command answers once the record is
+  closed or kept, within 20 s ([launch.md](../launch.md#a-space-for-a-worker)).
+  Tests:
+  - `internal/host/spacehost/close_main_test.go` `TestMainsCloseEndsTheWorkerThroughTheSpaceHost`
+  - `internal/cli/space_close_test.go` `TestSpaceCloseIsRefusedButForMainsOwnOpenSpace`
+  - `test/workflow/fixture_space_close_test.go` `TestFixtureSpaceClose`

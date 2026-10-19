@@ -124,10 +124,16 @@ func (h *host) start() error {
 			why += "; its last line: " + line
 		}
 	}
+	return h.finish(cmd.Process.Pid, reaped, why, stopping)
+}
+
+// finish ends the worker's process group and records the end it observed.
+// A space main closed is closing already, with main's reason.
+func (h *host) finish(pgid int, reaped <-chan struct{}, why string, times stopTimes) error {
 	if record, err := space.BeginClosing(h.spec.Dir, h.spec.ID, why); err == nil {
 		h.record = record
 	}
-	switch took := stopGroup(cmd.Process.Pid, reaped, stopping); took {
+	switch took := stopGroup(pgid, reaped, times); took {
 	case "":
 		// Not seen gone, so not seen to end: the record stays closing
 		// rather than claim an end nobody observed.
@@ -140,9 +146,9 @@ func (h *host) start() error {
 }
 
 // watch checks main's run once a second until it has ended, by whatever
-// cause, or the worker exits by itself; it fills the record's checkout once
-// the worker's session claims one. It says why the space closes, empty for a
-// worker that exited by itself.
+// cause, main closed the space, or the worker exits by itself; it fills the
+// record's checkout once the worker's session claims one. It says why the
+// space closes, empty for a worker that exited by itself.
 func (h *host) watch(reaped <-chan struct{}) string {
 	tick := time.NewTicker(time.Second)
 	defer tick.Stop()
@@ -151,6 +157,16 @@ func (h *host) watch(reaped <-chan struct{}) string {
 		case <-reaped:
 			return ""
 		case <-tick.C:
+		}
+		// rewake space close asks by the record alone: it moves the space to
+		// closing with its reason, and the ending is this host's, as at
+		// main's end. A record that does not read this time is read again
+		// at the next tick.
+		if record, err := space.Load(h.spec.Dir, h.spec.ID); err == nil {
+			h.record = record
+			if record.State == space.Closing {
+				return record.Closing
+			}
 		}
 		if space.MainRuns(h.record) == proc.IdentityEnded {
 			return "main's run ended"

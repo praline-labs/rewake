@@ -375,7 +375,19 @@ suite's subreaper, about one run in ten). A process whose leader thread is a zom
 one while another of its threads runs, as after `pthread_exit` of its first thread: taking it
 for one closed a space after the hangup with such a worker running (seen in review the same
 day). A group not seen gone, or a checkout that could not
-be looked for, leaves the record closing rather than record an end nobody saw. The view socket is
+be looked for, leaves the record closing rather than record an end nobody saw.
+
+Main closes a worker it raised with `rewake space close <name>`, built October 19, 2026: a
+worker is never switched or restarted in place, and when another one is needed main closes it
+and raises a new one from a template (the owner's decision that day); there is no restart verb.
+Close is a change, refused as a wrong call from any role but main and for a name no open space
+holds, and refused, exit 1, for a space another run of main opened or one still opening. It
+moves the record to closing with the reason "main closed it with rewake space close" and signals
+nothing itself: the space host re-reads the record at each tick of its watch, and one it finds
+closing ends the worker by the same sequence as at main's end, recording that reason with the
+signal that took. Close answers once the record is closed or kept, at most 20 s, and says so
+otherwise; a kept checkout follows SP7. A task the worker still owed reads as lost in main's
+`rewake inbox --awaited`, as any ended worker's does. The view socket is
 listened on before the worker starts; an open that cannot serve it is refused. Its standard streams are `/dev/null`: what goes wrong shows in
 the record's end or as the open's timeout.
 

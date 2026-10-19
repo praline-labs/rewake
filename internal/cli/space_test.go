@@ -121,7 +121,7 @@ func TestSpaceListShowsOpenClosedAndKept(t *testing.T) {
 	if _, out, _ := run("space", "list"); strings.Contains(out, "kept checkout") || !strings.Contains(out, "kept    kept") {
 		t.Fatalf("a kept checkout removed by hand:\n%s", out)
 	}
-	if code, _, errOut := run("space", "close"); code != ExitUsage || !strings.Contains(errOut, "space needs list") {
+	if code, _, errOut := run("space", "restart"); code != ExitUsage || !strings.Contains(errOut, "space needs list") {
 		t.Fatalf("a verb list does not know: %d %q", code, errOut)
 	}
 }
