@@ -40,6 +40,23 @@ function endedOf(listing: Listing): string[] {
     .map((s) => s.id);
 }
 
+// readListing is the room's listing, or undefined when it does not read.
+async function readListing(rewake: string, room: string): Promise<Listing | undefined> {
+  try {
+    const child = Bun.spawn([rewake, "space", "list", "--json"], {
+      env: { ...(process.env as Record<string, string>), REWAKE_ROOM: room },
+      stdout: "pipe",
+      stderr: "ignore",
+      stdin: "ignore",
+    });
+    const text = await new Response(child.stdout).text();
+    if ((await child.exited) === 0) return JSON.parse(text);
+  } catch {
+    // Read as no listing.
+  }
+  return undefined;
+}
+
 // pollRoom calls onSpaces with each listing that reads; a failed read keeps
 // the last. It returns the stop.
 export function pollRoom(
@@ -49,26 +66,9 @@ export function pollRoom(
 ): () => void {
   let stopped = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
-  const env: Record<string, string> = {
-    ...(process.env as Record<string, string>),
-    REWAKE_ROOM: room,
-  };
   const once = async () => {
-    try {
-      const child = Bun.spawn([rewake, "space", "list", "--json"], {
-        env,
-        stdout: "pipe",
-        stderr: "ignore",
-        stdin: "ignore",
-      });
-      const text = await new Response(child.stdout).text();
-      if ((await child.exited) === 0 && !stopped) {
-        const listing = JSON.parse(text);
-        onSpaces(spacesOf(listing), endedOf(listing));
-      }
-    } catch {
-      // The next poll tries again.
-    }
+    const listing = await readListing(rewake, room);
+    if (listing && !stopped) onSpaces(spacesOf(listing), endedOf(listing));
     if (!stopped) timer = setTimeout(once, every);
   };
   void once();
@@ -76,4 +76,22 @@ export function pollRoom(
     stopped = true;
     clearTimeout(timer);
   };
+}
+
+// spacesOver resolves once none of the spaces ids is open or closing in the
+// room's listing — each worker ended by its host after main's run ended — or
+// once bound passes: a space host takes up to about nine seconds to end a
+// worker that ignores its hangup and SIGTERM.
+export async function spacesOver(rewake: string, room: string, ids: string[], bound: number) {
+  const until = Date.now() + bound;
+  while (ids.length > 0 && Date.now() < until) {
+    const listing = await readListing(rewake, room);
+    // A listing that does not read shows nothing to wait for.
+    if (!listing) return;
+    const live = (listing.spaces ?? []).filter(
+      (s) => ids.includes(s.id) && (s.state === "open" || s.state === "closing"),
+    );
+    if (live.length === 0) return;
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  }
 }

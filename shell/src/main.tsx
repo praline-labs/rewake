@@ -17,7 +17,7 @@ import { Closing } from "./closing.tsx";
 import { askColors, keepDefaultForeground, seedOf } from "./colors.ts";
 import { endMain, tailText, watchTerminal } from "./ending.ts";
 import { type Command, prefixHandler } from "./keys.ts";
-import { pollRoom, type Space } from "./room.ts";
+import { pollRoom, type Space, spacesOver } from "./room.ts";
 import { Scanner } from "./scan.ts";
 import { connectWorker, type MainRun, type Source, startMain } from "./sources.ts";
 import { themeOf } from "./theme.ts";
@@ -86,6 +86,16 @@ const [prefixWaits, setPrefixWaits] = createSignal(false);
 // closing is set when main's end begins: from then until the shell exits the
 // screen is the closing layer alone, and the keys reach no program.
 const [closing, setClosing] = createSignal(false);
+// closingAt is when the closing layer began, so it is shown at least
+// closingShown before the shell exits.
+let closingAt = 0;
+const closingShown = 600;
+const workersBound = 10_000;
+function beginClosing() {
+  if (closing()) return;
+  closingAt = Date.now();
+  setClosing(true);
+}
 const allPanes = () => [mainPane, ...workers()];
 const paneOf = (id: string | undefined) => allPanes().find((p) => p.id === id);
 
@@ -190,7 +200,7 @@ function startWorkerPane(pane: Pane, term: PaneTerminal) {
 function takeSpaces(spaces: Space[], ended: string[]) {
   if (closing()) return;
   const was = workers();
-  if (was.some((p) => ended.includes(p.id))) return void setClosing(true);
+  if (was.some((p) => ended.includes(p.id))) return beginClosing();
   const next = spaces.map(
     (space) =>
       was.find((p) => p.id === space.id) ?? {
@@ -331,10 +341,21 @@ function App() {
 async function finish(code?: number, lost = false) {
   if (ending) return;
   ending = true;
-  if (!lost) setClosing(true);
+  if (!lost) beginClosing();
   stopRoom();
   for (const pane of workers()) pane.source?.close();
   if (main) code = await endMain(main.child, main.close);
+  // Main's process ends only after its screen has gone, and the shell's
+  // own end followed within milliseconds, so the layer was never drawn and
+  // the workers ended unseen after it. It stays until the workers the
+  // shell showed are over, and a minimum time.
+  if (!lost) {
+    const ids = workers().map((p) => p.id);
+    await Promise.all([
+      spacesOver(rewake, room, ids, workersBound),
+      new Promise((resolve) => setTimeout(resolve, closingAt + closingShown - Date.now())),
+    ]);
+  }
   renderer.destroy();
   await Promise.race([renderer.closed, new Promise((resolve) => setTimeout(resolve, 1000))]);
   if (code !== 0 && process.stderr.isTTY) {

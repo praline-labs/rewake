@@ -44,7 +44,19 @@ terminal in a pty; the owner checked step 1 on their own terminal the same day.
   when main's process ends, or when the shell ends itself on SIGTERM, SIGINT or SIGQUIT; not when
   the terminal is lost (a hangup, its input ended, the parent gone), with nowhere to draw. It is a
   layer over the work, as the modal will be, and the work underneath is hidden as one, so a
-  terminal background the shell does not know never lets a pane show through.
+  terminal background the shell does not know never lets a pane show through. Once main has
+  ended, the layer stays until every worker the shell showed reads closed in the room's listing
+  (polled every 200 ms, at most 10 s, the space host's own bounds for ending a worker), and at
+  least 600 ms. Measured live on October 19, 2026 (Claude Code 2.1.302 on a cheap model, one
+  worker, under a stand-in terminal): after `/exit`'s Enter, or the second Ctrl+C, Claude Code
+  leaves the alternate screen within 15 ms, and main's process, wrapper and all, exits 340–420 ms
+  later; the room's listing reads main's run ended only after that, and the worker reads closed
+  0.9–1.0 s after main's exit. The shell used to exit 30 ms after main, before a frame of the
+  layer was drawn, and the worker ended unseen; now the spinner shows from main's exit until
+  the worker is closed, about a second. Main leaving the alternate screen is not a sign of its
+  end: Ctrl+Z leaves it as well, and Claude Code then stays on "has been suspended" with its
+  process running — so for those 340–420 ms the pane shows Claude Code's last lines on its
+  ordinary screen.
 
 ## How a pane is fed: the raw stream
 
