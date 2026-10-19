@@ -3,14 +3,8 @@ package proc
 import (
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strconv"
-	"strings"
 )
-
-// ErrNotDescendant says a process is not below the one it was checked against.
-var ErrNotDescendant = errors.New("not a descendant")
 
 // Parent returns the parent of a process and the process's own start time,
 // read from one stat line so both describe the same process.
@@ -34,42 +28,13 @@ func (r Reader) Parent(pid int) (int, uint64, error) {
 	return parent, start, nil
 }
 
-// Descends says whether pid is ancestor itself or runs below it.
-//
-// The chain is walked through /proc, which a pid reused on the way could
-// bend: a process is never older than its parent, so a link whose parent
-// started after it is a pid that was taken again, and the walk refuses it
-// rather than follow a stranger.
-func (r Reader) Descends(pid, ancestor int) error {
-	child, childStart := pid, uint64(0)
-	for range 4096 {
-		parent, start, err := r.Parent(child)
-		if err != nil {
-			return fmt.Errorf("%w: cannot read process %d: %v", ErrNotDescendant, child, err)
-		}
-		if childStart != 0 && start > childStart {
-			return fmt.Errorf("%w: process %d started after its child", ErrNotDescendant, child)
-		}
-		if child == ancestor {
-			return nil
-		}
-		if parent <= 0 || parent == child {
-			return fmt.Errorf("%w: process %d does not run below %d", ErrNotDescendant, pid, ancestor)
-		}
-		child, childStart = parent, start
-	}
-	return fmt.Errorf("%w: the chain above process %d does not end", ErrNotDescendant, pid)
-}
-
 // ErrDescendant says a process runs below the one it was checked against.
 var ErrDescendant = errors.New("a descendant")
 
 // Outside shows that pid does not run below ancestor, from its chain of
 // parents read whole up to the first process: nil only when every link reads,
-// none is ancestor and none is a reused pid. Descends cannot answer this: it
-// reports a link it could not read as "not a descendant" too, which for a
-// process that must be shown outside is no evidence. ErrDescendant is a pid
-// below ancestor; any other error is a chain that could not be shown.
+// none is ancestor and none is a reused pid. ErrDescendant is a pid below
+// ancestor; any other error is a chain that could not be shown.
 func (r Reader) Outside(pid, ancestor int) error {
 	child, childStart := pid, uint64(0)
 	for range 4096 {
@@ -92,25 +57,4 @@ func (r Reader) Outside(pid, ancestor int) error {
 		child, childStart = parent, start
 	}
 	return fmt.Errorf("the chain above process %d does not end", pid)
-}
-
-// Namespaces names the mount, user and pid namespaces of a process. A
-// sandbox that confines a process with namespaces gives it other ones than
-// the processes outside it, and nothing it runs can take them off. The kernel
-// answers a link of another user's process with an empty name and no error;
-// that is a namespace not read, never one to compare.
-func (r Reader) Namespaces(pid string) (string, error) {
-	var names []string
-	for _, kind := range []string{"mnt", "user", "pid"} {
-		path := filepath.Join(r.Root, pid, "ns", kind)
-		link, err := os.Readlink(path)
-		if err != nil {
-			return "", err
-		}
-		if link == "" {
-			return "", &os.PathError{Op: "readlink", Path: path, Err: os.ErrPermission}
-		}
-		names = append(names, link)
-	}
-	return strings.Join(names, " "), nil
 }

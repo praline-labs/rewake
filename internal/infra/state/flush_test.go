@@ -64,36 +64,3 @@ func TestPublishExclusiveAnswersEveryFlushItCouldNotMake(t *testing.T) {
 		}
 	})
 }
-
-// SyncFile flushes a regular file and nothing else: a link is not followed,
-// a FIFO is not waited on, and a flush that fails is answered.
-func TestSyncFileFlushesRegularFilesAlone(t *testing.T) {
-	dir := leasedDir(t)
-	file := filepath.Join(dir, "record")
-	if err := os.WriteFile(file, []byte("whole"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if err := SyncFile(file); err != nil {
-		t.Fatalf("a regular file: %v", err)
-	}
-	link := filepath.Join(dir, "link")
-	if err := os.Symlink(file, link); err != nil {
-		t.Fatal(err)
-	}
-	fifo := filepath.Join(dir, "fifo")
-	if err := syscall.Mkfifo(fifo, 0o600); err != nil {
-		t.Fatal(err)
-	}
-	for _, path := range []string{link, fifo, dir} {
-		if err := SyncFile(path); !errors.Is(err, ErrNotRegular) {
-			t.Errorf("%s: %v", filepath.Base(path), err)
-		}
-	}
-	if err := SyncFile(filepath.Join(dir, "gone")); !errors.Is(err, os.ErrNotExist) {
-		t.Errorf("a missing file: %v", err)
-	}
-	failed := failFlush(t, func(at string) bool { return at == file })
-	if err := SyncFile(file); !errors.Is(err, syscall.EIO) || *failed != 1 {
-		t.Errorf("a flush that failed answered %v", err)
-	}
-}

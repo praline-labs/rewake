@@ -153,8 +153,6 @@ still takes no request of the mod.
   record with the worker never started and says why; the worker's wrapper is started only
   after it. The ancestry test the authority makes is unchanged.
   Tests:
-  - `internal/infra/proc/lineage_test.go` `TestDescendsWalksParentsToTheAncestor`
-  - `internal/infra/proc/lineage_test.go` `TestDescendsRefusesAReusedParent`
   - `internal/infra/proc/lineage_test.go` `TestOutsideIsShownOnlyFromAWholeChain`
   - `internal/host/spacehost/host_test.go` `TestASpaceHostBelowMainStartsNoWorker`
   - `internal/core/authority/decide_test.go` `TestAWrapperTakesADecisionOnlyFromBelow`
