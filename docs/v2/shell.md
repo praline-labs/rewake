@@ -88,12 +88,13 @@ mode:
 - **The host keeps answering the program's queries**, as it must while nobody is attached; the
   pane's widget answers too, so the shell drops what the widget sends with source `response`
   (the `onData` callback says which) for a host-fed pane — never for main's. What a host-fed
-  program hears is the host's answer: DA1, `CSI ? u`, OSC 10/11, DECRQM 2026 as known (reset, set inside a frame; October 19, 2026 — it was
-  "not recognized", and a program that asks before it draws then sent no synchronized output, so the
-  widget drew each piece of a frame: a fast, chaotic flicker of the cursor in a worker's pane. The
-  emulator itself draws at once and the bytes pass to the widget, which batches);
-  XTVERSION, kitty graphics and OSC 4 go unanswered. The spike's
-  widget answers more (XTVERSION as `libghostty`, a kitty graphics query, OSC 4); that is not
+  program hears is the host's answer: DA1, `CSI ? u`, OSC 10/11, XTVERSION as `libghostty`, DECRQM 2026 as known (reset, set inside a frame);
+  kitty graphics and OSC 4 go unanswered. A worker's flicker of the cursor (October 19, 2026) was
+  the missing XTVERSION answer: Claude Code sends its mode queries, DECRQM 2026 among them, only
+  after it hears a terminal's name, so it never asked and sent no synchronized output; the widget
+  then drew each piece of a frame, with the cursor hidden between `?25l` and `?25h`. The DECRQM
+  answer stays (not tried without it): the emulator draws at once and the bytes pass to the widget, which batches. The spike's
+  widget answers more (a kitty graphics query, OSC 4); that is not
   the host's set, and the widget is not made a second responder to make up for it.
 - Scrollback before the attach is not replayed: Claude Code runs fullscreen
   (`CLAUDE_CODE_NO_FLICKER=1`, which the claude adapter adds for a shell's main unless the person
