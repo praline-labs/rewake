@@ -107,7 +107,10 @@ pass the programs' bytes through.
   only parameter bytes) is held until it completes or 50 ms pass. So a lone Escape still goes
   out, and a key is never sent in two writes.
 - **The prefix is Ctrl+\\.** No harness binds it, and it was `rewake attach`'s detach key.
-  - The automaton matches the legacy byte `0x1c` and its CSI-u and modifyOtherKeys forms.
+  - The automaton matches the legacy byte `0x1c` and its CSI-u and modifyOtherKeys forms; the
+    CSI-u form with the lock keys' bits and an explicit press or repeat counts too.
+  - A key's release (the kitty protocol's event type 3) never cancels a pending prefix, and the
+    release of the prefix and of the key taken after it are the host's, never forwarded.
   - It never matches inside a bracketed paste.
   - A pending prefix lapses after 2 s.
 - **The commands after the prefix:**
@@ -138,9 +141,32 @@ pass the programs' bytes through.
   otherwise it goes bare.
 - **Focus events.** These go through when the program asked for them (1004).
 - **Keys.** All other input goes to the shown program unchanged.
-- **The kitty keyboard protocol.** The host does not push it on the person's terminal. Keys
-  arrive in the legacy form, which Claude Code handles today behind the space host's emulator.
-  Translating the kitty forms is a later step, done only if a harness needs it.
+- **The keyboard protocols, mirrored too** (found live by the owner, October 19, 2026: Shift+Enter
+  in Claude Code arrived as a plain Enter and sent the message). Every emulator keeps the
+  program's kitty keyboard flags — push `CSI > f u`, pop `CSI < n u`, set `CSI = f ; mode u` —
+  and its modifyOtherKeys level (`CSI > 4 ; n m`, reset by `CSI > 4 m` or `CSI > 4 n`), and
+  answers the query `CSI ? u` from them; the library knows neither. A program that hears no
+  answer falls back to legacy keys, which is what Claude Code did behind the emulator.
+  - The person's terminal gets the shown program's flags as one entry pushed over its own
+    stack, replaced by a pop and a push at a change or a switch, and its modifyOtherKeys level;
+    at the exit, and on every signal, the entry is popped only if pushed, so the person's shell
+    keeps its own, and modifyOtherKeys is reset to the terminal's setting. Keys then pass
+    unchanged, in the form the program asked for.
+  - One stack serves both screens of an emulator, where the protocol keeps one each: a program
+    that pushes before it takes the alternate screen keeps its keys.
+  - What a terminal without the protocol sends stays legacy: the program was told the protocol
+    is on, and Shift+Enter is Enter there, as before.
+  - Seen on October 19, 2026: Claude Code 2.1.302 asks `CSI ? u` with DA1 and, answered, pushes
+    5 (disambiguate, alternate keys) and sets modifyOtherKeys 2; unanswered it stays legacy. pi
+    1.2.0 pushes 7 (with event types) before it asks, and sets modifyOtherKeys 2 only unanswered.
+  - **Built and checked live, October 19, 2026, Claude Code 2.1.302 and pi 1.2.0**
+    (`internal/host/terminal/keyboard.go`, `internal/host/hostmode/kitty.go`): a script acting as
+    a kitty-capable terminal ran `rewake --host --main claude` on the cheapest model. The
+    terminal got 5 and modifyOtherKeys 2; `CSI 13;2u` made a new line in main's prompt and in a
+    Claude Code worker's; Enter ran main's `!rewake space open`; Ctrl+\\ n, 2 and m switched as
+    `CSI 92;5u`, with its release under pi's flags; a switch to pi gave 7 and modifyOtherKeys
+    reset, a new line in pi's editor too, and back to main 5 and 2 again. At the exit, on
+    SIGTERM and on SIGHUP, the terminal was left with no flags and modifyOtherKeys reset.
 
 ## Scrollback, selection, copy
 

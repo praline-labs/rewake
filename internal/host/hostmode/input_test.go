@@ -127,3 +127,25 @@ func TestAnUnknownKeyCancelsThePrefixAndMouseDoesNot(t *testing.T) {
 		t.Errorf("mouse between: sent %q, commands %q", sent, commands)
 	}
 }
+
+// Under the kitty keyboard protocol the prefix arrives as CSI u, with the
+// lock keys' bits when they are on and, with event types, an explicit press
+// and a release; the releases neither cancel the prefix nor reach the
+// program, and every other key event passes unchanged — Shift+Enter included.
+func TestThePrefixUnderTheKittyProtocol(t *testing.T) {
+	for _, keys := range []string{
+		"\x1b[92;5un",
+		"\x1b[92;133un",
+		"\x1b[92;5:1u\x1b[92;5:3un",
+		"\x1b[92;5u\x1b[92;5:3u\x1b[110u\x1b[110;1:3u",
+	} {
+		sent, commands := run("a\x1b[13;2u" + keys + "\x1b[13;2:3u")
+		if sent != "a\x1b[13;2u\x1b[13;2:3u" || commands != "n" {
+			t.Errorf("%q: sent %q, commands %q; want Shift+Enter's press and release, and n", keys, sent, commands)
+		}
+	}
+	// The prefix twice sends the second press; Ctrl+Shift+\ is no prefix.
+	if sent, commands := run("\x1b[92;5u\x1b[92;5u\x1b[92;6u"); sent != "\x1b[92;5u\x1b[92;6u" || commands != "" {
+		t.Errorf("sent %q, commands %q", sent, commands)
+	}
+}

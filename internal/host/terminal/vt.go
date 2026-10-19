@@ -23,6 +23,8 @@ type vtEmulator struct {
 	// modes are kept from the mode callbacks, which run inside write, so
 	// they change only under the terminal's lock.
 	modes Modes
+	// kitty are the kitty keyboard flags saved by pushes (keyboard.go).
+	kitty []uint8
 	osc   oscFilter
 }
 
@@ -44,6 +46,7 @@ func newVT(size Size) (emulator, error) {
 	// A clipboard request is taken and dropped: there is no clipboard here
 	// to set, and none to read back to the program.
 	emu.RegisterOscHandler(52, func([]byte) bool { return true })
+	v.keyboard()
 	return v, nil
 }
 

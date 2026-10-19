@@ -53,6 +53,46 @@ func TestAnIndexedColorReachesTheTerminalAsAnIndex(t *testing.T) {
 	}
 }
 
+// The shown program's keyboard protocols reach the person's terminal: its
+// kitty flags as one entry pushed over the terminal's own, replaced at a
+// change, popped at the leave only when pushed, so the person's shell keeps
+// its own entry; modifyOtherKeys set and reset.
+func TestTheKeyboardProtocolsAreMirrored(t *testing.T) {
+	var out bytes.Buffer
+	c := NewCanvas(&out, []string{"TTY_FORCE=1", "TERM=xterm-256color"}, Size{Cols: 20, Rows: 3})
+	if err := c.Enter(); err != nil {
+		t.Fatal(err)
+	}
+	draw := func(m Modes) string {
+		out.Reset()
+		if err := c.Draw(Frame{Region: Size{Cols: 20, Rows: 2}, Modes: m}); err != nil {
+			t.Fatal(err)
+		}
+		return out.String()
+	}
+	if got := draw(Modes{KittyKeys: 5, ModifyOtherKeys: 2}); !strings.Contains(got, "\x1b[>5u") || !strings.Contains(got, "\x1b[>4;2m") || strings.Contains(got, "\x1b[<") {
+		t.Errorf("first: %q", got)
+	}
+	if got := draw(Modes{KittyKeys: 7}); !strings.Contains(got, "\x1b[<1u\x1b[>7u") || !strings.Contains(got, "\x1b[>4m") {
+		t.Errorf("switch: %q", got)
+	}
+	out.Reset()
+	if err := c.Leave(); err != nil {
+		t.Fatal(err)
+	}
+	if got := out.String(); strings.Count(got, "\x1b[<1u") != 1 {
+		t.Errorf("leaving with flags pushed: %q", got)
+	}
+	_ = draw(Modes{})
+	out.Reset()
+	if err := c.Leave(); err != nil {
+		t.Fatal(err)
+	}
+	if got := out.String(); strings.Contains(got, "\x1b[<") {
+		t.Errorf("leaving with nothing pushed popped: %q", got)
+	}
+}
+
 // A wide glyph's run is one cell over its columns; any other run a cell per
 // cluster, padded to its width.
 func TestRunsBecomeCellsByTheEmulatorsWidths(t *testing.T) {

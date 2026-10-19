@@ -17,9 +17,12 @@ const (
 	stringLimit = 4096
 )
 
-// The prefix in each form a terminal may send Ctrl+\ as: the legacy byte,
-// CSI u and xterm's modifyOtherKeys.
-var prefixes = [][]byte{{0x1c}, []byte("\x1b[92;5u"), []byte("\x1b[27;5;92~")}
+// The prefix in the forms a terminal may send Ctrl+\ as but the kitty
+// protocol's: the legacy byte and xterm's modifyOtherKeys.
+var prefixes = [][]byte{{0x1c}, []byte("\x1b[27;5;92~")}
+
+// prefixCode is the key code of the prefix's backslash.
+const prefixCode = '\\'
 
 var (
 	pasteStart = []byte("\x1b[200~")
@@ -54,6 +57,9 @@ type input struct {
 	pending   bool
 	pendingAt time.Time
 	paste     bool
+	// taken is the code of the last key the host took after the prefix in
+	// the CSI u form, whose release is the host's too.
+	taken int
 }
 
 // feed takes one read.
@@ -127,18 +133,31 @@ func (in *input) take(out []action, token []byte, now time.Time) []action {
 		return append(out, action{send: token})
 	}
 	if in.pending {
+		// A release, the prefix's own among them, leaves the prefix waiting.
+		if keyRelease(token) {
+			return out
+		}
 		in.pending = false
-		switch {
-		case isPrefix(token):
+		if isPrefix(token) {
 			return append(out, action{send: token})
-		case len(token) == 1 && commandKey(token[0]):
-			return append(out, action{command: token[0]})
+		}
+		in.taken = 0
+		if k, ok := parseKitty(token); ok {
+			in.taken = k.code
+		}
+		if c, ok := command(token); ok {
+			return append(out, action{command: c})
 		}
 		// Any other key cancels the prefix and is dropped.
 		return out
 	}
 	if isPrefix(token) {
 		in.pending, in.pendingAt = true, now
+		return out
+	}
+	if k, ok := parseKitty(token); ok && k.event == eventRelease && (k.code == prefixCode || k.code == in.taken) {
+		// The release of a key the host took is the host's, as its press was.
+		in.taken = 0
 		return out
 	}
 	return append(out, action{send: token})
@@ -157,13 +176,29 @@ func merge(actions []action) []action {
 	return out
 }
 
+// isPrefix says the token presses Ctrl+\ in any form: a repeat counts, as a
+// held key repeats the legacy byte.
 func isPrefix(token []byte) bool {
 	for _, p := range prefixes {
 		if bytes.Equal(token, p) {
 			return true
 		}
 	}
-	return false
+	k, ok := parseKitty(token)
+	return ok && k.code == prefixCode && k.mods == modCtrl && k.event != eventRelease
+}
+
+// command is the command key the token presses, as text or, under the kitty
+// protocol's report of all keys, as CSI u with no modifier.
+func command(token []byte) (byte, bool) {
+	if len(token) == 1 && commandKey(token[0]) {
+		return token[0], true
+	}
+	k, ok := parseKitty(token)
+	if !ok || k.mods != 0 || k.event == eventRelease || k.code > 0x7f || !commandKey(byte(k.code)) {
+		return 0, false
+	}
+	return byte(k.code), true
 }
 
 func commandKey(b byte) bool {

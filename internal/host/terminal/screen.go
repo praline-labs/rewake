@@ -106,6 +106,11 @@ type Modes struct {
 	MouseSGR bool `json:"mouseSgr,omitempty"`
 	// Focus is mode 1004: focus in and out reported.
 	Focus bool `json:"focus,omitempty"`
+	// KittyKeys are the kitty keyboard protocol's flags in force (CSI > u):
+	// 1 disambiguates, so Shift+Enter differs from Enter.
+	KittyKeys uint8 `json:"kittyKeys,omitempty"`
+	// ModifyOtherKeys is xterm's modifyOtherKeys level, 0 to 2.
+	ModifyOtherKeys uint8 `json:"modifyOtherKeys,omitempty"`
 	// AltScreen says the alternate screen is shown.
 	AltScreen bool `json:"altScreen,omitempty"`
 }
