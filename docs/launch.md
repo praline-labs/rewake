@@ -265,6 +265,12 @@ neither read nor changed. Beside the alias file, not in the state directory: it 
 person's, not a room's, and outlives a cleared temporary directory. A variable of the same
 name in the person's environment does not reach the run.
 
+The launch also makes `extensions/` and `skills/` in that directory (0700) when they are
+missing, so it is visible where a person's additions go, and leaves what is in them alone
+(a skills installer may already link into `skills/`). An extension is a file in `extensions/`,
+or `PI_CODING_AGENT_DIR=~/.config/rewake/pi/agent pi install npm:<package>`; a skill is a
+folder with a `SKILL.md` in `skills/` (owner decision, October 19, 2026).
+
 The adapter embeds `extension.ts` and its management module, writing both in the run
 directory. It adds `-e <extension.ts>` and, unless `--no-intro`, its briefing through the
 repeatable `--append-system-prompt`. `-e` adds rewake's extension to those pi finds: the

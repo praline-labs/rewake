@@ -165,6 +165,35 @@ func TestAnExistingAgentDirectoryIsMadePrivate(t *testing.T) {
 	}
 }
 
+// The folders a person adds extensions and skills to are made on a launch;
+// what a person already keeps there, a skills installer's link included, stays.
+func TestTheAgentDirectoryGetsExtensionsAndSkillsFolders(t *testing.T) {
+	request := launchRequest(t)
+	dir := filepath.Join(request.Dir, ".config", "rewake", "pi", "agent")
+	skills := filepath.Join(dir, "skills")
+	if err := os.MkdirAll(skills, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(skills, "mine")
+	if err := os.Symlink(request.Dir, link); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := (harness{}).Launch(request); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"extensions", "skills"} {
+		if info, err := os.Stat(filepath.Join(dir, name)); err != nil || !info.IsDir() {
+			t.Errorf("%s: %v, %v", name, info, err)
+		}
+	}
+	if info, err := os.Stat(filepath.Join(dir, "extensions")); err != nil || info.Mode().Perm() != 0o700 {
+		t.Errorf("extensions mode: %v, %v", info, err)
+	}
+	if got, err := os.Readlink(link); err != nil || got != request.Dir {
+		t.Errorf("the link in skills/: %q, %v", got, err)
+	}
+}
+
 // A project with its own resources would hold the run on pi's trust prompt
 // until a person answered; the launch trusts it unless its arguments decide.
 func TestPiTrustsTheProjectUnlessTheLaunchDecides(t *testing.T) {
