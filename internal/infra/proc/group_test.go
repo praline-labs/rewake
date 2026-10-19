@@ -7,7 +7,8 @@ import (
 )
 
 // A group is alive while any member is not a zombie, its leader gone or
-// not; a tree that cannot be listed holds one.
+// not, or a member's leader thread is one while another thread runs; a tree
+// that cannot be listed holds one.
 func TestAGroupLivesWhileAnyMemberIsNotAZombie(t *testing.T) {
 	stat := func(pid, group, state string) string {
 		return pid + " (sh (x)) " + state + " 1 " + group + " " + group + " 0\n"
@@ -22,14 +23,16 @@ func TestAGroupLivesWhileAnyMemberIsNotAZombie(t *testing.T) {
 		{"only zombies", map[string]string{"10": stat("10", "10", "Z"), "11": stat("11", "10", "Z")}, false},
 		{"a zombie leader and a sleeping child", map[string]string{"10": stat("10", "10", "Z"), "11": stat("11", "10", "S")}, true},
 		{"a group whose id is a prefix of another's", map[string]string{"12": stat("12", "100", "S")}, false},
+		{"a zombie leader thread with a running one", map[string]string{"10": stat("10", "10", "Z"), "10/task/10": stat("10", "10", "Z"), "10/task/13": stat("13", "10", "S")}, true},
+		{"a zombie whose threads all ended", map[string]string{"10": stat("10", "10", "Z"), "10/task/10": stat("10", "10", "Z")}, false},
 	}
 	for _, c := range cases {
 		root := t.TempDir()
-		for pid, line := range c.members {
-			if err := os.MkdirAll(filepath.Join(root, pid), 0o755); err != nil {
+		for dir, line := range c.members {
+			if err := os.MkdirAll(filepath.Join(root, dir), 0o755); err != nil {
 				t.Fatal(err)
 			}
-			if err := os.WriteFile(filepath.Join(root, pid, "stat"), []byte(line), 0o644); err != nil {
+			if err := os.WriteFile(filepath.Join(root, dir, "stat"), []byte(line), 0o644); err != nil {
 				t.Fatal(err)
 			}
 		}

@@ -67,7 +67,11 @@ func (r Reader) State(pid int) (string, error) {
 // statFields returns the fields of /proc/<pid>/stat that follow the command
 // name, which is the only part that can be split on spaces safely.
 func (r Reader) statFields(pid int) ([]string, error) {
-	raw, err := os.ReadFile(filepath.Join(r.Root, strconv.Itoa(pid), "stat"))
+	return fieldsAt(filepath.Join(r.Root, strconv.Itoa(pid), "stat"))
+}
+
+func fieldsAt(path string) ([]string, error) {
+	raw, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +79,7 @@ func (r Reader) statFields(pid int) ([]string, error) {
 	// contain spaces and parentheses, so fields are counted after the last one.
 	closeParen := strings.LastIndex(string(raw), ")")
 	if closeParen < 0 {
-		return nil, fmt.Errorf("unreadable stat line for pid %d", pid)
+		return nil, fmt.Errorf("unreadable stat line in %s", path)
 	}
 	return strings.Fields(string(raw)[closeParen+1:]), nil
 }
