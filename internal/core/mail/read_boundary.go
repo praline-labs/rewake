@@ -6,7 +6,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"slices"
 	"strconv"
 	"strings"
 	"syscall"
@@ -210,31 +209,6 @@ func ScopedWaiters(dir, name, epoch string, boundary *ReadBoundary) ([]Waiter, e
 		}
 	}
 	return selected, nil
-}
-
-// OnlyMessages narrows waiters to the messages in ids, each with its read
-// sequence and time: what a turn end's first attempt found owed is all its
-// retries answer, whatever was read since.
-func OnlyMessages(waiters []Waiter, ids []string) []Waiter {
-	var selected []Waiter
-	for _, waiter := range waiters {
-		var kept Waiter
-		kept.Name, kept.Epoch, kept.Since = waiter.Name, waiter.Epoch, waiter.Since
-		for i, id := range waiter.Messages {
-			if !slices.Contains(ids, id) {
-				continue
-			}
-			kept.Messages = append(kept.Messages, id)
-			if i < len(waiter.ReadSequences) {
-				kept.ReadSequences = append(kept.ReadSequences, waiter.ReadSequences[i])
-			}
-			kept.ReadAt = append(kept.ReadAt, waiter.readAt(i))
-		}
-		if len(kept.Messages) > 0 {
-			selected = append(selected, kept)
-		}
-	}
-	return selected
 }
 
 func readHigh(path string) ([]byte, error) {

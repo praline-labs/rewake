@@ -83,36 +83,6 @@ func PeekUnread(dir, name, epoch string) ([]Message, error) {
 	return mine, nil
 }
 
-// UnreadCopy is one letter of a run as unread/ holds it now, a withdrawn one as
-// its tombstone. It looks the letter up by itself, not through a listing that
-// passes over a file it cannot read: false says the letter is not unread, and
-// an error that it, or its status, could not be read. The caller holds the
-// mailbox lock.
-func UnreadCopy(dir, name, epoch, id string) (Message, bool, error) {
-	if !safeID(id) {
-		return Message{}, false, nil
-	}
-	raw, err := state.ReadFile(filepath.Join(state.UnreadPath(dir, name), id+".json"))
-	if errors.Is(err, os.ErrNotExist) {
-		return Message{}, false, nil
-	}
-	if err != nil {
-		return Message{}, false, err
-	}
-	var message Message
-	if err := json.Unmarshal(raw, &message); err != nil {
-		return Message{}, false, fmt.Errorf("the letter %s is not readable: %w", id, err)
-	}
-	if epoch != "" && message.ToEpoch != epoch {
-		return Message{}, false, nil
-	}
-	shown, err := asWithdrawn(dir, name, message)
-	if err != nil {
-		return Message{}, false, err
-	}
-	return shown, true, nil
-}
-
 // asWithdrawn shows a message its status calls withdrawn as its tombstone. A
 // withdrawal writes the status before the tombstone, and one that failed in
 // between leaves the original readable by hard link: its sender was told it

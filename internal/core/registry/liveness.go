@@ -16,11 +16,6 @@ var alive = proc.Alive
 // namespace reports the pid namespace of this process, replaceable in tests.
 var namespace = proc.Namespace
 
-// Reachable reports whether a session may still be sent to. It is not the same
-// question as Alive: a reader that cannot see the processes says yes, because
-// the wrapper that can see them is the one that will deliver.
-func (s Session) Reachable() bool { return s.Alive() }
-
 // Judgeable reports whether this reader can tell if the session is running.
 //
 // Only a reader in the same pid namespace can. A sandboxed agent runs its

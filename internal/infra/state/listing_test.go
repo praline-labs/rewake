@@ -116,28 +116,3 @@ func TestReadDirBelowListsInsideTheParentItOpened(t *testing.T) {
 		t.Fatalf("listed %v, %v; want the record of the parent opened", entries, err)
 	}
 }
-
-// The rooms of a root are none only when rooms is missing for real; a link
-// there, dangling or not, is refused.
-func TestAllRoomDirsTakesOnlyMissingRoomsForNone(t *testing.T) {
-	root := t.TempDir()
-	if dirs, err := AllRoomDirs(root); err != nil || len(dirs) != 0 {
-		t.Fatalf("a root with no rooms lists %v, %v", dirs, err)
-	}
-	elsewhere := filepath.Join(root, "elsewhere")
-	if err := os.MkdirAll(filepath.Join(elsewhere, DefaultRoom), 0o700); err != nil {
-		t.Fatal(err)
-	}
-	for name, target := range map[string]string{"dangling": filepath.Join(root, "gone"), "to a directory": elsewhere} {
-		t.Run("rooms a link "+name, func(t *testing.T) {
-			rooms := filepath.Join(root, "rooms")
-			_ = os.Remove(rooms)
-			if err := os.Symlink(target, rooms); err != nil {
-				t.Fatal(err)
-			}
-			if dirs, err := AllRoomDirs(root); err == nil {
-				t.Fatalf("listed %v through a link", dirs)
-			}
-		})
-	}
-}

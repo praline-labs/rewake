@@ -85,7 +85,7 @@ Tests:
 - `internal/host/room_context_test.go` `TestTheHarnessReceivesItsRoomAndDefaultGeneral`
 - `internal/host/room_context_test.go` `TestADeadMainDoesNotSelectAnImplicitMain`
 - `internal/host/room_context_test.go` `TestEachRoomHasItsOwnMain`
-- `internal/host/window_test.go` `TestWrapperGathersNotesApartIntoOneNotice`
+- `test/workflow/batch_arrival_test.go` `TestBatchArrival`
 - `internal/host/thread_test.go` `TestTheWrapperPinsDeliveryToTheHarnessThread`
 - `internal/host/thread_test.go` `TestTheWrapperPinsDeliveryToTheObservedThread`
 - `internal/host/launch/version_test.go` `TestAVersionBelowTheMinimumIsRefused`
