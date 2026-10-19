@@ -54,8 +54,10 @@ type Message struct {
 	// To is the receiving session.
 	To string `json:"to"`
 	// ToEpoch names the run of that session the message was written for. A name
-	// can be reused once its session ends, and mail addressed to the previous
-	// tenant must not be handed to the next one.
+	// can be reused once its session ends: mail for the previous tenant is not
+	// delivered to the next one, and a report goes to the run that is owed it.
+	// What an earlier run was told of and never read, the next run's inbox still
+	// shows, marked and owing nothing.
 	ToEpoch string `json:"toEpoch,omitempty"`
 	// FromEpoch names the run of the sending session, so an answer to it — a
 	// report that the receiver's turn ended — reaches that run and no other.
