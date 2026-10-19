@@ -39,25 +39,33 @@ stale text is fixed when met, never rewritten for tidiness.
 
 ## Checks
 
-While a step goes on, a commit needs to build and its touched packages to pass:
+Every commit runs the pre-commit hook of `lefthook.yml` over what it stages: a staged `.ts`
+or `.tsx` file goes through `biome check --write` (`biome.json`), a staged `.go` file through
+`golangci-lint fmt`, and then the module through `go build ./... && go vet ./...` and
+`golangci-lint run ./...`; what the formatters rewrite is staged again, and a finding stops the
+commit. The tools are binaries on `PATH`
+([docs/testing.md](docs/testing.md#before-a-publication-to-npm)), and `lefthook install` is run
+once per clone, which every linked worktree shares.
+
+While a step goes on, a commit also needs its touched packages to pass:
 
 ```bash
-go build ./... && go vet ./...
 env -u REWAKE_SESSION -u REWAKE_EPOCH -u REWAKE_DIR -u REWAKE_ROOM \
   go test ./<the packages touched>/...
 ```
 
-The last commit of a step, before it lands on `v2`:
+The last commit of a step, before it lands on `v2`, adds what the hook does not run:
 
 ```bash
-gofumpt -l $(go list -tags rewaketest -f '{{.Dir}}' ./...)   # empty; the module, not the tree
-golangci-lint run ./...         # config in .golangci.yml; golangci-lint fmt formats
 env -u REWAKE_SESSION -u REWAKE_EPOCH -u REWAKE_DIR -u REWAKE_ROOM \
   go test -race -shuffle=on -timeout 20m ./...
+(cd shell && bun install --frozen-lockfile && bun run check)   # when the shell changed
 ```
 
-and the workflow scenarios the change touches (below). A step is done when it works live
-and breaks no existing test. A red test is never somebody else's: everything in the working
+and the workflow scenarios the change touches (below). The mod's own tests run inside
+`go test ./internal/adapter/claude/` (`claude plugin test`). A commit made without the hook
+runs its checks by hand: `golangci-lint fmt` over the files it touched, `golangci-lint run
+./...` and `biome check .`. A step is done when it works live and breaks no existing test. A red test is never somebody else's: everything in the working
 tree belongs to the current work. `-p 4` when the process list shows no other heavy run,
 `-p 2` when one is going. Before a publication to npm the full set runs — every build
 variant, staticcheck, the tagged `-race` runs and the whole workflow suite

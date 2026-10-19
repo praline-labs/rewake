@@ -1,0 +1,31 @@
+# Checks on every commit, over what it stages. The tools are binaries on PATH
+# (docs/testing.md), so a linked worktree needs no install of its own; a tool
+# that is missing fails the commit rather than being skipped. Tests, the race
+# run and the workflow suite are not here: AGENTS.md, "Checks".
+pre-commit:
+  parallel: true
+  jobs:
+    - name: biome
+      glob: "*.{ts,tsx}"
+      exclude:
+        - "archive/**"
+        - "docs/archive/**"
+      run: biome check --write --no-errors-on-unmatched {staged_files}
+      stage_fixed: true
+
+    # Piped: the formatter rewrites the files the build and the linter read.
+    - name: go
+      glob: "*.go"
+      exclude:
+        - "archive/**"
+        - "docs/archive/**"
+      group:
+        piped: true
+        jobs:
+          - name: format
+            run: golangci-lint fmt {staged_files}
+            stage_fixed: true
+          - name: build and vet
+            run: go build ./... && go vet ./...
+          - name: lint
+            run: golangci-lint run ./...

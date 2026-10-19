@@ -107,11 +107,22 @@ The commands of a commit and of a step live in the [Checks section of
 AGENTS.md](../AGENTS.md#checks), which every agent session loads; the full set before a
 publication is [below](#before-a-publication-to-npm). Three levels, by the owner's
 decision of October 17, 2026: a commit while a step goes on builds, vets and passes the
-tests of the packages it touched; the last commit of a step, before it lands on `v2`, passes `gofumpt`, golangci-lint, one
+tests of the packages it touched; the last commit of a step, before it lands on `v2`, passes one
 `go test -race` over the whole tree and the workflow scenarios the change touches; the full
 set — every build variant, vet and staticcheck over each, the tagged `-race` runs and the whole
 workflow suite — runs only before a publication to npm. A step is
 done when it works live and breaks no existing test.
+Formatting and linting run on every commit, by the pre-commit hook (`lefthook.yml`), decided by
+the owner on October 19, 2026: Biome over the staged TypeScript, `golangci-lint fmt` over the
+staged Go, then `go build`, `go vet` and `golangci-lint run` over the module. A lint run after a
+change to the exported surface of a package many others import takes seconds more than one that
+finds its cache. `biome.json` sets the owner's style — spaces, indent 2, line width 100, double
+quotes, the recommended rules, imports organized — over the shell, the mod and pi's extension,
+leaving out the generated `protocol.gen.ts`, which stays as `tools/protogen` writes it. Its
+three overrides each name the files they need: the shell's `main.tsx` has no accessibility rule
+(OpenTUI has no accessibility tree or roles), the shell's escape-sequence parsers may write
+control characters in a regular expression, and the mod's test doubles may be `any`, standing in
+for the host's untyped objects.
 What follows is what their variables and flags do, and when each run is the right one.
 
 **Every `go test`** clears `REWAKE_SESSION`, `REWAKE_EPOCH`, `REWAKE_DIR` and
@@ -166,11 +177,15 @@ env -u REWAKE_SESSION -u REWAKE_EPOCH -u REWAKE_DIR -u REWAKE_ROOM \
   go test -race -shuffle=on -timeout 20m -tags rewaketest "${tagged_packages[@]}"
 ```
 
-Run the whole workflow suite as well. The tools install into `~/go/bin`, on `PATH`:
+Run the whole workflow suite as well. The tools install into `~/go/bin` and the active Node's
+global `bin`, both on `PATH`; the hook's two are pinned, and `lefthook install` runs once per clone:
 
 ```bash
 go install honnef.co/go/tools/cmd/staticcheck@latest mvdan.cc/gofumpt@latest \
   github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
+go install github.com/evilmartians/lefthook/v2@v2.2.2
+npm install --global @biomejs/biome@2.5.15
+lefthook install
 ```
 
 ### The stand-in API
