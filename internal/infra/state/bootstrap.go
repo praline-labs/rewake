@@ -12,9 +12,7 @@ import (
 // Bootstrap, CreateLeaseLock, OpenLeaseLock and WriteBuildRecord are the only
 // writes that work without one, and build.Acquire is their one caller: a test
 // over the module fails on any other reference to them, a function value
-// included. None of them notes a completed write for the shell's observation:
-// making a room or taking its lease is no mail operation, and a refused call
-// must not leave evidence that the state was written.
+// included.
 
 // Bootstrap makes the base, the root, the room and the room's sessions, inbox
 // and sock, each when missing, and verifies each that exists without repairing
@@ -68,13 +66,13 @@ func makeLevel(path string) error {
 			return err
 		}
 	} else if err != nil {
-		return noteReach(fmt.Errorf("could not read the state directory %s: %w", path, err), false)
+		return fmt.Errorf("could not read the state directory %s: %w", path, err)
 	}
 	if err := Verify(path); err != nil {
 		return err
 	}
 	if err := syncLevel(filepath.Dir(path)); err != nil {
-		return noteReach(fmt.Errorf("could not flush the state directory %s: %w", filepath.Dir(path), err), false)
+		return fmt.Errorf("could not flush the state directory %s: %w", filepath.Dir(path), err)
 	}
 	return nil
 }
@@ -88,7 +86,7 @@ func createLevel(path string) error {
 		return nil
 	}
 	if err != nil {
-		return noteReach(fmt.Errorf("could not create the state directory %s: %w", path, err), false)
+		return fmt.Errorf("could not create the state directory %s: %w", path, err)
 	}
 	return fault(OpWrite, path)
 }

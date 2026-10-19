@@ -100,7 +100,7 @@ func openLeaseFile(room string, create bool) (*os.File, error) {
 		return nil, fmt.Errorf("%w: %s", ErrNoLeaseLock, path)
 	}
 	if err != nil {
-		return nil, noteReach(fmt.Errorf("could not open the build lease of %s: %w", room, err), false)
+		return nil, fmt.Errorf("could not open the build lease of %s: %w", room, err)
 	}
 	return file, nil
 }
@@ -181,7 +181,7 @@ func (l *LeaseLock) lockBy(how int, deadline time.Time) error {
 			return nil
 		}
 		if err != syscall.EWOULDBLOCK && err != syscall.EINTR {
-			return noteReach(fmt.Errorf("could not lock the build lease of %s: %w", l.room, err), false)
+			return fmt.Errorf("could not lock the build lease of %s: %w", l.room, err)
 		}
 		if !time.Now().Before(deadline) {
 			return ErrLeaseBusy
@@ -213,7 +213,7 @@ func (l *LeaseLock) Unlock() error {
 	// Whether or not the unlock answers, the lock is no longer one to write by.
 	l.lose()
 	if err := syscall.Flock(int(l.file.Fd()), syscall.LOCK_UN); err != nil {
-		return noteReach(fmt.Errorf("could not unlock the build lease of %s: %w", l.room, err), false)
+		return fmt.Errorf("could not unlock the build lease of %s: %w", l.room, err)
 	}
 	return nil
 }

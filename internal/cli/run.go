@@ -11,7 +11,6 @@ import (
 	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/host/launch"
 	"github.com/praline-labs/rewake/internal/host/spacehost"
-	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // Run executes one invocation against the catalog the binary built and
@@ -24,8 +23,6 @@ func Run(catalog adapter.Catalog, argv []string, stdout, stderr io.Writer) int {
 	}
 	t := newTable(catalog)
 	ctx := &Context{Stdout: stdout, Stderr: stderr, table: t}
-	// What this invocation meets reaching the state is its own evidence.
-	state.ResetReach()
 
 	// Direct aliases expand before parsing, so the ordinary launch path sees
 	// only arguments. Keep the same set for workers and space open's --alias.
@@ -48,8 +45,7 @@ func Run(catalog adapter.Catalog, argv []string, stdout, stderr io.Writer) int {
 	}
 	ctx.JSON = result.Call.Switch("json")
 	class := formAccess(result)
-	// A refused lease is answered and nothing more: the shell's observation
-	// is a write of the room, and the call holds no lease to make it under.
+	// A refused lease is answered and nothing more.
 	return ctx.within(class, result.Call, func() int { return runParsed(ctx, result) }, func(err error) int {
 		return report(ctx, err)
 	})

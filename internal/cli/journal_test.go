@@ -83,7 +83,7 @@ func openOperation(t *testing.T, dir string, self registry.Session, words ...str
 		t.Fatal(err)
 	}
 	normal := testTable().normalized(result)
-	record, _, err := receipt.Begin(dir, self.Name, receipt.Key{Epoch: self.Epoch(), Digest: receipt.Digest(normal)},
+	record, err := receipt.Begin(dir, self.Name, receipt.Key{Epoch: self.Epoch(), Digest: receipt.Digest(normal)},
 		receipt.Record{Words: normal, Transport: receipt.Shell})
 	if err != nil {
 		t.Fatal(err)

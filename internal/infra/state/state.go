@@ -87,7 +87,7 @@ func verifyPresent(path string) error {
 	if _, err := os.Lstat(path); errors.Is(err, os.ErrNotExist) {
 		return nil
 	}
-	return noteReach(Verify(path), false)
+	return Verify(path)
 }
 
 // ensureDir creates a directory and refuses one that somebody else could write.
@@ -97,7 +97,7 @@ func ensureDir(path string) error {
 	if err := guard(OpWrite, path); err != nil {
 		return err
 	}
-	return noteReach(makeDir(path), false)
+	return makeDir(path)
 }
 
 func makeDir(path string) error {
@@ -214,7 +214,7 @@ func WithMailboxLockAt(ctx context.Context, mailbox string, fn func() error) err
 	path := filepath.Join(mailbox, ".lock")
 	file, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0o600)
 	if err != nil {
-		return &LockUnusableError{Err: noteReach(err, false)}
+		return &LockUnusableError{Err: err}
 	}
 	defer func() { _ = file.Close() }()
 
@@ -224,7 +224,7 @@ func WithMailboxLockAt(ctx context.Context, mailbox string, fn func() error) err
 			break
 		}
 		if err != syscall.EWOULDBLOCK && err != syscall.EINTR {
-			return &LockUnusableError{Err: noteReach(err, false)}
+			return &LockUnusableError{Err: err}
 		}
 		if !waited && LockWait != nil {
 			LockWait(mailbox)

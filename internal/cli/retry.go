@@ -8,23 +8,21 @@ import (
 )
 
 // retryCommand is retry, which finishes or shows again what a call with a
-// receipt began (docs/archive/mail-bridge.md#receipts-retries-and-deadlines). A tool
-// call that timed out, or whose answer the harness lost, leaves its receipt in
-// the answer it did give or in the refusal of the call that repeated it; this
-// is the one way back to that operation that cannot start a second one.
+// receipt began (docs/archive/mail-bridge.md#receipts-retries-and-deadlines). A call
+// that stopped short, or whose answer was lost, leaves its receipt in the answer
+// it did give or in the refusal of the call that repeated it; this is the one
+// way back to that operation that cannot start a second one.
 func retryCommand() *Command {
 	return &Command{
 		Name:           "retry",
 		Args:           "<receipt>",
 		MaxPositionals: 1,
-		Summary:        "Finish, or show again, what an earlier call with this receipt began: a heads-up, a pending mark, a decision, a read or a long output.",
+		Summary:        "Finish, or show again, what an earlier call with this receipt began: a heads-up or a pending mark.",
 		Options:        []Option{jsonOption},
 		Examples:       []string{"rewake retry 0123456789abcdef01234567", "rewake retry 0123456789abcdef01234567 --json"},
 		Notes: []string{
 			"A receipt belongs to the run that printed it and is kept for a day after its operation finished.",
 			"A finished heads-up or mark prints its answer again and does nothing more; an unfinished one takes its remaining steps, to the same letter id and the same recipient run as the first attempt.",
-			"A read shows again from its first part, the letters as the read froze them; they become read as its parts reach you. Letters that came since: rewake inbox --peek.",
-			"Through the rewake tool it finishes only what the tool's own words may do; a receipt of a shell call, such as a heads-up whose text came from stdin, is finished in the shell.",
 		},
 		Access:  changeForm,
 		Handler: handleRetry,
@@ -61,7 +59,7 @@ func handleRetry(ctx *Context, call Call) error {
 	}
 	handler := original.Call.Command.Handler
 	switch original.Call.Command.Name {
-	case "send", "pending", "decide":
+	case "send", "pending":
 	default:
 		return failf("the receipt %s is of %s, which has nothing to finish", token, original.Call.Command.Name)
 	}
