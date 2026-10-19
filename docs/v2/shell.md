@@ -157,14 +157,13 @@ mode:
 
 ## How rewake starts the shell, and how it ships
 
-- `rewake --shell claude [args]`, or an alias with `rewake = ["--shell"]`: the Go launcher refuses
+- `rewake --shell claude [args]`: the Go launcher refuses
   it, exit 2, for a role that opens no spaces and without a terminal on standard input and output,
   and execs the shell as
   `<shell> --room <room> -- <rewake> <its own arguments>` with `REWAKE_SHELL_MAIN=1`, so no rewake
   process stays between the person's terminal and the shell. The shell runs that command line on
   its pty; that launch, seeing the variable, takes it out of its environment and runs main
-  ([launch.md](../launch.md#the-shell)). An alias works unchanged: the same arguments expand it
-  again.
+  ([launch.md](../launch.md#the-shell)).
 - **Shipping.** The person has no Bun. `bun build --compile` with `@opentui/solid/bun-plugin`
   gives one executable with the runtime and OpenTUI's native library inside: built and run in the
   spike, 100 MB, 31 MB compressed. Bun is MIT, but the runtime it embeds carries JavaScriptCore,

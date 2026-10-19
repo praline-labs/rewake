@@ -24,22 +24,12 @@ func Run(catalog adapter.Catalog, argv []string, stdout, stderr io.Writer) int {
 	t := newTable(catalog)
 	ctx := &Context{Stdout: stdout, Stderr: stderr, table: t}
 
-	// Direct aliases expand before parsing, so the ordinary launch path sees
-	// only arguments. Keep the same set for workers and space open's --alias.
-	aliases := launch.Load()
-	ctx.aliases = aliases
-	for _, note := range aliases.Notes {
-		_, _ = fmt.Fprintln(stderr, "rewake: "+note)
-	}
-	expanded, err := aliases.ExpandConfigured(argv, catalog, t.launchFlagTakesValue, projectForbidden())
-	if err != nil {
-		return report(ctx, &UsageError{Message: err.Error()})
-	}
-
-	if err := t.singleProgram(expanded); err != nil {
+	if err := t.singleProgram(argv); err != nil {
 		return report(ctx, err)
 	}
-	result, err := t.parseKnowing(expanded, aliases.Names())
+	// An alias is no launch since October 19, 2026; a word naming one is
+	// refused with how main opens it instead.
+	result, err := t.parseKnowing(argv, func() []string { return ctx.launchAliases().Names() })
 	if err != nil {
 		return report(ctx, err)
 	}
@@ -199,8 +189,7 @@ func (t *table) guideModel(play *role.Playbook) map[string]any {
 
 // singleProgram refuses a launch line that names --command twice before the
 // harness word. A launch starts one program, and letting the last one win
-// would start something other than one of the two the person wrote. An
-// alias's copy is not counted: a typed --command replaces it during expansion.
+// would start something other than one of the two the person wrote.
 func (t *table) singleProgram(argv []string) error {
 	count := 0
 	var command *Command

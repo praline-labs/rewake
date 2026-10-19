@@ -197,8 +197,11 @@ Remove `~/.rewake2-worktrees` too once nothing in the checkouts there is wanted;
   harness that may run no shell commands cannot take part.
 - A main started in print mode (`claude -p`) gets no report: it exits before a worker's turn
   ends.
-- 2.0 reads the launch aliases of 1.0.3 (`~/.config/rewake/aliases.toml` and a project's
-  `.rewake.toml`) and writes nothing there; an alias that starts Codex fails as `codex` does.
+- Since October 19, 2026 the aliases (`~/.config/rewake/aliases.toml` and a project's
+  `.rewake.toml`) are only main's catalogue of workers, opened with `rewake space open
+  --alias`; a file of 1.0.3's form, with `rewake` lists or `main = true`, is refused naming
+  each field until rewritten ([launch-defaults.md](launch-defaults.md#the-worker-catalogue)).
+  rewake writes nothing there.
 
 ## Upgrading from 1.x
 

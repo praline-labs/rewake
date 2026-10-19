@@ -36,7 +36,7 @@ func documentedForms(launch string) []formCase {
 		{[]string{"list"}, view},
 		{[]string{"list", "--json"}, view},
 		{[]string{"workers"}, view},
-		{[]string{"workers", "--all", "--json"}, view},
+		{[]string{"workers", "--json"}, view},
 		{[]string{"whoami"}, view},
 		{[]string{"whoami", "--json"}, view},
 		{[]string{"inbox", "--owed"}, view},

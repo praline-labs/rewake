@@ -1,10 +1,12 @@
 package launch
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/pelletier/go-toml/v2"
 )
@@ -59,7 +61,16 @@ func (s *Set) read(path, description string, user bool) {
 	var file struct {
 		Alias map[string]Alias `toml:"alias"`
 	}
-	if err := toml.Unmarshal(raw, &file); err != nil {
+	decoder := toml.NewDecoder(bytes.NewReader(raw))
+	// A field rewake does not know is refused, not skipped: a silently
+	// ignored field is a worker that starts as something nobody wrote.
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&file); err != nil {
+		var strict *toml.StrictMissingError
+		if errors.As(err, &strict) {
+			s.unreadable(unknownFields(description, path, strict))
+			return
+		}
 		// Named, not skipped: a file that is there and unreadable is a
 		// mistake somebody wants to hear about.
 		var decode *toml.DecodeError
@@ -76,4 +87,55 @@ func (s *Set) read(path, description string, user bool) {
 		s.sources[name] = description
 		s.fromProject[name] = !user
 	}
+}
+
+// removedFields are the fields aliases lost on October 19, 2026, when they
+// became main's catalog of workers, each with what replaced it. A file
+// written before says which, so it is rewritten once rather than guessed at.
+var removedFields = map[string]string{
+	"rewake":       `the worker's role is role = "write" or "general"; the space names the worker and its room`,
+	"main":         "main is no alias: it is started with rewake <harness>",
+	"launch.apply": "model, effort and context always apply; flags that should not go in args",
+}
+
+// unknownFields names every field the file has that an alias does not, the
+// removed ones with what took their place.
+func unknownFields(description, path string, strict *toml.StrictMissingError) string {
+	var removed, unknown []string
+	for _, field := range strict.Errors {
+		key := field.Key()
+		dotted := strings.Join(key, ".")
+		line, _ := field.Position()
+		// A key here is alias.<name>.<field>; the field is what was removed.
+		why, gone := "", false
+		if len(key) > 2 && key[0] == "alias" {
+			why, gone = removedFields[strings.Join(key[2:], ".")]
+		}
+		if gone {
+			removed = append(removed, fmt.Sprintf("%s (line %d): %s", dotted, line, why))
+		} else {
+			unknown = append(unknown, fmt.Sprintf("%s (line %d)", dotted, line))
+		}
+	}
+	var parts []string
+	if len(removed) > 0 {
+		parts = append(parts, "fields removed when aliases became main's catalog of workers (October 19, 2026): "+strings.Join(removed, "; "))
+	}
+	if len(unknown) > 0 {
+		parts = append(parts, "fields an alias does not have: "+strings.Join(unknown, ", "))
+	}
+	return fmt.Sprintf("%s at %s has %s; rewrite it as rewake workers --help shows", description, path, strings.Join(parts, "; and "))
+}
+
+// Err refuses a catalog that could silently omit workers from an unreadable
+// file.
+func (s *Set) Err() error {
+	if len(s.problems) == 0 {
+		return nil
+	}
+	return errors.New(strings.Join(s.problems, "; "))
+}
+
+func (s *Set) unreadable(message string) {
+	s.problems = append(s.problems, message)
 }

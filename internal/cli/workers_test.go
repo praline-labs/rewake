@@ -27,38 +27,31 @@ func workerAliases(t *testing.T, text string) string {
 	return path
 }
 
-const workerAliasesExample = `[alias.agent-main]
+const workerAliasesExample = `[alias.agent-general]
 harness = "agent"
-rewake = ["--main", "--name", "main"]
-args = []
 
 [alias.agent-write]
 harness = "agent"
-rewake = ["--write", "--name", "write"]
+role = "write"
 args = []
 command = "agent-worker"
 `
 
-func TestWorkersOldFileAndReadOnlyModel(t *testing.T) {
+// An alias is no launch of its own: its name on the line is refused with how
+// main opens it.
+func TestAnAliasIsNoLaunch(t *testing.T) {
 	workerAliases(t, workerAliasesExample)
-	base := filepath.Join(t.TempDir(), "never-created")
-	t.Setenv(state.DirEnv, base)
-	t.Setenv(state.SessionEnv, "")
-	code, out, errOut := run("workers", "--json")
-	var view workersListing
-	if code != ExitOK || json.Unmarshal([]byte(out), &view) != nil || len(view.Workers) != 1 {
-		t.Fatalf("workers: %d %s %s", code, out, errOut)
+	code, _, errOut := run("agent-write")
+	if code != ExitUsage || !strings.Contains(errOut, "rewake space open <space> --alias agent-write") {
+		t.Fatalf("a direct alias launch: %d %s", code, errOut)
 	}
-	worker := view.Workers[0]
-	if worker.Name != "agent-write" || worker.Role != "write" || worker.Command != "agent-worker" || worker.Main {
-		t.Fatalf("old worker changed: %+v", worker)
-	}
-	code, out, errOut = run("workers", "--all", "--json")
-	if code != ExitOK || json.Unmarshal([]byte(out), &view) != nil || len(view.Workers) != 2 || !view.Workers[0].Main {
-		t.Fatalf("all workers: %d %s %s", code, out, errOut)
-	}
-	if _, err := os.Stat(base); !os.IsNotExist(err) {
-		t.Fatalf("workers touched state: %v", err)
+}
+
+func TestWorkersRefusesAnOldFile(t *testing.T) {
+	workerAliases(t, "[alias.lead]\nharness = \"agent\"\nmain = true\nrewake = [\"--main\"]\n")
+	code, _, errOut := run("workers")
+	if code != ExitUsage || !strings.Contains(errOut, "alias.lead.main (line 3)") || !strings.Contains(errOut, "alias.lead.rewake (line 4)") {
+		t.Fatalf("an old file: %d %s", code, errOut)
 	}
 }
 
@@ -76,40 +69,37 @@ func (workerSettingsHarness) Offers() adapter.Offer {
 	return adapter.Offer{Conversation: adapter.ConversationOffer{Flag: "--session-id"}}
 }
 
-func TestWorkersStructuredModel(t *testing.T) {
+func TestWorkersListsTheCatalogue(t *testing.T) {
 	workerAliases(t, workerAliasesExample+`
 description = "Small patch worker"
 [alias.agent-write.launch]
 model = "chosen"
 effort = "high"
 context = "large"
-[alias.marked]
-harness = "agent"
-main = true
-[alias.wrapper]
-harness = "agent"
-[alias.wrapper.launch]
-model = "wrapped"
-effort = "low"
-context = "small"
-apply = false
 `)
+	base := filepath.Join(t.TempDir(), "never-created")
+	t.Setenv(state.DirEnv, base)
+	t.Setenv(state.SessionEnv, "")
 	catalog := adapter.NewCatalog(workerSettingsHarness{})
 	code, out, errOut := runOn(catalog, "workers", "--json")
 	var view workersListing
 	if code != ExitOK || json.Unmarshal([]byte(out), &view) != nil || len(view.Workers) != 2 {
 		t.Fatalf("workers: %d %s %s", code, out, errOut)
 	}
-	worker, wrapper := view.Workers[0], view.Workers[1]
-	if worker.Description != "Small patch worker" || !worker.Model.Applied || !worker.Effort.Applied || worker.Context.Applied || worker.Context.Value != "large" {
-		t.Fatalf("structured worker: %+v", worker)
+	general, writer := view.Workers[0], view.Workers[1]
+	if general.Name != "agent-general" || general.Role != "general" || general.Command != "agent" || general.Model.Value != "" {
+		t.Fatalf("an alias with defaults: %+v", general)
 	}
-	if wrapper.Model.Value != "wrapped" || wrapper.Model.Applied || wrapper.Effort.Applied || wrapper.Context.Applied {
-		t.Fatalf("wrapper settings: %+v", wrapper)
+	if writer.Role != "write" || writer.Command != "agent-worker" || writer.Description != "Small patch worker" ||
+		!writer.Model.Applied || !writer.Effort.Applied || writer.Context.Applied || writer.Context.Value != "large" {
+		t.Fatalf("a structured worker: %+v", writer)
 	}
-	code, out, errOut = runOn(catalog, "workers", "--all")
-	if code != ExitOK || !strings.Contains(out, "[main]") || !strings.Contains(out, "(applied)") || !strings.Contains(out, "(shown only)") {
+	code, out, errOut = runOn(catalog, "workers")
+	if code != ExitOK || !strings.Contains(out, `model="chosen" (applied)`) || !strings.Contains(out, `context="large" (shown only)`) {
 		t.Fatalf("workers lines: %d %s %s", code, out, errOut)
+	}
+	if _, err := os.Stat(base); !os.IsNotExist(err) {
+		t.Fatalf("workers touched state: %v", err)
 	}
 }
 
@@ -121,20 +111,17 @@ func TestWorkersUnreadableFileRefuses(t *testing.T) {
 	}
 }
 
-func TestSpaceAliasUsesLaunchAndRejectsMain(t *testing.T) {
+func TestSpaceAliasUsesTheTemplate(t *testing.T) {
 	workerAliases(t, workerAliasesExample+`
 [alias.agent-write.launch]
 model = "chosen"
 effort = "high"
 context = "large"
-[alias.marked]
-harness = "agent"
-main = true
 `)
 	ctx := &Context{table: newTable(adapter.NewCatalog(workerSettingsHarness{}))}
 	for _, argv := range [][]string{
-		{"space", "open", "api", "--alias", "agent-main"},
-		{"space", "open", "api", "--alias", "marked", "--role", "write"},
+		{"space", "open", "api", "--alias", "nothing"},
+		{"space", "open", "api", "--alias", "agent-write", "--role", "main"},
 		{"space", "open", "api", "--alias", "agent-write", "--harness", "agent"},
 		{"space", "open", "api", "--alias", "agent-write", "--worktree="},
 	} {

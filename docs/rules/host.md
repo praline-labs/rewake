@@ -2,7 +2,7 @@
 
 The host is the wrapper a session runs under: its launch lifetime, the claim of its name,
 signals, availability, departure, the notices it sends, the delivery loop, its worktree,
-and the launch aliases
+and the worker aliases
 ([design.md](../v2/design.md#the-layout)). Its rules have no numbers of their own: they
 are the 1.x rules of [launch.md](../launch.md) and [delivery.md](../delivery.md) the
 wrapper carries, and each block below names the tests that hold them

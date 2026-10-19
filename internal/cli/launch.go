@@ -215,24 +215,6 @@ func roleOptions() []Option {
 	return options
 }
 
-// roleFlags are the flag names that choose a role. They are what a file
-// carried by a directory may not set: the role decides what a session sees and
-// what it may ask for, which is more than a working directory should decide
-// for whoever launches there.
-func roleFlags() []string {
-	var flags []string
-	for _, candidate := range role.All() {
-		flags = append(flags, candidate.ID)
-	}
-	return flags
-}
-
-// projectForbidden are the rewake flags an alias in a project file may not
-// set: the role flags, and the program a launch starts.
-func projectForbidden() []string {
-	return append(roleFlags(), launch.CommandFlag)
-}
-
 // roleSummary keeps the guide on the same catalog as launch flags and help.
 func roleSummary() string {
 	var descriptions []string

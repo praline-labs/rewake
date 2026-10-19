@@ -32,7 +32,7 @@ internal/adapter/claude/modhost/              the wrapper's end of the mod's pro
 internal/adapter/pi/                          launch arguments, embedded TypeScript extension and management, peer-checked socket for notices, settled ends, telemetry and control
 internal/adapter/fixture/                     the test harness behind rewaketest: a scripted program over a socket, every contract interface
 internal/host/                                wrapper: launch, signals, lifecycle
-internal/host/launch/                         a launch's host side: the run's environment, the version read before the claim, the bounded probe, the aliases a short name expands to
+internal/host/launch/                         a launch's host side: the run's environment, the version read before the claim, the bounded probe, the worker aliases main opens
 internal/host/delivery/                       the delivery server: the serving loop, notices and their batches, the coalescing window, outcomes and the sweep's lock
 internal/host/terminal/                       a program's pseudo-terminal by the standard library, whether a file is a terminal, the screen the program draws with its input modes, keyboard protocols and title, and the raw stream with its preamble for a late client, the one package the emulator library enters
 internal/host/spacehost/                      the space host: the worker's pseudo-terminal and screen, the space socket's raw stream for the shell
@@ -71,15 +71,15 @@ type Harness interface {
 }
 ```
 
-`SingleUseFlags` names the flags a harness takes at most once, so an alias and a typed
-flag for the same parameter replace rather than repeat each other. `Version` is the gate the host reads before the
+`SingleUseFlags` names the flags a harness takes at most once, so a worker alias's flag and
+one typed after `space open --` for the same parameter replace rather than repeat each other. `Version` is the gate the host reads before the
 claim, and `EnvNotInherited` the variables the host leaves out of `LaunchRequest.Env`.
 The optional `LaunchSettingsHarness` translates an alias's model and effort into harness
 flags; context never reaches it. The optional `Shipped` is a harness whose pinned copy is
 installed with rewake (pi): its `Locate` finds the copy and its runtime before the claim, the
 host holds the copy to `VersionGate.Pinned` and passes it to Launch as `LaunchRequest.Start`,
 which `Invocation` puts before the caller's arguments unless `--command` names another
-program. `host/launch` applies those before ordinary alias replacement,
+program. `host/launch` reads the worker aliases into templates, applying those settings,
 and builds a space's complete worker command, wrapper and fresh conversation id included.
 `test/launch` checks that command against every registered harness with and without a worktree.
 

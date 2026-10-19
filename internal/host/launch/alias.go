@@ -1,18 +1,21 @@
-// An alias turns a short name into the arguments of a launch.
+// An alias names a worker main can open: one name, one recorded launch.
 //
-// A launch that states a role, a name, a model and a configuration override is
-// long enough that people stop typing it and start approximating it, which is
-// how a session comes up as something other than what was meant. An alias is
-// the opposite of a guess: one name, one recorded set of arguments.
+// Since October 19, 2026 an alias is only main's catalog of workers
+// (docs/v2/worker-profile.md): `rewake space open <space> --alias <name>`
+// starts one, `rewake workers` lists them, and none is a launch of its own.
+// The space owns the worker's name and room; the alias says which harness,
+// which role, which program and which arguments.
 
 package launch
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 
 	"github.com/praline-labs/rewake/internal/adapter"
+	"github.com/praline-labs/rewake/internal/core/role"
 )
 
 // Where aliases are read from, weakest first. The project file wins because it
@@ -25,58 +28,58 @@ const (
 	projectFile = ".rewake.toml"
 )
 
-// Alias is one name's worth of launch.
-//
-// Three fields rather than one list, because the three are not interchangeable:
-// what rewake reads, which harness to start, and what that harness gets. A
-// single flat list would have to be cut at the harness name to know which flag
-// belongs to whom, and a person editing the file would have to know that rule.
+// Alias is one worker of the catalog.
 //
 // Lists rather than one string, throughout. A string would have to be split
 // into words, and splitting words means quoting rules — the part of this that
 // has broken twice before.
 type Alias struct {
-	// Harness is the launch command, by its id in the catalog.
+	// Harness is the worker's harness, by its id in the catalog.
 	Harness string `toml:"harness"`
-	// Rewake are flags read by rewake itself, such as --write or --name.
-	Rewake []string `toml:"rewake"`
+	// Role is the worker's role, write or general; general when empty.
+	Role string `toml:"role"`
 	// Args are handed to the harness untouched.
 	Args []string `toml:"args"`
 	// Command is the program started instead of the harness's own — a wrapper
-	// script that runs it. It becomes rewake's --command, so one typed on the
-	// line replaces it like any other of rewake's flags.
-	Command string `toml:"command"`
-	// Main marks a person's main alias, never a worker template.
-	Main        bool          `toml:"main"`
+	// script that runs it.
+	Command     string        `toml:"command"`
 	Description string        `toml:"description"`
 	Launch      AliasSettings `toml:"launch"`
 }
 
+// AliasSettings are the portable settings of a worker. The harness turns
+// each into its own flags; one it has no flag for is only shown.
+type AliasSettings struct {
+	Model   string `toml:"model"`
+	Effort  string `toml:"effort"`
+	Context string `toml:"context"`
+}
+
 // CommandFlag is rewake's flag for the program a launch starts, which the
-// alias field of the same name becomes.
+// alias field of the same name becomes in the worker's launch.
 const CommandFlag = "command"
 
 // Help is the one line that tells a person aliases exist, printed with every
 // launch command's help. Somebody who has to read the documentation to learn
 // that a feature exists will not find it.
-const Help = "An alias names a launch: [alias.<name>] in ~/.config/" + userDir + "/" + userFile +
-	" or in " + projectFile + " in the working directory, with harness = \"<id>\", " +
-	"rewake = [flags rewake reads], args = [arguments for the harness] and, in the user file only, " +
-	"command = \"<program>\" for a wrapper script. `rewake <name>` then launches it: rewake's flags go " +
-	"before the name, the harness's after it, and a typed flag replaces the alias's copy."
+const Help = "Main opens workers by alias: [alias.<name>] in ~/.config/" + userDir + "/" + userFile +
+	" or in " + projectFile + " in the working directory, with harness = \"<id>\", role = \"write\" or \"general\", " +
+	"args = [arguments for the harness], description, [alias.<name>.launch] model, effort and context, and, " +
+	"in the user file only, role and command = \"<program>\" for a wrapper script. rewake workers lists them; " +
+	"rewake space open <space> --alias <name> opens one. An alias is not a launch of its own."
 
-// Set is what this process can expand.
+// Set is what this process read.
 type Set struct {
 	aliases map[string]Alias
 	sources map[string]string
 	// fromProject marks the aliases read from a file in the working directory,
 	// which may decide less than the user's own file.
 	fromProject map[string]bool
-	// Notes are what to tell the person: a file that could not be read, an
-	// alias that makes no sense. They are printed, not swallowed — an alias
-	// silently absent is a launch that silently runs something else.
+	// Notes are advisories for the person, such as a user file open to
+	// others; they are printed and refuse nothing.
 	Notes []string
-	// problems distinguish unreadable files from advisory permission notes.
+	// problems are files that could not be read, which refuse the catalog
+	// through Err rather than leave a worker silently absent.
 	problems []string
 }
 
@@ -97,214 +100,71 @@ func (s *Set) Lookup(name string) (Alias, string, bool) {
 	return value, s.sources[name], ok
 }
 
-// Expand replaces an alias in argv with what it stands for. argv without an
-// alias comes back unchanged, and so does an empty one.
-//
-// A flag typed on the line replaces the alias's copy of it — but only for the
-// flags the harness takes at most once, which the harness itself names through
-// singleUse. Ordering alone would not do: a harness may refuse to parse a
-// repeated --model rather than take the last one, so an alias naming a model plus a
-// model typed on the line would end the launch complaining about a flag the
-// person wrote once.
-//
-// Everything else is appended, and that is the safe default rather than a gap.
-// A repeated --add-dir is how a second directory is added; a repeated -c key
-// takes its last value when it is a plain one but merges when the setting is
-// structured, so dropping the earlier one can remove part of a setting the
-// later one does not restate. Replacing either would take away something
-// nobody asked to remove.
-func (s *Set) Expand(argv []string, knownHarnesses []string, takesValue func(string) bool, projectMayNotSet []string, singleUse func(harness string) []adapter.Flag) ([]string, error) {
-	position := commandWord(argv, takesValue)
-	if position < 0 {
-		return argv, nil
-	}
-	name := argv[position]
+// Template is an alias resolved against its harness: what space open starts.
+type Template struct {
+	Name        string
+	Harness     adapter.Harness
+	Role        role.Role
+	Command     string
+	Description string
+	// Args are the alias's arguments with its applied settings in them.
+	Args     []string
+	Settings AliasSettings
+	// Applied says which of the settings became flags.
+	Applied struct{ Model, Effort, Context bool }
+}
+
+// Template resolves one alias, refusing one that would start something other
+// than what it says.
+func (s *Set) Template(name string, catalog adapter.Catalog) (Template, error) {
 	value, source, ok := s.Lookup(name)
 	if !ok {
-		return argv, nil
+		return Template{}, fmt.Errorf("no alias %q; available: %s", name, strings.Join(s.Names(), ", "))
 	}
-	if err := value.check(name, source, knownHarnesses, takesValue); err != nil {
-		return nil, err
+	if err := value.check(name, source, catalog.IDs(), s.fromProject[name]); err != nil {
+		return Template{}, err
 	}
-	rewake := value.Rewake
-	if value.Command != "" {
-		rewake = append([]string{"--" + CommandFlag, value.Command}, rewake...)
+	h, _ := catalog.Find(value.Harness)
+	part := role.General
+	if value.Role != "" {
+		part, _ = role.Find(value.Role)
 	}
-	if s.fromProject[name] {
-		for _, flag := range rewake {
-			bare, _, _ := strings.Cut(strings.TrimPrefix(flag, "--"), "=")
-			if !strings.HasPrefix(flag, "--") || !contains(projectMayNotSet, bare) {
-				continue
-			}
-			// A file in whatever directory somebody happens to be in must not
-			// choose the role of the session launching there, nor the program
-			// it starts. The role outranks the room: a main sees every
-			// session's telemetry and may ask for repository access. The
-			// program is whatever runs with the person's credentials. Same
-			// boundary as the settings file's closed list of names, and for
-			// the same reason.
-			what := "a role"
-			if bare == CommandFlag {
-				what = "the program a launch starts"
-			}
-			return nil, fmt.Errorf("alias %q in %s sets %s; %s belongs in the user alias file, not in one carried by a directory",
-				name, source, flag, what)
-		}
+	template := Template{
+		Name: name, Harness: h, Role: part, Command: value.Command,
+		Description: value.Description, Args: slices.Clone(value.Args), Settings: value.Launch,
 	}
-
-	var flags []adapter.Flag
-	if singleUse != nil {
-		flags = singleUse(value.Harness)
+	flags, err := settingFlags(h, value.Launch, &template)
+	if err != nil {
+		return Template{}, fmt.Errorf("alias %q: %w", name, err)
 	}
-	typedBefore, typedAfter := argv[:position], argv[position+1:]
-	expanded := make([]string, 0, len(argv)+len(value.Rewake)+len(value.Args)+1)
-	// rewake's own flags are all single-use, and rewake knows which of them
-	// take a value; the harness half knows neither, so it is given the list the
-	// harness published and treats a following non-flag token as the value.
-	expanded = append(expanded, replaced(rewake, typedBefore, rewakeFlags(takesValue, rewake, typedBefore))...)
-	expanded = append(expanded, typedBefore...)
-	expanded = append(expanded, value.Harness)
-	expanded = append(expanded, replaced(value.Args, typedAfter, flags)...)
-	expanded = append(expanded, typedAfter...)
-	return expanded, nil
+	if len(flags) > 0 {
+		// Structured fields replace an older copy in args, even when args
+		// ends with a prompt terminator. New flags still precede that tail.
+		visible := adapter.BeforeTerminator(template.Args)
+		kept := replaced(visible, flags, h.SingleUseFlags())
+		template.Args = adapter.AddFlags(append(slices.Clone(kept), template.Args[len(visible):]...), flags...)
+	}
+	return template, nil
 }
 
-// rewakeFlags describes rewake's own flags the way a harness describes its
-// own: every flag it takes is single-use, and whether one carries a value is
-// something rewake knows from its command table.
-func rewakeFlags(takesValue func(string) bool, lists ...[]string) []adapter.Flag {
-	var flags []adapter.Flag
-	named := map[string]bool{}
-	for _, argument := range concat(lists...) {
-		if !strings.HasPrefix(argument, "--") || argument == "--" {
-			continue
-		}
-		name, _, _ := strings.Cut(argument, "=")
-		if named[name] {
-			continue
-		}
-		named[name] = true
-		flags = append(flags, adapter.Flag{
-			Spellings:  []string{name},
-			TakesValue: takesValue != nil && takesValue(strings.TrimPrefix(name, "--")),
-		})
+// settingFlags turns the settings into the harness's flags and records which
+// of them it applied.
+func settingFlags(h adapter.Harness, settings AliasSettings, template *Template) ([]string, error) {
+	if settings.Model == "" && settings.Effort == "" {
+		return nil, nil
 	}
-	return flags
+	translator, ok := h.(adapter.LaunchSettingsHarness)
+	if !ok {
+		return nil, fmt.Errorf("%s has no launch settings; put the model and effort in args", h.Title())
+	}
+	template.Applied.Model, template.Applied.Effort = settings.Model != "", settings.Effort != ""
+	return translator.LaunchSettings(settings.Model, settings.Effort), nil
 }
 
-// commandWord is where the command or alias stands in argv, or -1.
-//
-// It has to step over the value of a flag that takes one: in
-// `rewake --name mine wmain`, the first word that is not a flag is "mine",
-// and treating that as the command would leave the alias unexpanded and the
-// launch subtly different from what was asked for. Which flags take a value is
-// the caller's knowledge, not this package's.
-func commandWord(argv []string, takesValue func(string) bool) int {
-	for i := 0; i < len(argv); i++ {
-		token := argv[i]
-		if token == "--" {
-			// Nothing after the terminator is a command word either; rewake
-			// refuses such a line on its own, and expanding an alias out of it
-			// first would only change which refusal the person sees.
-			return -1
-		}
-		if !strings.HasPrefix(token, "-") {
-			return i
-		}
-		name := strings.TrimPrefix(token, "--")
-		if strings.Contains(name, "=") {
-			// --flag=value carries its value with it.
-			continue
-		}
-		if takesValue != nil && takesValue(name) {
-			i++
-		}
-	}
-	return -1
-}
-
-// replaced drops each argument of the alias whose parameter was named on the
-// line, along with the value belonging to it.
-//
-// The terminator is read on the command being built, not on each list on its
-// own. "--" ends the flags of everything that follows it there: a terminator
-// the person typed ends their own arguments, and one the alias carries ends
-// both its own tail and everything the line appends behind it. Either way a
-// word of a prompt must never replace a setting — which is what happened when
-// each half was checked separately.
-func replaced(arguments, typed []string, flags []adapter.Flag) []string {
-	visible := adapter.BeforeTerminator(arguments)
-	if len(visible) != len(arguments) {
-		// The alias itself ends the flags. Everything the line adds lands
-		// behind that terminator in the command being built, so all of it is
-		// input for the harness — and a word of a prompt must not replace a
-		// setting. Nothing is dropped here at all.
-		return arguments
-	}
-	named := map[string]bool{}
-	for _, name := range parameters(adapter.BeforeTerminator(typed), flags) {
-		named[name] = true
-	}
-	kept := make([]string, 0, len(arguments))
-	for i := 0; i < len(visible); i++ {
-		name, width := parameterAt(visible, i, flags)
-		if name != "" && named[name] {
-			i += width - 1
-			continue
-		}
-		kept = append(kept, visible[i:i+width]...)
-		i += width - 1
-	}
-	return kept
-}
-
-// parameters names every parameter these arguments set.
-func parameters(arguments []string, flags []adapter.Flag) []string {
-	var names []string
-	for i := 0; i < len(arguments); i++ {
-		name, width := parameterAt(arguments, i, flags)
-		if name != "" {
-			names = append(names, name)
-		}
-		i += width - 1
-	}
-	return names
-}
-
-// parameterAt answers which parameter the argument at index sets, and how many
-// arguments it occupies. A flag that is not in the list answers "" — it may be
-// repeated for all we know, so it is left alone.
-//
-// The shapes of a flag are read by adapter.MatchFlag, the one place that knows
-// them: --flag value, --flag=value, -f value, -f=value and -fvalue. Each of
-// those has cost us a defect somewhere else already.
-func parameterAt(arguments []string, index int, flags []adapter.Flag) (string, int) {
-	arg := arguments[index]
-	if !strings.HasPrefix(arg, "-") || arg == "-" || arg == "--" {
-		return "", 1
-	}
-	for _, flag := range flags {
-		for _, spelling := range flag.Spellings {
-			_, separate, ok := adapter.MatchFlag(arg, spelling)
-			if !ok {
-				continue
-			}
-			width := 1
-			if separate && flag.TakesValue && index+1 < len(arguments) {
-				// The value is the next argument — unless nothing follows,
-				// which is a malformed line the harness will refuse anyway.
-				width = 2
-			}
-			return flag.Spellings[0], width
-		}
-	}
-	return "", 1
-}
-
-// check refuses an alias that would expand into something unusable, and says
-// what it expanded to. A launch that fails three layers down, complaining
-// about a flag the person never typed, is worse than no alias at all.
-func (a Alias) check(name, source string, knownHarnesses []string, takesValue func(string) bool) error {
+// check refuses an alias that would start something unusable, and says what.
+// A worker that fails three layers down, complaining about a flag the person
+// never typed, is worse than no alias at all.
+func (a Alias) check(name, source string, knownHarnesses []string, fromProject bool) error {
 	for _, value := range []string{a.Description, a.Launch.Model, a.Launch.Effort, a.Launch.Context} {
 		if strings.ContainsAny(value, "\r\n") {
 			return fmt.Errorf("alias %q in %s has a multiline description or launch setting; each must be one line", name, source)
@@ -313,37 +173,24 @@ func (a Alias) check(name, source string, knownHarnesses []string, takesValue fu
 	if a.Harness == "" {
 		return fmt.Errorf("alias %q in %s names no harness; add harness = \"<name>\"", name, source)
 	}
-	if len(knownHarnesses) > 0 && !contains(knownHarnesses, a.Harness) {
-		return fmt.Errorf("alias %q in %s launches %q, which is not a harness; known: %s",
+	if !slices.Contains(knownHarnesses, a.Harness) {
+		return fmt.Errorf("alias %q in %s starts %q, which is not a harness; known: %s",
 			name, source, a.Harness, strings.Join(knownHarnesses, ", "))
 	}
-	// An alias names arguments to rewake, and nothing else. Without this a list
-	// could begin with a command word and turn `rewake <name>` into some other
-	// command entirely — the same reason the settings file has no
-	// substitutions. A flag's own value is not a command word, so the walk
-	// steps over it the way the argument parser does.
-	for i := 0; i < len(a.Rewake); i++ {
-		flag := a.Rewake[i]
-		if !strings.HasPrefix(flag, "--") || flag == "--" {
-			return fmt.Errorf("alias %q in %s has %q in rewake, which only takes flags like --write or --name", name, source, flag)
-		}
-		body := strings.TrimPrefix(flag, "--")
-		if strings.Contains(body, "=") {
-			continue
-		}
-		if takesValue != nil && takesValue(body) {
-			if i+1 >= len(a.Rewake) {
-				return fmt.Errorf("alias %q in %s ends with %s, which needs a value", name, source, flag)
-			}
-			i++
+	if a.Role != "" {
+		if part, found := role.Find(a.Role); !found || part.Spaces {
+			return fmt.Errorf("alias %q in %s has role = %q; a worker's role is %q or %q", name, source, a.Role, role.Write.ID, role.General.ID)
 		}
 	}
-	if a.Command != "" {
-		for _, flag := range a.Rewake {
-			if bare, _, _ := strings.Cut(strings.TrimPrefix(flag, "--"), "="); strings.HasPrefix(flag, "--") && bare == CommandFlag {
-				return fmt.Errorf("alias %q in %s names the program twice, as command and as --%s in rewake; keep one", name, source, CommandFlag)
-			}
+	if fromProject && (a.Role != "" || a.Command != "") {
+		// A file in whatever directory somebody happens to be in must not
+		// choose the role of a worker opened there, nor the program it starts:
+		// the program is whatever runs with the person's credentials.
+		what := "role"
+		if a.Command != "" {
+			what = "command"
 		}
+		return fmt.Errorf("alias %q in %s sets %s; it belongs in the user alias file, not in one carried by a directory", name, source, what)
 	}
 	for _, argument := range a.Args {
 		if argument == "" {
@@ -351,22 +198,4 @@ func (a Alias) check(name, source string, knownHarnesses []string, takesValue fu
 		}
 	}
 	return nil
-}
-
-// concat joins argument lists without touching either.
-func concat(lists ...[]string) []string {
-	var all []string
-	for _, list := range lists {
-		all = append(all, list...)
-	}
-	return all
-}
-
-func contains(values []string, want string) bool {
-	for _, value := range values {
-		if value == want {
-			return true
-		}
-	}
-	return false
 }

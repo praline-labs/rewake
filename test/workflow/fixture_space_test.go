@@ -46,7 +46,7 @@ func TestFixtureSpace(t *testing.T) {
 	if err := os.MkdirAll(aliasDir, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	aliases := fmt.Sprintf("[alias.worker]\nharness = %q\nrewake = [\"--write\", \"--name\", \"alias-name\"]\ncommand = %q\n", fixtureColumn.harness, wrapper)
+	aliases := fmt.Sprintf("[alias.worker]\nharness = %q\nrole = \"write\"\ncommand = %q\n", fixtureColumn.harness, wrapper)
 	if err := os.WriteFile(filepath.Join(aliasDir, "aliases.toml"), []byte(aliases), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -67,7 +67,7 @@ func TestFixtureSpace(t *testing.T) {
 		stopSession(t, c, lead)
 		return
 	}
-	c.Observed(obsSpaceOpened, "space open used the alias's wrapper and answered "+opened.Session+", registered in main's room rather than the alias's name")
+	c.Observed(obsSpaceOpened, "space open used the alias's wrapper and answered "+opened.Session+", registered under the space's name in main's room")
 
 	if code, out, _ := asks.ask(c, "send", worker.name, fixtureSpaceTask); code != 0 {
 		c.Contradicted(obsSpaceReported, "the task was not sent: %d %s", code, out)

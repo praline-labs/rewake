@@ -35,18 +35,12 @@ func (ctx *Context) spaceTarget(call Call) (workerTarget, error) {
 		if err := ctx.launchAliases().Err(); err != nil {
 			return refuse("%v", err)
 		}
-		view, expanded, err := ctx.workerAlias(alias)
+		template, err := ctx.launchAliases().Template(alias, ctx.table.catalog)
 		if err != nil {
 			return refuse("%v", err)
 		}
-		if view.Main {
-			return refuse("alias %q is main's, not a worker; choose one from rewake workers.", alias)
-		}
-		target.harness = expanded.Command.Harness
-		target.part, _ = role.Find(view.Role)
-		target.command = expanded.Flag(launch.CommandFlag, "")
-		target.noIntro = expanded.Switch("no-intro")
-		target.args = launch.MergeArguments(expanded.Raw, target.args, target.harness.SingleUseFlags())
+		target.harness, target.part, target.command = template.Harness, template.Role, template.Command
+		target.args = launch.MergeArguments(template.Args, target.args, target.harness.SingleUseFlags())
 	} else {
 		var found bool
 		target.harness, found = ctx.table.catalog.Find(call.Flag("harness", ""))

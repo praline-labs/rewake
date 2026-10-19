@@ -31,11 +31,10 @@ The common part of the wrapper:
 6. Remove the record, close the inbox (pending messages get the status `failed:
    session ended`), exit with the harness's code.
 
-### Launch defaults and aliases
+### Launch defaults and the worker catalogue
 
-A default model and reasoning effort from the environment or a settings file, and
-launch aliases that name a whole set of arguments, are in
-[launch-defaults.md](launch-defaults.md).
+A default model and reasoning effort from the environment or a settings file, and the
+aliases main opens workers from, are in [launch-defaults.md](launch-defaults.md).
 
 ### Room and role flags
 
@@ -49,7 +48,7 @@ specified once, in design.md and roles.md: [Rooms](design.md#rooms), [Roles](rol
 
 ### No session inside a session
 
-A launch — `rewake claude`, or an alias that stands for one — from a
+A launch — `rewake claude` — from a
 shell inside a rewake session is refused with exit 2, before anything else is checked
 (main's decision of September 27, 2026). A Claude Code worker runs a plain `rewake`
 command unasked, and a launch among them would start an agent with none of the
@@ -97,11 +96,9 @@ rewake --main --name lead --command my-claude claude
   the arguments the adapter's version gate names (`<wrapper> --version`,
   [design-api.md](v2/design-api.md#minimum-versions)); a wrapper that does not answer it
   with a version refuses the launch, as an unreadable version always does.
-- **In an alias** it is the field `command = "<program>"`, which becomes `--command`
-  before the harness word — in the user alias file only
-  ([launch-defaults.md](launch-defaults.md#naming-a-whole-launch)). With it, a launch
-  through a wrapper is one word: `[alias.lead]` with `harness = "claude"`, `rewake =
-  ["--main", "--name", "lead"]` and `command = "my-claude"` is `rewake lead`.
+- **In a worker alias** it is the field `command = "<program>"`, which becomes the
+  worker launch's `--command` — in the user alias file only
+  ([launch-defaults.md](launch-defaults.md#the-worker-catalogue)).
 - Owner decision, September 23, 2026: the harness is named, the program is given; no
   guessing from names and no probing.
 
@@ -224,9 +221,9 @@ args>` is main's way to start a worker, built October 18, 2026 (S4-7,
 [the steps](v2/stage4-space-steps.md#the-build-steps)); `--role` is `write` by default. Alternatively,
 `rewake workers` lists the person's worker aliases, and `space open <name> --alias <alias>`
 uses the alias's harness, role, command wrapper, args and applied settings. `--harness` and
-`--alias` exclude each other, main aliases refuse, and the space owns the name and room;
-`--role` may override the alias's worker role. The optional fields and precedence are in
-[launch-defaults.md](launch-defaults.md#a-catalogue-main-can-open-workers-from).
+`--alias` exclude each other, and the space owns the name and room; `--role` may override the
+alias's worker role. The fields and precedence are in
+[launch-defaults.md](launch-defaults.md#the-worker-catalogue).
 Opening is a change, refused unless main's run has `Spaces` live, and refused for a name whose session is
 already alive. It writes the space's record and re-executes rewake as a launcher with
 `Setsid`; the launcher starts the space host and exits. The space host takes the room's build

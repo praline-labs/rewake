@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 )
 
@@ -28,11 +29,10 @@ type parsed struct {
 // parse reads argv into a call against the command table.
 func (t *table) parse(argv []string) (parsed, error) { return t.parseKnowing(argv, nil) }
 
-// parseKnowing is parse with the aliases this process can expand, so that a
-// word which is neither a command nor an alias is refused with both lists. A
-// person who mistypes an alias is told what exists, not only that this is not
-// a command.
-func (t *table) parseKnowing(argv []string, aliases []string) (parsed, error) {
+// parseKnowing is parse with the worker aliases this process reads, so that a
+// launch of one by its name, as before October 19, 2026, is told how main
+// opens it rather than only that it is no command. They are read only then.
+func (t *table) parseKnowing(argv []string, aliases func() []string) (parsed, error) {
 	var result parsed
 	result.Call.Flags = map[string]string{}
 	result.Call.Lists = map[string][]string{}
@@ -76,8 +76,8 @@ func (t *table) parseKnowing(argv []string, aliases []string) (parsed, error) {
 		if near := t.nearestCommand(word); near != "" {
 			message += fmt.Sprintf(" Did you mean %q?", near)
 		}
-		if len(aliases) > 0 {
-			message += " Aliases here: " + strings.Join(aliases, ", ") + "."
+		if aliases != nil && slices.Contains(aliases(), word) {
+			message += fmt.Sprintf(" %q is a worker alias, which main opens: rewake space open <space> --alias %s; rewake workers lists them.", word, word)
 		}
 		message += " Run rewake for the map."
 		return result, &UsageError{Message: message}

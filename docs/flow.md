@@ -96,7 +96,7 @@ with exit 2 before any step below ([launch.md](launch.md#no-session-inside-a-ses
    role flag, or identify the explicit flag.
 5. **The harness command line.** The user's arguments go through as written, save the
    exceptions each launch page's notes list: a `--help` written first, rewake's own
-   `--worktree` and a flag the line types again in place of an alias's copy. rewake adds, for one launch only and never into a config file:
+   `--worktree`. rewake adds, for one launch only and never into a config file:
    - Claude Code: `--messaging-socket-path sock/<name>.<epoch>.sock`,
      `--append-system-prompt <intro>`, `--allowedTools "Bash(rewake:*)"` unless the
      line gives its own, `--plugin-dir` naming the mod written into the run's directory
@@ -318,7 +318,7 @@ has held it once, through the adapter, to ask whether the work is done.
 
 Main can read `rewake workers` and run `rewake space open api --alias claude-write --worktree
 -- <harness args>` from its shell, while its run has `Spaces` live. The alias supplies its
-worker wrapper, role and applied settings; main's aliases refuse. `--harness claude` remains
+worker wrapper, role and applied settings; an alias is no launch of its own. `--harness claude` remains
 the direct form without an alias. Listing is a view for any role, not a launch. Opening writes the record, `spaces/<id>.json`, opening,
 and re-executes rewake as a launcher in a session of its own; the launcher starts the
 **space host** and exits, so the space host is nobody's child in main's tree. The space host

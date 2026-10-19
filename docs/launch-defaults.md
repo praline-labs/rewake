@@ -1,7 +1,7 @@
 # Launch defaults and aliases
 
 What a launch gets when the person did not type it: a model and a reasoning effort from
-the environment or a settings file, and a whole set of arguments under one alias name.
+the environment or a settings file; and the catalogue of workers main opens by alias name.
 The launch sequence itself, the room and role flags and the per-harness details are in
 [launch.md](launch.md).
 
@@ -61,102 +61,6 @@ and none of them stops the launch. The permission warning is for the user file o
 project file created under the usual umask is `0644`, and warning about that on every
 launch would teach people to skip these notes.
 
-## Naming a whole launch
-
-A launch that states a role, a name, a model and a configuration override is long
-enough that people stop typing it and start approximating it — and that is how a
-session comes up as something other than what was meant. An alias is the opposite of
-approximating: one name, one recorded set of arguments.
-
-```toml
-# ~/.config/rewake/aliases.toml, or .rewake.toml in the working directory
-[alias.claude-write]
-harness = "claude"
-rewake  = ["--write", "--name", "writer"]
-args    = ["--model", "chosen-model", "--effort", "high"]
-command = "claude-worker"
-```
-
-`rewake claude-write` is then the whole launch. TOML, because this is a structure rather
-than a list of names and values; a separate file from `settings`, because that one is
-`KEY=VALUE` and a file cannot be both.
-
-**Separate fields, not one list.** What rewake reads, which harness to start, and what
-that harness gets are not interchangeable, and a single flat list would have to be cut
-at the harness name for anyone — a person editing the file included — to know which
-flag belongs to whom. **Lists, not strings**, for the same reason everywhere: a string
-would have to be split into words, and splitting words means quoting rules.
-
-An alias states a default, and a flag typed on the line *replaces* the alias's copy of
-it — dropped, not merely outranked. So `rewake --name reviewer claude-write --model another`
-launches as `reviewer` on `another`, and the command that reaches the harness names the
-model once.
-
-Dropping it is the only thing that works, and only for some flags. Codex refuses to
-parse a repeated `--model` rather than taking the last one, so leaving both would end
-the launch with a complaint about a flag the person wrote once. But a repeated
-`--add-dir` is how a second directory is added, and a repeated `-c` key means one thing
-for a plain value — the last wins — and another for a structured setting, which merges.
-Replacing either would remove something nobody asked to remove, and sorting the two
-kinds of setting apart means understanding the value, which the harness already does.
-
-So the flags that get replaced are a closed list, published by each harness and applied
-only to launches of that harness. Each entry names one parameter by all its spellings —
-a typed `-m` replaces an alias's `--model` — and says whether it carries a value, which
-is what keeps a dropped `--search` from taking the prompt standing behind it. Everything
-else is appended and left to the harness, which is the safe answer for anything
-unlisted; `-c` is never collapsed.
-
-The reason differs by harness, and that difference is the point. Codex refuses to parse
-a repeated flag, so replacement is what keeps the launch alive. Claude Code accepts one
-and takes the last occurrence, so replacement there only keeps the command readable and
-the two behaving alike. Both lists live in their adapters
-([research-launch.md](research-launch.md) records what each was read from).
-
-Two things this deliberately does not try to do. `--enable X` with `--disable X` is not
-"the last one wins" — Codex applies every enable and then every disable — and flags that
-conflict under different names, an approval policy against a sandbox mode, are not found
-by comparing names at all. Resolving those is the harness's business, and an alias that
-sets up such a pair is a mistake the person has to see rather than one rewake silently
-half-fixes.
-
-**Where the flags end.** `--` ends them for everything that follows it in the command
-being built, not just in the half it was written in. A terminator you type ends your own
-arguments; a terminator the alias carries ends its own tail *and* everything the line
-adds behind it, because that is where those words land. So an alias ending in `--` is one
-whose arguments are fixed: what you add after it is input for the harness, and a word of
-a prompt can never take a setting out of the alias. Checking each half separately let
-exactly that happen.
-
-**Where a flag goes:** rewake's own flags before the alias name, the harness's after it.
-`rewake --name reviewer claude-write --model another` sets the session name and the model;
-writing `--name` after the alias would hand it to the harness, which knows nothing about
-session names. That is the general rule of the command line — everything after a launch
-word belongs to the harness — and an alias does not change it.
-
-Environment defaults still fill in what the alias did not name.
-
-An alias names arguments to rewake and nothing else. It cannot begin with a command
-word, so it cannot turn `rewake <name>` into some other command — the same boundary
-the settings file draws by having no substitutions.
-
-**A project file may not choose a role, or the program.** `--main`, `--write` and
-`--general` belong in the user's own file, and so does `command` (or `--command` in its
-`rewake` list); an alias in `.rewake.toml` that carries one is refused by name. The
-program is whatever runs with the person's credentials, the same concern as the role. The
-role decides more than the room does — a main session sees everyone's telemetry and may
-ask for repository access — and a file sitting in whatever directory somebody happens to
-be in should not decide that for them. The user file is also held to `0600`, and a
-launch says so when it is not: it can name a role, which is more than the settings file
-beside it can do.
-
-Refusals say what happened rather than falling through: a name that is not an alias
-and not a command lists both, an alias with no harness or an unknown one says so and
-names the file it came from, and a file that is present but unreadable produces a note
-instead of silence. A launch that quietly runs something other than what was asked for
-is the failure this feature exists to prevent, so it is the one outcome that is never
-allowed.
-
 Three rules, all about not surprising anyone. An explicit flag always wins: a launch
 that already names a model or an effort gets nothing added and no note. Nothing
 configured means nothing substituted — behavior without configuration is exactly what
@@ -188,66 +92,92 @@ The variable wins, being the one set for rewake specifically. A Codex launch wit
 profile is refused outright before any of this, as are `--oss` and
 `--local-provider`.
 
-## A catalogue main can open workers from
+## The worker catalogue
 
-**Owner decision, October 18, 2026:** the person's launch aliases are also the worker
-catalogue. Every new field is optional; existing alias files keep their launch meaning.
-
-| Field | Meaning |
-| --- | --- |
-| `main = true` | Marks main's template, excluded from workers. An older alias with `--main` is also main's, even without the mark. The mark alone does not select the direct launch's role. |
-| `description` | One line explaining when to choose the worker. |
-| `[alias.<name>.launch] model` | Model selector, applied as `--model` by the adapter. |
-| `launch.effort` | Applied as Claude Code's `--effort` or pi's `--thinking`. |
-| `launch.context` | Free one-line text such as `1M`; always shown only, never applied. |
-| `launch.apply` | Defaults to `true`. With `false`, all three values are shown only, describing what the wrapper sets. |
-
-For example, with a placeholder model selector to replace locally:
+**Owner decision, October 19, 2026** ([worker-profile.md](v2/worker-profile.md)): aliases are
+only main's catalogue of workers. `rewake workers` lists them and `rewake space open <space>
+--alias <name>` starts one; `rewake <alias>` is no launch — the word is refused, naming the
+`space open` that opens it. Since October 18 the aliases had been launches and the catalogue at
+once; the `rewake` list, `main = true` and `launch.apply` went with that.
 
 ```toml
-# ~/.config/rewake/aliases.toml
-[alias.claude-main]
-harness = "claude"
-rewake = ["--main", "--name", "main"]
-args = []
-main = true
-description = "The person's main session"
-
+# ~/.config/rewake/aliases.toml, or .rewake.toml in the working directory
 [alias.claude-write]
 harness = "claude"
-rewake = ["--write", "--name", "write"]
-args = []
+role = "write"
+args = ["--permission-mode", "acceptEdits"]
 command = "claude-worker"
-description = "A patch worker through the worker wrapper"
+description = "A patch worker"
 [alias.claude-write.launch]
 model = "chosen-model"
 effort = "high"
-context = "worker window"
-apply = false
+context = "400k"
 ```
 
-`rewake workers` is a view available to any role, even outside a session. It reads the same
-user and current-directory project files, with the project alias replacing the user's alias
-of the same name. It shows name, harness, role, command, description and each setting's value
-and applied/shown-only status. An unspecified command displays the harness command, and an
-unspecified role is `general`, just as on a direct launch. `--all` includes main's aliases,
-marked; `--json` returns `workers`, whose `model`, `effort` and `context` each have `value` and
-`applied`. Empty values mean unspecified, not a claim about a running session. A file that
-cannot be read refuses the catalogue rather than silently omit workers; TOML errors include
-the source path, line and column. Wider user-file permissions still produce only a note.
+| Field | Meaning |
+| --- | --- |
+| `harness` | The worker's harness, by its id; required. |
+| `role` | `write` or `general`; `general` when absent. User file only. |
+| `args` | Arguments handed to the harness as written. |
+| `command` | The program started in place of the harness, a wrapper that runs it; becomes the worker launch's `--command`. User file only. |
+| `description` | One line saying when to choose the worker. |
+| `[alias.<name>.launch] model` | Applied by the adapter: `--model` on Claude Code and pi. |
+| `launch.effort` | Applied as Claude Code's `--effort` or pi's `--thinking`. |
+| `launch.context` | Applied where the harness has a flag for it — Claude Code's `--autocompact`, from the worker profile's step 1 — and only shown elsewhere. |
 
-`rewake space open api --alias claude-write -- <more harness args>` takes the alias's harness,
-role, command wrapper, arguments, `--no-intro` and applied settings. `--alias` and `--harness`
-exclude each other; either `main = true` or an expanded `--main` refuses a worker launch.
-The space's name and main's room replace the alias's name and room; an explicit `--role`
-overrides its worker role. Single-use flags after `--` replace the alias's copies under the
-same rule as a direct alias launch. An alias's own `--` still makes everything after it
-literal input, not new settings. A worktree named in the alias is also recorded as the space's
-checkout; an explicit space `--worktree` replaces it.
+TOML, because this is a structure rather than a list of names and values; a separate file
+from `settings`, because that one is `KEY=VALUE` and a file cannot be both. **Lists, not
+strings**: a string would have to be split into words, and splitting words means quoting
+rules. A field rewake does not know is refused, not skipped, and the removed ones are named
+with what replaced them — `rewake` (the role is `role`; the space names the worker and its
+room), `main` (main is started with `rewake <harness>`), `launch.apply` (settings always
+apply; flags that should not go in `args`). The whole file is refused then, so it is
+rewritten once.
 
-Applied structured settings replace older copies in `args`; typed flags replace those in
-turn, and environment defaults fill what neither supplied. Setting `apply = false` adds no
-flags and does not disable those existing environment defaults. Context is descriptive in
-every case. Neither catalogue reads nor alias launches inspect or edit the person's wrapper
-or harness settings. The ordinary project-file restriction on roles and command wrappers
-also applies when an alias is read as a worker.
+**A project file may not choose a role, or the program.** `role` and `command` belong in the
+user's own file; an alias in `.rewake.toml` that carries one is refused by name. The program is
+whatever runs with the person's credentials, and a file sitting in whatever directory somebody
+happens to be in should not decide that or what a worker may do. The user file is held to
+`0600`, and a wider one produces a note.
+
+`rewake workers` is a view available to any role, even outside a session. It reads the user
+file and the current directory's `.rewake.toml`, a project alias replacing the user's of the
+same name, and shows name, harness, role, command (the harness when none), description and each
+setting's value marked applied or shown only; `--json` returns `workers`, whose `model`,
+`effort` and `context` each have `value` and `applied`. A file that cannot be read refuses the
+catalogue rather than silently omit workers; TOML errors include the source path, line and
+column. An alias that makes no sense — no harness or an unknown one, a role that is not a
+worker's, settings on a harness with no flags for them — refuses it too, naming the alias.
+
+`rewake space open api --alias claude-write -- <more harness args>` starts the alias's harness,
+role, command, arguments and applied settings. `--alias` and `--harness` exclude each other; the
+space names the worker and its room, and an explicit `--role` overrides the alias's. Applied
+settings replace older copies in `args`, and flags after `--` replace those in turn; environment
+defaults fill what neither supplied. A worktree named in the alias is recorded as the space's
+checkout; an explicit space `--worktree` replaces it. rewake neither reads nor edits the
+person's wrapper or harness settings.
+
+**Which typed flags replace the alias's.** A flag after `--` replaces the alias's copy of it —
+dropped, not merely outranked — so the command that reaches the harness names the model once.
+Dropping it is the only thing that works, and only for some flags. A harness may refuse to
+parse a repeated `--model` rather than take the last one. But a repeated `--add-dir` is how a
+second directory is added, and a repeated `-c` key means one thing for a plain value — the last
+wins — and another for a structured setting, which merges. Replacing either would remove
+something nobody asked to remove, and sorting the two kinds of setting apart means understanding
+the value, which the harness already does.
+
+So the flags that get replaced are a closed list, published by each harness and applied only to
+workers of that harness. Each entry names one parameter by all its spellings — a typed `-m`
+replaces an alias's `--model` — and says whether it carries a value, which is what keeps a
+dropped `--search` from taking the prompt standing behind it. Everything else is appended and
+left to the harness; `-c` is never collapsed. Claude Code accepts a repeated flag and takes the
+last occurrence, so replacement there only keeps the command readable; the lists live in their
+adapters ([research-launch.md](research-launch.md) records what each was read from). Two things
+this deliberately does not try to do: `--enable X` with `--disable X`, and flags that conflict
+under different names, are the harness's business, and an alias that sets up such a pair is a
+mistake the person has to see.
+
+**Where the flags end.** `--` ends them for everything that follows it in the command being
+built, not just in the half it was written in. A terminator the alias carries ends its own tail
+*and* everything typed behind it, because that is where those words land: what is added after it
+is input for the harness, and a word of a prompt can never take a setting out of the alias.
