@@ -104,59 +104,6 @@ func TestAnUnpublishedReportIsCompletedByTheNextTurnEnd(t *testing.T) {
 	}
 }
 
-// A run that takes over the waits of an ended one does not take over a wait
-// whose report that run wrote before it could clear the wait: the task is
-// answered once.
-func TestAnAdoptedWaitWhoseReportIsOutIsNotAnsweredAgain(t *testing.T) {
-	for _, kind := range journalKinds {
-		t.Run(string(kind), func(t *testing.T) {
-			dir, old, web := peerSession(t)
-			id := readKind(t, dir, web, kind)
-			// The waits read but take no change: the plan finds nothing
-			// unknown, and the clearing fails once the report is out.
-			waits := filepath.Join(state.AwaitingPath(dir, "api"), old.Epoch())
-			previous := beforeReports
-			beforeReports = func() { _ = os.Chmod(waits, 0o500) }
-			t.Cleanup(func() { beforeReports = previous; _ = os.Chmod(waits, 0o700) })
-			if err := completeTurn(dir, old, mail.TurnEnd{Boundary: boundaryNow(t, dir, old), ID: "first", Text: "the first is done"}, "thread-a"); err == nil {
-				t.Fatal("a turn end whose clearing failed answered success")
-			}
-			beforeReports = previous
-			if err := os.Chmod(waits, 0o700); err != nil {
-				t.Fatal(err)
-			}
-			if answersTo(t, dir, id) != 1 {
-				t.Fatalf("the report did not go out once: %d", answersTo(t, dir, id))
-			}
-			threads := filepath.Join(state.InboxPath(dir, "api"), "threads")
-			if err := os.MkdirAll(threads, 0o700); err != nil {
-				t.Fatal(err)
-			}
-			if err := os.WriteFile(filepath.Join(threads, id), []byte("thread-a"), 0o600); err != nil {
-				t.Fatal(err)
-			}
-			resumed := otherRun(t, dir, "api")
-			var adopted []string
-			if err := state.WithMailboxLock(context.Background(), dir, "api", func() error {
-				var err error
-				adopted, err = mail.AdoptWaits(dir, "api", resumed.Epoch(), "thread-a")
-				return err
-			}); err != nil {
-				t.Fatal(err)
-			}
-			if len(adopted) != 0 {
-				t.Fatalf("took over a wait whose report is out: %v", adopted)
-			}
-			if err := completeTurn(dir, resumed, mail.TurnEnd{Boundary: boundaryNow(t, dir, resumed), ID: "resumed", Text: "the resumed turn is done"}, "thread-a"); err != nil {
-				t.Fatal(err)
-			}
-			if answersTo(t, dir, id) != 1 {
-				t.Fatalf("the task got %d reports", answersTo(t, dir, id))
-			}
-		})
-	}
-}
-
 // boundaryNow is the read boundary of a completion observed now: the reads
 // of self's run so far, and none after. An event keeps it for every retry.
 func boundaryNow(t *testing.T, dir string, self registry.Session) *mail.ReadBoundary {

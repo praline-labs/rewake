@@ -179,11 +179,11 @@ without one is.
 
 Removed on October 18, 2026, with the journals it completed. Nothing runs before a turn
 end reads a wait: an end that failed part way left its wait standing and nothing else to
-complete, and its retry, or the next end, runs the steps again (8). Adoption looks for the
-answer itself: a run that resumes a conversation does not take over a task that already
-has a finished or failed report of the name in the sender's mailbox
-(`internal/core/mail/answered.go`), since the run before it may have died between writing
-the report and clearing the wait.
+complete, and its retry, or the next end, runs the steps again (8). A report is not written
+for a task that already has a finished or failed report of the name in the sender's mailbox
+(`internal/core/mail/answered.go`), since the run before may have died between writing
+the report and clearing the wait. Adoption of an earlier run's waits by a resumed one was
+deleted on October 19, 2026.
 
 ## The stop
 

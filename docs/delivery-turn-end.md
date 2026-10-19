@@ -71,10 +71,9 @@ and the sender reads the task as owed or gone (`rewake inbox --awaited`).
 Killed after, the letter is with the sender already. Two narrow holes are closed in the
 code. The sweep of a recipient keeps a report whose writer's wait still names what it
 answers (`reportStillAwaited` in `internal/core/mail/sweep.go`), so a retry that comes
-after a day still finds the letter. A run that resumes a conversation does not take over
-a wait whose tasks already have a finished or failed report of the name in the sender's
-mailbox (`AdoptWaits`, `internal/core/mail/answered.go`), and a report is not written
-when every task of its wait has one: that run died between writing the report and
+after a day still finds the letter. A report is not written
+when every task of its wait already has a finished or failed report of the name in the
+sender's mailbox (`internal/core/mail/answered.go`): the run died between writing the report and
 clearing the wait. A failure report to main, which answers no wait, is found again by
 its operation in its id's tail on a retry (`reportOfOp`).
 The report's id is derived from the wait — the reporting run, the waiting run,

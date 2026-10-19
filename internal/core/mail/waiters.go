@@ -27,8 +27,7 @@ type Waiter struct {
 	// Messages are the ids of what was read from that run since its last report.
 	Messages []string
 	// ReadAt is when each of Messages was read, in nanoseconds: a wait
-	// gathers what is read until the report, and each task may be resumed
-	// for its own time from its reading (adopt.go).
+	// gathers what is read until the report, and each task has its own time.
 	ReadAt []int64
 }
 
@@ -69,15 +68,12 @@ func awaitingPath(dir, name, epoch string) (string, bool) {
 // for which message. A run that already waits gets the message added to its
 // wait; a different run of that name replaces it.
 func markAwaiting(dir, name, epoch, from, fromEpoch, messageID string) error {
-	return markAwaitingSequence(dir, name, epoch, from, fromEpoch, messageID, 0, 0)
+	return markAwaitingSequence(dir, name, epoch, from, fromEpoch, messageID, 0)
 }
 
-// markAwaitingSequence is markAwaiting with the message's read sequence, and
-// when it was read: now when readAt is 0, the earlier run's reading for a
-// wait taken over (AdoptWaits), since the resume window counts from the read.
-// A record there that cannot be read is an error: written over, it would drop
+// markAwaitingSequence is markAwaiting with the message's read sequence. A record there that cannot be read is an error: written over, it would drop
 // what the run owes for the messages it names.
-func markAwaitingSequence(dir, name, epoch, from, fromEpoch, messageID string, sequence uint64, readAt int64) error {
+func markAwaitingSequence(dir, name, epoch, from, fromEpoch, messageID string, sequence uint64) error {
 	path, ok := awaitingPath(dir, name, epoch)
 	if !ok || !state.ValidName(from) {
 		return nil
@@ -118,10 +114,7 @@ func markAwaitingSequence(dir, name, epoch, from, fromEpoch, messageID string, s
 		}
 		waiter.Messages = append(waiter.Messages, messageID)
 		waiter.ReadSequences = append(waiter.ReadSequences, sequence)
-		if readAt == 0 {
-			readAt = now
-		}
-		waiter.ReadAt = append(waiter.ReadAt, readAt)
+		waiter.ReadAt = append(waiter.ReadAt, now)
 	}
 	return writeWaiter(file, waiter)
 }
@@ -317,8 +310,7 @@ func (w world) clearAwaiting(name, epoch string, peer Waiter) error {
 
 // SweepAwaitingLocked forgets what earlier runs of this name were waited on
 // for. The delivery server's followEarlierRun calls it inside the mailbox
-// section in which AdoptWaits took over what those runs owe, and only once that
-// succeeded; it takes no lock of its own, since the mailbox lock is not
+// section; it takes no lock of its own, since the mailbox lock is not
 // reentrant; its callers are held by internal/layout_callers_test.go.
 func SweepAwaitingLocked(dir, name, epoch string) {
 	entries, err := os.ReadDir(state.AwaitingPath(dir, name))

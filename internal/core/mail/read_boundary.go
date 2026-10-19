@@ -92,13 +92,12 @@ func (c *ReadClock) Close() { _ = c.counter.Close() }
 
 // The mailbox lock serializes writers. Persist waiter sequences before publishing
 // the shared word; an earlier captured boundary cannot absorb a later read.
-// readAt is when the message was read, 0 for now.
-func markScopedAwaiting(dir, name, epoch string, message Message, readAt int64) error {
+func markScopedAwaiting(dir, name, epoch string, message Message) error {
 	if message.FromEpoch == "" || !state.ValidName(message.From) {
 		return nil
 	}
 	return onReadClock(dir, name, epoch, func(position uint64) error {
-		return markAwaitingSequence(dir, name, epoch, message.From, message.FromEpoch, message.ID, position, readAt)
+		return markAwaitingSequence(dir, name, epoch, message.From, message.FromEpoch, message.ID, position)
 	})
 }
 

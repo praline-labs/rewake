@@ -374,8 +374,9 @@ Two readers at once are serialized: the second finds nothing new.
 
 ### A resumed conversation
 
-How a cold resume takes over what an earlier run of the name read and had not reported
-on: [delivery-conversation.md](archive/1.x/delivery-conversation.md#a-resumed-conversation).
+Deleted on October 19, 2026: a new run forgets what the earlier runs of its name owed, and
+its sender reads the task as lost. The 1.x record:
+[delivery-conversation.md](archive/1.x/delivery-conversation.md#a-resumed-conversation).
 
 ### Owed reports
 

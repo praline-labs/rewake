@@ -23,7 +23,7 @@ func TestReadBoundaryExcludesLaterReadsAndIncludesSameTurnSteering(t *testing.T)
 	read := func(id string) {
 		t.Helper()
 		if err := state.WithMailboxLock(context.Background(), dir, "api", func() error {
-			return markScopedAwaiting(dir, "api", "1.1", Message{ID: id, From: "peer", FromEpoch: "2.2"}, 0)
+			return markScopedAwaiting(dir, "api", "1.1", Message{ID: id, From: "peer", FromEpoch: "2.2"})
 		}); err != nil {
 			t.Fatal(err)
 		}
@@ -90,7 +90,7 @@ func TestReadBoundaryHighWatermarkPreventsReuseAfterCounterLoss(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer clock.Close()
-	if err := markScopedAwaiting(dir, "api", "1.1", Message{ID: "old", From: "peer", FromEpoch: "2.2"}, 0); err != nil {
+	if err := markScopedAwaiting(dir, "api", "1.1", Message{ID: "old", From: "peer", FromEpoch: "2.2"}); err != nil {
 		t.Fatal(err)
 	}
 	boundary := clock.Snapshot()
@@ -100,7 +100,7 @@ func TestReadBoundaryHighWatermarkPreventsReuseAfterCounterLoss(t *testing.T) {
 		}
 	}
 	mustStore(t, clock, 0)
-	if err := markScopedAwaiting(dir, "api", "1.1", Message{ID: "later", From: "peer", FromEpoch: "2.2"}, 0); err != nil {
+	if err := markScopedAwaiting(dir, "api", "1.1", Message{ID: "later", From: "peer", FromEpoch: "2.2"}); err != nil {
 		t.Fatal(err)
 	}
 	selected, err := ScopedWaiters(dir, "api", "1.1", boundary)
@@ -128,7 +128,7 @@ func TestReadClockProcessWriter(t *testing.T) {
 	}
 	buildtest.Room(t, base, filepath.Base(dir))
 	err = state.WithMailboxLock(context.Background(), dir, "api", func() error {
-		return markScopedAwaiting(dir, "api", "1.1", Message{ID: "from-process", From: "peer", FromEpoch: "2.2"}, 0)
+		return markScopedAwaiting(dir, "api", "1.1", Message{ID: "from-process", From: "peer", FromEpoch: "2.2"})
 	})
 	if err != nil {
 		t.Fatal(err)

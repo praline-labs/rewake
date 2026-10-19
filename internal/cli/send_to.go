@@ -136,9 +136,6 @@ func addendumRefusal(dir string, self registry.Session, epoch string, root mail.
 		return unreadableTask(root, err)
 	case settled:
 		return failf("%s has already reported on your %s %s; send the addition as a new task: %s", target.Name, mail.KindOf(root), root.ID, next)
-	case !item.Gone() && root.ToEpoch != target.Epoch():
-		// Another run took the work over; an addition cannot follow it there.
-		return failf("the session run your %s %s was written for has ended, and an addition cannot reach the run that took it over, which may still report on it; wait for that report before sending anything again, or send a separate task with: %s", mail.KindOf(root), root.ID, next)
 	case item.Gone() || root.ToEpoch != target.Epoch():
 		return failf("the session run your %s %s was written for has ended, so no report on it is coming; send a new task with: %s", mail.KindOf(root), root.ID, next)
 	case item.Stage == mail.StageFailed:

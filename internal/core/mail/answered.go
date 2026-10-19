@@ -3,9 +3,8 @@ package mail
 // A wait is answered once its report is written and only then cleared
 // (publishTurnContext). A run that dies between the two leaves a wait that
 // names tasks already answered; a run resuming its conversation would take it
-// over (AdoptWaits) and answer them again under its own report's id. So both
-// the takeover and the writing of a report first look for the answer in the
-// mailbox of whoever waits.
+// over and answer them again under its own report's id. So the writing of a
+// report first looks for the answer in the mailbox of whoever waits.
 
 // answeredIDs names the messages a final report of the name — finished or
 // failed, as stageOf counts them — has answered

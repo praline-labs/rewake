@@ -95,8 +95,7 @@ type Server struct {
 	// arrivals remembers when each waiting message was first seen, which is
 	// what the window mail waits in is measured from.
 	arrivals map[string]*arrival
-	// followed is set once the earlier runs' waits were taken over or
-	// forgotten (adopt.go).
+	// followed is set once the earlier runs' waits were forgotten.
 	followed bool
 }
 

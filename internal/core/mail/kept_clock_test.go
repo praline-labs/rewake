@@ -65,7 +65,7 @@ func (k keptClock) keep(text string) error {
 
 func (k keptClock) read(id string) error {
 	return withLock(k.dir, "api", func() error {
-		return markScopedAwaiting(k.dir, "api", k.epoch, Message{ID: id, From: "web", FromEpoch: "2.2"}, 0)
+		return markScopedAwaiting(k.dir, "api", k.epoch, Message{ID: id, From: "web", FromEpoch: "2.2"})
 	})
 }
 

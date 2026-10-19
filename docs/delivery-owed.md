@@ -97,8 +97,8 @@ whatever stage it had reached: it is listed as `no report coming: <name> ended; 
 saved work and give the task to a new worker` (`… was replaced by a new run; …`) and counted apart from the reports still
 expected. No restore operation reopens a worker's conversation under its name, so
 nothing is promised for a resume (main's decision, October 19, 2026,
-after the audit of the briefings). The old adoption code (`AdoptWaits`) remains but nothing
-in a release reaches it, and `--awaited` no longer lists a task as resumable.
+after the audit of the briefings). The adoption code (`AdoptWaits`, the resume window) was
+deleted the same day, and `--awaited` no longer lists a task as resumable.
 
 Whether a missing wait record can be trusted depends on who could have removed it. Only
 the report removes one, and only a new run of the name sweeps the old run's directory

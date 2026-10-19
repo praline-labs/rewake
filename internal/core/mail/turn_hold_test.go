@@ -37,7 +37,7 @@ func newInterimLab(t *testing.T) interimLab {
 	base := newTwoSessionLab(t)
 	self := base.session(t, "api")
 	if err := withLock(base.dir, "api", func() error {
-		return markScopedAwaiting(base.dir, "api", self.Epoch(), Message{ID: "task", From: "web", FromEpoch: base.web.Epoch()}, 0)
+		return markScopedAwaiting(base.dir, "api", self.Epoch(), Message{ID: "task", From: "web", FromEpoch: base.web.Epoch()})
 	}); err != nil {
 		t.Fatal(err)
 	}

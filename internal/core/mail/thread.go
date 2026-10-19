@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"slices"
 
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
@@ -64,15 +65,12 @@ func keepThreadRecord(dir, name, id string) bool {
 	if err != nil || stages[0] || stages[1] {
 		return true
 	}
-	// Any run's: an earlier run's owed task is what a resumed one takes over
-	// by this record (adopt.go).
 	owed, err := owedByAnyRun(dir, name, id)
 	return err != nil || owed
 }
 
 // owedByAnyRun says whether a wait record of any run of the name lists the
-// message, and still stands: a run that ended owes it only within the resume
-// window (adopt.go). An error says a wait record could not be read.
+// message. An error says a wait record could not be read.
 func owedByAnyRun(dir, name, id string) (bool, error) {
 	runs, err := os.ReadDir(state.AwaitingPath(dir, name))
 	if errors.Is(err, os.ErrNotExist) {
@@ -90,7 +88,7 @@ func owedByAnyRun(dir, name, id string) (bool, error) {
 			return false, err
 		}
 		for _, waiter := range waiters {
-			if owedStands(run.Name(), waiter, id) {
+			if slices.Contains(waiter.Messages, id) {
 				return true, nil
 			}
 		}

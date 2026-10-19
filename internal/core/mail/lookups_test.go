@@ -89,7 +89,7 @@ func TestAWaiterThatCannotBeReadIsNotWrittenOver(t *testing.T) {
 	path, _ := awaitingPath(dir, "api", "e1")
 	earlier := []byte(`{"name":"web","epoch":"w1","messages":["earlier"]}`)
 	unreadable(t, filepath.Join(path, "web"), earlier)
-	if err := markAwaitingSequence(dir, "api", "e1", "web", "w1", NewID(), 0, 0); err == nil {
+	if err := markAwaitingSequence(dir, "api", "e1", "web", "w1", NewID(), 0); err == nil {
 		t.Fatal("recorded a read over a waiter it could not read")
 	}
 	if err := os.Chmod(filepath.Join(path, "web"), 0o600); err != nil {
@@ -333,7 +333,7 @@ func TestADamagedWaitRecordIsNotReadAsZeros(t *testing.T) {
 		if waiters, err := ReadWaiters(dir, "api", "1.1"); err == nil {
 			t.Fatalf("%q read as %+v", damaged, waiters)
 		}
-		if err := markAwaitingSequence(dir, "api", "1.1", "web", "w1", NewID(), 0, 0); err == nil {
+		if err := markAwaitingSequence(dir, "api", "1.1", "web", "w1", NewID(), 0); err == nil {
 			t.Fatalf("recorded a read over %q", damaged)
 		}
 		if err := ClearAwaiting(dir, "api", "1.1", Waiter{Name: "web", Epoch: "w1", Messages: []string{letter.ID}}); err == nil {
