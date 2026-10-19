@@ -68,6 +68,12 @@
       "answer": {"$ref": "#/$defs/Done"}
     },
     {
+      "path": "session/closing",
+      "description": "says the harness has begun to end its process, from main's mod at /exit and at session.end with an exit reason, before the harness's screen goes or as soon after as the harness tells; a main in rewake's shell has its closing screen started by it (docs/v2/shell.md), and nothing else changes on the host.",
+      "request": {"$ref": "#/$defs/ClosingRequest"},
+      "answer": {"$ref": "#/$defs/Done"}
+    },
+    {
       "path": "ask/open",
       "description": "opens a permission request or a question of a worker's run for main to answer (docs/permission-requests.md): the host leaves main a notify naming it and answers its id; 409 says the run is no worker or the room has no main to ask, and the question stays the person's at the screen.",
       "request": {"$ref": "#/$defs/AskOpenRequest"},
@@ -199,6 +205,16 @@
         "loadSeq": {"type": "integer", "description": "is, on a hello refused 410 for a number below the current load's, that load's number: a load whose store shows no number above its own takes the next above this one and says hello once more."}
       },
       "required": ["error"],
+      "additionalProperties": false
+    },
+    "ClosingRequest": {
+      "type": "object",
+      "description": "says the harness's process has begun to end.",
+      "properties": {
+        "loadId": {"type": "string", "description": "is the admitted load telling."},
+        "reason": {"type": "string", "description": "is why, in the harness's word for a session's end (prompt_input_exit for /exit, ctrl+c and ctrl+d)."}
+      },
+      "required": ["loadId", "reason"],
       "additionalProperties": false
     },
     "Done": {

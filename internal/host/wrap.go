@@ -199,6 +199,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 		// The shell's pane draws main as a space host's draws a worker, so
 		// main gets the same locale (docs/v2/shell.md); its workers inherit it.
 		launchRequest.Env = terminal.UTF8Locale(launchRequest.Env)
+		launchRequest.Closing = tellShellClosing
 	}
 	plan, err := request.Harness.Launch(launchRequest)
 	if err != nil {

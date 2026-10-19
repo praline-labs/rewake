@@ -14,6 +14,7 @@ import type {
 } from "../protocol.gen.ts";
 import { paths } from "../protocol.gen.ts";
 import { Asks, allowOnce, allowSession, refuseCall } from "./asks.ts";
+import { exitReasons, tellClosing } from "./closing.ts";
 import { Heartbeat } from "./heartbeat.ts";
 import { Management } from "./management.ts";
 import type { Host } from "./outbox.ts";
@@ -345,6 +346,17 @@ export const register: Register = (on) => {
       ? { deny: "rewake could not carry this question (" + next.error.message + ")." }
       : next(e),
   );
+
+  // The process's end, told as it begins (closing.ts): /exit before the
+  // command runs, Ctrl+C and Ctrl+D at session.end.
+  on("command.run", { command: "exit" }, async ($, e, next) => {
+    if (load?.run) await tellClosing(load.host, loadId, "prompt_input_exit");
+    return next(e);
+  });
+  on("session.end", async ($, e, next) => {
+    if (load?.run && exitReasons.has(e.reason)) await tellClosing(load.host, loadId, e.reason);
+    return next(e);
+  });
 
   on("session.measure", async ($, e, next) => {
     const measured = await next(e);

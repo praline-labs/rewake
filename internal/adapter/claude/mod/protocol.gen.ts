@@ -29,6 +29,11 @@ export const paths = {
   modState: "/v1/mod/state",
   // modControl acknowledges a control request or reports its final outcome.
   modControl: "/v1/mod/control",
+  // sessionClosing says the harness has begun to end its process, from main's mod at /exit and
+  // at session.end with an exit reason, before the harness's screen goes or as soon after as
+  // the harness tells; a main in rewake's shell has its closing screen started by it
+  // (docs/v2/shell.md), and nothing else changes on the host.
+  sessionClosing: "/v1/session/closing",
   // askOpen opens a permission request or a question of a worker's run for main to answer
   // (docs/permission-requests.md): the host leaves main a notify naming it and answers its id;
   // 409 says the run is no worker or the room has no main to ask, and the question stays the
@@ -52,6 +57,7 @@ export interface Endpoints {
   "/v1/mod/ended": { request: EndedRequest; answer: EndedAnswer }
   "/v1/mod/state": { request: StateRequest; answer: Done }
   "/v1/mod/control": { request: ControlReply; answer: Done }
+  "/v1/session/closing": { request: ClosingRequest; answer: Done }
   "/v1/ask/open": { request: AskOpenRequest; answer: AskOpenAnswer }
   "/v1/ask/poll": { request: AskPollRequest; answer: AskPollAnswer }
   "/v1/ask/settle": { request: AskSettleRequest; answer: Done }
@@ -182,6 +188,15 @@ export interface Refusal {
   // number: a load whose store shows no number above its own takes the next above this one and
   // says hello once more.
   loadSeq?: number
+}
+
+// ClosingRequest says the harness's process has begun to end.
+export interface ClosingRequest {
+  // loadId is the admitted load telling.
+  loadId: string
+  // reason is why, in the harness's word for a session's end (prompt_input_exit for /exit,
+  // ctrl+c and ctrl+d).
+  reason: string
 }
 
 // Done is the answer of an endpoint that did what was asked and has nothing to say.

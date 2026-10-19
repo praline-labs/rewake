@@ -30,7 +30,7 @@ var bypassExceptions = []bypass{
 	{"internal/host/worktree/worktree.go", "os.MkdirAll", 2, worktreeOutside + ": the directories of checkouts and records"},
 	{"internal/host/worktree/worktree.go", "os.Remove", 4, worktreeOutside + ": a checkout's directory and record, undone"},
 
-	{"internal/adapter/pi/ship.go", "os.MkdirAll", 1, "pi's agent directory, the person's beside the alias file and outside any room: no room's lease covers it"},
+	{"internal/adapter/pi/ship.go", "os.MkdirAll", 2, "pi's agent directory and its extensions and skills folders, the person's beside the alias file and outside any room: no room's lease covers them"},
 	{"internal/adapter/pi/ship.go", "os.Chmod", 1, "pi's agent directory made private, the person's beside the alias file and outside any room"},
 
 	{"internal/adapter/claude/workerdir.go", "os.MkdirAll", 2, "the Claude Code worker profile's directory and a template's memory in it, the person's beside the alias file and outside any room: no room's lease covers it"},

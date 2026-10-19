@@ -40,24 +40,38 @@ terminal in a pty; the owner checked step 1 on their own terminal the same day.
 - **The closing screen** (the owner's wish, October 19, 2026): from the moment main's end begins
   until the shell exits, the whole screen is one spinner and "closing rewake…" in the middle
   (`shell/src/closing.tsx`), and nothing of the work — no pane, no bar — shows, nor do keys reach a
-  program. It begins when the room's listing reads main's run ended for a space the shell shows
-  (main's harness gone while its process may still linger, the space hosts ending the workers),
-  when main's process ends, or when the shell ends itself on SIGTERM, SIGINT or SIGQUIT; not when
-  the terminal is lost (a hangup, its input ended, the parent gone), with nowhere to draw. It is a
-  layer over the work, as the modal will be, and the work underneath is hidden as one, so a
-  terminal background the shell does not know never lets a pane show through. Once main has
-  ended, the layer stays until every worker the shell showed reads closed in the room's listing
-  (polled every 200 ms, at most 10 s, the space host's own bounds for ending a worker), and at
-  least 600 ms. Measured live on October 19, 2026 (Claude Code 2.1.302 on a cheap model, one
-  worker, under a stand-in terminal): after `/exit`'s Enter, or the second Ctrl+C, Claude Code
-  leaves the alternate screen within 15 ms, and main's process, wrapper and all, exits 340–420 ms
-  later; the room's listing reads main's run ended only after that, and the worker reads closed
-  0.9–1.0 s after main's exit. The shell used to exit 30 ms after main, before a frame of the
-  layer was drawn, and the worker ended unseen; now the spinner shows from main's exit until
-  the worker is closed, about a second. Main leaving the alternate screen is not a sign of its
-  end: Ctrl+Z leaves it as well, and Claude Code then stays on "has been suspended" with its
-  process running — so for those 340–420 ms the pane shows Claude Code's last lines on its
-  ordinary screen.
+  program. It is a layer over the work, as the modal will be, and the work underneath is hidden as
+  one, so a terminal background the shell does not know never lets a pane show through.
+- **What begins it.** First, **main's closing mark** (the owner's idea, October 19, 2026): main's
+  mod tells its wrapper `session/closing` as Claude Code begins to end its process — at `/exit`
+  before the command runs, and at `session.end` for Ctrl+C or Ctrl+D twice, the earliest the mod
+  hears of them ([the record](../research-claude-mod.md#the-end-of-the-process-as-the-mod-hears-it)) —
+  and the wrapper of a main in the shell writes `ESC ] 6262 ; rewake-closing BEL` on its terminal,
+  main's pane (`internal/host/start.go`), which the scanner takes out (`shell/src/scan.ts`; the
+  widget ignores an OSC it does not know). For `/exit` the mod waits for the answer, at most
+  300 ms, so the mark is in the pane's stream before Claude Code leaves its screen. For Ctrl+C and
+  Ctrl+D the screen is left some 60 ms before the mark, so the shell holds main's bytes from the
+  moment main leaves the alternate screen, at most 250 ms (`LeaveHold` in `shell/src/ending.ts`),
+  and a mark within that starts the layer over the screen main left. Ctrl+Z and an external editor
+  leave the screen too, with no mark: their first frame comes 250 ms late. A layer begun by the
+  mark alone is lifted if main still runs 5 s later, so a main that did not end is never hidden.
+  The fallbacks stay: the room's listing reading main's run ended for a space the shell shows,
+  main's process ending, and the shell ending itself on SIGTERM, SIGINT or SIGQUIT; not when the
+  terminal is lost (a hangup, its input ended, the parent gone), with nowhere to draw.
+- **When it ends.** Once main has ended, the layer stays until every worker the shell showed reads
+  closed in the room's listing (polled every 200 ms, at most 10 s, the space host's own bounds for
+  ending a worker), and at least 600 ms. Measured live on October 19, 2026 (Claude Code 2.1.302 on
+  a cheap model, one worker, under a stand-in terminal): after `/exit`'s Enter, or the second
+  Ctrl+C, Claude Code leaves the alternate screen within 15 ms, and main's process, wrapper and all,
+  exits 340–420 ms later; the room's listing reads main's run ended only after that, and the worker
+  reads closed 0.9–1.0 s after main's exit. The shell used to exit 30 ms after main, before a frame
+  of the layer was drawn, and the worker ended unseen.
+- **Timeline with the mark** (live, the same day, main alone on a cheap model in the shell under a
+  stand-in terminal that read its screen after every write). Before: `/exit`'s Enter emptied main's
+  pane at +39 ms and the spinner came at +633 ms; the second Ctrl+C or Ctrl+D, +22–24 ms and
+  +612–643 ms, one run each. After: the spinner at +44–56 ms after `/exit`'s Enter (three runs)
+  and +80–132 ms after the second Ctrl+C (three) or Ctrl+D (one), drawn in the frame that took
+  main's last screen away, its pane never seen empty.
 
 ## How a pane is fed: the raw stream
 

@@ -70,6 +70,12 @@ type LaunchRequest struct {
 	// terminal keeps no scrollback before a pane attached: an adapter whose
 	// harness can scroll its own history turns that on (docs/v2/shell.md).
 	Shell bool
+	// Closing, set by the host for a run in rewake's shell and nil
+	// otherwise, tells the shell that the harness has begun to end its
+	// process, so the shell's closing screen is up before the harness's own
+	// screen goes. An adapter calls it when its harness says so, as often as
+	// it says (docs/v2/shell.md).
+	Closing func()
 	// Env is the run's whole environment, built by the host: the current
 	// one less what the adapter's runs must not inherit (EnvNotInherited),
 	// plus the rewake variables that name the run. The adapter starts the

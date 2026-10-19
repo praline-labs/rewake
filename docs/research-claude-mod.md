@@ -491,3 +491,21 @@ October 19, 2026, Claude Code 2.1.302, a probe mod under `claude -p --plugin-dir
   without one listed unknown, then `"medium"` after a turn, and after `/effort max` typed in
   its terminal still `"medium"` until its next turn, then `"max"`. Nothing the mod hears
   marks the change itself, so between them `list` lags by a turn.
+
+## The end of the process, as the mod hears it
+
+October 19, 2026, Claude Code 2.1.302, fullscreen (the alternate screen), a probe mod under
+`claude --model haiku --plugin-dir …` in a stand-in terminal whose clock also stamped each of
+the mod's posts to a socket of the driver's:
+
+- `/exit`'s Enter: `command.run` with `command: "exit"` at +46 ms, then the harness leaves the
+  alternate screen at +54 ms, `classic.SessionEnd` and `session.end` (`prompt_input_exit`) at
+  +119 and +124 ms, the process gone at +650 ms. The hook awaited its post before `next(e)`,
+  so the screen is left only after a `command.run` hook returns.
+- The second Ctrl+C, or Ctrl+D: the screen left at +3 ms, `classic.SessionEnd` at +63–68 ms and
+  `session.end` at +66–73 ms (`prompt_input_exit` both), the process gone at about +600 ms.
+  Nothing the mod hooks fires earlier: the first press runs no command and ends nothing, and a
+  `Button`'s `action` presses only where no engine handler of the action is mounted, which
+  the exit's always is (the types' text).
+- rewake uses both since the same day: main's mod sends `session/closing` from the first, and
+  from the second for `prompt_input_exit` and `other` (docs/v2/shell.md, "The closing screen").

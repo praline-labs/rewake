@@ -308,7 +308,9 @@ sees the variable, takes it out of its environment and runs main as an ordinary 
 adapter is told the run is drawn by rewake (`LaunchRequest.Shell`): Claude Code runs fullscreen,
 `CLAUDE_CODE_NO_FLICKER=1` unless the person set the variable, so it scrolls its own history with
 the wheel. The shell sets `REWAKE_HOST_COLORS` in main's environment from the terminal's
-answer, so workers' hosts are seeded too. It ends when main ends, with main's code, and when its
+answer, so workers' hosts are seeded too. Main's wrapper writes on its terminal one thing of its
+own, the shell's closing mark, when main's mod says Claude Code has begun to end
+([shell.md](v2/shell.md#who-owns-which-pty)). It ends when main ends, with main's code, and when its
 terminal goes: then it hangs main up and main's run's end ends every worker. A launch that failed
 inside the shell has its last lines printed once the shell leaves the screen.
 

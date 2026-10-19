@@ -20,43 +20,6 @@ import (
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
-// Config is what a run's mod endpoint serves.
-type Config struct {
-	// Socket is the run's mod socket, in the room's sock/ directory.
-	Socket     string
-	ControlDir string
-	Epoch      string
-	// Role is the run's role, as the role catalog names it, which a hello
-	// is answered with.
-	Role string
-	// Record is where the last admitted hello is written for the run, empty
-	// for nowhere: what a person or a live check reads of the mod's load.
-	Record string
-	// Wait bounds how long a request waits for the host to name the
-	// harness's process; a request that comes before is held, then refused.
-	Wait time.Duration
-	// Live hears each transition of what the mod proves: a hello that opens
-	// a generation, once it is bound and recorded and before it is
-	// answered, so the set is live by the time the mod acts on the answer;
-	// and a lapse. Each carries the next number of the run's one sequence,
-	// so a report heard after a later one is known for what it is
-	// (alive.go); nil hears nothing.
-	Live func(transition uint64, proven bool)
-	// Hold and Lapse are the heartbeat's bounds, the protocol's
-	// aliveHoldSeconds and aliveLapseSeconds when zero.
-	Hold, Lapse time.Duration
-	// Ended says a run, by its epoch, is proven ended — of another boot, or
-	// its wrapper gone — for mod/ended; nil proves none ended.
-	Ended func(epoch string) bool
-	// Asked tells main of a worker's request the mod opened, by its id, what
-	// it shows and its deadline (asks.go); nil for a run main does not
-	// answer for, whose requests stay the person's at the screen.
-	Asked func(id string, offer asking.Offer, deadline time.Time) error
-	// Effort is the reasoning effort the launch passed, empty when it passed
-	// none: shown, marked, until the mod sees a request of the main loop.
-	Effort string
-}
-
 // Server is the wrapper's end of the mod's protocol for one run. Every
 // request is checked by its peer on its own: the process at the other end of
 // the connection must be the harness the host started, alive with its start
@@ -338,16 +301,17 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 // endpoints is the protocol's paths and what serves each.
 func (s *Server) endpoints() map[string]http.HandlerFunc {
 	return map[string]http.HandlerFunc{
-		PathHello:      s.hello,
-		PathTurnStart:  s.turnStart,
-		PathTurnEnd:    s.turnEnd,
-		PathModEnded:   s.ended,
-		PathModAlive:   s.alive,
-		PathModState:   s.state,
-		PathModControl: s.controlReply,
-		PathAskOpen:    s.askOpen,
-		PathAskPoll:    s.askPoll,
-		PathAskSettle:  s.askSettle,
+		PathHello:          s.hello,
+		PathTurnStart:      s.turnStart,
+		PathTurnEnd:        s.turnEnd,
+		PathModEnded:       s.ended,
+		PathModAlive:       s.alive,
+		PathModState:       s.state,
+		PathModControl:     s.controlReply,
+		PathSessionClosing: s.sessionClosing,
+		PathAskOpen:        s.askOpen,
+		PathAskPoll:        s.askPoll,
+		PathAskSettle:      s.askSettle,
 	}
 }
 

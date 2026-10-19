@@ -4,19 +4,15 @@
 // Started by rewake --shell as
 //   rewake-shell --room <room> -- <main's command line>
 
-import {
-  createCliRenderer,
-  type EmbeddedTerminalOptions,
-  EmbeddedTerminalRenderable,
-  type RenderContext,
-} from "@opentui/core";
-import { extend, render, useTerminalDimensions } from "@opentui/solid";
+import { createCliRenderer } from "@opentui/core";
+import { render, useTerminalDimensions } from "@opentui/solid";
 import { createEffect, createSignal, For, Show } from "solid-js";
 import { Bar, Hints } from "./bar.tsx";
 import { Closing } from "./closing.tsx";
-import { askColors, keepDefaultForeground, seedOf } from "./colors.ts";
-import { endMain, tailText, watchTerminal } from "./ending.ts";
+import { askColors, seedOf } from "./colors.ts";
+import { endMain, LeaveHold, tailText, watchTerminal } from "./ending.ts";
 import { type Command, prefixHandler } from "./keys.ts";
+import { type PaneTerminal, paneHooks } from "./pane.ts";
 import { pollRoom, type Space, spacesOver } from "./room.ts";
 import { Scanner } from "./scan.ts";
 import { connectWorker, type MainRun, type Source, startMain } from "./sources.ts";
@@ -32,38 +28,6 @@ if (split < 0 || command.length === 0) {
 }
 const rewake = command[0]!;
 const cwd = process.env.REWAKE_SHELL_CWD || process.cwd();
-
-// Solid makes a renderable with { id } only, so what the widget reads only
-// in its constructor is fixed here: assigning onMouseDown later replaces the
-// widget's own mouse forwarding.
-// The id is read at the press: Solid sets the id prop after construction.
-let pressed: (id: string) => void = () => {};
-// standIn is the seed's stand-in foreground, set before any pane is made.
-let standIn: [number, number, number] | undefined;
-class PaneTerminal extends EmbeddedTerminalRenderable {
-  constructor(ctx: RenderContext, options: EmbeddedTerminalOptions) {
-    const self: { term?: PaneTerminal } = {};
-    super(ctx, {
-      ...options,
-      maxScrollback: 10_000,
-      onMouseDown: () => {
-        if (self.term) pressed(self.term.id);
-      },
-    });
-    self.term = this;
-    // The widget draws every cell in an RGB colour; with no foreground from
-    // the terminal its default one goes back to the terminal's own.
-    this.renderAfter = (buffer) => {
-      if (standIn) keepDefaultForeground(buffer, standIn);
-    };
-  }
-}
-extend({ pane_terminal: PaneTerminal });
-declare module "@opentui/solid" {
-  interface OpenTUIComponents {
-    pane_terminal: typeof PaneTerminal;
-  }
-}
 
 // A pane is a program on the screen: main, or a space's worker.
 type Pane = {
@@ -91,10 +55,18 @@ const [closing, setClosing] = createSignal(false);
 let closingAt = 0;
 const closingShown = 600;
 const workersBound = 10_000;
-function beginClosing() {
+// closingMarked is a closing begun by main's closing mark alone, lifted if
+// main still runs closingLift later: the mark says main began to end, and a
+// screen that hid a main going on would leave the person no way to it.
+let closingMarked = false;
+const closingLift = 5000;
+function beginClosing(marked = false) {
+  if (!marked) closingMarked = false;
   if (closing()) return;
+  closingMarked = marked;
   closingAt = Date.now();
   setClosing(true);
+  if (marked) setTimeout(() => closingMarked && !ending && setClosing(false), closingLift);
 }
 const allPanes = () => [mainPane, ...workers()];
 const paneOf = (id: string | undefined) => allPanes().find((p) => p.id === id);
@@ -112,13 +84,19 @@ const renderer = await createCliRenderer({
 });
 const colors = await askColors(renderer);
 const seed = seedOf(colors);
-standIn = seed.standIn;
+paneHooks.standIn = seed.standIn;
 const theme = themeOf(colors);
 
 // feed passes a program's bytes to its pane, after the scanner took what
 // the widget would swallow.
 function feed(pane: Pane, data: Uint8Array) {
+  let left = false;
   for (const seen of pane.scanner.scan(data)) {
+    left ||= seen.left === true;
+    if (seen.closing && pane === mainPane) {
+      beginClosing(true);
+      mainHold.release();
+    }
     if (seen.copy !== undefined) renderer.copyToClipboardOSC52(seen.copy);
     if (seen.title !== undefined) {
       pane.title = seen.title;
@@ -128,8 +106,10 @@ function feed(pane: Pane, data: Uint8Array) {
     // selection of OpenTUI's.
     if (seen.mouse !== undefined && pane.term) pane.term.selectable = !seen.mouse;
   }
-  pane.term?.write(data);
+  if (pane === mainPane) mainHold.pass(data, left && !closing());
+  else pane.term?.write(data);
 }
+const mainHold = new LeaveHold((data) => mainPane.term?.write(data));
 
 function startMainPane(term: PaneTerminal) {
   mainPane.term = term;
@@ -264,7 +244,7 @@ function run(c: Command) {
   }
 }
 
-pressed = (id) => {
+paneHooks.pressed = (id) => {
   if (id !== focused() && !closing()) show(id);
 };
 
@@ -287,7 +267,7 @@ function App() {
     paddingLeft: 1,
     paddingRight: 1,
     backgroundColor: seed.transparent ? undefined : theme.background,
-    onMouseDown: () => pressed(p.id),
+    onMouseDown: () => paneHooks.pressed(p.id),
   });
   const inner = (p: Pane) => Math.max(widthOf(p) - 2, 1);
   const focusedPane = () => paneOf(focused()) ?? mainPane;
@@ -369,7 +349,10 @@ async function finish(code?: number, lost = false) {
     const ids = workers().map((p) => p.id);
     await Promise.all([
       spacesOver(rewake, room, ids, workersBound),
-      new Promise((resolve) => setTimeout(resolve, closingAt + closingShown - Date.now())),
+      // Begun by main's mark, the layer may have shown long enough already.
+      new Promise((resolve) =>
+        setTimeout(resolve, Math.max(0, closingAt + closingShown - Date.now())),
+      ),
     ]);
   }
   renderer.destroy();

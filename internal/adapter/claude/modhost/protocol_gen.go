@@ -28,6 +28,12 @@ const (
 	// PathModControl acknowledges a control request or reports its final outcome. Asked
 	// ControlReply, answered Done.
 	PathModControl = "/v1/mod/control"
+	// PathSessionClosing says the harness has begun to end its process, from main's mod at /exit
+	// and at session.end with an exit reason, before the harness's screen goes or as soon after as
+	// the harness tells; a main in rewake's shell has its closing screen started by it
+	// (docs/v2/shell.md), and nothing else changes on the host. Asked ClosingRequest, answered
+	// Done.
+	PathSessionClosing = "/v1/session/closing"
 	// PathAskOpen opens a permission request or a question of a worker's run for main to answer
 	// (docs/permission-requests.md): the host leaves main a notify naming it and answers its id;
 	// 409 says the run is no worker or the room has no main to ask, and the question stays the
@@ -209,6 +215,16 @@ type Refusal struct {
 	// number: a load whose store shows no number above its own takes the next above this one and
 	// says hello once more.
 	LoadSeq *int `json:"loadSeq,omitempty"`
+}
+
+// ClosingRequest says the harness's process has begun to end.
+type ClosingRequest struct {
+	// LoadID is the admitted load telling.
+	LoadID string `json:"loadId"`
+
+	// Reason is why, in the harness's word for a session's end (prompt_input_exit for /exit,
+	// ctrl+c and ctrl+d).
+	Reason string `json:"reason"`
 }
 
 // Done is the answer of an endpoint that did what was asked and has nothing to say.

@@ -105,7 +105,7 @@ longer than 20 s; a wait is a loop of polls. A request body is at most 64 KiB �
 | `turn/start`, `turn/end` | every load's mod, for its own conversation's turns | the turn's id; at its end the end's id, the reason and the answer | a receipt once the core took it ([section 5](#5-reports)) |
 | `mod/alive` | every admitted load, in a loop | the load | within 15 s, done; 409 once its generation lapsed or is not the current one, and the mod says hello again; 410 once a later load superseded it ([the live set](stage4-turns.md#the-live-set)) |
 | `mod/ended` | every admitted load, at its start | the epochs of other runs whose ends the store keeps | those rewake proves ended ([the outbox](stage4-turns.md#the-mods-side)) |
-| `session/closing` | main's mod, at `session.end` when the process exits | the reason | at once: the wrapper takes over the shutdown ([section 7](#7-closing)) |
+| `session/closing` | every admitted load, at `/exit` before the command runs and at `session.end` with an exit reason | the reason | done; a main in rewake's shell has the wrapper write the shell's closing mark ([section 7](#7-closing)) |
 
 **One description.** The protocol is one JSON schema,
 `internal/adapter/claude/mod/protocol.schema.json` (answer 9). A small generator of rewake's
@@ -238,8 +238,12 @@ after the bound and a margin has its session killed by main's wrapper.
 
 **main ends.** At `session.end` with an exit reason, main's mod sends `session/closing`, best
 effort, under the hook's bound; an abort loses nothing, since the wrapper also sees its harness
-exit. On either signal the host writes each open space's record as closing and stops each
-worker. Once each worker's end is observed the host inspects its checkout — gone, kept with
+exit. Built on October 19, 2026 for the shell alone: the mod sends it at `/exit` before the
+command runs and at `session.end` for `prompt_input_exit` and `other`, waiting at most 300 ms
+for the answer, and the wrapper of a main in the shell writes the shell's closing mark
+([shell.md](shell.md#who-owns-which-pty)); the host stops nothing on it. As planned, on either
+signal the host would write each open space's record as closing and stop each worker; today
+the workers end when main's run does. Once each worker's end is observed the host inspects its checkout — gone, kept with
 changes or commits — and marks each record closed
 with what it saw. A record is closed from that observation, never from a release sent. **The
 reminder of kept checkouts covers what stays** (the owner, October 13, 2026): such a checkout is
