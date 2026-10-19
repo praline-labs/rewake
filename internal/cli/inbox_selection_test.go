@@ -103,7 +103,7 @@ func TestMixedGroupPeekThenSelectedReadAndReadAll(t *testing.T) {
 	}
 }
 
-func TestInboxSelectionRefusesReservedOldAndInvalidIDs(t *testing.T) {
+func TestInboxSelectionRefusesReservedAndInvalidIDs(t *testing.T) {
 	dir, self, peer := stateCaller(t, "general")
 	id := rawUnread(t, dir, self.Name, map[string]any{"from": peer.Name, "fromEpoch": peer.Epoch(), "toEpoch": self.Epoch(), "kind": "finished", "inReplyTo": []string{"question"}, "text": "reserved body"})
 	release, err := mail.ReserveAnswer(dir, self.Name, "question")
@@ -111,8 +111,7 @@ func TestInboxSelectionRefusesReservedOldAndInvalidIDs(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer release()
-	old := rawUnread(t, dir, self.Name, map[string]any{"toEpoch": "old-epoch", "kind": "task", "text": "old body"})
-	for _, args := range [][]string{{"inbox", "--message", id}, {"inbox", "--message", old}, {"inbox", "--message", "unknown"}, {"inbox", "--message", "../escape"}, {"inbox", "--message", ""}, {"inbox", "--peek", "--message", id}, {"inbox", "--peek=false"}} {
+	for _, args := range [][]string{{"inbox", "--message", id}, {"inbox", "--message", "unknown"}, {"inbox", "--message", "../escape"}, {"inbox", "--message", ""}, {"inbox", "--peek", "--message", id}, {"inbox", "--peek=false"}} {
 		code, out, stderr := run(args...)
 		if code == ExitOK || strings.Contains(out, "body") || !strings.Contains(stderr, "inbox") {
 			t.Fatalf("selection accepted: %v %d %s %s", args, code, out, stderr)

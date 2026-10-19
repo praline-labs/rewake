@@ -58,14 +58,32 @@ func TestInboxShowsTheTextOnce(t *testing.T) {
 	}
 }
 
-func TestInboxLeavesAnEarlierSessionsMail(t *testing.T) {
-	dir := liveSession(t, "api")
-	t.Setenv(state.SessionEnv, "api")
-	leaveUnread(t, dir, mail.Message{From: "web", To: "api", ToEpoch: "1.1", Text: "for someone else"})
+// An earlier run of the name that ended before reading what was announced to
+// it left it unread: seen live, a main's reports lost after its restart. The
+// next run reads it, marked, and owes nothing for a task in it.
+func TestInboxShowsAnEarlierRunsMailOwingNothing(t *testing.T) {
+	dir, self, peer := stateCaller(t, "general")
+	leaveUnread(t, dir, mail.Message{From: peer.Name, FromEpoch: peer.Epoch(), To: self.Name, ToEpoch: "1.1", Kind: mail.Finished, Text: "earlier report"})
+	leaveUnread(t, dir, mail.Message{From: peer.Name, FromEpoch: peer.Epoch(), To: self.Name, ToEpoch: "1.1", Kind: mail.Task, Text: "earlier task"})
+	leaveUnread(t, dir, mail.Message{From: peer.Name, FromEpoch: peer.Epoch(), To: self.Name, ToEpoch: self.Epoch(), Kind: mail.Task, Text: "current task"})
 
-	_, out, _ := run("inbox")
-	if strings.Contains(out, "for someone else") {
-		t.Errorf("inbox = %q, showed mail addressed to an earlier session with this name", out)
+	_, peek, _ := run("inbox", "--peek", "--json")
+	if strings.Count(peek, `"earlierRun": true`) != 2 {
+		t.Fatalf("peek = %s, want the two earlier letters marked", peek)
+	}
+	code, out, errOut := run("inbox")
+	if code != ExitOK {
+		t.Fatalf("exit = %d (stderr: %s)", code, errOut)
+	}
+	if !strings.Contains(out, "finished · ") || strings.Count(out, " · for an earlier run") != 2 || !strings.Contains(out, "earlier task\n"+earlierRunNote) || strings.Contains(out, "current task\n"+earlierRunNote) || !strings.Contains(out, "earlier report") {
+		t.Fatalf("inbox = %q, want all three, the earlier two marked", out)
+	}
+	owed, err := mail.OwedMessages(dir, self.Name, self.Epoch())
+	if err != nil || len(owed) != 1 || owed[0].Text != "current task" {
+		t.Fatalf("owed = %+v %v, want only the current task", owed, err)
+	}
+	if _, again, _ := run("inbox"); again != "Rewake: no new messages.\n" {
+		t.Errorf("second read = %q, want nothing new", again)
 	}
 }
 

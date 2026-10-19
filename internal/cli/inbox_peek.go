@@ -59,6 +59,7 @@ type messagePreview struct {
 	// the heading of a plain read does.
 	AddendumTo string `json:"addendumTo,omitempty"`
 	Replaces   string `json:"replaces,omitempty"`
+	EarlierRun bool   `json:"earlierRun,omitempty"`
 	relation   string
 }
 
@@ -72,7 +73,7 @@ func writeInboxPeek(ctx *Context, name string, messages []messageView) error {
 	for _, message := range messages {
 		model.Messages = append(model.Messages, messagePreview{
 			ID: message.ID, From: message.From, Kind: mail.KindOf(message.Message), CreatedAt: message.CreatedAt, Preview: mail.Preview(message.Text), Telemetry: message.Telemetry,
-			AddendumTo: message.AddendumTo, Replaces: message.Replaces, relation: relation(message.Message),
+			AddendumTo: message.AddendumTo, Replaces: message.Replaces, EarlierRun: message.EarlierRun, relation: relation(message.Message) + earlierRun(message.EarlierRun),
 		})
 	}
 	return printValue(ctx, model, func() []string {
