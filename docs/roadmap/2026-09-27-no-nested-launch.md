@@ -1,7 +1,7 @@
 # No session started from inside a session
 
-September 27, 2026. Found by review-claude after stage 2 of the directory grant
-([entry](2026-09-27-grant-dir-claude.md)), fixed the same day.
+September 27, 2026. Found by review-claude after stage 2 of the directory grant,
+fixed the same day.
 
 ## What was found
 

@@ -14,9 +14,10 @@ processes behave. On September 23, 2026 the file passed 400 lines again and was 
 by subject: what a running Codex session shows moved to
 [research-codex.md](archive/research-codex.md), and this file keeps Claude Code, the other
 harnesses and the failed-turn observations. Later the same day, what reaches a running
-Claude Code session from outside besides a message — an interruption, a command, a
-prompt draft — moved to [research-claude-control.md](research-claude-control.md). The
-mail tool on both harnesses had its own, archived with the tool on October 18, 2026:
+Claude Code session from outside besides a message moved to a document of its own, removed on
+October 19, 2026 with what it still taught kept
+[below](#interrupting-a-turn-commands-and-the-stop-hook). The mail tool on both harnesses had
+its own, archived with the tool on October 18, 2026:
 [research-mail-tool.md](archive/research-mail-tool.md).
 
 **[verified live; September 21, 2026]** A fact about our own checks rather than about a
@@ -159,7 +160,7 @@ which the gate does not consult when it decides:
   hook runs]**
 - The Stop hook receives `last_assistant_message` on stdin. **[source; verified
   live]** What a hook that blocks the stop does to the turn — the second call, its
-  payload, the limit — is in [research-claude-actions.md](research-claude-actions.md#holding-a-turns-end-from-the-stop-hook).
+  payload, the limit — is [below](#interrupting-a-turn-commands-and-the-stop-hook).
 - What rewake read from that payload until S9, October 11, 2026, when the hook left
   (`internal/cli/turn_payload.go`, removed then): `agent_id`,
   which decides whether the end counts at all — a child's inherited hook carries one
@@ -277,7 +278,7 @@ Hooks **[verified live unless marked]**:
   takes one **[source]** — absent on Haiku 4.5.
 - `SessionStart` carries `source` and `model` (the id): `startup` at launch,
   `compact` after a compaction, `clear` after `/clear` — without `model` — and `resume`
-  after `/resume` ([research-claude-control.md](research-claude-control.md#interrupting-a-turn-and-changing-the-conversation)).
+  after `/resume` ([below](#interrupting-a-turn-commands-and-the-stop-hook)).
 - `UserPromptSubmit` fires for a message delivered through the inbox socket, and
   carries its text in `prompt`.
 - `PreCompact` (`trigger` `manual` or `auto`, `custom_instructions`) and `PostCompact`
@@ -292,7 +293,7 @@ Hooks **[verified live unless marked]**:
 - `Notification`: `message`, `title`, `notification_type`; the binary names
   `permission_prompt`, `idle_prompt`, `agent_needs_input`, `agent_completed` and
   others **[source]**. `idle_prompt` came 61.6 seconds after an ordinary `Stop`, and
-  not within 80 seconds after an Esc ([research-claude-control.md](research-claude-control.md#interrupting-a-turn-and-changing-the-conversation)).
+  not within 80 seconds after an Esc (2.1.280, September 23, 2026).
 - `SessionEnd`: `reason`, `prompt_input_exit` for `/exit`. `Stop` also carries
   `background_tasks` and `session_crons` **[source]**.
 - Conversation text travels in `prompt`, `last_assistant_message`,
@@ -338,11 +339,31 @@ Code 2.1.280, against a stand-in API server; the evidence was kept outside the r
   is not visible to a plugin at all; until S9, October 11, 2026, rewake read it from the launch's arguments
   ([claude-telemetry.md](archive/1.x/claude-telemetry.md)).
 
-### Interrupting a turn, commands and prompt drafts
+### Interrupting a turn, commands and the Stop hook
 
-Moved on September 23, 2026 to [research-claude-control.md](research-claude-control.md):
-what an Esc or a Ctrl+C leaves for rewake to hear, what `/clear` and `/resume` do, which
-commands reach a session from outside, and how text can be put into its input box.
+Kept from the plugin-era research (Claude Code 2.1.280, private HOME, a stand-in API,
+September 23–26, 2026), removed on October 19, 2026; one line per fact still relied on.
+
+- **An interrupted turn runs no hook.** Esc or Ctrl+C during a request, streaming or a tool
+  gives no `Stop`, `StopFailure` or `Notification`; the abort branches never call the Stop
+  hook **[live; source]**. The mod hears it as `turn.complete` with `aborted`.
+- **Ctrl+C is a key, not a signal.** The UI holds the terminal raw (`-isig`); twice while
+  idle it ends the session with `SessionEnd` reason `prompt_input_exit` **[live]**.
+- **A Bash tool's command** gets SIGTERM on its process tree on Esc or Ctrl+C, never SIGINT,
+  and SIGKILL if still alive after 1500 ms **[live; source]**.
+- **`/clear` and `/resume`.** `/clear`: `SessionEnd` reason `clear` with the old id, then
+  `SessionStart` source `clear` with a new one and no `model`; `/resume`: reason and source
+  `resume`, the resumed conversation's own id. The inbox socket survives both **[live]**.
+- **The inbox socket never runs a slash command**: every `user` line is queued with
+  `skipSlashCommands`, `isMeta` and `skipAttachments`, and none of its control actions
+  compacts, clears or switches a model **[source; live]**.
+- **A Stop hook's block** (`{"decision":"block","reason":…}`) holds the turn: the model is
+  called again with the reason; the next Stop carries `stop_hook_active: true` and only the
+  continuation in `last_assistant_message`; eight blocks in a row are honored, the ninth ends
+  the turn (`CLAUDE_CODE_STOP_HOOK_BLOCK_CAP`, default 8) **[live; source]**.
+- **A draft for a running session** needs code inside it: the function-hooks plugin's
+  `$.prompt.fill` put text into the input box without submitting **[live]**; at launch,
+  `--prefill` ([research-launch.md](research-launch.md#a-prompt-draft-at-launch)).
 
 ## Other harnesses (for later)
 

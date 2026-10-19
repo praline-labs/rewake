@@ -22,14 +22,10 @@ The design:
 - [design-state.md](design-state.md) — the state root of 2.0, clearing the state of 1.x, one
   build per room.
 
-Stage 3's documents that the living ones cite:
+Stage 3's document that the living ones cite:
 
-- [stage3-fixture.md](stage3-fixture.md) — the fixture adapter, its readiness exchange, its
-  program and its column.
 - [stage3-state.md](stage3-state.md) — the state root `v2/` and its inverse, what is a writer,
   the build id and the room's lease with its bootstrap writes.
-- [stage3-decision.md](stage3-decision.md) — the operator decision on an unknown outcome: its
-  subject, its authority, the command, the write-once records and what every reader consults.
 
 Stage 4, Claude Code's adapter as one mod, then the space:
 

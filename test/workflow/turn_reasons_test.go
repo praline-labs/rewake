@@ -15,7 +15,7 @@ import (
 // from the end (O2), on the fixture column: the end's outcome and text travel
 // through the adapter's frame, the neutral completion and the wrapper's
 // confirmation before they become a report, and this is where that whole path
-// is held (docs/v2/stage3-fixture.md).
+// is held (docs/testing.md#the-fixtures-readiness-exchange).
 //
 //   - A worker whose turn fails holds tasks from main and from a peer: each of
 //     the two reads an error about its own task, carrying the turn's reason, and

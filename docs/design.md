@@ -286,7 +286,7 @@ interface every adapter implements are in [code.md](code.md).
 How to run, read and extend the tests is in [testing.md](testing.md); the commands and
 which tests to write are in `AGENTS.md`, "Checks". Three layers, cheapest first: unit tests
 beside the code; the workflow suite in `test/workflow`, switched on by `REWAKE_WORKFLOW=1`,
-a built rewake end to end against the fixture harness, with negative controls; and live runs
+a built rewake end to end against the fixture harness; and live runs
 with real harnesses in a separate state directory, done by hand and recorded in the dated
 acceptance documents.
 

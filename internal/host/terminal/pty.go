@@ -111,26 +111,33 @@ func ioctl(f *os.File, request uintptr, arg unsafe.Pointer) error {
 // by the emulator, never by the person's terminal directly, so TERM and
 // COLORTERM name the capable terminal the emulator plays, never the one
 // inherited from main's command: that one may be a pipe's or a
-// graphics-capable one the emulator does not play. LC_CTYPE is set to C.UTF-8 when the
-// locale in effect names no UTF-8, since a program in the C locale draws a
-// wide glyph as question marks; an LC_ALL the person set is theirs and stays.
+// graphics-capable one the emulator does not play. The locale is UTF8Locale's.
 func Environ(env []string) []string {
-	values := map[string]string{}
 	out := make([]string, 0, len(env)+3)
 	for _, kv := range env {
-		name, value, _ := strings.Cut(kv, "=")
-		values[name] = value
+		name, _, _ := strings.Cut(kv, "=")
 		if name == "TERM" || name == "COLORTERM" {
 			continue
 		}
 		out = append(out, kv)
 	}
-	out = append(out, "TERM=xterm-256color", "COLORTERM=truecolor")
-	if values["LC_ALL"] != "" || namesUTF8(values["LC_CTYPE"]) || values["LC_CTYPE"] == "" && namesUTF8(values["LANG"]) {
-		return out
+	return UTF8Locale(append(out, "TERM=xterm-256color", "COLORTERM=truecolor"))
+}
+
+// UTF8Locale is env with LC_CTYPE set to C.UTF-8 when the locale in effect
+// names no UTF-8, since a program in the C locale draws a wide glyph as
+// question marks; an LC_ALL the person set is theirs and stays.
+func UTF8Locale(env []string) []string {
+	values := map[string]string{}
+	for _, kv := range env {
+		name, value, _ := strings.Cut(kv, "=")
+		values[name] = value
 	}
-	kept := out[:0]
-	for _, kv := range out {
+	if values["LC_ALL"] != "" || namesUTF8(values["LC_CTYPE"]) || values["LC_CTYPE"] == "" && namesUTF8(values["LANG"]) {
+		return env
+	}
+	kept := make([]string, 0, len(env)+1)
+	for _, kv := range env {
 		if !strings.HasPrefix(kv, "LC_CTYPE=") {
 			kept = append(kept, kv)
 		}

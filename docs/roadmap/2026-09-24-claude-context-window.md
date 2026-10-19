@@ -21,7 +21,7 @@ stand-in API the same morning
 - Compaction fires at `window − min(maxOutput, 20000) − 13000`: 267K, 89% of a 300K
   window, seen live between 266K and 268K.
 - A module that uses `$` inside a logical expression does not load
-  ([research-claude-control.md](../research-claude-control.md#what-a-function-hooks-plugin-hears)).
+  (research-claude-control.md).
 
 **What was built** (`de44dda`, [claude-telemetry.md](../archive/1.x/claude-telemetry.md)):
 

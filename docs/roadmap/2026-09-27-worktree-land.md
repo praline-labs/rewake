@@ -1,7 +1,7 @@
 # Worktrees on a branch, landed and finished — September 27, 2026
 
 The checkout `rewake codex --worktree` made on September 26
-([the launch](2026-09-26-codex-worktree-launch.md)) was detached: the commits an agent
+was detached: the commits an agent
 made there hung off no branch, and taking the work back was done by hand. The owner
 decided on September 27, 2026 that a worktree is on a branch of its own, that rewake
 lands and finishes it, and that a Claude Code launch gets the same worktree.

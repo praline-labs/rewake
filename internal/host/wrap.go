@@ -23,6 +23,7 @@ import (
 	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/host/delivery"
 	"github.com/praline-labs/rewake/internal/host/launch"
+	"github.com/praline-labs/rewake/internal/host/terminal"
 	"github.com/praline-labs/rewake/internal/infra/build"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/infra/state"
@@ -186,6 +187,11 @@ func Run(ctx context.Context, request Request) (int, error) {
 		Shell:      request.Shell,
 	}
 	launchRequest.Env = launch.SessionEnv(launchRequest, request.Harness.EnvNotInherited())
+	if request.Shell {
+		// The shell's pane draws main as a space host's draws a worker, so
+		// main gets the same locale (docs/v2/shell.md); its workers inherit it.
+		launchRequest.Env = terminal.UTF8Locale(launchRequest.Env)
+	}
 	plan, err := request.Harness.Launch(launchRequest)
 	if err != nil {
 		return 0, err

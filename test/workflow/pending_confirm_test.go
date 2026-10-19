@@ -10,8 +10,8 @@ import (
 
 // TestPendingConfirm is the confirmation of a turn end on the column that can
 // hold one: the fixture's end, which asks the core through the contract
-// (docs/v2/stage3-fixture.md); the Claude Code column's Stop hook held one too
-// until S9. A worker
+// (docs/testing.md#the-fixtures-readiness-exchange); the Claude Code
+// column's Stop hook held one too until S9. A worker
 // reads a task and ends its first turn pending. Woken by another session's
 // mail, its next turn ends with no mark — the turn a finished subagent starts,
 // where the mark is easily forgotten — and rewake holds it once, quoting the

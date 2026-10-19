@@ -48,7 +48,7 @@ tools/protogen/                               writes the mod protocol's Go and T
 ```
 
 `cmd/` holds only what the project ships; `tools/` holds development programs that ship
-with nobody, and `test/` and `docs/` hold packages that exist only for their tests.
+with nobody, and `test/` holds packages that exist only for their tests.
 
 ## The adapter API
 

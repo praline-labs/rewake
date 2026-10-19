@@ -41,18 +41,6 @@ step of the lease ([stage3-state.md](v2/stage3-state.md#one-build-per-room)), re
 killed by the test. It runs in every test run, untagged, since a launch
 it starts never gets past its lease.
 
-The decision rig (`test/decisionrig`) builds rewake with the tag and the fixture harness,
-and launches sessions whose harness is the rig's own test binary as the fixture's program
-([stage3-decision.md](v2/stage3-decision.md#authority)). The program's two halves start
-askers on command — below the wrapper, in a group or a user namespace of their own, with
-the session's variables changed or cleared — each asking for a decision through the client,
-straight at the address, or classifying itself as the person. A wrapper is held at the named steps of a decision's way and killed
-or ended there, an asker at the client's step after it checked the wrapper. It runs only
-with the test tag, since a launch needs the fixture harness. The death cases keep one
-before the decision and one after its commit; the deadline and admitted-decision regressions
-remain whole. The person cases keep an ordinary child and a detached child with a clean
-environment.
-
 The tag also admits one narrow kind of test code into a production package. When a fault
 schedule must cross a package boundary and neither an exported operation, a file
 fixture nor `state.Fault` can build it, the package that owns the step may carry exported
@@ -60,7 +48,7 @@ test operations in a file built only under `rewaketest`, and the tests in the ot
 package that use them carry the same tag. They run in the additional tagged
 race run; an untagged build has no such operation. The only such file is
 `internal/core/mail/faultops.go`, decided by S15 for `core/mail` ([stage3-moves.md](archive/v2/stage3-moves.md#s15-the-delivery-server-to-hostdelivery-codex)):
-a waiting copy's removal that fails, and the listing of a mailbox's stops observed.
+a waiting copy's removal that fails.
 
 ### Three columns, three meanings
 
@@ -72,8 +60,8 @@ a Claude Code column back. Shared scenarios run across the columns; adapter-spec
 scenarios run on the columns they exercise. The column left is the
 fixture harness — a harness of its own, built
 only under the `rewaketest` tag, which the suite's rewake is built with
-([stage3-fixture.md](v2/stage3-fixture.md)). **The fixture column is the regression
-gate** since S6 ([stage3-fixture.md](v2/stage3-fixture.md#the-gate-across-the-steps)):
+([its exchange](#the-fixtures-readiness-exchange)). **The fixture column is the regression
+gate** since S6:
 a red there blocks, and an absent capability there is red too, because a gate that
 stopped checking must not look green. It proves the core through the adapter contract,
 and its program can withhold each capability. Until S9 **Claude Code was a search
@@ -83,6 +71,35 @@ meaning again. The gate is a field of the
 column (`gate` in `test/workflow/column_test.go`), set on exactly one. The summary
 names the column of every result and promotes none; ending the asymmetry is the owner's
 decision, recorded in [harness-features.md](archive/harness-features.md).
+
+### The fixture's readiness exchange
+
+The fixture harness (`internal/adapter/fixture`, id `fixture`) runs the program `fixture`
+the suite puts on the run's `PATH`, with the launch description as flags it parses strictly;
+a `fixture --version` below `1.0.0`, or unreadable, refuses the launch. What is live for a
+run is what the program proved, and only that: a test switches liveness, never the offered
+set. Kept from the stage 3 design, removed on October 19, 2026.
+
+1. **Hello.** The adapter listens on the run's socket and passes its path as a flag; the
+   program sends one hello — its version, pid, conversation and the capabilities it serves
+   (Wake, TurnBoundary, Telemetry, Control). It is accepted only from the process the adapter
+   started, by the peer's pid and start time, and only once.
+2. **Probes.** One probe with no side effect per served capability, answered within the
+   readiness bound: Wake a probe notice acknowledged without showing it, TurnBoundary the
+   turn state, Telemetry the last sample or none, Control "ready" without acting. An answered
+   probe makes its capability live; a late or wrong answer leaves it out, the others not.
+3. **Withdrawal.** A closed socket withdraws every live capability; a reconnect is a fresh
+   hello and fresh probes from the same process; the program's exit ends the run.
+
+After the probes the adapter hands the program its briefing (`brief`), and a control request
+reaches it as `control` while Control is live. The adapter reports the live set after the
+exchange and at each change (`ReportLive`); the host records it in the session record, and a
+worker's launch waits for its TurnBoundary up to the readiness bound. The suite's switches
+(`test/workflow/fixtureshim_test.go`): `RW_SHIM_NO_WAKE`, `RW_SHIM_NO_BOUNDARY`,
+`RW_SHIM_NO_TELEMETRY` and `RW_SHIM_NO_CONTROL` leave a capability out of the hello;
+`RW_SHIM_FAIL_PROBE=<capability>` serves it and fails its probe; `RW_SHIM_DROP_AFTER=<turns>`
+closes the socket after that many turns; `RW_SHIM_HELPER_REQUESTS` sends the hello from a
+child, which the peer check refuses; `RW_SHIM_NO_HOLD` reports ends that cannot be held.
 
 ## Running it
 
@@ -123,15 +140,15 @@ to prove that a scenario missing an observation turns the run red.
 ### Before a publication to npm
 
 The release has no build tag. The test-only `rewaketest` tag enables both the fault
-seam and the fixture harness ([stage3-fixture.md](v2/stage3-fixture.md)); it replaced
+seam and the fixture harness ([its exchange](#the-fixtures-readiness-exchange)); it replaced
 `rewakefault` and `rewakefixture` on October 18, 2026. No release needs either feature.
 The lease rig uses the same tag, though it stops launches before their harness starts.
 
 Run the ordinary checks over the whole module. Run the additional tagged vet,
 staticcheck and race checks only over packages with tagged files: `internal/infra/state`,
-`internal/core/mail`, `internal/host/delivery`, `internal/adapter/catalog`,
-`internal/adapter/fixture` and `test/decisionrig`. This includes tagged test files and
-negative build constraints, so the release/catalogue exclusion is checked in the ordinary
+`internal/core/mail`, `internal/host/delivery`, `internal/adapter/catalog` and
+`internal/adapter/fixture`. This includes tagged test files and negative build constraints, so
+the release/catalogue exclusion is checked in the ordinary
 run and the fixture's presence in the tagged run. The locked-caller check in `internal`
 still loads the whole module in both variants. The list is derived from build constraints,
 not maintained separately:

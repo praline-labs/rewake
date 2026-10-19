@@ -196,11 +196,8 @@ Weighed in the stage 4 audit, October 13, 2026
 pseudo-terminal belongs to a rewake process, the space's terminal process, whose identity
 P11 and P15 decide, so a tab can host a worker of any harness, Codex and pi included, and a
 button appears when main launches a worker, not only on "+"; a reload of the mod loses the
-view, not the worker, and main's exit closes the space. By the owner's idea of the same day,
-the tab is Claude Code's own: the entry a keeper subagent of main gets in the tasks list,
-with the mod drawing the terminal in that subagent's tool row — which P15a showed carries it
-— or in its pane for that view. Main
-launching workers is a new authority; the owner made it the target the same day — main
+view, not the worker, and main's exit closes the space. The owner made main launching
+workers the target the same day — main
 creates a space, a tab over a pseudo-terminal rewake owns, and seats a worker in it
 ([the target](../archive/v2/stage4-audit.md#the-target-a-space)). The probe above is P15 of
 [design-claude.md](design-claude.md#the-stage-4-probe), which runs beside stage 4's probe by
@@ -263,16 +260,15 @@ headless worker would too; background workers under Claude Code's supervisor are
 Claude Code's own means — its `--worktree`, or from the mod — and Claude Code removes it
 (`claude rm`, when safe). rewake only seats a worker of any harness, Codex included, in
 it: the mod sees the creation (`classic.WorktreeCreate`) and tells the host the path and
-the name, and a later `rewake codex` launches in that directory. rewake's own worktree
+the name, and a later launch of the worker runs in that directory. rewake's own worktree
 commands (`land`, `finish`) take no part; the branch is merged with Git or Claude Code's
 means. The owner's aim: use Claude Code's mechanism whole rather than carry rewake's own.
 
 **To settle.** Claude Code's removal judges safety by what it knows, and it does not know
 a rewake worker works in the directory: whether the mod, seeing `classic.WorktreeRemove`,
 can defer or refuse the removal while a rewake session is there is for the probe to show.
-The worktree's Git metadata lives in the main repository's `.git/worktrees/<name>`, so a
-Codex worker that commits there needs the Git grant (`--grant-git`). Claude Code's own
-worktree lies inside the repository.
+The worktree's Git metadata lives in the main repository's `.git/worktrees/<name>`. Claude
+Code's own worktree lies inside the repository.
 
 **Stage.** 4 for the Claude Code side (the audit of
 [design-claude.md](design-claude.md#before-the-probe-what-claude-code-already-does) and
@@ -289,6 +285,6 @@ chose the keeper: a subagent of main with worktree isolation that the mod spawns
 holds by its blocking tool; the background session was dropped when the owner decided that
 workers close with main. Claude Code locks the keeper's checkout itself, and Git takes one
 lock per worktree, so rewake cannot add its own; what sweeps a checkout left behind is open
-([the record](../research-claude-mod.md#p12b-a-subagent-of-main-as-the-worktrees-keeper)). A worker that commits needs both the
-private and the common Git directory granted, resolved through Git. By the owner's decision of the same day pi comes
+([the record](../research-claude-mod.md#p12b-a-subagent-of-main-as-the-worktrees-keeper)). By
+the owner's decision of the same day pi comes
 before Codex, so the first worker seated this way is pi's.

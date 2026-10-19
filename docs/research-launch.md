@@ -267,7 +267,7 @@ they work in.
 `--prefill <text>`, and `--prefill-b64` with the text in base64, puts the text into the
 input box without submitting it and shows `Pre-filled prompt · review before pressing
 Enter`. It fills the first prompt only; a draft for a session already running needs a
-plugin ([research-claude-control.md](research-claude-control.md#putting-text-into-the-input-box)).
+plugin ([research.md](research.md#interrupting-a-turn-commands-and-the-stop-hook)).
 
 ## A worktree at launch
 

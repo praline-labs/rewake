@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-// The fixture program's timed turn starts (docs/v2/stage3-fixture.md): the
+// The fixture program's timed turn starts (docs/testing.md#the-fixtures-readiness-exchange): the
 // program times each turn's start itself and sends that time before the turn
 // does anything; the endpoint records it in the mailbox, where a pending mark
 // of an earlier turn whose end was lost finds its turn over. The record is
