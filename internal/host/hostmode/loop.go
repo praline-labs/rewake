@@ -82,6 +82,9 @@ func (h *Host) loop() {
 	drawTimer := time.NewTimer(0)
 	drawing := true
 	keys := h.keys
+	if len(h.early) > 0 {
+		h.dispatch(h.in.feed(h.early, time.Now()))
+	}
 	for {
 		select {
 		case <-h.ctx.Done():
@@ -116,7 +119,14 @@ func (h *Host) loop() {
 	}
 }
 
+// apply takes a tab's new screen. Its events reach the person's terminal
+// whichever tab is shown: a worker's bell or notification is for the person,
+// and only the shown program takes the mouse a copy comes from.
 func (h *Host) apply(u update) {
+	for _, e := range u.pic.Events {
+		_ = h.canvas.Event(e)
+	}
+	u.pic.Events = nil
 	before := h.label(u.tab)
 	u.tab.pic = u.pic
 	if u.tab == h.cur || h.label(u.tab) != before {
@@ -306,6 +316,6 @@ func (h *Host) draw() {
 		pic.Cursor.Visible = false
 	}
 	_ = h.canvas.Draw(terminal.Frame{
-		Region: h.lay.region, Rows: pic.Rows, Cursor: pic.Cursor, Modes: h.modes(), Bar: bar, Side: side,
+		Region: h.lay.region, Rows: pic.Rows, Cursor: pic.Cursor, Modes: h.modes(), Bar: bar, Side: side, Title: pic.Title,
 	})
 }

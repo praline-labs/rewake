@@ -3,6 +3,7 @@ package terminal
 import (
 	"context"
 	"errors"
+	"image/color"
 	"io"
 	"sync"
 	"time"
@@ -181,6 +182,15 @@ func (g *Grid) Resize(size Size) error {
 	g.wakeLocked()
 	g.mu.Unlock()
 	return nil
+}
+
+// SetDefaults sets the colors the program's queries of the default
+// foreground and background are answered with — the person's terminal's, so a
+// program choosing a light or dark theme sees the real one; nil keeps one.
+func (g *Grid) SetDefaults(fg, bg color.Color) {
+	g.mu.Lock()
+	g.emu.defaults(fg, bg)
+	g.mu.Unlock()
 }
 
 // Screen is the screen for a reader that has the sequence after: at once

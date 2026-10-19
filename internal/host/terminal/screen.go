@@ -17,8 +17,32 @@ type Screen struct {
 	Changed []Row  `json:"changed"`
 	Cursor  Cursor `json:"cursor"`
 	Modes   Modes  `json:"modes"`
+	// Title is the program's title, whole (osc.go).
+	Title string `json:"title,omitempty"`
+	// Events are what the program asked of the person's terminal since the
+	// reader's sequence; none for a reader that had none, so a view opened
+	// late never repeats an old copy.
+	Events []Event `json:"events,omitempty"`
 	// Ended says the program's side is closed: the screen changes no more.
 	Ended bool `json:"ended,omitempty"`
+}
+
+// Event is something the program asked of its terminal that the host mode
+// passes to the person's, from whichever tab: a bell, or an OSC string — a
+// copy to the clipboard, a notification — written as it came.
+type Event struct {
+	Bell bool   `json:"bell,omitempty"`
+	OSC  string `json:"osc,omitempty"`
+}
+
+// eventsKept bounds the events a terminal keeps for its readers; a reader
+// further behind loses the oldest.
+const eventsKept = 32
+
+// stamped is an event and the sequence it came at.
+type stamped struct {
+	seq   uint64
+	event Event
 }
 
 // Row is one row as runs that cover its width, left to right.
@@ -121,6 +145,8 @@ type look struct {
 	rows   [][]Run
 	cursor Cursor
 	modes  Modes
+	title  string
+	events []Event
 }
 
 // published is what the terminal last gave out: the rows, and the sequence
@@ -133,6 +159,8 @@ type published struct {
 	changed []uint64
 	cursor  Cursor
 	modes   Modes
+	title   string
+	events  []stamped
 }
 
 // take compares a fresh look with what was published and moves the
@@ -140,7 +168,7 @@ type published struct {
 // new size republishes every row, since the mod's rows no longer fit.
 func (p *published) take(l look) {
 	resized := l.size != p.size || len(p.rows) != len(l.rows)
-	moved := l.cursor != p.cursor || l.modes != p.modes
+	moved := l.cursor != p.cursor || l.modes != p.modes || l.title != p.title || len(l.events) > 0
 	next := p.seq + 1
 	differs := resized || moved
 	if resized {
@@ -159,14 +187,25 @@ func (p *published) take(l look) {
 	if !differs {
 		return
 	}
-	p.seq, p.size, p.rows, p.cursor, p.modes = next, l.size, l.rows, l.cursor, l.modes
+	p.seq, p.size, p.rows, p.cursor, p.modes, p.title = next, l.size, l.rows, l.cursor, l.modes, l.title
+	for _, e := range l.events {
+		p.events = append(p.events, stamped{seq: next, event: e})
+	}
+	if over := len(p.events) - eventsKept; over > 0 {
+		p.events = append(p.events[:0:0], p.events[over:]...)
+	}
 }
 
 // since is the screen for a reader that has after: the rows changed since,
 // or every row when after is 0 or a sequence this terminal never reached.
 func (p *published) since(after uint64) Screen {
-	s := Screen{Seq: p.seq, Size: p.size, Cursor: p.cursor, Modes: p.modes, Changed: []Row{}}
+	s := Screen{Seq: p.seq, Size: p.size, Cursor: p.cursor, Modes: p.modes, Title: p.title, Changed: []Row{}}
 	all := after == 0 || after > p.seq
+	for _, e := range p.events {
+		if !all && e.seq > after {
+			s.Events = append(s.Events, e.event)
+		}
+	}
 	for i, row := range p.rows {
 		if all || p.changed[i] > after {
 			s.Changed = append(s.Changed, Row{Index: i, Runs: row})

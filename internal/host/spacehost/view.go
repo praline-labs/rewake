@@ -158,11 +158,14 @@ func (v *View) Picture(ctx context.Context, after uint64) (terminal.Picture, err
 	for {
 		v.mu.Lock()
 		p, err, wake := v.picture, v.err, v.wake
-		v.mu.Unlock()
-		if p.Ended {
-			return p, nil
+		out := p.Ended || (p.Seq != after && p.Rows != nil)
+		if out {
+			// The events go out once, with the picture that first carries
+			// them.
+			v.picture.Events = nil
 		}
-		if p.Seq != after && p.Rows != nil {
+		v.mu.Unlock()
+		if out {
 			return p, nil
 		}
 		if err != nil {

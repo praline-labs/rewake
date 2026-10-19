@@ -9,6 +9,10 @@ type Picture struct {
 	Rows   [][]Run
 	Cursor Cursor
 	Modes  Modes
+	Title  string
+	// Events gather from the frames applied until whoever hands the
+	// picture out takes them.
+	Events []Event
 	// Ended says the program's side is closed: the screen changes no more.
 	Ended bool
 }
@@ -28,5 +32,6 @@ func (p *Picture) Apply(s Screen) {
 			p.Rows[row.Index] = row.Runs
 		}
 	}
-	p.Seq, p.Cursor, p.Modes, p.Ended = s.Seq, s.Cursor, s.Modes, p.Ended || s.Ended
+	p.Seq, p.Cursor, p.Modes, p.Title, p.Ended = s.Seq, s.Cursor, s.Modes, s.Title, p.Ended || s.Ended
+	p.Events = append(p.Events, s.Events...)
 }

@@ -171,7 +171,10 @@ terminal less the bar's row. The mouse and bracketed paste stay on at the person
 click on the bar switches, a mouse event in the region reaches the shown program in the form its
 modes ask for, or not at all when it turned the mouse off, and a paste comes framed only to a
 program that asked for brackets. Claude Code runs fullscreen there, `CLAUDE_CODE_NO_FLICKER=1`
-unless the person set the variable, so it scrolls its own history with the wheel. `--host` is refused, exit 2, for a role that opens no spaces and
+unless the person set the variable, so it scrolls its own history with the wheel. A copy (OSC 52), a
+notification and the bell from any tab reach the person's terminal, the shown program's title is
+its title, and the terminal's default colours, asked once at start, seed every emulator, reaching
+workers as `REWAKE_HOST_COLORS` in main's environment. `--host` is refused, exit 2, for a role that opens no spaces and
 when standard input or output is not a terminal. Because the person's terminal is in raw mode,
 Ctrl+C and Ctrl+Z reach the shown program as bytes, never as signals; a harness that stops
 itself is continued at once, since no shell could bring it back. A kill of the wrapper still

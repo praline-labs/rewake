@@ -62,13 +62,21 @@ type Host struct {
 	gone    chan string
 	listed  chan []spacehost.Worker
 
+	// early is what the person typed while the host asked the terminal's
+	// colors, fed to the input first; colors is the value of
+	// terminal.DefaultsEnv for main's harness, empty when unknown.
+	early  []byte
+	colors string
+
 	raw       func() error
 	leaveOnce sync.Once
 	stopOnce  sync.Once
 }
 
-// Open readies a host on the person's terminal: main's pseudo-terminal and
-// its screen, sized to the region. Nothing is drawn until Start.
+// Open readies a host on the person's terminal: raw mode, the terminal's
+// default colors asked for main's screen and the spaces, main's
+// pseudo-terminal and its screen, sized to the region. Nothing is drawn
+// until Start; Stop gives the terminal back.
 func Open(cfg Config) (*Host, error) {
 	if !terminal.IsTerminal(cfg.In) || !terminal.IsTerminal(cfg.Out) {
 		return nil, errors.New("the host mode needs a terminal on standard input and output")
@@ -88,27 +96,41 @@ func Open(cfg Config) (*Host, error) {
 		return nil, err
 	}
 	ctx, cancel := context.WithCancel(context.Background())
-	return &Host{
+	h := &Host{
 		cfg: cfg, pty: pty, grid: grid, lay: lay, ctx: ctx, cancel: cancel,
 		done: make(chan struct{}), updates: make(chan update), keys: make(chan []byte, 16),
 		winch: make(chan os.Signal, 1), opened: make(chan opened), gone: make(chan string),
 		listed: make(chan []spacehost.Worker),
-	}, nil
+	}
+	raw, err := terminal.MakeRaw(cfg.In)
+	if err != nil {
+		h.Stop()
+		return nil, err
+	}
+	h.raw = raw
+	go h.read()
+	fg, bg, early := askColors(func(p []byte) error { _, err := cfg.Out.Write(p); return err }, h.keys)
+	h.early, h.colors = early, terminal.FormatDefaults(fg, bg)
+	grid.SetDefaults(terminal.ParseDefaults(h.colors))
+	return h, nil
 }
 
 // Prepare makes cmd, main's harness, run on the host's pseudo-terminal in a
-// session of its own.
-func (h *Host) Prepare(cmd *exec.Cmd) error { return h.pty.Prepare(cmd) }
+// session of its own, with the terminal's colors for the spaces it opens.
+func (h *Host) Prepare(cmd *exec.Cmd) error {
+	if h.colors != "" {
+		if cmd.Env == nil {
+			cmd.Env = os.Environ()
+		}
+		cmd.Env = append(cmd.Env, terminal.DefaultsEnv+"="+h.colors)
+	}
+	return h.pty.Prepare(cmd)
+}
 
-// Start takes the person's terminal once the harness started: raw mode, the
-// alternate screen, and the loop that draws and routes keys.
+// Start takes the person's terminal once the harness started: the alternate
+// screen, and the loop that draws and routes keys.
 func (h *Host) Start() error {
 	_ = h.pty.ReleaseSide()
-	raw, err := terminal.MakeRaw(h.cfg.In)
-	if err != nil {
-		return err
-	}
-	h.raw = raw
 	h.canvas = terminal.NewCanvas(h.cfg.Out, h.cfg.Env, h.lay.size)
 	if err := h.canvas.Enter(); err != nil {
 		h.leave()
@@ -123,7 +145,6 @@ func (h *Host) Start() error {
 	h.cur = main
 	go h.pump()
 	go h.answer()
-	go h.read()
 	go h.poll()
 	go h.loop()
 	return nil
@@ -135,6 +156,7 @@ func (h *Host) Stop() {
 	h.stopOnce.Do(func() {
 		h.cancel()
 		if h.canvas == nil {
+			h.leave()
 			_ = h.pty.Close()
 			_ = h.grid.Close()
 			return

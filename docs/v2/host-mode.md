@@ -90,14 +90,21 @@ pass the programs' bytes through.
   - The last size from any client wins. Once the pane and attach are gone, the host is the
     only client that sizes a worker.
 - **Not passed through.** Because nothing is passed through, a program's queries never reach the
-  person's terminal, so the problem of an orphan reply after a switch does not exist here. Three
-  outputs must still go out, and they become a new view frame `e` (an event) from the space host,
-  which main's grid gives locally:
-  - OSC 52 (copy). It is dropped today in `vt.go`; it will be forwarded instead.
-  - The title.
-  - The bell and notifications.
+  person's terminal, so the problem of an orphan reply after a switch does not exist here. A
+  program's outputs that must still go out are caught by its emulator from the raw stream, before
+  the library sees it (the library ends an OSC string at 0x9C, below), and ride in the screen
+  frame — `Screen.Title` and `Screen.Events` — rather than a frame `e` of their own: one stream
+  keeps their order with the rows, and main's grid gives them the same way.
+  - Events: OSC 52 (a copy; its query `;?` is not forwarded), OSC 9 (but `9;4` progress), 99 and
+    777 notifications, and the bell. They are written to the person's terminal from any tab, the
+    hidden ones included, once each: a grid keeps the last 32 with their sequence, and a reader
+    gets those after the sequence it had, so a view opened late never sets an old copy again.
+  - The title (OSC 0 and 2) is a tab's state: the shown program's is set when it changes or the
+    tab is switched. The host saves the person's title with `CSI 22;0t` on entering and gives it
+    back with `CSI 23;0t` on leaving.
 
-  OSC 8 hyperlinks are lost until the frames carry them.
+  OSC 8 hyperlinks are lost until the frames carry them. OSC 4 queries of the palette are answered
+  from the library's own palette, not the person's.
 - **Rejected: a scroll-region trick.** The idea is to tell the program a smaller size and place
   its raw output inside margins. It cannot give a right sidebar, because DECSLRM side margins are
   rarely supported. Programs reset margins themselves. A switch needs the program to repaint, with
@@ -187,9 +194,14 @@ pass the programs' bytes through.
 - **Selection.** A drag in the region is the program's own selection, and its copy reaches the
   terminal clipboard through the forwarded OSC 52. Shift+drag gives the terminal's native
   selection over the visible composed screen, bar and sidebar included.
-- **Default colours.** The host reads the terminal's default colours with OSC 10/11 at start and
-  seeds every emulator with them (`SetDefaultForegroundColor`/`Background`), so a program that
-  asks for the background sees the real one. A worker's emulator gets them in a frame on the view.
+- **Default colours.** The host asks the person's terminal for its default colours at start —
+  OSC 10 and 11, then DA1 as the sentinel every terminal answers, waiting at most 300 ms — before
+  the harness starts, and seeds main's emulator with them (`SetDefaultForegroundColor`/
+  `Background`), so a program that asks for the background sees the real one. Workers get them
+  through the environment rather than a view frame: the host puts `REWAKE_HOST_COLORS=fg;bg`
+  (XParseColor forms) into main's harness, `space open` inherits it, and the space host seeds its
+  grid from it. A reply that comes after the wait is dropped from the input, never typed into the
+  program. A terminal that answers neither leaves the library's defaults.
 
 ## The mode switch
 
@@ -241,9 +253,18 @@ pass the programs' bytes through.
      `!rewake space open`; the sidebar listed main and `w1-claude` with its harness, model and
      `idle`, main's screen drawn 102 columns wide; Ctrl+\\ s hid it and main repainted at 130,
      Ctrl+\\ s showed it again; a click on the worker's name in the sidebar showed the worker.
-4. **Events and colours.** The `e` frame: OSC 52, title, bell, default colours; the theme's
-   indices checked live. Live check: a copy from a
-   worker lands in the clipboard.
+4. **Events and colours.** OSC 52, title, bell, default colours; the theme's indices checked
+   live. Live check: a copy from a worker lands in the clipboard.
+   - **Built and checked live, October 19, 2026, Claude Code 2.1.302, pi 1.2.0**
+     (`internal/host/terminal/osc.go`, `internal/host/hostmode/colors.go`): under an outer
+     terminal answering OSC 10/11 with a light theme, `echo $REWAKE_HOST_COLORS` printed both
+     colours in main and in a Claude Code worker; a drag over four lines of the worker's output
+     sent `OSC 52;c` with exactly those lines to the outer terminal; the titles `✳ Claude Code`
+     (with its spinner frames) and pi's `π - <cwd>` reached it, the latter on a switch to pi; on
+     exit the title was given back. Indexed colours were already written as indices from step 1
+     (`colorFor` in `canvas.go`); pi draws its own theme in RGB.
+   - Not the design's `e` frame: the events and the title ride in the screen frame, and the
+     colours reach workers through the environment (above).
 
 The tests are the subset of §2's checklist that "Which tests to write" keeps: the automaton, a
 restore on every signal, and the routing of mouse and paste by mode.

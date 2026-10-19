@@ -23,6 +23,8 @@ type Canvas struct {
 	modes Modes
 	// shown says the cursor is visible on the person's terminal now.
 	shown bool
+	// title is the one set on the person's terminal now.
+	title string
 }
 
 // Frame is one composed screen: the shown program's rows in the region at
@@ -41,7 +43,16 @@ type Frame struct {
 	Side [][]Run
 	// Bar is drawn on the canvas's last row when it lies below the region.
 	Bar []Run
+	// Title is the shown program's, set on the person's terminal.
+	Title string
 }
+
+// The title stack of xterm's window operations: the person's title is saved
+// on entering and given back on leaving, whatever the programs set.
+const (
+	pushTitle = "\x1b[22;0t"
+	popTitle  = "\x1b[23;0t"
+)
 
 // NewCanvas draws on out, a terminal of size; env gives the terminal's type
 // and the color profile it is drawn for.
@@ -56,7 +67,7 @@ func NewCanvas(out io.Writer, env []string, size Size) *Canvas {
 func (c *Canvas) Enter() error {
 	c.r.EnterAltScreen()
 	c.modes = hostModes(Modes{})
-	_, _ = c.r.WriteString(ansi.HideCursor + modeChanges(Modes{}, c.modes))
+	_, _ = c.r.WriteString(pushTitle + ansi.HideCursor + modeChanges(Modes{}, c.modes))
 	c.shown = false
 	return c.r.Flush()
 }
@@ -70,8 +81,8 @@ func (c *Canvas) Leave() error {
 	if c.modes.KittyKeys != 0 {
 		kitty = ansi.PopKittyKeyboard(1)
 	}
-	_, _ = c.r.WriteString(kitty + resetModes + ansi.ResetStyle + ansi.ShowCursor)
-	c.modes, c.shown = Modes{}, true
+	_, _ = c.r.WriteString(kitty + resetModes + ansi.ResetStyle + ansi.ShowCursor + popTitle)
+	c.modes, c.shown, c.title = Modes{}, true, ""
 	c.r.ExitAltScreen()
 	return c.r.Flush()
 }
@@ -116,6 +127,10 @@ func (c *Canvas) Draw(f Frame) error {
 	want := hostModes(f.Modes)
 	_, _ = c.r.WriteString(modeChanges(c.modes, want))
 	c.modes = want
+	if f.Title != c.title {
+		_, _ = c.r.WriteString(ansi.SetWindowTitle(f.Title))
+		c.title = f.Title
+	}
 	at := f.Cursor
 	if at.Visible && at.Row >= 0 && at.Row < f.Region.Rows && at.Col >= 0 && at.Col < f.Region.Cols {
 		c.r.MoveTo(at.Col, at.Row)
@@ -126,6 +141,18 @@ func (c *Canvas) Draw(f Frame) error {
 	} else if c.shown {
 		_, _ = c.r.WriteString(ansi.HideCursor)
 		c.shown = false
+	}
+	return c.r.Flush()
+}
+
+// Event passes on what a program asked of its terminal: a bell, or an OSC
+// string as the program wrote it, ended by BEL.
+func (c *Canvas) Event(e Event) error {
+	switch {
+	case e.Bell:
+		_, _ = c.r.WriteString("\a")
+	case e.OSC != "":
+		_, _ = c.r.WriteString("\x1b]" + e.OSC + "\a")
 	}
 	return c.r.Flush()
 }

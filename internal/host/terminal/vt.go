@@ -26,6 +26,10 @@ type vtEmulator struct {
 	// kitty are the kitty keyboard flags saved by pushes (keyboard.go).
 	kitty []uint8
 	osc   oscFilter
+	// title and events are what the program's OSC strings and bells said
+	// for the host mode (osc.go); events are handed out once, by look.
+	title  string
+	events []Event
 }
 
 func newVT(size Size) (emulator, error) {
@@ -42,7 +46,9 @@ func newVT(size Size) (emulator, error) {
 	emu.SetCallbacks(vt.Callbacks{
 		EnableMode:  func(m ansi.Mode) { v.setMode(m, true) },
 		DisableMode: func(m ansi.Mode) { v.setMode(m, false) },
+		Bell:        func() { v.events = append(v.events, Event{Bell: true}) },
 	})
+	v.osc.done = v.oscSeen
 	// A clipboard request is taken and dropped: there is no clipboard here
 	// to set, and none to read back to the program.
 	emu.RegisterOscHandler(52, func([]byte) bool { return true })
@@ -86,46 +92,16 @@ func (v *vtEmulator) mouse(m MouseMode, on bool) {
 
 func (v *vtEmulator) write(p []byte) { _, _ = v.emu.Write(v.osc.filter(p)) }
 
-// oscFilter drops the bytes above ASCII inside an OSC string. The library's
-// parser (x/ansi v0.11.7 and v0.11.8) ends an OSC string at the byte 0x9C,
-// the 8-bit ST, even inside a UTF-8 character, so Claude Code's title
-// "✳ Claude Code" (✳ is E2 9C B3) ended early and the rest was drawn as
-// text over its logo. A program in a UTF-8 locale never sends a bare 8-bit
-// ST; what the string loses is only its non-ASCII characters, and no OSC
-// the emulator acts on needs them.
-type oscFilter struct{ esc, osc bool }
-
-func (f *oscFilter) filter(p []byte) []byte {
-	out := p
-	copied := false
-	for i, b := range p {
-		drop := false
-		switch {
-		case f.osc:
-			switch b {
-			case 0x07, 0x18, 0x1a:
-				f.osc = false
-			case 0x1b:
-				f.osc, f.esc = false, true
-			}
-			drop = b >= 0x80
-		case f.esc:
-			f.esc = false
-			f.osc = b == ']'
-		case b == 0x1b:
-			f.esc = true
-		}
-		switch {
-		case drop && !copied:
-			out, copied = append([]byte(nil), p[:i]...), true
-		case !drop && copied:
-			out = append(out, b)
-		}
-	}
-	return out
-}
-
 func (v *vtEmulator) resize(size Size) { v.emu.Resize(size.Cols, size.Rows) }
+
+func (v *vtEmulator) defaults(fg, bg color.Color) {
+	if fg != nil {
+		v.emu.SetDefaultForegroundColor(fg)
+	}
+	if bg != nil {
+		v.emu.SetDefaultBackgroundColor(bg)
+	}
+}
 
 func (v *vtEmulator) replies() io.Reader { return v.emu }
 
@@ -142,7 +118,12 @@ func (v *vtEmulator) look() look {
 	pos := v.emu.CursorPosition()
 	modes := v.modes
 	modes.AltScreen = v.emu.IsAltScreen()
-	return look{size: size, rows: rows, cursor: Cursor{Row: pos.Y, Col: pos.X, Visible: !v.emu.CursorHidden()}, modes: modes}
+	events := v.events
+	v.events = nil
+	return look{
+		size: size, rows: rows, cursor: Cursor{Row: pos.Y, Col: pos.X, Visible: !v.emu.CursorHidden()}, modes: modes,
+		title: v.title, events: events,
+	}
 }
 
 // row is one row as runs: a new run where the style changes, a wide glyph

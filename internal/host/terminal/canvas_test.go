@@ -93,6 +93,36 @@ func TestTheKeyboardProtocolsAreMirrored(t *testing.T) {
 	}
 }
 
+// The shown program's title is set on the person's terminal, whose own is
+// saved on entering and given back on leaving; an event goes out as it came.
+func TestTheTitleAndEventsReachTheTerminal(t *testing.T) {
+	var out bytes.Buffer
+	c := NewCanvas(&out, []string{"TTY_FORCE=1", "TERM=xterm-256color"}, Size{Cols: 20, Rows: 3})
+	if err := c.Enter(); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out.String(), pushTitle) {
+		t.Fatalf("entering: %q", out.String())
+	}
+	out.Reset()
+	if err := c.Draw(Frame{Region: Size{Cols: 20, Rows: 2}, Title: "✳ a"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := c.Event(Event{OSC: "52;c;aGk="}); err != nil {
+		t.Fatal(err)
+	}
+	if got := out.String(); !strings.Contains(got, "\x1b]2;✳ a\a") || !strings.HasSuffix(got, "\x1b]52;c;aGk=\a") {
+		t.Fatalf("drawn %q", got)
+	}
+	out.Reset()
+	if err := c.Leave(); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out.String(), popTitle) {
+		t.Fatalf("leaving: %q", out.String())
+	}
+}
+
 // A wide glyph's run is one cell over its columns; any other run a cell per
 // cluster, padded to its width.
 func TestRunsBecomeCellsByTheEmulatorsWidths(t *testing.T) {

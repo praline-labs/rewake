@@ -1,6 +1,9 @@
 package terminal
 
-import "io"
+import (
+	"image/color"
+	"io"
+)
 
 // emulator is the one seam the terminal library sits behind
 // (docs/v2/host-mode.md): bytes in, a resize, the
@@ -12,6 +15,9 @@ type emulator interface {
 	// come out of replies while it runs.
 	write(p []byte)
 	resize(size Size)
+	// defaults sets the colors the program's queries of the default
+	// foreground and background are answered with; nil keeps one.
+	defaults(fg, bg color.Color)
 	// look reads the whole screen, the cursor and the modes.
 	look() look
 	replies() io.Reader

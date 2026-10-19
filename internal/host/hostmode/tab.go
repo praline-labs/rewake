@@ -114,5 +114,7 @@ func (g *gridSource) Picture(ctx context.Context, after uint64) (terminal.Pictur
 		s = g.grid.Screen(ctx, after)
 	}
 	g.pic.Apply(s)
-	return g.pic, nil
+	p := g.pic
+	g.pic.Events = nil
+	return p, nil
 }

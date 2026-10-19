@@ -126,6 +126,9 @@ func (in *input) take(out []action, token []byte, now time.Time) []action {
 		in.paste, in.pending = true, false
 		return append(out, action{paste: pasteOpens})
 	}
+	if isReply(token) {
+		return out
+	}
 	if m, ok := parseMouse(token); ok {
 		return append(out, action{mouse: &m})
 	}

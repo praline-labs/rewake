@@ -87,6 +87,9 @@ func (h *host) start() error {
 		return h.never(err.Error())
 	}
 	defer func() { _ = grid.Close() }()
+	// A host mode's main passes the person's terminal colors, which the
+	// worker may ask for before any view is there.
+	grid.SetDefaults(terminal.ParseDefaults(os.Getenv(terminal.DefaultsEnv)))
 	cmd, err := h.command()
 	if err == nil {
 		err = pty.Prepare(cmd)
