@@ -1,0 +1,9 @@
+#!/bin/sh
+# Runs the shell from its sources with Bun, as REWAKE_SHELL names it until the
+# compiled shell ships beside rewake (docs/v2/shell.md). Bun reads bunfig.toml
+# from the directory it runs in, so the shell runs here and main in the
+# person's directory.
+here=$(dirname "$(readlink -f "$0")")
+export REWAKE_SHELL_CWD="$PWD"
+cd "$here" || exit 1
+exec "${BUN:-bun}" src/main.tsx "$@"

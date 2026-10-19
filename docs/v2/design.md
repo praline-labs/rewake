@@ -182,5 +182,7 @@ How a space is shown (the owner's decision, October 18, 2026): a host mode of re
 at launch, holds the person's terminal and relays main and the workers, main on the left and the
 chosen worker on the right above a bottom tab bar ([project.md](../project.md#what-the-tool-does), "Main starts its
 workers"); the mod's space features are active only in that mode. Its design is
-[host-mode.md](host-mode.md).
+[host-mode.md](host-mode.md). Its successor, by the owner's decision of October 19, 2026, is the
+shell, a TypeScript application started by `rewake --shell` with the same layout
+([shell.md](shell.md)); the two stand side by side until the host mode is removed.
 

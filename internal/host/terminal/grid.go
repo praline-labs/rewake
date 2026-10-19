@@ -36,6 +36,11 @@ type Grid struct {
 	emu   emulator
 	dirty bool
 	ended bool
+	// streams are the raw streams attached (stream.go), and unfinished the
+	// bytes of a sequence the program has not finished, which each new one
+	// ends its preamble with.
+	streams    map[*Stream]struct{}
+	unfinished unfinished
 	// wake is closed when the screen may have changed, and replaced.
 	wake chan struct{}
 
@@ -132,6 +137,7 @@ func (g *Grid) commit(p []byte, end bool) {
 		g.emu.write(p)
 		g.dirty = true
 	}
+	g.streamLocked(p, end)
 	if end {
 		g.ended = true
 	}

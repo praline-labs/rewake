@@ -51,6 +51,10 @@ func handleLaunch(h adapter.Harness) func(*Context, Call) error {
 		if err := refuseHost(call, part); err != nil {
 			return err
 		}
+		inShell, err := enterShell(call)
+		if err != nil {
+			return err
+		}
 		// The build lease before anything of the room is made or locked, and
 		// before the worktree; held until the wrapper and its cleanup are done
 		// (docs/v2/stage3-state.md#one-build-per-room).
@@ -92,6 +96,7 @@ func handleLaunch(h adapter.Harness) func(*Context, Call) error {
 			Args:      args,
 			Intro:     !call.Switch("no-intro"),
 			Host:      call.Switch("host"),
+			Shell:     inShell,
 			Role:      part,
 			Command:   program,
 			OnClaimed: onClaimed,
@@ -239,17 +244,26 @@ func roleSummary() string {
 	return "No role flag means general, even in an empty room; only --main makes main, refused while the room has one, and a name never selects a role. " + strings.Join(descriptions, " ")
 }
 
-// refuseHost refuses the host mode where it has nothing to show or nowhere
-// to show it: a role that opens no spaces, or no terminal to hold.
+// refuseHost refuses the host mode or the shell where it has nothing to
+// show or nowhere to show it: a role that opens no spaces, or no terminal to
+// hold; and both at once.
 func refuseHost(call Call, part role.Role) error {
-	if !call.Switch("host") {
+	flag := ""
+	switch host, shell := call.Switch("host"), call.Switch("shell"); {
+	case host && shell:
+		return &UsageError{Command: call.Command, Message: "--host and --shell are two ways of showing main; choose one."}
+	case host:
+		flag = "--host"
+	case shell:
+		flag = "--shell"
+	default:
 		return nil
 	}
 	if !part.Spaces {
-		return &UsageError{Command: call.Command, Message: "--host shows the workers a main session opens; add --" + role.Main.ID + "."}
+		return &UsageError{Command: call.Command, Message: flag + " shows the workers a main session opens; add --" + role.Main.ID + "."}
 	}
 	if !terminal.IsTerminal(os.Stdin) || !terminal.IsTerminal(os.Stdout) {
-		return &UsageError{Command: call.Command, Message: "--host holds a terminal: standard input and output must both be one."}
+		return &UsageError{Command: call.Command, Message: flag + " holds a terminal: standard input and output must both be one."}
 	}
 	return nil
 }

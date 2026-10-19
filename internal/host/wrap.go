@@ -45,6 +45,10 @@ type Request struct {
 	// Host runs the harness in the host mode: on a terminal of the wrapper's,
 	// shown with the run's workers above a bar (docs/v2/host-mode.md).
 	Host bool
+	// Shell says the harness runs in rewake's shell, on the shell's
+	// terminal (docs/v2/shell.md): an ordinary run here, drawn by the shell
+	// as the host mode would draw it.
+	Shell bool
 
 	// Role is explicit when its ID is set; empty always uses general.
 	Role role.Role
@@ -182,7 +186,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 		ControlDir: controlDir,
 		RunDir:     runDir,
 		Version:    version,
-		Host:       request.Host,
+		Host:       request.Host || request.Shell,
 	}
 	launchRequest.Env = launch.SessionEnv(launchRequest, request.Harness.EnvNotInherited())
 	plan, err := request.Harness.Launch(launchRequest)

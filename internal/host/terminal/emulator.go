@@ -20,6 +20,9 @@ type emulator interface {
 	defaults(fg, bg color.Color)
 	// look reads the whole screen, the cursor and the modes.
 	look() look
+	// replay is the screen and the input modes as bytes for a fresh
+	// terminal (replay.go); unlike look it leaves the events.
+	replay() []byte
 	replies() io.Reader
 	// stopReplies ends replies, so its reader returns.
 	stopReplies() error

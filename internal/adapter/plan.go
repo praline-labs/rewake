@@ -57,10 +57,10 @@ type LaunchRequest struct {
 	// flag, or refuses: a launch that dropped it would leave a record naming
 	// a conversation that does not exist.
 	Conversation string
-	// Host says the run is main's in the host mode, drawn by rewake on the
-	// person's terminal, whose scrollback then holds nothing of it: an
-	// adapter whose harness can scroll its own history turns that on
-	// (docs/v2/host-mode.md#scrollback-selection-copy).
+	// Host says the run is main's in the host mode or the shell, drawn by
+	// rewake on the person's terminal, whose scrollback then holds nothing
+	// of it: an adapter whose harness can scroll its own history turns that
+	// on (docs/v2/host-mode.md#scrollback-selection-copy).
 	Host bool
 	// Env is the run's whole environment, built by the host: the current
 	// one less what the adapter's runs must not inherit (EnvNotInherited),

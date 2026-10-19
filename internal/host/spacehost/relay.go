@@ -13,13 +13,14 @@ import (
 )
 
 // The space's unix socket. A client writes one byte first, the mode: a view
-// (view.go), the only one since the host mode replaced the attach
-// (docs/v2/host-mode.md). The space host answers it with one byte and then
-// writes the screen; the client writes frames — a kind, a big-endian length
+// (view.go) for the host mode (docs/v2/host-mode.md), or the raw bytes
+// (bytes.go) for the shell (docs/v2/shell.md). The space host answers it with
+// one byte and then writes the screen; the client writes frames — a kind, a big-endian length
 // of two bytes, the payload: keys to type, or a resize of four bytes, columns
 // then rows.
 const (
 	modeView    byte = 'v'
+	modeBytes   byte = 'b'
 	accepted    byte = 'A'
 	frameInput  byte = 'i'
 	frameResize byte = 'r'
@@ -93,11 +94,15 @@ func (r *relay) serve(l net.Listener) {
 func (r *relay) take(conn net.Conn) {
 	mode := make([]byte, 1)
 	_ = conn.SetReadDeadline(time.Now().Add(clientWrite))
-	if _, err := io.ReadFull(conn, mode); err != nil || mode[0] != modeView {
+	if _, err := io.ReadFull(conn, mode); err != nil || (mode[0] != modeView && mode[0] != modeBytes) {
 		_ = conn.Close()
 		return
 	}
 	_ = conn.SetReadDeadline(time.Time{})
+	if mode[0] == modeBytes {
+		r.bytes(conn)
+		return
+	}
 	r.view(conn)
 }
 

@@ -98,7 +98,7 @@ only looks leaves no state behind. [Optional primary observations](session-state
     inbox/<name>/once/<epoch>/<id> a journaled notify's heads-up, so a retry writes it once
     sock/<name>.<epoch>.sock   one inbound socket per run
     sock/<name>.<epoch>.reply.sock the wrapper's own: Claude Code's receipts for held lines
-    sock/space.<id>.sock       a space host's: the worker's screen for a host mode's views (launch.md)
+    sock/space.<id>.sock       a space host's: the worker's screen for views and raw streams (launch.md)
     control/<name>.<epoch>/    a main's compact or interrupt request and its answer (remote-control.md)
     run/<name>.<epoch>/        what an adapter writes for one run, removed with the run or, after a kill, by a later launch once the run is proven dead (v2/stage3-state.md)
     letters/<name>/<id>.json   a compaction this main asked for, held by the command while it asks, kept on an answer that leaves the outcome open until its letter goes (remote-control-letter.md)

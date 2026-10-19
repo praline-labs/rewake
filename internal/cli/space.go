@@ -45,7 +45,7 @@ func spaceGroup() Group {
 			Next: []string{"rewake send <name>-<harness> \"text\""},
 			Notes: []string{
 				"--alias uses the same expansion as a direct alias launch, including applied model/effort and the command wrapper. main = true and --main aliases are refused. The space's name and room replace the alias's; --role overrides its worker role. Extra harness flags after -- replace the alias's single-use flags. Context metadata is never applied.",
-				"open is main's: refused from any other role, and from a run whose spaces are not live. The worker is an ordinary launch of rewake in main's room, named <name>-<harness>, started in main's working directory; everything after the name goes to its harness — permission flags, a model. rewake types nothing into the worker on its own: what it needs to start unattended goes there; the person types into it from main's host mode, rewake --host --main <harness>, which shows each worker's terminal on its own tab. rewake chooses the session id of a harness that takes one and keeps it in the record.",
+				"open is main's: refused from any other role, and from a run whose spaces are not live. The worker is an ordinary launch of rewake in main's room, named <name>-<harness>, started in main's working directory; everything after the name goes to its harness — permission flags, a model. rewake types nothing into the worker on its own: what it needs to start unattended goes there; the person types into it from main's shell, rewake --shell --main <harness>, or its host mode, rewake --host --main <harness>, both showing each worker's terminal beside main's. rewake chooses the session id of a harness that takes one and keeps it in the record.",
 				"The worker runs in a pseudo-terminal of a space host, a rewake process detached from main and no descendant of it. The space host checks main's run once a second; once that run has ended — by /exit, a crash or a kill — it sends the worker's process group SIGHUP, then SIGTERM after a second, then SIGKILL after five more, records what it observed, and exits.",
 				"open answers once the worker's session is registered, within 30 seconds, or says why the space did not open — a worker that exited at once is named with the last line it wrote.",
 				"Each space shows its main, its worker's name, harness and role, the session id rewake chose for the worker's conversation (none for a harness that takes none), its checkout and branch. A closed space keeps them.",
@@ -76,6 +76,10 @@ type spaceView struct {
 	// MainRun is whether the main of a space not over still runs: running,
 	// ended or unknown; empty once the space is over.
 	MainRun string `json:"mainRun,omitempty"`
+	// Socket is where the space's host serves its worker's screen, for a
+	// space not over: the shell connects there and builds no path itself
+	// (docs/v2/shell.md).
+	Socket string `json:"socket,omitempty"`
 }
 
 type spaceListing struct {
@@ -128,6 +132,7 @@ func handleSpace(ctx *Context, call Call) error {
 			if view.MainRun == "" {
 				view.MainRun = "unknown"
 			}
+			view.Socket = state.SpaceSocketPath(dir, record.ID)
 		}
 		listing.Spaces = append(listing.Spaces, view)
 	}

@@ -181,6 +181,20 @@ itself is continued at once, since no shell could bring it back. A kill of the w
 forwards to the harness after the grace below; a SIGKILL leaves the person's terminal raw on the
 alternate screen, which `reset` repairs.
 
+### The shell
+
+`rewake --shell --main <harness>` runs main in rewake's shell ([shell.md](v2/shell.md)), the
+host mode's successor, beside it until the host mode is removed. The launch checks the role and
+the terminal as `--host` does (both together are refused) and execs the shell — `REWAKE_SHELL`,
+or `rewake-shell` beside rewake — as `<shell> --room <room> -- <rewake> <the same arguments>`
+with `REWAKE_SHELL_MAIN=1`. The shell runs that command line on a pty of its own; that launch
+sees the variable, takes it out of its environment and runs main as an ordinary launch whose
+adapter is told the run is drawn by rewake (`CLAUDE_CODE_NO_FLICKER=1` for Claude Code, as in the
+host mode). The shell sets `REWAKE_HOST_COLORS` in main's environment from the terminal's
+answer, so workers' hosts are seeded too. It ends when main ends, with main's code, and when its
+terminal goes: then it hangs main up and main's run's end ends every worker. A launch that failed
+inside the shell has its last lines printed once the shell leaves the screen.
+
 ### A worktree for a launch
 
 `rewake claude --worktree` and `rewake --main claude --worktree` give a session a checkout of its

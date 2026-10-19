@@ -30,6 +30,10 @@ type vtEmulator struct {
 	// for the host mode (osc.go); events are handed out once, by look.
 	title  string
 	events []Event
+	// pen is the style text is written in now, followed from the program's
+	// SGR for a late client's preamble (replay.go): the library keeps it
+	// unexported.
+	pen uv.Style
 }
 
 func newVT(size Size) (emulator, error) {
@@ -53,6 +57,7 @@ func newVT(size Size) (emulator, error) {
 	// to set, and none to read back to the program.
 	emu.RegisterOscHandler(52, func([]byte) bool { return true })
 	v.keyboard()
+	v.followPen()
 	return v, nil
 }
 
