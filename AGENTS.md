@@ -65,8 +65,8 @@ env -u REWAKE_SESSION -u REWAKE_EPOCH -u REWAKE_DIR -u REWAKE_ROOM \
 and the workflow scenarios the change touches (below). The mod's own tests run inside
 `go test ./internal/adapter/claude/` (`claude plugin test`). A commit made without the hook
 runs its checks by hand: `golangci-lint fmt` over the files it touched, `golangci-lint run
-./...` and `biome check .`. A step is done when it works live and breaks no existing test. A red test is never somebody else's: everything in the working
-tree belongs to the current work. `-p 4` when the process list shows no other heavy run,
+./...` and `biome check .`. A step is done when it works live and breaks no existing test. A red
+test is never somebody else's: everything in the working tree belongs to the current work. `-p 4` when the process list shows no other heavy run,
 `-p 2` when one is going. Before a publication to npm the full set runs — every build
 variant, staticcheck, the tagged `-race` runs and the whole workflow suite
 ([docs/testing.md](docs/testing.md#before-a-publication-to-npm), with the tools to install).
