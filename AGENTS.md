@@ -15,6 +15,11 @@ not by code existing. Then by the work, through the map `docs/README.md`: `docs/
 changing how mail or launches behave, `docs/traps.md` when something misbehaves, research for
 a harness's facts, re-checked before touching an adapter.
 
+`archive/` and `docs/archive/` hold the 1.x code and the records of finished work, Codex's
+among them; they stay as they are. Do not read them unless a task needs a fact only they hold,
+and leave them out of every count, search, audit and clean-up: their lines are not rewake's code,
+tests or documents.
+
 ## Keeping the documentation true
 
 The documents are the memory of the project; the code is not. The depth matches the change;
