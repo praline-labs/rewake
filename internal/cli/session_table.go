@@ -64,11 +64,14 @@ func stateCells(snapshot *session.Snapshot) []string {
 	if !snapshot.Fresh && !strings.Contains(activity, "stale") {
 		activity += " (unavailable/stale)"
 	}
-	setting := func(value *string) string {
+	setting := func(value *string, source string) string {
 		if value == nil {
 			return "unknown"
 		}
 		text := strconv.Quote(*value)
+		if source != "" {
+			text += " (" + source + ")"
+		}
 		if !snapshot.Fresh || !snapshot.SettingsFresh {
 			text += " (stale)"
 		}
@@ -91,5 +94,5 @@ func stateCells(snapshot *session.Snapshot) []string {
 	if snapshot.Coverage == "partial" {
 		count += " (partial)"
 	}
-	return []string{activity, setting(snapshot.Model), setting(snapshot.Effort), context, count}
+	return []string{activity, setting(snapshot.Model, ""), setting(snapshot.Effort, snapshot.EffortSource), context, count}
 }

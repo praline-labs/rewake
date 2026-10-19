@@ -475,3 +475,19 @@ two Claude Code workers on haiku opened from main's shell mode:
 - A `dockColumns` kept in `~/.claude.json` (`pluginPanes`) held the dock at 92 columns: `columns`
   of 100, 1000, 150 and 60 and none, asked through `$.ui.open` of the open pane, each answered
   `{ isPlaced: true }` and none moved it. Before it was kept, the same reopens moved the dock.
+
+## Effort
+
+October 19, 2026, Claude Code 2.1.302, a probe mod under `claude -p --plugin-dir … --model haiku
+--effort low`, then rewake's mod live in a private state directory:
+
+- `$.config.list()` has no effort row (it lists `switchModelsOnFlag`, `thinking`, `model`), and
+  `$.settings.read().effortLevel` is the settings file's value, not the session's.
+- A `turn.step` of the main loop (no `agentId`) carries `effort: "low"`, and a classic `Stop`
+  `effort: {"level": "low"}`: the value the request runs at. The mod takes `turn.step`'s, the
+  first point of a turn; it may also be an integer budget, sent as its decimal text.
+- Live: a main launched with `--effort low` listed `"low"` after its first turn; a worker
+  launched with `--effort high` listed `"high" (launch)` before any turn; a worker launched
+  without one listed unknown, then `"medium"` after a turn, and after `/effort max` typed in
+  its terminal still `"medium"` until its next turn, then `"max"`. Nothing the mod hears
+  marks the change itself, so between them `list` lags by a turn.

@@ -103,6 +103,9 @@ func stateLine(name string, snapshot *session.Snapshot, settings bool) string {
 		}
 		if snapshot.Effort != nil {
 			effort = strconv.Quote(*snapshot.Effort)
+			if snapshot.EffortSource != "" {
+				effort += " (" + snapshot.EffortSource + ")"
+			}
 		}
 		line += " | model " + model + " | effort " + effort
 		if snapshot.SettingsAt != nil && !snapshot.SettingsFresh {

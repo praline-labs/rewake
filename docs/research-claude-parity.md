@@ -22,7 +22,9 @@ plugin's `session.compact` observer. Complete native manual/automatic compaction
 is not promised there. Remote completion still comes from the explicit call's result.
 The event hook only observes and passes through; it adds no policy veto.
 
-Effort is unknown: no current-effort getter was verified. Rate limits are excluded by
+Effort was unknown here: no current-effort getter was verified. Since October 19, 2026 the
+mod reads it from the main loop's model requests ([research](research-claude-mod.md#effort)).
+Rate limits are excluded by
 main's decision for this step. No transcript, summary or full context breakdown is sent.
 Reload or transport loss may lose a compaction's final outcome; the new path adds no durable
 outbox. Main owns live acceptance of context, focus, interrupt and post-control mail on the
