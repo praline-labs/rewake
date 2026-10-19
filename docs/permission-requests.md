@@ -72,7 +72,7 @@ A notify from the worker, which the ordinary notice announces and `rewake inbox`
 Rewake: api asks permission for Bash (request 3f9a); answer by 14:05:12.
 Input: {"command":"make deploy"}
 In: /home/me/code/app
-Choices: once allows this call; session allows this exact call for the rest of the worker's run; refuse [reason] refuses it, and the reason goes to its model.
+Choices: once allows this call; session allows this exact call until the worker ends or its mod reloads; refuse [reason] refuses it, and the reason goes to its model.
 Answer: rewake answer api 3f9a once
 A person at the worker's screen may answer first; the first answer counts, and with none by the deadline the worker is refused.
 ```
@@ -98,7 +98,7 @@ command table's.
 
 - A request lives in the wrapper's memory: a wrapper or mod restart loses it, and the dialog
   stays the person's at the screen; the model asks again on its next call.
-- Session allowances live in the mod's memory and go with a reload of the mod.
+- Session allowances live in the mod's memory and go with a reload of the mod. The request bridge is Claude Code's; pi has none built in (October 19, 2026).
 - The mode comes from the harness's classic events; a mode never reported carries nothing to
   main, and the dialog stays the person's.
 - A request settled while main's answer is on its way is reported to main as answered first or

@@ -10,7 +10,7 @@ import (
 
 // The choices of a permission, as main types them, in the order of the
 // permission question's options: allow this call, allow this exact call for
-// the rest of the worker's run, refuse with a reason.
+// the worker's run, until its mod reloads, refuse with a reason.
 const (
 	ChoiceOnce    = "once"
 	ChoiceSession = "session"

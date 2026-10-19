@@ -50,7 +50,7 @@ func Letter(worker, id string, offer Offer, deadline time.Time) string {
 			lines = append(lines, "In: "+offer.Cwd)
 		}
 		lines = append(lines,
-			"Choices: once allows this call; session allows this exact call for the rest of the worker's run; refuse [reason] refuses it, and the reason goes to its model.",
+			"Choices: once allows this call; session allows this exact call until the worker ends or its mod reloads; refuse [reason] refuses it, and the reason goes to its model.",
 			fmt.Sprintf("Answer: rewake answer %s %s once", worker, id))
 	} else {
 		first := ""
