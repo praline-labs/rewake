@@ -117,6 +117,11 @@ function startMainPane(term: PaneTerminal) {
   // The person's colours reach every space host through main's environment,
   // so a worker's program hears them from its host (docs/v2/shell.md).
   if (seed.host) env.REWAKE_HOST_COLORS = seed.host;
+  // pi copies through the machine's clipboard where it finds one, which never
+  // reaches the person's terminal from inside the shell (on WSL without
+  // WT_SESSION, PowerShell); this makes it send OSC 52 as well, which the
+  // scanner carries out. Main's workers inherit it like the colours.
+  env.PI_CLIPBOARD_OSC52 ??= "1";
   main = startMain(
     command,
     env,

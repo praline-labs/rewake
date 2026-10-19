@@ -225,6 +225,14 @@ the 1.3.0 package (`docs/cli.md`, `docs/security.md`, `docs/settings.md`, `dist/
   does not move the npm cache (`~/.npm`) a package install uses, ambient credentials such as
   provider keys in the environment, or a user-level `~/.agents/skills`.
 - `PI_SKIP_VERSION_CHECK=1` stops pi offering its own update; rewake updates the copy.
+- A copy (fullscreen selection, `/copy`) goes through `copyToClipboard` (`dist/utils/clipboard.js`):
+  on Linux `wl-copy` with `WAYLAND_DISPLAY`, `xclip`/`xsel` with `DISPLAY`; then on WSL OSC 52
+  alone when `WT_SESSION` is set, else `wslpath` and `powershell.exe Set-Clipboard`; OSC 52
+  (`ESC ] 52 ; c ; <base64> BEL`, at most 100,000 encoded bytes) only when nothing copied on a
+  machine with no display, or always after the local write with `SSH_CONNECTION`, `SSH_CLIENT`,
+  `MOSH_CONNECTION` or `PI_CLIPBOARD_OSC52=1`. Fullscreen turns on mouse modes 1000, 1002, 1003,
+  1004 and 1006 and copies on select by default (`fullscreenCopyOnSelect`). Read on 1.3.0 and
+  driven in a pty on October 19, 2026.
 - `--version` is not state-free: `dist/main.js` builds its settings manager and HTTP setup from
   the agent directory's settings before it checks the flag, so `{"httpProxy":"not-a-url"}` there
   makes `node cli.js --version` exit 1. Every version read rewake makes gets the run's agent

@@ -80,6 +80,13 @@ mode:
 - **OSC 52, title.** The widget swallows them. The shell scans the bytes before `write()` — a
   stateful scanner, since a sequence can split across reads — and calls
   `renderer.copyToClipboardOSC52` and `setTerminalTitle` (the focused pane's). Both checked live.
+  A program that copies through the machine's clipboard sends no OSC 52, and inside the shell such
+  a copy never reaches the person's terminal: pi 1.3.0 in fullscreen selects with the mouse itself
+  and on WSL without `WT_SESSION` copies with PowerShell, showing "Copied!" with nothing in the
+  person's clipboard (the owner's report, October 19, 2026). The shell starts main with
+  `PI_CLIPBOARD_OSC52=1` unless the person set it, pi's own switch for a multiplexer, so pi sends
+  OSC 52 after its own write; main's workers inherit it like the colours. Checked under a
+  stand-in terminal with pi as main: OSC 52 reached the terminal, none before the switch.
 - **Bell, OSC 9/99/777 notifications** are not delivered to the person's terminal: the owner's
   decision of October 19, 2026, for now. OpenTUI offers no way to write them anyway; its native
   session takes only the title, the mouse, kitty flags and program status.
