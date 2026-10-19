@@ -75,7 +75,11 @@ type Harness interface {
 flag for the same parameter replace rather than repeat each other. `Version` is the gate the host reads before the
 claim, and `EnvNotInherited` the variables the host leaves out of `LaunchRequest.Env`.
 The optional `LaunchSettingsHarness` translates an alias's model and effort into harness
-flags; context never reaches it. `host/launch` applies those before ordinary alias replacement,
+flags; context never reaches it. The optional `Shipped` is a harness whose pinned copy is
+installed with rewake (pi): its `Locate` finds the copy and its runtime before the claim, the
+host holds the copy to `VersionGate.Pinned` and passes it to Launch as `LaunchRequest.Start`,
+which `Invocation` puts before the caller's arguments unless `--command` names another
+program. `host/launch` applies those before ordinary alias replacement,
 and builds a space's complete worker command, wrapper and fresh conversation id included.
 `test/launch` checks that command against every registered harness with and without a worktree.
 

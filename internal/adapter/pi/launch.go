@@ -31,21 +31,32 @@ func (harness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, error)
 	}
 	args, notes := adapter.ApplyDefaults(args, defaults())
 	file := filepath.Join(request.RunDir, "extension.ts")
-	args = adapter.AddFlags(args, "-ne", "-e", file, "-na")
+	// -e adds rewake's extension to those pi finds, the person's and the
+	// project's, which load as they would without rewake.
+	args = adapter.AddFlags(args, "-e", file)
 	if request.Intro {
 		args = adapter.AddFlags(args, "--append-system-prompt", brief.Intro(request.BriefContext()))
 	}
-	env := make([]string, 0, len(request.Env)+1)
+	dir, err := agentDir()
+	if err != nil {
+		return adapter.LaunchPlan{}, err
+	}
+	if request.Command != "" && request.Version != PinnedVersion {
+		notes = append(notes, fmt.Sprintf("pi %s named with --command is not the %s this rewake was checked with", request.Version, PinnedVersion))
+	}
+	env := make([]string, 0, len(request.Env)+3)
 	for _, value := range request.Env {
-		if !strings.HasPrefix(value, socketEnv+"=") {
+		name, _, _ := strings.Cut(value, "=")
+		if name != socketEnv && name != AgentDirEnv && name != SkipVersionCheckEnv {
 			env = append(env, value)
 		}
 	}
-	env = append(env, socketEnv+"="+request.Socket)
+	env = append(append(env, socketEnv+"="+request.Socket), isolation(dir)...)
 	run := newRun(file, request.Socket)
 	run.epoch, run.controlDir = request.Epoch, request.ControlDir
+	command, args := request.Invocation(ID, args)
 	return adapter.LaunchPlan{
-		Command: request.Program(ID), Args: args, Env: env, Notes: notes,
+		Command: command, Args: args, Env: env, Notes: notes,
 		Socket: request.Socket, OwnsSocket: true,
 		Service: run, Wake: run, TurnBoundary: run, Thread: run, Live: run, Telemetry: run,
 	}, nil

@@ -308,7 +308,12 @@ acceptance documents.
   where the shim looks. The separate packages of the old layout, which 1.0.0 and 1.0.1
   depend on, were removed from the registry on September 28, 2026; those two versions
   now install without a binary and are deprecated once 1.0.2 is out.
-- A non-npm alternative: `go install`.
+- pi ships with rewake (owner decision, October 19, 2026): the entry names
+  `@earendil-works/pi-coding-agent` in `dependencies` at the exact version the binary pins,
+  so npm installs and updates it with rewake, and a launch starts that copy with `node`
+  ([launch.md](launch.md#pi)). Claude Code is not shipped; its license leaves it to the person.
+- A non-npm alternative: `go install`, with pi installed beside the binary by hand
+  ([install.md](install.md#trying-20-beside-103)).
 - Owner decision, September 28, 2026: the repository lives in the GitHub
   organization `praline-labs`, the module path is `github.com/praline-labs/rewake`
   and the npm scope `@praline-labs` (the unscoped name `rewake` belongs to someone

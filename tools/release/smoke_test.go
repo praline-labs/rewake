@@ -7,6 +7,7 @@ import (
 	"io"
 	"maps"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -41,8 +42,16 @@ func TestInstalledBuildsAreFoundWhereverNpmPutThem(t *testing.T) {
 
 // The local registry answers the scoped name as npm asks for it, with its slash
 // escaped, lists every version under its tag with the tarball's integrity, and
-// serves the tarballs.
+// serves the tarballs; any other package, the shipped pi's among them, it asks
+// the public registry for.
 func TestTheLocalRegistryServesTheRelease(t *testing.T) {
+	public := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.WriteString(w, "public "+r.URL.EscapedPath())
+	}))
+	defer public.Close()
+	saved := upstream
+	upstream = public.URL + "/"
+	t.Cleanup(func() { upstream = saved })
 	packs := 0
 	f := &fake{answer: func(line string) result {
 		if !strings.HasPrefix(line, "npm pack") {
@@ -110,5 +119,8 @@ func TestTheLocalRegistryServesTheRelease(t *testing.T) {
 		if body := get(strings.TrimPrefix(dist.Tarball, registry.url)); !strings.HasSuffix(string(body), ".tgz") {
 			t.Errorf("%s: tarball %q", version, body)
 		}
+	}
+	if body := string(get("@earendil-works%2fpi-coding-agent")); body != "public /@earendil-works%2fpi-coding-agent" {
+		t.Errorf("another package: %q", body)
 	}
 }

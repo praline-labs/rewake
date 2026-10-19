@@ -10,6 +10,8 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/praline-labs/rewake/internal/adapter/pi"
 )
 
 const (
@@ -111,6 +113,9 @@ func (g *gate) checkInstall(ctx context.Context) {
 			g.fail("the installed command did not print %q: %s", want+"…", r.why())
 		}
 	}
+	if ok {
+		g.shippedPi(ctx, filepath.Join(scratch, "this-machine", "lib", "node_modules"), scratch)
+	}
 	for _, other := range packages {
 		if other.platform == "" || other.platform == p.platform {
 			continue
@@ -141,9 +146,10 @@ func (g *gate) checkInstall(ctx context.Context) {
 	}
 }
 
-// installLimit bounds one npm install from the local registry: nothing leaves
-// the machine, so a minute is plenty.
-const installLimit = 2 * time.Minute
+// installLimit bounds one npm install from the local registry. The release's
+// own packages are local; pi and its dependencies come from the public
+// registry once and from the scratch cache after.
+const installLimit = 3 * time.Minute
 
 // install runs npm install of the release's entry into a prefix of its own,
 // against the local registry only, and returns the installed command and the
@@ -220,4 +226,35 @@ func installedBuilds(modules string) (map[string]string, error) {
 		return nil
 	})
 	return builds, err
+}
+
+// shippedPi requires npm to have put the pinned pi where the installed binary
+// looks for it, a node_modules above its own directory, and that copy to
+// answer its version under node, as a launch reads it.
+func (g *gate) shippedPi(ctx context.Context, modules, scratch string) {
+	for _, dir := range []string{filepath.Join(modules, packageName, "node_modules"), modules} {
+		manifest := filepath.Join(dir, pi.Package, "package.json")
+		raw, err := os.ReadFile(manifest)
+		if err != nil {
+			continue
+		}
+		var found struct {
+			Bin map[string]string `json:"bin"`
+		}
+		if err := json.Unmarshal(raw, &found); err != nil || found.Bin["pi"] == "" {
+			g.fail("%s names no pi command: %v", manifest, err)
+			return
+		}
+		// pi reads its settings before it answers, so it gets an agent
+		// directory of the scratch's, never the person's own pi's.
+		r := g.run(ctx, runLimit, scratch, "env", pi.AgentDirEnv+"="+filepath.Join(scratch, "pi-agent"), pi.SkipVersionCheckEnv+"=1",
+			"node", filepath.Join(dir, pi.Package, found.Bin["pi"]), "--version")
+		if r.ok() && strings.TrimSpace(r.stdout) == pi.PinnedVersion {
+			g.pass("npm installs %s@%s beside the command, and it runs under node", pi.Package, pi.PinnedVersion)
+		} else {
+			g.fail("the installed %s is not %s under node: %s %s", pi.Package, pi.PinnedVersion, strings.TrimSpace(r.stdout), r.why())
+		}
+		return
+	}
+	g.fail("npm installed no %s beside the command, where a launch of pi looks for it", pi.Package)
 }

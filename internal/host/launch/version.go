@@ -36,8 +36,58 @@ func Gate(h adapter.Harness, program string, env []string, dir string) (string, 
 	if gate.Minimum == "" {
 		return "", nil
 	}
-	version := readVersion(program, gate.Args, env, dir)
+	version := readVersion(program, gate.Args, overlay(env, gate.Env), dir)
 	return version.Value, RequireVersion(h.Title(), version, gate.Minimum)
+}
+
+// GateShipped reads the versions of a harness's shipped copy before the claim:
+// its runtime's first, held to the runtime's minimum, then the copy's own,
+// held to the pinned version exactly — this build was checked with that one.
+func GateShipped(h adapter.Harness, start adapter.Start, env []string, dir string) (string, error) {
+	if start.Runtime.Minimum != "" {
+		runtime := readVersion(start.Command, start.Runtime.Args, env, dir)
+		if err := RequireVersion(start.RuntimeTitle, runtime, start.Runtime.Minimum); err != nil {
+			return "", err
+		}
+	}
+	gate := h.Version()
+	version := readVersion(start.Command, append(append([]string{}, start.Args...), gate.Args...), overlay(env, gate.Env), dir)
+	return version.Value, RequirePinned(h.Title(), version, gate.Pinned)
+}
+
+// RequirePinned is the refusal of a shipped copy by version: nil only when
+// the version read is the pinned one.
+func RequirePinned(title string, version Version, pinned string) error {
+	if version.Value == "" {
+		cause := version.Unknown
+		if cause == "" {
+			cause = "not read"
+		}
+		return fmt.Errorf("the version of the %s shipped with rewake could not be read (%s); reinstall rewake", title, cause)
+	}
+	if version.Value != pinned {
+		return fmt.Errorf("%s %s was found where rewake's own copy should be; this rewake runs %s %s: reinstall rewake, or name another program with --command", title, version.Value, title, pinned)
+	}
+	return nil
+}
+
+// overlay is env with each of set in place of a variable of the same name.
+func overlay(env, set []string) []string {
+	if len(set) == 0 {
+		return env
+	}
+	named := map[string]bool{}
+	for _, entry := range set {
+		name, _, _ := strings.Cut(entry, "=")
+		named[name] = true
+	}
+	out := make([]string, 0, len(env)+len(set))
+	for _, entry := range env {
+		if name, _, _ := strings.Cut(entry, "="); !named[name] {
+			out = append(out, entry)
+		}
+	}
+	return append(out, set...)
 }
 
 // Version is what a launch read of its harness's version: the version, or
