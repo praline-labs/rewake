@@ -24,7 +24,7 @@ func spaceGroup() Group {
 		Summary: "A space is a worker main starts with rewake space open: an ordinary session of main's room in a terminal of its own, which ends when main's run ends; its record stays after it closes.",
 		Commands: []*Command{workersCommand(), {
 			Name:           "space",
-			Args:           "list | open <name> [harness args...]",
+			Args:           "list | open <name> (--harness <id> | --alias <alias>) [options] [-- <harness args...>]",
 			MaxPositionals: Variadic,
 			Summary:        "List this room's spaces, or, from main, open one: start a worker that lives no longer than main's run.",
 			Options: []Option{
@@ -45,7 +45,7 @@ func spaceGroup() Group {
 			Next: []string{"rewake send <name>-<harness> \"text\""},
 			Notes: []string{
 				"--alias starts the worker an alias of rewake workers describes: its harness, role, command and arguments, with its model and effort, and its context where the harness has a flag for it. The space names the worker and its room; --role overrides the alias's role. Harness flags after -- replace the alias's single-use ones.",
-				"open is main's: refused from any other role, and from a run whose spaces are not live. The worker is an ordinary launch of rewake in main's room whatever its checkout, named <name>-<harness>, started in main's working directory; the only way to start one, since a person's rewake <harness> is always main. Everything after the name goes to its harness — permission flags, a model. rewake types nothing into the worker on its own: what it needs to start unattended goes there; the person types into it from main's shell, where main runs whenever it was started on a terminal, which shows each worker's terminal beside main's. rewake chooses the session id of a harness that takes one and keeps it in the record.",
+				"open is main's: refused from any other role, and from a run whose spaces are not live. The worker is an ordinary launch of rewake in main's room whatever its checkout, named <name>-<harness>, started in main's working directory; the only way to start one, since a person's rewake <harness> is always main. Put the harness's flags — permission flags, a model — after --; the options before it belong to space open. rewake types nothing into the worker on its own: what it needs to start unattended goes there; the person types into it from main's shell, where main runs whenever it was started on a terminal, which shows each worker's terminal beside main's. rewake chooses the session id of a harness that takes one and keeps it in the record.",
 				"The worker runs in a pseudo-terminal of a space host, a rewake process detached from main and no descendant of it. The space host checks main's run once a second; once that run has ended — by /exit, a crash or a kill — it sends the worker's process group SIGHUP, then SIGTERM after a second, then SIGKILL after five more, records what it observed, and exits.",
 				"open answers once the worker's session is registered, within 30 seconds, or says why the space did not open — a worker that exited at once is named with the last line it wrote.",
 				"Each space shows its main, its worker's name, harness and role, the session id rewake chose for the worker's conversation (none for a harness that takes none), its checkout and branch. A closed space keeps them.",

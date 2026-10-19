@@ -39,7 +39,7 @@ type spaceOpened struct {
 func (o spaceOpened) lines() []string {
 	return []string{
 		fmt.Sprintf("Rewake: opened space %s: %s (%s, %s) runs in room %s and closes when this run ends.", o.Space, o.Session, o.Harness, o.Role, o.Room),
-		fmt.Sprintf("Give it a task with rewake send %s \"...\"; main in the shell shows its terminal on a tab of its own.", o.Session),
+		fmt.Sprintf("Give it a task with rewake send %s \"...\"; main in the shell shows its terminal as the worker pane the bar selects.", o.Session),
 	}
 }
 

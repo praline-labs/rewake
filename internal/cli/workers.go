@@ -35,7 +35,7 @@ func workersCommand() *Command {
 		Examples: []string{"rewake workers", "rewake workers --json"},
 		Next:     []string{"rewake space open <name> --alias <alias>"},
 		Notes: []string{
-			"Any role may read this catalog. Aliases come from the user alias file, then the current directory's .rewake.toml, which may not set role or command. An unreadable file refuses the listing rather than silently omit workers.",
+			"Any role may read this catalog. Aliases come from the user alias file, ~/.config/rewake/aliases.toml, then the current directory's .rewake.toml, which may not set role or command. An unreadable file refuses the listing rather than silently omit workers.",
 			"An alias: [alias.<name>] with harness = \"<id>\"; role = \"write\" or \"general\" (general when absent); args = [the harness's arguments]; command = \"<program>\", a wrapper that runs the harness; description; and [alias.<name>.launch] with model, effort and context. Model and effort become the harness's flags; context does on a harness with a flag for it and is only shown elsewhere. Typed harness flags after -- in space open replace applied ones.",
 			"Since October 19, 2026 an alias's rewake list, main = true and launch.apply are gone: a file with them is refused, naming each field and what replaced it.",
 		},
