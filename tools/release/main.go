@@ -87,12 +87,15 @@ The checks, in order:
   - each would upload exactly its allowlist of files, nothing missing and
     nothing extra, and carries the right name, version, os and cpu; the
     entry's optional dependencies are exactly this release's builds;
-  - each platform binary is built for its architecture, and the one for this
-    machine prints the version, built from HEAD with no local changes;
+  - each platform binary and the shell beside it are built for its
+    architecture, and the binary for this machine prints the version, built
+    from HEAD with no local changes;
   - npm installs the release from a registry this process serves on the
-    loopback interface: this machine's build alone, and its command runs;
-    each other build alone for its cpu; none with --omit=optional, and the
-    command then fails naming the reinstall;
+    loopback interface: this machine's build alone, and its command runs,
+    the pinned pi beside it runs under node, and the shell beside the binary
+    starts and draws its main's output; each other build alone for its cpu;
+    none with --omit=optional, and the command then fails naming the
+    reinstall;
   - the shim's own tests, go test ./scripts.
 
 --publish then uploads both platform builds first, each under its own

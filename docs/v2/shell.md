@@ -162,12 +162,16 @@ mode:
   gives one executable with the runtime and OpenTUI's native library inside: built and run in the
   spike, 100 MB, 31 MB compressed. Bun is MIT, but the runtime it embeds carries JavaScriptCore,
   LGPL-2, which the dependency rule does not name; main's decision of October 19, 2026 accepts it
-  inside the compiled executable. It goes into each
-  platform package beside the Go binary (`scripts/pack.sh`), and rewake finds it next to its own
-  executable; `REWAKE_SHELL` names another — the owner's edited copy run from source with `bun`.
-  The sources live in `shell/` at the repository's root, outside the Go module; until step 3,
-  `shell/rewake-shell` runs them with `bun` (`bun install` in `shell/` once), named by
-  `REWAKE_SHELL`.
+  inside the compiled executable. `shell/build.ts` compiles it for a target;
+  `scripts/pack.sh` installs every Linux native library of the lockfile first
+  (`bun install --frozen-lockfile --os=linux --cpu='*'`, since Bun installs only this machine's by
+  default) and puts `bin/rewake-shell` into each platform package beside the Go binary: about
+  99 MB, 49.5 MB packed, for x64 and arm64 alike. rewake finds it next to its own executable;
+  `REWAKE_SHELL` names another — the owner's edited copy run from source with `bun`, which
+  `shell/rewake-shell` does (`bun install` in `shell/` once). The compiled shell reads no
+  `bunfig.toml`, `.env`, `tsconfig.json` or `package.json` of the directory it starts in: a
+  preload named in one stopped it in a first build. The sources live in `shell/` at the
+  repository's root, outside the Go module.
 - **The mod does not change**: it knows nothing of who draws the screen.
 
 ## Steps, each checked live
@@ -184,7 +188,10 @@ mode:
 2. **Events and colours.** Bell and notifications settled: not delivered, by the owner's decision.
   Check: a copy from each pane lands in the clipboard of the person's terminal.
 3. **Shipping**: the compiled shell in the npm packages, found by rewake. Check: an install by the
-  release gate starts it.
+  release gate starts it. Done October 19, 2026: the gate checks each package's shell, its
+  architecture and, after the install, that the shell beside the installed binary starts and
+  draws main's output; live, an npm-installed package ran `rewake --shell --main claude`
+  ([roadmap](../roadmap/2026-10-19-shell-ship.md)).
 4. **The host mode removed**: `internal/host/hostmode`, the canvas, the view mode, `--host`, the
   host mode's workflow scenario and its document, deleted. Done October 19, 2026
   ([roadmap](../roadmap/2026-10-19-host-mode-removed.md)).

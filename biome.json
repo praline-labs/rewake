@@ -10,6 +10,7 @@
     "ignoreUnknown": true,
     "includes": [
       "shell/src/**/*.{ts,tsx}",
+      "shell/build.ts",
       "internal/adapter/claude/mod/**/*.ts",
       "internal/adapter/pi/**/*.ts",
       "!internal/adapter/claude/mod/protocol.gen.ts",

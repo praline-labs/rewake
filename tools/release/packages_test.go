@@ -89,14 +89,15 @@ func TestVersionsAndTags(t *testing.T) {
 }
 
 // The allowlist holds both ways: a missing file and an extra one are each a
-// failure, and the command must be executable.
+// failure, and every executable must be executable: rewake, and in a platform
+// build the shell beside it.
 func TestFileProblems(t *testing.T) {
 	entry := packages[2]
 	files := func(paths ...string) packed {
 		var p packed
 		for _, path := range paths {
 			mode := 0o644
-			if path == "bin/rewake" {
+			if strings.HasPrefix(path, "bin/") {
 				mode = 0o755
 			}
 			p.Files = append(p.Files, struct {
@@ -117,6 +118,14 @@ func TestFileProblems(t *testing.T) {
 	flat.Files[2].Mode = 0o644
 	if problems := fileProblems(entry, flat); len(problems) != 1 || !strings.Contains(problems[0], "not executable") {
 		t.Errorf("a command that cannot run: %v", problems)
+	}
+	build := files("LICENSE", "bin/rewake", "bin/rewake-shell", "package.json")
+	if problems := fileProblems(packages[0], build); len(problems) > 0 {
+		t.Errorf("a platform build's exact set: %v", problems)
+	}
+	build.Files[2].Mode = 0o644
+	if problems := fileProblems(packages[0], build); len(problems) != 1 || !strings.Contains(problems[0], "bin/rewake-shell is not executable") {
+		t.Errorf("a shell that cannot run: %v", problems)
 	}
 }
 

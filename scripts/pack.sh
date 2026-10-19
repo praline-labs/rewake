@@ -30,6 +30,14 @@ built="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 rm -rf "$out"
 mkdir -p "$out"
 
+# The shell is compiled by Bun into one executable per platform, beside the
+# binary that starts it (docs/v2/shell.md); the person needs no Bun. Bun
+# installs OpenTUI's native library only for this machine by default, and a
+# platform without its own has nothing to put inside, so every Linux one is
+# installed first, at the versions of the lockfile.
+command -v bun >/dev/null || { echo "pack.sh: bun is needed to compile the shell (docs/testing.md)" >&2; exit 1; }
+(cd "$root/shell" && bun install --frozen-lockfile --os=linux --cpu='*' >/dev/null)
+
 # One build per platform. The list is short on purpose: a platform nobody
 # builds for is a version that installs and then cannot run.
 for target in linux-amd64:linux-x64 linux-arm64:linux-arm64; do
@@ -48,6 +56,7 @@ for target in linux-amd64:linux-x64 linux-arm64:linux-arm64; do
   CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" go build -C "$root" -trimpath \
     -ldflags "-X github.com/praline-labs/rewake/internal/cli.Version=$version -X github.com/praline-labs/rewake/internal/cli.built=$built" \
     -o "$dir/bin/rewake" ./cmd/rewake
+  bun "$root/shell/build.ts" "bun-$platform" "$dir/bin/rewake-shell" >/dev/null
 
   cat > "$dir/package.json" <<JSON
 {
@@ -58,7 +67,7 @@ for target in linux-amd64:linux-x64 linux-arm64:linux-arm64; do
   $repository,
   "os": ["$goos"],
   "cpu": ["${platform##*-}"],
-  "files": ["bin/rewake", "LICENSE"]
+  "files": ["bin/rewake", "bin/rewake-shell", "LICENSE"]
 }
 JSON
   cp "$root/LICENSE" "$dir/LICENSE"
