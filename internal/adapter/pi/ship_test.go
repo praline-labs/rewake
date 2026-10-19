@@ -76,7 +76,7 @@ func launchRequest(t *testing.T) adapter.LaunchRequest {
 		Name: "api", Dir: dir, RoomDir: dir, Room: "default", Epoch: "1-1",
 		Socket: filepath.Join(dir, "api.sock"), RunDir: dir, Version: PinnedVersion,
 		Start: adapter.Start{Command: "/usr/bin/node", Args: []string{"/shipped/cli.js"}},
-		Env:   []string{"PATH=/usr/bin", agentDirEnv + "=/home/someone/.pi/agent", skipVersionCheckEnv + "=0"},
+		Env:   []string{"PATH=/usr/bin", AgentDirEnv + "=/home/someone/.pi/agent", SkipVersionCheckEnv + "=0"},
 	}
 }
 
@@ -100,11 +100,11 @@ func TestPiRunsInRewakesOwnAgentDirectory(t *testing.T) {
 	dir := filepath.Join(request.Dir, ".config", "rewake", "pi", "agent")
 	var named []string
 	for _, value := range plan.Env {
-		if strings.HasPrefix(value, agentDirEnv+"=") || strings.HasPrefix(value, skipVersionCheckEnv+"=") {
+		if strings.HasPrefix(value, AgentDirEnv+"=") || strings.HasPrefix(value, SkipVersionCheckEnv+"=") {
 			named = append(named, value)
 		}
 	}
-	if want := []string{agentDirEnv + "=" + dir, skipVersionCheckEnv + "=1"}; !slices.Equal(named, want) {
+	if want := []string{AgentDirEnv + "=" + dir, SkipVersionCheckEnv + "=1"}; !slices.Equal(named, want) {
 		t.Errorf("pi's environment names %q, want %q", named, want)
 	}
 	if info, err := os.Stat(dir); err != nil || info.Mode().Perm() != 0o700 {
@@ -129,5 +129,38 @@ func TestAPiNamedWithCommandStartsWithANote(t *testing.T) {
 	}
 	if len(plan.Notes) != 1 || !strings.Contains(plan.Notes[0], "1.2.0") || !strings.Contains(plan.Notes[0], PinnedVersion) {
 		t.Errorf("the notes: %q", plan.Notes)
+	}
+}
+
+// The version read gets the run's agent directory without making it: pi
+// reads its settings before it answers, and nothing is made before the claim.
+func TestTheVersionReadUsesRewakesAgentDirectory(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	dir := filepath.Join(home, ".config", "rewake", "pi", "agent")
+	if env := (harness{}).Version().Env; !slices.Equal(env, []string{AgentDirEnv + "=" + dir, SkipVersionCheckEnv + "=1"}) {
+		t.Errorf("the version read's environment: %q", env)
+	}
+	if _, err := os.Stat(dir); !os.IsNotExist(err) {
+		t.Errorf("the version gate made the directory: %v", err)
+	}
+}
+
+// A directory made before the first launch, wider than private, is made
+// private: it holds the login.
+func TestAnExistingAgentDirectoryIsMadePrivate(t *testing.T) {
+	request := launchRequest(t)
+	dir := filepath.Join(request.Dir, ".config", "rewake", "pi", "agent")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := (harness{}).Launch(request); err != nil {
+		t.Fatal(err)
+	}
+	if info, err := os.Stat(dir); err != nil || info.Mode().Perm() != 0o700 {
+		t.Errorf("the agent directory: %v, %v", info, err)
 	}
 }

@@ -118,20 +118,31 @@ func entryOf(path string) (string, error) {
 	return entry, nil
 }
 
-// agentDir is the directory pi keeps its login, settings, extensions,
+// agentDirPath is the directory pi keeps its login, settings, extensions,
 // packages and sessions in for every pi rewake starts: rewake's own, beside
 // its alias file, so the person's global pi is neither read nor changed. It
 // is the person's, not a room's: it outlives the state directory, which may
-// be cleared with the system's temporary files. Private, since it holds the
-// login.
-func agentDir() (string, error) {
+// be cleared with the system's temporary files.
+func agentDirPath() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", fmt.Errorf("pi's directory is in the home directory: %w", err)
 	}
-	dir := filepath.Join(home, ".config", "rewake", "pi", "agent")
+	return filepath.Join(home, ".config", "rewake", "pi", "agent"), nil
+}
+
+// agentDir makes that directory for a launch, private since it holds the
+// login: one made before, by the person or by pi, is made private too.
+func agentDir() (string, error) {
+	dir, err := agentDirPath()
+	if err != nil {
+		return "", err
+	}
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return "", fmt.Errorf("could not make pi's directory: %w", err)
+	}
+	if err := os.Chmod(dir, 0o700); err != nil {
+		return "", fmt.Errorf("could not make pi's directory private: %w", err)
 	}
 	return dir, nil
 }

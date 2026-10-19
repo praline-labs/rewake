@@ -245,7 +245,10 @@ func (g *gate) shippedPi(ctx context.Context, modules, scratch string) {
 			g.fail("%s names no pi command: %v", manifest, err)
 			return
 		}
-		r := g.run(ctx, runLimit, scratch, "node", filepath.Join(dir, pi.Package, found.Bin["pi"]), "--version")
+		// pi reads its settings before it answers, so it gets an agent
+		// directory of the scratch's, never the person's own pi's.
+		r := g.run(ctx, runLimit, scratch, "env", pi.AgentDirEnv+"="+filepath.Join(scratch, "pi-agent"), pi.SkipVersionCheckEnv+"=1",
+			"node", filepath.Join(dir, pi.Package, found.Bin["pi"]), "--version")
 		if r.ok() && strings.TrimSpace(r.stdout) == pi.PinnedVersion {
 			g.pass("npm installs %s@%s beside the command, and it runs under node", pi.Package, pi.PinnedVersion)
 		} else {

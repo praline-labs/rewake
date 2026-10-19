@@ -36,7 +36,7 @@ func Gate(h adapter.Harness, program string, env []string, dir string) (string, 
 	if gate.Minimum == "" {
 		return "", nil
 	}
-	version := readVersion(program, gate.Args, env, dir)
+	version := readVersion(program, gate.Args, overlay(env, gate.Env), dir)
 	return version.Value, RequireVersion(h.Title(), version, gate.Minimum)
 }
 
@@ -51,7 +51,7 @@ func GateShipped(h adapter.Harness, start adapter.Start, env []string, dir strin
 		}
 	}
 	gate := h.Version()
-	version := readVersion(start.Command, append(append([]string{}, start.Args...), gate.Args...), env, dir)
+	version := readVersion(start.Command, append(append([]string{}, start.Args...), gate.Args...), overlay(env, gate.Env), dir)
 	return version.Value, RequirePinned(h.Title(), version, gate.Pinned)
 }
 
@@ -69,6 +69,25 @@ func RequirePinned(title string, version Version, pinned string) error {
 		return fmt.Errorf("%s %s was found where rewake's own copy should be; this rewake runs %s %s: reinstall rewake, or name another program with --command", title, version.Value, title, pinned)
 	}
 	return nil
+}
+
+// overlay is env with each of set in place of a variable of the same name.
+func overlay(env, set []string) []string {
+	if len(set) == 0 {
+		return env
+	}
+	named := map[string]bool{}
+	for _, entry := range set {
+		name, _, _ := strings.Cut(entry, "=")
+		named[name] = true
+	}
+	out := make([]string, 0, len(env)+len(set))
+	for _, entry := range env {
+		if name, _, _ := strings.Cut(entry, "="); !named[name] {
+			out = append(out, entry)
+		}
+	}
+	return append(out, set...)
 }
 
 // Version is what a launch read of its harness's version: the version, or

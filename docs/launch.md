@@ -151,7 +151,10 @@ harness pid and process start time; node runs the shipped entry in its own proce
 
 Every pi rewake starts keeps its state in rewake's own directory: the launch sets
 `PI_CODING_AGENT_DIR` to `~/.config/rewake/pi/agent`, made private (0700) by the launch,
-and `PI_SKIP_VERSION_CHECK=1`, since rewake updates the copy. Login (`/login`, kept in its
+and `PI_SKIP_VERSION_CHECK=1`, since rewake updates the copy. The version reads before the
+claim get both too, through the gate's `Env`: pi 1.3.0 reads its settings before it answers
+`--version`, and a setting of the person's own pi stopped the launch (review of October 19,
+2026). They name the directory without making it; the launch makes it after the claim. Login (`/login`, kept in its
 `auth.json`), settings, extensions, skills, prompts, themes, models, `pi install` packages,
 trust decisions and sessions live there, apart from the person's own pi, whose `~/.pi` is
 neither read nor changed. Beside the alias file, not in the state directory: it is the

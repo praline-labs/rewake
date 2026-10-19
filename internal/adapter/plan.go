@@ -85,6 +85,10 @@ type VersionGate struct {
 	// checked with this build. A program named with --command is held to
 	// Minimum alone.
 	Pinned string
+	// Env is what a read of the version sets over the probe's environment,
+	// as the run will: a harness that reads its own state before it answers
+	// --version must read the state its run gets, never the person's own.
+	Env []string
 }
 
 // Shipped is a harness whose pinned copy is installed with rewake and updated

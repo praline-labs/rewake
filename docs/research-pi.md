@@ -225,6 +225,10 @@ the 1.3.0 package (`docs/cli.md`, `docs/security.md`, `docs/settings.md`, `dist/
   does not move the npm cache (`~/.npm`) a package install uses, ambient credentials such as
   provider keys in the environment, or a user-level `~/.agents/skills`.
 - `PI_SKIP_VERSION_CHECK=1` stops pi offering its own update; rewake updates the copy.
+- `--version` is not state-free: `dist/main.js` builds its settings manager and HTTP setup from
+  the agent directory's settings before it checks the flag, so `{"httpProxy":"not-a-url"}` there
+  makes `node cli.js --version` exit 1. Every version read rewake makes gets the run's agent
+  directory (found in review, October 19, 2026).
 - `bin.pi` is `dist/bundle/cli.js`, and `engines.node` is `>=22.19.0`, which pi does not
   check. `node cli.js --version` prints `1.3.0` and writes nothing to HOME.
 - Project trust: without `-a`/`-na`, an extension handling `project_trust` or a saved decision,
@@ -242,7 +246,8 @@ with the person's own HOME for its login:
 | rewake's and a third-party extension | `[Extensions] extension.ts, third.ts`; the third-party one, in the isolated `extensions/`, wrote its marker on `session_start` |
 | a `pi install` package | `pi install npm:pi-mcp-adapter` with `PI_CODING_AGENT_DIR` set put it in the isolated `npm/`; the launch listed `extension.ts, pi-mcp-adapter, third.ts`, and the adapter turned off the built-in MCP as it does under a plain pi |
 | where pi writes | only under `~/.config/rewake/pi/agent`: `auth.json` (`{}`, 0600), `settings.json`, `models-store.json`, `sessions/`; no `~/.pi` |
-| the directory's mode | a fresh HOME: the launch made `~/.config/rewake/pi/agent` 0700 (and the missing parents) |
+| the directory's mode | a fresh HOME: the launch made `~/.config/rewake/pi/agent` 0700 (and the missing parents); one made before at 0755 is made 0700 |
+| a foreign setting | `~/.pi/agent/settings.json` and an inherited `PI_CODING_AGENT_DIR` both holding `{"httpProxy":"not-a-url"}`, which makes a plain `--version` exit 1: the shipped copy and a `--command` pi both started; neither foreign directory was written |
 | a turn without login | pi printed `Provider is not configured: openai-codex`; the turn ended `stopReason: error`, and main's inbox got an `error` report from the worker 0.2 s later, empty text. The question stayed open: the model never read its inbox, so the report did not answer it |
 | a project with `.pi/extensions` | pi's "Trust project folder?" prompt; no extension loaded and the boundary did not go live within 60 s, until answered |
 | `REWAKE_PI` at the person's pi 1.2.0 | refused before the claim: `pi 1.2.0 was found where rewake's own copy should be; this rewake runs pi 1.3.0: reinstall rewake, or name another program with --command` |

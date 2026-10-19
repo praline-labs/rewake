@@ -9,10 +9,10 @@ const (
 	ID             = "pi"
 	MinimumVersion = "1.2.0"
 	socketEnv      = "REWAKE_PI_SOCKET"
-	// agentDirEnv moves pi's whole agent directory; skipVersionCheckEnv
+	// AgentDirEnv moves pi's whole agent directory; SkipVersionCheckEnv
 	// keeps pi from offering an update of a copy rewake updates.
-	agentDirEnv         = "PI_CODING_AGENT_DIR"
-	skipVersionCheckEnv = "PI_SKIP_VERSION_CHECK"
+	AgentDirEnv         = "PI_CODING_AGENT_DIR"
+	SkipVersionCheckEnv = "PI_SKIP_VERSION_CHECK"
 	sessionIDFlag       = "--session-id"
 	worktreeFlag        = "--worktree"
 )
@@ -73,12 +73,26 @@ func (harness) SingleUseFlags() []adapter.Flag {
 	}
 }
 
+// pi 1.3.0 reads its settings before it answers --version (dist/main.js), so
+// the read gets the run's agent directory: a setting of the person's own pi
+// could otherwise refuse the launch. Resolved, not made: pi makes nothing
+// there to answer, and nothing is made before the claim.
 func (harness) Version() adapter.VersionGate {
-	return adapter.VersionGate{Minimum: MinimumVersion, Args: []string{"--version"}, Pinned: PinnedVersion}
+	gate := adapter.VersionGate{Minimum: MinimumVersion, Args: []string{"--version"}, Pinned: PinnedVersion}
+	if dir, err := agentDirPath(); err == nil {
+		gate.Env = isolation(dir)
+	}
+	return gate
+}
+
+// isolation is what every pi rewake starts is given over the person's
+// environment, its version read included.
+func isolation(dir string) []string {
+	return []string{AgentDirEnv + "=" + dir, SkipVersionCheckEnv + "=1"}
 }
 
 func (harness) EnvNotInherited() []string {
-	return []string{socketEnv, agentDirEnv, skipVersionCheckEnv, "PI_CODING_AGENT", "PI_SESSION_ID", "PI_SESSION_FILE", "PI_PROVIDER", "PI_MODEL", "PI_REASONING_LEVEL"}
+	return []string{socketEnv, AgentDirEnv, SkipVersionCheckEnv, "PI_CODING_AGENT", "PI_SESSION_ID", "PI_SESSION_FILE", "PI_PROVIDER", "PI_MODEL", "PI_REASONING_LEVEL"}
 }
 
 func (harness) Offers() adapter.Offer {

@@ -44,3 +44,19 @@ func TestTheShippedCopyRunsOnlyAtItsPinnedVersion(t *testing.T) {
 		}
 	}
 }
+
+// A gate's own variables replace the inherited ones for the read, in both
+// gates: a harness that reads its state before answering reads the run's.
+func TestTheVersionReadGetsTheGatesEnvironment(t *testing.T) {
+	script := "#!/bin/sh\n[ \"$STATE_DIR\" = /run/own ] && echo 1.3.0 || exit 1\n"
+	inherited := append(os.Environ(), "STATE_DIR=/home/someone/.own")
+	gate := pinned()
+	gate.gate.Env = []string{"STATE_DIR=/run/own"}
+	if read, err := Gate(gate, versionScript(t, script), inherited, t.TempDir()); err != nil || read != "1.3.0" {
+		t.Errorf("the minimum's read: %q, %v", read, err)
+	}
+	start := adapter.Start{Command: versionScript(t, script)}
+	if read, err := GateShipped(gate, start, inherited, t.TempDir()); err != nil || read != "1.3.0" {
+		t.Errorf("the pin's read: %q, %v", read, err)
+	}
+}
