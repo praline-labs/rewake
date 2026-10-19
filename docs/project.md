@@ -139,8 +139,9 @@ harness main names, with the model and effort main picks and in a checkout of it
 asked, outside main's process tree, in a pseudo-terminal rewake holds; the worker joins main's
 room as any session, and ends when main's run ends. In the host mode — `rewake claude` started
 in that mode — rewake holds the person's terminal and relays main and its workers through it:
-a tab bar at the bottom switches between them, a sidebar on the right lists the workers with
-their model, effort, context and state, and on a narrow screen the bottom bar alone navigates.
+main shows on the left and the chosen worker's live screen on the right, a tab bar at the bottom
+chooses the worker, and the focus moves between them by a click or the prefix's arrows; on a
+narrow screen the bar switches the whole window between them.
 An ordinary launch stays transparent, and the mod's space features are active only in the host
 mode. (The owner's decisions, October 18, 2026.)
 
