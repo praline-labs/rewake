@@ -31,12 +31,18 @@ const defaultQuestionWait = 10 * time.Minute
 func answerQuestion(ctx *Context, question sent) error {
 	target, model := question.target, question.model
 	wait, cancel := context.WithDeadline(context.Background(), question.deadline)
-	defer cancel()
 	// A question can still fail after send reported it held or pending — the
 	// hold expired, the session ended — and then no answer is coming. Waiting
-	// out the deadline for one would block the asker for nothing.
+	// out the deadline for one would block the asker for nothing. The watch
+	// ends with the command: one left reading the mailbox after it returned
+	// raced the next command of the same process (seen under -race).
 	refused := make(chan refusal, 1)
-	go watchRefusal(wait, refusalWatch{dir: question.dir, to: target.Name, id: model.ID}, refused, cancel)
+	watched := make(chan struct{})
+	go func() {
+		defer close(watched)
+		watchRefusal(wait, refusalWatch{dir: question.dir, to: target.Name, id: model.ID}, refused, cancel)
+	}()
+	defer func() { cancel(); <-watched }()
 
 	_, found, err := mail.AwaitAnswer(wait, question.dir, question.self.Name, question.epoch, model.ID, func(answer mail.Message) error {
 		model.State, model.Answer = string(mail.Read), answer.Text
