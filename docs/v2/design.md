@@ -178,11 +178,11 @@ probe ([research-claude-mod.md](../research-claude-mod.md)):
    versioned with it; the protocol between it and the host is described once, as a JSON
    schema, and the TypeScript types are generated from it.
 
-How a space is shown (the owner's decision, October 18, 2026): a host mode of rewake, chosen
-at launch, holds the person's terminal and relays main and the workers, main on the left and the
-chosen worker on the right above a bottom tab bar ([project.md](../project.md#what-the-tool-does), "Main starts its
-workers"); the mod's space features are active only in that mode. Its design is
-[host-mode.md](host-mode.md). Its successor, by the owner's decision of October 19, 2026, is the
-shell, a TypeScript application started by `rewake --shell` with the same layout
-([shell.md](shell.md)); the two stand side by side until the host mode is removed.
+How a space is shown: rewake's shell, chosen at launch with `rewake --shell`, a TypeScript
+application in the person's terminal with a pane per program, main on the left and the chosen
+worker on the right above a bottom tab bar ([shell.md](shell.md),
+[project.md](../project.md#what-the-tool-does), "Main starts its workers"). It replaced the host
+mode of October 18, 2026, a compositor in main's wrapper, by the owner's decision of October 19,
+2026; the host mode was removed the same day. A main started without the shell opens spaces as
+well, and its workers run unseen.
 

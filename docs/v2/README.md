@@ -47,9 +47,8 @@ Stage 4, Claude Code's adapter as one mod, then the space:
   as S4-3 built them. Open it before writing a space's record from the host.
 - [stage4-space-terminal.md](stage4-space-terminal.md) — `internal/host/terminal` as S4-4
   built it; its emulator left the code on October 18, 2026 and came back the same day for the
-  workers' panel, which the host mode replaced that evening.
-- [host-mode.md](host-mode.md) — the host mode: main's wrapper holds the person's terminal and
-  draws main and the workers from their emulators under a tab bar.
+  workers' panel, which the host mode replaced that evening; the shell replaced the host mode on
+  October 19, 2026.
 - [stage4-reading-pi.md](stage4-reading-pi.md) — pi read on October 13, 2026 at 0.85.1 and
   1.2.0, capability by capability, its risks and the probe items PI1–PI14. Open it before
   stage 4b.

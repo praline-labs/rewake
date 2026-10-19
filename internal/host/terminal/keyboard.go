@@ -7,10 +7,11 @@ import (
 	"github.com/charmbracelet/x/ansi"
 )
 
-// The keyboard protocols a program may ask its terminal for, kept so the
-// host mode can ask the person's terminal for the same (docs/v2/host-mode.md#input):
-// the library knows neither, and a program that hears no answer to its kitty
-// query falls back to legacy keys, where Shift+Enter is a plain Enter.
+// The keyboard protocols a program may ask its terminal for, kept so a late
+// client's preamble sets the same (replay.go) and the program's query is
+// answered: the library knows neither, and a program that hears no answer to
+// its kitty query falls back to legacy keys, where Shift+Enter is a plain
+// Enter.
 
 const (
 	// kittyAll are the progressive enhancements the protocol defines.

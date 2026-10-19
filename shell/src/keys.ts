@@ -35,15 +35,14 @@ function commandOf(seq: string): Command | undefined {
   return undefined
 }
 
-// A typed prefix waits this long for its command, as in the host mode.
+// A typed prefix waits this long for its command.
 const prefixLapse = 2000
 // The key code of a CSI sequence, for matching a release to its press.
 const codeOf = (seq: string) => /^\x1b\[(\d+)[;u]/.exec(seq)?.[1]
 
 // prefixHandler is the input handler: true takes the sequence from OpenTUI.
-// The prefix waits for one key; any other key after it is dropped, as in
-// the host mode, and the releases of the prefix and of the key taken are
-// taken too.
+// The prefix waits for one key; any other key after it is dropped, and the
+// releases of the prefix and of the key taken are taken too.
 export function prefixHandler(run: (command: Command) => void, now = Date.now): (seq: string) => boolean {
   let pendingAt: number | undefined
   let taken: string | undefined

@@ -178,7 +178,7 @@ a refusal names the one that is missing:
 
 On Claude Code the proof is the mod's hello: an admitted hello on a main run makes Spaces live.
 The answer no longer says `hostsSpaces`: the mod served the workers' pane by it, and the pane went
-with the host mode on October 18, 2026 ([host-mode.md](host-mode.md)). A mod
+with the host mode on October 18, 2026, which the shell replaced ([shell.md](shell.md)). A mod
 that is lost takes them out of the live set when the host sees the loss — the lapse of its
 heartbeat, the signal that withdraws its turn boundary, built in S4-6
 ([the live set](stage4-turns.md#the-live-set)). A run whose mod did not load never has them.

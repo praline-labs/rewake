@@ -42,12 +42,9 @@ type Request struct {
 	Intro bool
 	// Command is the program to start in place of the harness's own.
 	Command string
-	// Host runs the harness in the host mode: on a terminal of the wrapper's,
-	// shown with the run's workers above a bar (docs/v2/host-mode.md).
-	Host bool
 	// Shell says the harness runs in rewake's shell, on the shell's
-	// terminal (docs/v2/shell.md): an ordinary run here, drawn by the shell
-	// as the host mode would draw it, its stops continued as the host mode's.
+	// terminal (docs/v2/shell.md): an ordinary run here, drawn by the shell,
+	// its stops continued at once.
 	Shell bool
 
 	// Role is explicit when its ID is set; empty always uses general.
@@ -186,7 +183,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 		ControlDir: controlDir,
 		RunDir:     runDir,
 		Version:    version,
-		Host:       request.Host || request.Shell,
+		Shell:      request.Shell,
 	}
 	launchRequest.Env = launch.SessionEnv(launchRequest, request.Harness.EnvNotInherited())
 	plan, err := request.Harness.Launch(launchRequest)
@@ -237,14 +234,13 @@ func Run(ctx context.Context, request Request) (int, error) {
 
 	command := exec.Command(plan.Command, plan.Args...)
 	command.Env = plan.Env
-	screen, onStop, err := startHarness(request, command, epoch)
+	onStop, err := startHarness(request, command)
 	if err != nil {
 		if errors.Is(err, exec.ErrNotFound) {
 			return 0, fmt.Errorf("%s is not installed or not in PATH", plan.Command)
 		}
 		return 0, err
 	}
-	defer screen.Stop()
 
 	process, _ := plan.Service.(adapter.ProcessService)
 	if start, err := proc.StartTime(command.Process.Pid); err == nil {
@@ -329,9 +325,6 @@ func Run(ctx context.Context, request Request) (int, error) {
 	}()
 
 	code := waitForHarness(command.Process.Pid, onStop)
-	// The person's terminal comes back with the harness's end, not after
-	// the run's cleanup.
-	screen.Stop()
 	// The run begins to end with its harness: no decision is taken from here.
 	life.closeAdmission()
 

@@ -194,7 +194,7 @@ func TestARunWritesItsModAndServesItsSocket(t *testing.T) {
 	}
 }
 
-func TestTheHostModeTurnsFullscreenOnUnlessThePersonChose(t *testing.T) {
+func TestTheShellTurnsFullscreenOnUnlessThePersonChose(t *testing.T) {
 	if got := fullscreen([]string{"A=1"}); !slices.Equal(got, []string{"A=1", "CLAUDE_CODE_NO_FLICKER=1"}) {
 		t.Fatalf("env %q", got)
 	}

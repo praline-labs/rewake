@@ -3,7 +3,7 @@ package terminal
 import "testing"
 
 // A wide glyph is a run of its own, two columns for one glyph: how the
-// host mode learns its width from the emulator rather than guess it.
+// preamble places the run after it by the emulator's width.
 func TestAWideGlyphIsARunOfItsOwn(t *testing.T) {
 	emulator, err := newVT(Size{Cols: 8, Rows: 1})
 	if err != nil {
@@ -24,9 +24,10 @@ func TestAWideGlyphIsARunOfItsOwn(t *testing.T) {
 	}
 }
 
-// A title with a character whose UTF-8 holds the byte 0x9C stays a title:
-// the library took that byte for the end of the string and drew the rest of
-// Claude Code's title over its logo. Cut at every offset, as reads come.
+// A title with a character whose UTF-8 holds the byte 0x9C stays a title,
+// kept whole for a late client's preamble: the library took that byte for
+// the end of the string and drew the rest of Claude Code's title over its
+// logo. Cut at every offset, as reads come.
 func TestATitleIsNeverDrawn(t *testing.T) {
 	stream := "\x1b]0;✳ Claude Code\x07X\x1b]2;✳ é\x1b\\Y"
 	for cut := 0; cut <= len(stream); cut++ {
@@ -39,8 +40,8 @@ func TestATitleIsNeverDrawn(t *testing.T) {
 		vt.write([]byte(stream[cut:]))
 		runs := vt.row(0, 20)
 		_ = vt.stopReplies()
-		if len(runs) == 0 || runs[0].Text[:2] != "XY" {
-			t.Fatalf("cut at %d: row %+v, want XY", cut, runs)
+		if len(runs) == 0 || runs[0].Text[:2] != "XY" || vt.title != "✳ é" {
+			t.Fatalf("cut at %d: row %+v, title %q, want XY and ✳ é", cut, runs, vt.title)
 		}
 	}
 }

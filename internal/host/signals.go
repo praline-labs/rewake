@@ -33,8 +33,8 @@ func followStop(pid int, stopped func(int) bool, stop func()) {
 // stops with it and continues with it, which is what a shell expects of a job.
 func followJob(pid int) { followStop(pid, stillStopped, stopSelf) }
 
-// continueHarness brings back a harness that stopped itself on the host
-// mode's terminal: it is in a session of its own there, so no shell could.
+// continueHarness brings back a harness that stopped itself on the shell's
+// pane, where no shell behind it could.
 func continueHarness(pid int) { _ = syscall.Kill(pid, syscall.SIGCONT) }
 
 // stillStopped reports whether a process is in a job-control stop now.

@@ -1,64 +1,17 @@
 package terminal
 
-import "slices"
-
-// The screen as the host mode shows it (docs/v2/host-mode.md): rows of
-// styled runs with the cursor, and the input modes the person's terminal
-// mirrors. This package knows no harness and no mod.
-
-// Screen is the screen at one sequence, carrying the rows changed since the
-// sequence its reader had.
-type Screen struct {
-	// Seq is this screen's sequence: the after of the next read.
-	Seq  uint64 `json:"seq"`
-	Size Size   `json:"size"`
-	// Changed are the rows changed since the reader's sequence, every row
-	// when it had none or had one this terminal never gave.
-	Changed []Row  `json:"changed"`
-	Cursor  Cursor `json:"cursor"`
-	Modes   Modes  `json:"modes"`
-	// Title is the program's title, whole (osc.go).
-	Title string `json:"title,omitempty"`
-	// Events are what the program asked of the person's terminal since the
-	// reader's sequence; none for a reader that had none, so a view opened
-	// late never repeats an old copy.
-	Events []Event `json:"events,omitempty"`
-	// Ended says the program's side is closed: the screen changes no more.
-	Ended bool `json:"ended,omitempty"`
-}
-
-// Event is something the program asked of its terminal that the host mode
-// passes to the person's, from whichever tab: a bell, or an OSC string — a
-// copy to the clipboard, a notification — written as it came.
-type Event struct {
-	Bell bool   `json:"bell,omitempty"`
-	OSC  string `json:"osc,omitempty"`
-}
-
-// eventsKept bounds the events a terminal keeps for its readers; a reader
-// further behind loses the oldest.
-const eventsKept = 32
-
-// stamped is an event and the sequence it came at.
-type stamped struct {
-	seq   uint64
-	event Event
-}
-
-// Row is one row as runs that cover its width, left to right.
-type Row struct {
-	Index int   `json:"row"`
-	Runs  []Run `json:"runs"`
-}
+// The screen as the emulator holds it: rows of styled runs, which a late
+// client's preamble draws (replay.go), and the input modes it sets. This
+// package knows no harness and no mod.
 
 // Run is a stretch of a row in one style. Cols counts a wide glyph as two;
 // the runs of a row add up to its width.
 type Run struct {
-	Text  string `json:"text"`
-	Cols  int    `json:"cols"`
-	Fg    Color  `json:"fg"`
-	Bg    Color  `json:"bg"`
-	Attrs Attrs  `json:"attrs,omitempty"`
+	Text  string
+	Cols  int
+	Fg    Color
+	Bg    Color
+	Attrs Attrs
 }
 
 // ColorKind tells a color's form.
@@ -75,11 +28,11 @@ const (
 // Color is a run's foreground or background: the default, a palette index
 // (0–15 the basic colors, up to 255 the extended), or a direct color.
 type Color struct {
-	Kind  ColorKind `json:"kind"`
-	Index uint8     `json:"index,omitempty"`
-	R     uint8     `json:"r,omitempty"`
-	G     uint8     `json:"g,omitempty"`
-	B     uint8     `json:"b,omitempty"`
+	Kind  ColorKind
+	Index uint8
+	R     uint8
+	G     uint8
+	B     uint8
 }
 
 // Attrs are a run's attributes. Blink has no place in the mod's text and is
@@ -98,9 +51,9 @@ const (
 
 // Cursor is where the cursor is, from 0, and whether the program shows it.
 type Cursor struct {
-	Row     int  `json:"row"`
-	Col     int  `json:"col"`
-	Visible bool `json:"visible"`
+	Row     int
+	Col     int
+	Visible bool
 }
 
 // MouseMode is which mouse events the program asked for.
@@ -116,27 +69,27 @@ const (
 )
 
 // Modes are what the program set that changes the bytes a key must be sent
-// as: the encoder in the mod reads them, or Right reaches a program in
-// application cursor mode as CSI C where it waits for SS3 C.
+// as: a client without them sends Right to a program in application cursor
+// mode as CSI C where it waits for SS3 C.
 type Modes struct {
 	// CursorKeys is DECCKM (mode 1): arrows, Home and End as SS3 sequences.
-	CursorKeys bool `json:"cursorKeys,omitempty"`
+	CursorKeys bool
 	// Keypad is DECNKM (mode 66): the keypad in application mode.
-	Keypad bool `json:"keypad,omitempty"`
+	Keypad bool
 	// BracketedPaste is mode 2004: a paste framed by CSI 200~ and 201~.
-	BracketedPaste bool      `json:"bracketedPaste,omitempty"`
-	Mouse          MouseMode `json:"mouse,omitempty"`
+	BracketedPaste bool
+	Mouse          MouseMode
 	// MouseSGR is mode 1006: mouse reports in the SGR form.
-	MouseSGR bool `json:"mouseSgr,omitempty"`
+	MouseSGR bool
 	// Focus is mode 1004: focus in and out reported.
-	Focus bool `json:"focus,omitempty"`
+	Focus bool
 	// KittyKeys are the kitty keyboard protocol's flags in force (CSI > u):
 	// 1 disambiguates, so Shift+Enter differs from Enter.
-	KittyKeys uint8 `json:"kittyKeys,omitempty"`
+	KittyKeys uint8
 	// ModifyOtherKeys is xterm's modifyOtherKeys level, 0 to 2.
-	ModifyOtherKeys uint8 `json:"modifyOtherKeys,omitempty"`
+	ModifyOtherKeys uint8
 	// AltScreen says the alternate screen is shown.
-	AltScreen bool `json:"altScreen,omitempty"`
+	AltScreen bool
 }
 
 // look is the whole screen as the emulator holds it at one moment.
@@ -146,70 +99,4 @@ type look struct {
 	cursor Cursor
 	modes  Modes
 	title  string
-	events []Event
-}
-
-// published is what the terminal last gave out: the rows, and the sequence
-// at which each last changed, so a read after any sequence gets exactly the
-// rows changed since.
-type published struct {
-	seq     uint64
-	size    Size
-	rows    [][]Run
-	changed []uint64
-	cursor  Cursor
-	modes   Modes
-	title   string
-	events  []stamped
-}
-
-// take compares a fresh look with what was published and moves the
-// sequence when anything differs — a row, the size, the cursor, a mode. A
-// new size republishes every row, since the mod's rows no longer fit.
-func (p *published) take(l look) {
-	resized := l.size != p.size || len(p.rows) != len(l.rows)
-	moved := l.cursor != p.cursor || l.modes != p.modes || l.title != p.title || len(l.events) > 0
-	next := p.seq + 1
-	differs := resized || moved
-	if resized {
-		p.changed = make([]uint64, len(l.rows))
-		for i := range p.changed {
-			p.changed[i] = next
-		}
-	} else {
-		for i, row := range l.rows {
-			if !slices.Equal(row, p.rows[i]) {
-				p.changed[i] = next
-				differs = true
-			}
-		}
-	}
-	if !differs {
-		return
-	}
-	p.seq, p.size, p.rows, p.cursor, p.modes, p.title = next, l.size, l.rows, l.cursor, l.modes, l.title
-	for _, e := range l.events {
-		p.events = append(p.events, stamped{seq: next, event: e})
-	}
-	if over := len(p.events) - eventsKept; over > 0 {
-		p.events = append(p.events[:0:0], p.events[over:]...)
-	}
-}
-
-// since is the screen for a reader that has after: the rows changed since,
-// or every row when after is 0 or a sequence this terminal never reached.
-func (p *published) since(after uint64) Screen {
-	s := Screen{Seq: p.seq, Size: p.size, Cursor: p.cursor, Modes: p.modes, Title: p.title, Changed: []Row{}}
-	all := after == 0 || after > p.seq
-	for _, e := range p.events {
-		if !all && e.seq > after {
-			s.Events = append(s.Events, e.event)
-		}
-	}
-	for i, row := range p.rows {
-		if all || p.changed[i] > after {
-			s.Changed = append(s.Changed, Row{Index: i, Runs: row})
-		}
-	}
-	return s
 }

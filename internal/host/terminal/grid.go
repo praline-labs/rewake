@@ -1,7 +1,6 @@
 package terminal
 
 import (
-	"context"
 	"errors"
 	"image/color"
 	"io"
@@ -26,27 +25,21 @@ const (
 // before the terminal, and decides where the emulator's answers go.
 //
 // One goroutine writes each piece of output whole into the emulator under
-// the lock before any reader of the screen sees it, since the emulator's
-// callbacks run inside the write and a look between them sees half a frame;
+// the lock before a stream attaches or takes it, since the emulator's
+// callbacks run inside the write and a preamble between them sees half a
+// frame;
 // another takes the emulator's answers off its pipe at once, so the emulator
 // never waits on whoever takes them.
 type Grid struct {
 	// mu guards the emulator and what is said of it.
 	mu    sync.Mutex
 	emu   emulator
-	dirty bool
 	ended bool
 	// streams are the raw streams attached (stream.go), and unfinished the
 	// bytes of a sequence the program has not finished, which each new one
 	// ends its preamble with.
 	streams    map[*Stream]struct{}
 	unfinished unfinished
-	// wake is closed when the screen may have changed, and replaced.
-	wake chan struct{}
-
-	// pubMu guards what was published; a look runs under mu inside it.
-	pubMu sync.Mutex
-	pub   published
 
 	// inMu orders a write with the end of the output: a write after it is
 	// dropped, never sent on a closed channel.
@@ -69,7 +62,7 @@ func NewGrid(size Size) (*Grid, error) {
 		return nil, err
 	}
 	g := &Grid{
-		emu: emu, wake: make(chan struct{}), chunks: make(chan []byte, 64),
+		emu: emu, chunks: make(chan []byte, 64),
 		answers: make(chan []byte, replyQueue), fed: make(chan struct{}),
 	}
 	g.wg.Add(2)
@@ -127,7 +120,7 @@ func (g *Grid) feed() {
 }
 
 // commit writes one piece of output into the emulator, whole, and only then
-// wakes the readers of the screen.
+// hands it to the streams.
 func (g *Grid) commit(p []byte, end bool) {
 	if len(p) == 0 && !end {
 		return
@@ -135,19 +128,12 @@ func (g *Grid) commit(p []byte, end bool) {
 	g.mu.Lock()
 	if len(p) > 0 {
 		g.emu.write(p)
-		g.dirty = true
 	}
 	g.streamLocked(p, end)
 	if end {
 		g.ended = true
 	}
-	g.wakeLocked()
 	g.mu.Unlock()
-}
-
-func (g *Grid) wakeLocked() {
-	close(g.wake)
-	g.wake = make(chan struct{})
 }
 
 func (g *Grid) drain() {
@@ -176,16 +162,13 @@ func (g *Grid) Answers() <-chan []byte { return g.answers }
 
 // Resize sizes the grid. The caller sizes the terminal after it: the program
 // draws for its new size only once the kernel tells it, and by then the grid
-// has that size. The library does not reflow; a new size republishes every
-// row.
+// has that size. The library does not reflow.
 func (g *Grid) Resize(size Size) error {
 	if err := size.check(); err != nil {
 		return err
 	}
 	g.mu.Lock()
 	g.emu.resize(size)
-	g.dirty = true
-	g.wakeLocked()
 	g.mu.Unlock()
 	return nil
 }
@@ -197,44 +180,6 @@ func (g *Grid) SetDefaults(fg, bg color.Color) {
 	g.mu.Lock()
 	g.emu.defaults(fg, bg)
 	g.mu.Unlock()
-}
-
-// Screen is the screen for a reader that has the sequence after: at once
-// when it changed since, when after is a sequence this grid never gave, or
-// when the output is over; otherwise when it changes, or ctx ends, and then
-// with the same sequence and no rows.
-func (g *Grid) Screen(ctx context.Context, after uint64) Screen {
-	for {
-		g.mu.Lock()
-		wake, ended := g.wake, g.ended
-		g.mu.Unlock()
-		s := g.publish(after)
-		s.Ended = ended
-		if s.Seq != after || ended || ctx.Err() != nil {
-			return s
-		}
-		select {
-		case <-wake:
-		case <-ctx.Done():
-		}
-	}
-}
-
-func (g *Grid) publish(after uint64) Screen {
-	g.pubMu.Lock()
-	defer g.pubMu.Unlock()
-	g.mu.Lock()
-	fresh := g.dirty || g.pub.seq == 0
-	var l look
-	if fresh {
-		l = g.emu.look()
-		g.dirty = false
-	}
-	g.mu.Unlock()
-	if fresh {
-		g.pub.take(l)
-	}
-	return g.pub.since(after)
 }
 
 // Close ends the output, if not yet, writes what is held, then stops the

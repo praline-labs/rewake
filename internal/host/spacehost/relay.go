@@ -12,14 +12,12 @@ import (
 	"github.com/praline-labs/rewake/internal/host/terminal"
 )
 
-// The space's unix socket. A client writes one byte first, the mode: a view
-// (view.go) for the host mode (docs/v2/host-mode.md), or the raw bytes
-// (bytes.go) for the shell (docs/v2/shell.md). The space host answers it with
-// one byte and then writes the screen; the client writes frames — a kind, a big-endian length
-// of two bytes, the payload: keys to type, or a resize of four bytes, columns
-// then rows.
+// The space's unix socket. A client writes one byte first, the mode: the raw
+// bytes (bytes.go) for the shell (docs/v2/shell.md), the one mode there is.
+// The space host answers it with one byte and then writes the screen; the
+// client writes frames — a kind, a big-endian length of two bytes, the
+// payload: keys to type, or a resize of four bytes, columns then rows.
 const (
-	modeView    byte = 'v'
 	modeBytes   byte = 'b'
 	accepted    byte = 'A'
 	frameInput  byte = 'i'
@@ -27,8 +25,8 @@ const (
 	maxFrame         = 1 << 15
 )
 
-// clientWrite bounds a write to a view's client: one that stops reading is
-// dropped rather than left to hold the view.
+// clientWrite bounds a write to a client: one that stops reading is dropped
+// rather than left to hold the worker's output.
 const clientWrite = 5 * time.Second
 
 // tailBytes is how much of the worker's last output is kept, for the line a
@@ -37,7 +35,7 @@ const tailBytes = 4 << 10
 
 // relay carries the worker's terminal: it reads the master all the time, so
 // the worker never blocks on output while nobody looks, and feeds it to the
-// grid the views read.
+// grid the clients attach to.
 type relay struct {
 	pty  *terminal.Plain
 	grid *terminal.Grid
@@ -79,7 +77,7 @@ func (r *relay) keepTail(p []byte) {
 	}
 }
 
-// serve takes views until the listener closes.
+// serve takes clients until the listener closes.
 func (r *relay) serve(l net.Listener) {
 	for {
 		conn, err := l.Accept()
@@ -94,16 +92,12 @@ func (r *relay) serve(l net.Listener) {
 func (r *relay) take(conn net.Conn) {
 	mode := make([]byte, 1)
 	_ = conn.SetReadDeadline(time.Now().Add(clientWrite))
-	if _, err := io.ReadFull(conn, mode); err != nil || (mode[0] != modeView && mode[0] != modeBytes) {
+	if _, err := io.ReadFull(conn, mode); err != nil || mode[0] != modeBytes {
 		_ = conn.Close()
 		return
 	}
 	_ = conn.SetReadDeadline(time.Time{})
-	if mode[0] == modeBytes {
-		r.bytes(conn)
-		return
-	}
-	r.view(conn)
+	r.bytes(conn)
 }
 
 // frames relays a client's frames to the terminal until the client leaves or
