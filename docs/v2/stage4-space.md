@@ -152,8 +152,9 @@ stays as SP9 ([the rules](../rules/space.md)).
   configures to run, for one byte the host writes on the liveness pipe once the check passed;
   the end of the pipe before that byte aborts the launch.
   If detaching cannot be guaranteed on a machine, the open is refused there and main decides.
-- **The command.** `<image> <harness> --name <name> --<role> --room <main's room> --
-  <the harness's new-conversation arguments>`, in its checkout and with the terminal at the
+- **The command.** `<image> <harness> <the harness's new-conversation arguments>` with
+  `REWAKE_SPACE=<room>/<space id>`, from which the launch takes the name, role and room (since
+  October 19, 2026; [launch.md](../launch.md#a-space-for-a-worker)), in its checkout and with the terminal at the
   size asked for. It is an ordinary launch from there on, but
   for its process groups: it claims its name, takes the room's lease, writes its own run
   directory and its own mod.
@@ -179,7 +180,7 @@ stays as SP9 ([the rules](../rules/space.md)).
   `REWAKE_BRIDGE_` variable — and less the worker harness's `EnvNotInherited`, as the probe
   environment drops them today (`internal/host/launch/environment.go`, `ProbeEnv`). Then the
   host adds values of its own: `REWAKE_DIR` set to the base main's checked room belongs to
-  (`state.BaseForRoom`), so the worker's `--room` names the same room under the same base and
+  (`state.BaseForRoom`), so the space's room is the same room under the same base and
   never the default one; the liveness descriptor's number; and `TERM=xterm-256color`. The
   person's preferences (`REWAKE_CLAUDE_MODEL`, `REWAKE_WORKTREES` and the like) stay. The
   refusal of a nested launch reads `REWAKE_SESSION` and `REWAKE_EPOCH` only, and neither

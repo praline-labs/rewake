@@ -50,7 +50,7 @@ func liveSession(t *testing.T, name string) string {
 	// must not leak into the sessions they make up.
 	t.Setenv(state.SessionEnv, "")
 	t.Setenv(state.EpochEnv, "")
-	launched(t, dir, state.CurrentRoom())
+	launched(t, dir, currentRoom(t))
 	resolved, err := state.Dir()
 	if err != nil {
 		t.Fatalf("state.Dir: %v", err)

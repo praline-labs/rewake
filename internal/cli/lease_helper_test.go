@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/infra/build/buildtest"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // launched establishes a room's build the way a launch of this test binary
@@ -13,4 +14,14 @@ import (
 func launched(t *testing.T, base, room string) string {
 	t.Helper()
 	return buildtest.Room(t, base, room)
+}
+
+// currentRoom is the room a command of this process would act in.
+func currentRoom(t *testing.T) string {
+	t.Helper()
+	room, err := state.CurrentRoom()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return room
 }

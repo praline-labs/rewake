@@ -65,7 +65,7 @@ func TestAWorktreeRefusesWhatWouldWorkElsewhere(t *testing.T) {
 			t.Errorf("%q beside --worktree was accepted", refused)
 			continue
 		}
-		if strings.Contains(err.Error(), "continues one") && !strings.Contains(err.Error(), "rewake --main claude") {
+		if strings.Contains(err.Error(), "continues one") && !strings.Contains(err.Error(), "rewake claude") {
 			t.Errorf("%q: the refusal names no launch that starts: %v", refused, err)
 		}
 	}

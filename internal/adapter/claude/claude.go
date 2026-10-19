@@ -83,10 +83,10 @@ func (claudeHarness) Summary() string {
 
 func (claudeHarness) Examples() []string {
 	return []string{
-		"rewake --main claude",
-		"rewake --write --name api claude",
-		"rewake --main --name lead claude --continue",
-		"rewake --main claude --worktree=fix-login",
+		"rewake claude",
+		"rewake claude --effort high",
+		"rewake claude --continue",
+		"rewake claude --worktree=fix-login",
 	}
 }
 

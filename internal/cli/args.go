@@ -10,7 +10,7 @@ import (
 Minimal argument parser. The shape is small and fixed:
 
 	rewake [--global] <command> [positional...] [--flag value] [--switch]
-	rewake [--name N] <harness> [everything after belongs to the harness]
+	rewake [--command P] <harness> [everything after belongs to the harness]
 
 A flag parser framework would add startup cost to a command an agent calls many
 times a session, and would not answer the one question that matters here: where

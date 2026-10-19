@@ -234,7 +234,7 @@ stays. The version probe writes no room state.
   callback; a change form for its scope ([above](#what-is-a-writer)); each child that
   writes, its own — take it shared, then read `build`: their own id goes on; another id,
   or a missing, unreadable or malformed record, refuses, exit 1, naming the room's build
-  and the way past it (end the room's sessions, or `--room`). Only a launch establishes
+  and the way past it (end the room's sessions, or start in another directory, which is another room). Only a launch establishes
   a build, so a writer makes nothing of a room no launch completed: it refuses there and
   leaves the base as it found it.
 - **Changing the build.** A launch whose id differs from `build`, or that finds it

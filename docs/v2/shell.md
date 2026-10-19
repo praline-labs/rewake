@@ -157,9 +157,9 @@ mode:
 
 ## How rewake starts the shell, and how it ships
 
-- `rewake --shell claude [args]`: the Go launcher refuses
-  it, exit 2, for a role that opens no spaces and without a terminal on standard input and output,
-  and execs the shell as
+- `rewake claude [args]` at a terminal (the owner's decision of October 19, 2026; `--shell` went
+  with it): when standard input and output are both terminals and the adapter offers spaces, the
+  Go launcher execs the shell as
   `<shell> --room <room> -- <rewake> <its own arguments>` with `REWAKE_SHELL_MAIN=1`, so no rewake
   process stays between the person's terminal and the shell. The shell runs that command line on
   its pty; that launch, seeing the variable, takes it out of its environment and runs main

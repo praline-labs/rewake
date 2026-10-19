@@ -119,11 +119,15 @@ they live in the user's data directory, `~/.local/share/rewake/worktrees` by def
 
 ### Rooms
 
-**Owner decision, September 16, 2026:** `--room <name>` selects a room at launch.
-Without the flag, a launch uses `default`, including when invoked from a session
-in another room. Commands inherit `REWAKE_ROOM`; a shell without it uses
-`default`. `REWAKE_DIR` always remains the base passed to children, never the root
-or the room below it.
+**Owner decision, October 19, 2026** (superseding `--room` of September 16): the room is the
+directory rewake is started in, resolved with symlinks followed, and the person never names
+one. Its name on disk is `<slug>-<hash>` — the directory's last element reduced to `[a-z0-9-]`
+and cut to 19 characters, then 12 hex digits of the SHA-256 of the resolved path — and the
+room's file `directory` keeps the resolved path for `rewake list`
+([launch.md](launch.md#main-in-the-room-of-its-directory)). Workers main raises are in main's
+room whatever their checkout. Commands inherit `REWAKE_ROOM`; a shell without it takes the room
+of its working directory. The room `default` of earlier builds is left as it is, unmigrated.
+`REWAKE_DIR` always remains the base passed to children, never the root or the room below it.
 
 Room names use the session-name syntax. Names are unique within a room and can
 repeat in different rooms. List, send, inbox, whoami, turn reports and delivery

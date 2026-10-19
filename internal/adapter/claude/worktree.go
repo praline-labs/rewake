@@ -79,7 +79,7 @@ func (claudeHarness) WorktreeRefusal(args []string) error {
 	}
 	if word := claudeContinuation(visible); word != "" {
 		return fmt.Errorf("%s makes a new checkout for a new conversation, and %s continues one kept with the directory it was started in: in the checkout Claude Code finds none, or leads back out. Start a new conversation with %s, or %s; a prompt that is the word itself goes after --",
-			worktreeFlag, word, worktreeFlag, adapter.ContinueInWorktree("rewake --main claude", word))
+			worktreeFlag, word, worktreeFlag, adapter.ContinueInWorktree("rewake claude", word))
 	}
 	return nil
 }

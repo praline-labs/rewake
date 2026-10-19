@@ -21,7 +21,7 @@ func (agentHarness) Title() string   { return "Test agent" }
 func (agentHarness) Summary() string { return "Start the test agent as a rewake session." }
 
 func (agentHarness) Examples() []string {
-	return []string{"rewake --main agent", "rewake --main --name api agent --model chosen", "rewake --main agent --worktree=fix-login"}
+	return []string{"rewake agent", "rewake agent --model chosen", "rewake agent --worktree=fix-login"}
 }
 
 func (agentHarness) Notes() []string {

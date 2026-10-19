@@ -2,8 +2,8 @@ package cli
 
 import "github.com/praline-labs/rewake/internal/adapter"
 
-// Match the guide's general-role launch instead of implying that --name is
-// already a complete address. Direct sends still accept existing names as-is.
+// Match the guide's worker opened as helper instead of implying that a space's
+// name is already a complete address. Direct sends still accept existing names as-is.
 func sendExamples(catalog adapter.Catalog) []string {
 	address := "helper"
 	if available := catalog.All(); len(available) > 0 {

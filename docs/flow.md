@@ -49,17 +49,22 @@ sock/space.<id>.sock             the worker's screen, served by its space host t
 
 ## Act 1. A session starts
 
-`rewake --write claude` starts write-claude. The sender in this example starts
-with `rewake --main --name lead claude`, becoming lead-claude. The owner runs both, from
-terminals outside any session: a launch from a shell inside a rewake session is refused
-with exit 2 before any step below ([launch.md](launch.md#no-session-inside-a-session)).
+`rewake claude` starts main-claude, the sender in this example, in the room of its directory;
+the owner runs it from a terminal outside any session, and a launch from a shell inside a
+rewake session is refused with exit 2 before any step below
+([launch.md](launch.md#no-session-inside-a-session)). Main raises the receiver, api-claude, with
+`rewake space open api --harness claude` ([A space](#a-space-main-starts-a-worker)); that worker's launch goes through the
+same steps, with its name, role and room from the space's record.
 
 1. **The directory.** The wrapper resolves the `REWAKE_DIR` base, its root `v2/` and
-   the room selected by `--room`, or `default` when omitted, creating nothing. Each
+   the room of its directory — `<slug>-<hash>` of the working directory resolved with symlinks
+   followed ([launch.md](launch.md#main-in-the-room-of-its-directory)), or main's room for a
+   worker — creating nothing. Each
    that exists is 0700; a symlink, foreign owner or loose permissions is refused.
    Before anything of the room is made or
    locked, it takes the room's build lease for its whole life — the lease's bootstrap
-   makes whatever level is missing, and nothing else makes any — the room's `build` names the content of the rewake
+   makes whatever level is missing, and nothing else makes any; a main's launch then writes the
+   resolved directory into the room's file `directory` once, which `rewake list` shows — the room's `build` names the content of the rewake
    executable whose sessions write there, a launch of another build switches it only
    while nothing holds the room, and every change form of a shell or a tool call holds the
    lease too, refused in a room of another build
@@ -75,8 +80,8 @@ with exit 2 before any step below ([launch.md](launch.md#no-session-inside-a-ses
    Then, before any name is claimed, the bounded read of Claude Code's version: one
    older than 2.1.287, or a read that cannot show its process ended, refuses the launch
    with nothing published.
-2. **The name and role.** Under the room lock, first select the role (step 4),
-   then append the harness ID to the role prefix or explicit `--name` prefix.
+2. **The name and role.** Under the room lock, append the harness ID to the role's prefix,
+   `main`, or to the space's name for a worker.
    Automatic collisions add -2, -3 after the harness suffix; explicit conflicts
    refuse with the full address. Prefix and final name must fit the name syntax
    and 32-character limit. Publication uses `link()`: live names remain taken,
@@ -84,16 +89,15 @@ with exit 2 before any step below ([launch.md](launch.md#no-session-inside-a-ses
 3. **The run.** The wrapper's pid, its start time and the machine's boot id make
    the **epoch** (`<pid>.<ticks>.<boot>`). A name can be started many times; the epoch
    says which start this is, and the boot keeps it from recurring after a restart.
-4. **The role.** An unflagged launch always becomes general, even in an empty
-   room or after main exits. Only explicit `--main` creates main, and it refuses
-   under the room lock if a live main already occupies the room. Explicit
-   `--general` and `--write` remain unchanged; a --name prefix never selects a
-   role. Main stays silent; write reports like general. A role that owes reports is refused,
+4. **The role.** A person's launch is main; under the room lock it is refused, exit 1, if a
+   live main already occupies the room — one main per directory. A worker's role is the
+   space's. Main stays silent; write reports like general. A role that owes reports is refused,
    exit 1, on a harness whose contract reports no turn's end, and on Claude Code when a cause
    known to keep the mod from loading stands; the mod proves
    the boundary after the start ([stage4-turns.md](v2/stage4-turns.md#readiness-and-admission)).
-   Selecting a role requests no access. The record and intro say default general for an omitted
-   role flag, or identify the explicit flag.
+   Selecting a role requests no access. The record and intro say why the role was taken:
+   "rewake <harness> always starts main, one per directory", or "raised by main with rewake
+   space open as <role>".
 5. **The harness command line.** The user's arguments go through as written, save the
    exceptions each launch page's notes list: a `--help` written first, rewake's own
    `--worktree`. rewake adds, for one launch only and never into a config file:
@@ -324,13 +328,14 @@ and re-executes rewake as a launcher in a session of its own; the launcher start
 **space host** and exits, so the space host is nobody's child in main's tree. The space host
 records its own run, checks that its chain of parents does not meet main's wrapper — or closes
 the record, the worker never started — and starts in a pseudo-terminal it owns an ordinary
-`rewake --name api --room <main's room> --write --command claude-worker claude --worktree <harness args>`, with main's
-base and none of main's session in its environment. From there the worker is any session: Act
+`rewake claude --worktree <harness args>`, `--command <wrapper>` before the harness when the
+alias names one, with main's base, `REWAKE_SPACE=<room>/<space id>` and none of main's session in
+its environment; the launch believes the variable only from its parent, that space's host. From there the worker is any session: Act
 1 for it, its record `sessions/api-claude.json`. The space host records the worker's run, open;
 the command answers once that run is registered, within 30 s.
 
 Main sends `api-claude` a task, and its report comes back as in Acts 2 to 5. When main was
-started in the shell, `rewake --shell`, main runs on the shell's own pty and each worker's pane is
+started in the shell — at a terminal, always — main runs on the shell's own pty and each worker's pane is
 fed the raw bytes from its space host's socket; Ctrl+\\ then a key chooses the worker shown
 beside main, and everything else typed goes to the focused program ([shell.md](v2/shell.md)).
 Without the shell the worker runs unseen.

@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/adapter"
+	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/host/worktree"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
@@ -92,7 +93,7 @@ func newWorktreeLab(t *testing.T) worktreeLab {
 	}
 	t.Setenv(state.DirEnv, lab.state)
 	t.Setenv(worktree.RootEnv, lab.root)
-	launched(t, lab.state, state.CurrentRoom())
+	launched(t, lab.state, currentRoom(t))
 	return lab
 }
 
@@ -131,13 +132,26 @@ func (lab worktreeLab) launch(t *testing.T, probe *worktreeProbe, dir string, ra
 func (worktreeLab) launchTold(t *testing.T, probe *worktreeProbe, dir string, raw ...string) (string, error) {
 	t.Helper()
 	t.Chdir(dir)
-	parsed, err := testTable().parse(append([]string{"--room", "trees", "--name", "tree", probe.ID()}, raw...))
+	asTreeWorker(t)
+	parsed, err := testTable().parse(append([]string{probe.ID()}, raw...))
 	if err != nil {
 		t.Fatal(err)
 	}
 	var stderr strings.Builder
 	err = handleLaunch(probe)(&Context{Stdout: io.Discard, Stderr: &stderr, table: testTable()}, parsed.Call)
 	return stderr.String(), err
+}
+
+// asTreeWorker makes the launches of a test the worker tree in the room
+// trees, as a space would: these tests are about the checkout, not about
+// who the launch is.
+func asTreeWorker(t *testing.T) {
+	t.Helper()
+	saved := identifyLaunch
+	identifyLaunch = func(Call) (launchIdentity, error) {
+		return launchIdentity{name: "tree", room: "trees", part: role.General, reason: "a test's worker"}, nil
+	}
+	t.Cleanup(func() { identifyLaunch = saved })
 }
 
 func harnessProbe(t *testing.T, id string) *worktreeProbe {

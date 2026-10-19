@@ -27,7 +27,7 @@ func (harness) Title() string   { return "pi" }
 func (harness) Summary() string { return "Start pi as a rewake session." }
 
 func (harness) Examples() []string {
-	return []string{"rewake --main pi", "rewake --name api pi", "rewake pi --worktree=fix-login"}
+	return []string{"rewake pi", "rewake pi --model chosen", "rewake pi --worktree=fix-login"}
 }
 
 func (harness) Notes() []string {

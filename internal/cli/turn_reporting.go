@@ -32,14 +32,9 @@ func refuseReportingRole(h adapter.Harness, part role.Role) error {
 	if part.Silent || reportsTurns(h) {
 		return nil
 	}
-	// No role flag is the default role, which reports.
-	name := part.ID
-	if name == "" {
-		name = role.Default().ID
-	}
 	return &FailedError{Message: fmt.Sprintf(
-		"a %s session owes a report at each turn's end, and %s has no turn boundary in this rewake: it is told when a notice arrives, never when a turn ends. Start this session with --main, or run the %s role on a harness that reports its turns.",
-		name, h.Title(), name)}
+		"a %s session owes a report at each turn's end, and %s has no turn boundary in this rewake: it is told when a notice arrives, never when a turn ends. Open the %s worker on a harness that reports its turns.",
+		part.ID, h.Title(), part.ID)}
 }
 
 // refuseUnreported refuses a task or a question to a session whose turn

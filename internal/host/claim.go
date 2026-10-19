@@ -17,7 +17,7 @@ import (
 type MainTakenError struct{ Room, Name string }
 
 func (e *MainTakenError) Error() string {
-	return fmt.Sprintf("room %q already has live main session %q; stop or restart that session, or launch without --main to join as general", e.Room, e.Name)
+	return fmt.Sprintf("room %q already has live main session %q: a room has one main", e.Room, e.Name)
 }
 
 // claimName resolves a role and publishes while holding one room lock. A pending
@@ -42,6 +42,9 @@ func claimName(request Request, self int, selfStart uint64, boot, cwd string) (r
 		}
 		chosen := request.Role
 		reason := "selected explicitly with --" + chosen.ID
+		if request.RoleReason != "" {
+			reason = request.RoleReason
+		}
 		if chosen.ID == "" {
 			chosen = role.General
 			reason = "default general because no role flag was supplied"

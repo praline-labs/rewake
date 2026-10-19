@@ -2,8 +2,8 @@
 
 What a launch gets when the person did not type it: a model and a reasoning effort from
 the environment or a settings file; and the catalogue of workers main opens by alias name.
-The launch sequence itself, the room and role flags and the per-harness details are in
-[launch.md](launch.md).
+The launch sequence itself — `rewake <harness>` always main, in the room of its directory —
+the worker profile and the per-harness details are in [launch.md](launch.md).
 
 ## Launch defaults from the environment
 
@@ -151,7 +151,8 @@ worker's, settings on a harness with no flags for them — refuses it too, namin
 
 `rewake space open api --alias claude-write -- <more harness args>` starts the alias's harness,
 role, command, arguments and applied settings. `--alias` and `--harness` exclude each other; the
-space names the worker and its room, and an explicit `--role` overrides the alias's. Applied
+space names the worker, and its room is main's whatever the checkout; an explicit `--role`
+overrides the alias's. Applied
 settings replace older copies in `args`, and flags after `--` replace those in turn; environment
 defaults fill what neither supplied. Under a `command` wrapper whose settings set
 `CLAUDE_CODE_AUTO_COMPACT_WINDOW`, that value wins over `--autocompact`; without one a worker's

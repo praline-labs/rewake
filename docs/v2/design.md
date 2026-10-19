@@ -178,7 +178,7 @@ probe ([research-claude-mod.md](../research-claude-mod.md)):
    versioned with it; the protocol between it and the host is described once, as a JSON
    schema, and the TypeScript types are generated from it.
 
-How a space is shown: rewake's shell, chosen at launch with `rewake --shell`, a TypeScript
+How a space is shown: rewake's shell, every main's screen at a terminal since October 19, 2026, a TypeScript
 application in the person's terminal with a pane per program, main on the left and the chosen
 worker on the right above a bottom tab bar ([shell.md](shell.md),
 [project.md](../project.md#what-the-tool-does), "Main starts its workers"). It replaced the host

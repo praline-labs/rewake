@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -139,6 +140,11 @@ func sessionLaunch(t *testing.T, c *Case, iso *Isolation, dir, harness, name, ro
 	// Only one session in a room may be main, and only a main sees telemetry.
 	// A scenario that needs two sessions gives that role to the one whose
 	// telemetry it has to observe.
+	if dir != "" && !slices.Contains(flags, "--room") {
+		// A launch elsewhere is another room; the scenario's sessions share
+		// the home's, as workers main raises share its room.
+		flags = append([]string{"--room", iso.HomeRoom()}, flags...)
+	}
 	launch := iso.Command(append(append(append([]string{"--name", name, role}, flags...), harness), harnessArgs...)...)
 	if dir != "" {
 		launch.Dir = dir

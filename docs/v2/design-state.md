@@ -90,7 +90,7 @@ writers, and `build.lock`, a file locked with `flock`:
   [stage3-state.md](stage3-state.md#one-build-per-room)). Then the launch refuses, exit 1,
   naming the holders `/proc/locks` shows, by pid
   and a safe label, never a command line: end them, or launch into another room
-  (`--room`). Held, the launch writes its id to `build` by rename, then turns its lock to shared and reads `build` again like any
+  (another directory). Held, the launch writes its id to `build` by rename, then turns its lock to shared and reads `build` again like any
   writer: `flock` does not promise the conversion is atomic.
 - **No guess about liveness.** The kernel drops a `flock` with its last descriptor, so a
   crashed writer holds nothing and a live one cannot be missed. A reader of the old

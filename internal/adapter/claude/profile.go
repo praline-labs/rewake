@@ -6,8 +6,10 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/praline-labs/rewake/internal/adapter"
@@ -31,7 +33,8 @@ const settingsFlag = "--settings"
 const mcpConfigFlag = "--mcp-config"
 
 // profileDirPath is the person's own part of the profile, beside rewake's
-// alias file and pi's directory; rewake reads it and never writes it.
+// alias file and pi's directory; rewake makes what of it is missing and never
+// changes what is there (makeProfileDir).
 func profileDirPath() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -69,11 +72,15 @@ func workerProfile(request adapter.LaunchRequest, args []string) (profile, error
 			return profile{}, fmt.Errorf("a worker's %s comes from rewake's worker profile; put the settings in %s", flag, filepath.Join(dir, "settings.json"))
 		}
 	}
+	if err := makeProfileDir(dir); err != nil {
+		return profile{}, err
+	}
 	settings, err := profileSettings(dir, request.Env)
 	if err != nil {
 		return profile{}, err
 	}
-	out := profile{args: []string{settingSourcesFlag, workerSources, settingsFlag, settings}}
+	// The directory is the worker plugin, its skills/ the person's skills.
+	out := profile{args: []string{settingSourcesFlag, workerSources, settingsFlag, settings, pluginDirFlag, dir}}
 	plugins := filepath.Join(dir, "plugins")
 	if ok, err := present(plugins, true); err != nil {
 		return profile{}, err
@@ -135,10 +142,25 @@ func profileSettings(dir string, env []string) (string, error) {
 		"claudeMdExcludes": personalMemory(env),
 		"env": map[string]any{
 			// Not updated under a running room, nor a survey in a pane
-			// nobody may watch.
-			"DISABLE_AUTOUPDATER":      "1",
-			"DISABLE_FEEDBACK_COMMAND": "1",
+			// nobody may watch, nor the person's IDE opened from one.
+			"DISABLE_AUTOUPDATER":                 "1",
+			"DISABLE_FEEDBACK_COMMAND":            "1",
+			"CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY": "1",
+			"CLAUDE_CODE_AUTO_CONNECT_IDE":        "false",
+			// A worker that wakes itself ends turns nobody asked for.
+			"CLAUDE_CODE_DISABLE_CRON": "1",
 		},
+		"permissions": map[string]any{"deny": anyList(deniedTools)},
+		// Fan-out, a session steered from outside the room, and model
+		// calls and noise in a pane main reads.
+		"disableWorkflows":        true,
+		"remoteControlAtStartup":  false,
+		"promptSuggestionEnabled": false,
+		"awaySummaryEnabled":      false,
+		"idleCompaction":          false,
+		"spinnerTipsEnabled":      false,
+		// The person's claude.ai connectors; the project's .mcp.json stays.
+		"disableClaudeAiConnectors": true,
 	}
 	path := filepath.Join(dir, "settings.json")
 	if ok, err := present(path, false); err != nil {
@@ -154,6 +176,12 @@ func profileSettings(dir string, env []string) (string, error) {
 		if err := decoder.Decode(&own); err != nil || own == nil {
 			return "", fmt.Errorf("the worker profile's %s is not a JSON object", path)
 		}
+		keep, err := takeRewakeKey(own)
+		if err != nil {
+			return "", fmt.Errorf("the worker profile's %s: %w", path, err)
+		}
+		permissions := settings["permissions"].(map[string]any)
+		permissions["deny"] = slices.DeleteFunc(permissions["deny"].([]any), func(tool any) bool { return slices.Contains(keep, tool.(string)) })
 		if err := mergeSettings(settings, own); err != nil {
 			return "", fmt.Errorf("the worker profile's %s: %w", path, err)
 		}
@@ -165,9 +193,65 @@ func profileSettings(dir string, env []string) (string, error) {
 	return string(data), nil
 }
 
+// deniedTools are the tools a worker goes without (the owner's decision,
+// October 19, 2026; names of 2.1.302): subagents, every built-in agent
+// among them, which run past main's view; waking itself; Claude Code's own
+// messaging beside rewake's mail, whose socket still carries the wake; a
+// checkout rewake does not know; plan mode, whose exit waits at a screen
+// nobody watches; and what reaches outside the machine with no person there.
+var deniedTools = []string{
+	"Agent", "ScheduleWakeup", "SendMessage", "ListAgents", "EnterWorktree", "ExitWorktree",
+	"EnterPlanMode", "PushNotification", "RemoteTrigger", "Artifact",
+}
+
+// anyList is a list of names as decoded JSON holds one.
+func anyList(names []string) []any {
+	out := make([]any, len(names))
+	for i, name := range names {
+		out[i] = name
+	}
+	return out
+}
+
+// rewakeKey is the profile settings' own object, read by rewake and not
+// passed on. A deny cannot be undone by an allow, so the way back is here:
+// {"rewake": {"keep": ["Agent"]}} gives workers back the tools it names.
+const rewakeKey = "rewake"
+
+// takeRewakeKey reads and removes rewake's own key from the person's
+// settings, returning the denied tools workers keep.
+func takeRewakeKey(own map[string]any) ([]string, error) {
+	value, present := own[rewakeKey]
+	if !present {
+		return nil, nil
+	}
+	delete(own, rewakeKey)
+	fields, ok := value.(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("%s is not an object", rewakeKey)
+	}
+	var keep []string
+	for key, field := range fields {
+		list, isList := field.([]any)
+		if key != "keep" || !isList {
+			return nil, fmt.Errorf("%s holds only \"keep\", a list of the tools rewake denies a worker, not %q", rewakeKey, key)
+		}
+		for _, item := range list {
+			tool, isText := item.(string)
+			if !isText || !slices.Contains(deniedTools, tool) {
+				return nil, fmt.Errorf("%s.keep names %v, not one of the tools rewake denies a worker: %s", rewakeKey, item, strings.Join(deniedTools, ", "))
+			}
+			keep = append(keep, tool)
+		}
+	}
+	return keep, nil
+}
+
 // mergeSettings lays the person's settings over rewake's: objects key by key,
-// the person's value winning, except claudeMdExcludes, which is added to, so
-// the exclusion of the person's own CLAUDE.md is never lost.
+// the person's value winning, except two lists, which are added to, since a
+// list replaces rewake's whole: claudeMdExcludes, so the exclusion of the
+// person's own CLAUDE.md is never lost, and permissions.deny, so the
+// person's own denials do not lift rewake's.
 func mergeSettings(base, own map[string]any) error {
 	for key, value := range own {
 		if key == "claudeMdExcludes" {
@@ -177,6 +261,20 @@ func mergeSettings(base, own map[string]any) error {
 			}
 			base[key] = append(base[key].([]any), list...)
 			continue
+		}
+		if permissions, ok := value.(map[string]any); ok && key == "permissions" {
+			if denied, given := permissions["deny"]; given {
+				list, ok := denied.([]any)
+				if !ok {
+					return errors.New("permissions.deny is not a list")
+				}
+				if current, ok := base[key].(map[string]any); ok {
+					list = append(current["deny"].([]any), list...)
+				}
+				permissions = maps.Clone(permissions)
+				permissions["deny"] = list
+				value = permissions
+			}
 		}
 		mergeValue(base, key, value)
 	}

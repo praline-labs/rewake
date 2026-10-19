@@ -130,7 +130,7 @@ func shortOf(id string) string {
 
 // mailboxPath is a file or directory of a session's mailbox.
 func mailboxPath(iso *Isolation, session *scenarioSession, parts ...string) string {
-	return filepath.Join(append([]string{iso.Room("default"), "inbox", session.name}, parts...)...)
+	return filepath.Join(append([]string{iso.Room(iso.HomeRoom()), "inbox", session.name}, parts...)...)
 }
 
 // atReadGate waits until the worker's turn has started and stopped at the

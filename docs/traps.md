@@ -164,7 +164,10 @@ launch takes its room from `--room` alone, and commands such as `list` and `send
 the variable ([design.md](design.md#rooms)). Put `--room` before the harness name, like
 `--main`.
 
-*September 26, 2026.*
+*September 26, 2026.* Since October 19, 2026 a person's launch takes the room of its
+directory and has no `--room` (only the `rewaketest` build keeps it); it still reads no
+`REWAKE_ROOM`, so a probe's commands outside a session go to the room of their own working
+directory: run them from main's directory, or export the room `rewake list` shows.
 
 ### An empty `.git` in `/tmp` turned the layout tests red
 

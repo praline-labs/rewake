@@ -36,12 +36,36 @@ The common part of the wrapper:
 A default model and reasoning effort from the environment or a settings file, and the
 aliases main opens workers from, are in [launch-defaults.md](launch-defaults.md).
 
-### Room and role flags
+### Main, in the room of its directory
 
-Launch flags precede the harness name. `--room <name>` chooses the room, `default`
-without it; `--main`, `--general` or `--write` chooses the role, at most one of them,
-general without any; `--name <prefix>` replaces the role part of the address. What a
-room isolates, what each role may do and see, and how the address is formed are
+By the owner's decision of October 19, 2026 a person's launch is `rewake [--command
+<program>] [--no-intro] <harness> [the harness's flags]` and nothing else: it always starts
+**main**, `main-<harness>`, and the person never starts a worker from a terminal. There is no
+role, name, room or shell flag. Workers are raised by main alone, with `rewake space open`
+([A space for a worker](#a-space-for-a-worker)).
+
+- **The room is the launch directory**, resolved with symlinks followed. Its name on disk is
+  `v2/rooms/<slug>-<hash>`: the directory's last element in lower case, every run of
+  characters outside `[a-z0-9]` one dash, cut to 19 characters (`dir` when nothing is left),
+  then the first 12 hex digits of the SHA-256 of the resolved path — 32 characters at most,
+  readable, and apart for two checkouts named alike (`state.RoomOf`). The launch writes the
+  resolved path into the room's file `directory` once, under its lease; `rewake list` shows
+  the room as `<name> (<directory>)`, and `--json` as `roomDirectory`.
+- **One main per directory.** A second launch in a directory whose main runs is refused,
+  exit 1, before anything starts: `<directory> already has main <name>: one main per
+  directory. Use that one, or start rewake in another directory, which is another room.`
+  Another directory is another room.
+- **A command outside any session** takes the room of its working directory; a session's
+  commands take `REWAKE_ROOM`, as before. A launch reads no `REWAKE_ROOM`.
+- **Workers are in main's room whatever their checkout**: the space names the room, not the
+  worker's directory.
+- **The room `default`** that earlier builds used is left as it is: no launch names it again,
+  and nothing migrates it. A room holding only finished mail can be deleted by hand.
+- **The `rewaketest` build**, which the workflow suite runs, keeps `--name`, `--room`,
+  `--main`, `--general` and `--write` on the launch (main's decision 3): the suite starts its
+  workers directly, without a main to open their spaces. No flag there means main too.
+
+What a room isolates, what each role may do and see, and how the address is formed are
 specified once, in design.md and roles.md: [Rooms](design.md#rooms), [Roles](roles.md#roles) and
 [Names](roles.md#names). The variables the wrapper passes to the harness are in
 [Environment the harness receives](design.md#environment-the-harness-receives).
@@ -75,10 +99,10 @@ person's own wrapper script, which sets up an environment — a configuration di
 credentials — and then runs the harness. The harness is still named by its ordinary word:
 
 ```bash
-rewake --main --name lead --command my-claude claude
+rewake --command my-claude claude
 ```
 
-- **Where it goes:** before the harness word, like `--name` — everything after that word
+- **Where it goes:** before the harness word — everything after that word
   belongs to the harness. It is single-use: named twice there, the launch is refused
   rather than the last one winning. An alias's copy is replaced by one typed on the line.
 - **What it replaces:** the program, and nothing else. Every argument, variable, socket
@@ -121,15 +145,43 @@ rewake --main --name lead --command my-claude claude
   it. A worker's is refused, since the worker profile owns that flag.
 - **The worker profile.** Every launch but main's, unless `--command` names a wrapper, which
   then decides the configuration (a launch note says so), adds `--setting-sources
-  project,local` and one `--settings` JSON string: `autoMemoryEnabled: false`,
-  `claudeMdExcludes` naming the person's `CLAUDE.md` in `CLAUDE_CONFIG_DIR` and in
-  `~/.claude`, `env` with `DISABLE_AUTOUPDATER=1` and `DISABLE_FEEDBACK_COMMAND=1`, and the
-  person's `~/.config/rewake/claude/worker/settings.json` merged over them, key by key, its
-  `claudeMdExcludes` added to rewake's. That directory's `plugins/` becomes `--plugin-dir`,
-  `mcp.json` `--mcp-config`, and `CLAUDE.md` follows the briefing in the one
-  `--append-system-prompt`. rewake reads the directory and never writes it; an entry of the
-  wrong kind or a settings file that is not a JSON object refuses the launch naming the path.
-  The design and the probes are in [worker-profile.md](v2/worker-profile.md).
+  project,local`, one `--settings` JSON string and the service folder as a plugin. The
+  design and the probes are in [worker-profile.md](v2/worker-profile.md).
+  - **The service folder**, `~/.config/rewake/claude/worker/`: what of it is missing a
+    worker's launch makes (the owner's decision, October 19, 2026) — the folder itself
+    (0700), `settings.json` holding `{}`, an empty `CLAUDE.md`, an empty `skills/` and
+    `.claude-plugin/plugin.json` naming the plugin `worker`. A file or directory already there
+    is the person's and is never changed. It is not a `CLAUDE_CONFIG_DIR`: the worker keeps
+    the person's login, transcripts and folder trust.
+  - **A skill is attached** by placing its folder, or a symlink to it, in `skills/`: the folder
+    is passed as `--plugin-dir`, so the skill loads as `worker:<skill>` and shows under that
+    name in `/skills` and in `/context`'s Skills, source `Plugin (worker)`. Whole plugins go
+    in `plugins/`, each child one plugin (another `--plugin-dir`); `mcp.json` becomes
+    `--mcp-config`; `CLAUDE.md` follows the briefing in the one `--append-system-prompt`.
+  - **rewake's defaults** in `--settings`: `autoMemoryEnabled: false`; `claudeMdExcludes`
+    naming the person's `CLAUDE.md` in `CLAUDE_CONFIG_DIR` and in `~/.claude`; the owner's
+    off-list of October 19, 2026 — `permissions.deny` of `Agent` (every subagent, the
+    built-in `Explore` and `Plan` among them), `ScheduleWakeup`, `SendMessage`, `ListAgents`,
+    `EnterWorktree`, `ExitWorktree`, `EnterPlanMode`, `PushNotification`, `RemoteTrigger` and
+    `Artifact`; `disableWorkflows: true`, `remoteControlAtStartup`, `promptSuggestionEnabled`,
+    `awaySummaryEnabled`, `idleCompaction` and `spinnerTipsEnabled` false;
+    `disableClaudeAiConnectors: true`, which drops only the person's claude.ai connectors —
+    the project's `.mcp.json` servers and the folder's `mcp.json` still load; `env` with
+    `DISABLE_AUTOUPDATER=1`, `DISABLE_FEEDBACK_COMMAND=1`,
+    `CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY=1`, `CLAUDE_CODE_AUTO_CONNECT_IDE=false` and
+    `CLAUDE_CODE_DISABLE_CRON=1`. Kept: web fetch and search, `AskUserQuestion`,
+    `ExitPlanMode`, the terminal title, auto-compact, background tasks and Claude Code's own
+    messaging socket, which carries rewake's wake.
+  - **The person's `settings.json`** is merged over the defaults, key by key, the person's
+    value winning; two lists are added to rather than replaced: `claudeMdExcludes` and
+    `permissions.deny`. So a setting or an `env` value of the off-list is undone by writing it
+    there — `"idleCompaction": true`, `"disableClaudeAiConnectors": false`, `"env":
+    {"CLAUDE_CODE_DISABLE_CRON": ""}`. A denied tool
+    cannot be undone by an allow, so rewake reads one key of its own and does not pass it on:
+    `{"rewake": {"keep": ["Agent"]}}` gives workers the tools it names back, subagents here;
+    a name not on rewake's list, or any other field under `rewake`, refuses the launch.
+  - An entry of the wrong kind or a settings file that is not a JSON object refuses the
+    launch naming the path.
 - Every role launches here since S4-6: the run's mod reports each turn's end once its
   hello is admitted, after the harness starts, and a task to the run fails until then
   ([stage4-turns.md](v2/stage4-turns.md#readiness-and-admission)). A cause the adapter knows
@@ -194,11 +246,14 @@ reported. The exchange and its verified native behavior are in [research-pi.md](
 
 ### The shell
 
-`rewake --shell --main <harness>` runs main in rewake's shell ([shell.md](v2/shell.md)). The
-launch refuses it, exit 2, for a role that opens no spaces and when standard input or output is
-not a terminal, and execs the shell — `REWAKE_SHELL`,
-or `rewake-shell` beside rewake — as `<shell> --room <room> -- <rewake> <the same arguments>`
-with `REWAKE_SHELL_MAIN=1`. The shell runs that command line on a pty of its own; that launch
+Main runs in rewake's shell ([shell.md](v2/shell.md)) whenever standard input and output are
+both terminals and its adapter offers spaces, with no flag to turn it off (the owner's
+decision, October 19, 2026). Otherwise main runs plain: under a script or a pipe, and pi, which
+offers no spaces and so has no shell and no workers. The launch reads no harness flag, so
+`rewake claude -p` typed at a terminal runs inside the shell too (a known limit). The launch
+execs the shell — `REWAKE_SHELL`, or `rewake-shell` beside rewake, refused exit 1 when neither
+is there — as `<shell> --room <room> -- <rewake> <the same arguments>` with
+`REWAKE_SHELL_MAIN=1`. The shell runs that command line on a pty of its own; that launch
 sees the variable, takes it out of its environment and runs main as an ordinary launch whose
 adapter is told the run is drawn by rewake (`LaunchRequest.Shell`): Claude Code runs fullscreen,
 `CLAUDE_CODE_NO_FLICKER=1` unless the person set the variable, so it scrolls its own history with
@@ -209,17 +264,17 @@ inside the shell has its last lines printed once the shell leaves the screen.
 
 ### A worktree for a launch
 
-`rewake claude --worktree` and `rewake --main claude --worktree` give a session a checkout of its
-own, on a branch of its own, under rewake's worktree directory. `rewake worktree land`
+`rewake claude --worktree` gives main, and `rewake space open <name> … --worktree` a worker, a
+checkout of its own, on a branch of its own, under rewake's worktree directory. `rewake worktree land`
 fast-forwards a branch of the checkout it came from to the worktree's commits, `finish`
 lands once more and removes the worktree and its branch, and `ls` and `rm` list and
 remove. What the flag does for each harness, where the checkout goes, what
 `.worktreeinclude` copies in and what land, finish and rm ask first is in
 [worktree.md](worktree.md).
 
-A session cannot start another ([no session inside a session](#no-session-inside-a-session)),
-so the owner starts each writer, in a checkout of its own with `--worktree=<topic>`, from
-a terminal outside any session. The main session then takes the accepted work with
+Main raises each writer in a checkout of its own with `rewake space open <name> --alias
+<alias> --worktree=<topic>`; a session cannot start another by a launch
+([no session inside a session](#no-session-inside-a-session)). Main then takes the accepted work with
 `rewake worktree land <topic>` and closes the checkout with
 `rewake worktree finish <topic>`, rather than making one by hand with `git worktree add`.
 A writer's uncommitted edits then never mix with what is being checked or committed in
@@ -242,10 +297,16 @@ lease as any writer, records its own run, and refuses the open — the record cl
 never started — unless its whole chain of parents reads up to the root without meeting main's
 wrapper ([SP9](rules/space.md)). Then it opens a pseudo-terminal of 120 by 40 with
 `host/terminal`'s pair and starts its own executable there as
-`rewake --name <name> --room <main's room> --<role> [--command <wrapper>] <harness> [--worktree…] <harness args>`, in
+`rewake [--command <wrapper>] <harness> [--worktree…] <harness args>`, in
 main's working directory, with `REWAKE_SESSION`, `REWAKE_EPOCH`, `REWAKE_ROOM`, every
 `REWAKE_BRIDGE_` variable and every catalogue harness's `EnvNotInherited` stripped,
-`REWAKE_DIR` set to main's base and `TERM` set. Where the harness takes a conversation id
+`REWAKE_DIR` set to main's base, `TERM` set and `REWAKE_SPACE=<room>/<space id>`. The launch
+is that worker, not main, only when the variable names a space of an existing room that is
+`opening`, or already `open` on the launch's own run (the host records it as soon as it
+started the worker), and whose recorded host run — pid and start time — is the launch's parent; it then
+takes the name, role and room from the record and unsets the variable. Anything else is
+refused, exit 1, pointing to `rewake space open`: a person who set the variable would start a
+worker past main. Where the harness takes a conversation id
 (`ConversationOffer`), a fresh one is inserted before any prompt terminator and recorded.
 For pi, `--session-id` names or creates that conversation; it is not by itself a continuation
 and no longer refuses a new worktree. Resume, continue, session and fork flags still do. The worker's session is

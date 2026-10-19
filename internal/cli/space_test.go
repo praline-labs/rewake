@@ -33,7 +33,7 @@ func TestSpaceListShowsOpenClosedAndKept(t *testing.T) {
 	t.Setenv(state.RoomEnv, "")
 	t.Setenv(state.SessionEnv, "")
 	t.Setenv(epochEnv, "")
-	if code, out, _ := run("space", "list"); code != ExitOK || !strings.Contains(out, "No spaces in room default.") {
+	if code, out, _ := run("space", "list"); code != ExitOK || !strings.Contains(out, "No spaces in room "+currentRoom(t)+".") {
 		t.Fatalf("a base nobody made: %d %q", code, out)
 	}
 	dir := buildtest.Current(t)

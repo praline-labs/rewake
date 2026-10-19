@@ -22,7 +22,7 @@ func newTable(catalog adapter.Catalog) *table {
 // lookupOption finds a flag among the global options and those of a command.
 // With no command it searches every command instead: flags written before the
 // command word are read first and checked against the command afterwards, which
-// is what makes "rewake --name api <harness>" possible at all.
+// is what makes "rewake --command <program> <harness>" possible at all.
 func (t *table) lookupOption(command *Command, name string) (Option, bool) {
 	flag := "--" + name
 	for _, option := range globalOptions {

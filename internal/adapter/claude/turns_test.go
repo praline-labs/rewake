@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -103,7 +104,7 @@ func TestAKnownCauseWithholdsTheBoundary(t *testing.T) {
 		if got := withheld(t, plan.Service); !strings.Contains(got, c.cause) || !strings.Contains(got, "rewake mod") {
 			t.Fatalf("%s: withheld %q", name, got)
 		}
-		if plan.TurnBoundary != nil || indexOf(plan.Args, pluginDirFlag) >= 0 {
+		if plan.TurnBoundary != nil || slices.Contains(adapter.FlagValues(plan.Args, pluginDirFlag), modDir(c.request.RunDir)) {
 			t.Fatalf("%s: a run without its mod plans a boundary or loads a mod", name)
 		}
 	}

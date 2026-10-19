@@ -1,9 +1,6 @@
 package cli
 
 import (
-	"io/fs"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -41,27 +38,12 @@ func unreported(t *testing.T) adapter.Harness {
 func TestAReportingRoleDoesNotLaunchOnAHarnessThatReportsNoTurns(t *testing.T) {
 	realReporting(t)
 	silent := unreported(t)
-	dir := t.TempDir()
-	if err := os.Chmod(dir, 0o700); err != nil {
-		t.Fatal(err)
-	}
-	t.Setenv(state.DirEnv, dir)
-	outsideAnySession(t)
-	for _, flags := range [][]string{{silent.ID()}, {"--general", silent.ID()}, {"--write", silent.ID()}} {
-		code, out, errOut := run(flags...)
-		if code != ExitFailed || out != "" || !strings.Contains(errOut, "has no turn boundary in this rewake") ||
-			!strings.Contains(errOut, "on a harness that reports its turns") || !strings.Contains(errOut, "--main") {
-			t.Errorf("%v: exit %d, %q, %q", flags, code, out, errOut)
+	for _, part := range []role.Role{role.General, role.Write} {
+		err := refuseReportingRole(silent, part)
+		if err == nil || !strings.Contains(err.Error(), "a "+part.ID+" session owes a report") ||
+			!strings.Contains(err.Error(), "has no turn boundary in this rewake") || !strings.Contains(err.Error(), "on a harness that reports its turns") {
+			t.Errorf("%s: %v", part.ID, err)
 		}
-	}
-	_ = filepath.WalkDir(dir, func(path string, entry fs.DirEntry, err error) error {
-		if err == nil && !entry.IsDir() {
-			t.Errorf("a refused launch left %s", path)
-		}
-		return nil
-	})
-	if !strings.Contains(firstLineOf(t, silent.ID()), "a general session owes a report") {
-		t.Error("the refusal of a launch with no role flag does not name the default role")
 	}
 	if err := refuseReportingRole(silent, role.Main); err != nil {
 		t.Fatalf("main was refused: %v", err)
@@ -106,12 +88,4 @@ func TestATaskToASessionThatReportsNoTurnsFails(t *testing.T) {
 	if sent := finishedFor(t, dir, "web"); len(sent) != 1 {
 		t.Fatalf("the note left %v", sent)
 	}
-}
-
-// firstLineOf is the first line a launch's refusal prints.
-func firstLineOf(t *testing.T, argv ...string) string {
-	t.Helper()
-	_, _, errOut := run(argv...)
-	line, _, _ := strings.Cut(errOut, "\n")
-	return line
 }

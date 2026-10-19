@@ -143,8 +143,8 @@ context = "large"
 	if err != nil {
 		t.Fatal(err)
 	}
-	words, err := workerLaunch(target, parsed.Call, "api", "chosen-room", "fresh-id")
-	want := []string{"--name", "api", "--room", "chosen-room", "--general", "--command", "agent-worker", "agent", "--model", "chosen", "--effort", "low", "--session-id", "fresh-id"}
+	words, err := workerLaunch(target, parsed.Call, "fresh-id")
+	want := []string{"--command", "agent-worker", "agent", "--model", "chosen", "--effort", "low", "--session-id", "fresh-id"}
 	if err != nil || !reflect.DeepEqual(words, want) {
 		t.Fatalf("launch: %v, %v; want %v", words, err, want)
 	}
@@ -153,8 +153,8 @@ context = "large"
 	// checkout flag; an explicit checkout replaces the alias's older one.
 	target.args = []string{"--worktree=old", "--", "--session-id=literal"}
 	parsed.Call.Flags["worktree"] = "patch"
-	words, err = workerLaunch(target, parsed.Call, "api", "chosen-room", "fresh-id")
-	want = []string{"--name", "api", "--room", "chosen-room", "--general", "--command", "agent-worker", "agent", "--worktree=patch", "--session-id", "fresh-id", "--", "--session-id=literal"}
+	words, err = workerLaunch(target, parsed.Call, "fresh-id")
+	want = []string{"--command", "agent-worker", "agent", "--worktree=patch", "--session-id", "fresh-id", "--", "--session-id=literal"}
 	if err != nil || !reflect.DeepEqual(words, want) {
 		t.Fatalf("literal tail: %v, %v; want %v", words, err, want)
 	}

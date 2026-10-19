@@ -43,7 +43,7 @@ func TestACommandThatCannotRunIsRefused(t *testing.T) {
 // silently winning.
 func TestACommandGivenTwiceIsRefused(t *testing.T) {
 	isolateAliases(t)
-	code, _, errOut := run("--command", "sh", "--name", "x", "--command=sh", agentID)
+	code, _, errOut := run("--command", "sh", "--no-intro", "--command=sh", agentID)
 	if code != ExitUsage || !strings.Contains(errOut, "--command given twice") || !strings.Contains(errOut, "full help:") {
 		t.Errorf("exit %d, stderr %q", code, errOut)
 	}

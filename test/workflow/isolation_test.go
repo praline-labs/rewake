@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // Isolation is the private world one case runs in. Establishing it can fail,
@@ -211,6 +213,16 @@ func (iso *Isolation) rooms() string { return filepath.Join(iso.StateDir, "v2", 
 
 // Room is one room's directory in the case's state.
 func (iso *Isolation) Room(name string) string { return filepath.Join(iso.rooms(), name) }
+
+// HomeRoom is the room of the case's home, where its sessions launch and its
+// commands run: a launch is in the room of its directory.
+func (iso *Isolation) HomeRoom() string {
+	room, _, err := state.RoomOf(iso.Home)
+	if err != nil {
+		panic(err)
+	}
+	return room
+}
 
 // inEveryRoom collects the entries of <state>/v2/rooms/*/<sub> whose name matches.
 func (iso *Isolation) inEveryRoom(sub string, matches func(string) bool) ([]string, error) {

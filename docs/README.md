@@ -24,7 +24,7 @@ Sessions and launches:
 
 - [session-record.md](session-record.md) — the session record: every field, the boot, how a record is published, updated and pruned.
 - [roles.md](roles.md) — roles and names: the catalogue, what each role is told and reports, how a role and a name are chosen.
-- [launch.md](launch.md) — the wrapper's launch sequence, signals, room and role flags, the harness flags, the intro.
+- [launch.md](launch.md) — the wrapper's launch sequence, signals, main in the room of its directory, the worker profile, the harness flags, the intro.
 - [launch-defaults.md](launch-defaults.md) — model and effort defaults nobody typed; the worker aliases, main's catalogue for `space open --alias`, and which flags a typed one replaces ([the step](roadmap/2026-10-19-worker-catalogue.md)).
 - [worktree.md](worktree.md) — the checkout `--worktree` gives a launch, `.worktreeinclude`, and `rewake worktree land`, `finish`, `ls`, `rm`.
 - [install.md](install.md) — building and installing locally, the npm dry run, the upgrade from 1.x, the release gate.
@@ -45,8 +45,8 @@ Mail and reports:
 Main and its workers:
 
 - [session-state.md](session-state.md) — the telemetry line main sees for its workers: context, model and effort, compactions, staleness.
-- [v2/worker-profile.md](v2/worker-profile.md) — rewake's own Claude Code worker profile by launch options (step 1 built), and `rewake claude` as main's whole launch in the room of its directory, workers raised only by main.
-- [v2/shell.md](v2/shell.md) — the shell, which replaced the host mode on October 19, 2026: a TypeScript application on OpenTUI and Solid in `shell/`, started by `rewake --shell`, a terminal pane per program fed from its host's socket in the raw mode, the spike's findings, the steps.
+- [v2/worker-profile.md](v2/worker-profile.md) — rewake's own Claude Code worker profile by launch options and `rewake claude` as main's whole launch in the room of its directory, workers raised only by main (built).
+- [v2/shell.md](v2/shell.md) — the shell, which replaced the host mode on October 19, 2026: a TypeScript application on OpenTUI and Solid in `shell/`, the screen of every main started at a terminal, a terminal pane per program fed from its host's socket in the raw mode, the spike's findings, the steps.
 - [session-activity.md](session-activity.md) — activity labels, compaction notices, a worker's departure or replacement announced to main.
 - [remote-control.md](remote-control.md) — `rewake compact` and `rewake interrupt`: who may call them, refusals, the control directory.
 - [remote-control-letter.md](remote-control-letter.md) — the letter that ends a compaction main asked for and the record that owes it.

@@ -13,38 +13,6 @@ import (
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
-func TestMainIsALaunchFlag(t *testing.T) {
-	result, err := testTable().parse([]string{"--main", "--name", "lead", agentID, "--main"})
-	if err != nil {
-		t.Fatalf("parse: %v", err)
-	}
-	part, err := chosenRole(result.Call)
-	if err != nil || part.ID != role.Main.ID {
-		t.Errorf("role = %v, %v; want main", part.ID, err)
-	}
-	// After the harness name it belongs to the harness.
-	if len(result.Call.Raw) != 1 || result.Call.Raw[0] != "--main" {
-		t.Errorf("raw = %q, want the harness's own --main kept", result.Call.Raw)
-	}
-}
-
-func TestOmittedRoleStaysUnsetUntilDefaultResolution(t *testing.T) {
-	result, err := testTable().parse([]string{agentID})
-	if err != nil {
-		t.Fatalf("parse: %v", err)
-	}
-	if part, _ := chosenRole(result.Call); part.ID != "" {
-		t.Errorf("role = %s, want omission preserved for the default-general reason", part.ID)
-	}
-}
-
-func TestMainIsRefusedOnOtherCommands(t *testing.T) {
-	code, _, errOut := run("--main", "list")
-	if code != ExitUsage || !strings.Contains(errOut, "list does not take --main") {
-		t.Errorf("exit = %d, stderr = %q; want a refusal", code, errOut)
-	}
-}
-
 // markMain turns the test's session into the main one.
 func markMain(t *testing.T, dir, name string) {
 	t.Helper()
@@ -91,36 +59,5 @@ func TestTheMainSessionReportsNothing(t *testing.T) {
 	mustEndTurn(t, smokeEnd)
 	if found := finishedFor(t, dir, "web"); len(found) != 0 {
 		t.Errorf("web holds %v, want no report from the main session", found)
-	}
-}
-
-func TestWriteIsALaunchRole(t *testing.T) {
-	result, err := testTable().parse([]string{"--write", aHarness(t)})
-	if err != nil {
-		t.Fatal(err)
-	}
-	part, err := chosenRole(result.Call)
-	if err != nil || part.ID != "write" || part.Silent {
-		t.Fatalf("role=%+v err=%v", part, err)
-	}
-	code, _, errOut := run("--write", "list")
-	if code != ExitUsage || !strings.Contains(errOut, "list does not take --write") {
-		t.Errorf("write accepted on list: %d %s", code, errOut)
-	}
-	for _, args := range [][]string{{"guide"}, {aHarness(t), "--help"}} {
-		code, out, errOut := run(args...)
-		if code != 0 || !strings.Contains(out, "--write") {
-			t.Errorf("help lacks write: %d %s %s", code, out, errOut)
-		}
-	}
-}
-
-func TestAWriterCannotAlsoBeMain(t *testing.T) {
-	result, err := testTable().parse([]string{"--write", "--main", aHarness(t)})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := chosenRole(result.Call); err == nil {
-		t.Fatal("conflicting roles were accepted")
 	}
 }

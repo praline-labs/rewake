@@ -14,7 +14,6 @@ import (
 	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/host"
 	"github.com/praline-labs/rewake/internal/host/launch"
-	"github.com/praline-labs/rewake/internal/host/terminal"
 	"github.com/praline-labs/rewake/internal/infra/build"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
@@ -27,9 +26,6 @@ func handleLaunch(h adapter.Harness) func(*Context, Call) error {
 		if err := refuseNestedLaunch(call); err != nil {
 			return err
 		}
-		if prefix, present := call.Flags["name"]; present && prefix == "" {
-			return &UsageError{Command: call.Command, Message: "--name needs a nonempty prefix; omit --name to use the selected role."}
-		}
 		program, err := launchProgram(call)
 		if err != nil {
 			return err
@@ -41,25 +37,21 @@ func handleLaunch(h adapter.Harness) func(*Context, Call) error {
 			// branching on the code tries to fix the call.
 			return &UsageError{Message: err.Error()}
 		}
-		part, err := chosenRole(call)
+		id, err := identifyLaunch(call)
 		if err != nil {
 			return err
 		}
-		if err := refuseReportingRole(h, part); err != nil {
+		if err := refuseReportingRole(h, id.part); err != nil {
 			return err
 		}
-		if err := refuseShell(call, part); err != nil {
-			return err
-		}
-		inShell, err := enterShell(call)
+		inShell, err := enterShell(h, id)
 		if err != nil {
 			return err
 		}
 		// The build lease before anything of the room is made or locked, and
 		// before the worktree; held until the wrapper and its cleanup are done
 		// (docs/v2/stage3-state.md#one-build-per-room).
-		room := call.Flag("room", state.DefaultRoom)
-		lease, err := leaseError(call.Command, func() (*build.Lease, error) { return build.Launch(base, room) })
+		lease, err := leaseError(call.Command, func() (*build.Lease, error) { return build.Launch(base, id.room) })
 		if err != nil {
 			return err
 		}
@@ -68,9 +60,14 @@ func handleLaunch(h adapter.Harness) func(*Context, Call) error {
 		if err != nil {
 			return &UsageError{Message: err.Error()}
 		}
-		dir, err := state.RoomDir(root, room)
+		dir, err := state.RoomDir(root, id.room)
 		if err != nil {
 			return &UsageError{Command: call.Command, Message: err.Error()}
+		}
+		if id.directory != "" {
+			if err := state.RecordRoomDirectory(dir, id.directory); err != nil {
+				return &FailedError{Message: "the room's directory could not be recorded: " + err.Error()}
+			}
 		}
 		// Last of the preparations: every refusal above leaves no checkout
 		// behind.
@@ -90,28 +87,29 @@ func handleLaunch(h adapter.Harness) func(*Context, Call) error {
 			OnConfirm: func(ctx context.Context, self registry.Session, result adapter.TurnEnd) (string, error) {
 				return ConfirmCompletion(ctx, dir, self, result)
 			},
-			Harness:   h,
-			Dir:       dir,
-			Name:      call.Flag("name", ""),
-			Args:      args,
-			Intro:     !call.Switch("no-intro"),
-			Shell:     inShell,
-			Role:      part,
-			Command:   program,
-			OnClaimed: onClaimed,
-			Lease:     lease,
+			Harness:    h,
+			Dir:        dir,
+			Name:       id.name,
+			Args:       args,
+			Intro:      !call.Switch("no-intro"),
+			Shell:      inShell,
+			Role:       id.part,
+			RoleReason: id.reason,
+			Command:    program,
+			OnClaimed:  onClaimed,
+			Lease:      lease,
 		})
 		if checkout != nil {
 			checkout.settle(err != nil || code != 0)
 		}
 		if err != nil {
-			var mainTaken *host.MainTakenError
-			if errors.As(err, &mainTaken) {
-				return &UsageError{Command: call.Command, Message: mainTaken.Error()}
-			}
-			var taken *registry.NameTakenError
+			var taken *host.MainTakenError
 			if errors.As(err, &taken) {
-				return &UsageError{Command: call.Command, Message: taken.Error() + " Pick another prefix with --name, or omit --name to get the next free role-based address."}
+				return mainTaken(id, taken)
+			}
+			var nameTaken *registry.NameTakenError
+			if errors.As(err, &nameTaken) {
+				return &UsageError{Command: call.Command, Message: nameTaken.Error()}
 			}
 			if errors.Is(err, registry.ErrUnusableName) {
 				return &UsageError{Command: call.Command, Message: err.Error()}
@@ -186,56 +184,11 @@ func launchProgram(call Call) (string, error) {
 	return program, nil
 }
 
-// chosenRole leaves an omitted role unset so the wrapper can distinguish
-// default general from an explicit --general in its recorded reason.
-func chosenRole(call Call) (role.Role, error) {
-	chosen := role.Role{}
-	var flags []string
-	for _, candidate := range role.All() {
-		if call.Switch(candidate.ID) {
-			chosen = candidate
-			flags = append(flags, "--"+candidate.ID)
-		}
-	}
-	if len(flags) > 1 {
-		return role.Role{}, &UsageError{
-			Command: call.Command,
-			Message: strings.Join(flags, " and ") + " exclude each other: a session has one role.",
-		}
-	}
-	return chosen, nil
-}
-
-// roleOptions are the launch flags that choose a role, for the command table.
-func roleOptions() []Option {
-	var options []Option
-	for _, candidate := range role.All() {
-		options = append(options, Option{Flag: "--" + candidate.ID, Summary: candidate.Summary})
-	}
-	return options
-}
-
-// roleSummary keeps the guide on the same catalog as launch flags and help.
+// roleSummary keeps the guide on the same catalog as the briefings.
 func roleSummary() string {
 	var descriptions []string
 	for _, candidate := range role.All() {
-		label := "--" + candidate.ID
-		descriptions = append(descriptions, label+": "+candidate.Summary)
+		descriptions = append(descriptions, candidate.ID+": "+candidate.Summary)
 	}
-	return "No role flag means general, even in an empty room; only --main makes main, refused while the room has one, and a name never selects a role. " + strings.Join(descriptions, " ")
-}
-
-// refuseShell refuses the shell where it has nothing to show or nowhere to
-// show it: a role that opens no spaces, or no terminal to hold.
-func refuseShell(call Call, part role.Role) error {
-	if !call.Switch("shell") {
-		return nil
-	}
-	if !part.Spaces {
-		return &UsageError{Command: call.Command, Message: "--shell shows the workers a main session opens; add --" + role.Main.ID + "."}
-	}
-	if !terminal.IsTerminal(os.Stdin) || !terminal.IsTerminal(os.Stdout) {
-		return &UsageError{Command: call.Command, Message: "--shell holds a terminal: standard input and output must both be one."}
-	}
-	return nil
+	return "A person starts only main: rewake <harness> is main in the room of its directory, and a second main there is refused. Workers are raised by main alone, with rewake space open --alias <alias> or --harness <harness> --role write|general. " + strings.Join(descriptions, " ")
 }

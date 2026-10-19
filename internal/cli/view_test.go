@@ -69,7 +69,7 @@ func TestEveryViewLeavesMissingAndExistingStateUnchanged(t *testing.T) {
 		t.Setenv(state.SessionEnv, "")
 		t.Setenv(epochEnv, "")
 		check(t, parent)
-		if code, out, _ := run("list"); code != ExitOK || !strings.Contains(out, "No sessions are running in room default") {
+		if code, out, _ := run("list"); code != ExitOK || !strings.Contains(out, "No sessions are running in room "+currentRoom(t)) {
 			t.Fatalf("list of a missing base: %d %q", code, out)
 		}
 		t.Setenv(state.SessionEnv, "api")

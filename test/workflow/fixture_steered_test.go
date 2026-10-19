@@ -193,7 +193,7 @@ func killHarness(c *Case, iso *Isolation, session *scenarioSession) {
 	var record struct {
 		HarnessPID int `json:"harnessPid"`
 	}
-	raw, err := os.ReadFile(filepath.Join(iso.Room("default"), "sessions", session.name+".json"))
+	raw, err := os.ReadFile(filepath.Join(iso.Room(iso.HomeRoom()), "sessions", session.name+".json"))
 	if err != nil || json.Unmarshal(raw, &record) != nil || record.HarnessPID <= 0 {
 		c.Note("no harness to kill for " + session.name)
 		return

@@ -85,7 +85,7 @@ func worktreeAccess(call Call) access {
 // through a tool call's bounded output. Nothing of the invocation that can
 // write runs outside it. A change holds the build lease of its room for the
 // whole scope (docs/v2/stage3-state.md#one-build-per-room), taken before any
-// other lock; a launch takes its own, for the room its --room names, and
+// other lock; a launch takes its own, for the room of its directory or its space, and
 // holds it for the wrapper's life. A lease refused ends the scope before the
 // handler, which then has had no effect, and is answered by refused the way
 // its route answers — with no write at all, the shell's observation included.
@@ -134,7 +134,10 @@ func acquireCurrent(command *Command) (*build.Lease, error) {
 	if err != nil {
 		return nil, &UsageError{Command: command, Message: err.Error()}
 	}
-	room := state.CurrentRoom()
+	room, err := state.CurrentRoom()
+	if err != nil {
+		return nil, &UsageError{Command: command, Message: err.Error()}
+	}
 	return leaseError(command, func() (*build.Lease, error) { return build.Acquire(base, room) })
 }
 

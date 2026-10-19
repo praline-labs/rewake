@@ -133,7 +133,7 @@ func playPendingReport(t *testing.T, c *Case, iso *Isolation, col column) []tele
 // awaiting lists the worker's open obligations as files: one per sender whose
 // task it read and has not reported on yet.
 func awaiting(iso *Isolation, worker *scenarioSession) []string {
-	found, _ := filepath.Glob(filepath.Join(iso.Room("default"), "inbox", worker.name, "awaiting", "*", pendingSenderLabel+"-*"))
+	found, _ := filepath.Glob(filepath.Join(iso.Room(iso.HomeRoom()), "inbox", worker.name, "awaiting", "*", pendingSenderLabel+"-*"))
 	return found
 }
 

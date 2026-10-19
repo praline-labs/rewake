@@ -40,7 +40,7 @@ func (fixtureHarness) Summary() string {
 }
 
 func (fixtureHarness) Examples() []string {
-	return []string{"rewake fixture", "rewake --name api fixture"}
+	return []string{"rewake fixture", "rewake --no-intro fixture"}
 }
 
 func (fixtureHarness) Notes() []string {

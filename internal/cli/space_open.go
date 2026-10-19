@@ -98,7 +98,7 @@ func handleSpaceOpen(ctx *Context, call Call) error {
 	if record.ID, err = space.NewID(); err != nil {
 		return failf("%v", err)
 	}
-	launchWords, err := workerLaunch(target, call, name, filepath.Base(dir), record.Worker.SessionID)
+	launchWords, err := workerLaunch(target, call, record.Worker.SessionID)
 	if err != nil {
 		return err
 	}

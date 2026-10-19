@@ -15,12 +15,12 @@ func TestSpaceHostCommandForEachHarness(t *testing.T) {
 	for _, h := range catalog.New().All() {
 		for _, checkout := range []string{"", "true", "patch"} {
 			t.Run(h.ID()+"/checkout="+checkout, func(t *testing.T) {
-				worker := launch.Worker{Name: "api", Room: "room", Role: "write", Worktree: checkout, Conversation: "0f0e0d0c-0b0a-4908-8706-050403020100"}
+				worker := launch.Worker{Worktree: checkout, Conversation: "0f0e0d0c-0b0a-4908-8706-050403020100"}
 				got, err := launch.WorkerArgs(h, worker)
 				if err != nil {
 					t.Fatal(err)
 				}
-				want := []string{"--name", "api", "--room", "room", "--write", h.ID()}
+				want := []string{h.ID()}
 				taker, worktrees := h.(adapter.WorktreeHarness)
 				if checkout != "" {
 					if !worktrees {
@@ -39,7 +39,7 @@ func TestSpaceHostCommandForEachHarness(t *testing.T) {
 					t.Fatalf("space host command %v, want %v", got, want)
 				}
 				if checkout != "" {
-					if err := taker.WorktreeRefusal(got[6:]); err != nil {
+					if err := taker.WorktreeRefusal(got[1:]); err != nil {
 						t.Fatalf("space host command refused: %v", err)
 					}
 				}

@@ -50,6 +50,9 @@ type Request struct {
 
 	// Role is explicit when its ID is set; empty always uses general.
 	Role role.Role
+	// RoleReason says why the launch has its role, for the record and the
+	// briefing; empty says the role was selected with its flag.
+	RoleReason string
 	// OnTurn publishes a turn's end the run's TurnBoundary reported.
 	OnTurn func(context.Context, registry.Session, adapter.TurnEnd) error
 	// OnConfirm runs an end the adapter may hold open, beside OnTurn

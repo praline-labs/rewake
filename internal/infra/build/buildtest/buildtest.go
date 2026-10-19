@@ -90,5 +90,9 @@ func Current(t testing.TB) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return Room(t, base, state.CurrentRoom())
+	room, err := state.CurrentRoom()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return Room(t, base, room)
 }

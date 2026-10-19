@@ -60,10 +60,9 @@ func (ctx *Context) spaceTarget(call Call) (workerTarget, error) {
 
 // workerLaunch builds the complete ordinary launch, including settings and
 // the fresh conversation id, before the detached host receives it. The space
-// owns name and room; an alias's copies cannot move its worker elsewhere.
-func workerLaunch(target workerTarget, call Call, name, room, conversation string) ([]string, error) {
+// owns name, role and room, which its record carries.
+func workerLaunch(target workerTarget, call Call, conversation string) ([]string, error) {
 	words, err := launch.WorkerArgs(target.harness, launch.Worker{
-		Name: name, Room: room, Role: target.part.ID,
 		Command: target.command, NoIntro: target.noIntro, Args: target.args,
 		Worktree: call.Flag("worktree", ""), Conversation: conversation,
 	})

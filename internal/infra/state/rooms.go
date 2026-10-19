@@ -1,25 +1,104 @@
 package state
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 )
 
 // RoomEnv carries the command's inherited conversation namespace.
 const RoomEnv = "REWAKE_ROOM"
 
-// DefaultRoom is used by shells and launches without an explicit room.
+// DefaultRoom is the room every launch took before rooms were named by their
+// directory; a state directory may still hold it, and tests use the name.
 const DefaultRoom = "default"
 
-// CurrentRoom is inherited by commands. Launches deliberately default to the
-// default room instead; only their --room flag selects another one.
-func CurrentRoom() string {
-	if room := os.Getenv(RoomEnv); room != "" {
-		return room
+// roomDirectoryFile keeps, in a room's directory, the launch directory the
+// room is named for, so a listing can show it.
+const roomDirectoryFile = "directory"
+
+// The parts of a room's name: the directory's last element cut to slugLength,
+// a dash, and hashLength hex digits of the resolved path, 32 in all.
+const (
+	slugLength = 19
+	hashLength = 12
+)
+
+// RoomOf is the room of a launch directory (the owner's decision, October
+// 19, 2026): the directory resolved with symlinks followed names it, so two
+// launches in one directory share a room and two directories never do. The
+// name keeps the directory's last element readable and a hash of the whole
+// path, so checkouts named alike stay apart. It returns the resolved path too.
+func RoomOf(directory string) (string, string, error) {
+	absolute, err := filepath.Abs(directory)
+	if err != nil {
+		return "", "", err
 	}
-	return DefaultRoom
+	resolved, err := filepath.EvalSymlinks(absolute)
+	if err != nil {
+		return "", "", fmt.Errorf("the room is named by the launch directory, and %s does not resolve: %w", absolute, err)
+	}
+	sum := sha256.Sum256([]byte(resolved))
+	return slug(filepath.Base(resolved)) + "-" + hex.EncodeToString(sum[:])[:hashLength], resolved, nil
+}
+
+// slug is a name's letters and digits in lower case, every other run of
+// characters one dash, cut to slugLength; "dir" when nothing is left.
+func slug(name string) string {
+	var out []byte
+	for _, r := range strings.ToLower(name) {
+		switch {
+		case r >= 'a' && r <= 'z', r >= '0' && r <= '9':
+			out = append(out, byte(r))
+		case len(out) > 0 && out[len(out)-1] != '-':
+			out = append(out, '-')
+		}
+	}
+	if len(out) > slugLength {
+		out = out[:slugLength]
+	}
+	if trimmed := strings.Trim(string(out), "-"); trimmed != "" {
+		return trimmed
+	}
+	return "dir"
+}
+
+// CurrentRoom is the room a command acts in: the one its session inherited,
+// or outside a session the room of its working directory.
+func CurrentRoom() (string, error) {
+	if room := os.Getenv(RoomEnv); room != "" {
+		return room, nil
+	}
+	working, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("the room is named by the working directory, which cannot be read: %w", err)
+	}
+	room, _, err := RoomOf(working)
+	return room, err
+}
+
+// RecordRoomDirectory writes the directory a room is named for into it, once:
+// the name is a hash of that path, so the content never changes.
+func RecordRoomDirectory(roomDir, resolved string) error {
+	path := filepath.Join(roomDir, roomDirectoryFile)
+	if _, err := os.Lstat(path); err == nil {
+		return nil
+	}
+	return WriteAtomic(path, []byte(resolved+"\n"))
+}
+
+// RoomDirectory is the directory a room is named for, or empty for a room
+// without the record: one of an earlier build, or a test's.
+func RoomDirectory(roomDir string) string {
+	raw, err := ReadRegular(filepath.Join(roomDir, roomDirectoryFile), 4096)
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSuffix(string(raw), "\n")
 }
 
 // Dir returns only this command's room, made nowhere. Legacy records are
@@ -30,7 +109,11 @@ func Dir() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return RoomDir(root, CurrentRoom())
+	room, err := CurrentRoom()
+	if err != nil {
+		return "", err
+	}
+	return RoomDir(root, room)
 }
 
 // RoomDir is where a room of the root lives and its sessions and mailboxes

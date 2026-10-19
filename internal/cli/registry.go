@@ -24,14 +24,6 @@ var globalOptions = []Option{
 	{Flag: "--version", Summary: "The version and its build: revision, build or commit time, modified."},
 }
 
-// nameOption is a launch flag, and it goes before the harness name: everything
-// after the harness name belongs to the harness.
-var nameOption = Option{
-	Flag:    "--name",
-	Value:   "<prefix>",
-	Summary: "Address prefix, the role by default: the session is <prefix>-<harness>, 32 characters at most. A taken default gets -2, -3; a taken --name is refused.",
-}
-
 // commandOption names the program a launch starts instead of the harness's
 // own: a person's wrapper script, which sets up an environment and then runs
 // the harness. The harness word still says which harness it is — rewake does
@@ -39,18 +31,6 @@ var nameOption = Option{
 var commandOption = Option{
 	Flag: "--command", Value: "<program>",
 	Summary: "Start this program, a wrapper script that runs the harness, in place of the harness with the same arguments. A name is looked up on PATH, a path with a slash taken as given; it must be executable.",
-}
-
-// shellOption runs main in the shell (docs/v2/shell.md): a way of running
-// main, not another harness, so a flag rather than a command.
-var shellOption = Option{
-	Flag:    "--shell",
-	Summary: "Run main in rewake's shell on this terminal: main on the left, from 120 columns the worker chosen on the bar below on the right; Ctrl+\\ then a digit, n, p or m chooses, an arrow moves the focus, z zooms. Closing the terminal ends main and its workers. The shell is REWAKE_SHELL, or rewake-shell beside rewake. Only for a role that opens spaces, and only on a terminal.",
-}
-
-var roomOption = Option{
-	Flag: "--room", Value: "<name>",
-	Summary: "The room to join; default otherwise. Names are unique within a room.",
 }
 
 // buildGroups builds the command table in guide order. Launch commands are
@@ -248,24 +228,24 @@ func buildGroups(catalog adapter.Catalog) []Group {
 	return []Group{run, talk, steer, spaceGroup(), help}
 }
 
-// nestedLaunchHelp is refuseNestedLaunch's rule, on every launch page: a
-// main reading how to start a worker must not learn it only from the refusal.
-const nestedLaunchHelp = "Refused with exit 2 from a shell inside a rewake session: the owner starts sessions, from a terminal outside any."
+// launchHelp is who a launch is and refuseNestedLaunch's rule, on every
+// launch page: main reading how to start a worker must not learn it only
+// from the refusal.
+const launchHelp = "Always main, in the room of the launch directory; refused with exit 1 while that directory has a main. On a terminal main runs in rewake's shell — main on the left, from 120 columns the worker chosen on the bar below on the right; Ctrl+\\ then a digit, n, p or m chooses, an arrow moves the focus, z zooms; closing the terminal ends main and its workers; the shell is REWAKE_SHELL, or rewake-shell beside rewake. Without a terminal, or on a harness whose main opens no spaces, main runs plain. Refused with exit 2 from a shell inside a rewake session: the owner starts main, from a terminal outside any, and main starts the workers."
 
 // launchCommand builds the command that starts one harness.
 func launchCommand(h adapter.Harness) *Command {
 	notes := append([]string{}, h.Notes()...)
-	notes = append(notes, nestedLaunchHelp, adapter.SettingsHelp, launch.Help)
+	notes = append(notes, launchHelp, adapter.SettingsHelp, launch.Help)
 	return &Command{
 		Name:           h.ID(),
 		Args:           "[" + h.ID() + " args...]",
 		MaxPositionals: Variadic,
 		Summary:        h.Summary(),
-		Options: append(append([]Option{nameOption, roomOption, commandOption}, roleOptions()...),
+		Options: append(directOptions(), commandOption,
 			Option{Flag: "--no-intro", Summary: "Do not add the system-layer briefing."},
-			shellOption,
 		),
-		Examples: append(h.Examples(), roomExample(h)),
+		Examples: h.Examples(),
 		Next:     []string{"rewake list", "rewake send <name> \"text\""},
 		Notes:    notes,
 		Raw:      true,
@@ -275,15 +255,6 @@ func launchCommand(h adapter.Harness) *Command {
 	}
 }
 
-// roomExample starts a session in another room, with the role the harness can
-// run: a worker where it reports its turns, main where it does not.
-func roomExample(h adapter.Harness) string {
-	if !reportsTurns(h) {
-		return "rewake --room work --" + role.Main.ID + " --name lead " + h.ID()
-	}
-	return "rewake --room work --" + role.General.ID + " --name helper " + h.ID()
-}
-
 // flow is the worked order printed in the guide: real invocations, not shapes.
 // A harness that reports no turn's end starts only a main session and takes no
 // task, so it shows that start and none of the task's steps.
@@ -291,16 +262,16 @@ func flow(catalog adapter.Catalog) []FlowStep {
 	steps := []FlowStep{}
 	last := ""
 	for _, h := range catalog.All() {
-		if !reportsTurns(h) {
-			steps = append(steps, FlowStep{
-				Command: fmt.Sprintf("rewake --%s --name lead %s", role.Main.ID, h.ID()),
-				Summary: fmt.Sprintf("Start %s as lead-%s, the main session: this rewake is not told when its turns end, so it takes notes but no task or question until stage 4.", h.Title(), h.ID()),
-			})
+		steps = append(steps, FlowStep{
+			Command: "rewake " + h.ID(),
+			Summary: fmt.Sprintf("Start %s as main-%s in the room of this directory, in rewake's shell when on a terminal; a second main here is refused.", h.Title(), h.ID()),
+		})
+		if !reportsTurns(h) || !h.Offers().Spaces {
 			continue
 		}
 		steps = append(steps, FlowStep{
-			Command: fmt.Sprintf("rewake --%s --name helper %s", role.General.ID, h.ID()),
-			Summary: fmt.Sprintf("Start %s as helper-%s with role %s; --name sets only the prefix.", h.Title(), h.ID(), role.General.ID),
+			Command: fmt.Sprintf("rewake space open helper --harness %s --role %s", h.ID(), role.General.ID),
+			Summary: fmt.Sprintf("From main, raise the worker helper-%s with role %s in main's room; only main starts workers.", h.ID(), role.General.ID),
 		}, FlowStep{
 			Command: fmt.Sprintf("rewake send helper-%s \"pull and rerun the smoke\"", h.ID()),
 			Summary: "Give that exact address a task; its report comes back when the turn ends.",
@@ -353,11 +324,11 @@ func notes() []Note {
 		},
 		{
 			Title: "Rooms isolate conversations",
-			Body:  "--room <name> before the harness name picks the room, default otherwise. Commands inherit REWAKE_ROOM, default without it. Sessions see only their room and names may repeat across rooms: no address or messaging flag reaches another room.",
+			Body:  "The room is the directory rewake <harness> was started in, symlinks followed: one main per directory, and another directory is another room. Workers main raises are in its room whatever their checkout. A session's commands inherit REWAKE_ROOM; a command outside any session takes the room of its working directory. Sessions see only their room and names may repeat across rooms: no address or messaging flag reaches another room.",
 		},
 		{
 			Title: "Session addresses come from launch prefixes",
-			Body:  "An address is <prefix>-<harness>. The prefix is the role unless --name replaces it, which leaves the role as it is; -<harness> is added even to a prefix that already ends with it. A taken default gets -2, -3 after the harness; a taken --name is refused. A prefix starts with a lower-case letter or digit and holds lower-case letters, digits, dots, dashes and underscores; the address fits 32 characters. Send takes the exact address list shows, and running sessions keep their names.",
+			Body:  "An address is <prefix>-<harness>: main's prefix is main, a worker's the name main gave its space. -<harness> is added even to a prefix that already ends with it; a space's taken name is refused. A prefix starts with a lower-case letter or digit and holds lower-case letters, digits, dots, dashes and underscores; the address fits 32 characters. Send takes the exact address list shows, and running sessions keep their names.",
 		},
 		{
 			Title: "Choose a session role",

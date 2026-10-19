@@ -9,13 +9,8 @@ import (
 )
 
 func TestGeneralIsTheReportingRoleAndReadsLegacyWorkers(t *testing.T) {
-	parsed, err := testTable().parse([]string{"--general", aHarness(t)})
-	if err != nil {
-		t.Fatal(err)
-	}
-	part, err := chosenRole(parsed.Call)
-	if err != nil || part.ID != "general" || part.Silent {
-		t.Fatalf("role=%+v %v", part, err)
+	if part, found := role.Find("general"); !found || part.Silent {
+		t.Fatalf("role=%+v", part)
 	}
 	if role.Of("worker").ID != "general" {
 		t.Fatal("legacy worker was not normalized")

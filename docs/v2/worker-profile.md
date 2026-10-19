@@ -1,6 +1,6 @@
 # The worker profile and `rewake claude` as main
 
-A design; step 1 built October 19, 2026 (below). The owner's decisions of October 19, 2026: rewake carries its own
+A design; all three steps built October 19, 2026 (below). The owner's decisions of October 19, 2026: rewake carries its own
 Claude Code worker profile, so a worker does not carry everything of the person's own Claude
 Code, and the person's wrapper made for that is deleted; the person starts everything with
 `rewake claude` and Claude Code's own flags, which always makes main; workers are raised only
@@ -31,8 +31,9 @@ still shows as `Project`). Launch options do all of it and keep the person's dir
 
 What stays the person's: the login and account, transcripts and `/resume`, folder trust, the
 project's and local settings, the project's `CLAUDE.md`/`AGENTS.md`, skills, agents and
-`.mcp.json`, managed policy, and the claude.ai connectors (only `--strict-mcp-config` drops them,
-and it drops the project's servers with them).
+`.mcp.json`, and managed policy. The claude.ai connectors are dropped by the profile's
+`disableClaudeAiConnectors: true` (the owner's decision below), which leaves the project's
+servers; `--strict-mcp-config` would drop both.
 
 Two facts that shape the build. `--settings` is single-use — a second one replaces the first,
 not merges (probed) — so the profile owns it: a worker's `--settings` or `--setting-sources`
@@ -49,21 +50,33 @@ with the user source off, `--autocompact` holds unless the project's settings se
 above; `autoMemoryEnabled: false`, since a worker is short-lived and the auto-memory of a project
 is main's (sharing the directory with main otherwise mixes them); `env` with
 `DISABLE_AUTOUPDATER=1` (a worker must not update Claude Code under a running room) and
-`DISABLE_FEEDBACK_COMMAND=1` (no survey in an unattended pane); `Bash(rewake:*)` as today.
+`DISABLE_FEEDBACK_COMMAND=1` (no survey in an unattended pane); `Bash(rewake:*)` as today;
+and the owner's off-list of October 19, 2026 — subagents (`Agent`), `ScheduleWakeup` and cron,
+`SendMessage`, `ListAgents`, the worktree and plan-mode tools, `PushNotification`,
+`RemoteTrigger`, `Artifact`, workflows, remote control, prompt suggestions, away summaries, idle
+compaction, spinner tips, the feedback survey, IDE auto-connect and the claude.ai connectors —
+listed setting by setting in [launch.md](../launch.md#claude-code). A denied tool comes back only
+through rewake's own key, `{"rewake": {"keep": [<tools>]}}`, since an allow cannot undo a deny;
+everything else through the person's value in `settings.json`.
 
 **The person's profile**, optional, in rewake's own directory beside pi's,
-`~/.config/rewake/claude/worker/`, never in the state directory; rewake reads it and never
-writes or makes it, and an entry of the wrong kind refuses the launch naming the path:
+`~/.config/rewake/claude/worker/`, never in the state directory. A worker's launch makes what
+of it is missing — the folder (0700), `settings.json` holding `{}`, an empty `CLAUDE.md`,
+`skills/` and `.claude-plugin/plugin.json` naming the plugin `worker` — and never changes what
+is there (the owner's decision, October 19, 2026); the folder itself is passed as
+`--plugin-dir`, so a skill placed or symlinked into `skills/` loads as `worker:<skill>`. An entry
+of the wrong kind refuses the launch naming the path:
 
 - `settings.json` — merged over rewake's defaults (objects key by key, the person's value wins;
-  `claudeMdExcludes` is appended to, never replaced), passed as the run's one `--settings`, a
+  `claudeMdExcludes` and `permissions.deny` are appended to, never replaced), passed as the run's one `--settings`, a
   JSON string, so nothing is written.
   Where the person's permissions allow-list, `env`, model per effort, `skillOverrides` go.
 - `CLAUDE.md` — the worker's instructions, after rewake's briefing.
-- `plugins/` — each child a plugin, loaded with `--plugin-dir`; the worker's skills live here.
+- `skills/` — the worker's own skills, each folder or symlink one skill of the plugin `worker`.
+- `plugins/` — each child a whole plugin, loaded with `--plugin-dir`.
 - `mcp.json` — passed with `--mcp-config`.
 
-rewake reads only its own directory and never `~/.claude`, `~/.claude.json` or a project's
+rewake reads and makes only its own directory and never `~/.claude`, `~/.claude.json` or a project's
 files; it does not know where the person's instructions and skills are built from. Filling the
 profile is the person's: the owner's installers get a target writing these paths.
 
@@ -90,7 +103,7 @@ configuration Claude Code starts with, as it did before. A wrapper that moves
 - **The room is the launch directory** (the owner's decision, October 19, 2026). Its identity is
   the working directory resolved with symlinks followed; the person never names a room. On disk
   it is `v2/rooms/<base>-<hash>`: the directory's last element reduced to `[a-z0-9-]` and cut to
-  24 characters, then the first 12 hex digits of the SHA-256 of the resolved path, so two
+  19 characters (`dir` when nothing is left), the name then fitting rewake's 32, then the first 12 hex digits of the SHA-256 of the resolved path, so two
   checkouts named alike stay apart and the name stays readable. `rewake list` shows the room as
   that resolved path, kept in the room's directory by the bootstrap that makes it — a new file
   of the state format, so step 3 takes Codex's acceptance. A session finds its room in
@@ -98,7 +111,8 @@ configuration Claude Code starts with, as it did before. A wrapper that moves
   Workers main raises belong to main's room whatever their checkout: the space host passes main's
   room, and a worktree elsewhere changes nothing.
 - **A second `rewake claude` in the same directory** is refused, exit 1, before anything
-  starts: `<dir> has main <name>; one main per directory: start it in another directory`. One
+  starts: `<dir> already has main <name>: one main per directory. Use that one, or start rewake
+  in another directory, which is another room.` One
   in another directory is another room.
 - **Aliases are only main's worker catalogue.** `rewake <alias>` as a launch is removed, and with
   it `main = true` and main's aliases. An alias keeps `harness`, `command`, `args`, `description`
@@ -106,10 +120,12 @@ configuration Claude Code starts with, as it did before. A wrapper that moves
   else in it means anything for a space. A file with the old fields is refused naming them.
   `rewake workers` and `space open --alias | --harness [--role]` stay; the user/project rule
   stays: a project alias names no role and no command.
-- **How the space host still launches a worker.** It runs the same launch it runs today with
-  `--name` and the role, plus `REWAKE_SPACE=<id>`; the launch takes a role or a name only when that
-  variable names an `opening` space of the room with that name whose host is its parent process,
-  and refuses them otherwise, pointing to `rewake space open`. The space record is not changed.
+- **How the space host still launches a worker.** It runs `rewake [--command <wrapper>]
+  <harness> <args>` with `REWAKE_SPACE=<room>/<space id>` and no name, room or role flag; the
+  launch is that worker only when the variable names a space that is `opening`, or `open` on the
+  launch's own run, whose host is its parent process — taking the name, role and room from the
+  record — and refuses otherwise, pointing to `rewake space open`. The space record is not
+  changed.
   The workflow suite, which starts workers directly in about forty places, keeps that form in the
   `rewaketest` build only.
 
@@ -121,7 +137,9 @@ Main's, October 19, 2026, on the design's questions; the room's identity is the 
 2. A second `rewake claude` in the same directory is refused, exit 1.
 3. The workflow suite's direct worker launches stay, in the `rewaketest` build only.
 4. A worker's auto-memory is off by default.
-5. The claude.ai connectors stay for workers: no `--strict-mcp-config` by default.
+5. The claude.ai connectors stay for workers: no `--strict-mcp-config` by default. Superseded the
+   same day by the owner: they are off for workers, through `disableClaudeAiConnectors`, and the
+   project's `.mcp.json` servers stay.
 6. `rewake pi` is main too; without spaces it runs without the shell and without workers.
 7. One profile for every Claude Code worker; named profiles only when needed.
 
@@ -145,6 +163,21 @@ Main's, October 19, 2026, on the design's questions; the room's identity is the 
    `launch.context` applied, `apply`, `main` and the direct alias launch removed; an old file is
    refused naming each field, its line and what replaced it. Main rewrites the owner's `aliases.toml` with him and deletes the wrapper and its
    `command` lines with him, once step 1 is live; the wrapper's directory stays his.
-3. **The launch surface**: main by default, the shell by default, the flags removed, the second
-   main refused, `REWAKE_SPACE`; examples, the guide, briefings, `launch.md`, `launch-defaults.md`,
-   `roles.md` and `project.md` in the same commit; the room by directory with its acceptance.
+3. **The launch surface** — built ([its entry](../roadmap/2026-10-19-worker-profile-step3.md)):
+   main always, the shell by default, the flags removed for the person, the second main refused,
+   `REWAKE_SPACE`, the room by directory, the service folder made, the off-list. Checked live
+   through a built rewake in a private `REWAKE_DIR`, `HOME` unchanged for the login, haiku:
+
+   | check | seen |
+   | --- | --- |
+   | `rewake claude --model haiku` at a terminal | main-claude in the shell, room `proj-c219f3571dbf`, "rewake <harness> always starts main, one per directory" |
+   | a second `rewake claude` there | exit 1, "/tmp/rewake-live/proj already has main main-claude: one main per directory. …" |
+   | `rewake claude -p` in another directory | room `other-d46b52a25619`, its `directory` file naming it |
+   | main runs `space open api --harness claude --role write` | api-claude in main's room, "raised by main with rewake space open as write"; the service folder made, 0700, the person's `skills/pskill` symlink kept |
+   | main's task to the worker | woken by mail with `SendMessage` and `ListAgents` denied, report `finished` at its turn end |
+   | the worker's tools | no `Agent`, `SendMessage`, `ListAgents`, `ScheduleWakeup`, worktree, plan-mode, push, trigger, `Artifact` or workflow tool; main has `Agent`, `ScheduleWakeup` and the connectors |
+   | the worker's `/context` and `/skills` | MCP tools: 1, the project's `.mcp.json` server `probe`, no claude.ai connector; `worker:pskill`, plugin `worker` |
+   | the terminal closed | the shell, main, the worker and its space host ended; the space closed "main's run ended" |
+
+   `--alias` was not run: the owner's `aliases.toml` is still in the old form, which step 2
+   refuses, and is rewritten with main at landing.

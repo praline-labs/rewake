@@ -86,6 +86,11 @@ func stateDir(t *testing.T) string {
 		t.Fatalf("chmod: %v", err)
 	}
 	t.Setenv(state.DirEnv, dir)
+	// A short room, not the one of the package's directory: a socket's path
+	// under a temporary directory is near the limit of its length already.
+	if os.Getenv(state.RoomEnv) == "" {
+		t.Setenv(state.RoomEnv, state.DefaultRoom)
+	}
 	resolved := buildtest.Current(t)
 	return resolved
 }

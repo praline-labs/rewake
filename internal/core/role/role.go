@@ -31,7 +31,7 @@ type Role struct {
 // General takes work and reports when its turn ends. It is also the fallback role.
 var General = Role{
 	ID:      "general",
-	Summary: "The default. Takes work from other sessions and reports each turn's end to them; may start before main.",
+	Summary: "A worker main raises with rewake space open. Takes work from other sessions and reports each turn's end to them.",
 	Play:    generalPlaybook,
 }
 
@@ -39,7 +39,7 @@ var General = Role{
 // nobody: reporting back to the sessions that reported to it would never end.
 var Main = Role{
 	ID:      "main",
-	Summary: "Hands out work and reads the reports; its own successful turns go to nobody, so reports never wake each other endlessly. rewake gives it no write permission of its own.",
+	Summary: "The session every rewake <harness> starts. Hands out work and reads the reports; its own successful turns go to nobody, so reports never wake each other endlessly. rewake gives it no write permission of its own.",
 	Silent:  true,
 	Spaces:  true,
 	Play:    mainPlaybook,
@@ -48,7 +48,7 @@ var Main = Role{
 // Write takes work and can commit changes in its working repository.
 var Write = Role{
 	ID:      "write",
-	Summary: "As general, and may commit within its own permissions. The owner's permissions stay as they are.",
+	Summary: "A worker as general that may commit within its own permissions. The owner's permissions stay as they are.",
 	Play:    writePlaybook,
 }
 

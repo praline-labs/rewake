@@ -139,15 +139,15 @@ func TestLoosePositionalsAreRefused(t *testing.T) {
 }
 
 func TestHarnessArgumentsStayRaw(t *testing.T) {
-	result, err := testTable().parse([]string{"--name", "api", agentID, "--model", "chosen-model", "--", "write the notes", "", "--json"})
+	result, err := testTable().parse([]string{"--command", "sh", agentID, "--model", "chosen-model", "--", "write the notes", "", "--json"})
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
 	if result.Call.Command == nil || result.Call.Command.Name != agentID {
 		t.Fatalf("command = %v, want %s", result.Call.Command, agentID)
 	}
-	if got := result.Call.Flag("name", ""); got != "api" {
-		t.Errorf("name = %q, want api", got)
+	if got := result.Call.Flag("command", ""); got != "sh" {
+		t.Errorf("command = %q, want sh", got)
 	}
 	// Compared element by element: joining them would hide a lost argument
 	// boundary and a dropped empty argument, which is how a prompt gets mangled.
@@ -167,11 +167,11 @@ func TestHarnessArgumentsStayRaw(t *testing.T) {
 }
 
 func TestLaunchFlagRejectedOnOtherCommands(t *testing.T) {
-	code, _, errOut := run("--name", "api", "list")
+	code, _, errOut := run("--no-intro", "list")
 	if code != ExitUsage {
 		t.Fatalf("exit = %d, want %d", code, ExitUsage)
 	}
-	if !strings.Contains(errOut, "list does not take --name") {
+	if !strings.Contains(errOut, "list does not take --no-intro") {
 		t.Errorf("unexpected refusal: %s", errOut)
 	}
 }

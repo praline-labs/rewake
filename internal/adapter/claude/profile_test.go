@@ -58,75 +58,130 @@ func TestWorkerProfileDefaults(t *testing.T) {
 		if settings["autoMemoryEnabled"] != false || !slices.Equal(settings["claudeMdExcludes"].([]any), excludes) {
 			t.Fatalf("%s: settings %v", part.ID, settings)
 		}
-		if adapter.HasFlag(plan.Args, mcpConfigFlag) || len(adapter.FlagValues(plan.Args, pluginDirFlag)) != 0 {
-			t.Fatalf("%s: an empty profile added its parts: %q", part.ID, plan.Args)
+		if deny := settings["permissions"].(map[string]any)["deny"].([]any); len(deny) != len(deniedTools) || deny[0] != "Agent" {
+			t.Fatalf("%s: the tools not denied: %v", part.ID, settings)
+		}
+		env := settings["env"].(map[string]any)
+		if settings["disableWorkflows"] != true || settings["idleCompaction"] != false || settings["disableClaudeAiConnectors"] != true || env["CLAUDE_CODE_DISABLE_CRON"] != "1" {
+			t.Fatalf("%s: the off-list: %v", part.ID, settings)
+		}
+		dir := filepath.Join(home, ".config", "rewake", "claude", "worker")
+		if adapter.HasFlag(plan.Args, mcpConfigFlag) || !slices.Contains(adapter.FlagValues(plan.Args, pluginDirFlag), dir) || slices.Contains(adapter.FlagValues(plan.Args, pluginDirFlag), filepath.Join(dir, "plugins")) {
+			t.Fatalf("%s: the folder's parts: %q", part.ID, plan.Args)
+		}
+		if intro := adapter.FlagValues(plan.Args, introFlag); len(intro) != 1 || strings.HasSuffix(intro[0], "\n\n") {
+			t.Fatalf("%s: an empty CLAUDE.md added to the briefing: %q", part.ID, intro)
 		}
 	}
 }
 
-func TestMainGetsNoProfile(t *testing.T) {
-	plan, err := profileLaunch(t, t.TempDir(), role.Main, "", nil, "--settings", "mine.json")
-	if err != nil {
+// A worker's launch makes the service folder: private, a plugin of its
+// own with an empty skills/, empty settings and instructions.
+func TestTheServiceFolderIsMade(t *testing.T) {
+	home := t.TempDir()
+	if _, err := profileLaunch(t, home, role.Write, "", nil); err != nil {
 		t.Fatal(err)
 	}
-	if adapter.HasFlag(plan.Args, settingSourcesFlag) || !slices.Equal(adapter.FlagValues(plan.Args, settingsFlag), []string{"mine.json"}) {
-		t.Fatalf("main's launch changed: %q", plan.Args)
+	dir := filepath.Join(home, ".config", "rewake", "claude", "worker")
+	if info, err := os.Stat(dir); err != nil || info.Mode().Perm() != 0o700 {
+		t.Fatalf("the folder: %v %v", info, err)
+	}
+	if info, err := os.Stat(filepath.Join(dir, "skills")); err != nil || !info.IsDir() {
+		t.Fatalf("skills/: %v", err)
+	}
+	var manifest map[string]any
+	raw, _ := os.ReadFile(filepath.Join(dir, ".claude-plugin", "plugin.json"))
+	if err := json.Unmarshal(raw, &manifest); err != nil || manifest["name"] != profilePlugin {
+		t.Fatalf("plugin.json %q: %v", raw, err)
+	}
+	for name, want := range map[string]string{"settings.json": "{}\n", "CLAUDE.md": ""} {
+		if raw, err := os.ReadFile(filepath.Join(dir, name)); err != nil || string(raw) != want {
+			t.Fatalf("%s = %q, %v", name, raw, err)
+		}
 	}
 }
 
-func TestWorkerProfileOfThePerson(t *testing.T) {
+// What the person put in the folder stays as it was.
+func TestTheServiceFolderIsNeverOverwritten(t *testing.T) {
 	home := t.TempDir()
 	dir := filepath.Join(home, ".config", "rewake", "claude", "worker")
-	if err := os.MkdirAll(filepath.Join(dir, "plugins"), 0o700); err != nil {
+	if err := os.MkdirAll(filepath.Join(dir, ".claude-plugin"), 0o700); err != nil {
 		t.Fatal(err)
 	}
-	files := map[string]string{
-		"settings.json": `{"autoMemoryEnabled": true, "language": "x", "claudeMdExcludes": ["/other/CLAUDE.md"], "env": {"DISABLE_FEEDBACK_COMMAND": "0", "OWN": "1"}}`,
-		"mcp.json":      `{"mcpServers": {}}`,
-		"CLAUDE.md":     "\nWorker rules.\n",
+	own := map[string]string{
+		"settings.json":              `{"language": "x"}`,
+		"CLAUDE.md":                  "Mine.",
+		".claude-plugin/plugin.json": `{"name": "mine"}`,
 	}
-	for name, text := range files {
+	for name, text := range own {
 		if err := os.WriteFile(filepath.Join(dir, name), []byte(text), 0o600); err != nil {
 			t.Fatal(err)
 		}
 	}
-	plan, err := profileLaunch(t, home, role.Write, "", nil)
-	if err != nil {
+	if err := os.Symlink(t.TempDir(), filepath.Join(dir, "skills")); err != nil {
 		t.Fatal(err)
 	}
-	settings := settingsOf(t, plan.Args)
-	env := settings["env"].(map[string]any)
-	if settings["autoMemoryEnabled"] != true || settings["language"] != "x" || env["DISABLE_AUTOUPDATER"] != "1" || env["DISABLE_FEEDBACK_COMMAND"] != "0" || env["OWN"] != "1" {
-		t.Fatalf("merged settings: %v", settings)
+	if _, err := profileLaunch(t, home, role.General, "", nil); err != nil {
+		t.Fatal(err)
 	}
-	if excludes := settings["claudeMdExcludes"].([]any); len(excludes) != 2 || excludes[1] != "/other/CLAUDE.md" {
-		t.Fatalf("the person's exclude replaced rewake's: %v", excludes)
+	for name, text := range own {
+		if raw, _ := os.ReadFile(filepath.Join(dir, name)); string(raw) != text {
+			t.Errorf("%s became %q", name, raw)
+		}
 	}
-	if !slices.Contains(adapter.FlagValues(plan.Args, pluginDirFlag), filepath.Join(dir, "plugins")) || !slices.Equal(adapter.FlagValues(plan.Args, mcpConfigFlag), []string{filepath.Join(dir, "mcp.json")}) {
-		t.Fatalf("plugins or MCP servers missing: %q", plan.Args)
-	}
-	intro := adapter.FlagValues(plan.Args, introFlag)
-	if len(intro) != 1 || !strings.HasSuffix(intro[0], "\n\nWorker rules.") || !strings.Contains(intro[0], "rewake") {
-		t.Fatalf("instructions after the briefing: %q", intro)
+	if info, err := os.Lstat(filepath.Join(dir, "skills")); err != nil || info.Mode()&os.ModeSymlink == 0 {
+		t.Errorf("the linked skills/ was replaced: %v", err)
 	}
 }
 
-func TestWorkerProfileRefusals(t *testing.T) {
-	home := t.TempDir()
-	for _, flag := range []string{settingsFlag, settingSourcesFlag} {
-		if _, err := profileLaunch(t, home, role.Write, "", nil, flag, "x"); err == nil || !strings.Contains(err.Error(), "settings.json") {
-			t.Fatalf("a worker's %s: %v", flag, err)
+// The person's denials add to rewake's; only rewake's own key gives a
+// denied tool back, and it is not passed on.
+func TestADeniedToolComesBackOnlyByRewakesKey(t *testing.T) {
+	rest := func(drop ...string) []any {
+		var out []any
+		for _, tool := range deniedTools {
+			if !slices.Contains(drop, tool) {
+				out = append(out, tool)
+			}
+		}
+		return out
+	}
+	for text, want := range map[string][]any{
+		`{"permissions": {"deny": ["WebFetch"], "allow": ["Agent"]}}`:            append(rest(), "WebFetch"),
+		`{"rewake": {"keep": ["Agent", "SendMessage"]}}`:                         rest("Agent", "SendMessage"),
+		`{"rewake": {"keep": ["Agent"]}, "permissions": {"deny": ["WebFetch"]}}`: append(rest("Agent"), "WebFetch"),
+		`{"rewake": {"keep": []}, "env": {"CLAUDE_CODE_DISABLE_CRON": "0"}}`:     rest(),
+	} {
+		home := t.TempDir()
+		dir := filepath.Join(home, ".config", "rewake", "claude", "worker")
+		if err := os.MkdirAll(dir, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, "settings.json"), []byte(text), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		plan, err := profileLaunch(t, home, role.Write, "", nil)
+		if err != nil {
+			t.Fatalf("%s: %v", text, err)
+		}
+		settings := settingsOf(t, plan.Args)
+		deny := settings["permissions"].(map[string]any)["deny"].([]any)
+		if _, passed := settings[rewakeKey]; passed || !slices.Equal(deny, want) {
+			t.Errorf("%s: settings %v", text, settings)
 		}
 	}
+	home := t.TempDir()
 	dir := filepath.Join(home, ".config", "rewake", "claude", "worker")
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(dir, "settings.json"), []byte("[1]"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := profileLaunch(t, home, role.Write, "", nil); err == nil || !strings.Contains(err.Error(), "not a JSON object") {
-		t.Fatalf("a broken settings.json: %v", err)
+	for _, text := range []string{`{"rewake": true}`, `{"rewake": {"subagents": true}}`, `{"rewake": {"keep": ["Bash"]}}`, `{"rewake": {"keep": "Agent"}}`, `{"permissions": {"deny": "Agent"}}`} {
+		if err := os.WriteFile(filepath.Join(dir, "settings.json"), []byte(text), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := profileLaunch(t, home, role.Write, "", nil); err == nil {
+			t.Errorf("%s was accepted", text)
+		}
 	}
 }
 

@@ -7,16 +7,16 @@ session has and what follows from it, and how its name is chosen. The catalogue 
 ## Roles
 
 A session has a role, from the catalogue in `internal/core/role`: one value per role
-and a line in its list, the way a harness is added. The launch flag `--<id>`,
-the help line and whether its turns are reported come from that value.
+and a line in its list, the way a harness is added. The help line and whether its turns are
+reported come from that value; the launch flag `--<id>` exists only in the `rewaketest` build.
 System text lives in `internal/core/brief`, with a reviewed snapshot
 for each role; harness adapters only pass the rendered strings. The record keeps the role's id.
 
-| role | flag | turns reported | its playbook says |
+| role | started by | turns reported | its playbook says |
 |---|---|---|---|
-| `general` | `--general` | yes | take work, end your turn with the result; no Git metadata |
-| `main` | `--main` | no | hand out work, read reports; you cannot start sessions |
-| `write` | `--write` | yes | take work, end your turn with the result; you can commit when authorized |
+| `general` | main, `space open --role general` | yes | take work, end your turn with the result; no Git metadata |
+| `main` | the person, `rewake <harness>` | no | hand out work, read reports; you cannot start sessions |
+| `write` | main, `space open` (the default role) | yes | take work, end your turn with the result; you can commit when authorized |
 
 The briefing carries the role's whole playbook, the text of
 [what a session is told](#what-a-session-is-told); the last column only names its
@@ -24,30 +24,29 @@ point. Grants left the code by the owner's decision of October 18, 2026, and the
 lines about them, and the role's `GitWrite` mark, went with them: a write session commits
 within its own permissions.
 
-**Owner decision, September 17, 2026:** omitted role flags always mean general,
-even in an empty room or after main exits. This supersedes automatic main
-selection. Only explicit `--main` creates an orchestrator; it refuses with the
-occupying session's name when main is already live. The same pid/start-time and
-namespace checks as list determine liveness. `--general` and `--write` remain
-explicit alternatives. A name prefix never chooses a role, and no session is
-promoted when a main leaves. The three role flags cannot be combined, and general
-or write sessions may start before any main exists. The refusal of a second `--main`
-names the live main and suggests stopping or restarting it, or launching without
-`--main` to join as general.
+**Owner decision, October 19, 2026** (superseding that of September 17, under which an
+unflagged launch was general): a person's launch, `rewake <harness>`, is always main, in the
+room of its directory, and has no role or name flag; workers are raised by main alone, with
+`rewake space open`, and a worker's launch takes its name and role from the space's record
+([launch.md](launch.md#a-space-for-a-worker)). A second main in a directory whose main runs is
+refused, exit 1, naming it: one main per directory, and another directory is another room. The
+same pid/start-time and namespace checks as list determine liveness. No session is promoted
+when a main leaves. The `rewaketest` build keeps `--main`, `--general`, `--write` and `--name`
+for the workflow suite's direct worker launches; there, too, no role flag means main.
 
 The room's `.launch.lock` covers inspection of live sessions, role choice and
 name publication. A starting wrapper is already a live claimant before its
 harness starts. Concurrent explicit launches cannot claim two mains. The lock is released
 before preparing or running the harness. The record, launch note and intro say
-which role was chosen and why.
+which role was chosen and why: "rewake <harness> always starts main, one per directory", or
+"raised by main with rewake space open as <role>".
 
 The main session exists to stop a loop: it reads the reports of its workers,
 and if its own turns were reported to them, each report would wake the other
 side for good. A silent role records no waits and emits no successful turn reports. A failed turn
 is still observed: an error from main stays in its own unread mailbox
-without waking the same failing conversation. Old records with role `worker` are read as `general`; omitted role flags and --general create
-reporting sessions. The zero role value remains a reporting fallback inside the
-catalogue; an omitted launch role is resolved separately under the room lock.
+without waking the same failing conversation. Old records with role `worker` are read as `general`. The zero role value remains a
+reporting fallback inside the catalogue.
 The write role reports like general.
 
 ## What a session is told
@@ -116,10 +115,10 @@ read "nothing owed" and skipped a new unread task twice:
 ## Names
 
 **Owner decision, September 17, 2026:** one rule for every role and harness.
-Select the actual role under the room lock, use its ID as the default prefix,
-then append `-<harness ID>`. `--name <prefix>` replaces only the prefix:
-`rewake --write claude` starts write-claude; adding `--name megamozg` starts
-megamozg-claude. No role flag produces general-claude; explicit --main produces main-claude.
+Use the role's ID as the default prefix, then append `-<harness ID>`: `rewake claude` starts
+main-claude. A worker's prefix is the space's name main chose, `rewake space open api …`
+starting api-claude; only the `rewaketest` build's `--name <prefix>` replaces the prefix on a
+launch.
 
 Automatic conflicts add -2, -3 after the harness suffix; explicit conflicts
 refuse with the complete address. Prefix and result must match

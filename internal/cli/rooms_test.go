@@ -84,19 +84,6 @@ func TestRoomAndRoleAreVisibleInIdentity(t *testing.T) {
 	}
 }
 
-func TestRoomsAndWorkerAreLaunchFlagsOnly(t *testing.T) {
-	for _, args := range [][]string{{"--room", "red", "--general", aHarness(t)}, {"--room=blue", "--main", agentID}} {
-		if _, err := testTable().parse(args); err != nil {
-			t.Errorf("launch %q: %v", args, err)
-		}
-	}
-	for _, command := range []string{"list", "send", "inbox", "whoami"} {
-		if _, err := testTable().parse([]string{"--room", "red", command}); err == nil {
-			t.Errorf("room override accepted by %s", command)
-		}
-	}
-}
-
 func TestLegacyRootRecordsAreIgnored(t *testing.T) {
 	root := filepath.Join(t.TempDir(), "state")
 	t.Setenv(state.DirEnv, root)
@@ -114,14 +101,33 @@ func TestLegacyRootRecordsAreIgnored(t *testing.T) {
 	}
 }
 
-func TestAnOccupiedMainIsAUsageRefusal(t *testing.T) {
-	t.Setenv(state.RoomEnv, state.DefaultRoom)
+// No command takes a room: every command's is its session's or its
+// directory's.
+func TestNoCommandTakesARoom(t *testing.T) {
+	for _, command := range []string{"list", "send", "inbox", "whoami"} {
+		if _, err := testTable().parse([]string{"--room", "red", command}); err == nil {
+			t.Errorf("a room accepted by %s", command)
+		}
+	}
+}
+
+// A second main in one directory is refused, exit 1, naming the directory
+// and the main that runs there.
+func TestASecondMainInTheDirectoryIsRefused(t *testing.T) {
+	launchDir := t.TempDir()
+	t.Chdir(launchDir)
+	room, resolved, err := state.RoomOf(launchDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv(state.RoomEnv, room)
 	dir := liveSession(t, "leader")
 	markMain(t, dir, "leader")
 	// The launch comes from a shell outside any session.
 	outsideAnySession(t)
-	code, _, errOut := run("--main", "--name", "other", agentID)
-	if code != ExitUsage || !strings.Contains(errOut, "leader") || !strings.Contains(errOut, "without --main") {
+	t.Setenv(state.RoomEnv, "")
+	code, _, errOut := run(agentID)
+	if code != ExitFailed || !strings.Contains(errOut, resolved+" already has main leader") || !strings.Contains(errOut, "one main per directory") {
 		t.Errorf("refusal=%d %s", code, errOut)
 	}
 }

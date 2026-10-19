@@ -55,7 +55,7 @@ func documentedForms(launch string) []formCase {
 		// Refused by the handler before any read.
 
 		{[]string{launch}, change},
-		{[]string{"--room", "work", "--name", "api", launch}, change},
+		{[]string{launch}, change},
 		{[]string{"send", "api", "hello"}, change},
 		{[]string{"withdraw", "8d4ddd85"}, change},
 		{[]string{"edit", "8d4ddd85", "new text"}, change},

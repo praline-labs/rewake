@@ -7,21 +7,22 @@ import (
 	"github.com/praline-labs/rewake/internal/adapter"
 )
 
-// Worker is an ordinary launch owned by a space. Name and room come from the
-// space, never from an alias; Worktree is empty when no checkout was requested.
+// Worker is an ordinary launch owned by a space. Its name, role and room are
+// not words of it: the launch reads them from the space's record, named by
+// the space host's REWAKE_SPACE. Worktree is empty when no checkout was
+// requested.
 type Worker struct {
-	Name, Room, Role string
-	Command          string
-	NoIntro          bool
-	Args             []string
-	Worktree         string
-	Conversation     string
+	Command      string
+	NoIntro      bool
+	Args         []string
+	Worktree     string
+	Conversation string
 }
 
 // WorkerArgs builds the complete command the detached space host runs. It
 // adds harness flags before a prompt terminator, preserving literal input.
 func WorkerArgs(h adapter.Harness, worker Worker) ([]string, error) {
-	words := []string{"--name", worker.Name, "--room", worker.Room, "--" + worker.Role}
+	var words []string
 	if worker.Command != "" {
 		words = append(words, "--command", worker.Command)
 	}

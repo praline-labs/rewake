@@ -17,7 +17,14 @@ func TestRoomsHaveSeparateStateTrees(t *testing.T) {
 		t.Setenv(RoomEnv, room)
 		want := room
 		if want == "" {
-			want = DefaultRoom
+			// Outside a session, the room of the working directory.
+			working, err := os.Getwd()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if want, _, err = RoomOf(working); err != nil {
+				t.Fatal(err)
+			}
 		}
 		made, err := Bootstrap(base, want)
 		if err != nil {
@@ -172,4 +179,42 @@ func tree(t *testing.T, dir string) string {
 		t.Fatal(err)
 	}
 	return strings.Join(lines, "; ")
+}
+
+// A room's name is the directory's last element made a name and a hash of
+// the whole resolved path: deterministic, the same through a symlink, apart
+// for two directories named alike, and within the 32 characters of a name.
+func TestARoomIsNamedByItsDirectory(t *testing.T) {
+	parent := t.TempDir()
+	first := filepath.Join(parent, "a", "My Project!")
+	second := filepath.Join(parent, "b", "My Project!")
+	long := filepath.Join(parent, strings.Repeat("Long_Name.", 6))
+	for _, dir := range []string{first, second, long, filepath.Join(parent, "...")} {
+		if err := os.MkdirAll(dir, 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	link := filepath.Join(parent, "link")
+	if err := os.Symlink(first, link); err != nil {
+		t.Fatal(err)
+	}
+	room, resolved, err := RoomOf(link)
+	if err != nil || resolved != first || !strings.HasPrefix(room, "my-project-") || !ValidName(room) {
+		t.Fatalf("through a symlink: %q %q %v", room, resolved, err)
+	}
+	if again, _, _ := RoomOf(first); again != room {
+		t.Fatalf("the same directory named %q and %q", room, again)
+	}
+	if other, _, _ := RoomOf(second); other == room {
+		t.Fatalf("two directories named alike share %q", room)
+	}
+	for _, dir := range []string{long, filepath.Join(parent, "..."), "/"} {
+		name, _, err := RoomOf(dir)
+		if err != nil || !ValidName(name) || len(name) > 32 {
+			t.Errorf("%s: %q %v", dir, name, err)
+		}
+	}
+	if _, _, err := RoomOf(filepath.Join(parent, "missing")); err == nil {
+		t.Error("a missing directory named a room")
+	}
 }

@@ -279,7 +279,7 @@ func stateLabel(view worktreeView) string {
 func worktreeLaunch(catalog adapter.Catalog) []string {
 	for _, h := range catalog.All() {
 		if _, ok := h.(adapter.WorktreeHarness); ok {
-			return []string{"rewake --main " + h.ID() + " --worktree"}
+			return []string{"rewake " + h.ID() + " --worktree"}
 		}
 	}
 	return nil

@@ -103,8 +103,8 @@ refuses, naming both versions. `REWAKE_PI=<pi package directory or entry script>
 environment names another copy instead.
 
 **Once, for the shell: its executable.** The npm package carries rewake's shell compiled beside
-the binary; a build from the checkout has none, and `rewake2 --shell` refuses, naming where it
-looked. Compile it there with [Bun](https://bun.sh), from the checkout, and again when an update
+the binary; a build from the checkout has none, and `rewake2 claude` at a terminal refuses, naming
+where it looked. Compile it there with [Bun](https://bun.sh), from the checkout, and again when an update
 changes `shell/` (`bun-linux-arm64` on an arm64 machine):
 
 ```bash
@@ -145,31 +145,20 @@ of its own: inside a session the agent types `rewake inbox`, `rewake send` and s
 launch puts the directory of the binary that started it first on the session's `PATH`, so in a
 2.0 session `rewake` is 2.0 and in a 1.0.3 session it stays 1.0.3.
 
-**Start a room.** Each session in a terminal of its own — your own terminal, not a shell an
-agent runs: started inside a rewake session, a launch refuses and exits 2. Start main first,
-in the project's directory:
+**Start a room.** Start main in the project's directory, from your own terminal, not a shell an
+agent runs (started inside a rewake session, a launch refuses and exits 2):
 
 ```bash
-rewake2 --main claude
+rewake2 claude
 ```
 
-Then workers, each in another terminal:
-
-```bash
-rewake2 --write claude
-rewake2 pi
-```
-
-They are `main-claude`, `write-claude` and `general-pi`; `--name api` makes the second one
-`api-claude`. Sessions of 2.0 find each other by the state base and the room: every `rewake2`
-uses the same base, and the room is `default` unless `--room <name>` names another. They never
-see sessions of 1.0.3, nor 1.0.3 theirs.
-
-From main, a worker can also be started without a terminal of your own: ask main to open a
-space, and it runs `rewake space open api --harness claude` (or `--harness pi`); the worker
-`api-claude` joins the room and ends when main ends. To see its screen and answer what it asks,
-start main in rewake's shell, `rewake2 --shell --main claude`: from 120 columns the chosen worker
-shows beside main, and `Ctrl-\` then `n` or a digit chooses it.
+It is `main-claude`, in the room of that directory, and runs in rewake's shell. A second
+`rewake2 claude` in the same directory is refused; another directory is another room. Workers
+are raised by main alone: ask it for one, and it runs `rewake space open api --alias <alias>` or
+`--harness claude`; the worker `api-claude` joins main's room and ends when main ends. From 120
+columns the chosen worker shows beside main, and `Ctrl-\` then `n` or a digit chooses it.
+`rewake2 pi` is main on pi, without the shell and without workers. Sessions of 2.0 never see
+sessions of 1.0.3, nor 1.0.3 theirs.
 `rewake2 space list` shows the spaces and what they left.
 
 **Go back to 1.0.3.** End the 2.0 sessions as usual (`/exit` in each; a space's worker ends

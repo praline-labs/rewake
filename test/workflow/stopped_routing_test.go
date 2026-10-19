@@ -86,7 +86,7 @@ func playStoppedRouting(t *testing.T, c *Case, iso *Isolation, col column) []tel
 				kinds = append(kinds, "read "+message.Kind)
 			}
 		}
-		mailbox := filepath.Join(iso.Room("default"), "inbox", lead.name)
+		mailbox := filepath.Join(iso.Room(iso.HomeRoom()), "inbox", lead.name)
 		files, _ := filepath.Glob(filepath.Join(mailbox, "*.json"))
 		unread, _ := filepath.Glob(filepath.Join(mailbox, "unread", "*.json"))
 		for _, file := range append(files, unread...) {

@@ -14,9 +14,12 @@ import (
 
 // listModel is the machine form of the session list.
 type listModel struct {
-	Directory string        `json:"directory"`
-	Room      string        `json:"room"`
-	Sessions  []sessionView `json:"sessions"`
+	Directory string `json:"directory"`
+	Room      string `json:"room"`
+	// RoomDirectory is the launch directory the room is named for; empty
+	// for a room named otherwise.
+	RoomDirectory string        `json:"roomDirectory,omitempty"`
+	Sessions      []sessionView `json:"sessions"`
 	// Unknown are the sessions whose record cannot be read: whether they
 	// run is unknown, so they are shown rather than left out.
 	Unknown []unknownSessionView `json:"unknown,omitempty"`
@@ -65,17 +68,22 @@ func handleList(ctx *Context, _ Call) error {
 	if err != nil {
 		return failf("%v", err)
 	}
-	return printValue(ctx, listModel{Directory: base, Room: room, Sessions: views, Unknown: unknown}, func() []string {
+	model := listModel{Directory: base, Room: room, RoomDirectory: state.RoomDirectory(dir), Sessions: views, Unknown: unknown}
+	label := room
+	if model.RoomDirectory != "" {
+		label += " (" + model.RoomDirectory + ")"
+	}
+	return printValue(ctx, model, func() []string {
 		var lines []string
 		switch {
 		case len(sessions) > 0:
-			lines = sessionTable(room, views, visible)
+			lines = sessionTable(label, views, visible)
 		case len(unknown) > 0:
-			lines = []string{"Room: " + room}
+			lines = []string{"Room: " + label}
 		default:
 			return []string{
-				fmt.Sprintf("No sessions are running in room %s.", room),
-				"Start one: rewake --main --name api " + launchExample(ctx.table.catalog),
+				fmt.Sprintf("No sessions are running in room %s.", label),
+				"Start main in this room's directory: rewake " + launchExample(ctx.table.catalog) + "; main raises the workers.",
 			}
 		}
 		for _, session := range unknown {
