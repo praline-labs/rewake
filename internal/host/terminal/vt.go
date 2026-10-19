@@ -53,6 +53,14 @@ func newVT(size Size) (emulator, error) {
 	// A clipboard request is taken and dropped: there is no clipboard here
 	// to set, and none to read back to the program.
 	emu.RegisterOscHandler(52, func([]byte) bool { return true })
+	// The library answers a mode it does not know as "not recognized", and a
+	// program that asks DECRQM 2026 then draws without synchronized output;
+	// a client's widget shows each piece of such a frame as it comes. Reset
+	// is "recognized, off": the library then follows h and l, and the bytes
+	// reach the widget unchanged, which batches the frame itself. This
+	// emulator draws at once, which is how a terminal that ignores the
+	// batching behaves. A full reset (ESC c) forgets it.
+	_, _ = emu.Write([]byte("\x1b[?2026l"))
 	v.keyboard()
 	v.followPen()
 	return v, nil

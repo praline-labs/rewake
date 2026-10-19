@@ -45,3 +45,32 @@ func TestATitleIsNeverDrawn(t *testing.T) {
 		}
 	}
 }
+
+// DECRQM 2026 is answered as a known mode, reset and then set inside a
+// frame, so a program that asks before it draws wraps its frames in
+// synchronized output, which the widget of a host-fed pane batches.
+func TestSynchronizedOutputIsAnsweredAsKnown(t *testing.T) {
+	emulator, err := newVT(Size{Cols: 8, Rows: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	vt := emulator.(*vtEmulator)
+	defer func() { _ = vt.stopReplies() }()
+	ask := func(want string) {
+		t.Helper()
+		// The library's reply pipe is synchronous: the write waits for a reader.
+		got := make(chan string)
+		go func() {
+			buf := make([]byte, 64)
+			n, _ := vt.replies().Read(buf)
+			got <- string(buf[:n])
+		}()
+		vt.write([]byte("\x1b[?2026$p"))
+		if g := <-got; g != want {
+			t.Fatalf("answer %q, want %q", g, want)
+		}
+	}
+	ask("\x1b[?2026;2$y")
+	vt.write([]byte("\x1b[?2026h"))
+	ask("\x1b[?2026;1$y")
+}
