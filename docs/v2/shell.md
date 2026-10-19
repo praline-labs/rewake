@@ -8,10 +8,10 @@ is the one the owner approved for the host mode: from 120 columns, once a worker
 the left and the chosen worker on the right, half of the width less a divider column, the
 narrower part when the width is odd; below 120 columns, with no worker, or zoomed, the focused
 program takes the whole width and the bar switches the window between main and the workers. The
-bar numbers `main` 0 and the workers from 1, the focused tab bracketed; a click on a tab or in a
-pane focuses it. The prefix is Ctrl+\\, which no harness binds. The host mode was removed on
-October 19, 2026, deleted rather than archived (the owner's rule: what is no longer needed goes
-at once). "Checked live" below means the spike of October 19, 2026: Claude Code
+bar is a button per program and a line of key hints under it ([below](#the-bar)); a click on a
+button or in a pane focuses it. The prefix is Ctrl+\\, which no harness binds. The host mode was
+removed on October 19, 2026, deleted rather than archived (the owner's rule: what is no longer needed
+goes at once). "Checked live" below means the spike of October 19, 2026: Claude Code
 2.1.302 and pi 1.2.0 in two panes of `@opentui/core` 0.6.6 on Bun 1.4.0, under a stand-in
 terminal in a pty; the owner checked step 1 on their own terminal the same day.
 
@@ -169,6 +169,25 @@ mode:
   each session's activity, model, effort and context, `rewake space list --json` for the spaces, which
   gains each open space's socket path so the shell never builds a path itself. A stream comes only
   if polling is felt.
+
+## The bar
+
+The owner's wishes of October 19, 2026. The two bottom lines are the shell's; the panes take the
+rest, in the wide layout and the narrow one alike.
+
+- **The buttons** (`shell/src/bar.tsx`): ` main `, then each worker by its name, in the order the
+  spaces opened, with no number — the prefix's digits still choose by place. The focused one is
+  filled in its colour, bold, with near-black or near-white text, whichever reads; the others sit
+  on a grey with their colour as the text. Main's colour is apart from the workers': the person's
+  palette entry 4 for main and 2 for the workers, 8 for the grey, each with a fallback of its own
+  (`shell/src/theme.ts`). In the wide layout, while main has the focus, the worker shown beside it
+  is underlined. A zoom shows ` zoomed ` at the right end.
+- **The hints** (`shell/src/hints.ts`): what the keys do now — where typing goes, the prefix
+  commands that apply, and after a Ctrl+\\ the commands themselves until one is taken or the two
+  seconds pass. A hint is a row of one table keyed by the context (main focused, a worker focused,
+  the prefix waiting), kept by a `when` over the focus, the zoom and the number of workers; a new
+  hint or a new context is a row there. The keys are drawn in the focused program's colour, the
+  words in the terminal's foreground; a line longer than the width is cut at its end.
 
 ## How rewake starts the shell, and how it ships
 

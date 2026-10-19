@@ -42,19 +42,27 @@ const codeOf = (seq: string) => /^\x1b\[(\d+)[;u]/.exec(seq)?.[1];
 
 // prefixHandler is the input handler: true takes the sequence from OpenTUI.
 // The prefix waits for one key; any other key after it is dropped, and the
-// releases of the prefix and of the key taken are taken too.
+// releases of the prefix and of the key taken are taken too. waiting hears
+// when a prefix starts and stops waiting, for the hint line.
 export function prefixHandler(
   run: (command: Command) => void,
+  waiting: (on: boolean) => void = () => {},
   now = Date.now,
 ): (seq: string) => boolean {
   let pendingAt: number | undefined;
   let taken: string | undefined;
+  let lapse: ReturnType<typeof setTimeout> | undefined;
+  const settle = () => {
+    clearTimeout(lapse);
+    pendingAt = undefined;
+    waiting(false);
+  };
   return (seq) => {
     const released = release.test(seq);
-    if (pendingAt !== undefined && now() - pendingAt > prefixLapse) pendingAt = undefined;
+    if (pendingAt !== undefined && now() - pendingAt > prefixLapse) settle();
     if (pendingAt !== undefined) {
       if (released) return true;
-      pendingAt = undefined;
+      settle();
       taken = codeOf(seq);
       const command = commandOf(seq);
       if (command) run(command);
@@ -62,6 +70,11 @@ export function prefixHandler(
     }
     if (isPrefix(seq)) {
       pendingAt = now();
+      waiting(true);
+      clearTimeout(lapse);
+      lapse = setTimeout(() => {
+        if (pendingAt !== undefined) settle();
+      }, prefixLapse);
       return true;
     }
     if (released) {

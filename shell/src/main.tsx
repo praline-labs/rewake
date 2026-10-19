@@ -1,6 +1,7 @@
 // rewake's shell (docs/v2/shell.md): main on the left, from 120 columns the
-// chosen worker on the right, a bar below choosing the worker; below 120
-// columns the bar switches the whole window. Started by rewake --shell as
+// chosen worker on the right, a bar below choosing the worker and a line of
+// key hints under it; below 120 columns the bar switches the whole window.
+// Started by rewake --shell as
 //   rewake-shell --room <room> -- <main's command line>
 
 import {
@@ -11,12 +12,14 @@ import {
 } from "@opentui/core";
 import { extend, render, useTerminalDimensions } from "@opentui/solid";
 import { createEffect, createSignal, For, Show } from "solid-js";
+import { Bar, Hints } from "./bar.tsx";
 import { askColors, keepDefaultForeground, seedOf } from "./colors.ts";
 import { endMain, tailText, watchTerminal } from "./ending.ts";
 import { type Command, prefixHandler } from "./keys.ts";
 import { pollRoom, type Space } from "./room.ts";
 import { Scanner } from "./scan.ts";
 import { connectWorker, type MainRun, type Source, startMain } from "./sources.ts";
+import { themeOf } from "./theme.ts";
 
 const args = process.argv.slice(2);
 const split = args.indexOf("--");
@@ -77,6 +80,8 @@ const [workers, setWorkers] = createSignal<Pane[]>([]);
 const [focused, setFocused] = createSignal("main");
 const [chosen, setChosen] = createSignal<string>();
 const [zoomed, setZoomed] = createSignal(false);
+// prefixWaits is a typed Ctrl+\ waiting for its command.
+const [prefixWaits, setPrefixWaits] = createSignal(false);
 const allPanes = () => [mainPane, ...workers()];
 const paneOf = (id: string | undefined) => allPanes().find((p) => p.id === id);
 
@@ -89,11 +94,12 @@ const renderer = await createCliRenderer({
   exitOnCtrlC: false,
   exitSignals: [],
   useMouse: true,
-  prependInputHandlers: [prefixHandler(run)],
+  prependInputHandlers: [prefixHandler(run, setPrefixWaits)],
 });
 const colors = await askColors(renderer);
 const seed = seedOf(colors);
 standIn = seed.standIn;
+const theme = themeOf(colors);
 
 // feed passes a program's bytes to its pane, after the scanner took what
 // the widget would swallow.
@@ -243,31 +249,6 @@ pressed = (id) => {
   if (id !== focused()) show(id);
 };
 
-function Bar(props: { width: number }) {
-  const tabs = () =>
-    allPanes().map((p, i) => {
-      const label = ` ${i} ${p.label} `;
-      return p.id === focused() ? `[${label.trim()}]` : label;
-    });
-  const hint = () => `  Ctrl+\\ n p 0-9 ← → z${zoomed() ? "  zoomed" : ""}`;
-  // A click on a tab shows it.
-  const click = (x: number) => {
-    let col = 0;
-    tabs().forEach((tab, i) => {
-      if (x >= col && x < col + tab.length) show(allPanes()[i]?.id);
-      col += tab.length + 1;
-    });
-  };
-  return (
-    <text
-      height={1}
-      width={props.width}
-      content={(tabs().join(" ") + hint()).slice(0, props.width)}
-      onMouseDown={(e: { x: number }) => click(e.x)}
-    />
-  );
-}
-
 function App() {
   const dims = useTerminalDimensions();
   const wide = () => dims().width >= 120 && chosen() !== undefined && !zoomed();
@@ -275,7 +256,9 @@ function App() {
   const shown = (p: Pane) => (wide() ? p === mainPane || p.id === chosen() : p.id === focused());
   const widthOf = (p: Pane) =>
     !wide() ? dims().width : p === mainPane ? dims().width - 1 - right() : right();
-  const height = () => Math.max(dims().height - 1, 1);
+  // The panes leave the two bottom lines to the bar and the hints.
+  const height = () => Math.max(dims().height - 2, 1);
+  const focusedPane = () => paneOf(focused()) ?? mainPane;
   return (
     <box flexDirection="column" width="100%" height="100%">
       <box flexDirection="row" height={height()}>
@@ -303,7 +286,25 @@ function App() {
           )}
         </For>
       </box>
-      <Bar width={dims().width} />
+      <Bar
+        tabs={allPanes().map((p) => ({ id: p.id, label: p.label, main: p === mainPane }))}
+        focused={focused()}
+        chosen={wide() && focused() === "main" ? chosen() : undefined}
+        zoomed={zoomed()}
+        theme={theme}
+        pick={show}
+      />
+      <Hints
+        context={{
+          focus: focusedPane() === mainPane ? "main" : "worker",
+          name: focusedPane().label,
+          prefix: prefixWaits(),
+          zoomed: zoomed(),
+          workers: workers().length,
+        }}
+        theme={theme}
+        accent={focusedPane() === mainPane ? theme.main : theme.worker}
+      />
     </box>
   );
 }

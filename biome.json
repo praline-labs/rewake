@@ -50,7 +50,7 @@
   },
   "overrides": [
     {
-      "includes": ["shell/src/main.tsx"],
+      "includes": ["shell/src/main.tsx", "shell/src/bar.tsx"],
       "linter": { "rules": { "a11y": { "noStaticElementInteractions": "off" } } }
     },
     {
