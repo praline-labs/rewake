@@ -35,8 +35,7 @@ const table: Record<"prefix" | "main" | "worker", Entry[]> = {
     { keys: "1-9", does: "a worker by place", when: hasWorkers },
     { keys: "0/m", does: "main", when: (c) => c.focus === "worker" },
     { keys: "z", does: (c) => (c.zoomed ? "end the zoom" : "zoom") },
-    { keys: "Ctrl+\\", does: (c) => `send it to ${c.name}` },
-    { keys: "other", does: "cancel" },
+    { keys: "Ctrl+\\ again", does: (c) => `pass Ctrl+\\ to ${c.name}` },
   ],
   main: [
     { lead: true, keys: "keys", does: "go to main" },
