@@ -29,8 +29,18 @@ export type Frame = {
   tokensBefore?: number;
   tokensAfter?: number;
 };
-type Waiter = { resolve: (frame: Frame) => void; reject: (error: Error) => void; timer: ReturnType<typeof setTimeout> };
-export type Link = { socket: Socket; thread: string; ready: boolean; next: number; waiting: Map<number, Waiter> };
+type Waiter = {
+  resolve: (frame: Frame) => void;
+  reject: (error: Error) => void;
+  timer: ReturnType<typeof setTimeout>;
+};
+export type Link = {
+  socket: Socket;
+  thread: string;
+  ready: boolean;
+  next: number;
+  waiting: Map<number, Waiter>;
+};
 export type Turn = { id: string; link: Link; text: string; reason: string; interrupted?: string };
 
 const maxFrame = 4 << 20;
@@ -44,10 +54,18 @@ export default function (pi: ExtensionAPI) {
   let retry: ReturnType<typeof setTimeout> | undefined;
   let delay = 250;
   let turn: Turn | undefined;
-  const managed = management(pi, () => context, () => current, () => turn,
-    (link, fields) => { void ask(link, fields).catch(() => {
-      if (fields.op !== "state") warn("compaction observation was not acknowledged; ask main to check its outcome");
-    }); });
+  const managed = management(
+    pi,
+    () => context,
+    () => current,
+    () => turn,
+    (link, fields) => {
+      void ask(link, fields).catch(() => {
+        if (fields.op !== "state")
+          warn("compaction observation was not acknowledged; ask main to check its outcome");
+      });
+    },
+  );
 
   function warn(message: string) {
     if (context?.hasUI) context.ui.notify(`rewake: ${message}`, "warning");
@@ -69,8 +87,9 @@ export default function (pi: ExtensionAPI) {
         reject(new Error(`no answer to ${fields.op}`));
       }, bound);
       link.waiting.set(id, { resolve, reject, timer });
-      try { send(link, { ...fields, id }); }
-      catch (error) {
+      try {
+        send(link, { ...fields, id });
+      } catch (error) {
         clearTimeout(timer);
         link.waiting.delete(id);
         reject(error);
@@ -101,31 +120,58 @@ export default function (pi: ExtensionAPI) {
       return;
     }
     const respond = (reply: Partial<Frame>) => {
-      try { send(link, { op: "answer", id: frame.id, ...reply }); }
-      catch { close(link); }
+      try {
+        send(link, { op: "answer", id: frame.id, ...reply });
+      } catch {
+        close(link);
+      }
     };
-    if (link !== current || !link.ready || !context || frame.thread !== context.sessionManager.getSessionId()) {
-      respond({ outcome: "refused", reason: "not the selected conversation",
-        error: "the delivery conversation is no longer current" });
+    if (
+      link !== current ||
+      !link.ready ||
+      !context ||
+      frame.thread !== context.sessionManager.getSessionId()
+    ) {
+      respond({
+        outcome: "refused",
+        reason: "not the selected conversation",
+        error: "the delivery conversation is no longer current",
+      });
       return;
     }
-    if (frame.op === "state") { respond({ ok: true, state: managed.sample() }); return; }
+    if (frame.op === "state") {
+      respond({ ok: true, state: managed.sample() });
+      return;
+    }
     if (frame.op === "control") {
-      void managed.control(link, frame).then(respond).catch(() => respond({ outcome: "failed", open: true,
-        detail: "native control did not return an outcome" }));
+      void managed
+        .control(link, frame)
+        .then(respond)
+        .catch(() =>
+          respond({
+            outcome: "failed",
+            open: true,
+            detail: "native control did not return an outcome",
+          }),
+        );
       return;
     }
     let reply: Partial<Frame>;
     if (frame.op !== "wake") reply = { error: "unknown host operation" };
-    else if (typeof frame.notice !== "string" || !frame.notice) reply = { error: "a wake needs a notice" };
+    else if (typeof frame.notice !== "string" || !frame.notice)
+      reply = { error: "a wake needs a notice" };
     else if (managed.busy()) reply = { pending: true, error: "compaction in progress" };
     else {
       const steered = !context.isIdle();
       try {
-        pi.sendMessage({ customType: "rewake_notice", content: frame.notice, display: true },
-          { triggerTurn: true, deliverAs: "steer" });
+        pi.sendMessage(
+          { customType: "rewake_notice", content: frame.notice, display: true },
+          { triggerTurn: true, deliverAs: "steer" },
+        );
         reply = { ok: true, steered };
-      } catch { reply = { error: "the harness did not accept the notice" }; }
+      } catch {
+        reply = { error: "the harness did not accept the notice" };
+      }
     }
     respond(reply);
   }
@@ -157,16 +203,27 @@ export default function (pi: ExtensionAPI) {
           if (buffer.length > maxFrame) close(link);
           return;
         }
-        if (end > maxFrame) { close(link); return; }
+        if (end > maxFrame) {
+          close(link);
+          return;
+        }
         const line = buffer.subarray(0, end).toString("utf8");
         buffer = buffer.subarray(end + 1);
         try {
           const frame = JSON.parse(line) as Frame;
-          if (!frame || typeof frame.op !== "string" || !Number.isSafeInteger(frame.id) || frame.id <= 0) {
+          if (
+            !frame ||
+            typeof frame.op !== "string" ||
+            !Number.isSafeInteger(frame.id) ||
+            frame.id <= 0
+          ) {
             throw new Error("invalid frame");
           }
           incoming(link, frame);
-        } catch { close(link); return; }
+        } catch {
+          close(link);
+          return;
+        }
       }
     });
     socket.on("error", () => close(link));
@@ -179,15 +236,25 @@ export default function (pi: ExtensionAPI) {
     });
     opening = (async () => {
       try {
-        const reply = await ask(link, { op: "hello", protocol: 2, thread, state: managed.sample() });
+        const reply = await ask(link, {
+          op: "hello",
+          protocol: 2,
+          thread,
+          state: managed.sample(),
+        });
         if (!reply.ok) throw new Error("host refused the extension handshake");
-        if (current !== link || !active) { close(link); return; }
+        if (current !== link || !active) {
+          close(link);
+          return;
+        }
         link.ready = true;
         delay = 250;
       } catch {
         close(link);
         warn("mail connection unavailable; reconnecting while this session runs");
-      } finally { opening = undefined; }
+      } finally {
+        opening = undefined;
+      }
     })();
     return opening;
   }
@@ -215,7 +282,10 @@ export default function (pi: ExtensionAPI) {
     // Automatic retries have another agent_start, but only one settled end.
     if (turn) return;
     const link = current;
-    if (!link?.ready) { warn("turn started without a mail connection; its end cannot be reported"); return; }
+    if (!link?.ready) {
+      warn("turn started without a mail connection; its end cannot be reported");
+      return;
+    }
     const started: Turn = { id: randomUUID(), link, text: "", reason: "" };
     turn = started;
     managed.changed();
@@ -234,7 +304,10 @@ export default function (pi: ExtensionAPI) {
     turn.text = "";
     turn.reason = "";
     if (assistant?.role === "assistant") {
-      turn.text = assistant.content.filter((block) => block.type === "text").map((block) => block.text).join("\n");
+      turn.text = assistant.content
+        .filter((block) => block.type === "text")
+        .map((block) => block.text)
+        .join("\n");
       turn.reason = assistant.stopReason;
     }
   });
@@ -244,13 +317,22 @@ export default function (pi: ExtensionAPI) {
     turn = undefined;
     managed.changed();
     if (!ended) return;
-    const outcome = event.aborted || ended.reason === "aborted" ? "aborted"
-      : ended.reason === "stop" ? "answered" : "failed";
+    const outcome =
+      event.aborted || ended.reason === "aborted"
+        ? "aborted"
+        : ended.reason === "stop"
+          ? "answered"
+          : "failed";
     managed.settled(ended, outcome === "aborted");
     try {
-      const reply = await ask(ended.link, { op: "turn-end", thread: ended.link.thread,
-        turn: ended.id, outcome, text: ended.text }, 20000);
+      const reply = await ask(
+        ended.link,
+        { op: "turn-end", thread: ended.link.thread, turn: ended.id, outcome, text: ended.text },
+        20000,
+      );
       if (!reply.ok) throw new Error("host refused the turn end");
-    } catch { warn("turn end was not acknowledged; ask main to check the report"); }
+    } catch {
+      warn("turn end was not acknowledged; ask main to check the report");
+    }
   });
 }
