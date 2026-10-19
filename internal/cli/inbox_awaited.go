@@ -13,10 +13,8 @@ import (
 
 // awaitedView is one task or question this run sent and has no report on yet.
 // Gone is "ended" or "replaced" when the run it was written for no longer
-// lives and nothing can take its work over: then no report is coming,
-// whatever the state says. Resumable is a run that ended owing it, whose
-// conversation a resume may still continue and report from: not lost yet, so
-// not to be sent again.
+// lives: then no report is coming,
+// whatever the state says.
 type awaitedView struct {
 	ID        string     `json:"id"`
 	Kind      mail.Kind  `json:"kind"`
@@ -24,7 +22,6 @@ type awaitedView struct {
 	State     mail.Stage `json:"state"`
 	Detail    string     `json:"detail,omitempty"`
 	Gone      string     `json:"gone,omitempty"`
-	Resumable bool       `json:"resumable,omitempty"`
 	Text      string     `json:"text"`
 	// AddendumTo names the task this one adds to.
 	AddendumTo string `json:"addendumTo,omitempty"`
@@ -124,7 +121,6 @@ func showAwaited(ctx *Context, dir string, session registry.Session, epoch strin
 		view := awaitedView{
 			ID: message.ID, Kind: mail.KindOf(message.Message), CreatedAt: message.CreatedAt,
 			State: message.Stage, Detail: message.Detail, Text: message.Text,
-			Resumable: message.Resumable,
 		}
 		if message.AddendumTo != "" {
 			// Under the task as it is now, an edit's replacement included,
@@ -203,14 +199,11 @@ func awaitedLines(recipients []awaitedRecipient) []string {
 // awaitedState says in a few words where a message stands. The whole detail
 // is in --json; one line of it is enough to know what to do.
 func awaitedState(recipient string, message awaitedView) string {
-	if message.Resumable {
-		return recipient + " ended; a resume of " + recipient + " in its conversation may still report"
-	}
 	switch message.Gone {
 	case "ended":
-		return "no report coming: " + recipient + " ended"
+		return "no report coming: " + recipient + " ended; check its saved work and give the task to a new worker"
 	case "replaced":
-		return "no report coming: " + recipient + " was replaced by a new run"
+		return "no report coming: " + recipient + " was replaced by a new run; check its saved work and give the task to a new worker"
 	}
 	detail := func(prefix string) string {
 		if line := mail.Preview(message.Detail); line != "" {

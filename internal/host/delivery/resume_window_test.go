@@ -17,7 +17,7 @@ func TestATaskSweptByARunInAnotherConversationIsLost(t *testing.T) {
 	s.Epoch = "next-epoch"
 	s.Thread = func() (string, error) { return "thread-b", nil }
 	s.followEarlierRun(context.Background())
-	if item := awaitedBy(dir, mail.RunReplaced)[task.ID]; item.Resumable || !item.Gone() {
+	if item := awaitedBy(dir, mail.RunReplaced)[task.ID]; !item.Gone() {
 		t.Errorf("swept by a run in another conversation, the task reads as %+v", item)
 	}
 }

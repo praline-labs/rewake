@@ -118,7 +118,7 @@ func TestAnEndRetriedAfterTheClearingFailedReportsOnce(t *testing.T) {
 }
 
 // An end that dies before its report is written leaves the wait standing, and
-// once its run is gone the sender reads the task as one a resume may take over.
+// once its run is gone the sender reads the task as lost.
 func TestAnEndThatFailedBeforeTheReportLeavesTheWaitStanding(t *testing.T) {
 	lab := newEndLab(t)
 	failed := failFirst(t, state.OpWrite, state.InboxPath(lab.dir, "web"))
@@ -130,7 +130,7 @@ func TestAnEndThatFailedBeforeTheReportLeavesTheWaitStanding(t *testing.T) {
 		t.Fatalf("web holds %d reports, api owes %d", len(got), lab.owed())
 	}
 	awaited, err := Awaited(lab.dir, "web", lab.web.Epoch(), func(string, string) RecipientRun { return RunEnded })
-	if err != nil || len(awaited) != 1 || awaited[0].ID != lab.task.ID || !awaited[0].Resumable || awaited[0].Gone() {
+	if err != nil || len(awaited) != 1 || awaited[0].ID != lab.task.ID || !awaited[0].Gone() {
 		t.Fatalf("web reads %+v: %v", awaited, err)
 	}
 }

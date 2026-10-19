@@ -44,10 +44,9 @@ wrapper (which then forwards it to a harness still alive a moment later).
 1. The wrapper closes the inbox: waiting mail gets `failed: session ended`.
    Unexpired reports stay readable for their epoch. A reserved answer keeps
    its queue entry and lease semantics so its waiting command can consume it.
-   A task the session had read and not reported on is not lost yet: for a day from
-   that read, `rewake inbox --awaited` shows its sender "<name> ended; a resume of
-   <name> in its conversation may still report", and a resume of that conversation
-   under the name takes the wait over and reports
+   A task the session had read and not reported on is lost: `rewake inbox --awaited`
+   shows its sender "no report coming: <name> ended; check its saved work and give the
+   task to a new worker"
    ([delivery-owed.md](delivery-owed.md#what-others-owe-you-rewake-inbox---awaited)).
 2. The record and the socket are removed; a later `list` will not show the
    name, and a `send` to it gets exit 2.

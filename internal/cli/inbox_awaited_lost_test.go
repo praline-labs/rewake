@@ -22,12 +22,10 @@ func pinned(t *testing.T, dir, name, id, thread string) {
 	}
 }
 
-// A task read by a run that ended owing it, in a conversation a resume may
-// continue, is not reported lost: main would send it again, and the resume
-// would do the work a second time. That holds while no new run has started,
-// and while a new one has not yet learned its conversation and swept the
-// wait; an addition to it is refused, saying so.
-func TestAwaitedDoesNotCallAResumableTaskLost(t *testing.T) {
+// A task read by a run that ended owing it is reported lost even in a
+// conversation: no release reopens a worker's conversation, so main gives the
+// task to a new worker.
+func TestAwaitedCallsATaskOfAnEndedRunLost(t *testing.T) {
 	room := newAwaitedRoom(t)
 	ended := otherRun(t, room.dir, "ended")
 	replaced := otherRun(t, room.dir, "replaced")
@@ -44,18 +42,17 @@ func TestAwaitedDoesNotCallAResumableTaskLost(t *testing.T) {
 
 	views := byID(awaitedJSON(t))
 	for _, id := range []string{first, second} {
-		if !views[id].Resumable || views[id].Gone != "" {
+		if views[id].Gone == "" {
 			t.Errorf("%s: %+v", id, views[id])
 		}
 	}
 	code, out, _ := run("inbox", "--awaited")
-	if code != ExitOK || strings.Contains(out, "no report coming") || strings.Contains(out, "will not come") ||
-		!strings.Contains(out, " · ended ended; a resume of ended in its conversation may still report\nlong job\n") ||
-		!strings.Contains(out, " · replaced ended; a resume of replaced in its conversation may still report\nanother job\n") {
+	if code != ExitOK || !strings.Contains(out, " · no report coming: ended ended; check its saved work and give the task to a new worker\nlong job\n") ||
+		!strings.Contains(out, " · no report coming: replaced was replaced by a new run; check its saved work and give the task to a new worker\nanother job\n") {
 		t.Fatalf("exit %d:\n%s", code, out)
 	}
 	code, _, errOut := run("send", "replaced", "also this", "--to", second)
-	if code != ExitFailed || !strings.Contains(errOut, "may still report on it") {
-		t.Fatalf("an addition to a resumable task: exit %d %s", code, errOut)
+	if code != ExitFailed || !strings.Contains(errOut, "no report on it is coming") {
+		t.Fatalf("an addition to a lost task: exit %d %s", code, errOut)
 	}
 }

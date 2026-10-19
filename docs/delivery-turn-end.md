@@ -67,7 +67,7 @@ would leave an answer on record and no letter. A failure returns at the step it 
 a retry of the same event runs the steps again from what the disk says — the wait still
 names what is owed, the report's id is fixed by the wait, and a report found written is
 not written again. Killed before the report is written, the end leaves the wait standing,
-and the sender reads the task as owed, resumable or gone (`rewake inbox --awaited`).
+and the sender reads the task as owed or gone (`rewake inbox --awaited`).
 Killed after, the letter is with the sender already. Two narrow holes are closed in the
 code. The sweep of a recipient keeps a report whose writer's wait still names what it
 answers (`reportStillAwaited` in `internal/core/mail/sweep.go`), so a retry that comes

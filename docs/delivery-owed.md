@@ -41,7 +41,9 @@ not appear. What of it asks for work — tasks and questions, and a kind this bu
 not know, by kind alone (`mail.AsksForWork`), so a task from a plain shell counts too —
 is counted after the list, `Rewake: <n> unread task(s) or question(s) — run rewake
 inbox.`, and nothing is said when there is none; `--json` carries the count as
-`unread`, 0 included. The count says work is waiting, not that a report is. Unread mail
+`unread`, 0 included. The count says work is waiting, not that a report is; it counts what plain
+`rewake inbox` reads, mail written for an earlier run of the name included (October 19, 2026), which
+owes no report. Unread mail
 is looked at before what is owed, and a message in both is counted once, as owed: a
 parallel `rewake inbox` writes the wait record before it moves the message out of
 `unread/`, so a message read between the two looks is found at least once — the other
@@ -90,20 +92,13 @@ names it; the record is cleared only once the report is written. A message whose
 resumed run took over is followed in that run's records
 ([delivery.md](archive/1.x/delivery-conversation.md#a-resumed-conversation)), and listed as that run's. Settled messages are not listed.
 
-A message read by a run that then ended, still named by its wait record, and delivered
-into a conversation is not lost yet: a resume of that conversation takes the wait over and
-reports on it — a resume under the same name only, since a conversation resumed under
-another name takes over nothing. It is listed as `<name> ended; a resume of <name> in its
-conversation may still report` (`"resumable": true`) and counted with the reports still expected, and main is told
-not to send it again yet: sending it would get the work done twice. That holds before any
-new run of the name, and after a new one has started but not yet learned its conversation
-and swept the old run's waits. It stops holding when a new run in another conversation
-sweeps the wait, or a day after the message was read (`resumeWindow`, as long as
-finished mail is kept; counted from each message's own read time, which the wait record
-keeps beside its read sequence, since one wait gathers what is read until the next report): from then on no resume takes it over, and it is lost for good. Any other unsettled message of a recipient whose run has
-ended, or whose name a new run has taken, is lost — listed as `no report coming: <name>
-ended` or `… was replaced by a new run`, whatever stage it had reached, and counted apart
-from the reports still expected. Only that line means the task may be sent again.
+A message read by a run that then ended, or whose name a new run has taken, is lost,
+whatever stage it had reached: it is listed as `no report coming: <name> ended; check its
+saved work and give the task to a new worker` (`… was replaced by a new run; …`) and counted apart from the reports still
+expected. No restore operation reopens a worker's conversation under its name, so
+nothing is promised for a resume (main's decision, October 19, 2026,
+after the audit of the briefings). The old adoption code (`AdoptWaits`) remains but nothing
+in a release reaches it, and `--awaited` no longer lists a task as resumable.
 
 Whether a missing wait record can be trusted depends on who could have removed it. Only
 the report removes one, and only a new run of the name sweeps the old run's directory
@@ -125,7 +120,7 @@ on already, or no longer kept — stands alone as `<id> · task, addendum to <ta
 the current one, an edit's replacement included, as for `--owed`. Nothing awaited is
 `Rewake: nobody owes you a report.` `--json` carries each message whole: `id`, `kind`,
 `createdAt`, `state`, `detail` (the hold or failure reason, or the interim or stop
-report's text), `gone` (`ended` or `replaced`, only when lost), `resumable`, `addendumTo`
+report's text), `gone` (`ended` or `replaced`, only when lost), `addendumTo`
 for an addendum, and the full `text`. A withdrawn message is a note from then on and is not listed.
 
 It only reads, like `--owed`: no lock, no status, nothing marked, nothing sent, and a

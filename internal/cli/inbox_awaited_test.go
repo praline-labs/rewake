@@ -229,8 +229,8 @@ func TestAwaitedNamesARecipientThatIsGone(t *testing.T) {
 	}
 	code, out, _ := run("inbox", "--awaited")
 	if code != ExitOK || !strings.HasPrefix(out, "Rewake: waiting on no reports; 3 will not come:") ||
-		!strings.Contains(out, " · no report coming: ended ended\nlong job\n") ||
-		!strings.Contains(out, " · no report coming: replaced was replaced by a new run\nanother job\n") {
+		!strings.Contains(out, " · no report coming: ended ended; check its saved work and give the task to a new worker\nlong job\n") ||
+		!strings.Contains(out, " · no report coming: replaced was replaced by a new run; check its saved work and give the task to a new worker\nanother job\n") {
 		t.Fatalf("exit %d:\n%s", code, out)
 	}
 

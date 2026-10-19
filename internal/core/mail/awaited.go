@@ -51,19 +51,12 @@ type AwaitedMessage struct {
 	// interim or stopped report; empty when the stage says it all.
 	Detail string
 	// Run is what became of the recipient's run. Anything but RunLive means
-	// no report is coming, whatever the stage, unless Resumable.
+	// no report is coming, whatever the stage.
 	Run RecipientRun
-	// Resumable is a read message whose run ended owing it, delivered into a
-	// conversation a resume may still continue: that run takes the wait over
-	// and reports (adopt.go). Until the resume window passes, or a new run of
-	// the name in another conversation sweeps the wait, it is not lost, and
-	// sending it again could get the work done twice.
-	Resumable bool
 }
 
-// Gone says no report can come, because the run it was written for is over
-// and no resume can take it over.
-func (m AwaitedMessage) Gone() bool { return m.Run != RunLive && !m.Resumable }
+// Gone says no report can come, because the run it was written for is over.
+func (m AwaitedMessage) Gone() bool { return m.Run != RunLive }
 
 // Awaited lists what one run sent — tasks and questions, never notes — and has
 // no report on yet, oldest first. Only that run's mail is listed: an earlier
@@ -142,8 +135,7 @@ func placed(dir string, message Message, reports []Message, wait Waiter, runOf f
 	if err != nil || settled {
 		return item, settled, err
 	}
-	owing := message.ToEpoch
-	item.Run = runOf(message.To, owing)
+	item.Run = runOf(message.To, message.ToEpoch)
 	if item.Run != RunLive {
 		// A run that resumed the conversation took the wait over, and its
 		// turn will report.
@@ -152,7 +144,6 @@ func placed(dir string, message Message, reports []Message, wait Waiter, runOf f
 			return item, false, err
 		}
 		if ok {
-			owing = run
 			item.Run = runOf(message.To, run)
 			if wait, err = waiterFor(dir, message.To, run, message.From, message.FromEpoch); err != nil {
 				return item, false, err
@@ -166,14 +157,6 @@ func placed(dir string, message Message, reports []Message, wait Waiter, runOf f
 		}
 		if kept {
 			return item, true, nil
-		}
-	}
-	if item.read() && item.Run != RunLive {
-		// Before a new run of the name sweeps the wait, it may yet be taken
-		// over: the window from that run's start to learning its
-		// conversation, or no new run at all.
-		if item.Resumable, err = mayResume(dir, message, owing, wait); err != nil {
-			return item, false, err
 		}
 	}
 	return item, false, nil

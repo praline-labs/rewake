@@ -33,13 +33,10 @@ func awaitedBy(dir string, what RecipientRun) map[string]AwaitedMessage {
 	return awaited
 }
 
-// A task read by a run that ended owing it is not lost while a resume of its
-// conversation may still take it over: before any new run, and after a new
-// one has started but has not swept the wait yet. It is lost once the wait is
-// swept by a run in another conversation, when it was delivered into no
-// conversation, or once the resume window has passed — and then a resume
-// takes nothing over, so a task sent again is not done twice.
-func TestATaskOfAnEndedRunIsLostOnlyWhenNoResumeCanTakeItOver(t *testing.T) {
+// A task read by a run that ended owing it is lost for its sender, in a
+// conversation or not: no release reopens a worker's conversation. The old
+// adoption still takes a wait over inside the resume window, and nothing past it.
+func TestATaskOfAnEndedRunIsLostAndAdoptionKeepsItsWindow(t *testing.T) {
 	dir := stateDir(t)
 	tasks := pendingTasks(t, dir, 2)
 	readIn(t, dir, "receiver-epoch", "thread-a", tasks[0])
@@ -47,16 +44,16 @@ func TestATaskOfAnEndedRunIsLostOnlyWhenNoResumeCanTakeItOver(t *testing.T) {
 
 	for _, what := range []RecipientRun{RunEnded, RunReplaced} {
 		awaited := awaitedBy(dir, what)
-		if item := awaited[tasks[0].ID]; !item.Resumable || item.Gone() {
-			t.Errorf("run %v: a task a resume may take over reads as %+v", what, item)
+		if item := awaited[tasks[0].ID]; !item.Gone() {
+			t.Errorf("run %v: a task in a conversation reads as %+v", what, item)
 		}
-		if item := awaited[tasks[1].ID]; item.Resumable || !item.Gone() {
+		if item := awaited[tasks[1].ID]; !item.Gone() {
 			t.Errorf("run %v: a task in no conversation reads as %+v", what, item)
 		}
 	}
 
 	agedWaits(t, dir, "receiver-epoch", resumeWindow+time.Minute)
-	if item := awaitedBy(dir, RunEnded)[tasks[0].ID]; item.Resumable || !item.Gone() {
+	if item := awaitedBy(dir, RunEnded)[tasks[0].ID]; !item.Gone() {
 		t.Errorf("past the window the task reads as %+v", item)
 	}
 	if adopted := must(AdoptWaits(dir, "api", "resumed-epoch", "thread-a")); len(adopted) != 0 {
@@ -65,9 +62,9 @@ func TestATaskOfAnEndedRunIsLostOnlyWhenNoResumeCanTakeItOver(t *testing.T) {
 }
 
 // A wait gathers what is read from one sender until the next report, so it
-// can have begun long before a task in it was read: that task is owed for the
-// window from its own reading, not from the wait's beginning.
-func TestATaskReadLateIntoALongWaitMayStillBeResumed(t *testing.T) {
+// can have begun long before a task in it was read: adoption counts the window
+// from the task's own reading, not from the wait's beginning.
+func TestATaskReadLateIntoALongWaitMayStillBeAdopted(t *testing.T) {
 	dir := stateDir(t)
 	tasks := pendingTasks(t, dir, 2)
 	readIn(t, dir, "receiver-epoch", "thread-a", tasks[0])
@@ -78,11 +75,8 @@ func TestATaskReadLateIntoALongWaitMayStillBeResumed(t *testing.T) {
 	}
 
 	awaited := awaitedBy(dir, RunEnded)
-	if item := awaited[tasks[0].ID]; item.Resumable || !item.Gone() {
+	if item := awaited[tasks[0].ID]; !item.Gone() {
 		t.Errorf("the task read past the window reads as %+v", item)
-	}
-	if item := awaited[tasks[1].ID]; !item.Resumable || item.Gone() {
-		t.Errorf("the task read late into the wait reads as %+v", item)
 	}
 	if adopted := must(AdoptWaits(dir, "api", "resumed-epoch", "thread-a")); !slices.Equal(adopted, []string{tasks[1].ID}) {
 		t.Errorf("a resume took over %v", adopted)

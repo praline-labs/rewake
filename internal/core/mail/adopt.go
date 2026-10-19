@@ -44,17 +44,6 @@ func owedStands(run string, waiter Waiter, id string) bool {
 	return time.Since(time.Unix(0, waiter.readAt(index))) < resumeWindow
 }
 
-// mayResume says whether a message a run that ended still owes can yet be
-// reported on by a run resuming its conversation: it was delivered into one,
-// and the wait naming it stands.
-func mayResume(dir string, message Message, run string, wait Waiter) (bool, error) {
-	thread, err := deliveryThread(dir, message.To, message.ID)
-	if err != nil {
-		return false, err
-	}
-	return thread != "" && owedStands(run, wait, message.ID), nil
-}
-
 // AdoptWaits moves to this run the waits of earlier runs of the name for the
 // messages delivered into thread, as if this run had read them when the
 // earlier one did. It returns the ids taken over. The caller holds the mailbox
