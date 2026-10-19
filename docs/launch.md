@@ -252,8 +252,11 @@ and sizes the shell sends back; the last size set is the worker's ([shell.md](v2
 The space host reads main's run once a second (`ObserveRun` through `space.MainRuns`). Once
 it reads ended it sends SIGHUP to the worker's process group, SIGTERM after 1 s, SIGKILL after
 5 s more, waits up to 2 s for the group to be gone, records the end it observed and exits; a
-run read as unknown ends nothing. A group not seen gone, or a checkout that could not be looked
-for, leaves the record closing rather than record an end nobody saw. The view socket is
+run read as unknown ends nothing. The group is gone once only zombies are left in it: an
+orphan of the worker waits there for whoever adopted it to reap it, and counting it left the
+record closing with nothing of the worker running (seen October 19, 2026 under the workflow
+suite's subreaper, about one run in ten). A group not seen gone, or a checkout that could not
+be looked for, leaves the record closing rather than record an end nobody saw. The view socket is
 listened on before the worker starts; an open that cannot serve it is refused. Its standard streams are `/dev/null`: what goes wrong shows in
 the record's end or as the open's timeout.
 

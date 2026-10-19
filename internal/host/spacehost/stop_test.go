@@ -61,3 +61,37 @@ func TestTheCloseSequenceEndsAWorkerThatIgnoresHangupAndTerm(t *testing.T) {
 		t.Fatalf("a group already gone was sent %q", took)
 	}
 }
+
+// prSetChildSubreaper is PR_SET_CHILD_SUBREAPER.
+const prSetChildSubreaper = 36
+
+// An orphan of the worker that ended is a zombie until whoever adopted it
+// reaps it, and kill(2) still finds it in the group: seen in the workflow
+// suite, whose subreaper reaps in batches, as a space left closing with
+// nothing of its worker running. The group is gone once only zombies are left.
+func TestTheCloseSequenceTakesAGroupOfZombiesAsGone(t *testing.T) {
+	if _, _, errno := syscall.RawSyscall(syscall.SYS_PRCTL, prSetChildSubreaper, 1, 0); errno != 0 {
+		t.Skipf("no subreaper: %v", errno)
+	}
+	var pgid int
+	t.Cleanup(func() {
+		_, _, _ = syscall.RawSyscall(syscall.SYS_PRCTL, prSetChildSubreaper, 0, 0)
+		var status syscall.WaitStatus
+		for pgid != 0 {
+			if pid, _ := syscall.Wait4(-pgid, &status, syscall.WNOHANG, nil); pid <= 0 {
+				return
+			}
+		}
+	})
+	// The hangup ends the leader and its child; the child, orphaned, is
+	// adopted by this process and stays a zombie.
+	times := stopTimes{hangup: 2 * time.Second, term: 100 * time.Millisecond, kill: 100 * time.Millisecond}
+	worker, reaped := startGroup(t, `sleep 60 & echo ready; wait`)
+	pgid = worker.Process.Pid
+	if took := stopGroup(pgid, reaped, times); took != "SIGHUP" {
+		t.Fatalf("a group left with a zombie ended after %q", took)
+	}
+	if err := syscall.Kill(-pgid, 0); err != nil {
+		t.Fatalf("the zombie the test needs was not there: %v", err)
+	}
+}

@@ -1,9 +1,10 @@
 package spacehost
 
 import (
-	"errors"
 	"syscall"
 	"time"
+
+	"github.com/praline-labs/rewake/internal/infra/proc"
 )
 
 // stopTimes are how long each signal of the close sequence is given before
@@ -56,12 +57,16 @@ func waitGone(pgid int, reaped <-chan struct{}, limit time.Duration) bool {
 	}
 }
 
-// groupGone says whether no process of the group is left.
+// groupGone says whether no process of the group is left. A zombie has
+// ended, though kill(2) still finds it: an orphan of the worker is reaped by
+// whoever adopted it, and a reaper that waits — a subreaper reaping in
+// batches, a container's first process that never does — left the space
+// closing for ever with nothing of the worker running.
 func groupGone(pgid int, reaped <-chan struct{}) bool {
 	select {
 	case <-reaped:
 	default:
 		return false
 	}
-	return errors.Is(syscall.Kill(-pgid, 0), syscall.ESRCH)
+	return !proc.GroupAlive(pgid)
 }
