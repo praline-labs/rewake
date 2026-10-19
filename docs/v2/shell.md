@@ -36,6 +36,15 @@ terminal in a pty; the owner checked step 1 on their own terminal the same day.
   input at an end or failing, and its parent gone, since a closed window takes the shell's parent
   with it. Checked in step 1: the stand-in terminal killed, the shell and main were gone within a
   second, the space host and its worker within three; `/exit` in main ended the shell with code 0.
+- **The closing screen** (the owner's wish, October 19, 2026): from the moment main's end begins
+  until the shell exits, the whole screen is one spinner and "closing rewake…" in the middle
+  (`shell/src/closing.tsx`), and nothing of the work — no pane, no bar — shows, nor do keys reach a
+  program. It begins when the room's listing reads main's run ended for a space the shell shows
+  (main's harness gone while its process may still linger, the space hosts ending the workers),
+  when main's process ends, or when the shell ends itself on SIGTERM, SIGINT or SIGQUIT; not when
+  the terminal is lost (a hangup, its input ended, the parent gone), with nowhere to draw. It is a
+  layer over the work, as the modal will be, and the work underneath is hidden as one, so a
+  terminal background the shell does not know never lets a pane show through.
 
 ## How a pane is fed: the raw stream
 
@@ -155,6 +164,7 @@ mode:
   Mouse events over the panes are meant to go to a full-size backdrop below the modal, not to
   the programs (not yet tried). Closing restores the pane's focus on the next tick, after the
   modal unmounts — restored at once, the first key after closing was lost.
+  The closing screen is the first such layer, full-size, with every pane blurred under it.
 
 ## The prefix and the room
 
@@ -167,7 +177,8 @@ mode:
   the CSI-u form with ← → and `z`.
 - **The room** comes from rewake's own commands, polled once a second: `rewake list --json` for
   each session's activity, model, effort and context, `rewake space list --json` for the spaces, which
-  gains each open space's socket path so the shell never builds a path itself. A stream comes only
+  gains each open space's socket path so the shell never builds a path itself, and its `mainRun`
+  reading `ended` begins the closing screen. A stream comes only
   if polling is felt.
 
 ## The bar

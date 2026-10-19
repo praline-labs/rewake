@@ -14,15 +14,18 @@ const termWait = 3000;
 // watchTerminal calls gone once the person's terminal is lost: a hangup or
 // another ending signal, the input at an end, or the parent gone — a
 // terminal window closed takes the shell's parent with it, and a shell
-// reparented has nobody to show anything to.
-export function watchTerminal(gone: (why: string) => void) {
-  for (const signal of ["SIGHUP", "SIGTERM", "SIGINT", "SIGQUIT", "SIGPIPE"] as const)
-    process.on(signal, () => gone(signal));
-  process.stdin.on("end", () => gone("the terminal's input ended"));
-  process.stdin.on("error", () => gone("the terminal's input failed"));
+// reparented has nobody to show anything to. lost says the terminal itself
+// is gone, so there is nothing to draw the closing on; SIGTERM, SIGINT and
+// SIGQUIT end the shell with its terminal still there.
+export function watchTerminal(gone: (why: string, lost: boolean) => void) {
+  for (const signal of ["SIGHUP", "SIGPIPE"] as const) process.on(signal, () => gone(signal, true));
+  for (const signal of ["SIGTERM", "SIGINT", "SIGQUIT"] as const)
+    process.on(signal, () => gone(signal, false));
+  process.stdin.on("end", () => gone("the terminal's input ended", true));
+  process.stdin.on("error", () => gone("the terminal's input failed", true));
   const parent = process.ppid;
   setInterval(() => {
-    if (process.ppid !== parent) gone("the shell's parent is gone");
+    if (process.ppid !== parent) gone("the shell's parent is gone", true);
   }, 1000).unref();
 }
 

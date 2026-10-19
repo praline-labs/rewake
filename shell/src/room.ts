@@ -32,12 +32,20 @@ function spacesOf(listing: Listing): Space[] {
     }));
 }
 
+// endedOf is the spaces not over whose main's run reads ended: the first
+// sign of main's end the room gives, while its hosts end the workers.
+function endedOf(listing: Listing): string[] {
+  return (listing.spaces ?? [])
+    .filter((s) => s.mainRun === "ended" && s.state !== "kept" && s.state !== "closed")
+    .map((s) => s.id);
+}
+
 // pollRoom calls onSpaces with each listing that reads; a failed read keeps
 // the last. It returns the stop.
 export function pollRoom(
   rewake: string,
   room: string,
-  onSpaces: (spaces: Space[]) => void,
+  onSpaces: (spaces: Space[], ended: string[]) => void,
 ): () => void {
   let stopped = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -54,7 +62,10 @@ export function pollRoom(
         stdin: "ignore",
       });
       const text = await new Response(child.stdout).text();
-      if ((await child.exited) === 0 && !stopped) onSpaces(spacesOf(JSON.parse(text)));
+      if ((await child.exited) === 0 && !stopped) {
+        const listing = JSON.parse(text);
+        onSpaces(spacesOf(listing), endedOf(listing));
+      }
     } catch {
       // The next poll tries again.
     }

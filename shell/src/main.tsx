@@ -13,6 +13,7 @@ import {
 import { extend, render, useTerminalDimensions } from "@opentui/solid";
 import { createEffect, createSignal, For, Show } from "solid-js";
 import { Bar, Hints } from "./bar.tsx";
+import { Closing } from "./closing.tsx";
 import { askColors, keepDefaultForeground, seedOf } from "./colors.ts";
 import { endMain, tailText, watchTerminal } from "./ending.ts";
 import { type Command, prefixHandler } from "./keys.ts";
@@ -82,6 +83,9 @@ const [chosen, setChosen] = createSignal<string>();
 const [zoomed, setZoomed] = createSignal(false);
 // prefixWaits is a typed Ctrl+\ waiting for its command.
 const [prefixWaits, setPrefixWaits] = createSignal(false);
+// closing is set when main's end begins: from then until the shell exits the
+// screen is the closing layer alone, and the keys reach no program.
+const [closing, setClosing] = createSignal(false);
 const allPanes = () => [mainPane, ...workers()];
 const paneOf = (id: string | undefined) => allPanes().find((p) => p.id === id);
 
@@ -181,9 +185,12 @@ function startWorkerPane(pane: Pane, term: PaneTerminal) {
   attach(pane);
 }
 
-// The room's spaces become the worker panes, in the order they opened.
-function takeSpaces(spaces: Space[]) {
+// The room's spaces become the worker panes, in the order they opened. A
+// space shown here whose main's run reads ended is main's end begun.
+function takeSpaces(spaces: Space[], ended: string[]) {
+  if (closing()) return;
   const was = workers();
+  if (was.some((p) => ended.includes(p.id))) return void setClosing(true);
   const next = spaces.map(
     (space) =>
       was.find((p) => p.id === space.id) ?? {
@@ -209,8 +216,9 @@ function show(id: string | undefined) {
 }
 
 createEffect(() => {
-  const id = focused();
+  const id = closing() ? undefined : focused();
   for (const pane of allPanes()) if (pane.id !== id) pane.term?.blur();
+  if (id === undefined) return;
   const pane = paneOf(id);
   // On the next tick: a pane shown by this change is mounted only then.
   setTimeout(() => pane?.term?.focus(), 0);
@@ -218,6 +226,7 @@ createEffect(() => {
 });
 
 function run(c: Command) {
+  if (closing()) return;
   const panes = allPanes();
   const at = Math.max(
     0,
@@ -246,7 +255,7 @@ function run(c: Command) {
 }
 
 pressed = (id) => {
-  if (id !== focused()) show(id);
+  if (id !== focused() && !closing()) show(id);
 };
 
 function App() {
@@ -259,61 +268,70 @@ function App() {
   // The panes leave the two bottom lines to the bar and the hints.
   const height = () => Math.max(dims().height - 2, 1);
   const focusedPane = () => paneOf(focused()) ?? mainPane;
+  // The work is hidden as a whole under the closing layer, so a terminal
+  // background the shell does not know never lets a pane show through.
   return (
-    <box flexDirection="column" width="100%" height="100%">
-      <box flexDirection="row" height={height()}>
-        <pane_terminal
-          id="main"
-          ref={(t: PaneTerminal) => startMainPane(t)}
-          visible={shown(mainPane)}
-          transparentBackground={seed.transparent}
-          width={widthOf(mainPane)}
-          height={height()}
+    <box width="100%" height="100%">
+      <box flexDirection="column" width="100%" height="100%" visible={!closing()}>
+        <box flexDirection="row" height={height()}>
+          <pane_terminal
+            id="main"
+            ref={(t: PaneTerminal) => startMainPane(t)}
+            visible={shown(mainPane)}
+            transparentBackground={seed.transparent}
+            width={widthOf(mainPane)}
+            height={height()}
+          />
+          <Show when={wide()}>
+            <box width={1} height={height()} backgroundColor="#444444" />
+          </Show>
+          <For each={workers()}>
+            {(pane) => (
+              <pane_terminal
+                id={pane.id}
+                ref={(t: PaneTerminal) => startWorkerPane(pane, t)}
+                visible={shown(pane)}
+                transparentBackground={seed.transparent}
+                width={widthOf(pane)}
+                height={height()}
+              />
+            )}
+          </For>
+        </box>
+        <Bar
+          tabs={allPanes().map((p) => ({ id: p.id, label: p.label, main: p === mainPane }))}
+          focused={focused()}
+          chosen={wide() && focused() === "main" ? chosen() : undefined}
+          zoomed={zoomed()}
+          theme={theme}
+          pick={show}
         />
-        <Show when={wide()}>
-          <box width={1} height={height()} backgroundColor="#444444" />
-        </Show>
-        <For each={workers()}>
-          {(pane) => (
-            <pane_terminal
-              id={pane.id}
-              ref={(t: PaneTerminal) => startWorkerPane(pane, t)}
-              visible={shown(pane)}
-              transparentBackground={seed.transparent}
-              width={widthOf(pane)}
-              height={height()}
-            />
-          )}
-        </For>
+        <Hints
+          context={{
+            focus: focusedPane() === mainPane ? "main" : "worker",
+            name: focusedPane().label,
+            prefix: prefixWaits(),
+            zoomed: zoomed(),
+            workers: workers().length,
+          }}
+          theme={theme}
+          accent={focusedPane() === mainPane ? theme.main : theme.worker}
+        />
       </box>
-      <Bar
-        tabs={allPanes().map((p) => ({ id: p.id, label: p.label, main: p === mainPane }))}
-        focused={focused()}
-        chosen={wide() && focused() === "main" ? chosen() : undefined}
-        zoomed={zoomed()}
-        theme={theme}
-        pick={show}
-      />
-      <Hints
-        context={{
-          focus: focusedPane() === mainPane ? "main" : "worker",
-          name: focusedPane().label,
-          prefix: prefixWaits(),
-          zoomed: zoomed(),
-          workers: workers().length,
-        }}
-        theme={theme}
-        accent={focusedPane() === mainPane ? theme.main : theme.worker}
-      />
+      <Show when={closing()}>
+        <Closing theme={theme} />
+      </Show>
     </box>
   );
 }
 
 // finish ends the shell with main's code: main hung up and waited for, the
-// workers' streams closed, the screen given back.
-async function finish(code?: number) {
+// workers' streams closed, the screen given back. Unless the terminal is
+// lost, the closing layer shows from its start.
+async function finish(code?: number, lost = false) {
   if (ending) return;
   ending = true;
+  if (!lost) setClosing(true);
   stopRoom();
   for (const pane of workers()) pane.source?.close();
   if (main) code = await endMain(main.child, main.close);
@@ -326,7 +344,7 @@ async function finish(code?: number) {
   process.exit(code ?? 1);
 }
 
-watchTerminal(() => void finish());
+watchTerminal((_why, lost) => void finish(undefined, lost));
 renderer.on("selection", (selection: { getSelectedText?: () => string } | null) => {
   const text = selection?.getSelectedText?.() ?? "";
   if (text) renderer.copyToClipboardOSC52(text);
