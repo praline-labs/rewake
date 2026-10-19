@@ -12,7 +12,7 @@ from the code.
 | who | what it is | lives |
 |---|---|---|
 | **wrapper** | the `rewake claude` process — next `rewake pi` — the harness's parent | as long as its harness |
-| **harness** | Claude Code, next pi, the ordinary program in the terminal | the session |
+| **harness** | Claude Code, pi, the ordinary program in the terminal | the session |
 | **agent** | the model inside the harness, calling `rewake send`, `rewake inbox`, `rewake whoami` from its shell | a turn at a time |
 | **sender** | any `rewake send` process: an agent's shell, a person's shell | until the status arrives |
 | **space host** | a detached `rewake` process `rewake space open` starts: owns a worker's terminal, watches main's run, ends the worker after it (A space, below) | as long as its worker and main |
@@ -136,7 +136,7 @@ shown as a session whose state is unknown.
 
 `rewake send write-claude "run the smoke and report what failed"` — from the main
 session's shell, or from a person's shell in the same room. A shell without
-`REWAKE_ROOM` uses `default`. Commands cannot name a different room.
+`REWAKE_ROOM` takes the room of its working directory. Commands cannot name a different room.
 
 1. **Who is sending.** `from` is `REWAKE_SESSION` when the run in
    `REWAKE_EPOCH` still holds that name, else `shell`. A leftover process of an

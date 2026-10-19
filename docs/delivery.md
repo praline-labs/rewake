@@ -8,7 +8,7 @@ primary TUI; losing that row never retries mail or changes its delivered status.
 [Back to the design](design.md).
 
 Every path and lookup below is relative to the current room's state directory,
-`<REWAKE_DIR>/v2/rooms/<REWAKE_ROOM>/` (`default` when the room variable is absent).
+`<REWAKE_DIR>/v2/rooms/<REWAKE_ROOM>/` (a command outside any session takes the room of its working directory when the variable is absent).
 Send, read, identity and turn reports never fall back to another room or to
 1.x's records beside the root.
 
@@ -207,7 +207,7 @@ with `reportAvailable: true` in its status. Only its waiting copy is removed;
 there is no automatic notice retry. Durable recovery respects this flag, and a
 concurrent read takes precedence. Expired reports never gain readability through
 this exception; task/notify failure behavior is unchanged. Undelivered tasks and notifications older
-than `--ttl` (30 minutes by default) get `failed: expired`.
+than the fixed TTL (30 minutes; there is no public `--ttl` flag) get `failed: expired`.
 
 **Held.** An adapter may report that the harness took the notice and keeps it from
 the agent — Claude Code's inbound gate does (below). A held message is not delivered:
