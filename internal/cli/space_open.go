@@ -106,6 +106,7 @@ func handleSpaceOpen(ctx *Context, call Call) error {
 	if err != nil {
 		return failf("%v", err)
 	}
+	spec.Template = target.template
 	_, spec.Worktree = call.Flags["worktree"]
 	if taker, ok := h.(adapter.WorktreeHarness); ok {
 		spec.Worktree = spec.Worktree || adapter.HasFlag(target.args, taker.WorktreeFlag())

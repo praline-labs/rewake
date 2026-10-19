@@ -51,6 +51,14 @@ func makeProfileDir(dir string) error {
 	return nil
 }
 
+// makeMemoryDir makes a template's memory directory and its parents private.
+func makeMemoryDir(dir string) error {
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return fmt.Errorf("the worker's memory directory %s could not be made: %w", dir, err)
+	}
+	return nil
+}
+
 // replaceFile writes a file of the folder in one step: a launch reading it at
 // the same time sees the old content or the new, never half of it.
 func replaceFile(path string, data []byte) error {

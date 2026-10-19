@@ -61,6 +61,11 @@ type LaunchRequest struct {
 	// flag, or refuses: a launch that dropped it would leave a record naming
 	// a conversation that does not exist.
 	Conversation string
+	// Template is the worker catalogue's alias a space was opened with, empty
+	// for a worker opened by --harness and for main: an adapter may keep what
+	// one template's workers share, its memory on Claude Code
+	// (docs/v2/worker-profile.md).
+	Template string
 	// Shell says the run is main's in rewake's shell, drawn on a pane whose
 	// terminal keeps no scrollback before a pane attached: an adapter whose
 	// harness can scroll its own history turns that on (docs/v2/shell.md).

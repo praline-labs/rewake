@@ -64,7 +64,7 @@ func TestWorkerProfileDefaults(t *testing.T) {
 		}
 		settings := settingsOf(t, plan.Args)
 		excludes := []any{filepath.Join(home, ".claude", "CLAUDE.md")}
-		if settings["autoMemoryEnabled"] != false || !slices.Equal(settings["claudeMdExcludes"].([]any), excludes) || settings[rewakeKey].(map[string]any)["defaults"] != float64(defaultsVersion) {
+		if _, memory := settings["autoMemoryEnabled"]; memory || !slices.Equal(settings["claudeMdExcludes"].([]any), excludes) || settings[rewakeKey].(map[string]any)["defaults"] != float64(defaultsVersion) {
 			t.Fatalf("%s: settings %v", part.ID, settings)
 		}
 		if deny := settings["permissions"].(map[string]any)["deny"].([]any); len(deny) != len(deniedTools) || deny[0] != "Agent" {

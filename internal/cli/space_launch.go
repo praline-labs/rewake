@@ -16,6 +16,8 @@ type workerTarget struct {
 	args    []string
 	command string
 	noIntro bool
+	// template is the alias, empty for --harness.
+	template string
 }
 
 func (ctx *Context) spaceTarget(call Call) (workerTarget, error) {
@@ -39,7 +41,7 @@ func (ctx *Context) spaceTarget(call Call) (workerTarget, error) {
 		if err != nil {
 			return refuse("%v", err)
 		}
-		target.harness, target.part, target.command = template.Harness, template.Role, template.Command
+		target.harness, target.part, target.command, target.template = template.Harness, template.Role, template.Command, alias
 		target.args = launch.MergeArguments(template.Args, target.args, target.harness.SingleUseFlags())
 	} else {
 		var found bool

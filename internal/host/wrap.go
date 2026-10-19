@@ -50,6 +50,9 @@ type Request struct {
 
 	// Role is explicit when its ID is set; empty always uses general.
 	Role role.Role
+	// Template is the alias the worker's space was opened with
+	// (adapter.LaunchRequest.Template).
+	Template string
 	// RoleReason says why the launch has its role, for the record and the
 	// briefing; empty says the role was selected with its flag.
 	RoleReason string
@@ -189,6 +192,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 		Version:    version,
 		Start:      start,
 		Shell:      request.Shell,
+		Template:   request.Template,
 	}
 	launchRequest.Env = launch.SessionEnv(launchRequest, request.Harness.EnvNotInherited())
 	if request.Shell {

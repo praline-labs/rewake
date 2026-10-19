@@ -323,6 +323,12 @@ call, in a private HOME as well as the person's. What the worker profile
   applies. Its `skillOverrides`, `autoMemoryEnabled` and `env` apply. A top-level key Claude
   Code does not know, `"rewake": {"defaults": 1}`, is ignored: the file's other settings apply,
   and neither `-p` nor the interactive start warns (October 19, 2026).
+- `autoMemoryDirectory` is read from `--settings` (policy settings first, then the flag's,
+  then local and project when the folder is trusted, then user); only an absolute or `~/` path
+  counts — a relative one is ignored for the default key, the main repository's root shared by
+  its worktrees. Claude Code makes the directory; `/context` lists its `MEMORY.md` as
+  `AutoMem`, and the model answers from it. `autoMemoryEnabled` defaults to true; the user source
+  off does not turn it off (October 19, 2026, with `/context` and one haiku call).
 - With the user source off, `$CLAUDE_CONFIG_DIR/CLAUDE.md` of a directory that is not an
   ancestor's `.claude` does not load (a private `CLAUDE_CONFIG_DIR` holding one, `/context`
   listing no memory file; October 19, 2026).

@@ -47,8 +47,8 @@ with the user source off, `--autocompact` holds unless the project's settings se
 `space open --harness claude` and an alias both get it; main is exactly the person's Claude Code.
 
 **rewake's defaults**, with no file of the person's: the user layer off and the ancestor exclude
-above; `autoMemoryEnabled: false`, since a worker is short-lived and the auto-memory of a project
-is main's (sharing the directory with main otherwise mixes them); `env` with
+above; the auto-memory, off until October 19, 2026 and since then one per template and project
+(step 5); `env` with
 `DISABLE_AUTOUPDATER=1` (a worker must not update Claude Code under a running room) and
 `DISABLE_FEEDBACK_COMMAND=1` (no survey in an unattended pane); `Bash(rewake:*)` as today;
 and the owner's off-list of October 19, 2026 — subagents (`Agent`), `ScheduleWakeup` and cron,
@@ -129,7 +129,8 @@ configuration Claude Code starts with, as it did before. A wrapper that moves
   `rewake workers` and `space open --alias | --harness [--role]` stay; the user/project rule
   stays: a project alias names no role and no command.
 - **How the space host still launches a worker.** It runs `rewake [--command <wrapper>]
-  <harness> <args>` with `REWAKE_SPACE=<room>/<space id>` and no name, room or role flag; the
+  <harness> <args>` with `REWAKE_SPACE=<room>/<space id>` (and `REWAKE_SPACE_TEMPLATE=<alias>`
+  for an alias, which names the worker's memory) and no name, room or role flag; the
   launch is that worker only when the variable names a space that is `opening`, or `open` on the
   launch's own run, whose host is its parent process — taking the name, role and room from the
   record — and refuses otherwise, pointing to `rewake space open`. The space record is not
@@ -144,7 +145,8 @@ Main's, October 19, 2026, on the design's questions; the room's identity is the 
 1. The shell by default whenever standard input and output are a terminal; no `--no-shell`.
 2. A second `rewake claude` in the same directory is refused, exit 1.
 3. The workflow suite's direct worker launches stay, in the `rewaketest` build only.
-4. A worker's auto-memory is off by default.
+4. A worker's auto-memory is off by default. Superseded the same day by the owner: Claude
+   Code's own auto-memory, one per worker template and project (step 5).
 5. The claude.ai connectors stay for workers: no `--strict-mcp-config` by default. Superseded the
    same day by the owner: they are off for workers, through `disableClaudeAiConnectors`, and the
    project's `.mcp.json` servers stay.
@@ -202,3 +204,19 @@ Main's, October 19, 2026, on the design's questions; the room's identity is the 
    | its tools and `/context` | no `Agent`, `ScheduleWakeup`, `SendMessage`, `ListAgents`, worktree, plan-mode, push, trigger or `Artifact`; System tools 2.7k, main's 6.7k |
    | `"Agent"` taken out of the file, the worker started again | `Agent` among its tools, System tools 4.5k; the file byte for byte the same |
    | Claude Code at a terminal with the file | no warning of the `rewake` key |
+5. **The worker's memory** — built ([its entry](../roadmap/2026-10-19-worker-memory.md)):
+   `autoMemoryEnabled: false` retired in defaults version 2; each launch lays
+   `autoMemoryEnabled: true` and `autoMemoryDirectory` over the folder's settings in a copy in
+   the run's directory, the directory
+   `~/.config/rewake/claude/worker/memory/<project>/<template>/` ([launch.md](../launch.md#claude-code));
+   the alias reaches the launch as `REWAKE_SPACE_TEMPLATE` from the space host, no new record
+   field. Checked live with haiku, a private HOME and `REWAKE_DIR`, a `-p` main in a probe
+   repository opening two spaces with `--worktree`:
+
+   | check | seen |
+   | --- | --- |
+   | a version-1 file with `autoMemoryEnabled: false` and only `Agent` denied | version 2, the key gone, the deny list as the person left it |
+   | `space open wa --alias haiku-a --worktree`, `wb --alias haiku-b --worktree` | two checkouts; each worker's `--settings` a run-directory copy, `autoMemoryDirectory` `…/memory/repo-d9ecc4f0fee9/haiku-a` and `…/haiku-b`, both made 0700 |
+   | `/context` with each worker's settings in its checkout | `AutoMem …/haiku-a/MEMORY.md` and `…/haiku-b/MEMORY.md`, each seeded with one line |
+   | a haiku call asking each for the code word in its memory | `HERON` for template A, `OSPREY` for B |
+

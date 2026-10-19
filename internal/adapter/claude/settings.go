@@ -22,7 +22,7 @@ import (
 
 // defaultsVersion is the version of rewake's defaults this build brings. A
 // default added or retired raises it and names it in since or retired.
-const defaultsVersion = 1
+const defaultsVersion = 2
 
 // rewakeKey is rewake's own object in the file, {"defaults": <version>}, the
 // version the file is at. Claude Code ignores a key it does not know (probed
@@ -58,9 +58,9 @@ func workerDefaults(home string) []setting {
 		return setting{path: path, value: value, item: true, since: 1}
 	}
 	defaults := []setting{
-		// A worker is short-lived; a project's auto-memory is main's, and a
-		// shared directory would mix the two.
-		key(false, "autoMemoryEnabled"),
+		// Off in version 1, when a worker's memory would have been main's;
+		// retired in 2, when each template got its own (memory.go).
+		{path: []string{"autoMemoryEnabled"}, value: false, since: 1, retired: 2},
 		// Claude Code reads .claude/CLAUDE.md of every directory above the
 		// working one, so the person's own loads as a project's for any
 		// checkout under the home directory, with the user source off too.
@@ -93,35 +93,35 @@ func workerDefaults(home string) []setting {
 }
 
 // workerSettings brings the folder's settings.json up to this build's
-// defaults and returns its path; a file with none is at version 0. It says
-// whether it wrote, so the launch can tell the person.
-func workerSettings(dir, home string) (string, bool, error) {
+// defaults and returns its path and its settings; a file with none is at
+// version 0. It says whether it wrote, so the launch can tell the person.
+func workerSettings(dir, home string) (string, map[string]any, bool, error) {
 	path := filepath.Join(dir, "settings.json")
 	if _, err := present(path, false); err != nil {
-		return "", false, err
+		return "", nil, false, err
 	}
 	target, err := settingsTarget(path)
 	if err != nil {
-		return "", false, err
+		return "", nil, false, err
 	}
 	settings, version, err := readSettings(path)
 	if err != nil {
-		return "", false, err
+		return "", nil, false, err
 	}
 	defaults := workerDefaults(home)
 	if err := checkShapes(settings, defaults); err != nil {
-		return "", false, fmt.Errorf("the worker profile's %s: %w; Claude Code would ignore the whole file, every default with it, so rewake leaves it as it is", path, err)
+		return "", nil, false, fmt.Errorf("the worker profile's %s: %w; Claude Code would ignore the whole file, every default with it, so rewake leaves it as it is", path, err)
 	}
 	if version >= defaultsVersion {
-		return path, false, nil
+		return path, settings, false, nil
 	}
 	if err := migrate(settings, version, defaultsVersion, defaults); err != nil {
-		return "", false, fmt.Errorf("the worker profile's %s: %w", path, err)
+		return "", nil, false, fmt.Errorf("the worker profile's %s: %w", path, err)
 	}
 	if err := writeSettings(target, settings); err != nil {
-		return "", false, fmt.Errorf("the worker profile's %s could not be written: %w", path, err)
+		return "", nil, false, fmt.Errorf("the worker profile's %s could not be written: %w", path, err)
 	}
-	return path, true, nil
+	return path, settings, true, nil
 }
 
 // readSettings reads the file and the defaults version it is at; a missing
@@ -316,12 +316,18 @@ func settingsTarget(path string) (string, error) {
 // writeSettings writes the file as the person reads it: indented, keys in
 // order, nothing escaped that JSON does not need.
 func writeSettings(path string, settings map[string]any) error {
+	data, err := encodeSettings(settings)
+	if err != nil {
+		return err
+	}
+	return replaceFile(path, data)
+}
+
+func encodeSettings(settings map[string]any) ([]byte, error) {
 	var out bytes.Buffer
 	encoder := json.NewEncoder(&out)
 	encoder.SetEscapeHTML(false)
 	encoder.SetIndent("", "  ")
-	if err := encoder.Encode(settings); err != nil {
-		return err
-	}
-	return replaceFile(path, out.Bytes())
+	err := encoder.Encode(settings)
+	return out.Bytes(), err
 }

@@ -26,6 +26,8 @@ type launchIdentity struct {
 	directory string
 	part      role.Role
 	reason    string
+	// template is the alias of the worker's space, empty for --harness.
+	template string
 }
 
 // identifyLaunch is identify; a test of the launch's other steps replaces it.
@@ -59,6 +61,8 @@ func ownRoom() (launchIdentity, error) {
 // start a worker past main.
 func spaceIdentity(value string) (launchIdentity, error) {
 	_ = os.Unsetenv(spacehost.WorkerSpaceEnv)
+	template := os.Getenv(spacehost.WorkerTemplateEnv)
+	_ = os.Unsetenv(spacehost.WorkerTemplateEnv)
 	refuse := func(why string) (launchIdentity, error) {
 		return launchIdentity{}, &FailedError{Message: fmt.Sprintf(
 			"%s=%s names the space this worker belongs to, but %s; a person starts main, and main starts workers with rewake space open.",
@@ -94,7 +98,7 @@ func spaceIdentity(value string) (launchIdentity, error) {
 	if !found || part.Spaces {
 		return refuse("its record names no worker's role")
 	}
-	return launchIdentity{name: record.Worker.Name, room: room, part: part, reason: "raised by main with rewake space open as " + part.ID}, nil
+	return launchIdentity{name: record.Worker.Name, room: room, part: part, reason: "raised by main with rewake space open as " + part.ID, template: template}, nil
 }
 
 // thisRun is this process's run epoch, as its space host records it.

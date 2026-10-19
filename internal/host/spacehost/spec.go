@@ -50,6 +50,9 @@ type Spec struct {
 	// Strip are the variables no worker inherits beyond rewake's own: every
 	// harness's EnvNotInherited, main's markers among them.
 	Strip []string `json:"strip,omitempty"`
+	// Template is the alias the space was opened with, given to the worker's
+	// launch as WorkerTemplateEnv; empty for --harness.
+	Template string `json:"template,omitempty"`
 	// Worktree says the launch makes a worktree, which the record names once
 	// the worker's session claims it.
 	Worktree bool          `json:"worktree,omitempty"`

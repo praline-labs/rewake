@@ -165,10 +165,11 @@ rewake --command my-claude claude
     in `plugins/`, each child one plugin (another `--plugin-dir`); `mcp.json` becomes
     `--mcp-config`; `CLAUDE.md` follows the briefing in the one `--append-system-prompt`.
   - **`settings.json` is the whole of the worker's settings** (the owner's decision, October
-    19, 2026), passed as the file it is. rewake writes its defaults there on the first launch,
+    19, 2026), passed as the file it is, or with the worker's memory as a copy with two keys
+    laid over it (below). rewake writes its defaults there on the first launch,
     with `"rewake": {"defaults": <n>}`, the version of rewake's defaults the file is at;
-    Claude Code ignores that key. The defaults of version 1: `autoMemoryEnabled: false`;
-    `claudeMdExcludes` naming `~/.claude/CLAUDE.md` as an absolute path; the owner's off-list —
+    Claude Code ignores that key. The defaults of version 2: `claudeMdExcludes` naming
+    `~/.claude/CLAUDE.md` as an absolute path; the owner's off-list —
     `permissions.deny` of `Agent` (every subagent, the built-in `Explore` and `Plan` among
     them), `ScheduleWakeup`, `SendMessage`, `ListAgents`, `EnterWorktree`, `ExitWorktree`,
     `EnterPlanMode`, `PushNotification`, `RemoteTrigger` and `Artifact`; `disableWorkflows:
@@ -180,6 +181,26 @@ rewake --command my-claude claude
     `CLAUDE_CODE_AUTO_CONNECT_IDE=false` and `CLAUDE_CODE_DISABLE_CRON=1`. Kept: web fetch and
     search, `AskUserQuestion`, `ExitPlanMode`, the terminal title, auto-compact, background
     tasks and Claude Code's own messaging socket, which carries rewake's wake.
+  - **Version 1 had `autoMemoryEnabled: false`**; version 2 retires it, so a file written
+    by the build before loses it where it still holds rewake's `false`.
+  - **The worker's memory** (the owner's decision, October 19, 2026) is Claude Code's own
+    auto-memory, `MEMORY.md` loaded into the context and kept by the model as main's is, but
+    one per worker template and project:
+    `~/.config/rewake/claude/worker/memory/<project>/<template>/`, made 0700 before the launch.
+    `<project>` is the main repository's root, named as a room is named for its directory —
+    the last element as a readable slug and 12 hex digits of the SHA-256 of the resolved path
+    — so every worktree of one repository, and any directory in it, shares it, as Claude Code
+    keys its own; outside Git it is the launch directory. `<template>` is the alias the space
+    was opened with, `default` for `space open --harness claude`; an alias that cannot name a
+    directory (only letters, digits, dot, dash and underscore, not starting with a dot)
+    refuses the launch. Parallel workers of one template share the directory; the last write
+    of a fact wins. Since `--settings` is single-use, the launch writes
+    `worker-settings.json` in the run's directory — the folder's settings with
+    `autoMemoryEnabled: true` and `autoMemoryDirectory: <that absolute path>` laid over them,
+    nothing else — and passes it; Claude Code ignores a relative `autoMemoryDirectory`
+    (research-launch.md). A person's own `"autoMemoryEnabled": false` in `settings.json` is
+    respected: the file is then passed as it is and the worker has no memory. A run directory
+    that cannot be written leaves the worker without memory, with a launch note.
   - **The person edits the file**: a default is turned back on by changing or removing it —
     `"Agent"` taken out of `permissions.deny` gives workers their subagents back,
     `"idleCompaction": true` its idle compaction — and anything else of Claude Code's settings
@@ -323,11 +344,13 @@ wrapper ([SP9](rules/space.md)). Then it opens a pseudo-terminal of 120 by 40 wi
 `rewake [--command <wrapper>] <harness> [--worktree…] <harness args>`, in
 main's working directory, with `REWAKE_SESSION`, `REWAKE_EPOCH`, `REWAKE_ROOM`, every
 `REWAKE_BRIDGE_` variable and every catalogue harness's `EnvNotInherited` stripped,
-`REWAKE_DIR` set to main's base, `TERM` set and `REWAKE_SPACE=<room>/<space id>`. The launch
+`REWAKE_DIR` set to main's base, `TERM` set and `REWAKE_SPACE=<room>/<space id>`, with
+`REWAKE_SPACE_TEMPLATE=<alias>` beside it for a space opened with `--alias`. The launch
 is that worker, not main, only when the variable names a space of an existing room that is
 `opening`, or already `open` on the launch's own run (the host records it as soon as it
 started the worker), and whose recorded host run — pid and start time — is the launch's parent; it then
-takes the name, role and room from the record and unsets the variable. Anything else is
+takes the name, role and room from the record, the template from its companion, and unsets
+both; the template names the worker's memory on Claude Code. Anything else is
 refused, exit 1, pointing to `rewake space open`: a person who set the variable would start a
 worker past main. Where the harness takes a conversation id
 (`ConversationOffer`), a fresh one is inserted before any prompt terminator and recorded.

@@ -73,14 +73,18 @@ func workerProfile(request adapter.LaunchRequest, args []string) (profile, error
 	if err := makeProfileDir(dir); err != nil {
 		return profile{}, err
 	}
-	settings, wrote, err := workerSettings(dir, home)
+	path, settings, wrote, err := workerSettings(dir, home)
+	if err != nil {
+		return profile{}, err
+	}
+	passed, notes, err := launchSettings(path, settings, dir, request.RunDir, request.Template)
 	if err != nil {
 		return profile{}, err
 	}
 	// The directory is the worker plugin, its skills/ the person's skills.
-	out := profile{args: []string{settingSourcesFlag, workerSources, settingsFlag, settings, pluginDirFlag, dir}}
+	out := profile{args: []string{settingSourcesFlag, workerSources, settingsFlag, passed, pluginDirFlag, dir}, notes: notes}
 	if wrote {
-		out.notes = append(out.notes, fmt.Sprintf("the worker settings %s now hold rewake's defaults of version %d", settings, defaultsVersion))
+		out.notes = append(out.notes, fmt.Sprintf("the worker settings %s now hold rewake's defaults of version %d", path, defaultsVersion))
 	}
 	plugins := filepath.Join(dir, "plugins")
 	if ok, err := present(plugins, true); err != nil {

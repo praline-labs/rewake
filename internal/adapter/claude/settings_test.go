@@ -43,7 +43,7 @@ func denied(settings map[string]any) []any {
 // owner's folder holds {} from the build before.
 func TestSettingsFreshAndEmpty(t *testing.T) {
 	for _, text := range []string{"", "{}\n"} {
-		path, wrote, err := workerSettings(settingsFile(t, text), "/home/p")
+		path, _, wrote, err := workerSettings(settingsFile(t, text), "/home/p")
 		if err != nil || !wrote {
 			t.Fatalf("%q: %v %v", text, wrote, err)
 		}
@@ -61,7 +61,7 @@ func TestSettingsFreshAndEmpty(t *testing.T) {
 // a file at this version is passed as it is, the tool taken out staying out.
 func TestSettingsKeepThePersons(t *testing.T) {
 	dir := settingsFile(t, `{"idleCompaction": true, "permissions": {"deny": ["WebFetch"], "allow": ["Bash(go:*)"]}, "env": {"X": "a&b"}, "n": 1.50}`)
-	path, _, err := workerSettings(dir, "/home/p")
+	path, _, _, err := workerSettings(dir, "/home/p")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -80,7 +80,7 @@ func TestSettingsKeepThePersons(t *testing.T) {
 	if err := os.WriteFile(path, []byte(edited), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, wrote, err := workerSettings(dir, "/home/p"); err != nil || wrote {
+	if _, _, wrote, err := workerSettings(dir, "/home/p"); err != nil || wrote {
 		t.Fatalf("a current file was written again: %v %v", wrote, err)
 	}
 	if again, _ := os.ReadFile(path); string(again) != edited {
@@ -138,7 +138,7 @@ func TestSettingsRefusedOrLeft(t *testing.T) {
 		"{\n\"rewake\": {\"defaults\": 1.5}}":                           "not a version",
 	} {
 		dir := settingsFile(t, text)
-		_, _, err := workerSettings(dir, "/home/p")
+		_, _, _, err := workerSettings(dir, "/home/p")
 		if err == nil || !strings.Contains(err.Error(), want) || !strings.Contains(err.Error(), filepath.Join(dir, "settings.json")) {
 			t.Errorf("%q: %v", text, err)
 		}
@@ -148,7 +148,7 @@ func TestSettingsRefusedOrLeft(t *testing.T) {
 	}
 	newer := `{"rewake": {"defaults": 99}}`
 	dir := settingsFile(t, newer)
-	if _, wrote, err := workerSettings(dir, "/home/p"); err != nil || wrote {
+	if _, _, wrote, err := workerSettings(dir, "/home/p"); err != nil || wrote {
 		t.Fatalf("a newer file: %v %v", wrote, err)
 	}
 	if raw, _ := os.ReadFile(filepath.Join(dir, "settings.json")); string(raw) != newer {
@@ -167,7 +167,7 @@ func TestSettingsThroughALink(t *testing.T) {
 	if err := os.Symlink(own, filepath.Join(dir, "settings.json")); err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := workerSettings(dir, "/home/p"); err != nil {
+	if _, _, _, err := workerSettings(dir, "/home/p"); err != nil {
 		t.Fatal(err)
 	}
 	if info, err := os.Lstat(filepath.Join(dir, "settings.json")); err != nil || info.Mode()&os.ModeSymlink == 0 {
@@ -187,7 +187,7 @@ func TestSettingsThroughADanglingLink(t *testing.T) {
 	if err := os.Symlink(own, link); err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := workerSettings(dir, "/home/p"); err == nil || !strings.Contains(err.Error(), own) {
+	if _, _, _, err := workerSettings(dir, "/home/p"); err == nil || !strings.Contains(err.Error(), own) {
 		t.Fatalf("a dangling link was accepted: %v", err)
 	}
 	if target, err := os.Readlink(link); err != nil || target != own {
@@ -200,7 +200,7 @@ func TestSettingsThroughADanglingLink(t *testing.T) {
 
 // Keys no default owns are the person's, whatever they hold.
 func TestSettingsLeaveOtherKeys(t *testing.T) {
-	path, _, err := workerSettings(settingsFile(t, `{"env": {"MINE": 1}, "mine": [1, {}], "permissions": {"allow": "x"}}`), "/home/p")
+	path, _, _, err := workerSettings(settingsFile(t, `{"env": {"MINE": 1}, "mine": [1, {}], "permissions": {"allow": "x"}}`), "/home/p")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -95,6 +95,7 @@ func handleLaunch(h adapter.Harness) func(*Context, Call) error {
 			Shell:      inShell,
 			Role:       id.part,
 			RoleReason: id.reason,
+			Template:   id.template,
 			Command:    program,
 			OnClaimed:  onClaimed,
 			Lease:      lease,

@@ -33,7 +33,7 @@ var bypassExceptions = []bypass{
 	{"internal/adapter/pi/ship.go", "os.MkdirAll", 1, "pi's agent directory, the person's beside the alias file and outside any room: no room's lease covers it"},
 	{"internal/adapter/pi/ship.go", "os.Chmod", 1, "pi's agent directory made private, the person's beside the alias file and outside any room"},
 
-	{"internal/adapter/claude/workerdir.go", "os.MkdirAll", 1, "the Claude Code worker profile's directory, the person's beside the alias file and outside any room: no room's lease covers it"},
+	{"internal/adapter/claude/workerdir.go", "os.MkdirAll", 2, "the Claude Code worker profile's directory and a template's memory in it, the person's beside the alias file and outside any room: no room's lease covers it"},
 	{"internal/adapter/claude/workerdir.go", "os.OpenFile", 1, "the Claude Code worker profile's first files, made only where none is, outside any room"},
 	{"internal/adapter/claude/workerdir.go", "os.CreateTemp", 1, workerSettings},
 	{"internal/adapter/claude/workerdir.go", "os.Rename", 1, workerSettings},
