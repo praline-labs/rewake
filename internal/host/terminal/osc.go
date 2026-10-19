@@ -16,8 +16,8 @@ const oscLimit = 1 << 20
 // "✳ Claude Code" (✳ is E2 9C B3) ended early and the rest was drawn as text
 // over its logo. A program in a UTF-8 locale never sends a bare 8-bit ST;
 // what the emulator loses is only the non-ASCII characters, and no OSC it
-// acts on needs them. What the host passes on — a title, a notification —
-// is taken from done, whole.
+// acts on needs them. The title a late client's preamble carries is taken
+// from done, whole.
 type oscFilter struct {
 	esc, osc bool
 	// buf is the OSC string so far; long says it outgrew oscLimit.
@@ -75,22 +75,12 @@ func (f *oscFilter) end(finished bool) {
 	}
 }
 
-// oscSeen keeps what an OSC string says for the host mode
-// (docs/v2/host-mode.md#rendering-from-the-emulators): a title (0 and 2) as
-// the screen's, a copy (52, not its query) and a notification (9 but its
-// progress 9;4, 99, 777) as events for the person's terminal.
+// oscSeen keeps the title (0 and 2) an OSC string sets, for a late client's
+// preamble (replay.go). The client's own copies, notifications and titles
+// come to it in the live bytes, which it reads itself.
 func (v *vtEmulator) oscSeen(payload []byte) {
 	command, rest, _ := bytes.Cut(payload, []byte(";"))
-	n, err := strconv.Atoi(string(command))
-	if err != nil {
-		return
-	}
-	switch {
-	case n == 0 || n == 2:
+	if n, err := strconv.Atoi(string(command)); err == nil && (n == 0 || n == 2) {
 		v.title = string(rest)
-	case n == 52 && !bytes.HasSuffix(rest, []byte(";?")),
-		n == 9 && !bytes.HasPrefix(rest, []byte("4;")),
-		n == 99, n == 777:
-		v.events = append(v.events, Event{OSC: string(payload)})
 	}
 }

@@ -3,7 +3,7 @@
 A worker that asks for a permission, or whose model asks a question, at a screen nobody watches
 stops its task, and main is not told. Since October 18, 2026 such a request of a Claude Code
 worker goes to main as an ordinary notify, main answers with `rewake answer`, and the worker goes
-on; a person at the worker's screen — a tab of main's host mode — may answer first.
+on; a person at the worker's screen — its pane in main's shell — may answer first.
 The facts the build rests on, and where they were seen, are in
 [permission-requests-sources.md](permission-requests-sources.md).
 

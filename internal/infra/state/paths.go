@@ -87,8 +87,8 @@ func SpacesPath(dir string) string { return filepath.Join(dir, spacesDir) }
 // space is closed, while the closed record stays for what a restore reads.
 func SpacePath(dir, id string) string { return filepath.Join(dir, spacesDir, id+".json") }
 
-// SpaceSocketPath is where a space host serves its worker's screen to a
-// host mode's views, by the space's id. A space id has no dot, so it never meets
+// SpaceSocketPath is where a space host serves its worker's screen to the
+// shell's panes, by the space's id. A space id has no dot, so it never meets
 // a session's socket, whose run does.
 func SpaceSocketPath(dir, id string) string { return SocketPath(dir, "space", id) }
 

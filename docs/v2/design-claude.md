@@ -237,8 +237,8 @@ telling; the choice between it and the end event is for stage 4.
 ## The workers' screens
 
 The mod draws no worker. Its pane, `/workers` and the `workers/*` endpoints were removed on
-October 18, 2026, when the host mode replaced them: main's wrapper draws the workers on the
-person's terminal itself ([host-mode.md](host-mode.md); the pane's design is archived,
+October 18, 2026, when the host mode replaced them; since October 19, 2026 rewake's shell draws
+the workers on the person's terminal ([shell.md](shell.md); the pane's design is archived,
 [workers-panel.md](../archive/v2/workers-panel.md)).
 
 ## What the mod never does

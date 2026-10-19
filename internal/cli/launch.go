@@ -48,7 +48,7 @@ func handleLaunch(h adapter.Harness) func(*Context, Call) error {
 		if err := refuseReportingRole(h, part); err != nil {
 			return err
 		}
-		if err := refuseHost(call, part); err != nil {
+		if err := refuseShell(call, part); err != nil {
 			return err
 		}
 		inShell, err := enterShell(call)
@@ -95,7 +95,6 @@ func handleLaunch(h adapter.Harness) func(*Context, Call) error {
 			Name:      call.Flag("name", ""),
 			Args:      args,
 			Intro:     !call.Switch("no-intro"),
-			Host:      call.Switch("host"),
 			Shell:     inShell,
 			Role:      part,
 			Command:   program,
@@ -244,26 +243,17 @@ func roleSummary() string {
 	return "No role flag means general, even in an empty room; only --main makes main, refused while the room has one, and a name never selects a role. " + strings.Join(descriptions, " ")
 }
 
-// refuseHost refuses the host mode or the shell where it has nothing to
-// show or nowhere to show it: a role that opens no spaces, or no terminal to
-// hold; and both at once.
-func refuseHost(call Call, part role.Role) error {
-	flag := ""
-	switch host, shell := call.Switch("host"), call.Switch("shell"); {
-	case host && shell:
-		return &UsageError{Command: call.Command, Message: "--host and --shell are two ways of showing main; choose one."}
-	case host:
-		flag = "--host"
-	case shell:
-		flag = "--shell"
-	default:
+// refuseShell refuses the shell where it has nothing to show or nowhere to
+// show it: a role that opens no spaces, or no terminal to hold.
+func refuseShell(call Call, part role.Role) error {
+	if !call.Switch("shell") {
 		return nil
 	}
 	if !part.Spaces {
-		return &UsageError{Command: call.Command, Message: flag + " shows the workers a main session opens; add --" + role.Main.ID + "."}
+		return &UsageError{Command: call.Command, Message: "--shell shows the workers a main session opens; add --" + role.Main.ID + "."}
 	}
 	if !terminal.IsTerminal(os.Stdin) || !terminal.IsTerminal(os.Stdout) {
-		return &UsageError{Command: call.Command, Message: flag + " holds a terminal: standard input and output must both be one."}
+		return &UsageError{Command: call.Command, Message: "--shell holds a terminal: standard input and output must both be one."}
 	}
 	return nil
 }

@@ -70,7 +70,7 @@ func handleAnswer(ctx *Context, call Call) error {
 		return usage("main's own requests are answered at its screen.")
 	}
 	if !session.HasLive(string(adapter.ControlCapability)) {
-		return failf("%s's control is not live: its run has not proven, or has lost, the way to carry an answer into it; answer at its screen (a host mode of main shows it) or let the request expire.", session.Name)
+		return failf("%s's control is not live: its run has not proven, or has lost, the way to carry an answer into it; answer at its screen (main's shell shows it) or let the request expire.", session.Name)
 	}
 	asking, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()

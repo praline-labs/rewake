@@ -41,15 +41,8 @@ var commandOption = Option{
 	Summary: "Start this program, a wrapper script that runs the harness, in place of the harness with the same arguments. A name is looked up on PATH, a path with a slash taken as given; it must be executable.",
 }
 
-// hostOption runs main in the host mode (docs/v2/host-mode.md): a way of
-// running main, not another harness, so a flag rather than a command.
-var hostOption = Option{
-	Flag:    "--host",
-	Summary: "Hold this terminal and show main, from 120 columns with the worker chosen on a bar of tabs beside it; Ctrl+\\ then a digit, n, p or m chooses, an arrow moves the focus, z zooms. Only for a role that opens spaces, and only on a terminal.",
-}
-
-// shellOption runs main in the shell (docs/v2/shell.md), the host mode's
-// successor, beside it until the host mode is removed.
+// shellOption runs main in the shell (docs/v2/shell.md): a way of running
+// main, not another harness, so a flag rather than a command.
 var shellOption = Option{
 	Flag:    "--shell",
 	Summary: "Run main in rewake's shell on this terminal: main on the left, from 120 columns the worker chosen on the bar below on the right; Ctrl+\\ then a digit, n, p or m chooses, an arrow moves the focus, z zooms. Closing the terminal ends main and its workers. The shell is REWAKE_SHELL, or rewake-shell beside rewake. Only for a role that opens spaces, and only on a terminal.",
@@ -269,7 +262,6 @@ func launchCommand(h adapter.Harness) *Command {
 		Summary:        h.Summary(),
 		Options: append(append([]Option{nameOption, roomOption, commandOption}, roleOptions()...),
 			Option{Flag: "--no-intro", Summary: "Do not add the system-layer briefing."},
-			hostOption,
 			shellOption,
 		),
 		Examples: append(h.Examples(), roomExample(h)),

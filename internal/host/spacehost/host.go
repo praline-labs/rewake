@@ -74,7 +74,7 @@ func (h *host) start() error {
 	// no way for the person to reach a prompt would leave the worker stuck.
 	listener, err := state.Listen(state.SpaceSocketPath(h.spec.Dir, h.spec.ID))
 	if err != nil {
-		return h.never("the worker's terminal could not be served for a host mode: " + err.Error())
+		return h.never("the worker's terminal could not be served for the shell: " + err.Error())
 	}
 	defer func() { _ = listener.Close() }()
 	pty, err := terminal.OpenPlain(h.spec.Size)
@@ -87,8 +87,8 @@ func (h *host) start() error {
 		return h.never(err.Error())
 	}
 	defer func() { _ = grid.Close() }()
-	// A host mode's main passes the person's terminal colors, which the
-	// worker may ask for before any view is there.
+	// The shell's main passes the person's terminal colors, which the
+	// worker may ask for before any pane is there.
 	grid.SetDefaults(terminal.ParseDefaults(os.Getenv(terminal.DefaultsEnv)))
 	cmd, err := h.command()
 	if err == nil {

@@ -12,9 +12,8 @@ The common part of the wrapper:
    preparing the child.
 2. Start an optional session-owned backend and wait for its connection. Then
    launch the harness: `exec.Cmd` with inherited stdin/stdout/stderr, the same
-   terminal and process group; in the host mode, on the host's pseudo-terminal in
-   a session of its own ("The host mode" below). Arguments after the harness name
-   are passed through as-is.
+   terminal and process group. Arguments after the harness name are passed
+   through as-is.
 3. Add the harness's pid and start time to the record.
 4. Catch and drop `SIGINT`, `SIGQUIT` (the harness handles them, being in the
    same foreground group). Caught, not ignored: an ignored signal stays ignored
@@ -25,8 +24,9 @@ The common part of the wrapper:
    wrapper stops itself with a signal aimed at its own thread, not at the
    process, and continues the harness only once it runs again: a process-wide
    stop is taken by another thread while the caller runs on, and continued the
-   harness before the wrapper had stopped. In the host mode a stop is continued
-   at once instead.
+   harness before the wrapper had stopped. A main in the shell has a stop
+   continued at once instead: its terminal is the shell's pane, and no shell
+   behind it has an `fg`.
 5. Service the inbox (below) until the harness exits.
 6. Remove the record, close the inbox (pending messages get the status `failed:
    session ended`), exit with the harness's code.
@@ -160,37 +160,17 @@ main's telemetry. Compact accepts a focus and refuses a running turn; interrupt 
 for the turn to settle aborted and leaves its actor in native history. No limits are
 reported. The exchange and its verified native behavior are in [research-pi.md](research-pi.md).
 
-### The host mode
-
-`rewake --host --main <harness>` holds the person's terminal ([host-mode.md](v2/host-mode.md)):
-main's harness runs on a pseudo-terminal of the wrapper's, in a session of its own, and each
-space main opens gets a tab from its space socket's view. The host draws the shown program on
-the alternate screen above a bar of tabs; Ctrl+\ then `n`, `p`, a digit, `0` or `m` switches,
-and Ctrl+\ twice sends Ctrl+\ to the program. Every program is kept at the region's size, the
-terminal less the bar's row. The mouse and bracketed paste stay on at the person's terminal: a
-click on the bar switches, a mouse event in the region reaches the shown program in the form its
-modes ask for, or not at all when it turned the mouse off, and a paste comes framed only to a
-program that asked for brackets. Claude Code runs fullscreen there, `CLAUDE_CODE_NO_FLICKER=1`
-unless the person set the variable, so it scrolls its own history with the wheel. A copy (OSC 52), a
-notification and the bell from any tab reach the person's terminal, the shown program's title is
-its title, and the terminal's default colours, asked once at start, seed every emulator, reaching
-workers as `REWAKE_HOST_COLORS` in main's environment. `--host` is refused, exit 2, for a role that opens no spaces and
-when standard input or output is not a terminal. Because the person's terminal is in raw mode,
-Ctrl+C and Ctrl+Z reach the shown program as bytes, never as signals; a harness that stops
-itself is continued at once, since no shell could bring it back. A kill of the wrapper still
-forwards to the harness after the grace below; a SIGKILL leaves the person's terminal raw on the
-alternate screen, which `reset` repairs.
-
 ### The shell
 
-`rewake --shell --main <harness>` runs main in rewake's shell ([shell.md](v2/shell.md)), the
-host mode's successor, beside it until the host mode is removed. The launch checks the role and
-the terminal as `--host` does (both together are refused) and execs the shell — `REWAKE_SHELL`,
+`rewake --shell --main <harness>` runs main in rewake's shell ([shell.md](v2/shell.md)). The
+launch refuses it, exit 2, for a role that opens no spaces and when standard input or output is
+not a terminal, and execs the shell — `REWAKE_SHELL`,
 or `rewake-shell` beside rewake — as `<shell> --room <room> -- <rewake> <the same arguments>`
 with `REWAKE_SHELL_MAIN=1`. The shell runs that command line on a pty of its own; that launch
 sees the variable, takes it out of its environment and runs main as an ordinary launch whose
-adapter is told the run is drawn by rewake (`CLAUDE_CODE_NO_FLICKER=1` for Claude Code, as in the
-host mode). The shell sets `REWAKE_HOST_COLORS` in main's environment from the terminal's
+adapter is told the run is drawn by rewake (`LaunchRequest.Shell`): Claude Code runs fullscreen,
+`CLAUDE_CODE_NO_FLICKER=1` unless the person set the variable, so it scrolls its own history with
+the wheel. The shell sets `REWAKE_HOST_COLORS` in main's environment from the terminal's
 answer, so workers' hosts are seeded too. It ends when main ends, with main's code, and when its
 terminal goes: then it hangs main up and main's run's end ends every worker. A launch that failed
 inside the shell has its last lines printed once the shell leaves the screen.
@@ -242,9 +222,9 @@ with the worker's run, at most 30 s, and fails with the record's reason otherwis
 
 What a harness needs to start unattended — Claude Code's folder trust, a permission mode — main
 passes after `--`; rewake types nothing into the worker on its own, only the person's keys from
-main's host mode. The space host serves `sock/space.<id>.sock` to views: the worker's screen,
-kept by its emulator from the worker's output, as frames, and the keys and sizes a view sends
-back; the last size set is the worker's ([host-mode.md](v2/host-mode.md)).
+main's shell. The space host serves `sock/space.<id>.sock` to the shell as a raw stream: a
+preamble from the emulator that keeps the worker's screen, then the worker's bytes, and the keys
+and sizes the shell sends back; the last size set is the worker's ([shell.md](v2/shell.md)).
 
 The space host reads main's run once a second (`ObserveRun` through `space.MainRuns`). Once
 it reads ended it sends SIGHUP to the worker's process group, SIGTERM after 1 s, SIGKILL after
@@ -278,7 +258,7 @@ screen, edit its configuration or read its transcript. Signals are the one place
 where it has to act at all, and only because of how they arrive.
 
 A signal from the keyboard — Ctrl+C, Ctrl+Z, Ctrl+\ — goes to the whole
-foreground process group (outside the host mode, which takes them as keys). The harness is in it, so it gets them directly and the
+foreground process group. The harness is in it, so it gets them directly and the
 wrapper passes on nothing. A `kill` aimed at the wrapper's pid, from a script or
 a supervisor, reaches nobody else: without the wrapper acting, the harness would
 keep running with its mailbox unserved and its record gone — an agent still alive
