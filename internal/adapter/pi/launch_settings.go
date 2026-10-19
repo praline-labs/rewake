@@ -1,6 +1,7 @@
 package pi
 
-func (harness) LaunchSettings(model, effort string) []string {
+// LaunchSettings ignores context: pi has no flag for its window.
+func (harness) LaunchSettings(model, effort, _ string) ([]string, error) {
 	var args []string
 	if model != "" {
 		args = append(args, "--model", model)
@@ -8,5 +9,7 @@ func (harness) LaunchSettings(model, effort string) []string {
 	if effort != "" {
 		args = append(args, "--thinking", effort)
 	}
-	return args
+	return args, nil
 }
+
+func (harness) AppliesContext() bool { return false }

@@ -148,17 +148,25 @@ func (s *Set) Template(name string, catalog adapter.Catalog) (Template, error) {
 }
 
 // settingFlags turns the settings into the harness's flags and records which
-// of them it applied.
+// of them it applied. Context is only shown on a harness with no flag for it.
 func settingFlags(h adapter.Harness, settings AliasSettings, template *Template) ([]string, error) {
-	if settings.Model == "" && settings.Effort == "" {
+	translator, ok := h.(adapter.LaunchSettingsHarness)
+	if settings.Model == "" && settings.Effort == "" && (!ok || settings.Context == "" || !translator.AppliesContext()) {
 		return nil, nil
 	}
-	translator, ok := h.(adapter.LaunchSettingsHarness)
 	if !ok {
 		return nil, fmt.Errorf("%s has no launch settings; put the model and effort in args", h.Title())
 	}
-	template.Applied.Model, template.Applied.Effort = settings.Model != "", settings.Effort != ""
-	return translator.LaunchSettings(settings.Model, settings.Effort), nil
+	context := settings.Context
+	if !translator.AppliesContext() {
+		context = ""
+	}
+	flags, err := translator.LaunchSettings(settings.Model, settings.Effort, context)
+	if err != nil {
+		return nil, err
+	}
+	template.Applied.Model, template.Applied.Effort, template.Applied.Context = settings.Model != "", settings.Effort != "", context != ""
+	return flags, nil
 }
 
 // check refuses an alias that would start something unusable, and says what.

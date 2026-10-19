@@ -59,11 +59,11 @@ func TestPortableSettingsUseHarnessFlags(t *testing.T) {
 			if h.ID() == "pi" {
 				effort = "--thinking"
 			}
-			if got := settings.LaunchSettings("chosen", "high"); !slices.Equal(got, []string{"--model", "chosen", effort, "high"}) {
-				t.Fatalf("translated settings: %v", got)
+			if got, err := settings.LaunchSettings("chosen", "high", ""); err != nil || !slices.Equal(got, []string{"--model", "chosen", effort, "high"}) {
+				t.Fatalf("translated settings: %v, %v", got, err)
 			}
-			if got := settings.LaunchSettings("", ""); len(got) != 0 {
-				t.Fatalf("unset settings became flags: %v", got)
+			if got, err := settings.LaunchSettings("", "", ""); err != nil || len(got) != 0 {
+				t.Fatalf("unset settings became flags: %v, %v", got, err)
 			}
 		})
 	}

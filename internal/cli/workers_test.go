@@ -57,9 +57,11 @@ func TestWorkersRefusesAnOldFile(t *testing.T) {
 
 type workerSettingsHarness struct{ agentHarness }
 
-func (workerSettingsHarness) LaunchSettings(model, effort string) []string {
-	return []string{"--model", model, "--effort", effort}
+func (workerSettingsHarness) LaunchSettings(model, effort, _ string) ([]string, error) {
+	return []string{"--model", model, "--effort", effort}, nil
 }
+
+func (workerSettingsHarness) AppliesContext() bool { return false }
 
 func (workerSettingsHarness) SingleUseFlags() []adapter.Flag {
 	return append(agentHarness{}.SingleUseFlags(), adapter.Flag{Spellings: []string{"--effort"}, TakesValue: true})

@@ -5,6 +5,7 @@ package claude
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter"
@@ -130,6 +131,7 @@ func (claudeHarness) Notes() []string {
 	return []string{
 		"Messages arrive through the session's inbox socket within seconds and wake an idle session.",
 		"Each turn's end reaches rewake through the rewake mod, which rewake writes into the run's directory and loads for that launch alone; a task or question to the session fails until the mod's hello is admitted, and a role that owes reports refuses to start when rewake knows the mod will not load.",
+		"A worker — any role but main — starts with rewake's worker profile in place of the person's user layer: --setting-sources project,local and one --settings with auto-memory off and the person's own CLAUDE.md left out, plus ~/.config/rewake/claude/worker/ when present: settings.json merged in, plugins/ as --plugin-dir, mcp.json as --mcp-config, CLAUDE.md after the briefing. A worker's own --settings or --setting-sources is refused; under --command the wrapper decides and the profile is not applied.",
 		"A turn's end is not held open: a turn that ends after rewake pending without a new mark closes the task as answered.",
 		"A launch through --command reaches the mod only when the command ends by exec-ing claude: a wrapper that runs it as a child is never admitted, and the session takes no tasks.",
 		"Arguments after claude reach it as written, beside the flags rewake adds for delivery, except: a --help first asks rewake for this page; --worktree is rewake's, below; and a typed flag replaces an alias's copy of it.",
@@ -155,7 +157,9 @@ func (claudeHarness) SingleUseFlags() []adapter.Flag {
 		{Spellings: []string{"--effort"}, TakesValue: true},
 		{Spellings: []string{"--fallback-model"}, TakesValue: true},
 		{Spellings: []string{"--permission-mode"}, TakesValue: true},
-		{Spellings: []string{"--settings"}, TakesValue: true},
+		{Spellings: []string{settingsFlag}, TakesValue: true},
+		{Spellings: []string{settingSourcesFlag}, TakesValue: true},
+		{Spellings: []string{autocompactFlag}, TakesValue: true},
 		{Spellings: []string{"--agent"}, TakesValue: true},
 		{Spellings: []string{sessionIDFlag}, TakesValue: true},
 		// rewake's own, taken before the launch and read only with =<name>, so
@@ -233,8 +237,25 @@ func (claudeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, 
 		notes = append(notes, "not hearing back about held messages: the socket path "+reply+" is longer than a unix socket allows")
 		reply = ""
 	}
-	if request.Intro && !adapter.HasFlag(args, introFlag) {
-		args = adapter.AddFlags(args, introFlag, brief.Intro(request.BriefContext()))
+	worker, err := workerProfile(request, args)
+	if err != nil {
+		return adapter.LaunchPlan{}, err
+	}
+	notes = append(notes, worker.notes...)
+	args = adapter.AddFlags(args, worker.args...)
+	if !adapter.HasFlag(args, introFlag) {
+		var parts []string
+		if request.Intro {
+			parts = append(parts, brief.Intro(request.BriefContext()))
+		}
+		if worker.instructions != "" {
+			parts = append(parts, worker.instructions)
+		}
+		if len(parts) > 0 {
+			args = adapter.AddFlags(args, introFlag, strings.Join(parts, "\n\n"))
+		}
+	} else if worker.instructions != "" {
+		notes = append(notes, "the worker profile's CLAUDE.md is not added: the arguments carry their own "+introFlag)
 	}
 	if len(adapter.FlagValues(args, toolFlag, toolFlagKebab)) == 0 {
 		args = adapter.AddFlags(args, toolFlag, "Bash(rewake:*)")

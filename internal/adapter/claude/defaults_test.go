@@ -14,6 +14,7 @@ func TestClaudeLaunchTakesModelAndEffortFromTheEnvironment(t *testing.T) {
 	t.Setenv("REWAKE_CLAUDE_MODEL", "configured-model")
 	t.Setenv("REWAKE_CLAUDE_EFFORT", "low")
 
+	privateHome(t)
 	plan, err := New().Launch(adapter.LaunchRequest{Name: "worker", Dir: t.TempDir(), Socket: socketPath(t), Role: role.General})
 	if err != nil {
 		t.Fatal(err)
@@ -32,6 +33,7 @@ func TestClaudeLaunchLeavesTheCallersOwnChoiceAlone(t *testing.T) {
 	t.Setenv("REWAKE_CLAUDE_EFFORT", "low")
 
 	given := []string{"--model", "asked-for", "--effort", "high"}
+	privateHome(t)
 	plan, err := New().Launch(adapter.LaunchRequest{Name: "worker", Dir: t.TempDir(), Socket: socketPath(t), Args: given, Role: role.General})
 	if err != nil {
 		t.Fatal(err)

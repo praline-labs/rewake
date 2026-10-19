@@ -3,6 +3,7 @@ package launch
 // Reading the catalog, and refusing what it must not say.
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -17,9 +18,23 @@ type settingsHarness struct{ adapter.Harness }
 func (settingsHarness) ID() string                     { return "agent" }
 func (settingsHarness) Title() string                  { return "Test agent" }
 func (settingsHarness) SingleUseFlags() []adapter.Flag { return agentLike }
-func (settingsHarness) LaunchSettings(model, effort string) []string {
-	return []string{"--model", model, "--effort", effort}
+func (settingsHarness) AppliesContext() bool           { return true }
+func (settingsHarness) LaunchSettings(model, effort, context string) ([]string, error) {
+	if context == "bad" {
+		return nil, errors.New("context bad is not a window")
+	}
+	flags := []string{"--model", model, "--effort", effort}
+	if context != "" {
+		flags = append(flags, "--window", context)
+	}
+	return flags, nil
 }
+
+// shownHarness has settings but no flag for context, as pi.
+type shownHarness struct{ settingsHarness }
+
+func (shownHarness) ID() string           { return "shown" }
+func (shownHarness) AppliesContext() bool { return false }
 
 type plainHarness struct{ adapter.Harness }
 
@@ -27,7 +42,7 @@ func (plainHarness) ID() string                     { return "plain" }
 func (plainHarness) Title() string                  { return "Plain" }
 func (plainHarness) SingleUseFlags() []adapter.Flag { return nil }
 
-var catalog = adapter.NewCatalog(settingsHarness{}, plainHarness{})
+var catalog = adapter.NewCatalog(settingsHarness{}, plainHarness{}, shownHarness{})
 
 // readSet reads contents as the user's file, or as a project's.
 func readSet(t *testing.T, contents string, user bool) *Set {
@@ -59,6 +74,14 @@ context = "large"
 
 [alias.plain]
 harness = "plain"
+[alias.plain.launch]
+context = "w"
+
+[alias.shown]
+harness = "shown"
+[alias.shown.launch]
+model = "m"
+context = "w"
 `, true)
 	if err := s.Err(); err != nil {
 		t.Fatal(err)
@@ -68,15 +91,19 @@ harness = "plain"
 		t.Fatal(err)
 	}
 	// The structured settings replace the copy in args and stay before the
-	// prompt's terminator; context has no flag here and is only shown.
-	want := []string{"--model", "chosen", "--effort", "high", "--", "literal prompt"}
+	// prompt's terminator.
+	want := []string{"--model", "chosen", "--effort", "high", "--window", "large", "--", "literal prompt"}
 	if got.Harness.ID() != "agent" || got.Role.ID != "write" || got.Command != "agent-worker" || got.Description != "Checks a patch" ||
-		!reflect.DeepEqual(got.Args, want) || !got.Applied.Model || !got.Applied.Effort || got.Applied.Context || got.Settings.Context != "large" {
+		!reflect.DeepEqual(got.Args, want) || !got.Applied.Model || !got.Applied.Effort || !got.Applied.Context {
 		t.Fatalf("template: %+v", got)
 	}
 	plain, err := s.Template("plain", catalog)
-	if err != nil || plain.Role.ID != "general" || plain.Command != "" || len(plain.Args) != 0 {
-		t.Fatalf("an alias without a role is general: %+v, %v", plain, err)
+	if err != nil || plain.Role.ID != "general" || plain.Command != "" || len(plain.Args) != 0 || plain.Applied.Context {
+		t.Fatalf("an alias without a role is general, its context only shown: %+v, %v", plain, err)
+	}
+	shown, err := s.Template("shown", catalog)
+	if err != nil || !reflect.DeepEqual(shown.Args, []string{"--model", "m", "--effort", ""}) || shown.Applied.Context || shown.Settings.Context != "w" {
+		t.Fatalf("context on a harness with no flag for it: %+v, %v", shown, err)
 	}
 }
 
@@ -116,6 +143,7 @@ func TestAnAliasThatMakesNoSenseIsRefused(t *testing.T) {
 		{"unknown harness", "[alias.x]\nharness = \"nothing\"\n", true, "which is not a harness"},
 		{"main's role", "[alias.x]\nharness = \"agent\"\nrole = \"main\"\n", true, `a worker's role is "write" or "general"`},
 		{"empty argument", "[alias.x]\nharness = \"agent\"\nargs = [\"\"]\n", true, "empty argument"},
+		{"a context the harness refuses", "[alias.x]\nharness = \"agent\"\n[alias.x.launch]\ncontext = \"bad\"\n", true, `alias "x": context bad is not a window`},
 		{"settings without flags", "[alias.x]\nharness = \"plain\"\n[alias.x.launch]\nmodel = \"m\"\n", true, "put the model and effort in args"},
 		// A directory may not choose a worker's role or the program run with
 		// the person's credentials.

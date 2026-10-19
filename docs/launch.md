@@ -117,8 +117,19 @@ rewake --main --name lead --command my-claude claude
   the run without touching the user's settings. **Verify live** that the flag adds to
   the user's permissions rather than replacing them; if it replaces them, drop the flag
   and have the overview say which rule to add to settings once.
-- A caller's `--settings` reaches the harness as given: rewake neither reads nor merges
-  it.
+- A caller's `--settings` reaches main's harness as given: rewake neither reads nor merges
+  it. A worker's is refused, since the worker profile owns that flag.
+- **The worker profile.** Every launch but main's, unless `--command` names a wrapper, which
+  then decides the configuration (a launch note says so), adds `--setting-sources
+  project,local` and one `--settings` JSON string: `autoMemoryEnabled: false`,
+  `claudeMdExcludes` naming the person's `CLAUDE.md` in `CLAUDE_CONFIG_DIR` and in
+  `~/.claude`, `env` with `DISABLE_AUTOUPDATER=1` and `DISABLE_FEEDBACK_COMMAND=1`, and the
+  person's `~/.config/rewake/claude/worker/settings.json` merged over them, key by key, its
+  `claudeMdExcludes` added to rewake's. That directory's `plugins/` becomes `--plugin-dir`,
+  `mcp.json` `--mcp-config`, and `CLAUDE.md` follows the briefing in the one
+  `--append-system-prompt`. rewake reads the directory and never writes it; an entry of the
+  wrong kind or a settings file that is not a JSON object refuses the launch naming the path.
+  The design and the probes are in [worker-profile.md](v2/worker-profile.md).
 - Every role launches here since S4-6: the run's mod reports each turn's end once its
   hello is admitted, after the harness starts, and a task to the run fails until then
   ([stage4-turns.md](v2/stage4-turns.md#readiness-and-admission)). A cause the adapter knows

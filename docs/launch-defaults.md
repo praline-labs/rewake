@@ -123,7 +123,7 @@ context = "400k"
 | `description` | One line saying when to choose the worker. |
 | `[alias.<name>.launch] model` | Applied by the adapter: `--model` on Claude Code and pi. |
 | `launch.effort` | Applied as Claude Code's `--effort` or pi's `--thinking`. |
-| `launch.context` | Applied where the harness has a flag for it — Claude Code's `--autocompact`, from the worker profile's step 1 — and only shown elsewhere. |
+| `launch.context` | The auto-compact window, applied on Claude Code as `--autocompact`: `auto`, or 100k–1M tokens such as `300k` or `1M`, any other value refused. Shown only on a harness without such a flag (pi). |
 
 TOML, because this is a structure rather than a list of names and values; a separate file
 from `settings`, because that one is `KEY=VALUE` and a file cannot be both. **Lists, not
@@ -153,9 +153,11 @@ worker's, settings on a harness with no flags for them — refuses it too, namin
 role, command, arguments and applied settings. `--alias` and `--harness` exclude each other; the
 space names the worker and its room, and an explicit `--role` overrides the alias's. Applied
 settings replace older copies in `args`, and flags after `--` replace those in turn; environment
-defaults fill what neither supplied. A worktree named in the alias is recorded as the space's
-checkout; an explicit space `--worktree` replaces it. rewake neither reads nor edits the
-person's wrapper or harness settings.
+defaults fill what neither supplied. Under a `command` wrapper whose settings set
+`CLAUDE_CODE_AUTO_COMPACT_WINDOW`, that value wins over `--autocompact`; without one a worker's
+user settings no longer reach the run ([worker-profile.md](v2/worker-profile.md)). A worktree
+named in the alias is recorded as the space's checkout; an explicit space `--worktree` replaces
+it. rewake neither reads nor edits the person's wrapper or harness settings.
 
 **Which typed flags replace the alias's.** A flag after `--` replaces the alias's copy of it —
 dropped, not merely outranked — so the command that reaches the harness names the model once.
