@@ -63,7 +63,10 @@ func handleInbox(ctx *Context, call Call) error {
 	wait, cancel := context.WithTimeout(context.Background(), readerLockWait)
 	defer cancel()
 	err = state.WithMailboxLock(wait, dir, session.Name, func() error {
-		messages, err := mail.AvailableUnread(dir, session.Name, epoch)
+		// Every run's unread mail, not only this run's: an earlier run of the
+		// name that ended before reading what was announced to it leaves it in
+		// unread/, and nobody else will ever read it.
+		messages, err := mail.AvailableUnread(dir, session.Name, "")
 		if err != nil {
 			failure = failf("could not read the inbox of %s: %v", session.Name, err)
 			return nil
@@ -81,19 +84,23 @@ func handleInbox(ctx *Context, call Call) error {
 				return nil
 			}
 		}
+		views := fromEarlierRuns(viewedMessages(dir, messages), epoch)
 		if peek {
-			if err := writeInboxPeek(ctx, session.Name, viewedMessages(dir, messages)); err != nil {
+			if err := writeInboxPeek(ctx, session.Name, views); err != nil {
 				failure = failf("could not print the inbox overview: %v", err)
 				return nil
 			}
 			return nil
 		}
-		if err := writeInbox(ctx, inboxModel{Session: session.Name, Messages: viewedMessages(dir, messages)}); err != nil {
+		if err := writeInbox(ctx, inboxModel{Session: session.Name, Messages: views}); err != nil {
 			failure = failf("could not print the messages, so none were marked read: %v", err)
 			return nil
 		}
 		for _, message := range messages {
-			if err := mail.MarkRead(dir, session.Name, epoch, message, !role.Of(session.Role).Silent); err != nil {
+			// A task an earlier run never read is lost to its sender, who may
+			// have sent it again: reading it now owes nothing.
+			reports := !role.Of(session.Role).Silent && message.ToEpoch == epoch
+			if err := mail.MarkRead(dir, session.Name, epoch, message, reports); err != nil {
 				failure = failf("the messages were shown, but recording that failed, so they stay unread and show again next time: %v", err)
 				return nil
 			}
@@ -144,6 +151,17 @@ func inboxLines(messages []messageView) []string {
 	return lines
 }
 
+// fromEarlierRuns marks the letters written for an earlier run of the name.
+func fromEarlierRuns(views []messageView, epoch string) []messageView {
+	for index := range views {
+		views[index].EarlierRun = views[index].ToEpoch != epoch
+	}
+	return views
+}
+
+// earlierRunNote follows a task or a question written for an earlier run.
+const earlierRunNote = "Rewake: written for an earlier run of this session, which never read it; no report is owed, and its sender counts it lost."
+
 // letterHead is what a letter shows above its text: the sender's state for a
 // main, then who sent what when.
 func letterHead(message messageView) []string {
@@ -152,18 +170,30 @@ func letterHead(message messageView) []string {
 		lines = append(lines, stateLine(message.From, message.Telemetry, message.Availability != nil || message.Departure != nil), "")
 	}
 	lines = append(lines,
-		fmt.Sprintf("from %s · %s · %s%s", message.From, mail.KindOf(message.Message), message.CreatedAt.Local().Format("15:04:05"), relation(message.Message)),
+		fmt.Sprintf("from %s · %s · %s%s%s", message.From, mail.KindOf(message.Message), message.CreatedAt.Local().Format("15:04:05"), relation(message.Message), earlierRun(message.EarlierRun)),
 	)
 	return lines
 }
 
 // letterBody is the letter's text, with the warning a report from another
-// conversation carries.
+// conversation carries, or the note on work an earlier run never read.
 func letterBody(message messageView) string {
+	text := message.Text
 	if message.ThreadChanged {
-		return message.Text + "\n" + mail.ThreadChangedWarning
+		text += "\n" + mail.ThreadChangedWarning
 	}
-	return message.Text
+	if message.EarlierRun && mail.AsksForWork(message.Message) {
+		text += "\n" + earlierRunNote
+	}
+	return text
+}
+
+// earlierRun is the heading's mark of a letter written for an earlier run.
+func earlierRun(earlier bool) string {
+	if earlier {
+		return " · for an earlier run"
+	}
+	return ""
 }
 
 // relation names the message a letter belongs with, for the heading line:

@@ -355,8 +355,15 @@ are unchanged.
 Run by the agent inside its session: `REWAKE_SESSION` names the mailbox and
 `REWAKE_EPOCH` the run. A run that no longer holds the name is refused, and so
 is a process with a name and no run — by its name alone, a leftover of an ended
-session cannot be told from the current one. Mail for an earlier run is not
-shown. Reports reserved for a waiting send are also skipped.
+session cannot be told from the current one. Reports reserved for a waiting send are
+skipped.
+
+Mail an earlier run of the name was told of and never read stays in `unread/`, and the
+next run reads it with its own, each such letter marked `for an earlier run` in its
+heading and `earlierRun` in JSON. A task or a question in it records no wait and owes
+no report: the sender's `--awaited` already counts it lost to the ended run, and may have
+sent it again. Before October 19, 2026 such mail was never shown: a main restarted under
+its name lost the reports its earlier run had been told of.
 
 Under the mailbox lock, the text is printed first. Only once the output got
 through is each message recorded: its sender run in `awaiting/<own epoch>/`

@@ -40,6 +40,9 @@ type sessionView struct {
 
 type messageView struct {
 	Telemetry *session.Snapshot `json:"telemetry,omitempty"`
+	// EarlierRun says the letter was written for an earlier run of the
+	// reader's name, which ended without reading it.
+	EarlierRun bool `json:"earlierRun,omitempty"`
 	mail.Message
 }
 

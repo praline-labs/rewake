@@ -225,8 +225,9 @@ why it was refused or failed — comes later as a notify from the worker
 ([remote-control.md](remote-control-letter.md)).
 
 1. **Whose mailbox.** `REWAKE_SESSION` names it, `REWAKE_EPOCH` proves the run:
-   a stale run, or a process with a name and no epoch, is refused. Mail of an
-   earlier run is not shown.
+   a stale run, or a process with a name and no epoch, is refused. Mail an
+   earlier run of the name was told of and never read is shown too, marked `for an
+   earlier run` (`earlierRun`); a task or a question in it records no wait.
 2. **Overview or full read.** `rewake inbox --peek` shows IDs and bounded first-line
    metadata without bodies, consumption, waiters or task-boundary changes; successful
    output has no dispatch side effect; new mail does not wait for an overview.
