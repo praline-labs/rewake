@@ -122,8 +122,8 @@ mode:
 ## The prefix and the room
 
 - **Ctrl+\\** is read in `prependInputHandlers` on raw sequences, before OpenTUI parses them: the
-  byte 0x1c, its CSI-u forms with event types and lock bits, its modifyOtherKeys form; a release
-  is swallowed. The commands are the host mode's: `n`/`p`, `0`–`9`, `m`, ← →, `z`, the prefix
+  byte 0x1c, its CSI-u forms with event types and lock bits, its modifyOtherKeys form; it waits two
+  seconds for its command, and the releases of the prefix and of the key taken are swallowed. The commands are the host mode's: `n`/`p`, `0`–`9`, `m`, ← →, `z`, the prefix
   again. Checked live in the CSI-u form with ← → and `z`.
 - **The room** comes from rewake's own commands, polled once a second: `rewake list --json` for
   each session's activity, model, effort and context, `rewake space --json` for the spaces, which

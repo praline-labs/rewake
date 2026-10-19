@@ -30,11 +30,17 @@ func (s screen) Stop() {
 // the terminal away from the shell.
 //
 // The host mode holds the person's terminal itself, so the harness runs on
-// the host's, in a session of its own, and a stop is continued at once.
+// the host's, in a session of its own, and a stop is continued at once. So
+// does a main in the shell: its terminal is the shell's pane, and no shell
+// behind it has an fg to bring a stopped job back.
 func startHarness(request Request, command *exec.Cmd, epoch string) (screen, func(int), error) {
 	if !request.Host {
 		command.Stdin, command.Stdout, command.Stderr = os.Stdin, os.Stdout, os.Stderr
-		return screen{}, followJob, command.Start()
+		onStop := followJob
+		if request.Shell {
+			onStop = continueHarness
+		}
+		return screen{}, onStop, command.Start()
 	}
 	h, err := hostmode.Open(hostmode.Config{
 		In: os.Stdin, Out: os.Stdout, Env: os.Environ(),

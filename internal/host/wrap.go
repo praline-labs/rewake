@@ -47,7 +47,7 @@ type Request struct {
 	Host bool
 	// Shell says the harness runs in rewake's shell, on the shell's
 	// terminal (docs/v2/shell.md): an ordinary run here, drawn by the shell
-	// as the host mode would draw it.
+	// as the host mode would draw it, its stops continued as the host mode's.
 	Shell bool
 
 	// Role is explicit when its ID is set; empty always uses general.

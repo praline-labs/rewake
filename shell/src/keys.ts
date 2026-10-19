@@ -35,20 +35,42 @@ function commandOf(seq: string): Command | undefined {
   return undefined
 }
 
+// A typed prefix waits this long for its command, as in the host mode.
+const prefixLapse = 2000
+// The key code of a CSI sequence, for matching a release to its press.
+const codeOf = (seq: string) => /^\x1b\[(\d+)[;u]/.exec(seq)?.[1]
+
 // prefixHandler is the input handler: true takes the sequence from OpenTUI.
 // The prefix waits for one key; any other key after it is dropped, as in
-// the host mode, and the release of a key taken is taken too.
-export function prefixHandler(run: (command: Command) => void): (seq: string) => boolean {
-  let pending = false
+// the host mode, and the releases of the prefix and of the key taken are
+// taken too.
+export function prefixHandler(run: (command: Command) => void, now = Date.now): (seq: string) => boolean {
+  let pendingAt: number | undefined
+  let taken: string | undefined
   return seq => {
-    if (release.test(seq)) return pending || seq.startsWith("\x1b[92;")
-    if (!pending) {
-      pending = isPrefix(seq)
-      return pending
+    const released = release.test(seq)
+    if (pendingAt !== undefined && now() - pendingAt > prefixLapse) pendingAt = undefined
+    if (pendingAt !== undefined) {
+      if (released) return true
+      pendingAt = undefined
+      taken = codeOf(seq)
+      const command = commandOf(seq)
+      if (command) run(command)
+      return true
     }
-    pending = false
-    const command = commandOf(seq)
-    if (command) run(command)
-    return true
+    if (isPrefix(seq)) {
+      pendingAt = now()
+      return true
+    }
+    if (released) {
+      const code = codeOf(seq)
+      if (code !== "92" && (taken === undefined || code !== taken)) return false
+      taken = undefined
+      return true
+    }
+    // Another key ends the wait for that release: a terminal reporting no
+    // releases never sends it.
+    taken = undefined
+    return false
   }
 }
