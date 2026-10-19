@@ -17,6 +17,7 @@ import (
 
 func launch(t *testing.T, args []string, socket string) adapter.LaunchPlan {
 	t.Helper()
+	privateHome(t)
 	plan, err := New().Launch(adapter.LaunchRequest{
 		Name:   "api",
 		Dir:    t.TempDir(),

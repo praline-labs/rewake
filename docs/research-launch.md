@@ -305,6 +305,29 @@ has two spellings, `--allowedTools, --allowed-tools <tools...>`, as does
 `--disallowedTools, --disallowed-tools`. Rewake adds its `Bash(rewake:*)` rule only when
 neither spelling of the allow list is given.
 
+## What the worker profile relies on
+
+**[`claude -p --no-session-persistence "/context"`, installed 2.1.302, no model call; October
+19, 2026]** `/context` lists the memory files, skills, MCP tools and the window without a model
+call, in a private HOME as well as the person's. What the worker profile
+([worker-profile.md](v2/worker-profile.md)) takes from it:
+
+- `--setting-sources project,local` leaves out the user settings, user skills, the user MCP
+  servers of `~/.claude.json` and the user `CLAUDE.md`. The claude.ai connectors stay; only
+  `--strict-mcp-config` drops them, with every server not named by `--mcp-config`.
+- `CLAUDE.md` and `.claude/CLAUDE.md` of each directory above the working one load as
+  *Project* memory, so `~/.claude/CLAUDE.md` loads for any checkout under the home directory —
+  with the user source off, and under another `CLAUDE_CONFIG_DIR`. `claudeMdExcludes` in
+  `--settings` (absolute paths or globs; user, project and local memory) leaves it out.
+- `--settings` takes a file or a JSON string and is single-use: given twice, only the last
+  applies. Its `skillOverrides`, `autoMemoryEnabled` and `env` apply.
+- An `env` value in the user settings beats `--autocompact` and the process environment; one in
+  `--settings` beats the user settings. `--autocompact` takes `auto` or 100k–1M (`300k`, `1M`,
+  `200000`) and reads the leading number of anything else: `300K (note)` is 300k, `250k5` is
+  250k; `99k`, `2M` and `1.5M` are refused.
+- `--plugin-dir` of a folder whose children are plugins loads each; a plugin's skills show as
+  `<plugin>:<skill>`, source `Plugin`.
+
 ## Claude Code's cross-session inbound gate
 
 **[the binary's bundled source, installed 2.1.280; September 23, 2026]** Every line that

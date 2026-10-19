@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/host/launch"
 )
@@ -39,7 +40,7 @@ func workersCommand() *Command {
 		Next:     []string{"rewake space open <name> --alias <alias>"},
 		Notes: []string{
 			"Any role may read this catalog. Aliases come from the user alias file, then the current directory's .rewake.toml, as for a direct launch. An unreadable file refuses the listing rather than silently omit workers.",
-			"Model, effort and context describe the alias's launch table, not a running session. Model and effort apply unless launch.apply is false; context is always only shown. Typed harness flags override applied settings at launch.",
+			"Model, effort and context describe the alias's launch table, not a running session. They apply unless launch.apply is false; context applies only on a harness with a flag for it — Claude Code's --autocompact — and is shown elsewhere. Typed harness flags override applied settings at launch.",
 			"main = true marks a main template; --main in an older alias does too. Neither may be opened as a worker. --all shows them marked.",
 		},
 		Access: viewForm, Handler: handleWorkers,
@@ -104,9 +105,19 @@ func (ctx *Context) workerAlias(name string) (workerTemplate, Call, error) {
 		Description: value.Description, Main: value.Main || part.ID == role.Main.ID,
 		Model:   workerSetting{Value: value.Launch.Model, Applied: applied && value.Launch.Model != ""},
 		Effort:  workerSetting{Value: value.Launch.Effort, Applied: applied && value.Launch.Effort != ""},
-		Context: workerSetting{Value: value.Launch.Context},
+		Context: workerSetting{Value: value.Launch.Context, Applied: applied && value.Launch.Context != "" && appliesContext(ctx, value.Harness)},
 	}
 	return view, parsed.Call, nil
+}
+
+// appliesContext says whether the alias's harness turns context into a flag.
+func appliesContext(ctx *Context, id string) bool {
+	h, ok := ctx.table.catalog.Find(id)
+	if !ok {
+		return false
+	}
+	settings, ok := h.(adapter.LaunchSettingsHarness)
+	return ok && settings.AppliesContext()
 }
 
 func (l workersListing) lines() []string {

@@ -45,6 +45,7 @@ Mail and reports:
 Main and its workers:
 
 - [session-state.md](session-state.md) — the telemetry line main sees for its workers: context, model and effort, compactions, staleness.
+- [v2/worker-profile.md](v2/worker-profile.md) — rewake's own Claude Code worker profile by launch options (step 1 built), and `rewake claude` as main's whole launch in the room of its directory, workers raised only by main.
 - [v2/shell.md](v2/shell.md) — the shell, which replaced the host mode on October 19, 2026: a TypeScript application on OpenTUI and Solid in `shell/`, started by `rewake --shell`, a terminal pane per program fed from its host's socket in the raw mode, the spike's findings, the steps.
 - [session-activity.md](session-activity.md) — activity labels, compaction notices, a worker's departure or replacement announced to main.
 - [remote-control.md](remote-control.md) — `rewake compact` and `rewake interrupt`: who may call them, refusals, the control directory.
@@ -53,7 +54,6 @@ Main and its workers:
 
 Designs not built:
 
-- [v2/worker-profile.md](v2/worker-profile.md) — rewake's own Claude Code worker profile by launch options, and `rewake claude` as main's whole launch, workers raised only by main.
 - [permission-requests.md](permission-requests.md) — a worker's permission request or question carried to main, answered with `rewake answer`, the first answer winning.
 - [permission-requests-sources.md](permission-requests-sources.md) — the live probe on Claude Code 2.1.302 and the pi facts behind it.
 - [conversation-reset.md](conversation-reset.md) — `rewake clear` from main and a conversation marker in `list` and notices.

@@ -1,6 +1,6 @@
 # The worker profile and `rewake claude` as main
 
-A design, not built. The owner's decisions of October 19, 2026: rewake carries its own
+A design; step 1 built October 19, 2026 (below). The owner's decisions of October 19, 2026: rewake carries its own
 Claude Code worker profile, so a worker does not carry everything of the person's own Claude
 Code, and the person's wrapper made for that is deleted; the person starts everything with
 `rewake claude` and Claude Code's own flags, which always makes main; workers are raised only
@@ -52,10 +52,12 @@ is main's (sharing the directory with main otherwise mixes them); `env` with
 `DISABLE_FEEDBACK_COMMAND=1` (no survey in an unattended pane); `Bash(rewake:*)` as today.
 
 **The person's profile**, optional, in rewake's own directory beside pi's,
-`~/.config/rewake/claude/worker/`, made private by the launch, never in the state directory:
+`~/.config/rewake/claude/worker/`, never in the state directory; rewake reads it and never
+writes or makes it, and an entry of the wrong kind refuses the launch naming the path:
 
 - `settings.json` — merged over rewake's defaults (objects key by key, the person's value wins;
-  `claudeMdExcludes` is appended to, never replaced), written as the run's one `--settings` file.
+  `claudeMdExcludes` is appended to, never replaced), passed as the run's one `--settings`, a
+  JSON string, so nothing is written.
   Where the person's permissions allow-list, `env`, model per effort, `skillOverrides` go.
 - `CLAUDE.md` — the worker's instructions, after rewake's briefing.
 - `plugins/` — each child a plugin, loaded with `--plugin-dir`; the worker's skills live here.
@@ -65,21 +67,39 @@ rewake reads only its own directory and never `~/.claude`, `~/.claude.json` or a
 files; it does not know where the person's instructions and skills are built from. Filling the
 profile is the person's: the owner's installers get a target writing these paths.
 
-**Context per worker.** The alias field `launch.context` becomes applied on Claude Code as
-`--autocompact <value>`, validated as the flag's range, and stays shown-only on a harness with no
-such flag. `launch.apply = false` goes with the wrapper it served.
+**Context per worker.** The alias field `launch.context` is applied on Claude Code as
+`--autocompact <value>`, for main and workers alike, checked by rewake as `auto` or 100k–1M
+written `300k`, `1M` or `200000` — Claude Code itself reads the leading number of anything —
+and stays shown-only on a harness with no such flag (`AppliesContext`). `launch.apply = false`
+goes with the wrapper it served (step 2).
+
+**Under `--command`** the profile is not applied, with a launch note: the wrapper decides the
+configuration Claude Code starts with, as it did before. A wrapper that moves
+`CLAUDE_CONFIG_DIR` keeps its own settings, whose `env` then beats `--autocompact`.
 
 ## `rewake claude [claude flags]`
 
-- **Always main.** `rewake [--room <room>] [--command <program>] [--no-intro] <harness> [flags]`
-  is main on that harness; `--worktree` stays. **Removed** from the person's launch: `--main`,
-  `--write`, `--general`, `--name` (main is `main-<harness>`, one per room) and `--shell`.
-- **The shell by default** when standard input and output are both terminals and the adapter
-  offers spaces; otherwise main runs plain (`claude -p`, a script, pi until it offers spaces), as
-  an ordinary launch. This changes "the shell, chosen at launch" in `project.md`: the owner's
-  decision, recorded there in the same step.
-- **A second `rewake claude` in the same room** is refused, exit 1, before anything starts:
-  `room <room> has main <name>; start another with rewake --room <other> claude`.
+- **Always main.** `rewake [--command <program>] [--no-intro] <harness> [flags]` is main on that
+  harness, pi's too; `--worktree` stays. **Removed** from the person's launch: `--main`,
+  `--write`, `--general`, `--name` (main is `main-<harness>`, one per room), `--shell` and
+  `--room`.
+- **The shell by default** whenever standard input and output are both terminals and the
+  adapter offers spaces, with no flag to turn it off; otherwise main runs plain (`claude -p`, a
+  script, and pi, which without spaces has no shell and no workers). This changes "the shell,
+  chosen at launch" in `project.md`: the owner's decision, recorded there in step 3.
+- **The room is the launch directory** (the owner's decision, October 19, 2026). Its identity is
+  the working directory resolved with symlinks followed; the person never names a room. On disk
+  it is `v2/rooms/<base>-<hash>`: the directory's last element reduced to `[a-z0-9-]` and cut to
+  24 characters, then the first 12 hex digits of the SHA-256 of the resolved path, so two
+  checkouts named alike stay apart and the name stays readable. `rewake list` shows the room as
+  that resolved path, kept in the room's directory by the bootstrap that makes it — a new file
+  of the state format, so step 3 takes Codex's acceptance. A session finds its room in
+  `REWAKE_ROOM` as today; a command outside a session takes the room of its working directory.
+  Workers main raises belong to main's room whatever their checkout: the space host passes main's
+  room, and a worktree elsewhere changes nothing.
+- **A second `rewake claude` in the same directory** is refused, exit 1, before anything
+  starts: `<dir> has main <name>; one main per directory: start it in another directory`. One
+  in another directory is another room.
 - **Aliases are only main's worker catalogue.** `rewake <alias>` as a launch is removed, and with
   it `main = true` and main's aliases. An alias keeps `harness`, `command`, `args`, `description`
   and `launch`; its `rewake` list becomes one field `role = "write" | "general"`, since nothing
@@ -93,17 +113,37 @@ such flag. `launch.apply = false` goes with the wrapper it served.
   The workflow suite, which starts workers directly in about forty places, keeps that form in the
   `rewaketest` build only.
 
+## Decisions
+
+Main's, October 19, 2026, on the design's questions; the room's identity is the owner's (above).
+
+1. The shell by default whenever standard input and output are a terminal; no `--no-shell`.
+2. A second `rewake claude` in the same directory is refused, exit 1.
+3. The workflow suite's direct worker launches stay, in the `rewaketest` build only.
+4. A worker's auto-memory is off by default.
+5. The claude.ai connectors stay for workers: no `--strict-mcp-config` by default.
+6. `rewake pi` is main too; without spaces it runs without the shell and without workers.
+7. One profile for every Claude Code worker; named profiles only when needed.
+
 ## Steps
 
-1. **The profile in the Claude Code adapter**, for every role but main, roles untouched.
-   Live check: main opens `space open p --harness claude`; `/context` in the worker's pane shows no
-   `~/.claude/CLAUDE.md` (neither User nor Project), the profile's skills and the window
-   `launch.context` named; main's own `/context` is unchanged. Unit tests: the merge, the refusal
-   of `--settings`/`--setting-sources` for a worker, the exclude path under `CLAUDE_CONFIG_DIR`.
+1. **The profile in the Claude Code adapter** — built (`internal/adapter/claude/profile.go`),
+   roles untouched. Checked live through a built rewake, `-p --no-session-persistence
+   "/context"` with haiku, in a private HOME and `REWAKE_DIR`, the profile there holding a
+   plugin with one skill, `CLAUDE.md` and `settings.json`, the alias with `context = "250k"`:
+
+   | run | memory | skills | window |
+   | --- | --- | --- | --- |
+   | worker | only the project's `CLAUDE.md` | `wtools:wskill` (Plugin) | 250k |
+   | worker, `CLAUDE_CONFIG_DIR` another directory | only the project's | `wtools:wskill` | 250k |
+   | main | User `~/.claude/CLAUDE.md` and the project's | the user skill | 300k, its user `env` |
+   | worker under `--command` moving `CLAUDE_CONFIG_DIR` | that directory's, `~/.claude`'s as Project | that directory's | its `env`, over `--autocompact` |
+
+   A haiku call quoted the profile's `CLAUDE.md` from the system prompt. Not seen live: a
+   worker through `space open` in a pane; it is the same launch.
 2. **The catalogue**: `role`, `launch.context` applied, `apply`, `main` and the direct alias launch
    removed. Main rewrites the owner's `aliases.toml` with him and deletes the wrapper and its
    `command` lines with him, once step 1 is live; the wrapper's directory stays his.
 3. **The launch surface**: main by default, the shell by default, the flags removed, the second
    main refused, `REWAKE_SPACE`; examples, the guide, briefings, `launch.md`, `launch-defaults.md`,
-   `roles.md`, L1 of `design-rules.md` (a worker's profile is added beside the mail) and
-   `project.md` in the same commit.
+   `roles.md` and `project.md` in the same commit; the room by directory with its acceptance.

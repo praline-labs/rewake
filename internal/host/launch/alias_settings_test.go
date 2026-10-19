@@ -16,9 +16,11 @@ func (settingsHarness) SingleUseFlags() []adapter.Flag {
 	return []adapter.Flag{{Spellings: []string{"--model"}, TakesValue: true}, {Spellings: []string{"--effort"}, TakesValue: true}}
 }
 
-func (settingsHarness) LaunchSettings(model, effort string) []string {
-	return []string{"--model", model, "--effort", effort}
+func (settingsHarness) LaunchSettings(model, effort, _ string) ([]string, error) {
+	return []string{"--model", model, "--effort", effort}, nil
 }
+
+func (settingsHarness) AppliesContext() bool { return false }
 
 // These are file fields and precedence rules, not a second space workflow.
 func TestAliasSettingsParsingAndExpansion(t *testing.T) {

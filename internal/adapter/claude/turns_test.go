@@ -31,6 +31,7 @@ func TestTheOfferReportsTurnsAfterTheStartAndHoldsNone(t *testing.T) {
 		t.Fatalf("the offer's turn boundary: %+v", got)
 	}
 	room := shortRoom(t)
+	privateHome(t)
 	plan, err := New().Launch(adapter.LaunchRequest{
 		Name: "api", Epoch: "e1", Dir: room, RoomDir: room, Socket: filepath.Join(room, "sock", "api.e1.sock"),
 		RunDir: filepath.Join(room, "runs", "api.e1"), Role: role.Write,

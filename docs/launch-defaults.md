@@ -199,7 +199,7 @@ catalogue. Every new field is optional; existing alias files keep their launch m
 | `description` | One line explaining when to choose the worker. |
 | `[alias.<name>.launch] model` | Model selector, applied as `--model` by the adapter. |
 | `launch.effort` | Applied as Claude Code's `--effort` or pi's `--thinking`. |
-| `launch.context` | Free one-line text such as `1M`; always shown only, never applied. |
+| `launch.context` | The auto-compact window, applied on Claude Code as `--autocompact`: `auto`, or 100k–1M tokens such as `300k` or `1M`, any other value refused. Shown only on a harness without such a flag (pi). |
 | `launch.apply` | Defaults to `true`. With `false`, all three values are shown only, describing what the wrapper sets. |
 
 For example, with a placeholder model selector to replace locally:
@@ -247,7 +247,9 @@ checkout; an explicit space `--worktree` replaces it.
 
 Applied structured settings replace older copies in `args`; typed flags replace those in
 turn, and environment defaults fill what neither supplied. Setting `apply = false` adds no
-flags and does not disable those existing environment defaults. Context is descriptive in
-every case. Neither catalogue reads nor alias launches inspect or edit the person's wrapper
+flags and does not disable those existing environment defaults. Context becomes
+`--autocompact` on Claude Code, where a worker's user settings no longer reach the run
+([worker-profile.md](v2/worker-profile.md)); under a `command` wrapper whose settings set
+`CLAUDE_CODE_AUTO_COMPACT_WINDOW`, that value wins over the flag. Neither catalogue reads nor alias launches inspect or edit the person's wrapper
 or harness settings. The ordinary project-file restriction on roles and command wrappers
 also applies when an alias is read as a worker.

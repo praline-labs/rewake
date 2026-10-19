@@ -10,7 +10,8 @@ import (
 )
 
 // AliasSettings are the portable settings a worker catalog shows. An omitted
-// Apply means true; Context never becomes an argument.
+// Apply means true; Context becomes an argument only on a harness that
+// applies it (LaunchSettingsHarness.AppliesContext).
 type AliasSettings struct {
 	Model   string `toml:"model"`
 	Effort  string `toml:"effort"`
@@ -18,7 +19,7 @@ type AliasSettings struct {
 	Apply   *bool  `toml:"apply"`
 }
 
-// Applied says whether model and effort become launch flags.
+// Applied says whether the settings become launch flags.
 func (s AliasSettings) Applied() bool { return s.Apply == nil || *s.Apply }
 
 // Err refuses a catalog that could silently omit workers from an unreadable
@@ -52,12 +53,15 @@ func (s *Set) ExpandConfigured(argv []string, catalog adapter.Catalog, takesValu
 		return nil, err
 	}
 	h, _ := catalog.Find(value.Harness)
-	if value.Launch.Applied() && (value.Launch.Model != "" || value.Launch.Effort != "") {
+	if value.Launch.Applied() && (value.Launch.Model != "" || value.Launch.Effort != "" || value.Launch.Context != "") {
 		settings, ok := h.(adapter.LaunchSettingsHarness)
 		if !ok {
 			return nil, fmt.Errorf("alias %q: %s cannot apply launch settings; use launch.apply = false or harness arguments", name, h.Title())
 		}
-		flags := settings.LaunchSettings(value.Launch.Model, value.Launch.Effort)
+		flags, err := settings.LaunchSettings(value.Launch.Model, value.Launch.Effort, value.Launch.Context)
+		if err != nil {
+			return nil, fmt.Errorf("alias %q: %w", name, err)
+		}
 		// Structured fields replace an older copy in args, even when args
 		// ends with a prompt terminator. New flags still precede that tail.
 		visible := adapter.BeforeTerminator(value.Args)
