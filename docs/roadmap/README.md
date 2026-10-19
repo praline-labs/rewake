@@ -15,24 +15,18 @@ sessions.
 
 ## Open right now
 
-The order of work set on October 18, 2026 ([its entry](2026-10-18-decision.md)):
-
-1. The documents brought to that decision.
-2. The deletions: batch A — the delivery hold, the 1.x legacy marks, the keeper and the screen in
-   the mod protocol, the clearing of 1.x, the version probe made small — landed
-   ([its entry](2026-10-18-deletions-a.md)); batch B, grants and the mail tool, landed after the
-   test diet ([its entry](2026-10-18-deletions-b.md)).
-3. The space on Claude Code, one step: `rewake space open` and `rewake attach`
-   ([S4-7](../v2/stage4-space-steps.md#the-build-steps)); built on branch `space`, waiting for
-   the review and main's live acceptance ([its entry](2026-10-18-space.md)).
-4. pi's adapter, then a read-only reviewer on it, then pi in a space (stage 4b,
-   [the stage plan](../v2/design.md#the-stage-plan-from-here)).
-5. Compaction and context on the mod and on pi; then the room can move to 2.0.
-6. The test diet, alongside from the start.
+Where the work stands on October 19, 2026 (the order was set on October 18,
+[its entry](2026-10-18-decision.md)): the documents brought to that decision, the deletions
+(batches A and B) and the test diet have landed; the space on Claude Code is `rewake space open`
+from main, and there is no `attach`; pi ships built into rewake and is a main with no space; the
+shell is shipped (steps 1–3, [shipping](2026-10-19-shell-ship.md)); a Claude Code worker runs with
+rewake's profile and a person starts only main ([the launch surface](2026-10-19-worker-profile-step3.md)).
+What each entry leaves open is in its last line; the live ones are the owner's file for
+`--alias`, a worker in a pane, the worker profile's later steps, compaction and context on the
+mod and on pi, and the last two items of [the audit's fixes](2026-10-19-briefings-audit-fixes.md).
 
 [Milestone 6](2026-09-16-milestone-06-ready-for-daily-use.md) of 1.x keeps its open
-publication. Stage 3 of 2.0 is closed ([its entry](2026-10-13-stage3-s19.md)); stage 4's
-steps so far are the entries of October 13–17 below.
+publication. Stage 3 of 2.0 is closed ([its entry](2026-10-13-stage3-s19.md)).
 
 ## Entries
 
@@ -162,3 +156,4 @@ without a date. Local installation without publishing is in
 | October 19, 2026 | [The worker profile, step 1](2026-10-19-worker-profile-step1.md) | a Claude Code worker starts without the person's user layer, with rewake's defaults and the person's `~/.config/rewake/claude/worker/`; `launch.context` as `--autocompact`; live with haiku; open: a worker in a pane, steps 2 and 3 |
 | October 19, 2026 | [Aliases are main's catalogue of workers](2026-10-19-worker-catalogue.md) | `rewake <alias>` no launch; `role` in place of the `rewake` list, `main` and `launch.apply` gone, an old file refused naming each field; `workers` without `--all`; open: the owner's file, step 3 |
 | October 19, 2026 | [The launch surface: main always, the room by directory](2026-10-19-worker-profile-step3.md) | a person starts only main, in the room of its directory, a second main refused; the role, name, room and shell flags gone outside the test build; the shell at a terminal; the worker's service folder made and the owner's off-list; live with haiku; open: `--alias` after the owner's file, acceptance of the room's name |
+| October 19, 2026 | [The briefings and the commands' help, fixed by the audit](2026-10-19-briefings-audit-fixes.md) | the command table, the guide, main's briefing, `--awaited`, `--owed`, `retry --json`, `space open`, `workers` and the permission letter corrected; no worker-resume promise; open: the Claude launch's append prompt and worker-profile help |

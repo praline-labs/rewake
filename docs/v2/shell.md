@@ -151,7 +151,7 @@ mode:
   the prefix again sends Ctrl+\\ to the focused program; any other key cancels. Checked live in
   the CSI-u form with ← → and `z`.
 - **The room** comes from rewake's own commands, polled once a second: `rewake list --json` for
-  each session's activity, model, effort and context, `rewake space --json` for the spaces, which
+  each session's activity, model, effort and context, `rewake space list --json` for the spaces, which
   gains each open space's socket path so the shell never builds a path itself. A stream comes only
   if polling is felt.
 
