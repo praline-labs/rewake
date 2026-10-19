@@ -23,7 +23,7 @@ still shows as `Project`). Launch options do all of it and keep the person's dir
 | --- | --- | --- |
 | drops the person's user layer: `settings.json` (hooks, status line, plugins, permissions, env, model, language), user skills, user MCP servers of `~/.claude.json`, the user `CLAUDE.md` | `--setting-sources project,local` | yes |
 | drops the person's `CLAUDE.md` read as an ancestor's | `claudeMdExcludes: ["<config dir>/CLAUDE.md"]` in `--settings` | yes |
-| carries the profile's settings; precedence is user < project < local < flag < policy | `--settings <run dir>/worker-settings.json` | yes |
+| carries the profile's settings; precedence is user < project < local < flag < policy | `--settings` of the service folder's `settings.json` | yes |
 | the profile's skills, as a plugin (skills appear as `<plugin>:<skill>`) | `--plugin-dir` of the profile's plugins folder | yes |
 | the profile's MCP servers | `--mcp-config` | from help |
 | the worker's instructions | folded into the one `--append-system-prompt` after rewake's briefing | from help |
@@ -55,22 +55,28 @@ and the owner's off-list of October 19, 2026 — subagents (`Agent`), `ScheduleW
 `SendMessage`, `ListAgents`, the worktree and plan-mode tools, `PushNotification`,
 `RemoteTrigger`, `Artifact`, workflows, remote control, prompt suggestions, away summaries, idle
 compaction, spinner tips, the feedback survey, IDE auto-connect and the claude.ai connectors —
-listed setting by setting in [launch.md](../launch.md#claude-code). A denied tool comes back only
-through rewake's own key, `{"rewake": {"keep": [<tools>]}}`, since an allow cannot undo a deny;
-everything else through the person's value in `settings.json`.
+listed setting by setting in [launch.md](../launch.md#claude-code). They are written into the
+service folder's `settings.json`, which the person edits to turn one back on — `"Agent"` taken
+out of `permissions.deny` — and which a newer build brings up to its defaults without undoing
+the person's changes (below).
 
 **The person's profile**, optional, in rewake's own directory beside pi's,
 `~/.config/rewake/claude/worker/`, never in the state directory. A worker's launch makes what
-of it is missing — the folder (0700), `settings.json` holding `{}`, an empty `CLAUDE.md`,
-`skills/` and `.claude-plugin/plugin.json` naming the plugin `worker` — and never changes what
-is there (the owner's decision, October 19, 2026); the folder itself is passed as
+of it is missing — the folder (0700), an empty `CLAUDE.md`, `skills/` and
+`.claude-plugin/plugin.json` naming the plugin `worker` — and never changes what is there but
+`settings.json` (the owner's decisions, October 19, 2026); the folder itself is passed as
 `--plugin-dir`, so a skill placed or symlinked into `skills/` loads as `worker:<skill>`. An entry
 of the wrong kind refuses the launch naming the path:
 
-- `settings.json` — merged over rewake's defaults (objects key by key, the person's value wins;
-  `claudeMdExcludes` and `permissions.deny` are appended to, never replaced), passed as the run's one `--settings`, a
-  JSON string, so nothing is written.
-  Where the person's permissions allow-list, `env`, model per effort, `skillOverrides` go.
+- `settings.json` — the whole of the worker's settings, passed as the run's one `--settings`
+  as the file it is (the owner's decision, October 19, 2026, in place of a JSON string of the
+  defaults merged with the person's file). rewake writes its defaults there on the first launch
+  and marks the file `"rewake": {"defaults": <n>}`; a build with newer defaults runs only the
+  steps after the file's version — adding what each brings where the file has no value,
+  taking out what each retires where the file still holds rewake's value — so a default the
+  person removed stays removed. The rule, the refusals and the write are in
+  [launch.md](../launch.md#claude-code). Where the person's permissions allow-list, `env`,
+  model per effort, `skillOverrides` go, beside rewake's defaults.
 - `CLAUDE.md` — the worker's instructions, after rewake's briefing.
 - `skills/` — the worker's own skills, each folder or symlink one skill of the plugin `worker`.
 - `plugins/` — each child a whole plugin, loaded with `--plugin-dir`.
@@ -181,3 +187,16 @@ Main's, October 19, 2026, on the design's questions; the room's identity is the 
 
    `--alias` was not run: the owner's `aliases.toml` is still in the old form, which step 2
    refuses, and is rewritten with main at landing.
+4. **The settings as a file** — built ([its entry](../roadmap/2026-10-19-worker-settings-file.md)):
+   the folder's `settings.json` passed as it is, rewake's defaults written and migrated by
+   version, `rewake.keep` and the merge gone. `claudeMdExcludes` lives in the file: the one
+   path that needs it is `~/.claude/CLAUDE.md` of the home the folder lies in, and a
+   `CLAUDE_CONFIG_DIR` elsewhere is not read with the user source off (probed on 2.1.302), so
+   no launch-time addition is left. Checked live with haiku, a private HOME and `REWAKE_DIR`:
+
+   | check | seen |
+   | --- | --- |
+   | a worker over a copy of the owner's `{}` | the file rewritten with every default at version 1, the launch noting it |
+   | its tools and `/context` | no `Agent`, `ScheduleWakeup`, `SendMessage`, `ListAgents`, worktree, plan-mode, push, trigger or `Artifact`; System tools 2.7k, main's 6.7k |
+   | `"Agent"` taken out of the file, the worker started again | `Agent` among its tools, System tools 4.5k; the file byte for byte the same |
+   | Claude Code at a terminal with the file | no warning of the `rewake` key |

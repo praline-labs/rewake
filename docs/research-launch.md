@@ -320,7 +320,12 @@ call, in a private HOME as well as the person's. What the worker profile
   with the user source off, and under another `CLAUDE_CONFIG_DIR`. `claudeMdExcludes` in
   `--settings` (absolute paths or globs; user, project and local memory) leaves it out.
 - `--settings` takes a file or a JSON string and is single-use: given twice, only the last
-  applies. Its `skillOverrides`, `autoMemoryEnabled` and `env` apply.
+  applies. Its `skillOverrides`, `autoMemoryEnabled` and `env` apply. A top-level key Claude
+  Code does not know, `"rewake": {"defaults": 1}`, is ignored: the file's other settings apply,
+  and neither `-p` nor the interactive start warns (October 19, 2026).
+- With the user source off, `$CLAUDE_CONFIG_DIR/CLAUDE.md` of a directory that is not an
+  ancestor's `.claude` does not load (a private `CLAUDE_CONFIG_DIR` holding one, `/context`
+  listing no memory file; October 19, 2026).
 - An `env` value in the user settings beats `--autocompact` and the process environment; one in
   `--settings` beats the user settings. `--autocompact` takes `auto` or 100k–1M (`300k`, `1M`,
   `200000`) and reads the leading number of anything else: `300K (note)` is 300k, `250k5` is

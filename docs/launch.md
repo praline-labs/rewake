@@ -145,43 +145,54 @@ rewake --command my-claude claude
   it. A worker's is refused, since the worker profile owns that flag.
 - **The worker profile.** Every launch but main's, unless `--command` names a wrapper, which
   then decides the configuration (a launch note says so), adds `--setting-sources
-  project,local`, one `--settings` JSON string and the service folder as a plugin. The
-  design and the probes are in [worker-profile.md](v2/worker-profile.md).
+  project,local`, `--settings` naming the service folder's `settings.json` and the folder as a
+  plugin. The design and the probes are in [worker-profile.md](v2/worker-profile.md).
   - **The service folder**, `~/.config/rewake/claude/worker/`: what of it is missing a
     worker's launch makes (the owner's decision, October 19, 2026) — the folder itself
-    (0700), `settings.json` holding `{}`, an empty `CLAUDE.md`, an empty `skills/` and
-    `.claude-plugin/plugin.json` naming the plugin `worker`. A file or directory already there
-    is the person's and is never changed. It is not a `CLAUDE_CONFIG_DIR`: the worker keeps
-    the person's login, transcripts and folder trust.
+    (0700), an empty `CLAUDE.md`, an empty `skills/` and `.claude-plugin/plugin.json` naming
+    the plugin `worker`. A file or directory already there is the person's and is never
+    changed, but for `settings.json` (below). It is not a `CLAUDE_CONFIG_DIR`: the worker
+    keeps the person's login, transcripts and folder trust.
   - **A skill is attached** by placing its folder, or a symlink to it, in `skills/`: the folder
     is passed as `--plugin-dir`, so the skill loads as `worker:<skill>` and shows under that
     name in `/skills` and in `/context`'s Skills, source `Plugin (worker)`. Whole plugins go
     in `plugins/`, each child one plugin (another `--plugin-dir`); `mcp.json` becomes
     `--mcp-config`; `CLAUDE.md` follows the briefing in the one `--append-system-prompt`.
-  - **rewake's defaults** in `--settings`: `autoMemoryEnabled: false`; `claudeMdExcludes`
-    naming the person's `CLAUDE.md` in `CLAUDE_CONFIG_DIR` and in `~/.claude`; the owner's
-    off-list of October 19, 2026 — `permissions.deny` of `Agent` (every subagent, the
-    built-in `Explore` and `Plan` among them), `ScheduleWakeup`, `SendMessage`, `ListAgents`,
-    `EnterWorktree`, `ExitWorktree`, `EnterPlanMode`, `PushNotification`, `RemoteTrigger` and
-    `Artifact`; `disableWorkflows: true`, `remoteControlAtStartup`, `promptSuggestionEnabled`,
-    `awaySummaryEnabled`, `idleCompaction` and `spinnerTipsEnabled` false;
-    `disableClaudeAiConnectors: true`, which drops only the person's claude.ai connectors —
-    the project's `.mcp.json` servers and the folder's `mcp.json` still load; `env` with
-    `DISABLE_AUTOUPDATER=1`, `DISABLE_FEEDBACK_COMMAND=1`,
-    `CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY=1`, `CLAUDE_CODE_AUTO_CONNECT_IDE=false` and
-    `CLAUDE_CODE_DISABLE_CRON=1`. Kept: web fetch and search, `AskUserQuestion`,
-    `ExitPlanMode`, the terminal title, auto-compact, background tasks and Claude Code's own
-    messaging socket, which carries rewake's wake.
-  - **The person's `settings.json`** is merged over the defaults, key by key, the person's
-    value winning; two lists are added to rather than replaced: `claudeMdExcludes` and
-    `permissions.deny`. So a setting or an `env` value of the off-list is undone by writing it
-    there — `"idleCompaction": true`, `"disableClaudeAiConnectors": false`, `"env":
-    {"CLAUDE_CODE_DISABLE_CRON": ""}`. A denied tool
-    cannot be undone by an allow, so rewake reads one key of its own and does not pass it on:
-    `{"rewake": {"keep": ["Agent"]}}` gives workers the tools it names back, subagents here;
-    a name not on rewake's list, or any other field under `rewake`, refuses the launch.
-  - An entry of the wrong kind or a settings file that is not a JSON object refuses the
-    launch naming the path.
+  - **`settings.json` is the whole of the worker's settings** (the owner's decision, October
+    19, 2026), passed as the file it is. rewake writes its defaults there on the first launch,
+    with `"rewake": {"defaults": <n>}`, the version of rewake's defaults the file is at;
+    Claude Code ignores that key. The defaults of version 1: `autoMemoryEnabled: false`;
+    `claudeMdExcludes` naming `~/.claude/CLAUDE.md` as an absolute path; the owner's off-list —
+    `permissions.deny` of `Agent` (every subagent, the built-in `Explore` and `Plan` among
+    them), `ScheduleWakeup`, `SendMessage`, `ListAgents`, `EnterWorktree`, `ExitWorktree`,
+    `EnterPlanMode`, `PushNotification`, `RemoteTrigger` and `Artifact`; `disableWorkflows:
+    true`, `remoteControlAtStartup`, `promptSuggestionEnabled`, `awaySummaryEnabled`,
+    `idleCompaction` and `spinnerTipsEnabled` false; `disableClaudeAiConnectors: true`, which
+    drops only the person's claude.ai connectors — the project's `.mcp.json` servers and the
+    folder's `mcp.json` still load; `env` with `DISABLE_AUTOUPDATER=1`,
+    `DISABLE_FEEDBACK_COMMAND=1`, `CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY=1`,
+    `CLAUDE_CODE_AUTO_CONNECT_IDE=false` and `CLAUDE_CODE_DISABLE_CRON=1`. Kept: web fetch and
+    search, `AskUserQuestion`, `ExitPlanMode`, the terminal title, auto-compact, background
+    tasks and Claude Code's own messaging socket, which carries rewake's wake.
+  - **The person edits the file**: a default is turned back on by changing or removing it —
+    `"Agent"` taken out of `permissions.deny` gives workers their subagents back,
+    `"idleCompaction": true` its idle compaction — and anything else of Claude Code's settings
+    is added beside them. rewake does not write the file again while it is at this build's
+    version, or a newer one.
+  - **An upgrade adds only the newer defaults.** A launch of a build whose defaults are newer
+    than the file's version runs only the steps after it: a default brought since is added
+    where the file has no value for it, into a list when absent from it; one retired since is
+    taken out only where the file still holds rewake's value; then the version is raised. What
+    the person took out of an older version stays out. A file with no `rewake` key is at
+    version 0 and gets every default, the person's values kept: the `{}` the folder held
+    before is such a file. A write replaces the file in one step, through a temporary file in
+    its directory, the target of a symlink when it is one; the keys come back in order and
+    indented, the values as they were. The launch notes that it wrote.
+  - **A file rewake cannot read** — not JSON, not one object, a `rewake` key other than
+    `{"defaults": <whole number>}`, a key a default goes under holding another kind — refuses
+    the launch, naming the file and the line, and is never replaced. `rewake.keep` of the
+    build before is refused, naming `permissions.deny` as the way. An entry of the wrong kind
+    in the folder refuses the launch naming the path.
 - Every role launches here since S4-6: the run's mod reports each turn's end once its
   hello is admitted, after the harness starts, and a task to the run fails until then
   ([stage4-turns.md](v2/stage4-turns.md#readiness-and-admission)). A cause the adapter knows

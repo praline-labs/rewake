@@ -7,6 +7,7 @@ package state
 const (
 	worktreeOutside = "host/worktree writes beside a checkout and in the user's data directory, outside the state: no room's lease covers it, its own locks order it"
 	testHelper      = "a test helper that is not a _test.go file sets a scene a test writes, outside any build"
+	workerSettings  = "the Claude Code worker profile's settings.json, replaced in one step when rewake adds its newer defaults, the person's file outside any room"
 )
 
 var bypassExceptions = []bypass{
@@ -34,6 +35,9 @@ var bypassExceptions = []bypass{
 
 	{"internal/adapter/claude/workerdir.go", "os.MkdirAll", 1, "the Claude Code worker profile's directory, the person's beside the alias file and outside any room: no room's lease covers it"},
 	{"internal/adapter/claude/workerdir.go", "os.OpenFile", 1, "the Claude Code worker profile's first files, made only where none is, outside any room"},
+	{"internal/adapter/claude/workerdir.go", "os.CreateTemp", 1, workerSettings},
+	{"internal/adapter/claude/workerdir.go", "os.Rename", 1, workerSettings},
+	{"internal/adapter/claude/workerdir.go", "os.Remove", 1, workerSettings},
 
 	{"internal/core/mail/mailtest/mailtest.go", "os.MkdirAll", 2, testHelper},
 	{"internal/core/registry/registrytest/registrytest.go", "os.MkdirAll", 1, testHelper + ": a 1.x record no 2.0 lease covers"},

@@ -59,8 +59,8 @@ One build per room, which T10 restated for a tool call, holds for every writer
 - **L1. The mail is added and nothing else changes.** The person's configuration is
   never edited; what a run needs is passed for that one launch. (`mail-bridge-launch.md`
   rule 1; on Claude Code, one `--plugin-dir`.) A worker of Claude Code also gets rewake's
-  worker profile, launch options alone, by the owner's decision of October 19, 2026
-  ([worker-profile.md](worker-profile.md)).
+  worker profile, launch options and the settings file of rewake's service folder, by the
+  owner's decisions of October 19, 2026 ([worker-profile.md](worker-profile.md)).
 - **L2. Diagnostics say where, never what**: no configuration content or argument value
   is printed. (Rule 7.)
 - **L3. Nothing persists past the run**: what a launch writes lives in the run's
