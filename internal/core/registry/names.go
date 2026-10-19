@@ -3,7 +3,6 @@ package registry
 import (
 	"errors"
 	"fmt"
-	"path/filepath"
 	"strconv"
 
 	"github.com/praline-labs/rewake/internal/infra/state"
@@ -56,6 +55,3 @@ func SocketFor(dir, name, epoch string) string { return state.SocketPath(dir, na
 
 // ControlFor is where a run takes control requests.
 func ControlFor(dir, name, epoch string) string { return state.ControlPath(dir, name, epoch) }
-
-// RecordPath is the file holding a session record.
-func RecordPath(dir, name string) string { return filepath.Clean(state.SessionPath(dir, name)) }

@@ -11,7 +11,6 @@ import (
 
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/role"
-	"github.com/praline-labs/rewake/internal/core/session"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -54,9 +53,6 @@ func handleInbox(ctx *Context, call Call) error {
 		return showAwaited(ctx, dir, session, epoch)
 	}
 	if mode.owed {
-		if err := mailAdmitted(dir, session.Name, epoch); err != nil {
-			return err
-		}
 		return showOwed(ctx, call, dir, session, epoch)
 	}
 	// Held from looking to marking. Two readers at once — parallel tool calls,
@@ -67,10 +63,6 @@ func handleInbox(ctx *Context, call Call) error {
 	wait, cancel := context.WithTimeout(context.Background(), readerLockWait)
 	defer cancel()
 	err = state.WithMailboxLock(wait, dir, session.Name, func() error {
-		if err := mailAdmitted(dir, session.Name, epoch); err != nil {
-			failure = err
-			return nil
-		}
 		messages, err := mail.AvailableUnread(dir, session.Name, epoch)
 		if err != nil {
 			failure = failf("could not read the inbox of %s: %v", session.Name, err)
@@ -115,22 +107,6 @@ func handleInbox(ctx *Context, call Call) error {
 		return failf("could not lock the inbox of %s: %v", session.Name, err)
 	}
 	return failure
-}
-
-// mailAdmitted refuses the mail of a run whose launch asked to resume a
-// conversation that is neither resumed nor replaced at the person's word: the
-// shell may be running in a conversation nobody chose
-// (docs/archive/1.x/delivery-conversation.md). The wrapper's own record decides, written
-// before the terminal starts.
-func mailAdmitted(dir, name, epoch string) error {
-	held, detail, err := session.MailHeld(dir, name, epoch)
-	if err != nil {
-		return failf("could not tell whether the mail of %s may be read in this conversation, so none was read: %v", name, err)
-	}
-	if !held {
-		return nil
-	}
-	return failf("the mail of %s waits for its conversation: %s", name, detail)
 }
 
 // readerLockWait is how long a reader waits for another reader, or for the
