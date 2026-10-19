@@ -87,7 +87,8 @@ files; it does not know where the person's instructions and skills are built fro
 profile is the person's: the owner's installers get a target writing these paths.
 
 **Context per worker.** The alias field `launch.context` is applied on Claude Code as
-`--autocompact <value>`, for main and workers alike, checked by rewake as `auto` or 100k–1M
+`--autocompact <value>` for the workers main raises with it — aliases are main's worker
+catalogue only, so main has none — checked by rewake as `auto` or 100k–1M
 written `300k`, `1M` or `200000` — Claude Code itself reads the leading number of anything —
 and stays shown-only on a harness with no such flag (`AppliesContext`). `launch.apply = false`
 went with the wrapper it served (step 2).
@@ -103,8 +104,9 @@ configuration Claude Code starts with, as it did before. A wrapper that moves
   `--write`, `--general`, `--name` (main is `main-<harness>`, one per room), `--shell` and
   `--room`.
 - **The shell by default** whenever standard input and output are both terminals and the
-  adapter offers spaces, with no flag to turn it off; otherwise main runs plain (`claude -p`, a
-  script, and pi, which without spaces has no shell and no workers). This changes "the shell,
+  adapter offers spaces, with no flag to turn it off; otherwise main runs plain — a script or a
+  pipe, and pi, which without spaces has no shell and no workers. `-p` does not decide it: what
+  counts is whether both streams are terminals. This changes "the shell,
   chosen at launch" in `project.md`: the owner's decision, recorded there in step 3.
 - **The room is the launch directory** (the owner's decision, October 19, 2026). Its identity is
   the working directory resolved with symlinks followed; the person never names a room. On disk

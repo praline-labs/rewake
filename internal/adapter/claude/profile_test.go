@@ -176,3 +176,54 @@ func TestContextWindow(t *testing.T) {
 		t.Fatalf("context as a flag: %v, %v", args, err)
 	}
 }
+
+// A caller's own --append-system-prompt once replaced the briefing and the
+// worker's CLAUDE.md, since Claude Code reads only the last one: it joins
+// them in the one rewake adds, and --no-intro drops only the briefing.
+func TestTheCallersAppendedPromptJoinsTheBriefing(t *testing.T) {
+	home := t.TempDir()
+	dir := filepath.Join(home, ".config", "rewake", "claude", "worker")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "CLAUDE.md"), []byte("WORKER-MARK"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range []struct {
+		part  role.Role
+		intro bool
+		args  []string
+		want  []string
+	}{
+		{role.Main, true, []string{"--append-system-prompt", "FIRST-MARK", "--append-system-prompt=MINE-MARK"}, []string{`session "api"`, "MINE-MARK"}},
+		{role.Write, true, []string{"--append-system-prompt", "MINE-MARK", "--", "--append-system-prompt"}, []string{`session "api"`, "WORKER-MARK", "MINE-MARK"}},
+		{role.Write, false, []string{"--append-system-prompt", "MINE-MARK"}, []string{"WORKER-MARK", "MINE-MARK"}},
+	} {
+		t.Setenv("HOME", home)
+		plan, err := New().Launch(adapter.LaunchRequest{
+			Name: "api", Dir: t.TempDir(), Args: c.args, Intro: c.intro, Role: c.part,
+			Socket: filepath.Join(t.TempDir(), "api.sock"), Env: []string{"HOME=" + home},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		texts := adapter.FlagValues(plan.Args, introFlag)
+		if len(texts) != 1 || strings.Contains(texts[0], "FIRST-MARK") {
+			t.Fatalf("%v: %q", c.args, texts)
+		}
+		at := -1
+		for _, part := range c.want {
+			next := strings.Index(texts[0], part)
+			if next <= at {
+				t.Fatalf("%v: %q not after what precedes it in %q", c.args, part, texts[0])
+			}
+			at = next
+		}
+		if !c.intro && strings.Contains(texts[0], `session "api"`) {
+			t.Fatalf("--no-intro kept the briefing: %q", texts[0])
+		}
+		if c.args[len(c.args)-1] == "--append-system-prompt" && plan.Args[len(plan.Args)-1] != "--append-system-prompt" {
+			t.Fatalf("the prompt after -- was touched: %q", plan.Args)
+		}
+	}
+}

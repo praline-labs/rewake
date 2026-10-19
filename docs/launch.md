@@ -134,7 +134,13 @@ rewake --command my-claude claude
   the harness.
 - Add `--messaging-socket-path <base>/v2/rooms/<room>/sock/<name>.<epoch>.sock` unless the user passed
   their own; before launch, remove a stale socket file at the same path.
-- Add `--append-system-prompt <intro>` (turned off by `--no-intro`).
+- Add one `--append-system-prompt`: rewake's briefing (turned off by `--no-intro`), then a
+  worker's `CLAUDE.md` of the service folder, then the caller's own `--append-system-prompt`,
+  joined by blank lines. Claude Code keeps only the last `--append-system-prompt` (probed on
+  2.1.302: of two, the first is lost; `--append-system-prompt-file` applies beside it), so the
+  caller's is taken out of the arguments and kept in rewake's rather than added beside it; of
+  several, the last is kept, as Claude Code would. Until October 19, 2026 a caller's flag
+  replaced the briefing and the worker's instructions silently (the briefings audit, F2).
 - Allow the tool's own commands without confirmation:
   `--allowedTools "Bash(rewake:*)"`, only when the caller passed no allow list of their
   own under either spelling, `--allowedTools` or `--allowed-tools`. This adds a rule for
@@ -201,9 +207,10 @@ rewake --command my-claude claude
 
 ### Claude Code telemetry
 
-A Claude Code session reports no telemetry in this build, and its row of `rewake list`
-carries none. The context fill and compaction come back through the mod, as parity with 1.x
-(stage 5 of [the stage plan](v2/design.md#the-stage-plan-from-here)).
+A Claude Code session reports its telemetry through the run's mod once its hello is admitted:
+activity, the configured model, the reasoning effort the main loop asks for (the launch's
+`--effort` until the mod sees one), the context used and its window, and compactions. Its row of
+`rewake list` carries them; a run whose mod did not load carries none.
 
 ### pi
 
@@ -346,9 +353,11 @@ the record's end or as the open's timeout.
 
 ### The intro
 
-The system layer uses an independent six-line briefing for general, write or
-main from `internal/core/brief/roles.go`. Each names its identity and selection reason,
-explains the commands that role needs, and points to guide for the full contract.
+The system layer uses an independent briefing for general, write or main from
+`internal/core/brief/roles.go`: the whole playbook of the role, with sections on the work, the
+reports, the limits and the mail — on October 19, 2026 a captured main's ran 51 lines and a
+worker's 33. Each names its identity and selection reason, explains the commands that role
+needs, and points to guide for the full contract.
 Write may commit; main delegates and reads results. All ask for the point of a message in its first line. Per-role
 snapshots make wording changes reviewable.
 
