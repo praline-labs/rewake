@@ -46,22 +46,26 @@ terminal in a pty; the owner checked step 1 on their own terminal the same day.
   measurements below): Claude Code runs fullscreen and leaves the alternate screen at once at
   every end of its process, before `session.end`, so the shell starts the layer on the
   `?1049l` (or 47, 1047) the scanner reads in main's stream (`shell/src/scan.ts`), and the frame
-  that would show main's left screen shows the layer instead. Ctrl+Z and an external editor leave
-  the screen too, so a layer begun by a sign of main's is lifted when main comes back to the
-  alternate screen — an editor's end, 6 ms after the leave, before a frame drew it — or when main
-  still runs 5 s after the last sign. Then **main's closing mark** (the owner's idea, October 19,
+  that would show main's left screen shows the layer instead. A leave may be no end, so under a
+  layer begun by a leave alone main keeps its focus and keys, and the layer is lifted when main
+  comes back to the alternate screen — an external editor's end, 6 ms after the leave, before a
+  frame drew it — or when main still runs 5 s after the last sign. Ctrl+Z leaves the screen with
+  no return (below), so a leave within a second after the shell sent main a Ctrl+Z (0x1a, or its
+  kitty or modifyOtherKeys form, `isSuspend` in `shell/src/keys.ts`) begins nothing; Claude Code
+  2.1.302 leaves 4 ms after the key. Text main writes after a leave is no sign of a pause: an exit
+  prints "Resume this session with: claude --resume …" on the screen it went to. Then **main's closing mark** (the owner's idea, October 19,
   2026): main's mod tells its wrapper `session/closing` at `session.end`, for `/exit`, Ctrl+C and
   Ctrl+D alike ([the record](../research-claude-mod.md#the-end-of-the-process-as-the-mod-hears-it)),
   and the wrapper of a main in the shell writes `ESC ] 6262 ; rewake-closing BEL` on its terminal,
   main's pane (`internal/host/start.go`), which the scanner reads (the widget ignores an OSC it
-  does not know); it begins the layer where no leave did and restarts the 5 s, since the session
-  has ended and only its process is left to exit. Until October 20 the mod also told it at
+  does not know); it makes the layer an end, the keys held, where no leave began it, and restarts
+  the 5 s, since the session has ended and only its process is left to exit. Until October 20 the mod also told it at
   `/exit`'s `command.run`, and the shell held main's bytes 250 ms after a leave waiting for the
   mark; `/exit` with work running opens Claude Code's dialog "Background work is running" after
   that hook, so the layer hid the dialog for 5 s with the keys going nowhere, and after the dialog
   the mark comes only once the tasks are stopped, past any fixed hold. Ctrl+Z inside the shell
   leaves Claude Code 2.1.302 on its "has been suspended" text though the wrapper continues it at
-  once: the layer shows for 5 s over it. The fallbacks stay: the room's listing reading main's run
+  once, its keys echoed by the pty until Ctrl+C ends it; the pane shows that, with no layer. The fallbacks stay: the room's listing reading main's run
   ended for a space the shell shows, main's process ending, and the shell ending itself on
   SIGTERM, SIGINT or SIGQUIT; not when the terminal is lost (a hangup, its input ended, the
   parent gone), with nowhere to draw.

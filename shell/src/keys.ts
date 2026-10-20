@@ -89,3 +89,13 @@ export function prefixHandler(
     return false;
   };
 }
+
+// Ctrl+Z as the widget sends it to a program in each mode: the byte 0x1a, the
+// kitty protocol's CSI u form (122 is z; Ctrl 5, with lock bits), or
+// modifyOtherKeys.
+const suspendKey = /\x1a|\x1b\[122;(5|69|133|197)(:[12])?u|\x1b\[27;5;122~/;
+
+// isSuspend says whether data sent to a program holds a Ctrl+Z.
+export function isSuspend(data: Uint8Array | string): boolean {
+  return suspendKey.test(typeof data === "string" ? data : Buffer.from(data).toString("latin1"));
+}

@@ -11,7 +11,7 @@ import { Bar, Hints } from "./bar.tsx";
 import { Closing } from "./closing.tsx";
 import { askColors, seedOf } from "./colors.ts";
 import { endMain, tailText, watchTerminal } from "./ending.ts";
-import { type Command, prefixHandler } from "./keys.ts";
+import { type Command, isSuspend, prefixHandler } from "./keys.ts";
 import { type PaneTerminal, paneHooks } from "./pane.ts";
 import { pollRoom, type Space, spacesOver } from "./room.ts";
 import { Scanner } from "./scan.ts";
@@ -48,8 +48,10 @@ const [zoomed, setZoomed] = createSignal(false);
 // prefixWaits is a typed Ctrl+\ waiting for its command.
 const [prefixWaits, setPrefixWaits] = createSignal(false);
 // closing is set when main's end begins: from then until the shell exits the
-// screen is the closing layer alone, and the keys reach no program.
-const [closing, setClosing] = createSignal(false);
+// screen is the closing layer alone, and once main's end is sure the keys
+// reach no program. "left" is a layer begun by main leaving its screen alone,
+// under which main keeps its focus and keys: a leave may be no end.
+const [closing, setClosing] = createSignal<"" | "left" | "sure">("");
 // closingAt is when the closing layer began, so it is shown at least
 // closingShown before the shell exits.
 let closingAt = 0;
@@ -57,27 +59,31 @@ const closingShown = 600;
 const workersBound = 10_000;
 // closingSign is a closing begun by a sign of main's alone — main leaving its
 // screen, the earliest, or main's closing mark — lifted when main comes back
-// to its screen, or still runs closingLift after the last sign: Ctrl+Z and an
-// external editor leave the screen too, and a screen that hid a main going on
-// would leave the person no way to it.
+// to its screen, or still runs closingLift after the last sign: a screen that
+// hid a main going on would leave the person no way to it.
 let closingSign = false;
 let liftTimer: ReturnType<typeof setTimeout> | undefined;
 const closingLift = 5000;
-function beginClosing(sign = false) {
-  if (closing() && !closingSign) return;
+function beginClosing(sign?: "left" | "mark") {
+  if (closing() === "sure" && !closingSign) return;
   clearTimeout(liftTimer);
-  closingSign = sign;
-  if (sign) liftTimer = setTimeout(liftClosing, closingLift);
-  if (closing()) return;
-  closingAt = Date.now();
-  setClosing(true);
+  closingSign = sign !== undefined;
+  if (closingSign) liftTimer = setTimeout(liftClosing, closingLift);
+  if (!closing()) closingAt = Date.now();
+  if (sign !== "left") setClosing("sure");
+  else if (!closing()) setClosing("left");
 }
 function liftClosing() {
   if (!closingSign || ending) return;
   clearTimeout(liftTimer);
   closingSign = false;
-  setClosing(false);
+  setClosing("");
 }
+// suspendSentAt is when the person's Ctrl+Z last went to main: a leave of the
+// screen within suspendWindow after it is the suspend, not an end. Claude
+// Code 2.1.302 leaves 4 ms after the key.
+let suspendSentAt = 0;
+const suspendWindow = 1000;
 const allPanes = () => [mainPane, ...workers()];
 const paneOf = (id: string | undefined) => allPanes().find((p) => p.id === id);
 
@@ -102,7 +108,9 @@ const theme = themeOf(colors);
 function feed(pane: Pane, data: Uint8Array) {
   for (const seen of pane.scanner.scan(data)) {
     if (pane === mainPane) {
-      if (seen.left || seen.closing) beginClosing(true);
+      // Ctrl+Z leaves the screen too, and the harness is continued at once.
+      if (seen.left && Date.now() - suspendSentAt > suspendWindow) beginClosing("left");
+      if (seen.closing) beginClosing("mark");
       if (seen.entered) liftClosing();
     }
     if (seen.copy !== undefined) renderer.copyToClipboardOSC52(seen.copy);
@@ -120,7 +128,10 @@ function feed(pane: Pane, data: Uint8Array) {
 function startMainPane(term: PaneTerminal) {
   mainPane.term = term;
   if (seed.widget) term.write(seed.widget);
-  term.onData = (data) => main?.write(data);
+  term.onData = (data) => {
+    if (isSuspend(data)) suspendSentAt = Date.now();
+    main?.write(data);
+  };
   term.onTerminalResize = (cols, rows) => main?.resize(cols, rows);
   const env: Record<string, string> = {
     ...(process.env as Record<string, string>),
@@ -212,7 +223,7 @@ function show(id: string | undefined) {
 }
 
 createEffect(() => {
-  const id = closing() ? undefined : focused();
+  const id = closing() === "sure" ? undefined : focused();
   for (const pane of allPanes()) if (pane.id !== id) pane.term?.blur();
   if (id === undefined) return;
   const pane = paneOf(id);
@@ -222,7 +233,7 @@ createEffect(() => {
 });
 
 function run(c: Command) {
-  if (closing()) return;
+  if (closing() === "sure") return;
   const panes = allPanes();
   const at = Math.max(
     0,
@@ -251,7 +262,7 @@ function run(c: Command) {
 }
 
 paneHooks.pressed = (id) => {
-  if (id !== focused() && !closing()) show(id);
+  if (id !== focused() && closing() !== "sure") show(id);
 };
 
 function App() {
