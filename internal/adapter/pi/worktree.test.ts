@@ -124,6 +124,7 @@ test("land refuses a name or a branch that would be read as a flag, and shows a 
     { name: "" },
     { name: "--force" },
     { name: "x", into: "-f" },
+    { name: "x", into: "" },
     { name: 3 },
   ]) {
     const result = await land.execute("c", input, undefined, undefined, { cwd: "/w" } as any);

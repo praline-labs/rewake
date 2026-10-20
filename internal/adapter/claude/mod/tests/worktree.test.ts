@@ -143,6 +143,7 @@ test("land refuses a name or a branch that would be read as a flag, without runn
     { name: "" },
     { name: "--force" },
     { name: "x", into: "-f" },
+    { name: "x", into: "" },
     { name: 3 },
   ]) {
     const answer: any = await call($, worktreeLandToolName, input);

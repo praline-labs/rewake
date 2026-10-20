@@ -29,10 +29,11 @@ export function landArgs(input: { name?: unknown; into?: unknown }): string[] | 
   if (typeof name !== "string" || name === "" || name.startsWith("-")) {
     return "worktree_land needs name, the worktree's name from worktree_list";
   }
-  if (into !== undefined && (typeof into !== "string" || into.startsWith("-"))) {
-    return "into must be a branch name";
+  // An empty into is refused, not read as "leave out": it would land into the default.
+  if (into !== undefined && (typeof into !== "string" || into === "" || into.startsWith("-"))) {
+    return "into must be a branch name; leave it out for the default";
   }
-  return ["worktree", "land", name, ...(into ? ["--into=" + into] : []), "--json"];
+  return ["worktree", "land", name, ...(into !== undefined ? ["--into=" + into] : []), "--json"];
 }
 
 type Ran = { stdout: string; stderr: string; code: number; killed: boolean };

@@ -74,11 +74,12 @@ export function landArgv(executable: string, input: Record<string, unknown>): st
   if (typeof name !== "string" || name === "" || name.startsWith("-")) {
     return "worktree_land needs name, the worktree's name from worktree_list";
   }
-  if (into !== undefined && (typeof into !== "string" || into.startsWith("-"))) {
-    return "into must be a branch name";
+  // An empty into is refused, not read as "leave out": it would land into the default.
+  if (into !== undefined && (typeof into !== "string" || into === "" || into.startsWith("-"))) {
+    return "into must be a branch name; leave it out for the default";
   }
   const argv = [executable, "worktree", "land", name];
-  if (into) argv.push("--into=" + into);
+  if (into !== undefined) argv.push("--into=" + into);
   return [...argv, "--json"];
 }
 
