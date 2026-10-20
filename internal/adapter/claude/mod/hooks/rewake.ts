@@ -19,7 +19,7 @@ import { Heartbeat } from "./heartbeat.ts";
 import { Management } from "./management.ts";
 import type { Host } from "./outbox.ts";
 import { cut, listed, loadKey, newId, nextDelay, Outbox } from "./outbox.ts";
-import { serveWorktreeStatus, worktreeTool } from "./worktree.ts";
+import { serveWorktreeStatus, worktreeToolsFor } from "./worktree.ts";
 
 // The harness's reasons, mapped to the protocol's.
 const reasons: Record<string, EndReason> = {
@@ -167,7 +167,9 @@ export const register: Register = (on) => {
       return started;
     }
     if (await $.env.get("REWAKE_EXECUTABLE")) {
-      await $.tool.register(worktreeTool).catch(() => undefined);
+      for (const tool of worktreeToolsFor(await $.env.get("REWAKE_ROLE"))) {
+        await $.tool.register(tool).catch(() => undefined);
+      }
     }
     const epoch = (await $.env.get("REWAKE_EPOCH")) ?? "";
     const host: Host = {

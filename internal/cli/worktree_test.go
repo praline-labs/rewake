@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/host/worktree"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // made is one checkout of the lab's repository, owned by nobody yet.
@@ -169,5 +170,30 @@ func TestWorktreeCommandRefusals(t *testing.T) {
 	}
 	if records := lab.records(t); len(records) != 2 {
 		t.Errorf("a refusal removed something: %+v", records)
+	}
+}
+
+// --this-room lists the checkouts made for a session of the current room and
+// nothing of another room or of nobody: the list main's tool shows.
+func TestWorktreeLsThisRoomKeepsTheRoomsCheckouts(t *testing.T) {
+	lab := newWorktreeLab(t)
+	mine := lab.made(t, "mine")
+	lab.made(t, "nobodys")
+	roomDir := launched(t, lab.state, "trees")
+	session := otherRun(t, roomDir, "busy-worker")
+	if _, err := worktree.Claim(mine, worktree.Owner{Name: session.Name, Room: "trees", Epoch: session.Epoch(), Harness: session.Harness, Dir: roomDir}); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv(state.RoomEnv, "trees")
+	code, out, errOut := run("worktree", "ls", "--this-room", "--json")
+	var listing worktreeListing
+	if code != ExitOK || json.Unmarshal([]byte(out), &listing) != nil {
+		t.Fatalf("ls --this-room: %d %s %s", code, out, errOut)
+	}
+	if len(listing.Worktrees) != 1 || listing.Worktrees[0].Name != "mine" {
+		t.Fatalf("this room's worktrees: %+v", listing.Worktrees)
+	}
+	if code, _, _ := run("worktree", "status", "--this-room"); code != ExitUsage {
+		t.Errorf("--this-room beside status: %d", code)
 	}
 }
