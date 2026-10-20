@@ -3,8 +3,8 @@
 // (OSC 0 and 2), and whether the program tracks the mouse, which decides
 // whether a drag selects text or goes to the program. Besides, for main's end
 // (docs/v2/shell.md, "Who owns which pty"): the program leaving the alternate
-// screen, and the closing mark main's wrapper writes, a private OSC the
-// widget ignores. A read may end inside a sequence, so the unfinished tail of
+// screen and coming back to it, and the closing mark main's wrapper writes, a
+// private OSC the widget ignores. A read may end inside a sequence, so the unfinished tail of
 // one read is carried into the next.
 
 export type Seen = {
@@ -12,6 +12,7 @@ export type Seen = {
   title?: string;
   mouse?: boolean;
   left?: boolean;
+  entered?: boolean;
   closing?: boolean;
 };
 
@@ -42,8 +43,8 @@ export class Scanner {
           else this.mouse.delete(mode);
         }
         if (was !== this.mouse.size > 0) seen.push({ mouse: this.mouse.size > 0 });
-        if (m[2] === "l" && m[1].split(";").some((mode) => alternate.has(mode)))
-          seen.push({ left: true });
+        if (m[1].split(";").some((mode) => alternate.has(mode)))
+          seen.push(m[2] === "l" ? { left: true } : { entered: true });
       } else if (m[3] !== undefined) {
         if (m[3] !== "?") seen.push({ copy: Buffer.from(m[3], "base64").toString("utf8") });
       } else if (m[4] !== undefined) {

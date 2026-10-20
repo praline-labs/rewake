@@ -1,8 +1,9 @@
-// The end of the harness's process, told to its run's wrapper as it begins,
-// so rewake's shell starts its closing screen before the harness's own screen
-// goes (docs/v2/shell.md). Measured on 2.1.302: /exit's command.run fires
-// before the harness leaves its screen, and Ctrl+C or Ctrl+D twice reach the
-// mod first at session.end, some 60 ms after.
+// The end of the harness's process, told to its run's wrapper at session.end,
+// so rewake's shell knows its closing screen is an end and not a pause
+// (docs/v2/shell.md). Measured on 2.1.302: /exit, Ctrl+C and Ctrl+D twice reach
+// session.end after the harness has left its screen, 60–120 ms after the key.
+// /exit's command.run comes earlier but tells nothing: with background work
+// running it opens a dialog that may keep the session.
 import type { ClosingRequest } from "../protocol.gen.ts";
 import { paths } from "../protocol.gen.ts";
 import type { Host } from "./outbox.ts";

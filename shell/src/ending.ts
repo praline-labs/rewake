@@ -63,33 +63,3 @@ export function tailText(raw: string, lines = 20): string {
     .filter((line) => line !== "");
   return text.slice(-lines).join("\n");
 }
-
-// LeaveHold holds main's bytes from the moment main leaves the alternate
-// screen, for at most bound ms, so that the closing mark which follows
-// Ctrl+C or Ctrl+D some 60 ms later (docs/v2/shell.md) starts the closing
-// layer before main's pane shows the screen main left to. Ctrl+Z and an
-// external editor leave it too: their first frame is late by the bound.
-export class LeaveHold {
-  private held: Uint8Array[] = [];
-  private timer: ReturnType<typeof setTimeout> | undefined;
-
-  constructor(
-    private write: (data: Uint8Array) => void,
-    private bound = 250,
-  ) {}
-
-  // pass writes data at once, or holds it while a leave is held, left
-  // saying data leaves the alternate screen.
-  pass(data: Uint8Array, left: boolean) {
-    if (left && this.timer === undefined) this.timer = setTimeout(() => this.release(), this.bound);
-    if (this.timer === undefined) this.write(data);
-    else this.held.push(data);
-  }
-
-  // release writes what is held and ends the hold.
-  release() {
-    clearTimeout(this.timer);
-    this.timer = undefined;
-    for (const data of this.held.splice(0)) this.write(data);
-  }
-}

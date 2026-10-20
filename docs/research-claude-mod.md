@@ -507,5 +507,13 @@ the mod's posts to a socket of the driver's:
   Nothing the mod hooks fires earlier: the first press runs no command and ends nothing, and a
   `Button`'s `action` presses only where no engine handler of the action is mounted, which
   the exit's always is (the types' text).
-- rewake uses both since the same day: main's mod sends `session/closing` from the first, and
-  from the second for `prompt_input_exit` and `other` (docs/v2/shell.md, "The closing screen").
+- `/exit` while work runs — a background shell, or a tool in the foreground — opens Claude
+  Code's dialog "Background work is running" (exit and stop the tasks, move them to the
+  background and exit, or stay) after `command.run`, and Ctrl+C twice opens the same dialog with
+  no `session.end`. Confirmed with Enter, the screen is left at +5 ms and `session.end` follows
+  only once the tasks are stopped: +123 ms with one shell loop (October 20, 2026, 2.1.302, rewake's
+  own mod in the shell). A `command.run` of `exit` is therefore no sign of the end.
+- rewake uses `session.end` alone since October 20, 2026: main's mod sends `session/closing` for
+  `prompt_input_exit` and `other`, and the shell starts its closing screen at the screen's leave,
+  which precedes it (docs/v2/shell.md, "The closing screen"). From October 19 the mod sent it at
+  `/exit`'s `command.run` too, and the closing screen hid the dialog above for five seconds.

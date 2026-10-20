@@ -28,8 +28,8 @@ func startHarness(request Request, command *exec.Cmd) (func(int), error) {
 
 // shellClosing is the private sequence main's wrapper writes on its terminal,
 // the shell's pane, when the harness says it has begun to end its process:
-// the shell's scanner takes it out of main's stream and starts its closing
-// screen (docs/v2/shell.md). The OSC number is one no terminal or program
+// the shell's scanner reads it in main's stream and starts its closing screen,
+// or keeps the one main's leave of its screen began (docs/v2/shell.md). The OSC number is one no terminal or program
 // is known to use; shell/src/scan.ts reads the same bytes.
 const shellClosing = "\x1b]6262;rewake-closing\x07"
 

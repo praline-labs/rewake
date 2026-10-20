@@ -347,12 +347,8 @@ export const register: Register = (on) => {
       : next(e),
   );
 
-  // The process's end, told as it begins (closing.ts): /exit before the
-  // command runs, Ctrl+C and Ctrl+D at session.end.
-  on("command.run", { command: "exit" }, async ($, e, next) => {
-    if (load?.run) await tellClosing(load.host, loadId, "prompt_input_exit");
-    return next(e);
-  });
+  // The process's end, told at session.end (closing.ts): /exit, Ctrl+C and
+  // Ctrl+D alike.
   on("session.end", async ($, e, next) => {
     if (load?.run && exitReasons.has(e.reason)) await tellClosing(load.host, loadId, e.reason);
     return next(e);

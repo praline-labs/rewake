@@ -2,11 +2,9 @@ package modhost
 
 import "net/http"
 
-// sessionClosing hears the mod say the harness has begun to end its process, at
-// /exit and at session.end, and tells the run's Closing (docs/v2/shell.md).
-// Measured on 2.1.302: /exit's command.run fires before the harness leaves
-// its screen, session.end some 60 ms after, so the mod tells at both and a
-// second word changes nothing.
+// sessionClosing hears the mod say the harness's session has ended and its
+// process is ending, at session.end, and tells the run's Closing
+// (docs/v2/shell.md). A second word changes nothing.
 func (s *Server) sessionClosing(w http.ResponseWriter, r *http.Request) {
 	var said ClosingRequest
 	if status, err := decode(w, r, &said, MaxBodyBytes); err != nil {

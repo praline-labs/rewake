@@ -10,7 +10,7 @@ import { createEffect, createSignal, For, Show } from "solid-js";
 import { Bar, Hints } from "./bar.tsx";
 import { Closing } from "./closing.tsx";
 import { askColors, seedOf } from "./colors.ts";
-import { endMain, LeaveHold, tailText, watchTerminal } from "./ending.ts";
+import { endMain, tailText, watchTerminal } from "./ending.ts";
 import { type Command, prefixHandler } from "./keys.ts";
 import { type PaneTerminal, paneHooks } from "./pane.ts";
 import { pollRoom, type Space, spacesOver } from "./room.ts";
@@ -55,18 +55,28 @@ const [closing, setClosing] = createSignal(false);
 let closingAt = 0;
 const closingShown = 600;
 const workersBound = 10_000;
-// closingMarked is a closing begun by main's closing mark alone, lifted if
-// main still runs closingLift later: the mark says main began to end, and a
-// screen that hid a main going on would leave the person no way to it.
-let closingMarked = false;
+// closingSign is a closing begun by a sign of main's alone — main leaving its
+// screen, the earliest, or main's closing mark — lifted when main comes back
+// to its screen, or still runs closingLift after the last sign: Ctrl+Z and an
+// external editor leave the screen too, and a screen that hid a main going on
+// would leave the person no way to it.
+let closingSign = false;
+let liftTimer: ReturnType<typeof setTimeout> | undefined;
 const closingLift = 5000;
-function beginClosing(marked = false) {
-  if (!marked) closingMarked = false;
+function beginClosing(sign = false) {
+  if (closing() && !closingSign) return;
+  clearTimeout(liftTimer);
+  closingSign = sign;
+  if (sign) liftTimer = setTimeout(liftClosing, closingLift);
   if (closing()) return;
-  closingMarked = marked;
   closingAt = Date.now();
   setClosing(true);
-  if (marked) setTimeout(() => closingMarked && !ending && setClosing(false), closingLift);
+}
+function liftClosing() {
+  if (!closingSign || ending) return;
+  clearTimeout(liftTimer);
+  closingSign = false;
+  setClosing(false);
 }
 const allPanes = () => [mainPane, ...workers()];
 const paneOf = (id: string | undefined) => allPanes().find((p) => p.id === id);
@@ -90,12 +100,10 @@ const theme = themeOf(colors);
 // feed passes a program's bytes to its pane, after the scanner took what
 // the widget would swallow.
 function feed(pane: Pane, data: Uint8Array) {
-  let left = false;
   for (const seen of pane.scanner.scan(data)) {
-    left ||= seen.left === true;
-    if (seen.closing && pane === mainPane) {
-      beginClosing(true);
-      mainHold.release();
+    if (pane === mainPane) {
+      if (seen.left || seen.closing) beginClosing(true);
+      if (seen.entered) liftClosing();
     }
     if (seen.copy !== undefined) renderer.copyToClipboardOSC52(seen.copy);
     if (seen.title !== undefined) {
@@ -106,10 +114,8 @@ function feed(pane: Pane, data: Uint8Array) {
     // selection of OpenTUI's.
     if (seen.mouse !== undefined && pane.term) pane.term.selectable = !seen.mouse;
   }
-  if (pane === mainPane) mainHold.pass(data, left && !closing());
-  else pane.term?.write(data);
+  pane.term?.write(data);
 }
-const mainHold = new LeaveHold((data) => mainPane.term?.write(data));
 
 function startMainPane(term: PaneTerminal) {
   mainPane.term = term;
@@ -349,7 +355,7 @@ async function finish(code?: number, lost = false) {
     const ids = workers().map((p) => p.id);
     await Promise.all([
       spacesOver(rewake, room, ids, workersBound),
-      // Begun by main's mark, the layer may have shown long enough already.
+      // Begun by a sign of main's, the layer may have shown long enough already.
       new Promise((resolve) =>
         setTimeout(resolve, Math.max(0, closingAt + closingShown - Date.now())),
       ),
