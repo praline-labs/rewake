@@ -11,13 +11,13 @@ import (
 
 // A worker's checkout goes at its close, with its branch, only when nothing
 // would be lost: untouched, or with every commit already on another local
-// branch. A commit only its branch holds, a change, an ignored file or a lock
-// keeps it, and its branch, with the reason.
+// branch; files git ignores go with it, unlike rm. A commit only its branch
+// holds, a change or a lock keeps it, and its branch, with the reason.
 func TestReleaseRemovesOnlyWhatLosesNothing(t *testing.T) {
 	isolate(t)
 	t.Setenv(state.DirEnv, t.TempDir())
 	source := repository(t, "project")
-	write(t, filepath.Join(source, ".gitignore"), ".env\n")
+	write(t, filepath.Join(source, ".gitignore"), ".env\nnode_modules/\n")
 	must(t, source, "add", ".gitignore")
 	must(t, source, "commit", "-q", "-m", "Ignore")
 	root := t.TempDir()
@@ -49,7 +49,14 @@ func TestReleaseRemovesOnlyWhatLosesNothing(t *testing.T) {
 			must(t, r.Path, "switch", "-q", "--detach", "main")
 		}, "holds commits no other local branch has"},
 		{"uncommitted", func(r Record) { write(t, filepath.Join(r.Path, "draft"), "draft\n") }, "changes git status shows"},
-		{"ignored", func(r Record) { write(t, filepath.Join(r.Path, ".env"), "SECRET=1\n") }, "files git ignores"},
+		{"ignored", func(r Record) {
+			write(t, filepath.Join(r.Path, ".env"), "SECRET=1\n")
+			write(t, filepath.Join(r.Path, "node_modules", "pkg", "index.js"), "built\n")
+		}, ""},
+		{"ignored-beside-a-change", func(r Record) {
+			write(t, filepath.Join(r.Path, ".env"), "SECRET=1\n")
+			write(t, filepath.Join(r.Path, "draft"), "draft\n")
+		}, "changes git status shows"},
 		{"assume-unchanged", func(r Record) {
 			must(t, r.Path, "update-index", "--assume-unchanged", "src/nested/file")
 			write(t, filepath.Join(r.Path, "src", "nested", "file"), "local work\n")

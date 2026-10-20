@@ -6,8 +6,11 @@ import (
 )
 
 // Release removes a checkout whose session is over, and its branch, when
-// nothing would be lost: nothing rm would keep it for (KeepReasons), and no
-// commit of it that a local branch other than its own does not hold. A local
+// nothing would be lost: nothing rm would keep it for (KeepReasons) but files
+// git ignores, and no commit of it that a local branch other than its own does
+// not hold. Ignored files go with it (the owner's decision, October 20, 2026):
+// almost every writer leaves some — node_modules, logs, a check's output — and
+// keeping a checkout for them kept nearly every one. A local
 // branch, not the branch it was made from: main may land into another with
 // --into, or the checkout it came from may have switched since, and any local
 // branch keeps the commits; a tag or a remote-tracking ref may be moved or
@@ -17,7 +20,7 @@ import (
 func Release(record Record) string {
 	why := ""
 	err := RemoveChecked(record, false, func(current Record) error {
-		reasons, check, err := KeepReasonsAndCheck(current)
+		reasons, check, err := keepReasons(current, false)
 		if err == nil && len(reasons) == 0 {
 			reasons, err = unmerged(current, check)
 		}

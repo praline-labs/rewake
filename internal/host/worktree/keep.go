@@ -20,6 +20,13 @@ func KeepReasons(record Record) ([]string, error) {
 
 // KeepReasonsAndCheck is KeepReasons with the look at the checkout it took.
 func KeepReasonsAndCheck(record Record) ([]string, Check, error) {
+	return keepReasons(record, true)
+}
+
+// keepReasons is KeepReasonsAndCheck, with files git ignores a reason only
+// when ignored says so: rm and finish are the person's own commands and keep
+// them, the close's release lets them go (Release).
+func keepReasons(record Record, ignored bool) ([]string, Check, error) {
 	var reasons []string
 	running, err := RunningIn(record)
 	if err != nil {
@@ -50,7 +57,7 @@ func KeepReasonsAndCheck(record Record) ([]string, Check, error) {
 	if check.Changes {
 		reasons = append(reasons, "it has changes git status shows")
 	}
-	if check.Ignored {
+	if ignored && check.Ignored {
 		reasons = append(reasons, "it holds files git ignores, a .env or a local build, which removal deletes")
 	}
 	if check.Hidden {

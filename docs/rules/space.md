@@ -135,14 +135,17 @@ shell replaced the host mode: the socket serves the raw stream only, to the shel
   gathered eighteen checkouts of merged work. Held since that day: the space host, after the
   worker's process group is seen gone, looks and removes under one hold of the repository's
   lock, as `rewake worktree rm` does (`worktree.Release`). It keeps the checkout for anything rm
-  would keep it for — a rewake session in it, changes, ignored files other than
-  `.worktreeinclude`'s unchanged copies, a tracked file marked assume-unchanged or
+  would keep it for but files git ignores — a rewake session in it, changes, a tracked file
+  marked assume-unchanged or
   skip-worktree, whose edits status does not show, a HEAD no ref holds, a `git worktree lock`, a submodule,
   a directory or repository gone — and for a commit, at its HEAD or its branch's tip, that no
   local branch but its own holds. Any local branch, not only the one it was made from: main may
   land with `--into`, and the checkout it came from may have switched since; a tag or a
   remote-tracking ref does not count, being moved or pruned with no thought of this work. Its
-  branch is then dropped as rm drops one. Why a checkout stays is added to the end's reason
+  branch is then dropped as rm drops one. Files git ignores — `node_modules`, logs, a check's
+  output — go with the checkout: almost every writer leaves some, and of seventeen checkouts
+  kept, fourteen were kept only for them, so the owner decided the same day that they do not
+  keep one at its close; rm and finish, the person's own commands, still keep them. Why a checkout stays is added to the end's reason
   after "; its checkout stays: ", so the record's format is unchanged; `rewake space close`
   answers it beside where the checkout is, and `rewake space list` with the reminder. A space
   that main's end closed has nobody to answer: the record and the listing carry it to the next
