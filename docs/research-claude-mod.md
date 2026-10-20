@@ -547,3 +547,9 @@ builds on:
 - `claude plugin validate`: `classic.WorktreeCreate`/`WorktreeRemove` hooks do not run in a
   plugin a person installs where an organization manages Claude Code; a `tool.call` guard has no
   such limit.
+- Live in rewake's room, the same day: `EnterWorktree {path}` from the mod's `$.tool.call` in an
+  interactive worker, `EnterWorktree` in `permissions.allow`, still opened Claude Code's dialog
+  "permission-root relocation to … — a model-supplied worktree outside .claude/worktrees/" in the
+  worker's own pane; a `tool.check` hook answering `allow` for the mod's call let it through with
+  no dialog. The entered worker's transcript was under the checkout's project directory
+  (`~/.claude/projects/<checkout's slug>/<session id>.jsonl`), not the launch directory's.

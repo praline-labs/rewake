@@ -148,3 +148,15 @@ test("elsewhere — main, a worker without entry — EnterWorktree goes on untou
   expect(answer.deny).toBeUndefined();
   expect(seen.entries).toHaveLength(1);
 });
+
+test("the permission check of the model's own EnterWorktree keeps the engine's verdict", async ($, on) => {
+  stage(on);
+  on("tool.check", () => ({ decision: "ask" }));
+  await start($);
+  const verdict: any = await $.tool.check({
+    tool: "EnterWorktree",
+    input: { path },
+    tool_use_id: "t1",
+  } as any);
+  expect(verdict.decision).toBe("ask");
+});

@@ -147,7 +147,11 @@ format or protocol changes.
   `REWAKE_WORKTREE_ENTER` is `1`: runs that command by argv through `REWAKE_EXECUTABLE`, cwd
   the session's, bound 120 seconds; then, unless the session's root already lies in the
   checkout, calls `$.tool.call({tool: "EnterWorktree", path})` and answers rewake's JSON with
-  Claude Code's message. A refused or failed entry is an error that says the checkout stays this
+  Claude Code's message. Claude Code asks a person before it moves a session into a checkout
+  outside `.claude/worktrees`, whatever the allow rules say (seen live, 2.1.302), and nobody may be
+  at a worker's screen: a `tool.check` hook on `EnterWorktree` answers `allow` for rewake's own
+  call (`next.origin.plugin === "rewake"`) in a run that may enter, and leaves every other
+  verdict to the engine. A refused or failed entry is an error that says the checkout stays this
   worker's and a second call enters it. The tool's text invites the call when main's task asks
   for a worktree: the probe saw a worker decline the native tool on a peer's request.
 - **The guard.** A `tool.call` hook on `EnterWorktree`, in a run where `REWAKE_WORKTREE_ENTER`
