@@ -13,7 +13,7 @@ import (
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
-//go:embed extension.ts management.ts
+//go:embed extension.ts management.ts worktree.ts
 var extensions embed.FS
 
 type run struct {
@@ -51,7 +51,7 @@ func (r *run) HarnessStarted(process adapter.RunProcess) {
 
 func (r *run) Start(ctx context.Context, _ func(string)) error {
 	r.ctx, r.cancel = context.WithCancel(ctx)
-	for _, name := range []string{"extension.ts", "management.ts"} {
+	for _, name := range []string{"extension.ts", "management.ts", "worktree.ts"} {
 		data, err := extensions.ReadFile(name)
 		if err != nil {
 			return err

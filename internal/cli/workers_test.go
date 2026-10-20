@@ -157,7 +157,7 @@ context = "large"
 	// A literal prompt tail cannot swallow the space's conversation id or
 	// checkout flag; an explicit checkout replaces the alias's older one.
 	target.args = []string{"--worktree=old", "--", "--session-id=literal"}
-	parsed.Call.Flags["worktree"] = "patch"
+	target.worktree = "patch"
 	words, err = workerLaunch(target, parsed.Call, "fresh-id")
 	want = []string{"--command", "agent-worker", "agent", "--worktree=patch", "--session-id", "fresh-id", "--", "--session-id=literal"}
 	if err != nil || !reflect.DeepEqual(words, want) {

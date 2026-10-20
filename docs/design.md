@@ -165,6 +165,9 @@ in [roles.md](roles.md), with the owner decisions that set them.
 - `REWAKE_DIR=<base>` — the shared base, not its root `v2/` nor the room below it.
 - `REWAKE_ROOM=<room>` — the room for every child command. Inherited room,
   session and epoch markers are replaced with this launch's values.
+- `REWAKE_EXECUTABLE=<path>` — the rewake that started the run, over an inherited value
+  (October 20, 2026): the harness's `worktree_status` tool runs it by argv rather than
+  whichever rewake PATH finds first ([worktree-tools.md](worktree-tools.md)). A probe gets none.
 - Inherited Claude Code markers are stripped (list in research): otherwise
   `rewake claude` launched from inside another session would inherit that
   session's socket and have transcript saving disabled.

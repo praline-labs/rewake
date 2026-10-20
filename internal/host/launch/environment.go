@@ -13,6 +13,12 @@ import (
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
+// ExecutableEnv carries the path of the rewake that started the run, for a
+// tool of the harness's adapter to run the same rewake by argv rather than
+// whichever one PATH finds first. Set at every launch, replacing an inherited
+// value.
+const ExecutableEnv = "REWAKE_EXECUTABLE"
+
 // SessionEnv returns the environment for a harness: the current one, with the
 // variables the adapter says its runs must not inherit removed — the markers a
 // parent agent session exports to its children — and the rewake variables
@@ -23,6 +29,7 @@ func SessionEnv(request adapter.LaunchRequest, strip []string) []string {
 		state.EpochEnv:   true,
 		state.DirEnv:     true,
 		state.RoomEnv:    true,
+		ExecutableEnv:    true,
 	}
 	for _, name := range strip {
 		drop[name] = true
@@ -43,6 +50,9 @@ func SessionEnv(request adapter.LaunchRequest, strip []string) []string {
 	if room == "" {
 		room = state.DefaultRoom
 	}
+	if executable, err := os.Executable(); err == nil {
+		env = append(env, ExecutableEnv+"="+executable)
+	}
 	return append(env,
 		state.RoomEnv+"="+room,
 		state.SessionEnv+"="+request.Name,
@@ -60,7 +70,7 @@ func ProbeEnv() []string {
 		name, value, found := strings.Cut(entry, "=")
 		switch {
 		case !found:
-		case name == state.SessionEnv, name == state.EpochEnv, name == state.DirEnv, name == state.RoomEnv:
+		case name == state.SessionEnv, name == state.EpochEnv, name == state.DirEnv, name == state.RoomEnv, name == ExecutableEnv:
 			continue
 		case strings.HasPrefix(name, "REWAKE_BRIDGE_"):
 			continue

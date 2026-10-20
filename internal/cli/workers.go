@@ -13,14 +13,16 @@ type workerSetting struct {
 }
 
 type workerTemplate struct {
-	Name        string        `json:"name"`
-	Harness     string        `json:"harness"`
-	Role        string        `json:"role"`
-	Command     string        `json:"command"`
-	Description string        `json:"description"`
-	Model       workerSetting `json:"model"`
-	Effort      workerSetting `json:"effort"`
-	Context     workerSetting `json:"context"`
+	Name        string `json:"name"`
+	Harness     string `json:"harness"`
+	Role        string `json:"role"`
+	Command     string `json:"command"`
+	Description string `json:"description"`
+	// Worktree says the worker starts in a new worktree of its own.
+	Worktree bool          `json:"worktree"`
+	Model    workerSetting `json:"model"`
+	Effort   workerSetting `json:"effort"`
+	Context  workerSetting `json:"context"`
 }
 
 type workersListing struct {
@@ -36,7 +38,7 @@ func workersCommand() *Command {
 		Next:     []string{"rewake space open <name> --alias <alias>"},
 		Notes: []string{
 			"Any role may read this catalog. Aliases come from the user alias file, ~/.config/rewake/aliases.toml, then the current directory's .rewake.toml, which may not set role or command. An unreadable file refuses the listing rather than silently omit workers.",
-			"An alias: [alias.<name>] with harness = \"<id>\"; role = \"write\" or \"general\" (general when absent); args = [the harness's arguments]; command = \"<program>\", a wrapper that runs the harness; description; and [alias.<name>.launch] with model, effort and context. Model and effort become the harness's flags; context does on a harness with a flag for it and is only shown elsewhere. Typed harness flags after -- in space open replace applied ones.",
+			"An alias: [alias.<name>] with harness = \"<id>\"; role = \"write\" or \"general\" (general when absent); args = [the harness's arguments]; command = \"<program>\", a wrapper that runs the harness; description; worktree = true, a worker started in a new worktree of its own, which --worktree=<name> on space open names and --no-worktree leaves out; and [alias.<name>.launch] with model, effort and context. Model and effort become the harness's flags; context does on a harness with a flag for it and is only shown elsewhere. Typed harness flags after -- in space open replace applied ones.",
 			"Since October 19, 2026 an alias's rewake list, main = true and launch.apply are gone: a file with them is refused, naming each field and what replaced it.",
 		},
 		Access: viewForm, Handler: handleWorkers,
@@ -81,7 +83,7 @@ func workerView(template launch.Template) workerTemplate {
 	settings := template.Settings
 	return workerTemplate{
 		Name: template.Name, Harness: template.Harness.ID(), Role: template.Role.ID,
-		Command: command, Description: template.Description,
+		Command: command, Description: template.Description, Worktree: template.Worktree,
 		Model:   workerSetting{Value: settings.Model, Applied: template.Applied.Model},
 		Effort:  workerSetting{Value: settings.Effort, Applied: template.Applied.Effort},
 		Context: workerSetting{Value: settings.Context, Applied: template.Applied.Context},
@@ -95,6 +97,9 @@ func (l workersListing) lines() []string {
 	var lines []string
 	for _, w := range l.Workers {
 		line := fmt.Sprintf("%s  harness=%s role=%s command=%s", w.Name, w.Harness, w.Role, strconv.Quote(w.Command))
+		if w.Worktree {
+			line += " worktree"
+		}
 		for _, setting := range []struct {
 			name  string
 			value workerSetting

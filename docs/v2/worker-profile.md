@@ -128,7 +128,8 @@ configuration Claude Code starts with, as it did before. A wrapper that moves
   else in it means anything for a space. A file with the old fields is refused naming them.
   `rewake workers` and `space open --alias` stay — the only way to raise a worker since
   `--harness` and `--role` went (decision 8); the user/project rule stays: a project alias names
-  no role and no command.
+  no role and no command. Since October 20, 2026 an alias may say `worktree = true`
+  ([worktree-tools.md](../worktree-tools.md#a-templates-worktree--true)).
 - **How the space host still launches a worker.** It runs `rewake [--command <wrapper>]
   <harness> <args>` with `REWAKE_SPACE=<room>/<space id>` and `REWAKE_SPACE_TEMPLATE=<alias>`,
   the alias that names the worker's memory, and no name, room or role flag; the

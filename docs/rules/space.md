@@ -145,7 +145,10 @@ shell replaced the host mode: the socket serves the raw stream only, to the shel
   branch is then dropped as rm drops one. Files git ignores — `node_modules`, logs, a check's
   output — go with the checkout: almost every writer leaves some, and of seventeen checkouts
   kept, fourteen were kept only for them, so the owner decided the same day that they do not
-  keep one at its close; rm and finish, the person's own commands, still keep them. Why a checkout stays is added to the end's reason
+  keep one at its close; rm and finish, the person's own commands, still keep them. The worker
+  sees this decision before its end: `rewake worktree status` forecasts it by the same policy
+  (`worktree.CloseForecast`), with only the worker's own run not counted
+  ([worktree-tools.md](../worktree-tools.md)). Why a checkout stays is added to the end's reason
   after "; its checkout stays: ", so the record's format is unchanged; `rewake space close`
   answers it beside where the checkout is, and `rewake space list` with the reminder. A space
   that main's end closed has nobody to answer: the record and the listing carry it to the next

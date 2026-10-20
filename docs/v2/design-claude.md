@@ -107,9 +107,11 @@ its mod takes no tasks ([answer 3](design.md#the-owners-answers)). P5 includes t
 
 ## The mail tools
 
-The mod registers no tools: the mail tool left the design by the owner's decision of
+The mod registers no mail tools: the mail tool left the design by the owner's decision of
 October 18, 2026, before it was built on this adapter, and a session reads and sends
-through the shell commands. Its design — the tools' registration, the permission check, a
+through the shell commands. Its one tool, since October 20, 2026, is `worktree_status`,
+which runs `rewake worktree status --json` by argv and answers in place of the engine's core
+([worktree-tools.md](../worktree-tools.md)). Its design — the tools' registration, the permission check, a
 call carried to the endpoint and a read proven by the final result — is in
 [rules-tools.md](../archive/rules-tools.md) and [mail-bridge.md](../archive/mail-bridge.md).
 What stays of it is how the host tells the mod's requests from a shell command's.

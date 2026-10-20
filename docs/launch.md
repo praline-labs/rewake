@@ -271,8 +271,8 @@ missing, so it is visible where a person's additions go, and leaves what is in t
 or `PI_CODING_AGENT_DIR=~/.config/rewake/pi/agent pi install npm:<package>`; a skill is a
 folder with a `SKILL.md` in `skills/` (owner decision, October 19, 2026).
 
-The adapter embeds `extension.ts` and its management module, writing both in the run
-directory. It adds `-e <extension.ts>` and, unless `--no-intro`, its briefing through the
+The adapter embeds `extension.ts`, its management module and its `worktree_status` tool
+([worktree-tools.md](worktree-tools.md)), writing them in the run directory. It adds `-e <extension.ts>` and, unless `--no-intro`, its briefing through the
 repeatable `--append-system-prompt`. `-e` adds rewake's extension to those pi finds: the
 person's, packages and built-ins load as without rewake, and so do a project's resources:
 in a project with `.pi` resources or `.agents/skills` pi would otherwise ask whether to trust
@@ -331,13 +331,16 @@ Main raises each writer in a checkout of its own with `rewake space open <name> 
 making a checkout by hand with `git worktree add`. Since October 20, 2026 the space's close
 removes the checkout and its branch when nothing in them would be lost, every commit already on
 another local branch among it ([SP7](rules/space.md)); one that stays is cleared with
-`rewake worktree finish <topic>` or `rm`.
+`rewake worktree finish <topic>` or `rm`. A template may say `worktree = true` instead of the
+typed flag, which then names the checkout, and `--no-worktree` leaves it out; the worker's
+`worktree_status` tool tells it its checkout and what the close would do with it
+([worktree-tools.md](worktree-tools.md)).
 A writer's uncommitted edits then never mix with what is being checked or committed in
 the main checkout at the same time.
 
 ### A space for a worker
 
-`rewake space open <name> --alias <alias> [--worktree[=<name>]] -- <harness args>` is main's way
+`rewake space open <name> --alias <alias> [--worktree[=<name>] | --no-worktree] -- <harness args>` is main's way
 to start a worker, built October 18, 2026 (S4-7,
 [the steps](v2/stage4-space-steps.md#the-build-steps)). A worker is raised only from a template
 (the owner's decision, October 19, 2026): `--alias` is required, `rewake workers` lists the

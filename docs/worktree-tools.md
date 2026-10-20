@@ -1,0 +1,79 @@
+# Worktree tools of both harnesses
+
+The shared worktree system: rewake's own worktree core ([worktree.md](worktree.md)) behind the
+same model tools in Claude Code's mod and rewake's pi extension, one Go implementation and thin
+front ends that call the CLI. The owner accepted the design on October 20, 2026; its first
+slice, landed that day, is the template field and `worktree_status`. Main's `worktree_list`
+and `worktree_land` tools, and entering or leaving a checkout from inside a session, come later.
+
+## A template's `worktree = true`
+
+An alias of `~/.config/rewake/aliases.toml` (or `.rewake.toml`) may say `worktree = true`: its
+worker starts in a new worktree of its own, as `space open --worktree` does. Refused on a
+harness rewake makes no worktree for, and beside the harness's worktree flag in the alias's
+`args`, which would be a second answer; `rewake workers` shows it.
+
+`space open` resolves the worker's worktree once, and the same answer goes to the worker's
+launch and to the space host, which captures the checkout and releases it at close:
+
+- a typed `--worktree` or `--worktree=<name>`, on `space open` or as the harness's flag after
+  `--`, wins: over `worktree = true` it only names the checkout;
+- else `--no-worktree` leaves the template's checkout out;
+- else the template's `worktree = true`, or the worktree flag in its `args`, stands;
+- `--worktree` given both on `space open` and after `--`, or beside `--no-worktree`, is refused.
+
+The flag is taken out of both argument lists before the launch is built, so a launch never
+carries two.
+
+## `rewake worktree status`
+
+A view for the session it runs in: no lease, no lock file, no pruning, no write. It knows the
+session by `ownRunIn` — the room directory, `REWAKE_SESSION` and `REWAKE_EPOCH` — never by
+its working directory, nor by whoever holds the name now, and answers:
+
+- `checkout`: the one whose record names this run as its owner — `ref`, `path`, `branch`,
+  `base` (the commit it was made at) and `source` — or `null`;
+- `space`: the space whose worker this run is, when one not yet over is;
+- `close`: what that space's close would do with the checkout if it closed now. `outcome` is
+  `remove`; `keep`, with `reasons`; `unknown`, when the look failed, as a close keeps what it
+  cannot judge; or `none` — main's checkout, a session that is no space's worker, a worker
+  without a checkout: no close removes anything there.
+
+The forecast is `worktree.CloseForecast`, `Release`'s own policy (SP7 of
+[rules/space.md](rules/space.md)): what rm keeps a checkout for but files git ignores, and a
+commit no other local branch holds. Only the worker's own run is not counted as working there —
+the close comes after it ends — while every other live session still is. It is a look, under
+no lock: later edits, commits and sessions change the answer, and it promises nothing.
+
+```json
+{"session":"api-claude","room":"rewake-28c6be7d4d60","role":"write",
+ "checkout":{"ref":"rewake-3f9a1c/wt-d219d1","path":"/home/me/.local/share/rewake/worktrees/rewake-3f9a1c/wt-d219d1",
+  "branch":"wt-d219d1","base":"24f3e8e…","source":"/home/me/code/rewake"},
+ "space":"api",
+ "close":{"outcome":"keep","reasons":["its commits up to 5b1e2c0a9d3f are on no local branch but its own"],
+  "note":"if this space closed now, its close would keep the checkout and its branch; …"}}
+```
+
+## The `worktree_status` tool
+
+The same name and contract in both harnesses: no input; it runs
+`$REWAKE_EXECUTABLE worktree status --json` by argv — no shell, nothing of the model's on the
+command line — and answers its JSON, or an error for a nonzero exit, a timeout, a cut answer or
+a command that could not start. `REWAKE_EXECUTABLE` is the path of the rewake that started the
+run, set by every launch over an inherited value
+([environment](design.md#environment-the-harness-receives)); without it no tool is registered.
+The bound is 60 seconds: the view reads records and git, and holds no lock to wait on.
+
+- **Claude Code**: the mod registers it at `session.start` as `mcp__rewake__worktree_status`
+  and serves it from a `tool.call` hook that answers in place of the engine's core; it calls
+  `$.process.run(argv, {cwd, env, timeoutMs})` with the run's `REWAKE_DIR`, `REWAKE_ROOM`,
+  `REWAKE_SESSION` and `REWAKE_EPOCH` set over the harness's environment, each named literally,
+  as the engine requires. A `.catch` turns a failed hook into an error result. Mod API of
+  2.1.302, from the `mods` skill.
+- **pi**: the extension calls `pi.registerTool` and `pi.exec(executable, args, {cwd, signal,
+  timeout})`, whose child inherits pi's environment. pi 1.3.0 reports a child it killed at the
+  timeout with exit code 0, so `killed` is read first.
+
+The tests: `internal/cli/worktree_status_test.go` (the forecast and the view),
+`internal/cli/space_worktree_test.go` (the resolution), the mod's `tests/worktree.test.ts`,
+pi's `worktree.test.ts`, and the workflow scenario `fixture-space-worktree`.

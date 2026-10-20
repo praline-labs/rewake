@@ -179,7 +179,17 @@ func TestARunWritesItsModAndServesItsSocket(t *testing.T) {
 	if err := plan.Service.Start(context.Background(), func(string) {}); err != nil {
 		t.Fatal(err)
 	}
-	for _, name := range []string{".claude-plugin/plugin.json", "hooks/hooks.json", "hooks/rewake.ts", "hooks/outbox.ts", "hooks/heartbeat.ts", "protocol.gen.ts"} {
+	// Every module of hooks/ is written: one the embed list misses fails the
+	// import, and the whole mod with it.
+	modules, err := filepath.Glob(filepath.Join("mod", "hooks", "*.ts"))
+	if err != nil || len(modules) == 0 {
+		t.Fatalf("the mod's modules: %v %v", modules, err)
+	}
+	names := []string{".claude-plugin/plugin.json", "hooks/hooks.json", "protocol.gen.ts"}
+	for _, module := range modules {
+		names = append(names, "hooks/"+filepath.Base(module))
+	}
+	for _, name := range names {
 		if _, err := os.Stat(filepath.Join(modDir(request.RunDir), name)); err != nil {
 			t.Errorf("the run's mod lacks %s: %v", name, err)
 		}

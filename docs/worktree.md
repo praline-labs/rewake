@@ -319,6 +319,9 @@ checks is `rm --force`.
 
 ## Listing and removing
 
+`rewake worktree status`, which answers for the session it runs in, and the tools built on it
+are in [worktree-tools.md](worktree-tools.md).
+
 A command names a worktree by its name or by `<repository>/<name>`, as ls prints it.
 Since a name may hold a slash, `rewake-3f9a1c/feat/login` could be read either way; the
 full form is tried first — a repository's directory and a name in it that match the word

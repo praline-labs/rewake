@@ -20,10 +20,7 @@ import (
 func Release(record Record) string {
 	why := ""
 	err := RemoveChecked(record, false, func(current Record) error {
-		reasons, check, err := keepReasons(current, false)
-		if err == nil && len(reasons) == 0 {
-			reasons, err = unmerged(current, check)
-		}
+		reasons, err := closeReasons(current, nil)
 		switch {
 		case err != nil:
 			why = "rewake could not tell whether removing it would lose work: " + err.Error()
@@ -42,6 +39,27 @@ func Release(record Record) string {
 	}
 	_, _ = DropBranch(record)
 	return ""
+}
+
+// CloseForecast says why the close of the worker's space would keep its
+// checkout if the worker ended now, or nothing when the close would remove it:
+// Release's own policy, with the worker's own run — the one the checkout was
+// made for — not counted as working there, since the close comes only after
+// it. Every other live user still counts. It is a look, under no lock and
+// writing nothing; edits, merges and other sessions may change the answer
+// before the close comes.
+func CloseForecast(record Record) ([]string, error) {
+	return closeReasons(record, record.Session)
+}
+
+// closeReasons is what keeps a checkout at its space's close: what rm keeps
+// it for but files git ignores, and commits no other local branch holds.
+func closeReasons(record Record, ending *Owner) ([]string, error) {
+	reasons, check, err := keepReasons(record, false, ending)
+	if err == nil && len(reasons) == 0 {
+		reasons, err = unmerged(record, check)
+	}
+	return reasons, err
 }
 
 // errKept refuses a release inside the lock; the reason is kept apart.

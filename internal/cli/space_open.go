@@ -107,10 +107,7 @@ func handleSpaceOpen(ctx *Context, call Call) error {
 		return failf("%v", err)
 	}
 	spec.Template = target.template
-	_, spec.Worktree = call.Flags["worktree"]
-	if taker, ok := h.(adapter.WorktreeHarness); ok {
-		spec.Worktree = spec.Worktree || adapter.HasFlag(target.args, taker.WorktreeFlag())
-	}
+	spec.Worktree = target.worktree != ""
 	var taken *space.NameTakenError
 	if err := space.Create(dir, record); errors.As(err, &taken) {
 		return failf("%v", err)

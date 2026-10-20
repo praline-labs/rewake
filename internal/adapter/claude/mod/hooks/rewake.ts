@@ -19,6 +19,7 @@ import { Heartbeat } from "./heartbeat.ts";
 import { Management } from "./management.ts";
 import type { Host } from "./outbox.ts";
 import { cut, listed, loadKey, newId, nextDelay, Outbox } from "./outbox.ts";
+import { serveWorktreeStatus, worktreeTool } from "./worktree.ts";
 
 // The harness's reasons, mapped to the protocol's.
 const reasons: Record<string, EndReason> = {
@@ -164,6 +165,9 @@ export const register: Register = (on) => {
     if (!socket) {
       // Loaded outside a rewake run: nobody to report to.
       return started;
+    }
+    if (await $.env.get("REWAKE_EXECUTABLE")) {
+      await $.tool.register(worktreeTool).catch(() => undefined);
     }
     const epoch = (await $.env.get("REWAKE_EPOCH")) ?? "";
     const host: Host = {
@@ -353,6 +357,8 @@ export const register: Register = (on) => {
     if (load?.run && exitReasons.has(e.reason)) await tellClosing(load.host, loadId, e.reason);
     return next(e);
   });
+
+  serveWorktreeStatus(on);
 
   on("session.measure", async ($, e, next) => {
     const measured = await next(e);

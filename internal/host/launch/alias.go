@@ -42,9 +42,12 @@ type Alias struct {
 	Args []string `toml:"args"`
 	// Command is the program started instead of the harness's own — a wrapper
 	// script that runs it.
-	Command     string        `toml:"command"`
-	Description string        `toml:"description"`
-	Launch      AliasSettings `toml:"launch"`
+	Command     string `toml:"command"`
+	Description string `toml:"description"`
+	// Worktree starts the worker in a new worktree of its own, as a typed
+	// --worktree on space open does.
+	Worktree bool          `toml:"worktree"`
+	Launch   AliasSettings `toml:"launch"`
 }
 
 // AliasSettings are the portable settings of a worker. The harness turns
@@ -64,7 +67,7 @@ const CommandFlag = "command"
 // that a feature exists will not find it.
 const Help = "Main opens workers by alias: [alias.<name>] in ~/.config/" + userDir + "/" + userFile +
 	" or in " + projectFile + " in the working directory, with harness = \"<id>\", role = \"write\" or \"general\", " +
-	"args = [arguments for the harness], description, [alias.<name>.launch] model, effort and context, and, " +
+	"args = [arguments for the harness], description, worktree = true for a worker in a new worktree of its own, [alias.<name>.launch] model, effort and context, and, " +
 	"in the user file only, role and command = \"<program>\" for a wrapper script. rewake workers lists them; " +
 	"rewake space open <space> --alias <name> opens one. An alias is not a launch of its own."
 
@@ -110,6 +113,8 @@ type Template struct {
 	// Args are the alias's arguments with its applied settings in them.
 	Args     []string
 	Settings AliasSettings
+	// Worktree says the worker starts in a new worktree of its own.
+	Worktree bool
 	// Applied says which of the settings became flags.
 	Applied struct{ Model, Effort, Context bool }
 }
@@ -132,6 +137,10 @@ func (s *Set) Template(name string, catalog adapter.Catalog) (Template, error) {
 	template := Template{
 		Name: name, Harness: h, Role: part, Command: value.Command,
 		Description: value.Description, Args: slices.Clone(value.Args), Settings: value.Launch,
+		Worktree: value.Worktree,
+	}
+	if err := worktreeField(h, value); err != nil {
+		return Template{}, fmt.Errorf("alias %q in %s: %w", name, source, err)
 	}
 	flags, err := settingFlags(h, value.Launch, &template)
 	if err != nil {
@@ -145,6 +154,23 @@ func (s *Set) Template(name string, catalog adapter.Catalog) (Template, error) {
 		template.Args = adapter.AddFlags(append(slices.Clone(kept), template.Args[len(visible):]...), flags...)
 	}
 	return template, nil
+}
+
+// worktreeField refuses worktree = true where it cannot be what it says: on a
+// harness rewake makes no worktree for, or beside the harness's worktree flag
+// in args, which would leave two answers to one question.
+func worktreeField(h adapter.Harness, value Alias) error {
+	if !value.Worktree {
+		return nil
+	}
+	taker, ok := h.(adapter.WorktreeHarness)
+	if !ok {
+		return fmt.Errorf("worktree = true, yet %s makes no worktree through rewake", h.Title())
+	}
+	if adapter.HasFlag(adapter.BeforeTerminator(value.Args), taker.WorktreeFlag()) {
+		return fmt.Errorf("worktree = true and %s in args; keep one, and name a worktree with --worktree=<name> on space open", taker.WorktreeFlag())
+	}
+	return nil
 }
 
 // settingFlags turns the settings into the harness's flags and records which

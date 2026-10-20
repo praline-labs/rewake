@@ -17,6 +17,10 @@ type workerTarget struct {
 	noIntro bool
 	// template is the alias the worker was raised from.
 	template string
+	// worktree is the worktree the worker starts in: "" for none, "true"
+	// for one of a generated name, else its name. Resolved once, here, for
+	// both the worker's launch and the space host (spaceWorktree).
+	worktree string
 }
 
 func (ctx *Context) spaceTarget(call Call) (workerTarget, error) {
@@ -39,10 +43,76 @@ func (ctx *Context) spaceTarget(call Call) (workerTarget, error) {
 	if err != nil {
 		return refuse("%v", err)
 	}
+	checkout, aliasArgs, typedArgs, err := spaceWorktree(call, template)
+	if err != nil {
+		return workerTarget{}, err
+	}
 	return workerTarget{
-		harness: template.Harness, part: template.Role, command: template.Command, template: alias,
-		args: launch.MergeArguments(template.Args, slices.Clone(call.Positionals[2:]), template.Harness.SingleUseFlags()),
+		harness: template.Harness, part: template.Role, command: template.Command, template: alias, worktree: checkout,
+		args: launch.MergeArguments(aliasArgs, typedArgs, template.Harness.SingleUseFlags()),
 	}, nil
+}
+
+// spaceWorktree resolves the worker's worktree from what asks for one: a
+// typed --worktree or --worktree=<name> on space open, or the harness's flag
+// typed after --, wins; else --no-worktree leaves the template's out; else the
+// template's worktree = true, or the flag in its args, stands. Two typed
+// requests, or a typed one beside --no-worktree, are refused: a worker has one
+// worktree. The flag is taken out of both argument lists, so the launch
+// carries the one answer the space host also gets.
+func spaceWorktree(call Call, template launch.Template) (string, []string, []string, error) {
+	aliasArgs, typedArgs := slices.Clone(template.Args), slices.Clone(call.Positionals[2:])
+	refuse := func(format string, args ...any) (string, []string, []string, error) {
+		return "", nil, nil, &UsageError{Command: call.Command, Message: fmt.Sprintf(format, args...)}
+	}
+	open, typed := call.Flags["worktree"]
+	no := call.Switch("no-worktree")
+	taker, ok := template.Harness.(adapter.WorktreeHarness)
+	if !ok {
+		if typed {
+			return refuse("%s makes no worktree through rewake; open the space without --worktree.", template.Harness.Title())
+		}
+		return "", aliasArgs, typedArgs, nil
+	}
+	flag := taker.WorktreeFlag()
+	fromAlias, err := takeWorktreeFlag(call, &aliasArgs, flag, taker.WorktreeNameSpaced())
+	if err != nil {
+		return refuse("alias %q: %v", template.Name, err)
+	}
+	afterDashes, err := takeWorktreeFlag(call, &typedArgs, flag, taker.WorktreeNameSpaced())
+	if err != nil {
+		return "", nil, nil, err
+	}
+	switch {
+	case typed && afterDashes != "":
+		return refuse("--worktree is given both to space open and after --; a worker has one worktree, so give it once.")
+	case no && (typed || afterDashes != ""):
+		return refuse("--no-worktree and --worktree ask opposite things; give one.")
+	case afterDashes != "":
+		return afterDashes, aliasArgs, typedArgs, nil
+	case typed:
+		return open, aliasArgs, typedArgs, nil
+	case no:
+		return "", aliasArgs, typedArgs, nil
+	case template.Worktree:
+		return "true", aliasArgs, typedArgs, nil
+	}
+	return fromAlias, aliasArgs, typedArgs, nil
+}
+
+// takeWorktreeFlag takes the harness's worktree flag out of args, read as a
+// launch reads it (worktreeRequest): "" when absent, "true" for a generated
+// name, else the name.
+func takeWorktreeFlag(call Call, args *[]string, flag string, spaced bool) (string, error) {
+	name, given, rest, err := worktreeRequest(Call{Command: call.Command, Raw: *args}, flag, spaced)
+	if err != nil || !given {
+		return "", err
+	}
+	*args = rest
+	if name == "" {
+		return "true", nil
+	}
+	return name, nil
 }
 
 // workerLaunch builds the complete ordinary launch, including settings and
@@ -51,7 +121,7 @@ func (ctx *Context) spaceTarget(call Call) (workerTarget, error) {
 func workerLaunch(target workerTarget, call Call, conversation string) ([]string, error) {
 	words, err := launch.WorkerArgs(target.harness, launch.Worker{
 		Command: target.command, NoIntro: target.noIntro, Args: target.args,
-		Worktree: call.Flag("worktree", ""), Conversation: conversation,
+		Worktree: target.worktree, Conversation: conversation,
 	})
 	if err != nil {
 		return nil, &UsageError{Command: call.Command, Message: err.Error()}

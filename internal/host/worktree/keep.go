@@ -20,15 +20,17 @@ func KeepReasons(record Record) ([]string, error) {
 
 // KeepReasonsAndCheck is KeepReasons with the look at the checkout it took.
 func KeepReasonsAndCheck(record Record) ([]string, Check, error) {
-	return keepReasons(record, true)
+	return keepReasons(record, true, nil)
 }
 
 // keepReasons is KeepReasonsAndCheck, with files git ignores a reason only
 // when ignored says so: rm and finish are the person's own commands and keep
-// them, the close's release lets them go (Release).
-func keepReasons(record Record, ignored bool) ([]string, Check, error) {
+// them, the close's release lets them go (Release). A run named ending is not
+// counted as working there: the close forecast asks on behalf of the worker
+// whose end it foresees (CloseForecast).
+func keepReasons(record Record, ignored bool, ending *Owner) ([]string, Check, error) {
 	var reasons []string
-	running, err := RunningIn(record)
+	running, err := runningIn(record, ending)
 	if err != nil {
 		return nil, Check{}, err
 	}
@@ -87,6 +89,12 @@ func keepReasons(record Record, ignored bool) ([]string, Check, error) {
 // a session of 1.x: an owner record naming a room of another layout fails the
 // root's check and is skipped.
 func RunningIn(record Record) ([]string, error) {
+	return runningIn(record, nil)
+}
+
+// runningIn is RunningIn with the run except names left out, wherever its
+// working directory is.
+func runningIn(record Record, except *Owner) ([]string, error) {
 	var roots []string
 	if root, err := state.Root(); err == nil {
 		roots = append(roots, root)
@@ -109,7 +117,10 @@ func RunningIn(record Record) ([]string, error) {
 				return nil, fmt.Errorf("cannot list the sessions of %s: %w", room, err)
 			}
 			for _, session := range sessions {
-				made := owner != nil && filepath.Clean(owner.Dir) == room && session.Name == owner.Name && session.Epoch() == owner.Epoch
+				if except != nil && except.is(room, session) {
+					continue
+				}
+				made := owner != nil && owner.is(room, session)
 				label := session.Name + " in room " + filepath.Base(room)
 				if session.Alive() && (made || Within(session.CWD, record.Path)) && !slices.Contains(found, label) {
 					found = append(found, label)
@@ -118,6 +129,11 @@ func RunningIn(record Record) ([]string, error) {
 		}
 	}
 	return found, nil
+}
+
+// is says whether a session of room is this owner's run.
+func (o *Owner) is(room string, session registry.Session) bool {
+	return filepath.Clean(o.Dir) == room && session.Name == o.Name && session.Epoch() == o.Epoch
 }
 
 // short is a commit as the person reads it.
