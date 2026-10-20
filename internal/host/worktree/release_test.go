@@ -50,6 +50,14 @@ func TestReleaseRemovesOnlyWhatLosesNothing(t *testing.T) {
 		}, "holds commits no other local branch has"},
 		{"uncommitted", func(r Record) { write(t, filepath.Join(r.Path, "draft"), "draft\n") }, "changes git status shows"},
 		{"ignored", func(r Record) { write(t, filepath.Join(r.Path, ".env"), "SECRET=1\n") }, "files git ignores"},
+		{"assume-unchanged", func(r Record) {
+			must(t, r.Path, "update-index", "--assume-unchanged", "src/nested/file")
+			write(t, filepath.Join(r.Path, "src", "nested", "file"), "local work\n")
+		}, "assume-unchanged or skip-worktree"},
+		{"skip-worktree", func(r Record) {
+			must(t, r.Path, "update-index", "--skip-worktree", "src/nested/file")
+			write(t, filepath.Join(r.Path, "src", "nested", "file"), "local work\n")
+		}, "assume-unchanged or skip-worktree"},
 		{"locked", func(r Record) { must(t, source, "worktree", "lock", "--reason", "mine", r.Path) }, "locked with git worktree lock (mine)"},
 	}
 	for _, c := range cases {

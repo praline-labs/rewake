@@ -345,6 +345,10 @@ refuses. The checks and the removal hold the repository's lock together
 - files git ignores — a `.env`, a local build — which `git worktree remove` deletes
   without a word, forced or not (checked on git 2.43, September 28, 2026); unchanged
   copies `.worktreeinclude` made are not counted;
+- a tracked file marked `--assume-unchanged` or `--skip-worktree`, as `git ls-files -v` shows
+  it: `git status` does not look at such a file, so an edit to it is work neither status nor
+  `git worktree remove` sees (found in review, October 20, 2026); a sparse checkout, which marks
+  files skip-worktree, is kept too;
 - a HEAD no branch, tag or remote-tracking ref holds, asked every time: the worktree's
   own branch holds its commits while HEAD is on it, but a checkout switched to a
   detached HEAD, or whose branch was deleted, holds commits nothing else does;

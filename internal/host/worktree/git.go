@@ -82,10 +82,15 @@ type Check struct {
 	// Submodules is a checkout holding a submodule checked out, which git
 	// worktree remove refuses unless forced.
 	Submodules bool `json:"submodules,omitempty"`
+	// Hidden is a tracked file marked assume-unchanged or skip-worktree:
+	// git status does not look at it, so an edit to it is work neither
+	// status nor git worktree remove sees (found in review, October 20,
+	// 2026).
+	Hidden bool `json:"hidden,omitempty"`
 }
 
 // Dirty says whether removing the checkout would lose work.
-func (c Check) Dirty() bool { return c.Changes || c.Ignored || c.Unreachable }
+func (c Check) Dirty() bool { return c.Changes || c.Ignored || c.Unreachable || c.Hidden }
 
 // Inspect looks at a checkout as it is now.
 func Inspect(record Record) (Check, error) {
@@ -131,7 +136,28 @@ func Inspect(record Record) (Check, error) {
 	if check.Submodules, err = submodules(record.Path); err != nil {
 		return Check{}, err
 	}
+	if check.Hidden, err = hiddenFromStatus(record.Path); err != nil {
+		return Check{}, err
+	}
 	return check, nil
+}
+
+// hiddenFromStatus says whether the index marks any tracked file
+// assume-unchanged or skip-worktree. Whether such a file was edited is not
+// asked: the marks exist to keep local edits, and a sparse checkout, which
+// sets skip-worktree too, is kept as well.
+func hiddenFromStatus(path string) (bool, error) {
+	listed, err := gitOutput(path, "ls-files", "-v", "-z")
+	if err != nil {
+		return false, fmt.Errorf("cannot list the index of %s: %w", path, err)
+	}
+	for _, entry := range strings.Split(listed, "\x00") {
+		// <tag> <path>: a lowercase tag is assume-unchanged, S skip-worktree.
+		if tag, _, ok := strings.Cut(entry, " "); ok && len(tag) == 1 && (tag == "S" || tag[0] >= 'a' && tag[0] <= 'z') {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // inspectMissing looks at a checkout whose directory is gone through what the

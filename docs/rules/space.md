@@ -136,7 +136,8 @@ shell replaced the host mode: the socket serves the raw stream only, to the shel
   worker's process group is seen gone, looks and removes under one hold of the repository's
   lock, as `rewake worktree rm` does (`worktree.Release`). It keeps the checkout for anything rm
   would keep it for — a rewake session in it, changes, ignored files other than
-  `.worktreeinclude`'s unchanged copies, a HEAD no ref holds, a `git worktree lock`, a submodule,
+  `.worktreeinclude`'s unchanged copies, a tracked file marked assume-unchanged or
+  skip-worktree, whose edits status does not show, a HEAD no ref holds, a `git worktree lock`, a submodule,
   a directory or repository gone — and for a commit, at its HEAD or its branch's tip, that no
   local branch but its own holds. Any local branch, not only the one it was made from: main may
   land with `--into`, and the checkout it came from may have switched since; a tag or a

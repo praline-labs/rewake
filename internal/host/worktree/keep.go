@@ -53,6 +53,9 @@ func KeepReasonsAndCheck(record Record) ([]string, Check, error) {
 	if check.Ignored {
 		reasons = append(reasons, "it holds files git ignores, a .env or a local build, which removal deletes")
 	}
+	if check.Hidden {
+		reasons = append(reasons, "a tracked file in it is marked assume-unchanged or skip-worktree, so git status cannot show its edits, which removal deletes; git ls-files -v names it")
+	}
 	if check.Unreachable {
 		reasons = append(reasons, "its HEAD "+short(check.Head)+" is on no branch, tag or remote-tracking ref, and those commits would be left to garbage collection")
 	}
