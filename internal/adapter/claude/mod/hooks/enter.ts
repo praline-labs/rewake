@@ -129,11 +129,16 @@ export function serveWorktreeEnter(on: Parameters<Register>[0]) {
   // Claude Code asks a person before it moves a session into a checkout
   // outside .claude/worktrees, whatever the allow rules say (seen live on
   // 2.1.302); nobody may be at a worker's screen. rewake made this one for
-  // this worker a moment ago, so its own call is allowed; the model's, and
-  // every call elsewhere, keep the engine's verdict.
+  // this worker a moment ago, so that ask of the engine's own is answered
+  // for rewake's call. Every other verdict stands: a deny, and an ask a
+  // PreToolUse hook, a rule or a setting made, are the person's policy; the
+  // model's call, and every call elsewhere, keep the engine's verdict whole.
   on("tool.check", { tool: "EnterWorktree" }, async ($, e, next) => {
-    if ((await $.env.get("REWAKE_WORKTREE_ENTER")) !== "1" || next.origin.plugin !== "rewake")
-      return next(e);
+    const verdict = await next(e);
+    const own =
+      verdict.hook === undefined && verdict.rule === undefined && verdict.setting === undefined;
+    if (verdict.decision !== "ask" || !own || next.origin.plugin !== "rewake") return verdict;
+    if ((await $.env.get("REWAKE_WORKTREE_ENTER")) !== "1") return verdict;
     return { decision: "allow", reason: entryAllowed };
   });
 }

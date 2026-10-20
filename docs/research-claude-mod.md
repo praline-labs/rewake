@@ -551,5 +551,8 @@ builds on:
   interactive worker, `EnterWorktree` in `permissions.allow`, still opened Claude Code's dialog
   "permission-root relocation to … — a model-supplied worktree outside .claude/worktrees/" in the
   worker's own pane; a `tool.check` hook answering `allow` for the mod's call let it through with
-  no dialog. The entered worker's transcript was under the checkout's project directory
+  no dialog. The engine's verdict there is `{decision: "ask"}` with no `hook` field; a PreToolUse
+  deny comes back to `$.tool.call` as `{deny: "PreToolUse:EnterWorktree hook error: …"}`, and a
+  `tool.check` hook that answers without `next(e)` overrides it (`claude -p` with a plugin
+  dropping the prompt, no model turn, 2.1.302). The entered worker's transcript was under the checkout's project directory
   (`~/.claude/projects/<checkout's slug>/<session id>.jsonl`), not the launch directory's.
