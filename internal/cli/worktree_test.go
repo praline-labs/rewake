@@ -145,8 +145,8 @@ func TestWorktreeCommandRefusals(t *testing.T) {
 		args []string
 		want string
 	}{
-		{[]string{"worktree"}, "needs ls, status, land, finish or rm"},
-		{[]string{"worktree", "list"}, "needs ls, status, land, finish or rm"},
+		{[]string{"worktree"}, "needs ls, status, enter, land, finish or rm"},
+		{[]string{"worktree", "list"}, "needs ls, status, enter, land, finish or rm"},
 		{[]string{"worktree", "ls", "x"}, "takes no name"},
 		{[]string{"worktree", "status", "x"}, "takes no name"},
 		{[]string{"worktree", "status", "--force"}, "--force is for rm"},

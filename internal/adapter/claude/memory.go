@@ -69,47 +69,24 @@ func withMemory(settings map[string]any, dir string) (map[string]any, bool) {
 	return out, true
 }
 
-// launchSettings is the --settings a worker's launch passes: the folder's
-// settings.json, or, with memory on, a copy in the run's directory with the
-// two memory keys laid over it, since --settings is single-use. The memory
-// directory is made private before Claude Code would make it. With no run
-// directory to write in, the worker starts without memory, noted. A worker
-// raised from no template — only a test build's direct launch — has none.
-func launchSettings(path string, settings map[string]any, folder, runDir, template string) (string, []string, error) {
-	if template == "" {
-		return path, nil, nil
-	}
-	if runDir == "" {
-		return path, []string{"no worker memory: the launch has no run directory to write its settings in"}, nil
-	}
+// memorySettings is the worker's settings with its memory laid over them,
+// its directory made private before Claude Code would make it; the settings
+// as they are when the person's own autoMemoryEnabled false holds.
+func memorySettings(settings map[string]any, folder, template string) (map[string]any, bool, error) {
 	cwd, err := os.Getwd()
 	if err != nil {
-		return "", nil, fmt.Errorf("a worker's memory is kept per project, and the working directory cannot be read: %w", err)
+		return nil, false, fmt.Errorf("a worker's memory is kept per project, and the working directory cannot be read: %w", err)
 	}
 	dir, err := memoryDir(folder, cwd, template)
 	if err != nil {
-		return "", nil, err
+		return nil, false, err
 	}
 	overlaid, on := withMemory(settings, dir)
 	if !on {
-		return path, nil, nil
+		return settings, false, nil
 	}
 	if err := makeMemoryDir(dir); err != nil {
-		return "", nil, err
+		return nil, false, err
 	}
-	data, err := encodeSettings(overlaid)
-	if err != nil {
-		return "", nil, err
-	}
-	// A run whose directory cannot be written fails its mod at the start;
-	// the memory alone stops nothing.
-	run := filepath.Join(runDir, "worker-settings.json")
-	err = state.EnsureSubdir(runDir)
-	if err == nil {
-		err = state.WriteFile(run, data, 0o600)
-	}
-	if err != nil {
-		return path, []string{"no worker memory: its settings could not be written to the run directory: " + err.Error()}, nil
-	}
-	return run, nil, nil
+	return overlaid, true, nil
 }

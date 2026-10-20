@@ -113,3 +113,45 @@ func TestATemplatesWorktreeIsShownAndHasOneAnswer(t *testing.T) {
 		t.Fatalf("both: %d %s", code, errOut)
 	}
 }
+
+type enteringHarness struct{ workerSettingsHarness }
+
+func (enteringHarness) EntersWorktree() {}
+
+// enter_worktree = true lets a worker started without a checkout enter one:
+// a typed --worktree starts it in one instead, and the field is refused
+// beside worktree = true and on a harness that cannot enter one.
+func TestATemplatesEntryIsItsOneCheckout(t *testing.T) {
+	workerAliases(t, "[alias.enter]\nharness = \"agent\"\nenter_worktree = true\n")
+	t.Setenv("REWAKE_SESSION", "")
+	catalog := adapter.NewCatalog(enteringHarness{})
+	ctx := &Context{table: newTable(catalog)}
+	for _, c := range []struct {
+		argv     []string
+		enter    bool
+		worktree string
+	}{
+		{[]string{"--alias", "enter"}, true, ""},
+		{[]string{"--alias", "enter", "--worktree"}, false, "true"},
+	} {
+		parsed, err := ctx.table.parse(append([]string{"space", "open", "api"}, c.argv...))
+		if err != nil {
+			t.Fatal(err)
+		}
+		target, err := ctx.spaceTarget(parsed.Call)
+		if err != nil || target.enter != c.enter || target.worktree != c.worktree {
+			t.Errorf("%v: enter %v worktree %q %v", c.argv, target.enter, target.worktree, err)
+		}
+	}
+	if _, out, _ := runOn(catalog, "workers"); !strings.Contains(out, "role=general command=\"agent\" enter_worktree") {
+		t.Fatalf("workers lines:\n%s", out)
+	}
+	workerAliases(t, "[alias.both]\nharness = \"agent\"\nworktree = true\nenter_worktree = true\n")
+	if code, _, errOut := runOn(catalog, "workers"); code != ExitUsage || !strings.Contains(errOut, "keep one") {
+		t.Fatalf("both: %d %s", code, errOut)
+	}
+	workerAliases(t, "[alias.enter]\nharness = \"agent\"\nenter_worktree = true\n")
+	if code, _, errOut := runOn(adapter.NewCatalog(workerSettingsHarness{}), "workers"); code != ExitUsage || !strings.Contains(errOut, "cannot enter a worktree") {
+		t.Fatalf("no entry: %d %s", code, errOut)
+	}
+}

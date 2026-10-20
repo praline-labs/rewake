@@ -55,8 +55,12 @@ type Spec struct {
 	Template string `json:"template,omitempty"`
 	// Worktree says the launch makes a worktree, which the record names once
 	// the worker's session claims it.
-	Worktree bool          `json:"worktree,omitempty"`
-	Size     terminal.Size `json:"size"`
+	Worktree bool `json:"worktree,omitempty"`
+	// Enter says the worker may enter a checkout rewake makes for it
+	// mid-session (enter_worktree = true), which the record names once its
+	// session claims it, as a launch's own.
+	Enter bool          `json:"enter,omitempty"`
+	Size  terminal.Size `json:"size"`
 	// Launcher is the launcher's pid, which the space host waits to see gone
 	// before it shows itself outside main's run.
 	Launcher int `json:"launcher,omitempty"`

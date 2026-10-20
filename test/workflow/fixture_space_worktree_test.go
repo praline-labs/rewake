@@ -24,56 +24,16 @@ func TestFixtureSpaceWorktree(t *testing.T) {
 		Observations: fixtureSpaceWorktreeObservations,
 		Deadline:     90 * time.Second,
 	})
-	iso := Isolate(t, c, binary)
-	repo := filepath.Join(iso.Home, "project")
-	if err := os.MkdirAll(repo, 0o700); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(filepath.Join(repo, "file"), []byte("one\n"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	git := func(dir string, args ...string) (string, error) {
-		command := exec.Command("git", append([]string{"-C", dir}, args...)...)
-		command.Env = append(iso.Env(), "GIT_CONFIG_NOSYSTEM=1",
-			"GIT_AUTHOR_NAME=Test", "GIT_AUTHOR_EMAIL=test@example.invalid",
-			"GIT_COMMITTER_NAME=Test", "GIT_COMMITTER_EMAIL=test@example.invalid")
-		out, err := c.OutputAllowingFailure(command)
-		return strings.TrimSpace(string(out)), err
-	}
-	for _, args := range [][]string{{"init", "-q", "-b", "main"}, {"add", "."}, {"commit", "-q", "-m", "First"}} {
-		if _, err := git(repo, args...); err != nil {
-			t.Fatalf("preparing the repository: git %q: %v", args, err)
-		}
-	}
-	aliasDir := filepath.Join(iso.Home, ".config", "rewake")
-	if err := os.MkdirAll(aliasDir, 0o700); err != nil {
-		t.Fatal(err)
-	}
-	aliases := fmt.Sprintf("[alias.worker]\nharness = %q\nrole = \"write\"\nworktree = true\n", fixtureColumn.harness)
-	if err := os.WriteFile(filepath.Join(aliasDir, "aliases.toml"), []byte(aliases), 0o600); err != nil {
-		t.Fatal(err)
-	}
-
-	asks := newRequests(iso, "lead")
-	lead := startSessionIn(t, c, iso, repo, fixtureColumn.harness, "lead", "--main", nil, nil, asks.env(), shimInboxJSON+"=1")
-	defer stopSession(t, c, lead)
-	if !waitFor(c, 20*time.Second, func() bool { _, err := os.Stat(lead.ready); return err == nil }) {
-		c.Contradicted(obsSpaceTreeStatus, "main never became ready")
+	room, ok := openTreeWorker(t, c, binary, "worktree = true", obsSpaceTreeStatus)
+	if !ok {
 		return
 	}
-	worker, env := spaceWorker(iso, "api", fixtureColumn.harness)
-	workerAsks := newRequests(iso, "api")
-	env[0] = workerAsks.env()
-	encoded, _ := json.Marshal(shimRequest{Args: []string{"space", "open", "api", "--alias", "worker", "--json"}, Env: env})
-	code, out, answered := asks.send(c, encoded, "space open api")
-	var opened struct {
-		Session  string `json:"session"`
-		Worktree bool   `json:"worktree"`
-	}
-	if !answered || code != 0 || json.Unmarshal([]byte(out), &opened) != nil || opened.Session != worker.name || !opened.Worktree {
-		c.Contradicted(obsSpaceTreeStatus, "space open answered %d, %v: %s", code, answered, out)
+	defer stopSession(t, c, room.lead)
+	if !room.opened.Worktree {
+		c.Contradicted(obsSpaceTreeStatus, "space open made no worktree")
 		return
 	}
+	asks, workerAsks, repo, git := room.asks, room.workerAsks, room.repo, room.git
 
 	var status struct {
 		Space    string `json:"space"`
@@ -85,9 +45,9 @@ func TestFixtureSpaceWorktree(t *testing.T) {
 			Reasons []string `json:"reasons"`
 		} `json:"close"`
 	}
-	code, out, _ = workerAsks.ask(c, "worktree", "status", "--json")
+	code, out, _ := workerAsks.ask(c, "worktree", "status", "--json")
 	head, _ := git(repo, "rev-parse", "HEAD")
-	trees := filepath.Join(iso.Home, ".local", "share", "rewake", "worktrees") + string(filepath.Separator)
+	trees := room.trees
 	if code != 0 || json.Unmarshal([]byte(out), &status) != nil || status.Checkout == nil || status.Space != "api" ||
 		!strings.HasPrefix(status.Checkout.Path, trees) || status.Checkout.Base != head || status.Close.Outcome != "remove" {
 		c.Contradicted(obsSpaceTreeStatus, "the worker's status answered %d: %s", code, out)
@@ -112,3 +72,72 @@ const (
 )
 
 var fixtureSpaceWorktreeObservations = []string{obsSpaceTreeStatus, obsSpaceTreeRemoved}
+
+// treeRoom is main ready in a repository of its own, and a worker it opened
+// from the alias worker, whose last line is given.
+type treeRoom struct {
+	repo, trees string
+	git         func(dir string, args ...string) (string, error)
+	lead        *scenarioSession
+	asks        *requests
+	workerAsks  *requests
+	opened      struct {
+		Session  string `json:"session"`
+		Worktree bool   `json:"worktree"`
+	}
+}
+
+func openTreeWorker(t *testing.T, c *Case, binary, line, obs string) (*treeRoom, bool) {
+	t.Helper()
+	iso := Isolate(t, c, binary)
+	room := &treeRoom{
+		repo:  filepath.Join(iso.Home, "project"),
+		trees: filepath.Join(iso.Home, ".local", "share", "rewake", "worktrees") + string(filepath.Separator),
+	}
+	if err := os.MkdirAll(room.repo, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(room.repo, "file"), []byte("one\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	room.git = func(dir string, args ...string) (string, error) {
+		command := exec.Command("git", append([]string{"-C", dir}, args...)...)
+		command.Env = append(iso.Env(), "GIT_CONFIG_NOSYSTEM=1",
+			"GIT_AUTHOR_NAME=Test", "GIT_AUTHOR_EMAIL=test@example.invalid",
+			"GIT_COMMITTER_NAME=Test", "GIT_COMMITTER_EMAIL=test@example.invalid")
+		out, err := c.OutputAllowingFailure(command)
+		return strings.TrimSpace(string(out)), err
+	}
+	for _, args := range [][]string{{"init", "-q", "-b", "main"}, {"add", "."}, {"commit", "-q", "-m", "First"}} {
+		if _, err := room.git(room.repo, args...); err != nil {
+			t.Fatalf("preparing the repository: git %q: %v", args, err)
+		}
+	}
+	aliasDir := filepath.Join(iso.Home, ".config", "rewake")
+	if err := os.MkdirAll(aliasDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	aliases := fmt.Sprintf("[alias.worker]\nharness = %q\nrole = \"write\"\n%s\n", fixtureColumn.harness, line)
+	if err := os.WriteFile(filepath.Join(aliasDir, "aliases.toml"), []byte(aliases), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	room.asks = newRequests(iso, "lead")
+	room.lead = startSessionIn(t, c, iso, room.repo, fixtureColumn.harness, "lead", "--main", nil, nil, room.asks.env(), shimInboxJSON+"=1")
+	if !waitFor(c, 20*time.Second, func() bool { _, err := os.Stat(room.lead.ready); return err == nil }) {
+		c.Contradicted(obs, "main never became ready")
+		stopSession(t, c, room.lead)
+		return room, false
+	}
+	worker, env := spaceWorker(iso, "api", fixtureColumn.harness)
+	room.workerAsks = newRequests(iso, "api")
+	env[0] = room.workerAsks.env()
+	encoded, _ := json.Marshal(shimRequest{Args: []string{"space", "open", "api", "--alias", "worker", "--json"}, Env: env})
+	code, out, answered := room.asks.send(c, encoded, "space open api")
+	if !answered || code != 0 || json.Unmarshal([]byte(out), &room.opened) != nil || room.opened.Session != worker.name {
+		c.Contradicted(obs, "space open answered %d, %v: %s", code, answered, out)
+		stopSession(t, c, room.lead)
+		return room, false
+	}
+	return room, true
+}

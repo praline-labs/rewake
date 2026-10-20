@@ -66,6 +66,10 @@ type LaunchRequest struct {
 	// keep what one template's workers share, its memory on Claude Code
 	// (docs/v2/worker-profile.md).
 	Template string
+	// WorktreeEntry says the template lets this worker enter a checkout
+	// rewake makes for it mid-session (enter_worktree = true); only an
+	// adapter offering it (WorktreeEntryHarness) is asked.
+	WorktreeEntry bool
 	// Shell says the run is main's in rewake's shell, drawn on a pane whose
 	// terminal keeps no scrollback before a pane attached: an adapter whose
 	// harness can scroll its own history turns that on (docs/v2/shell.md).

@@ -53,6 +53,9 @@ type Request struct {
 	// Template is the alias the worker's space was opened with
 	// (adapter.LaunchRequest.Template).
 	Template string
+	// WorktreeEntry says that template lets the worker enter a checkout
+	// (adapter.LaunchRequest.WorktreeEntry).
+	WorktreeEntry bool
 	// RoleReason says why the launch has its role, for the record and the
 	// briefing; empty says the role was selected with its flag.
 	RoleReason string
@@ -193,6 +196,8 @@ func Run(ctx context.Context, request Request) (int, error) {
 		Start:      start,
 		Shell:      request.Shell,
 		Template:   request.Template,
+
+		WorktreeEntry: request.WorktreeEntry,
 	}
 	launchRequest.Env = launch.SessionEnv(launchRequest, request.Harness.EnvNotInherited())
 	if request.Shell {

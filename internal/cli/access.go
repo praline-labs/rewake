@@ -67,13 +67,13 @@ func inboxAccess(call Call) access {
 	return accessChange
 }
 
-// worktreeAccess classifies worktree by its verb: rm, land and finish change
-// a checkout and look the room's sessions up; ls, and a verb the handler
+// worktreeAccess classifies worktree by its verb: enter, rm, land and finish
+// make or change a checkout and look the room's sessions up; ls, and a verb the handler
 // refuses before any effect, only answer.
 func worktreeAccess(call Call) access {
 	if len(call.Positionals) > 0 {
 		switch call.Positionals[0] {
-		case "rm", "land", "finish":
+		case "enter", "rm", "land", "finish":
 			return accessChange
 		}
 	}

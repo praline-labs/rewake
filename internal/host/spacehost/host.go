@@ -171,10 +171,17 @@ func (h *host) watch(reaped <-chan struct{}) string {
 		if space.MainRuns(h.record) == proc.IdentityEnded {
 			return "main's run ended"
 		}
-		if h.spec.Worktree && h.record.Checkout.Path == "" {
+		if h.checkoutAwaited() {
 			_ = h.captureCheckout()
 		}
 	}
+}
+
+// checkoutAwaited says the worker may yet claim a checkout the record does not
+// name: its launch makes one, or it may enter one mid-session. Either way a
+// worker has one checkout at most, the one the record names.
+func (h *host) checkoutAwaited() bool {
+	return (h.spec.Worktree || h.spec.Enter) && h.record.Checkout.Path == ""
 }
 
 // captureCheckout records the checkout the worker's session claimed, if it
@@ -207,7 +214,7 @@ func (h *host) never(why string) error {
 // the last poll, so the capture is made once more here; one that fails leaves
 // the space closing, never closed as if it had made none.
 func (h *host) close(why string) error {
-	if h.spec.Worktree && h.record.Checkout.Path == "" {
+	if h.checkoutAwaited() {
 		if err := h.captureCheckout(); err != nil {
 			return fmt.Errorf("the space stays closing: its checkout could not be captured: %w", err)
 		}
@@ -233,6 +240,9 @@ func (h *host) command() (*exec.Cmd, error) {
 	env = append(env, WorkerSpaceEnv+"="+h.spec.Room+"/"+h.spec.ID)
 	if h.spec.Template != "" {
 		env = append(env, WorkerTemplateEnv+"="+h.spec.Template)
+	}
+	if h.spec.Enter {
+		env = append(env, WorkerEnterEnv+"=1")
 	}
 	cmd := exec.Command(self, h.spec.Args...)
 	cmd.Dir, cmd.Env = h.spec.Cwd, env

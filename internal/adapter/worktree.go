@@ -24,6 +24,21 @@ type WorktreeHarness interface {
 	WorktreeNameSpaced() bool
 }
 
+// WorktreeEntryHarness is a harness whose worker can move into a checkout
+// rewake makes for it mid-session, through a tool of its adapter: a template
+// may then say enter_worktree = true (docs/worktree-tools.md).
+type WorktreeEntryHarness interface {
+	// EntersWorktree marks the offer; LaunchRequest.WorktreeEntry turns it
+	// on for one run.
+	EntersWorktree()
+}
+
+// WorktreeEnterEnv is "1" in the run of a worker that may enter a checkout:
+// its adapter sets it once the run can, and rewake worktree enter refuses
+// without it. It is not a boundary — a session's own command could set it —
+// only the run's way to say what its template allows.
+const WorktreeEnterEnv = "REWAKE_WORKTREE_ENTER"
+
 // ContinueInWorktree is the way on that a refused continuation names: the
 // conversation goes on where it was started, and one started in a checkout
 // rewake made is found with rewake worktree ls. Launched in the checkout

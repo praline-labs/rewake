@@ -38,3 +38,8 @@ func (fixtureHarness) LaunchDirectory(args []string) (string, []string, error) {
 // WorktreeRefusal refuses nothing: no argument of the fixture's leads out of
 // the checkout.
 func (fixtureHarness) WorktreeRefusal([]string) error { return nil }
+
+// EntersWorktree: a worker of the fixture may enter a checkout mid-session,
+// which it does by running rewake worktree enter, so a workflow scenario
+// follows that checkout from its claim to its space's close.
+func (fixtureHarness) EntersWorktree() {}

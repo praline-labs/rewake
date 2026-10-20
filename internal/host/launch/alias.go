@@ -9,6 +9,7 @@
 package launch
 
 import (
+	"errors"
 	"fmt"
 	"slices"
 	"sort"
@@ -46,8 +47,11 @@ type Alias struct {
 	Description string `toml:"description"`
 	// Worktree starts the worker in a new worktree of its own, as a typed
 	// --worktree on space open does.
-	Worktree bool          `toml:"worktree"`
-	Launch   AliasSettings `toml:"launch"`
+	Worktree bool `toml:"worktree"`
+	// EnterWorktree lets the worker, started without a checkout, enter one
+	// rewake makes for it mid-session, once (docs/worktree-tools.md).
+	EnterWorktree bool          `toml:"enter_worktree"`
+	Launch        AliasSettings `toml:"launch"`
 }
 
 // AliasSettings are the portable settings of a worker. The harness turns
@@ -67,7 +71,7 @@ const CommandFlag = "command"
 // that a feature exists will not find it.
 const Help = "Main opens workers by alias: [alias.<name>] in ~/.config/" + userDir + "/" + userFile +
 	" or in " + projectFile + " in the working directory, with harness = \"<id>\", role = \"write\" or \"general\", " +
-	"args = [arguments for the harness], description, worktree = true for a worker in a new worktree of its own, [alias.<name>.launch] model, effort and context, and, " +
+	"args = [arguments for the harness], description, worktree = true for a worker in a new worktree of its own or, on Claude Code, enter_worktree = true for one that may enter one mid-session, [alias.<name>.launch] model, effort and context, and, " +
 	"in the user file only, role and command = \"<program>\" for a wrapper script. rewake workers lists them; " +
 	"rewake space open <space> --alias <name> opens one. An alias is not a launch of its own."
 
@@ -115,6 +119,8 @@ type Template struct {
 	Settings AliasSettings
 	// Worktree says the worker starts in a new worktree of its own.
 	Worktree bool
+	// EnterWorktree says it may enter one mid-session instead.
+	EnterWorktree bool
 	// Applied says which of the settings became flags.
 	Applied struct{ Model, Effort, Context bool }
 }
@@ -137,9 +143,12 @@ func (s *Set) Template(name string, catalog adapter.Catalog) (Template, error) {
 	template := Template{
 		Name: name, Harness: h, Role: part, Command: value.Command,
 		Description: value.Description, Args: slices.Clone(value.Args), Settings: value.Launch,
-		Worktree: value.Worktree,
+		Worktree: value.Worktree, EnterWorktree: value.EnterWorktree,
 	}
 	if err := worktreeField(h, value); err != nil {
+		return Template{}, fmt.Errorf("alias %q in %s: %w", name, source, err)
+	}
+	if err := enterWorktreeField(h, value); err != nil {
 		return Template{}, fmt.Errorf("alias %q in %s: %w", name, source, err)
 	}
 	flags, err := settingFlags(h, value.Launch, &template)
@@ -169,6 +178,26 @@ func worktreeField(h adapter.Harness, value Alias) error {
 	}
 	if adapter.HasFlag(adapter.BeforeTerminator(value.Args), taker.WorktreeFlag()) {
 		return fmt.Errorf("worktree = true and %s in args; keep one, and name a worktree with --worktree=<name> on space open", taker.WorktreeFlag())
+	}
+	return nil
+}
+
+// enterWorktreeField refuses enter_worktree = true on a harness whose session
+// cannot move into a checkout, and beside a checkout made at the start, by
+// worktree = true or the harness's flag in args: a worker has one checkout,
+// made at its start or entered later, not both.
+func enterWorktreeField(h adapter.Harness, value Alias) error {
+	if !value.EnterWorktree {
+		return nil
+	}
+	if _, ok := h.(adapter.WorktreeEntryHarness); !ok {
+		return fmt.Errorf("enter_worktree = true, yet a %s session cannot enter a worktree mid-session; worktree = true starts it in one", h.Title())
+	}
+	if value.Worktree {
+		return errors.New("worktree = true and enter_worktree = true; a worker has one checkout, made at its start or entered later, so keep one")
+	}
+	if taker, ok := h.(adapter.WorktreeHarness); ok && adapter.HasFlag(adapter.BeforeTerminator(value.Args), taker.WorktreeFlag()) {
+		return fmt.Errorf("enter_worktree = true and %s in args; a worker has one checkout, made at its start or entered later, so keep one", taker.WorktreeFlag())
 	}
 	return nil
 }

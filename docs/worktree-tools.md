@@ -4,8 +4,9 @@ The shared worktree system: rewake's own worktree core ([worktree.md](worktree.m
 same model tools in Claude Code's mod and rewake's pi extension, one Go implementation and thin
 front ends that call the CLI. The owner accepted the design on October 20, 2026; its first
 slice, landed that day, is the template field and `worktree_status`; its second, the same day, is
-main's `worktree_list` and `worktree_land`. Entering or leaving a checkout from inside a session
-comes later.
+main's `worktree_list` and `worktree_land`; its third, the same day, a Claude Code worker's entry
+into a checkout of its own mid-session (`enter_worktree = true`, below). Leaving a checkout from
+inside a session, or holding more than one, is not built.
 
 ## A template's `worktree = true`
 
@@ -107,3 +108,60 @@ CLI was. The same names and contracts in both harnesses (`mcp__rewake__worktree_
 
 The tests: the mod's `tests/worktree.test.ts` and pi's `worktree.test.ts` (offer by role, argv,
 bounds, refused input), `TestWorktreeLsThisRoomKeepsTheRoomsCheckouts`, `TestARunNamesItsRole`.
+
+## A worker's entry: `enter_worktree = true` and `worktree_enter`
+
+Main's decisions of October 20, 2026, on the live probe of Claude Code 2.1.302
+([research](research-claude-mod.md#entering-a-checkout-mid-session-october-20-2026-21302)):
+**one checkout per worker, ever**; entry only for a worker launched without one; no exit. The
+space's singular `Checkout` then holds it, and its close releases it after the worker is gone,
+by the same capture as a launch's checkout (SP7): nothing is released mid-session, no state
+format or protocol changes.
+
+- **The field.** An alias may say `enter_worktree = true` (off by default): its worker starts
+  where main works and may enter a checkout rewake makes for it. Refused on a harness without
+  entry (`adapter.WorktreeEntryHarness`; pi has none), and beside `worktree = true` or the
+  harness's worktree flag in `args`: a worker's one checkout is made at its start or entered
+  later. A typed `--worktree` on `space open` starts the worker in one instead, entry off.
+  `rewake workers` shows it. `space open` carries it to the space host (`Spec.Enter`), which
+  passes `REWAKE_SPACE_ENTER=1` to the worker's launch and captures a claimed checkout while the
+  record names none, as for `worktree = true`; the launch hands it to the adapter as
+  `LaunchRequest.WorktreeEntry`.
+- **The run.** Claude Code's adapter writes the worker's settings copy in the run's directory
+  even with memory off, `EnterWorktree` taken out of `permissions.deny` and added to
+  `permissions.allow`; the person's `settings.json` is not changed, and a deny they wrote in
+  another form (a rule with a specifier) stays and wins. A whole-tool deny would hide the tool
+  from the mod's own call too. Only then the run gets `REWAKE_WORKTREE_ENTER=1`
+  (`adapter.WorktreeEnterEnv`), which no run inherits; under `--command`, whose wrapper decides
+  the settings, the variable is set and the deny is the wrapper's. It is not a boundary — a
+  session's own command could set it — only the run's way to say what its template allows.
+- **`rewake worktree enter [<name>] --json`**, a change (the room's lease), knows the run by
+  `ownRunIn` and refuses without `REWAKE_WORKTREE_ENTER=1`. With no checkout claimed by this
+  run, it makes one from the commit the session is at, from its working directory, on a new
+  branch (`worktree.Create`, the name generated when none is given), and claims it for the run:
+  `created`. Called again it answers the same one — `reused`, or `already` when the run was
+  started in it — and refuses another name: "one checkout per worker". A claim that fails takes
+  the checkout back as a failed launch's is. The answer is `outcome`, `checkout` (as status
+  has it) and `skipped`.
+- **The tool** `mcp__rewake__worktree_enter` (`name?`), registered only where
+  `REWAKE_WORKTREE_ENTER` is `1`: runs that command by argv through `REWAKE_EXECUTABLE`, cwd
+  the session's, bound 120 seconds; then, unless the session's root already lies in the
+  checkout, calls `$.tool.call({tool: "EnterWorktree", path})` and answers rewake's JSON with
+  Claude Code's message. A refused or failed entry is an error that says the checkout stays this
+  worker's and a second call enters it. The tool's text invites the call when main's task asks
+  for a worktree: the probe saw a worker decline the native tool on a peer's request.
+- **The guard.** A `tool.call` hook on `EnterWorktree`, in a run where `REWAKE_WORKTREE_ENTER`
+  is `1`, passes only rewake's own call (`next.origin.plugin === "rewake"`) and refuses the
+  model's, which would make a checkout rewake does not know; its `.catch` refuses unless the
+  tool already ran (fail closed). Elsewhere the call goes on untouched: main's `-w`,
+  `EnterWorktree` and `Agent` isolation stay Claude Code's. `ExitWorktree` stays denied: Claude
+  Code never removes a checkout entered by path, and there is no way back.
+- **Known limits.** Two `worktree_enter` calls at the same moment may each make one; the close
+  captures the first claim, and the other stays under the root for `rm`. A worker cannot go
+  back to main's directory, nor hold two checkouts; a worker that needs another is a new space.
+  rewake's registry keeps the launch directory as the session's `cwd`.
+
+The tests: `internal/cli/worktree_enter_test.go`, `TestATemplatesEntryIsItsOneCheckout`,
+`TestLaunchSettingsWithEntry`, `TestACheckoutClaimedBeforeAnyPollIsKeptWhenMainEndsFirst` (both
+flags), the mod's `tests/enter.test.ts`, and the workflow scenario
+`fixture-space-worktree-enter` (the fixture offers entry by running the command).

@@ -2,6 +2,7 @@ package spacehost
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -15,8 +16,15 @@ import (
 // A worker whose session claimed its checkout before the space host first
 // looked, with main ending first: the space is already closing when the
 // checkout is found, and the close still records it — kept while it is there,
-// never closed as a space that made none.
+// never closed as a space that made none. The same holds for a checkout the
+// worker entered mid-session, which its launch did not make.
 func TestACheckoutClaimedBeforeAnyPollIsKeptWhenMainEndsFirst(t *testing.T) {
+	for _, spec := range []Spec{{Worktree: true}, {Enter: true}} {
+		t.Run(fmt.Sprintf("enter=%v", spec.Enter), func(t *testing.T) { checkoutKeptWhenMainEndsFirst(t, spec) })
+	}
+}
+
+func checkoutKeptWhenMainEndsFirst(t *testing.T, spec Spec) {
 	dir := buildtest.Dir(t)
 	root := t.TempDir()
 	t.Setenv(worktree.RootEnv, root)
@@ -61,7 +69,8 @@ func TestACheckoutClaimedBeforeAnyPollIsKeptWhenMainEndsFirst(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	h := &host{spec: Spec{Dir: dir, ID: id, Worktree: true}, record: record}
+	spec.Dir, spec.ID = dir, id
+	h := &host{spec: spec, record: record}
 	if err := h.close("main's run ended"); err != nil {
 		t.Fatal(err)
 	}

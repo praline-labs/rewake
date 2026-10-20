@@ -108,6 +108,7 @@ func handleSpaceOpen(ctx *Context, call Call) error {
 	}
 	spec.Template = target.template
 	spec.Worktree = target.worktree != ""
+	spec.Enter = target.enter
 	var taken *space.NameTakenError
 	if err := space.Create(dir, record); errors.As(err, &taken) {
 		return failf("%v", err)

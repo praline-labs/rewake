@@ -283,6 +283,9 @@ func (claudeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, 
 	if request.Shell {
 		env = fullscreen(env)
 	}
+	if worker.enter {
+		env = withEnv(env, adapter.WorktreeEnterEnv, "1")
+	}
 	modSocket := modSocketPath(request)
 	switch {
 	case len(modSocket) > maxSocketPath:

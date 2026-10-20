@@ -99,6 +99,8 @@ func handleLaunch(h adapter.Harness) func(*Context, Call) error {
 			Command:    program,
 			OnClaimed:  onClaimed,
 			Lease:      lease,
+
+			WorktreeEntry: id.enter,
 		})
 		if checkout != nil {
 			checkout.settle(err != nil || code != 0)

@@ -50,16 +50,20 @@ type profile struct {
 	args         []string
 	instructions string
 	notes        []string
+	// enter says the run may enter a checkout: its settings let the mod's
+	// worktree_enter call EnterWorktree.
+	enter bool
 }
 
 // workerProfile builds the profile for a launch: none for main, and none
-// under --command, whose wrapper decides the configuration it starts with.
+// under --command, whose wrapper decides the configuration it starts with —
+// the entry into a checkout among it.
 func workerProfile(request adapter.LaunchRequest, args []string) (profile, error) {
 	if request.Role.ID == role.Main.ID {
 		return profile{}, nil
 	}
 	if request.Command != "" {
-		return profile{notes: []string{"the worker profile is not applied: the program named with --command decides the configuration Claude Code starts with"}}, nil
+		return profile{notes: []string{"the worker profile is not applied: the program named with --command decides the configuration Claude Code starts with"}, enter: request.WorktreeEntry}, nil
 	}
 	dir, home, err := profileDirPath()
 	if err != nil {
@@ -77,12 +81,12 @@ func workerProfile(request adapter.LaunchRequest, args []string) (profile, error
 	if err != nil {
 		return profile{}, err
 	}
-	passed, notes, err := launchSettings(path, settings, dir, request.RunDir, request.Template)
+	passed, enter, notes, err := launchSettings(path, settings, dir, request.RunDir, request.Template, request.WorktreeEntry)
 	if err != nil {
 		return profile{}, err
 	}
 	// The directory is the worker plugin, its skills/ the person's skills.
-	out := profile{args: []string{settingSourcesFlag, workerSources, settingsFlag, passed, pluginDirFlag, dir}, notes: notes}
+	out := profile{args: []string{settingSourcesFlag, workerSources, settingsFlag, passed, pluginDirFlag, dir}, notes: notes, enter: enter}
 	if wrote {
 		out.notes = append(out.notes, fmt.Sprintf("the worker settings %s now hold rewake's defaults of version %d", path, defaultsVersion))
 	}

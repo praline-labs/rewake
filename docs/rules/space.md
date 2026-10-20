@@ -66,7 +66,8 @@ shell replaced the host mode: the socket serves the raw stream only, to the shel
   run once the worker's wrapper is started, and the checkout once the worker's session claims
   one; `rewake space open` answers only once the record is open and the worker's session is
   registered with that run. A close records the worker seen ended or never started and what
-  was then seen of the checkout; with `--worktree` it looks for the claimed checkout once more,
+  was then seen of the checkout; with `--worktree`, or a template that lets the worker enter
+  one mid-session (`enter_worktree = true`), it looks for the claimed checkout once more,
   closing included, and a look that fails leaves the record closing, never closed as a space
   that made none. The format on disk is held by its own test.
   Tests:

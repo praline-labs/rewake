@@ -101,8 +101,8 @@ func TestLaunchSettingsWithMemory(t *testing.T) {
 	t.Cleanup(func() { _ = os.RemoveAll(base) })
 	runDir := filepath.Join(buildtest.Room(t, base, state.DefaultRoom), "runs", "api.e1")
 	folder := t.TempDir()
-	passed, notes, err := launchSettings("/f/settings.json", map[string]any{"a": true}, folder, runDir, "opus")
-	if err != nil || len(notes) != 0 || passed != filepath.Join(runDir, "worker-settings.json") {
+	passed, enter, notes, err := launchSettings("/f/settings.json", map[string]any{"a": true}, folder, runDir, "opus", false)
+	if err != nil || enter || len(notes) != 0 || passed != filepath.Join(runDir, "worker-settings.json") {
 		t.Fatalf("%s %v %v", passed, notes, err)
 	}
 	settings := readBack(t, passed)
@@ -110,10 +110,10 @@ func TestLaunchSettingsWithMemory(t *testing.T) {
 	if info, err := os.Stat(memory); err != nil || info.Mode().Perm() != 0o700 || filepath.Base(memory) != "opus" || settings["a"] != true {
 		t.Fatalf("%v: %v", settings, err)
 	}
-	if passed, _, err := launchSettings("/f/settings.json", map[string]any{"autoMemoryEnabled": false}, folder, runDir, "opus"); err != nil || passed != "/f/settings.json" {
+	if passed, _, _, err := launchSettings("/f/settings.json", map[string]any{"autoMemoryEnabled": false}, folder, runDir, "opus", false); err != nil || passed != "/f/settings.json" {
 		t.Fatalf("the person's false: %s %v", passed, err)
 	}
-	if passed, _, err := launchSettings("/f/settings.json", map[string]any{}, folder, runDir, ""); err != nil || passed != "/f/settings.json" {
+	if passed, _, _, err := launchSettings("/f/settings.json", map[string]any{}, folder, runDir, "", false); err != nil || passed != "/f/settings.json" {
 		t.Fatalf("no template: %s %v", passed, err)
 	}
 }

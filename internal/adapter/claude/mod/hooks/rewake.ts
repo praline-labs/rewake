@@ -15,6 +15,7 @@ import type {
 import { paths } from "../protocol.gen.ts";
 import { Asks, allowOnce, allowSession, refuseCall } from "./asks.ts";
 import { exitReasons, tellClosing } from "./closing.ts";
+import { serveWorktreeEnter, worktreeEnterTool } from "./enter.ts";
 import { Heartbeat } from "./heartbeat.ts";
 import { Management } from "./management.ts";
 import type { Host } from "./outbox.ts";
@@ -169,6 +170,9 @@ export const register: Register = (on) => {
     if (await $.env.get("REWAKE_EXECUTABLE")) {
       for (const tool of worktreeToolsFor(await $.env.get("REWAKE_ROLE"))) {
         await $.tool.register(tool).catch(() => undefined);
+      }
+      if ((await $.env.get("REWAKE_WORKTREE_ENTER")) === "1") {
+        await $.tool.register(worktreeEnterTool).catch(() => undefined);
       }
     }
     const epoch = (await $.env.get("REWAKE_EPOCH")) ?? "";
@@ -361,6 +365,7 @@ export const register: Register = (on) => {
   });
 
   serveWorktreeStatus(on);
+  serveWorktreeEnter(on);
 
   on("session.measure", async ($, e, next) => {
     const measured = await next(e);

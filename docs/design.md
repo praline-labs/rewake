@@ -171,6 +171,11 @@ in [roles.md](roles.md), with the owner decisions that set them.
 - `REWAKE_ROLE=<id>` — the run's role (October 20, 2026), over an inherited value: main's
   `worktree_list` and `worktree_land` are registered only where it is `main`; a choice of what
   is shown, not an authorization. A probe gets none.
+- `REWAKE_WORKTREE_ENTER=1` — set by the adapter only for a worker whose template says
+  `enter_worktree = true`, once its run can enter a checkout (October 20, 2026); never inherited,
+  none for a probe. The mod registers `worktree_enter` and guards `EnterWorktree` by it, and
+  `rewake worktree enter` refuses without it; not a boundary
+  ([worktree-tools.md](worktree-tools.md#a-workers-entry-enter_worktree--true-and-worktree_enter)).
 - Inherited Claude Code markers are stripped (list in research): otherwise
   `rewake claude` launched from inside another session would inherit that
   session's socket and have transcript saving disabled.

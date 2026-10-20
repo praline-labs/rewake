@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/praline-labs/rewake/internal/adapter"
@@ -95,6 +96,9 @@ func (fixtureHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan,
 	server = append(server, "--connect", socket)
 	terminal := append(append(append([]string{}, description...), "--"), request.Args...)
 	env := request.Env
+	if request.WorktreeEntry {
+		env = append(slices.Clone(env), adapter.WorktreeEnterEnv+"=1")
+	}
 	cwd, _ := os.Getwd()
 	run := newBackend(request.Program(ID), server, env, cwd, socket, request.Epoch)
 	if request.Intro {

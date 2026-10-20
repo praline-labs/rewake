@@ -120,3 +120,8 @@ func shortLetters(arg string) string {
 	}
 	return cluster
 }
+
+// EntersWorktree: a worker moves into a checkout rewake makes for it through
+// the mod's worktree_enter, which calls Claude Code's EnterWorktree with its
+// path (docs/worktree-tools.md).
+func (claudeHarness) EntersWorktree() {}

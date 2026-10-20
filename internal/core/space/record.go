@@ -73,8 +73,9 @@ type Record struct {
 	Main Run `json:"main"`
 	// Worker is the session the space hosts.
 	Worker Worker `json:"worker"`
-	// Checkout is the worktree the worker's launch made for it: empty for a
-	// worker started without one, and until its session is seen there.
+	// Checkout is the worker's one worktree: the one its launch made, or the
+	// one it entered mid-session (enter_worktree = true). Empty for a worker
+	// without one, and until its session is seen to claim it.
 	Checkout Checkout `json:"checkout"`
 	// Host is the space host's run, pid.start.boot as an epoch: the process
 	// that holds the worker's terminal and closes it. Set before the worker

@@ -21,6 +21,9 @@ type workerTarget struct {
 	// for one of a generated name, else its name. Resolved once, here, for
 	// both the worker's launch and the space host (spaceWorktree).
 	worktree string
+	// enter says the worker may enter a checkout mid-session: its template
+	// says enter_worktree = true and it starts without one.
+	enter bool
 }
 
 func (ctx *Context) spaceTarget(call Call) (workerTarget, error) {
@@ -49,7 +52,8 @@ func (ctx *Context) spaceTarget(call Call) (workerTarget, error) {
 	}
 	return workerTarget{
 		harness: template.Harness, part: template.Role, command: template.Command, template: alias, worktree: checkout,
-		args: launch.MergeArguments(aliasArgs, typedArgs, template.Harness.SingleUseFlags()),
+		enter: template.EnterWorktree && checkout == "",
+		args:  launch.MergeArguments(aliasArgs, typedArgs, template.Harness.SingleUseFlags()),
 	}, nil
 }
 

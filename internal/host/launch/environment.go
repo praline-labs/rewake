@@ -37,6 +37,9 @@ func SessionEnv(request adapter.LaunchRequest, strip []string) []string {
 		state.RoomEnv:    true,
 		ExecutableEnv:    true,
 		RoleEnv:          true,
+		// The adapter sets it for a run its template lets enter a
+		// checkout, never one inherited from a session that may.
+		adapter.WorktreeEnterEnv: true,
 	}
 	for _, name := range strip {
 		drop[name] = true
@@ -80,7 +83,7 @@ func ProbeEnv() []string {
 		name, value, found := strings.Cut(entry, "=")
 		switch {
 		case !found:
-		case name == state.SessionEnv, name == state.EpochEnv, name == state.DirEnv, name == state.RoomEnv, name == ExecutableEnv, name == RoleEnv:
+		case name == state.SessionEnv, name == state.EpochEnv, name == state.DirEnv, name == state.RoomEnv, name == ExecutableEnv, name == RoleEnv, name == adapter.WorktreeEnterEnv:
 			continue
 		case strings.HasPrefix(name, "REWAKE_BRIDGE_"):
 			continue

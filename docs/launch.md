@@ -201,6 +201,11 @@ rewake --command my-claude claude
     (research-launch.md). A person's own `"autoMemoryEnabled": false` in `settings.json` is
     respected: the file is then passed as it is and the worker has no memory. A run directory
     that cannot be written leaves the worker without memory, with a launch note.
+  - **A template with `enter_worktree = true`** (October 20, 2026) gets the same copy, memory
+    on or off, with `EnterWorktree` taken out of `permissions.deny` and added to
+    `permissions.allow`, and the run gets `REWAKE_WORKTREE_ENTER=1`; a copy that cannot be
+    written leaves the worker without entry, noted
+    ([worktree-tools.md](worktree-tools.md#a-workers-entry-enter_worktree--true-and-worktree_enter)).
   - **The person edits the file**: a default is turned back on by changing or removing it —
     `"Agent"` taken out of `permissions.deny` gives workers their subagents back,
     `"idleCompaction": true` its idle compaction — and anything else of Claude Code's settings
@@ -334,7 +339,9 @@ another local branch among it ([SP7](rules/space.md)); one that stays is cleared
 `rewake worktree finish <topic>` or `rm`. A template may say `worktree = true` instead of the
 typed flag, which then names the checkout, and `--no-worktree` leaves it out; the worker's
 `worktree_status` tool tells it its checkout and what the close would do with it
-([worktree-tools.md](worktree-tools.md)).
+([worktree-tools.md](worktree-tools.md)). A Claude Code template may say `enter_worktree = true`
+instead: the worker starts where main works and enters one checkout of its own mid-session
+through its `worktree_enter` tool, which the close releases the same way.
 A writer's uncommitted edits then never mix with what is being checked or committed in
 the main checkout at the same time.
 

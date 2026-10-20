@@ -517,3 +517,33 @@ the mod's posts to a socket of the driver's:
   `prompt_input_exit` and `other`, and the shell starts its closing screen at the screen's leave,
   which precedes it (docs/v2/shell.md, "The closing screen"). From October 19 the mod sent it at
   `/exit`'s `command.run` too, and the closing screen hid the dialog above for five seconds.
+
+## Entering a checkout mid-session (October 20, 2026, 2.1.302)
+
+`claude -p` on the cheapest model in a private repository with a probe mod logging the worktree
+events and `next.origin`, then a live room in a private `HOME` and `REWAKE_DIR` with two workers.
+What [worktree-tools.md](worktree-tools.md#a-workers-entry-enter_worktree--true-and-worktree_enter)
+builds on:
+
+- `EnterWorktree {name}` takes the path a `classic.WorktreeCreate` hook returns (the hook's `cwd`
+  is the source repository, even from a linked worktree); `{path}` of a checkout in `git worktree
+  list` fires no hook, only `tool.call`, and works from the main checkout, from a linked worktree
+  and after an exit. While entered, a second entry is refused by Claude Code.
+- A checkout entered by `{path}` is never removed by Claude Code ("not the owner"), even with
+  `discard_changes`; a hook-made one honours a `WorktreeRemove` block; a native one in
+  `.claude/worktrees` goes with no `WorktreeRemove` event. `Agent {isolation: "worktree"}` fires
+  `WorktreeCreate`; `-w` in `-p` did not.
+- After entry `$.session.root()`, `$.session.cwd()`, Bash's directory and the `Stop` hook's `cwd`
+  move to the checkout; the transcript, `REWAKE_*` and the mod's socket do not: mail, a wake and
+  the turn's report reached main from inside it. rewake's registry keeps the launch directory.
+- A whole-tool `permissions.deny` removes the tool for everyone: a mod's `tool.check` allow does
+  not bring it back, and its `$.tool.call` rejects "no tool named \"EnterWorktree\" in this
+  session".
+- The model declined `EnterWorktree` on main's task — "only for explicit user or project
+  instructions", "main's message is a peer request" — so a rewake tool whose text invites the
+  call is needed.
+- `next.origin` of the model's call is `{plugin: "engine", tier: "core"}`, of a mod's
+  `$.tool.call` `{plugin: "<mod>", tier: "user"}`: a guard tells them apart.
+- `claude plugin validate`: `classic.WorktreeCreate`/`WorktreeRemove` hooks do not run in a
+  plugin a person installs where an organization manages Claude Code; a `tool.call` guard has no
+  such limit.

@@ -330,7 +330,9 @@ records its own run, checks that its chain of parents does not meet main's wrapp
 the record, the worker never started — and starts in a pseudo-terminal it owns an ordinary
 `rewake claude --worktree <harness args>` — the worktree resolved once from the typed flag and
 the template's `worktree = true` ([worktree-tools.md](worktree-tools.md)) —, `--command <wrapper>` before the harness when the
-alias names one, with main's base, `REWAKE_SPACE=<room>/<space id>` and none of main's session in
+alias names one, with main's base, `REWAKE_SPACE=<room>/<space id>` — and
+`REWAKE_SPACE_ENTER=1` for a template's `enter_worktree = true`, whose worker may claim its one
+checkout later, which the host then captures as a launch's — and none of main's session in
 its environment; the launch believes the variable only from its parent, that space's host. From there the worker is any session: Act
 1 for it, its record `sessions/api-claude.json`. The space host records the worker's run, open;
 the command answers once that run is registered, within 30 s.

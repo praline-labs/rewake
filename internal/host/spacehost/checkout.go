@@ -5,8 +5,8 @@ import (
 	"github.com/praline-labs/rewake/internal/host/worktree"
 )
 
-// claimedCheckout finds the worktree the worker's launch made, once its
-// session claimed it: the record names the worker's run as its owner, in
+// claimedCheckout finds the worker's worktree — its launch's, or the one it
+// entered — once its session claimed it: the record names the worker's run as its owner, in
 // main's room. Not found is an observation only when the records could be
 // read; otherwise it is an error, never an absence.
 func claimedCheckout(dir, workerRun string) (space.Checkout, bool, error) {
