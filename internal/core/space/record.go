@@ -17,6 +17,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"regexp"
+	"strings"
 	"time"
 )
 
@@ -131,6 +132,26 @@ type End struct {
 	// Cleared is when a checkout left at the close was seen gone, which
 	// ends its reminder.
 	Cleared *time.Time `json:"cleared,omitempty"`
+}
+
+// staysMark joins to an end's reason why the worker's checkout was not
+// removed at the close: the reason stays one field of the record, and the
+// views split it again.
+const staysMark = "; its checkout stays: "
+
+// WithStays is an end's reason with why its checkout stays, when it does.
+func WithStays(why, stays string) string {
+	if stays == "" {
+		return why
+	}
+	return why + staysMark + stays
+}
+
+// Reasons are the end's reason without why its checkout stays, and that
+// part, empty for a checkout removed or never made.
+func (e End) Reasons() (why, stays string) {
+	why, stays, _ = strings.Cut(e.Why, staysMark)
+	return why, stays
 }
 
 // WorkerEnd is how the worker was seen to end.

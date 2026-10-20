@@ -78,7 +78,7 @@ func TestSpaceListShowsOpenClosedAndKept(t *testing.T) {
 		"SPACE", "SESSION ID", "0f0e0d0c-0b0a-4908-8706-050403020100",
 		"open    ", "orphan  open (main ended)", "closed  closed", "kept    kept",
 		"unreadable: " + broken,
-		"Rewake: 1 kept checkout stays until removed; rewake removes none.",
+		"Rewake: 1 kept checkout stays until removed: each held what its close would have lost.",
 		"  kept: " + kept + " on worktree-agent-kept: commits, locked",
 		"    git worktree unlock " + kept,
 		"    git worktree remove " + kept,

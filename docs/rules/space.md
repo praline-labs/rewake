@@ -126,23 +126,38 @@ shell replaced the host mode: the socket serves the raw stream only, to the shel
   of main's harness, and its socket serves the worker's raw stream to the shell and decides
   nothing.
 
-- **SP7. A kept checkout is never forgotten and never removed by rewake.** A closed space
-  whose checkout is still there is listed to main at its start and by `rewake space list`
-  until the checkout is gone; rewake removes no checkout.
+- **SP7. A worker's checkout goes at its close when nothing would be lost, and a kept one is
+  never forgotten.** Once the worker's end is observed, the close removes the worker's checkout
+  and its branch when removing them loses nothing; otherwise the space closes kept, says why,
+  and is listed to main at its start and by `rewake space list` until the checkout is gone.
 
-  Held today for the listing: a space closes kept when its checkout was found there or could
-  not be looked at; a kept checkout is reminded while it is there, and while it
-  cannot be looked at, with what was found in it and the Git commands that clear it; one seen
-  gone is not; `rewake space list` shows it beside the open and closed spaces; and the package
-  that keeps the records runs no command and removes no file; the space host's closing removes
-  none either (S4-7, October 18, 2026). Known limit, recorded on October 13, 2026: the reminder
-  to main at its start.
+  Decided by the owner, October 20, 2026: until then rewake removed no checkout, and a room
+  gathered eighteen checkouts of merged work. Held since that day: the space host, after the
+  worker's process group is seen gone, looks and removes under one hold of the repository's
+  lock, as `rewake worktree rm` does (`worktree.Release`). It keeps the checkout for anything rm
+  would keep it for — a rewake session in it, changes, ignored files other than
+  `.worktreeinclude`'s unchanged copies, a HEAD no ref holds, a `git worktree lock`, a submodule,
+  a directory or repository gone — and for a commit, at its HEAD or its branch's tip, that no
+  local branch but its own holds. Any local branch, not only the one it was made from: main may
+  land with `--into`, and the checkout it came from may have switched since; a tag or a
+  remote-tracking ref does not count, being moved or pruned with no thought of this work. Its
+  branch is then dropped as rm drops one. Why a checkout stays is added to the end's reason
+  after "; its checkout stays: ", so the record's format is unchanged; `rewake space close`
+  answers it beside where the checkout is, and `rewake space list` with the reminder. A space
+  that main's end closed has nobody to answer: the record and the listing carry it to the next
+  main. A space closes kept when its checkout was found there or could not be looked at; a kept
+  checkout is reminded while it is there, and while it cannot be looked at, with what was found
+  in it and the Git commands that clear it; one seen gone is not; and the package that keeps the
+  records runs no command and removes no file. Known limits: the reminder to main at its start
+  (October 13, 2026); a close that waits on the repository's lock, held at most a minute by a
+  launch copying `.worktreeinclude`'s files, can outlast the 20 s `rewake space close` waits.
   Tests:
   - `internal/core/space/list_test.go` `TestAKeptCheckoutIsRemindedUntilItIsGone`
   - `internal/core/space/list_test.go` `TestAnUnknownCheckoutIsReminded`
   - `internal/core/space/observation_test.go` `TestAnUnknownCheckoutKeepsTheSpace`
   - `internal/core/space/list_test.go` `TestThePackageRemovesNoCheckout`
   - `internal/cli/space_test.go` `TestSpaceListShowsOpenClosedAndKept`
+  - `internal/host/worktree/release_test.go` `TestReleaseRemovesOnlyWhatLosesNothing`
 
 - **SP9. A hosted worker is never main's descendant.** Its space host runs outside main's run,
   checked before the worker starts; an open that cannot show it is refused, and nothing the

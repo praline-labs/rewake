@@ -200,16 +200,19 @@ func (h *host) never(why string) error {
 	return errors.Join(errors.New(why), err)
 }
 
-// close records the worker's observed end and its checkout as found. The
-// worker may claim its checkout up to its end, after the last poll, so the
-// capture is made once more here; one that fails leaves the space closing,
-// never closed as if it had made none.
+// close records the worker's observed end and its checkout as found, once
+// the checkout is removed when nothing in it would be lost; why one stays is
+// added to the end's reason, which main reads in the close's answer and in
+// rewake space list. The worker may claim its checkout up to its end, after
+// the last poll, so the capture is made once more here; one that fails leaves
+// the space closing, never closed as if it had made none.
 func (h *host) close(why string) error {
 	if h.spec.Worktree && h.record.Checkout.Path == "" {
 		if err := h.captureCheckout(); err != nil {
 			return fmt.Errorf("the space stays closing: its checkout could not be captured: %w", err)
 		}
 	}
+	why = space.WithStays(why, h.release())
 	_, err := space.Close(h.spec.Dir, h.spec.ID, space.End{
 		At: time.Now().UTC(), Why: why, Worker: space.WorkerEnded, Checkout: seen(h.spec.Dir, h.record),
 	})

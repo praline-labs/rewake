@@ -110,7 +110,7 @@ func finishWorktree(ctx *Context, call Call, record worktree.Record) error {
 // keep it for, and a checkout that left its branch, whose work land would not
 // take.
 func finishReasons(record worktree.Record) ([]string, error) {
-	reasons, check, err := keepReasonsAndCheck(record)
+	reasons, check, err := worktree.KeepReasonsAndCheck(record)
 	if err != nil {
 		return nil, err
 	}

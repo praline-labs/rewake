@@ -327,8 +327,11 @@ remove. What the flag does for each harness, where the checkout goes, what
 Main raises each writer in a checkout of its own with `rewake space open <name> --alias
 <alias> --worktree=<topic>`; a session cannot start another by a launch
 ([no session inside a session](#no-session-inside-a-session)). Main then takes the accepted work with
-`rewake worktree land <topic>` and closes the checkout with
-`rewake worktree finish <topic>`, rather than making one by hand with `git worktree add`.
+`rewake worktree land <topic>` — or fast-forwards its own branch to the writer's — rather than
+making a checkout by hand with `git worktree add`. Since October 20, 2026 the space's close
+removes the checkout and its branch when nothing in them would be lost, every commit already on
+another local branch among it ([SP7](rules/space.md)); one that stays is cleared with
+`rewake worktree finish <topic>` or `rm`.
 A writer's uncommitted edits then never mix with what is being checked or committed in
 the main checkout at the same time.
 
@@ -394,7 +397,8 @@ moves the record to closing with the reason "main closed it with rewake space cl
 nothing itself: the space host re-reads the record at each tick of its watch, and one it finds
 closing ends the worker by the same sequence as at main's end, recording that reason with the
 signal that took. Close answers once the record is closed or kept, at most 20 s, and says so
-otherwise; a kept checkout follows SP7. A task the worker still owed reads as lost in main's
+otherwise; the worker's checkout is removed when nothing would be lost, and a kept one, its
+reason on the answer's second line, follows SP7. A task the worker still owed reads as lost in main's
 `rewake inbox --awaited`, as any ended worker's does. The view socket is
 listened on before the worker starts; an open that cannot serve it is refused. Its standard streams are `/dev/null`: what goes wrong shows in
 the record's end or as the open's timeout.

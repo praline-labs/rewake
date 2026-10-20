@@ -156,7 +156,7 @@ func kept(record worktree.Record) string {
 	if check.Head != record.Commit {
 		return "its HEAD moved from the commit it was made at"
 	}
-	reasons, err := keepReasons(record)
+	reasons, err := worktree.KeepReasons(record)
 	if err != nil {
 		return err.Error()
 	}

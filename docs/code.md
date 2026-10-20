@@ -36,7 +36,7 @@ internal/host/launch/                         a launch's host side: the run's en
 internal/host/delivery/                       the delivery server: the serving loop, notices and their batches, the coalescing window, outcomes and the sweep's lock
 internal/host/terminal/                       a program's pseudo-terminal by the standard library, whether a file is a terminal, the screen the program draws with its input modes, keyboard protocols and title, and the raw stream with its preamble for a late client, the one package the emulator library enters
 internal/host/spacehost/                      the space host: the worker's pseudo-terminal and screen, the space socket's raw stream for the shell
-internal/host/worktree/                       checkouts rewake makes for a launch: git worktree add, records, land, removal
+internal/host/worktree/                       checkouts rewake makes for a launch: git worktree add, records, land, removal and what keeps one, a worker's release at its close
 scripts/                                      packaging scripts and the tests of the npm shim
 docs/                                         the documentation, and the tests that keep it true to the tree
 test/workflow/                                the workflow suite: end-to-end scenarios against fixtures

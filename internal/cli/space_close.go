@@ -31,12 +31,19 @@ type spaceClosed struct {
 	// listed by rewake space list until it is gone.
 	Checkout string `json:"checkout,omitempty"`
 	Branch   string `json:"branch,omitempty"`
+	// Stays is why the close did not remove the checkout: something in it
+	// would have been lost.
+	Stays string `json:"stays,omitempty"`
 }
 
 func (c spaceClosed) lines() []string {
 	lines := []string{fmt.Sprintf("Rewake: closed space %s: %s ended (%s).", c.Space, c.Session, c.Why)}
 	if c.State == space.Kept {
-		lines = append(lines, fmt.Sprintf("Its checkout %s%s is kept: rewake space list shows what is in it and how to clear it.", c.Checkout, keptOn(space.Reminder{Branch: c.Branch})))
+		stays := ""
+		if c.Stays != "" {
+			stays = " because " + c.Stays
+		}
+		lines = append(lines, fmt.Sprintf("Its checkout %s%s stays%s: rewake space list shows what is in it and how to clear it.", c.Checkout, keptOn(space.Reminder{Branch: c.Branch}), stays))
 	}
 	return lines
 }
@@ -108,9 +115,10 @@ func handleSpaceClose(ctx *Context, call Call) error {
 	if err != nil {
 		return err
 	}
-	closed := spaceClosed{Space: name, ID: over.ID, Session: name + "-" + over.Worker.Harness, State: over.State, Why: over.End.Why}
+	why, stays := over.End.Reasons()
+	closed := spaceClosed{Space: name, ID: over.ID, Session: name + "-" + over.Worker.Harness, State: over.State, Why: why}
 	if over.State == space.Kept {
-		closed.Checkout, closed.Branch = over.Checkout.Path, over.Checkout.Branch
+		closed.Checkout, closed.Branch, closed.Stays = over.Checkout.Path, over.Checkout.Branch, stays
 	}
 	return printValue(ctx, closed, closed.lines)
 }

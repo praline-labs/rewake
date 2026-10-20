@@ -52,3 +52,21 @@ func seen(dir string, r space.Record) space.Seen {
 	}
 	return found
 }
+
+// release removes the worker's checkout and its branch when nothing would be
+// lost, and says why it stays otherwise. It runs only once the worker's
+// process group is seen gone, so no harness of the worker writes there any
+// more. A checkout whose record is gone — removed by hand — is left to seen.
+func (h *host) release() string {
+	if h.record.Checkout.Path == "" {
+		return ""
+	}
+	record, ok, err := claimed(h.spec.Dir, h.record.Worker.Run)
+	switch {
+	case err != nil:
+		return "rewake could not read its record: " + err.Error()
+	case !ok:
+		return ""
+	}
+	return worktree.Release(record)
+}

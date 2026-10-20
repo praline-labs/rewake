@@ -120,7 +120,8 @@ exists; rewake refuses such a name. It sets `core.hooksPath` in the configuratio
 checkouts share, pointing them at the main checkout's hooks (`:540-570`); rewake writes
 no configuration. And a periodic cleanup removes agent worktrees older than a cutoff,
 looking at them with `git status -uno`, which counts untracked files as build output
-(`:1044-1132`); rewake removes nothing by itself, and untracked files keep a checkout.
+(`:1044-1132`); rewake removes by itself only a worker's checkout at its space's close, by rm's
+checks, and untracked files keep a checkout.
 
 ## git worktree add beside another
 

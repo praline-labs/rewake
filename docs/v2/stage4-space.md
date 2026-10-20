@@ -249,7 +249,8 @@ with what it saw. A record is closed from that observation, never from a release
 reminder of kept checkouts covers what stays** (the owner, October 13, 2026): such a checkout is
 listed to main at its start and by `rewake space list` until it is merged or removed, with the
 Git commands that clear it. rewake removes no checkout itself in this step: what is inside is
-work, and only main or the person knows whether it is wanted.
+work, and only main or the person knows whether it is wanted. **Changed October 20, 2026** by the
+owner: the close removes a checkout in which nothing would be lost ([SP7](../rules/space.md)).
 
 **A conversation ends, the process goes on.** `clear` and `resume` end main's conversation and
 not its process; for `clear` no new `session.start` fires (the skill). Spaces belong to main's

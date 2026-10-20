@@ -158,7 +158,11 @@ checkout; pi launches take the flag the same way. Codex does not return soon (Oc
   rewake drops it while it is still at the commit and checked out nowhere, and removes
   the directory when it is empty and the record.
 - **After the session** the checkout and its branch stay, and a
-  line on stderr says where, and how to land, finish or remove it. A launch that fails
+  line on stderr says where, and how to land, finish or remove it. A worker's checkout,
+  made by `rewake space open --worktree`, is the exception: since October 20, 2026, by the
+  owner's decision, its space's close removes it and its branch when nothing would be lost —
+  what rm would keep it for, and any commit no local branch but its own holds, keeps it
+  ([SP7](rules/space.md)). A launch that fails
   after the checkout was made, or whose harness exits with an error — a resume of a
   conversation that does not exist, say — takes it back when it is still at its commit
   and rm without `--force` would remove it, and drops the branch the same way rm does.
@@ -369,7 +373,8 @@ refuses. The checks and the removal hold the repository's lock together
 `--force` removes it anyway, a locked one too: git needs `--force` twice for that, and
 rm passes it twice. Looking never stands in a session's way: git runs with
 `GIT_OPTIONAL_LOCKS=0`, so `git status` does not take `index.lock` from under a commit
-the session is making. Nothing is removed automatically. rm's refusals exit 1, as
+the session is making. Nothing else is removed automatically: only a worker's checkout at its
+space's close, by rm's checks and one more ([after the session](#the-launch)). rm's refusals exit 1, as
 finish's and land's over the same state do; a worktree name that names none exits 2.
 Until September 27, 2026 they exited 2, fixed before finish existed; the owner decided
 that day that a refusal over state exits 1 in every worktree command.

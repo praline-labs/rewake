@@ -140,7 +140,7 @@ func listWorktrees(ctx *Context, root string) error {
 	listing := worktreeListing{Root: root, Worktrees: []worktreeView{}}
 	for _, record := range records {
 		view := worktreeView{Record: record}
-		running, err := runningIn(record)
+		running, err := worktree.RunningIn(record)
 		view.RunningSessions, view.Running = running, len(running) > 0
 		if err != nil {
 			view.Problem = err.Error()
@@ -191,7 +191,7 @@ func removeWorktree(ctx *Context, call Call, record worktree.Record) error {
 	var keep func(worktree.Record) error
 	if !force {
 		keep = func(current worktree.Record) error {
-			if reasons, err := keepReasons(current); err != nil {
+			if reasons, err := worktree.KeepReasons(current); err != nil {
 				return &FailedError{Message: fmt.Sprintf("cannot tell whether %s holds work: %v. --force removes it without looking.", record.Ref(), err)}
 			} else if len(reasons) > 0 {
 				return &FailedError{Message: fmt.Sprintf("%s is kept: %s. Remove it anyway with rewake worktree rm %s --force.", record.Ref(), strings.Join(reasons, "; "), record.Ref())}

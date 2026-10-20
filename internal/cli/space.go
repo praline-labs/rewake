@@ -49,7 +49,7 @@ func spaceGroup() Group {
 				"close is main's, for a space its own run opened: a worker is never switched or restarted in place; when another is needed, close it and open a new one from a template. close records the space closing with main's reason; its space host, within a second, ends the worker by the same sequence as at main's end and records what it observed. close answers once the space is over, within 20 seconds: closed, or kept with its checkout, which space list then shows. A task the worker still owed reads as lost in rewake inbox --awaited.",
 				"Each space shows its main, its worker's name, harness and role, the session id rewake chose for the worker's conversation (none for a harness that takes none), its checkout and branch. A closed space keeps them.",
 				"States: opening — the record is written, the worker not yet started; open — the worker runs; closing; closed — over, no checkout left; kept — over, its checkout left. A space not over whose main has ended reads \"main ended\"; one whose main cannot be told from here reads \"main unknown\".",
-				"A kept checkout is listed with what was found in it — changes, commits, a Git lock, or that it could not be looked at — and the Git commands that clear it once what is wanted is merged; each refuses rather than lose work. It stays listed until the checkout is gone, and one that cannot be looked at stays too. rewake removes none.",
+				"A kept checkout is listed with what was found in it — changes, commits, a Git lock, or that it could not be looked at —, why the close kept it, and the Git commands that clear it once what is wanted is merged; each refuses rather than lose work. It stays listed until the checkout is gone, and one that cannot be looked at stays too. A close removes the checkout and its branch itself only when nothing would be lost: no changes, no ignored files but .worktreeinclude's unchanged copies, no lock or submodule, and every commit on another local branch.",
 				"Exit 0 listed, opened or closed; 1 the spaces could not be read, the space did not open, or did not close within the bound, or belongs to another run of main; 2 a wrong call — not main, no --alias or no such alias, a name that cannot be one, no open space of that name.",
 			},
 			Access:  spaceAccess,
@@ -166,7 +166,7 @@ func (l spaceListing) lines() []string {
 	if len(l.Kept) > 1 {
 		checkouts = "checkouts stay"
 	}
-	lines = append(lines, fmt.Sprintf("Rewake: %d kept %s until removed; rewake removes none. Merge what is wanted, then clear each from its repository:", len(l.Kept), checkouts))
+	lines = append(lines, fmt.Sprintf("Rewake: %d kept %s until removed: each held what its close would have lost. Merge what is wanted, then clear each from its repository:", len(l.Kept), checkouts))
 	for _, kept := range l.Kept {
 		lines = append(lines, "  "+kept.Space+": "+kept.Path+keptOn(kept)+": "+foundLabel(kept))
 		for _, command := range kept.Clear {
@@ -210,6 +210,9 @@ func foundLabel(kept space.Reminder) string {
 		label = "it could not be looked at at the close"
 	case len(found) > 0:
 		label = strings.Join(found, ", ")
+	}
+	if kept.Stays != "" {
+		label += "; kept because " + kept.Stays
 	}
 	if kept.Presence == space.Unknown {
 		label += "; it cannot be looked at now"

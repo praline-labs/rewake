@@ -80,10 +80,11 @@ func CheckoutPresence(r Record) Presence {
 }
 
 // Reminder is a kept checkout as main and the listing are told of it: where
-// it is, what was found in it, and the Git commands that clear it once what
-// is wanted of it is merged. Each command refuses rather than lose work — a
-// checkout with changes is not removed, an unmerged branch not deleted — so
-// running them is safe; rewake runs none of them (SP7).
+// it is, what was found in it, why the close did not remove it, and the Git
+// commands that clear it once what is wanted of it is merged. Each command
+// refuses rather than lose work — a checkout with changes is not removed, an
+// unmerged branch not deleted — so running them is safe; rewake runs none of
+// them (SP7).
 type Reminder struct {
 	Space    string   `json:"space"`
 	ID       string   `json:"id"`
@@ -91,6 +92,8 @@ type Reminder struct {
 	Branch   string   `json:"branch,omitempty"`
 	Found    Seen     `json:"found"`
 	Presence Presence `json:"presence"`
+	// Stays is why the close kept it, as the space host recorded it.
+	Stays string `json:"stays,omitempty"`
 	// Clear are the commands, run from the checkout's repository.
 	Clear []string `json:"clear"`
 }
@@ -110,6 +113,7 @@ func Reminders(records []Record) []Reminder {
 			continue
 		}
 		reminder := Reminder{Space: r.Name, ID: r.ID, Path: r.Checkout.Path, Branch: r.Checkout.Branch, Found: r.End.Checkout, Presence: presence}
+		_, reminder.Stays = r.End.Reasons()
 		if r.End.Checkout.Locked {
 			reminder.Clear = append(reminder.Clear, "git worktree unlock "+shellWord(r.Checkout.Path))
 		}

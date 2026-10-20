@@ -154,7 +154,8 @@ func tree(t *testing.T, root string) string {
 	return strings.Join(lines, "\n")
 }
 
-// rewake removes no checkout (SP7): the package that keeps the records and
+// The record keeper removes no checkout (SP7): the close's removal is the
+// space host's, through host/worktree. The package that keeps the records and
 // names the commands to clear a kept checkout runs no command and removes no
 // file, so a reminder can only be read, never carried out by it.
 func TestThePackageRemovesNoCheckout(t *testing.T) {

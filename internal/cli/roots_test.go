@@ -193,10 +193,10 @@ func TestWorktreeOwnerRootIsChecked(t *testing.T) {
 	record := func(dir string) worktree.Record {
 		return worktree.Record{Path: t.TempDir(), Session: &worktree.Owner{Name: "api", Room: "default", Epoch: self.Epoch(), Dir: dir}}
 	}
-	if found, err := runningIn(record(owned)); err != nil || !slices.Equal(found, []string{"api in room default"}) {
+	if found, err := worktree.RunningIn(record(owned)); err != nil || !slices.Equal(found, []string{"api in room default"}) {
 		t.Fatalf("the owner in a 2.0 room of another base: %v, %v", found, err)
 	}
-	if found, err := runningIn(record(legacy)); err != nil || len(found) != 0 {
+	if found, err := worktree.RunningIn(record(legacy)); err != nil || len(found) != 0 {
 		t.Fatalf("the owner in a 1.x room: %v, %v", found, err)
 	}
 }

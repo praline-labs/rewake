@@ -82,7 +82,8 @@ says whether its main still runs: told only from the main's own pid namespace, `
 from any other. A kept checkout is reminded while it is there or cannot be looked at, with
 what was found in it and the Git commands that clear it once what is wanted is merged —
 `git worktree unlock` for a locked one, `git worktree remove`, `git branch -d` — each of which
-refuses rather than lose work; rewake runs none of them (SP7). A kept checkout removed by
+refuses rather than lose work; rewake runs none of them (SP7; since October 20, 2026 the close
+removes a checkout that would lose nothing, before any reminder). A kept checkout removed by
 hand is no longer reminded, though its record reads `kept` until a change records it cleared:
 a view writes nothing.
 

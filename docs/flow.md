@@ -348,7 +348,11 @@ does one main closes with `rewake space close api`: the command moves the record
 with main's reason, the space host sees it at its next tick and ends the worker by that
 sequence, and the command answers once the record is closed, within 20 s; what the worker still
 owed reads as lost in `--awaited`. A worker is never restarted in place: main closes it and
-opens a new space. A checkout left behind is listed as kept by `rewake space list` until it is gone
+opens a new space. Once the worker's process group is gone, every close removes the worker's
+checkout and its branch when nothing would be lost — no changes, no ignored files but
+`.worktreeinclude`'s unchanged copies, no lock or submodule, every commit on another local
+branch — and otherwise keeps it, adding why to the record's reason, which the close's answer
+shows. A checkout left behind is listed as kept by `rewake space list` until it is gone
 ([space.md](rules/space.md)).
 
 The rest of the flow — a blocking question (Act 6), a notify (Act 7), the session's
