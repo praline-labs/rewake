@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"strings"
 	"text/tabwriter"
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/host/worktree"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // worktreeCommand lists the checkouts rewake made for launches, lands their
@@ -23,10 +25,12 @@ func worktreeCommand(catalog adapter.Catalog) *Command {
 		Options: []Option{
 			{Flag: "--into", Value: "<branch>", Summary: "land and finish: the branch to fast-forward; by default the one checked out where the worktree was made from."},
 			{Flag: "--force", Summary: "rm only: remove a worktree whatever rm would keep it for."},
+			{Flag: "--this-room", Summary: "ls only: the worktrees made for a session of this room, not every repository's under the root."},
 			jsonOption,
 		},
 		Examples: []string{
 			"rewake worktree ls",
+			"rewake worktree ls --this-room --json",
 			"rewake worktree ls --json",
 			"rewake worktree status --json",
 			"rewake worktree land fix-login",
@@ -40,6 +44,7 @@ func worktreeCommand(catalog adapter.Catalog) *Command {
 		Notes: []string{
 			"They live under " + worktreeRootHelp + ", one directory per repository, each worktree with a record beside it: the session it was made for, the repository, the commit. Each is on a branch of its own name; a slash in a name, feat/login, is + in its directory.",
 			"A worktree is named by its name, or by <repository>/<name> as ls prints it when two repositories share one; a word that could be either is taken as <repository>/<name> when both parts match.",
+			"ls lists every worktree under the root, of every repository and room; --this-room keeps those whose record names a session of the current room, which is what a main's worktree_list tool asks for.",
 			"status answers for the session it runs in, by its room, name and run: the checkout that run claimed (path, branch, the commit it was made at) or none, and what its space's close would do with it if the space closed now — remove (nothing would be lost; files git ignores go too), keep with the reasons, or unknown. The close removes only a space worker's own checkout, so for main or a session that is no worker the answer is none: its checkout stays until finish or rm. A look that writes nothing, not a promise: later edits, commits and sessions change it.",
 			"land fast-forwards the target to the worktree's branch and does nothing else: hashes are kept, the worktree and its session untouched, and it can be repeated. The target is --into or the branch checked out where the worktree was made from; checked out there, it moves by git merge --ff-only, so git refuses to overwrite changes; checked out nowhere, its ref moves. Refused: a target checked out in another checkout, the worktree's own included, or one a rebase or bisect is on; and one that moved on — rebase the branch onto it in the worktree, then land again.",
 			"finish lands once more, then removes the worktree and its branch. It refuses, landing and removing nothing, while a rewake session runs there or a launch is still starting one, while it has changes or ignored files, is off its branch, is locked or holds a submodule checked out, and when the fast-forward is impossible.",
@@ -105,6 +110,8 @@ func handleWorktree(ctx *Context, call Call) error {
 	}
 	_, into := call.Flags["into"]
 	switch {
+	case call.Switch("this-room") && verb != "ls":
+		return &UsageError{Command: call.Command, Message: "--this-room is for ls; the other verbs name one worktree."}
 	case call.Switch("force") && verb != "rm":
 		return &UsageError{Command: call.Command, Message: "--force is for rm; ls, status, land and finish remove nothing without their checks. rewake worktree rm <name> --force removes without them."}
 	case into && verb != "land" && verb != "finish":
@@ -112,9 +119,9 @@ func handleWorktree(ctx *Context, call Call) error {
 	case into && call.Flags["into"] == "":
 		return &UsageError{Command: call.Command, Message: "--into= needs a branch name; leave --into out to land into the branch checked out where the worktree was made from."}
 	case verb == "ls" && len(call.Positionals) == 1:
-		return listWorktrees(ctx, root)
+		return listWorktrees(ctx, call, root)
 	case verb == "ls":
-		return &UsageError{Command: call.Command, Message: "ls takes no name; it lists every worktree."}
+		return &UsageError{Command: call.Command, Message: "ls takes no name; it lists every worktree, or with --this-room those of this room."}
 	case verb == "status" && len(call.Positionals) == 1:
 		return worktreeStatusView(ctx, call, root)
 	case verb == "status":
@@ -138,10 +145,17 @@ func handleWorktree(ctx *Context, call Call) error {
 	return removeWorktree(ctx, call, record)
 }
 
-func listWorktrees(ctx *Context, root string) error {
+func listWorktrees(ctx *Context, call Call, root string) error {
 	records, err := worktree.List(root)
 	if err != nil {
 		return &FailedError{Message: err.Error()}
+	}
+	if call.Switch("this-room") {
+		dir, err := state.Dir()
+		if err != nil {
+			return &UsageError{Command: call.Command, Message: err.Error()}
+		}
+		records = inRoom(records, dir)
 	}
 	listing := worktreeListing{Root: root, Worktrees: []worktreeView{}}
 	for _, record := range records {
@@ -171,6 +185,18 @@ func listWorktrees(ctx *Context, root string) error {
 		lines := []string{"root: " + root}
 		return append(lines, strings.Split(strings.TrimRight(buffer.String(), "\n"), "\n")...)
 	})
+}
+
+// inRoom keeps the checkouts whose record names a session of the room at dir,
+// the one that was made for, ended or not.
+func inRoom(records []worktree.Record, dir string) []worktree.Record {
+	var kept []worktree.Record
+	for _, record := range records {
+		if owner := record.Session; owner != nil && filepath.Clean(owner.Dir) == filepath.Clean(dir) {
+			kept = append(kept, record)
+		}
+	}
+	return kept
 }
 
 // findWorktree resolves the name a call gave to one checkout.

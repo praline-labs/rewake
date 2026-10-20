@@ -1,5 +1,11 @@
 import { expect, test } from "claude-code/testing";
-import { statusTimeoutMs, worktreeToolName } from "../hooks/worktree.ts";
+import {
+  landTimeoutMs,
+  statusTimeoutMs,
+  worktreeLandToolName,
+  worktreeListToolName,
+  worktreeToolName,
+} from "../hooks/worktree.ts";
 import { epoch, socket, start, world } from "./world.ts";
 
 const env = {
@@ -30,7 +36,8 @@ function stage(on: any, ran: () => any, given: Record<string, string> = env) {
   return { registered, runs };
 }
 
-const call = ($: any) => $.tool.call({ tool: worktreeToolName } as any);
+const call = ($: any, tool = worktreeToolName, input: object = {}) =>
+  $.tool.call({ tool, ...input } as any);
 
 test("the tool runs rewake's status by argv with the run's variables, and answers its JSON", async ($, on) => {
   const seen = stage(on, () => ({ value: { exitCode: 0, stdout: status + "\n", stderr: "" } }));
@@ -84,4 +91,78 @@ test("a run whose rewake sets no executable registers no tool", async ($, on) =>
   const seen = stage(on, () => ({ value: { exitCode: 0, stdout: status, stderr: "" } }), without);
   await start($);
   expect(seen.registered).toEqual([]);
+});
+
+const asMain = { ...env, REWAKE_ROLE: "main" };
+
+test("main is offered the list and the land tools beside status, a worker only status", async ($, on) => {
+  const main = stage(on, () => ({ value: { exitCode: 0, stdout: "{}", stderr: "" } }), asMain);
+  await start($);
+  expect(main.registered.map((one) => one.name)).toEqual([
+    "worktree_status",
+    "worktree_list",
+    "worktree_land",
+  ]);
+});
+
+test("a write session is offered status alone", async ($, on) => {
+  const seen = stage(on, () => ({ value: { exitCode: 0, stdout: "{}", stderr: "" } }), {
+    ...env,
+    REWAKE_ROLE: "write",
+  });
+  await start($);
+  expect(seen.registered.map((one) => one.name)).toEqual(["worktree_status"]);
+});
+
+test("list asks for this room's checkouts, land runs once with the name and the branch as single arguments", async ($, on) => {
+  const seen = stage(
+    on,
+    () => ({ value: { exitCode: 0, stdout: '{"worktrees":[]}', stderr: "" } }),
+    asMain,
+  );
+  await start($);
+  await call($, worktreeListToolName);
+  await call($, worktreeLandToolName, { name: "fix-login", into: "release" });
+  await call($, worktreeLandToolName, { name: "fix-login" });
+  expect(seen.runs.map((run) => run.argv)).toEqual([
+    ["/opt/rewake/bin/rewake", "worktree", "ls", "--this-room", "--json"],
+    ["/opt/rewake/bin/rewake", "worktree", "land", "fix-login", "--into=release", "--json"],
+    ["/opt/rewake/bin/rewake", "worktree", "land", "fix-login", "--json"],
+  ]);
+  expect(seen.runs[0].init.timeoutMs).toBe(statusTimeoutMs);
+  // land waits up to a minute for a hook, so its bound is longer than that.
+  expect(seen.runs[1].init.timeoutMs).toBe(landTimeoutMs);
+  expect(landTimeoutMs).toBeGreaterThan(60_000);
+});
+
+test("land refuses a name or a branch that would be read as a flag, without running anything", async ($, on) => {
+  const seen = stage(on, () => ({ value: { exitCode: 0, stdout: "{}", stderr: "" } }), asMain);
+  await start($);
+  for (const input of [
+    {},
+    { name: "" },
+    { name: "--force" },
+    { name: "x", into: "-f" },
+    { name: "x", into: "" },
+    { name: 3 },
+  ]) {
+    const answer: any = await call($, worktreeLandToolName, input);
+    expect(answer.isError).toBe(true);
+  }
+  expect(seen.runs).toEqual([]);
+});
+
+test("a land the command refuses answers its reason as an error", async ($, on) => {
+  stage(
+    on,
+    () => ({
+      value: { exitCode: 1, stdout: "", stderr: "rewake: main moved on; rebase the branch" },
+    }),
+    asMain,
+  );
+  await start($);
+  const answer: any = await call($, worktreeLandToolName, { name: "x" });
+  expect(answer.isError).toBe(true);
+  expect(answer.result).toContain("rewake worktree land failed (exit 1)");
+  expect(answer.result).toContain("rebase the branch");
 });

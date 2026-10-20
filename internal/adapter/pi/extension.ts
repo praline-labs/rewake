@@ -3,7 +3,7 @@ import { createConnection, type Socket } from "node:net";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 
 import { management, type State } from "./management.ts";
-import { worktreeStatus } from "./worktree.ts";
+import { worktreeTools } from "./worktree.ts";
 
 export type Frame = {
   op: string;
@@ -48,7 +48,7 @@ const maxFrame = 4 << 20;
 const socketPath = process.env.REWAKE_PI_SOCKET;
 
 export default function (pi: ExtensionAPI) {
-  worktreeStatus(pi);
+  worktreeTools(pi);
   let context: ExtensionContext | undefined;
   let active = false;
   let current: Link | undefined;

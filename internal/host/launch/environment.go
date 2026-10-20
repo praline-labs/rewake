@@ -19,6 +19,12 @@ import (
 // value.
 const ExecutableEnv = "REWAKE_EXECUTABLE"
 
+// RoleEnv carries the run's role id, for a harness's front end to register
+// the tools that are a role's alone — main's worktree_list and worktree_land —
+// without a round trip. It chooses what is offered, not who may do it: the CLI
+// commands behind the tools are open to any session.
+const RoleEnv = "REWAKE_ROLE"
+
 // SessionEnv returns the environment for a harness: the current one, with the
 // variables the adapter says its runs must not inherit removed — the markers a
 // parent agent session exports to its children — and the rewake variables
@@ -30,6 +36,7 @@ func SessionEnv(request adapter.LaunchRequest, strip []string) []string {
 		state.DirEnv:     true,
 		state.RoomEnv:    true,
 		ExecutableEnv:    true,
+		RoleEnv:          true,
 	}
 	for _, name := range strip {
 		drop[name] = true
@@ -53,6 +60,9 @@ func SessionEnv(request adapter.LaunchRequest, strip []string) []string {
 	if executable, err := os.Executable(); err == nil {
 		env = append(env, ExecutableEnv+"="+executable)
 	}
+	if request.Role.ID != "" {
+		env = append(env, RoleEnv+"="+request.Role.ID)
+	}
 	return append(env,
 		state.RoomEnv+"="+room,
 		state.SessionEnv+"="+request.Name,
@@ -70,7 +80,7 @@ func ProbeEnv() []string {
 		name, value, found := strings.Cut(entry, "=")
 		switch {
 		case !found:
-		case name == state.SessionEnv, name == state.EpochEnv, name == state.DirEnv, name == state.RoomEnv, name == ExecutableEnv:
+		case name == state.SessionEnv, name == state.EpochEnv, name == state.DirEnv, name == state.RoomEnv, name == ExecutableEnv, name == RoleEnv:
 			continue
 		case strings.HasPrefix(name, "REWAKE_BRIDGE_"):
 			continue

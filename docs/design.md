@@ -168,6 +168,9 @@ in [roles.md](roles.md), with the owner decisions that set them.
 - `REWAKE_EXECUTABLE=<path>` — the rewake that started the run, over an inherited value
   (October 20, 2026): the harness's `worktree_status` tool runs it by argv rather than
   whichever rewake PATH finds first ([worktree-tools.md](worktree-tools.md)). A probe gets none.
+- `REWAKE_ROLE=<id>` — the run's role (October 20, 2026), over an inherited value: main's
+  `worktree_list` and `worktree_land` are registered only where it is `main`; a choice of what
+  is shown, not an authorization. A probe gets none.
 - Inherited Claude Code markers are stripped (list in research): otherwise
   `rewake claude` launched from inside another session would inherit that
   session's socket and have transcript saving disabled.

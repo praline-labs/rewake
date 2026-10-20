@@ -1,12 +1,16 @@
 // The worktree_status tool's contract with pi, run by go test (worktree_tool_test.go).
 import { expect, test } from "bun:test";
-import { statusArgs, statusTimeoutMs, worktreeStatus } from "./worktree.ts";
+import { landTimeoutMs, listArgs, statusArgs, statusTimeoutMs, worktreeTools } from "./worktree.ts";
 
 const status = '{"session":"api-pi","checkout":null,"close":{"outcome":"none"}}';
 
 // stage registers the tool on a pi that records each exec and answers it
 // with ran, and returns the tool and the calls.
-function stage(ran: () => Promise<any>, executable: string | undefined = "/opt/rewake/bin/rewake") {
+function stage(
+  ran: () => Promise<any>,
+  executable: string | undefined = "/opt/rewake/bin/rewake",
+  role: string | undefined = undefined,
+) {
   const tools: any[] = [];
   const execs: any[] = [];
   const pi: any = {
@@ -16,7 +20,7 @@ function stage(ran: () => Promise<any>, executable: string | undefined = "/opt/r
       return ran();
     },
   };
-  worktreeStatus(pi, executable);
+  worktreeTools(pi, executable, role);
   return { tools, execs };
 }
 
@@ -67,4 +71,69 @@ test("a refusal, a child killed at the bound and an exec that throws are errors"
 
 test("a pi whose rewake sets no executable registers no tool", () => {
   expect(stage(async () => ({}), "").tools).toEqual([]);
+});
+
+const asMain = (ran: () => Promise<any>) => stage(ran, "/opt/rewake/bin/rewake", "main");
+const byName = (seen: { tools: any[] }, name: string) =>
+  seen.tools.find((tool) => tool.name === name);
+const ok = async () => ({ stdout: "{}", stderr: "", code: 0, killed: false });
+
+test("main is offered list and land beside status, anyone else status alone", () => {
+  expect(asMain(ok).tools.map((tool) => tool.name)).toEqual([
+    "worktree_status",
+    "worktree_list",
+    "worktree_land",
+  ]);
+  expect(stage(ok, "/opt/rewake/bin/rewake", "write").tools.map((tool) => tool.name)).toEqual([
+    "worktree_status",
+  ]);
+});
+
+test("list asks for this room's checkouts, land passes the name and the branch as single arguments with a longer bound", async () => {
+  const seen = asMain(ok);
+  await call(byName(seen, "worktree_list"));
+  await seen.tools[2].execute("c", { name: "fix-login", into: "release" }, undefined, undefined, {
+    cwd: "/work/tree",
+  } as any);
+  await seen.tools[2].execute("c", { name: "fix-login" }, undefined, undefined, {
+    cwd: "/work/tree",
+  } as any);
+  expect(seen.execs.map((one) => one.args)).toEqual([
+    listArgs,
+    ["worktree", "land", "fix-login", "--into=release", "--json"],
+    ["worktree", "land", "fix-login", "--json"],
+  ]);
+  expect(seen.execs.map((one) => one.options.timeout)).toEqual([
+    statusTimeoutMs,
+    landTimeoutMs,
+    landTimeoutMs,
+  ]);
+  expect(landTimeoutMs).toBeGreaterThan(60_000);
+});
+
+test("land refuses a name or a branch that would be read as a flag, and shows a refusal as an error", async () => {
+  const seen = asMain(async () => ({
+    stdout: "",
+    stderr: "main moved on",
+    code: 1,
+    killed: false,
+  }));
+  const land = byName(seen, "worktree_land");
+  for (const input of [
+    {},
+    { name: "" },
+    { name: "--force" },
+    { name: "x", into: "-f" },
+    { name: "x", into: "" },
+    { name: 3 },
+  ]) {
+    const result = await land.execute("c", input, undefined, undefined, { cwd: "/w" } as any);
+    expect(result.isError).toBe(true);
+  }
+  expect(seen.execs).toEqual([]);
+  const refused = await land.execute("c", { name: "x" }, undefined, undefined, {
+    cwd: "/w",
+  } as any);
+  expect(refused.isError).toBe(true);
+  expect(refused.content[0].text).toContain("rewake worktree land failed (exit 1): main moved on");
 });

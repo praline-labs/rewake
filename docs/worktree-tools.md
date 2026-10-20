@@ -3,8 +3,9 @@
 The shared worktree system: rewake's own worktree core ([worktree.md](worktree.md)) behind the
 same model tools in Claude Code's mod and rewake's pi extension, one Go implementation and thin
 front ends that call the CLI. The owner accepted the design on October 20, 2026; its first
-slice, landed that day, is the template field and `worktree_status`. Main's `worktree_list`
-and `worktree_land` tools, and entering or leaving a checkout from inside a session, come later.
+slice, landed that day, is the template field and `worktree_status`; its second, the same day, is
+main's `worktree_list` and `worktree_land`. Entering or leaving a checkout from inside a session
+comes later.
 
 ## A template's `worktree = true`
 
@@ -77,3 +78,32 @@ The bound is 60 seconds: the view reads records and git, and holds no lock to wa
 The tests: `internal/cli/worktree_status_test.go` (the forecast and the view),
 `internal/cli/space_worktree_test.go` (the resolution), the mod's `tests/worktree.test.ts`,
 pi's `worktree.test.ts`, and the workflow scenario `fixture-space-worktree`.
+
+## Main's `worktree_list` and `worktree_land`
+
+Two tools registered only in main's session, by the role the launch names in `REWAKE_ROLE`
+(`launch.RoleEnv`, set at every launch over an inherited value, none for a probe; a run without
+it, or of another role, is offered `worktree_status` alone). That chooses what a session is
+shown; it is not authorization: `rewake worktree ls` and `land` stay open to any session, as the
+CLI was. The same names and contracts in both harnesses (`mcp__rewake__worktree_list` and
+`rewake_worktree_list` in pi, and so for land), run by argv through `REWAKE_EXECUTABLE`.
+
+- **`worktree_list`**, no input: `rewake worktree ls --this-room --json`. `ls` lists every
+  worktree under the root, of every repository and room, because the root is the owner's;
+  `--this-room` keeps those whose record names a session of the current room, the one it was made
+  for, ended or not. Per checkout, what `ls` has: the session and whether any runs there
+  (`runningSessions`), and `check` — changes, ignored files, commits on no other branch. It does
+  not forecast a close: that needs a space and a worker, which `worktree_status` answers for the
+  session itself. A view: no lease, no lock file.
+- **`worktree_land`**, `name` and optional `into`: `rewake worktree land <name> [--into=<branch>]
+  --json`, answering the landing (`worktree`, `branch`, `target`, `old`, `new`, `commits`,
+  `checkout`) or the command's refusal as an error — a target that moved on says to rebase in the
+  worktree, a target checked out elsewhere or with changes says so. A change: the room's lease as
+  for any land. A `name` or `into` that is empty or begins with a dash is refused by the tool
+  before any process starts, since it would be read as a flag. The bound is 120 seconds, not
+  60: land waits up to a minute for a hook, and a shorter bound would kill it while it waits.
+  The tool's text asks main to land into the integration branch only on the owner's or a review's
+  word; the tool does not enforce it.
+
+The tests: the mod's `tests/worktree.test.ts` and pi's `worktree.test.ts` (offer by role, argv,
+bounds, refused input), `TestWorktreeLsThisRoomKeepsTheRoomsCheckouts`, `TestARunNamesItsRole`.
