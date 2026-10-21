@@ -61,7 +61,7 @@ func handleSpaceClose(ctx *Context, call Call) error {
 	if len(call.Positionals) != 2 {
 		return usage("space close takes the space's name and nothing else: rewake space close api.")
 	}
-	for _, flag := range []string{"alias", "worktree"} {
+	for _, flag := range openOnlyFlags {
 		if _, given := call.Flags[flag]; given {
 			return usage("--%s belongs to space open.", flag)
 		}

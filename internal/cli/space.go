@@ -74,6 +74,10 @@ func spaceAccess(call Call) access {
 	return accessView
 }
 
+// openOnlyFlags are the space flags only open takes; list and close refuse
+// them rather than run as if they were not there.
+var openOnlyFlags = []string{"alias", "worktree", "no-worktree", "type", "no-type"}
+
 // spaceView is one space as list reports it.
 type spaceView struct {
 	space.Record
@@ -111,7 +115,7 @@ func handleSpace(ctx *Context, call Call) error {
 	case len(call.Positionals) > 1:
 		return &UsageError{Command: call.Command, Message: "space list takes no other argument."}
 	}
-	for _, flag := range []string{"alias", "worktree", "no-worktree"} {
+	for _, flag := range openOnlyFlags {
 		if _, given := call.Flags[flag]; given {
 			return &UsageError{Command: call.Command, Message: fmt.Sprintf("--%s belongs to space open.", flag)}
 		}
