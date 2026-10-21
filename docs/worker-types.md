@@ -18,6 +18,10 @@ The nearest of one name wins:
 The built-in texts name no model, provider or harness, so they read the same to every
 harness, and each defers to the project's own instructions. They say what to read first, how
 to work, when the work is done and what the report holds; the owner edits them in the source.
+The owner's, October 21, 2026: a text names or assumes no other type or worker, only this
+worker, main, the brief, the project and the subject of the work; `analysis`, `process` and
+`review` read right whether the subject is code, a document, data, a configuration or a
+procedure, and `code` assumes no language, test framework or version-control workflow.
 
 A type file is Markdown opening with a TOML front matter between two `+++` lines:
 

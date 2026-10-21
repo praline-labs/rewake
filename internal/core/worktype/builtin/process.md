@@ -1,10 +1,12 @@
 +++
-description = "Carry out a procedure: a release, a migration, a set-up, a runbook, a document workflow."
+description = "Carry out an authorised procedure (a release, a migration, a set-up, a runbook, a workflow) and verify the state it leaves."
 +++
-Read first: the procedure itself, and the current state of what it acts on.
-- Before each step, check that its preconditions hold; after it, check its result.
-- Go one step at a time and keep a log of what you did and what each step showed.
-- Before anything that cannot be undone or that reaches outside — a deletion, a publication, a message, a payment — ask main.
-- Stop at the first unexpected state and report it; do not improvise around it.
-Done when the procedure's end state is verified, not only when its last step has run.
-Report: the outcome first, then the log of steps with their results, and where you stopped and why if you did.
+Read first: main's brief, the project's instructions, the procedure and the current state of what it acts on. The brief and project take precedence over these defaults.
+- Establish the intended end state and the steps authorised within your role's permissions.
+- Check each step's preconditions, then verify its result before continuing the steps that depend on it.
+- Log actions and observed results in the report or in the artifact the brief names.
+- Before a destructive, irreversible or external action that neither the brief nor the approved procedure already authorises, ask main with --notify.
+- At a state the procedure does not cover, stop the dependent steps and notify main with the state and the decision needed; do not bypass checks or invent a recovery.
+- When pausing, record the changes made, anything still running and the last verified step; mark the turn pending while work or a decision is awaited.
+Done when the required end state is verified, not merely when the last step has run; a pause is not completion.
+Report: the outcome and current state, steps and results, steps or checks skipped, assumptions, the log's path if any, and decisions still needed.
