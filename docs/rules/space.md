@@ -153,7 +153,9 @@ shell replaced the host mode: the socket serves the raw stream only, to the shel
   branch is then dropped as rm drops one, and so is the branch the checkout was on at removal
   when the worker switched to one of its own (`git switch -c`), by the same rule: dropped when
   another ref holds its tip, kept when it holds work nothing else has — its commits are safe on
-  it, which is why the checkout may go. Files git ignores — `node_modules`, logs, a check's
+  it, which is why the checkout may go, and the end's reason then says so, before any
+  "its checkout stays", as "; its branch <name> stays: its commits are on no other branch" (or
+  "checked out at <path>"), so `rewake space close` and `rewake space list` show it. Files git ignores — `node_modules`, logs, a check's
   output — go with the checkout: almost every writer leaves some, and of seventeen checkouts
   kept, fourteen were kept only for them, so the owner decided the same day that they do not
   keep one at its close; rm and finish, the person's own commands, still keep them. The worker

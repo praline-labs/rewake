@@ -74,7 +74,7 @@ func TestReleaseRemovesOnlyWhatLosesNothing(t *testing.T) {
 				t.Fatal(err)
 			}
 			c.work(record)
-			stays := Release(record)
+			stays, _ := Release(record)
 			_, statErr := os.Stat(record.Path)
 			branch, _ := refTip(record.CommonDir, branchRef(record.Branch))
 			switch {
@@ -115,7 +115,7 @@ func TestReleaseDropsTheBranchTheCheckoutSwitchedTo(t *testing.T) {
 			if landed {
 				must(t, source, "merge", "-q", "--ff-only", own)
 			}
-			if stays := Release(record); stays != "" {
+			if stays, _ := Release(record); stays != "" {
 				t.Fatalf("kept: %s", stays)
 			}
 			if tip, _ := refTip(record.CommonDir, branchRef(record.Branch)); tip != "" {

@@ -16,8 +16,10 @@ import (
 // branch keeps the commits; a tag or a remote-tracking ref may be moved or
 // pruned with no work of this checkout in mind. It looks and removes under one
 // hold of the repository's lock, as rm does, and says why the checkout stays,
-// or "" once it is gone.
-func Release(record Record) string {
+// or "" once it is gone. Once it is gone, the second answer says when the
+// branch the worker switched to stays, for the close to tell main: that
+// branch holds work nothing else has, or another checkout has it out.
+func Release(record Record) (stays, note string) {
 	why, switched := "", ""
 	err := RemoveChecked(record, false, func(current Record) error {
 		reasons, check, err := closeReasons(current, nil)
@@ -34,9 +36,9 @@ func Release(record Record) string {
 	})
 	switch {
 	case why != "":
-		return why
+		return why, ""
 	case err != nil:
-		return "it could not be removed: " + err.Error()
+		return "it could not be removed: " + err.Error(), ""
 	}
 	_, _ = DropBranch(record)
 	if switched != "" && switched != record.Branch {
@@ -46,9 +48,14 @@ func Release(record Record) string {
 		// the tip too.
 		other := record
 		other.Branch = switched
-		_, _ = DropBranch(other)
+		if dropping, err := DropBranch(other); err == nil && dropping.Gone == "" && !dropping.Dropped {
+			note = "its branch " + switched + " stays: its commits are on no other branch"
+			if dropping.CheckedOut != "" {
+				note = "its branch " + switched + " stays: checked out at " + dropping.CheckedOut
+			}
+		}
 	}
-	return ""
+	return "", note
 }
 
 // CloseForecast says why the close of the worker's space would keep its

@@ -219,7 +219,11 @@ func (h *host) close(why string) error {
 			return fmt.Errorf("the space stays closing: its checkout could not be captured: %w", err)
 		}
 	}
-	why = space.WithStays(why, h.release())
+	stays, note := h.release()
+	if note != "" {
+		why += "; " + note
+	}
+	why = space.WithStays(why, stays)
 	_, err := space.Close(h.spec.Dir, h.spec.ID, space.End{
 		At: time.Now().UTC(), Why: why, Worker: space.WorkerEnded, Checkout: seen(h.spec.Dir, h.record),
 	})
