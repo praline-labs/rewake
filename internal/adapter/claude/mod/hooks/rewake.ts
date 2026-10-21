@@ -269,9 +269,14 @@ export const register: Register = (on) => {
   // The effort a main-loop request asks for is the session's live setting:
   // neither its configuration rows nor its settings file follow a change made
   // during the session (docs/research-claude-mod.md#effort). Only observed.
+  // Each main-loop response moves the context, which session.measure tells
+  // only at the turn's end: sampled after each, a long turn's fill shows as
+  // it grows rather than at the next heartbeat.
   on("turn.step", async function* ($, e, next) {
     if (e.agentId === undefined) load?.management.effortSeen(e.effort);
-    return yield* next(e);
+    const step = yield* next(e);
+    if (e.agentId === undefined) load?.management.changed();
+    return step;
   });
 
   // A turn's end of the main loop goes to the outbox; a subagent's, which

@@ -169,7 +169,9 @@ stop is marked. The skill's types allow it; that the chain works live — the or
 ## Telemetry
 
 Built October 18, 2026: the mod samples native context and the configured model after its
-hello, on `session.measure`, at the main turn's start and end, at compaction boundaries,
+hello, on `session.measure`, at the main turn's start and end, after each main-loop
+`turn.step`'s response (from October 21, 2026: `session.measure` comes only at a turn's end,
+so a long turn's fill waited for the next heartbeat, up to 15 s), at compaction boundaries,
 and after each heartbeat answer. It sends complete samples through `mod/state`, with the
 load, heartbeat generation, selected conversation and a load-local sequence. The host
 accepts only its current live generation and newer samples; unknown tokens clear an older

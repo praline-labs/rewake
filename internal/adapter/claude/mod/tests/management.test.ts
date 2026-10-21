@@ -191,7 +191,7 @@ test("a skipped remote compaction has a final refusal and no completion count", 
   expect(states(run).at(-1)).toMatchObject({ compactions: 0, compacting: false });
 });
 
-test("effort is the main loop's latest request's, sampled when it changes; a subagent's is not the session's", async ($, on) => {
+test("effort is the main loop's latest request's, and each main-loop step is sampled after its response; a subagent's is not the session's", async ($, on) => {
   const run = world(on);
   on("turn.step", async function* (_: any, e: any) {
     yield { kind: "text", index: 0, text: "" };
@@ -218,16 +218,18 @@ test("effort is the main loop's latest request's, sampled when it changes; a sub
   await start($);
   await run.clock.settle();
   expect(states(run).at(-1).effort).toBeUndefined();
+  const before = states(run).length;
   await step({ effort: "max", agentId: "child" });
   await run.clock.settle();
-  expect(states(run).at(-1).effort).toBeUndefined();
+  expect(states(run).length).toBe(before);
   await step({ effort: "low" });
   await run.clock.settle();
   const count = states(run).length;
   expect(states(run).at(-1).effort).toBe("low");
   await step({ effort: "low", index: 1 });
   await run.clock.settle();
-  expect(states(run).length).toBe(count);
+  expect(states(run).length).toBe(count + 1);
+  expect(states(run).at(-1).effort).toBe("low");
   await step({ effort: "high", index: 2 });
   await run.clock.settle();
   expect(states(run).at(-1).effort).toBe("high");
