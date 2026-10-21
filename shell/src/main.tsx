@@ -16,6 +16,7 @@ import { type PaneTerminal, paneHooks } from "./pane.ts";
 import { pollRoom, type Space, spacesOver } from "./room.ts";
 import { Scanner } from "./scan.ts";
 import { connectWorker, type MainRun, type Source, startMain } from "./sources.ts";
+import { Strip, showSessions, showSpaces } from "./strip.tsx";
 import { themeOf } from "./theme.ts";
 
 const args = process.argv.slice(2);
@@ -196,6 +197,7 @@ function startWorkerPane(pane: Pane, term: PaneTerminal) {
 // space shown here whose main's run reads ended is main's end begun.
 function takeSpaces(spaces: Space[], ended: string[]) {
   if (closing()) return;
+  showSpaces(spaces);
   const was = workers();
   if (was.some((p) => ended.includes(p.id))) return beginClosing();
   const next = spaces.map(
@@ -308,14 +310,15 @@ function App() {
           </Show>
           <For each={workers()}>
             {(pane) => (
-              <box {...padded(pane)}>
+              <box {...padded(pane)} flexDirection="column">
                 <pane_terminal
                   id={pane.id}
                   ref={(t: PaneTerminal) => startWorkerPane(pane, t)}
                   transparentBackground={seed.transparent}
                   width={inner(pane)}
-                  height={height()}
+                  height={Math.max(height() - 1, 1)}
                 />
+                <Strip id={pane.id} width={inner(pane)} theme={theme} />
               </box>
             )}
           </For>
@@ -387,4 +390,4 @@ renderer.on("selection", (selection: { getSelectedText?: () => string } | null) 
   if (text) renderer.copyToClipboardOSC52(text);
 });
 await render(() => <App />, renderer);
-stopRoom = pollRoom(rewake, room, takeSpaces);
+stopRoom = pollRoom(rewake, room, takeSpaces, () => main?.child.pid, showSessions);

@@ -234,11 +234,10 @@ mode:
   ← → the focus to main or to the chosen worker; `z` zooms the focused program or ends the zoom;
   the prefix again sends Ctrl+\\ to the focused program; any other key cancels. Checked live in
   the CSI-u form with ← → and `z`.
-- **The room** comes from rewake's own commands, polled once a second: `rewake list --json` for
-  each session's activity, model, effort and context, `rewake space list --json` for the spaces, which
-  gains each open space's socket path so the shell never builds a path itself, and its `mainRun`
-  reading `ended` begins the closing screen. A stream comes only
-  if polling is felt.
+- **The room** comes from rewake's own commands, polled once a second (`shell/src/room.ts`):
+  `rewake space list --json` for the spaces, which gains each open space's socket path so the
+  shell never builds a path itself, and its `mainRun` reading `ended` begins the closing screen;
+  `rewake list --json` for the strip (below). A stream comes only if polling is felt.
 
 ## The bar
 
@@ -261,6 +260,40 @@ rest, in the wide layout and the narrow one alike.
   other hints are centred in the rest of the width (the owner's wish, October 19, 2026); after
   Ctrl+\\, with no such hint, they are centred in the whole width. A line longer than the width
   starts at the left and is cut at its end.
+
+## The strip
+
+Main's decisions of October 21, 2026, after the owner's screenshot showed workers with no status
+line. Each worker pane's last row, inside its padding, is one line drawn by the shell
+(`shell/src/strip.tsx`), the same for every harness; the worker's program has one row less. Main
+gets none: its own status line shows the same.
+
+```
+write-claude (code) · working · ⎇ wt-fd7596 · <model> low · 23% 230k/1M
+```
+
+- **What it says**: the session and its type, the activity (`working`, `waiting for <name>`,
+  `idle`, `, compacting`, ` (stale)` once the run stopped publishing), the branch, the model and
+  effort, and the context as filled percent, used and window. A value rewake does not know is left
+  out; a window without a measure reads `–/<window>`. The model and effort stay even where a
+  worker's own status line shows them: the strip is the one line every harness has.
+- **Where it comes from**: `rewake list --json` shows telemetry only to a verified main
+  (`internal/cli/session_state.go`), and the shell is main's terminal, so it asks as main's run.
+  That run's record is the main whose `servicePid` is the shell's own child, main's wrapper; its
+  name and epoch go to `REWAKE_SESSION` and `REWAKE_EPOCH` of the poll, and a new epoch is read
+  again at once. No Go change: the record already names its pid.
+- **The branch** is the space record's `checkout.branch` for a worker in a checkout of its own
+  (made by its launch, or entered); otherwise the branch checked out where the session started,
+  read from `git` at most every five seconds, a detached head as its short commit.
+- **Narrow**: the line fits the pane, whatever the width. Too long, it leaves out the model and
+  effort, then the branch; what still does not fit is cut with `…`. The name, the activity and the
+  context stay.
+- **Colours**: the name bold in the workers' colour of the bar; the rest in the terminal's own
+  foreground with dim separators, no colour forced (herdr answers no OSC 10/11); the context in the
+  palette's green, yellow or red from 50% and 80%.
+- **How fresh**: a Claude Code worker's mod samples after each main-loop step's response, at a
+  turn's end and with each heartbeat ([design-claude.md](design-claude.md)), so the context grows
+  through a long turn; pi publishes on its own events. The poll adds up to a second.
 
 ## How rewake starts the shell, and how it ships
 
