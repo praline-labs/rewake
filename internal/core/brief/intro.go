@@ -3,6 +3,7 @@ package brief
 
 import (
 	"github.com/praline-labs/rewake/internal/core/role"
+	"github.com/praline-labs/rewake/internal/core/worktype"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -16,6 +17,9 @@ type Context struct {
 	// role texts need about it — how it commits, say — which the role texts, naming no harness, leave to its adapter
 	// (docs/v2/design-api.md#launch). Empty adds nothing.
 	Harness role.Section
+	// Work is the kind of work the worker was raised for, its text after
+	// the role's sections (docs/worker-types.md). Empty Name adds nothing.
+	Work worktype.Type
 }
 
 // Intro renders the independent system briefing of the selected role.

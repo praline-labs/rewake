@@ -332,8 +332,9 @@ the record, the worker never started — and starts in a pseudo-terminal it owns
 the template's `worktree = true` ([worktree-tools.md](worktree-tools.md)) —, `--command <wrapper>` before the harness when the
 alias names one, with main's base, `REWAKE_SPACE=<room>/<space id>` — and
 `REWAKE_SPACE_ENTER=1` for a template's `enter_worktree = true`, whose worker may claim its one
-checkout later, which the host then captures as a launch's — and none of main's session in
-its environment; the launch believes the variable only from its parent, that space's host. From there the worker is any session: Act
+checkout later, which the host then captures as a launch's, and `REWAKE_SPACE_TYPE` with its
+text for a worker raised for a kind of work, its briefing's last section
+([worker-types.md](worker-types.md)) — and none of main's session in its environment; the launch believes the variable only from its parent, that space's host. From there the worker is any session: Act
 1 for it, its record `sessions/api-claude.json`. The space host records the worker's run, open;
 the command answers once that run is registered, within 30 s.
 

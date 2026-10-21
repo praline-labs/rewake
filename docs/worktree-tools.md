@@ -10,7 +10,7 @@ inside a session, or holding more than one, is not built.
 
 ## A template's `worktree = true`
 
-An alias of `~/.config/rewake/aliases.toml` (or `.rewake.toml`) may say `worktree = true`: its
+An alias of `~/.config/rewake/aliases.toml` (or `.rewake/aliases.toml`) may say `worktree = true`: its
 worker starts in a new worktree of its own, as `space open --worktree` does. Refused on a
 harness rewake makes no worktree for, and beside the harness's worktree flag in the alias's
 `args`, which would be a second answer; `rewake workers` shows it.

@@ -17,6 +17,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/core/role"
+	"github.com/praline-labs/rewake/internal/core/worktype"
 )
 
 // Where aliases are read from, weakest first. The project file wins because it
@@ -25,8 +26,13 @@ const (
 	// userFile sits beside the settings file, in ~/.config/rewake/.
 	userDir  = "rewake"
 	userFile = "aliases.toml"
-	// projectFile is for aliases that belong to one repository.
-	projectFile = ".rewake.toml"
+	// projectDir holds what belongs to one repository: its aliases, as
+	// userFile, and its types.
+	projectDir = ".rewake"
+	// movedProjectFile held a project's aliases until October 21, 2026.
+	movedProjectFile = ".rewake.toml"
+	// typesDir holds types, beside the alias file in both places.
+	typesDir = "types"
 )
 
 // Alias is one worker of the catalog.
@@ -50,8 +56,11 @@ type Alias struct {
 	Worktree bool `toml:"worktree"`
 	// EnterWorktree lets the worker, started without a checkout, enter one
 	// rewake makes for it mid-session, once (docs/worktree-tools.md).
-	EnterWorktree bool          `toml:"enter_worktree"`
-	Launch        AliasSettings `toml:"launch"`
+	EnterWorktree bool `toml:"enter_worktree"`
+	// Type is the kind of work its worker does unless space open names
+	// another (docs/worker-types.md).
+	Type   string        `toml:"type"`
+	Launch AliasSettings `toml:"launch"`
 }
 
 // AliasSettings are the portable settings of a worker. The harness turns
@@ -70,10 +79,11 @@ const CommandFlag = "command"
 // launch command's help. Somebody who has to read the documentation to learn
 // that a feature exists will not find it.
 const Help = "Main opens workers by alias: [alias.<name>] in ~/.config/" + userDir + "/" + userFile +
-	" or in " + projectFile + " in the working directory, with harness = \"<id>\", role = \"write\" or \"general\", " +
+	" or in " + projectDir + "/" + userFile + " in the working directory, with harness = \"<id>\", role = \"write\" or \"general\", " +
 	"args = [arguments for the harness], description, worktree = true for a worker in a new worktree of its own or, on Claude Code, enter_worktree = true for one that may enter one mid-session, [alias.<name>.launch] model, effort and context, and, " +
-	"in the user file only, role and command = \"<program>\" for a wrapper script. rewake workers lists them; " +
-	"rewake space open <space> --alias <name> opens one. An alias is not a launch of its own."
+	"in the user file only, role and command = \"<program>\" for a wrapper script. " +
+	"An alias's type = \"<type>\" is its worker's kind of work by default, one of the types: texts in ~/.config/" + userDir + "/" + typesDir + "/<type>.md and " + projectDir + "/" + typesDir + "/<type>.md beside rewake's own; [types] off = [...] in either alias file hides built-in ones. " +
+	"rewake workers lists them; rewake space open <space> --alias <name> [--type <type>] opens one. An alias is not a launch of its own."
 
 // Set is what this process read.
 type Set struct {
@@ -88,6 +98,10 @@ type Set struct {
 	// problems are files that could not be read, which refuse the catalog
 	// through Err rather than leave a worker silently absent.
 	problems []string
+	// types are the type files read, a project's replacing the user's of
+	// the same name; off names the built-in types turned off, with where.
+	types map[string]worktype.Type
+	off   map[string]string
 }
 
 // Names are the aliases this process knows, in order, for a refusal that says
@@ -121,6 +135,9 @@ type Template struct {
 	Worktree bool
 	// EnterWorktree says it may enter one mid-session instead.
 	EnterWorktree bool
+	// Type is its default kind of work, as the alias names it; space open
+	// resolves it (Set.Type).
+	Type string
 	// Applied says which of the settings became flags.
 	Applied struct{ Model, Effort, Context bool }
 }
@@ -143,7 +160,7 @@ func (s *Set) Template(name string, catalog adapter.Catalog) (Template, error) {
 	template := Template{
 		Name: name, Harness: h, Role: part, Command: value.Command,
 		Description: value.Description, Args: slices.Clone(value.Args), Settings: value.Launch,
-		Worktree: value.Worktree, EnterWorktree: value.EnterWorktree,
+		Worktree: value.Worktree, EnterWorktree: value.EnterWorktree, Type: value.Type,
 	}
 	if err := worktreeField(h, value); err != nil {
 		return Template{}, fmt.Errorf("alias %q in %s: %w", name, source, err)
@@ -228,6 +245,9 @@ func settingFlags(h adapter.Harness, settings AliasSettings, template *Template)
 // A worker that fails three layers down, complaining about a flag the person
 // never typed, is worse than no alias at all.
 func (a Alias) check(name, source string, knownHarnesses []string, fromProject bool) error {
+	if a.Type != "" && !worktype.ValidName(a.Type) {
+		return fmt.Errorf("alias %q in %s has type = %q, which cannot name a type; rewake workers lists them", name, source, a.Type)
+	}
 	for _, value := range []string{a.Description, a.Launch.Model, a.Launch.Effort, a.Launch.Context} {
 		if strings.ContainsAny(value, "\r\n") {
 			return fmt.Errorf("alias %q in %s has a multiline description or launch setting; each must be one line", name, source)

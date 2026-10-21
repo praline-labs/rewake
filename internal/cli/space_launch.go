@@ -6,6 +6,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/core/role"
+	"github.com/praline-labs/rewake/internal/core/worktype"
 	"github.com/praline-labs/rewake/internal/host/launch"
 )
 
@@ -24,6 +25,8 @@ type workerTarget struct {
 	// enter says the worker may enter a checkout mid-session: its template
 	// says enter_worktree = true and it starts without one.
 	enter bool
+	// work is the kind of work the worker is raised for, empty Name for none.
+	work worktype.Type
 }
 
 func (ctx *Context) spaceTarget(call Call) (workerTarget, error) {
@@ -50,11 +53,47 @@ func (ctx *Context) spaceTarget(call Call) (workerTarget, error) {
 	if err != nil {
 		return workerTarget{}, err
 	}
+	work, err := ctx.spaceType(call, template)
+	if err != nil {
+		return workerTarget{}, err
+	}
 	return workerTarget{
 		harness: template.Harness, part: template.Role, command: template.Command, template: alias, worktree: checkout,
-		enter: template.EnterWorktree && checkout == "",
-		args:  launch.MergeArguments(aliasArgs, typedArgs, template.Harness.SingleUseFlags()),
+		enter: template.EnterWorktree && checkout == "", work: work,
+		args: launch.MergeArguments(aliasArgs, typedArgs, template.Harness.SingleUseFlags()),
 	}, nil
+}
+
+// spaceType resolves the worker's kind of work: a typed --type, else none
+// for --no-type, else the template's type, else none. One that is not there,
+// or is turned off, is refused here, before anything starts.
+func (ctx *Context) spaceType(call Call, template launch.Template) (worktype.Type, error) {
+	refuse := func(format string, args ...any) (worktype.Type, error) {
+		return worktype.Type{}, &UsageError{Command: call.Command, Message: fmt.Sprintf(format, args...)}
+	}
+	typed, given := call.Flags["type"]
+	no := call.Switch("no-type")
+	switch {
+	case given && no:
+		return refuse("--type and --no-type ask opposite things; give one.")
+	case given && typed == "":
+		return refuse("--type needs a name; rewake workers lists the types.")
+	case no:
+		return worktype.Type{}, nil
+	case given:
+		value, err := ctx.launchAliases().Type(typed)
+		if err != nil {
+			return refuse("%v", err)
+		}
+		return value, nil
+	case template.Type != "":
+		value, err := ctx.launchAliases().Type(template.Type)
+		if err != nil {
+			return refuse("alias %q names type = %q: %v; give --type or --no-type", template.Name, template.Type, err)
+		}
+		return value, nil
+	}
+	return worktype.Type{}, nil
 }
 
 // spaceWorktree resolves the worker's worktree from what asks for one: a

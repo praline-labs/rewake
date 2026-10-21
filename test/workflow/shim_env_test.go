@@ -34,6 +34,9 @@ const (
 	// delivery named. A report says which messages it settles, and the only
 	// way to check that link is to know what actually arrived here.
 	shimDeliveredFile = "RW_SHIM_DELIVERED_FILE"
+	// shimBriefFile is where a session writes the briefing rewake handed it,
+	// so a case can see what the worker was told.
+	shimBriefFile = "RW_SHIM_BRIEF_FILE"
 	// shimInboxJSON makes a session read its mailbox in the machine form. The
 	// link between a report and the messages it answers is a field, not a line
 	// of the printed form, so the side that has to observe it reads JSON.

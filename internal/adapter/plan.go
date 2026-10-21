@@ -3,6 +3,7 @@ package adapter
 import (
 	"github.com/praline-labs/rewake/internal/core/brief"
 	"github.com/praline-labs/rewake/internal/core/role"
+	"github.com/praline-labs/rewake/internal/core/worktype"
 )
 
 // LaunchRequest is what the wrapper knows before starting a harness.
@@ -70,6 +71,9 @@ type LaunchRequest struct {
 	// rewake makes for it mid-session (enter_worktree = true); only an
 	// adapter offering it (WorktreeEntryHarness) is asked.
 	WorktreeEntry bool
+	// WorkType is the kind of work the worker was raised for, which its
+	// briefing carries (docs/worker-types.md); empty Name for none.
+	WorkType worktype.Type
 	// Shell says the run is main's in rewake's shell, drawn on a pane whose
 	// terminal keeps no scrollback before a pane attached: an adapter whose
 	// harness can scroll its own history turns that on (docs/v2/shell.md).
@@ -245,5 +249,5 @@ type Flag struct {
 
 // BriefContext carries identity to the shared text package without assembling prose.
 func (r LaunchRequest) BriefContext() brief.Context {
-	return brief.Context{Name: r.Name, Room: r.Room, Role: r.Role, Reason: r.RoleReason}
+	return brief.Context{Name: r.Name, Room: r.Room, Role: r.Role, Reason: r.RoleReason, Work: r.WorkType}
 }

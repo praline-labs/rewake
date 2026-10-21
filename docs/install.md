@@ -187,7 +187,7 @@ Remove `~/.rewake2-worktrees` too once nothing in the checkouts there is wanted;
 - A main started in print mode (`claude -p`) gets no report: it exits before a worker's turn
   ends.
 - Since October 19, 2026 the aliases (`~/.config/rewake/aliases.toml` and a project's
-  `.rewake.toml`) are only main's catalogue of workers, opened with `rewake space open
+  `.rewake/aliases.toml`, before October 21 `.rewake.toml`, now refused) are only main's catalogue of workers, opened with `rewake space open
   --alias`; a file of 1.0.3's form, with `rewake` lists or `main = true`, is refused naming
   each field until rewritten ([launch-defaults.md](launch-defaults.md#the-worker-catalogue)).
   rewake writes nothing there.

@@ -47,8 +47,8 @@ with the user source off, `--autocompact` holds unless the project's settings se
 worker raised from any alias gets it; main is exactly the person's Claude Code.
 
 **rewake's defaults**, with no file of the person's: the user layer off and the ancestor exclude
-above; the auto-memory, off until October 19, 2026 and since then one per template and project
-(step 5); `env` with
+above; the auto-memory, off until October 19, 2026 and since then one per template and project,
+since October 21 one per type and project for a worker raised for a type (step 5); `env` with
 `DISABLE_AUTOUPDATER=1` (a worker must not update Claude Code under a running room) and
 `DISABLE_FEEDBACK_COMMAND=1` (no survey in an unattended pane); `Bash(rewake:*)` as today;
 and the owner's off-list of October 19, 2026 — subagents (`Agent`), `ScheduleWakeup` and cron,
@@ -218,7 +218,9 @@ Main's, October 19, 2026, on the design's questions; the room's identity is the 
    the run's directory, the directory
    `~/.config/rewake/claude/worker/memory/<project>/<template>/` ([launch.md](../launch.md#claude-code));
    the alias reaches the launch as `REWAKE_SPACE_TEMPLATE` from the space host, no new record
-   field. Checked live with haiku, a private HOME and `REWAKE_DIR`, a `-p` main in a probe
+   field. Since October 21, 2026 (main's decision) a worker raised for a type keeps the type's
+   memory, `…/memory/<project>/<type>/`, whatever template opened it; one with no type keeps
+   its template's, and nothing is moved ([worker-types.md](../worker-types.md)). Checked live with haiku, a private HOME and `REWAKE_DIR`, a `-p` main in a probe
    repository opening two spaces with `--worktree`:
 
    | check | seen |

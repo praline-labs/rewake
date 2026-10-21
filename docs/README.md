@@ -26,6 +26,7 @@ Sessions and launches:
 - [roles.md](roles.md) — roles and names: the catalogue, what each role is told and reports, how a role and a name are chosen.
 - [launch.md](launch.md) — the wrapper's launch sequence, signals, main in the room of its directory, the worker profile, the harness flags, the intro.
 - [launch-defaults.md](launch-defaults.md) — model and effort defaults nobody typed; the worker aliases, main's catalogue for `space open --alias`, and which flags a typed one replaces ([the step](roadmap/2026-10-19-worker-catalogue.md)).
+- [worker-types.md](worker-types.md) — the kinds of work a worker is raised for: the built-in, user and project types, `[types] off`, `space open --type`, the briefing's section and the memory by type; a project's `.rewake/` ([the step](roadmap/2026-10-21-worker-types.md)).
 - [worktree.md](worktree.md) — the checkout `--worktree` gives a launch, `.worktreeinclude`, and `rewake worktree land`, `finish`, `ls`, `rm`.
 - [worktree-tools.md](worktree-tools.md) — the worktree tools of both harnesses: a template's `worktree = true`, `rewake worktree status` and its close forecast, the `worktree_status` tool, main's `worktree_list` and `worktree_land`, and a Claude Code worker's entry: `enter_worktree = true`, `rewake worktree enter`, `worktree_enter` and its guard.
 - [install.md](install.md) — building and installing locally, the npm dry run, the upgrade from 1.x, the release gate.

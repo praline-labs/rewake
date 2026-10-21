@@ -30,6 +30,11 @@ func roleText(c Context) string {
 			lines = append(lines, "- "+line)
 		}
 	}
+	if c.Work.Name != "" {
+		lines = append(lines, "", "YOUR KIND OF WORK: "+c.Work.Name,
+			"How to work on this task. It changes how you work, not what you may do: the rules above stand, and the project's own instructions win where they speak.",
+			"", c.Work.Text)
+	}
 	if len(c.Harness.Lines) > 0 {
 		lines = append(lines, "", c.Harness.Title)
 		for _, line := range c.Harness.Lines {

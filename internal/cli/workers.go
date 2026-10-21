@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/praline-labs/rewake/internal/core/worktype"
 	"github.com/praline-labs/rewake/internal/host/launch"
 )
 
@@ -21,14 +22,20 @@ type workerTemplate struct {
 	// Worktree says the worker starts in a new worktree of its own.
 	Worktree bool `json:"worktree"`
 	// EnterWorktree says the worker may enter one mid-session instead.
-	EnterWorktree bool          `json:"enterWorktree"`
-	Model         workerSetting `json:"model"`
-	Effort        workerSetting `json:"effort"`
-	Context       workerSetting `json:"context"`
+	EnterWorktree bool `json:"enterWorktree"`
+	// Type is the template's default kind of work; TypeProblem why space
+	// open would refuse it — not there, or turned off.
+	Type        string        `json:"type,omitempty"`
+	TypeProblem string        `json:"typeProblem,omitempty"`
+	Model       workerSetting `json:"model"`
+	Effort      workerSetting `json:"effort"`
+	Context     workerSetting `json:"context"`
 }
 
 type workersListing struct {
 	Workers []workerTemplate `json:"workers"`
+	// Types are the kinds of work space open --type takes.
+	Types []worktype.Type `json:"types"`
 }
 
 func workersCommand() *Command {
@@ -39,7 +46,8 @@ func workersCommand() *Command {
 		Examples: []string{"rewake workers", "rewake workers --json"},
 		Next:     []string{"rewake space open <name> --alias <alias>"},
 		Notes: []string{
-			"Any role may read this catalog. Aliases come from the user alias file, ~/.config/rewake/aliases.toml, then the current directory's .rewake.toml, which may not set role or command. An unreadable file refuses the listing rather than silently omit workers.",
+			"Any role may read this catalog. Aliases come from the user alias file, ~/.config/rewake/aliases.toml, then the current directory's .rewake/aliases.toml, which may not set role or command. A .rewake.toml, where a project's aliases lived until October 21, 2026, is refused, naming the new place. An unreadable file refuses the listing rather than silently omit workers.",
+			"Types are the kinds of work a worker is raised for, each a text that follows its role's briefing: rewake's built-in code, analysis, process and review; the person's ~/.config/rewake/types/<type>.md; the project's .rewake/types/<type>.md. The nearest of one name wins. A type file is Markdown opening with a TOML front matter between two +++ lines that holds description = \"<one line>\", at most 32 KiB. [types] off = [\"<built-in type>\", ...] in either alias file hides those built-in ones; a file of the same name still stands. An alias's type = \"<type>\" is its default, shown with why space open would refuse it when it is not there or turned off.",
 			"An alias: [alias.<name>] with harness = \"<id>\"; role = \"write\" or \"general\" (general when absent); args = [the harness's arguments]; command = \"<program>\", a wrapper that runs the harness; description; worktree = true, a worker started in a new worktree of its own, which --worktree=<name> on space open names and --no-worktree leaves out; enter_worktree = true, on Claude Code, a worker started without one that may enter one mid-session through its worktree_enter tool, refused beside worktree = true; and [alias.<name>.launch] with model, effort and context. Model and effort become the harness's flags; context does on a harness with a flag for it and is only shown elsewhere. Typed harness flags after -- in space open replace applied ones.",
 			"Since October 19, 2026 an alias's rewake list, main = true and launch.apply are gone: a file with them is refused, naming each field and what replaced it.",
 		},
@@ -52,13 +60,21 @@ func handleWorkers(ctx *Context, call Call) error {
 	if err := aliases.Err(); err != nil {
 		return &UsageError{Command: call.Command, Message: err.Error()}
 	}
-	out := workersListing{Workers: []workerTemplate{}}
+	out := workersListing{Workers: []workerTemplate{}, Types: aliases.Types()}
 	for _, name := range aliases.Names() {
 		template, err := aliases.Template(name, ctx.table.catalog)
 		if err != nil {
 			return &UsageError{Command: call.Command, Message: err.Error()}
 		}
-		out.Workers = append(out.Workers, workerView(template))
+		view := workerView(template)
+		if template.Type != "" {
+			// Shown, not refused: the template still opens with --type or
+			// --no-type.
+			if _, err := aliases.Type(template.Type); err != nil {
+				view.TypeProblem = err.Error()
+			}
+		}
+		out.Workers = append(out.Workers, view)
 	}
 	return printValue(ctx, out, out.lines)
 }
@@ -86,6 +102,7 @@ func workerView(template launch.Template) workerTemplate {
 	return workerTemplate{
 		Name: template.Name, Harness: template.Harness.ID(), Role: template.Role.ID,
 		Command: command, Description: template.Description, Worktree: template.Worktree, EnterWorktree: template.EnterWorktree,
+		Type:    template.Type,
 		Model:   workerSetting{Value: settings.Model, Applied: template.Applied.Model},
 		Effort:  workerSetting{Value: settings.Effort, Applied: template.Applied.Effort},
 		Context: workerSetting{Value: settings.Context, Applied: template.Applied.Context},
@@ -93,6 +110,22 @@ func workerView(template launch.Template) workerTemplate {
 }
 
 func (l workersListing) lines() []string {
+	lines := l.workerLines()
+	lines = append(lines, "", "Types (space open --type <type>):")
+	if len(l.Types) == 0 {
+		lines = append(lines, "  none")
+	}
+	for _, value := range l.Types {
+		where := value.Source
+		if value.Path != "" {
+			where += " " + value.Path
+		}
+		lines = append(lines, fmt.Sprintf("  %s (%s) — %s", value.Name, where, value.Description))
+	}
+	return lines
+}
+
+func (l workersListing) workerLines() []string {
 	if len(l.Workers) == 0 {
 		return []string{"No worker aliases."}
 	}
@@ -104,6 +137,12 @@ func (l workersListing) lines() []string {
 		}
 		if w.EnterWorktree {
 			line += " enter_worktree"
+		}
+		if w.Type != "" {
+			line += " type=" + w.Type
+			if w.TypeProblem != "" {
+				line += " (not available: " + w.TypeProblem + ")"
+			}
 		}
 		for _, setting := range []struct {
 			name  string

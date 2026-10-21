@@ -68,6 +68,11 @@ step names is in the command table, with each verb it spells — `worktree ls`, 
 says it is for, one that command takes: a session copies them. The one exception is the
 launch flag `--worktree` in worktree's explanation, which a harness declares.
 
+A worker raised for a type ([worker-types.md](worker-types.md)) gets one more section in its
+briefing, after its role's and before the harness's: `YOUR KIND OF WORK: <type>`, a line
+saying it changes how the worker works and not what it may do, and the type's text. The
+guide does not print it: a type belongs to one worker's launch, not to the role.
+
 **Owner decision, September 29, 2026:** the briefings are what a session in any project
 gets, with no rewake repository at hand, so they teach the craft of the role and not
 only rewake's mechanics — a self-contained brief with acceptance criteria and exact

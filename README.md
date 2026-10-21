@@ -93,9 +93,10 @@ any terminal to see who is up.
 
 **Launch conveniences**
 
-- **Aliases and defaults.** Name a launch in `.rewake.toml` or
-  `~/.config/rewake/aliases.toml`, and start it with `rewake <alias>`. Set default
-  models and efforts in `~/.config/rewake/settings`.
+- **Aliases and defaults.** Name a worker in `~/.config/rewake/aliases.toml` or a
+  project's `.rewake/aliases.toml`, and main opens it with `rewake space open <space>
+  --alias <alias>`, raised for a kind of work with `--type`. Set default models and
+  efforts in `~/.config/rewake/settings`.
 
 **For agents**
 

@@ -81,7 +81,7 @@ func workerProfile(request adapter.LaunchRequest, args []string) (profile, error
 	if err != nil {
 		return profile{}, err
 	}
-	passed, enter, notes, err := launchSettings(path, settings, dir, request.RunDir, request.Template, request.WorktreeEntry)
+	passed, enter, notes, err := launchSettings(path, settings, dir, request.RunDir, memoryKey(request), request.WorktreeEntry)
 	if err != nil {
 		return profile{}, err
 	}

@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -17,6 +18,18 @@ import (
 // so the workers of one alias share theirs and no other's. Claude Code reads
 // autoMemoryDirectory from --settings, an absolute path only — a relative
 // one is ignored for its shared default (probed on 2.1.302).
+
+// memoryKey names a worker's memory within its project: its type when the
+// space raised it for one, what it learns being about the project and the
+// kind of work rather than the model; else its template, as before types
+// (main's decision, October 21, 2026). A template of a type's name shares
+// that type's memory. Empty for a worker raised from no template.
+func memoryKey(request adapter.LaunchRequest) string {
+	if request.Template != "" && request.WorkType.Name != "" {
+		return request.WorkType.Name
+	}
+	return request.Template
+}
 
 // templateName is what a template may be called to name a directory.
 var templateName = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._-]*$`)

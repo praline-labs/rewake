@@ -29,8 +29,14 @@ Read in the package's `docs/cli.md`, `docs/extensions.md`, `CHANGELOG.md` and
   decision or `defaultProjectTrust`, writing nothing. The adapter adds it since October 19,
   2026 unless the launch names either flag. Read on 1.3.0; 1.2.0's `dist/cli/args.js` has
   both flags.
-- `--append-system-prompt` is repeatable. The adapter appends its briefing even when the
-  caller already supplied one. `--no-intro` suppresses only rewake's briefing.
+- `--append-system-prompt` is repeatable, each a text or the path of an existing file. The
+  adapter appends its briefing even when the caller already supplied one. `--no-intro`
+  suppresses only rewake's briefing.
+- Any `--append-system-prompt` turns off pi's discovery of `APPEND_SYSTEM.md`, which is
+  otherwise the project's `.pi/APPEND_SYSTEM.md` when the project is trusted, else the agent
+  directory's (`dist/core/resource-loader.js`, around lines 480 and 955; read October 21, 2026
+  on 1.3.0). The briefing's flag hid a project's file from every run rewake started; the
+  adapter now passes that file's path after the briefing ([launch.md](launch.md#pi)).
 - `--session-id` opens or creates the named conversation. The native CLI rejects it with
   `--session`, `--continue` or `--resume`. The adapter also rejects a fork or
   `--no-session` when rewake names a new conversation. The id does not add a user message.

@@ -352,6 +352,9 @@ func (s *fixtureSession) serve(frame fixtureFrame) {
 	case "release":
 		return
 	case "brief":
+		if path := os.Getenv(shimBriefFile); path != "" {
+			_ = os.WriteFile(path, []byte(frame.Text), 0o600)
+		}
 		reply.OK = true
 	case "control":
 		reply = s.control(frame, reply)

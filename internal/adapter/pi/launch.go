@@ -2,6 +2,7 @@ package pi
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -34,8 +35,20 @@ func (harness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, error)
 	// -e adds rewake's extension to those pi finds, the person's and the
 	// project's, which load as they would without rewake.
 	args = adapter.AddFlags(args, "-e", file)
+	dir, err := agentDir()
+	if err != nil {
+		return adapter.LaunchPlan{}, err
+	}
 	if request.Intro {
-		args = adapter.AddFlags(args, "--append-system-prompt", brief.Intro(request.BriefContext()))
+		cwd, err := os.Getwd()
+		if err != nil {
+			return adapter.LaunchPlan{}, fmt.Errorf("cannot read the working directory: %w", err)
+		}
+		found := appendSystemFile(args, cwd, dir)
+		args = adapter.AddFlags(args, appendFlag, brief.Intro(request.BriefContext()))
+		if found != "" {
+			args = adapter.AddFlags(args, appendFlag, found)
+		}
 	}
 	// A project with its own pi resources makes pi ask whether to trust it
 	// before any extension loads, rewake's included, and the run waits for a
@@ -44,10 +57,6 @@ func (harness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, error)
 	// the launch's own arguments stands.
 	if len(adapter.FlagValues(args, "--approve", "-a", "--no-approve", "-na")) == 0 {
 		args = adapter.AddFlags(args, "--approve")
-	}
-	dir, err := agentDir()
-	if err != nil {
-		return adapter.LaunchPlan{}, err
 	}
 	if request.Command != "" && request.Version != PinnedVersion {
 		notes = append(notes, fmt.Sprintf("pi %s named with --command is not the %s this rewake was checked with", request.Version, PinnedVersion))

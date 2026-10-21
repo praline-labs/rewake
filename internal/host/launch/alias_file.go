@@ -9,24 +9,35 @@ import (
 	"strings"
 
 	"github.com/pelletier/go-toml/v2"
+
+	"github.com/praline-labs/rewake/internal/core/worktype"
 )
 
-// Load reads the user file and then the project file.
+// Load reads the user's files and then the project's: the alias files, then
+// the types beside each.
 func Load() *Set {
 	set := newSet()
 	if home, err := os.UserHomeDir(); err == nil {
-		set.read(filepath.Join(home, ".config", userDir, userFile), "the user alias file", true)
+		dir := filepath.Join(home, ".config", userDir)
+		set.read(filepath.Join(dir, userFile), "the user alias file", true)
+		set.readTypes(filepath.Join(dir, typesDir), worktype.User)
 	}
 	if working, err := os.Getwd(); err == nil {
 		// This directory only, like the settings file: a parent directory does
 		// not get to decide how a session launches.
-		set.read(filepath.Join(working, projectFile), "the project alias file", false)
+		set.refuseMoved(filepath.Join(working, movedProjectFile))
+		dir := filepath.Join(working, projectDir)
+		set.read(filepath.Join(dir, userFile), "the project alias file", false)
+		set.readTypes(filepath.Join(dir, typesDir), worktype.Project)
 	}
 	return set
 }
 
 func newSet() *Set {
-	return &Set{aliases: map[string]Alias{}, sources: map[string]string{}, fromProject: map[string]bool{}}
+	return &Set{
+		aliases: map[string]Alias{}, sources: map[string]string{}, fromProject: map[string]bool{},
+		types: map[string]worktype.Type{}, off: map[string]string{},
+	}
 }
 
 // read parses one file into the set. user says whether this is the file in the
@@ -60,6 +71,11 @@ func (s *Set) read(path, description string, user bool) {
 	}
 	var file struct {
 		Alias map[string]Alias `toml:"alias"`
+		// Types turns built-in types off: the person's or the project's
+		// choice of which of rewake's texts main is offered.
+		Types struct {
+			Off []string `toml:"off"`
+		} `toml:"types"`
 	}
 	decoder := toml.NewDecoder(bytes.NewReader(raw))
 	// A field rewake does not know is refused, not skipped: a silently
@@ -80,6 +96,10 @@ func (s *Set) read(path, description string, user bool) {
 			where = fmt.Sprintf("%s:%d:%d", path, line, column)
 		}
 		s.unreadable(fmt.Sprintf("%s at %s could not be read: %v", description, where, err))
+		return
+	}
+	if err := s.turnOff(file.Types.Off, description, path); err != nil {
+		s.unreadable(err.Error())
 		return
 	}
 	for name, value := range file.Alias {

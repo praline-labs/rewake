@@ -101,6 +101,7 @@ func handleLaunch(h adapter.Harness) func(*Context, Call) error {
 			Lease:      lease,
 
 			WorktreeEntry: id.enter,
+			WorkType:      id.work,
 		})
 		if checkout != nil {
 			checkout.settle(err != nil || code != 0)

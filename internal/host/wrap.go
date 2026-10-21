@@ -22,6 +22,7 @@ import (
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/core/space"
+	"github.com/praline-labs/rewake/internal/core/worktype"
 	"github.com/praline-labs/rewake/internal/host/delivery"
 	"github.com/praline-labs/rewake/internal/host/launch"
 	"github.com/praline-labs/rewake/internal/host/terminal"
@@ -57,6 +58,9 @@ type Request struct {
 	// WorktreeEntry says that template lets the worker enter a checkout
 	// (adapter.LaunchRequest.WorktreeEntry).
 	WorktreeEntry bool
+	// WorkType is the kind of work the worker was raised for
+	// (adapter.LaunchRequest.WorkType).
+	WorkType worktype.Type
 	// RoleReason says why the launch has its role, for the record and the
 	// briefing; empty says the role was selected with its flag.
 	RoleReason string
@@ -199,6 +203,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 		Template:   request.Template,
 
 		WorktreeEntry: request.WorktreeEntry,
+		WorkType:      request.WorkType,
 	}
 	launchRequest.Env = launch.SessionEnv(launchRequest, request.Harness.EnvNotInherited())
 	if request.Shell {

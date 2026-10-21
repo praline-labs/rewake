@@ -34,11 +34,17 @@ type spaceOpened struct {
 	Room      string `json:"room"`
 	SessionID string `json:"sessionId,omitempty"`
 	Worktree  bool   `json:"worktree,omitempty"`
+	// Type is the kind of work the worker was raised for, when it has one.
+	Type string `json:"type,omitempty"`
 }
 
 func (o spaceOpened) lines() []string {
+	kind := o.Role
+	if o.Type != "" {
+		kind += ", type " + o.Type
+	}
 	return []string{
-		fmt.Sprintf("Rewake: opened space %s: %s (%s, %s) runs in room %s and closes when this run ends or on rewake space close %s.", o.Space, o.Session, o.Harness, o.Role, o.Room, o.Space),
+		fmt.Sprintf("Rewake: opened space %s: %s (%s, %s) runs in room %s and closes when this run ends or on rewake space close %s.", o.Space, o.Session, o.Harness, kind, o.Room, o.Space),
 		fmt.Sprintf("Give it a task with rewake send %s \"...\"; main in the shell shows its terminal as the worker pane the bar selects.", o.Session),
 	}
 }
@@ -109,6 +115,7 @@ func handleSpaceOpen(ctx *Context, call Call) error {
 	spec.Template = target.template
 	spec.Worktree = target.worktree != ""
 	spec.Enter = target.enter
+	spec.Type, spec.TypeText = target.work.Name, target.work.Text
 	var taken *space.NameTakenError
 	if err := space.Create(dir, record); errors.As(err, &taken) {
 		return failf("%v", err)
@@ -122,7 +129,7 @@ func handleSpaceOpen(ctx *Context, call Call) error {
 	if err := awaitWorker(dir, record.ID, session); err != nil {
 		return err
 	}
-	opened := spaceOpened{Space: name, ID: record.ID, Session: session, Harness: h.ID(), Role: part.ID, Room: filepath.Base(dir), SessionID: record.Worker.SessionID, Worktree: spec.Worktree}
+	opened := spaceOpened{Space: name, ID: record.ID, Session: session, Harness: h.ID(), Role: part.ID, Room: filepath.Base(dir), SessionID: record.Worker.SessionID, Worktree: spec.Worktree, Type: spec.Type}
 	return printValue(ctx, opened, opened.lines)
 }
 

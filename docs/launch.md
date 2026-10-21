@@ -139,7 +139,8 @@ rewake --command my-claude claude
   the harness.
 - Add `--messaging-socket-path <base>/v2/rooms/<room>/sock/<name>.<epoch>.sock` unless the user passed
   their own; before launch, remove a stale socket file at the same path.
-- Add one `--append-system-prompt`: rewake's briefing (turned off by `--no-intro`), then a
+- Add one `--append-system-prompt`: rewake's briefing (turned off by `--no-intro`), which ends,
+  for a worker raised for a type, with the type's text ([worker-types.md](worker-types.md)), then a
   worker's `CLAUDE.md` of the service folder, then the caller's own `--append-system-prompt`,
   joined by blank lines. Claude Code keeps only the last `--append-system-prompt` (probed on
   2.1.302: of two, the first is lost; `--append-system-prompt-file` applies beside it), so the
@@ -283,7 +284,12 @@ folder with a `SKILL.md` in `skills/` (owner decision, October 19, 2026).
 
 The adapter embeds `extension.ts`, its management module and its `worktree_status` tool
 ([worktree-tools.md](worktree-tools.md)), writing them in the run directory. It adds `-e <extension.ts>` and, unless `--no-intro`, its briefing through the
-repeatable `--append-system-prompt`. `-e` adds rewake's extension to those pi finds: the
+repeatable `--append-system-prompt`, the type's text at its end for a worker raised for one
+([worker-types.md](worker-types.md)). That flag turns off pi's own discovery of
+`APPEND_SYSTEM.md`, so since October 21, 2026 the adapter adds, after the briefing, the file pi
+would have read: the project's `.pi/APPEND_SYSTEM.md` in the working directory unless the launch
+says `--no-approve`, else the agent directory's; none when the caller's own
+`--append-system-prompt` had turned discovery off already, as pi does. `-e` adds rewake's extension to those pi finds: the
 person's, packages and built-ins load as without rewake, and so do a project's resources:
 in a project with `.pi` resources or `.agents/skills` pi would otherwise ask whether to trust
 it before any extension loads, rewake's included, and the run would wait for a person. By the
@@ -352,7 +358,7 @@ the main checkout at the same time.
 
 ### A space for a worker
 
-`rewake space open <name> --alias <alias> [--worktree[=<name>] | --no-worktree] -- <harness args>` is main's way
+`rewake space open <name> --alias <alias> [--worktree[=<name>] | --no-worktree] [--type <type> | --no-type] -- <harness args>` is main's way
 to start a worker, built October 18, 2026 (S4-7,
 [the steps](v2/stage4-space-steps.md#the-build-steps)). A worker is raised only from a template
 (the owner's decision, October 19, 2026): `--alias` is required, `rewake workers` lists the
@@ -371,12 +377,14 @@ wrapper ([SP9](rules/space.md)). Then it opens a pseudo-terminal of 120 by 40 wi
 main's working directory, with `REWAKE_SESSION`, `REWAKE_EPOCH`, `REWAKE_ROOM`, every
 `REWAKE_BRIDGE_` variable and every catalogue harness's `EnvNotInherited` stripped,
 `REWAKE_DIR` set to main's base, `TERM` set and `REWAKE_SPACE=<room>/<space id>`, with
-`REWAKE_SPACE_TEMPLATE=<alias>` beside it for a space opened with `--alias`. The launch
+`REWAKE_SPACE_TEMPLATE=<alias>` beside it for a space opened with `--alias`, and
+`REWAKE_SPACE_TYPE=<type>` with `REWAKE_SPACE_TYPE_TEXT=<its text>` for a worker raised for a
+type, which `space open` resolved in main's directory ([worker-types.md](worker-types.md)). The launch
 is that worker, not main, only when the variable names a space of an existing room that is
 `opening`, or already `open` on the launch's own run (the host records it as soon as it
 started the worker), and whose recorded host run — pid and start time — is the launch's parent; it then
-takes the name, role and room from the record, the template from its companion, and unsets
-both; the template names the worker's memory on Claude Code. Anything else is
+takes the name, role and room from the record, the template and the type from their companions,
+and unsets them; the type, else the template, names the worker's memory on Claude Code. Anything else is
 refused, exit 1, pointing to `rewake space open`: a person who set the variable would start a
 worker past main. Where the harness takes a conversation id
 (`ConversationOffer`), a fresh one is inserted before any prompt terminator and recorded.
@@ -426,7 +434,8 @@ reports, the limits and the mail — on October 19, 2026 a captured main's ran 5
 worker's 33. Each names its identity and selection reason, explains the commands that role
 needs, and points to guide for the full contract.
 Write may commit; main delegates and reads results. All ask for the point of a message in its first line. Per-role
-snapshots make wording changes reviewable.
+snapshots make wording changes reviewable. A worker raised for a type gets, after its role's
+sections, `YOUR KIND OF WORK: <type>` and the type's text ([worker-types.md](worker-types.md)).
 
 ### First input
 

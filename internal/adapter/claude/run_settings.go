@@ -31,13 +31,13 @@ const enterTool = "EnterWorktree"
 
 // launchSettings is the --settings a worker's launch passes: the folder's
 // settings.json, or a copy in the run's directory with what this run alone
-// gets laid over it — its template's memory, and the entry into a checkout —
+// gets laid over it — its memory, under the key memoryKey chose, and the entry into a checkout —
 // since --settings is single-use. It says whether the run may enter a
 // checkout. With no run directory to write in, the worker starts without
 // either, noted. A worker raised from no template — only a test build's
 // direct launch — has none.
-func launchSettings(path string, settings map[string]any, folder, runDir, template string, enter bool) (string, bool, []string, error) {
-	if template == "" {
+func launchSettings(path string, settings map[string]any, folder, runDir, memoryKey string, enter bool) (string, bool, []string, error) {
+	if memoryKey == "" {
 		return path, false, nil, nil
 	}
 	refused := func(why string, memory bool) []string {
@@ -53,7 +53,7 @@ func launchSettings(path string, settings map[string]any, folder, runDir, templa
 	if runDir == "" {
 		return path, false, refused("the launch has no run directory to write its settings in", true), nil
 	}
-	overlaid, memory, err := memorySettings(settings, folder, template)
+	overlaid, memory, err := memorySettings(settings, folder, memoryKey)
 	if err != nil {
 		return "", false, nil, err
 	}

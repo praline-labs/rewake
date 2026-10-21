@@ -101,13 +101,14 @@ only main's catalogue of workers. `rewake workers` lists them and `rewake space 
 once; the `rewake` list, `main = true` and `launch.apply` went with that.
 
 ```toml
-# ~/.config/rewake/aliases.toml, or .rewake.toml in the working directory
+# ~/.config/rewake/aliases.toml, or .rewake/aliases.toml in the working directory
 [alias.claude-write]
 harness = "claude"
 role = "write"
 args = ["--permission-mode", "acceptEdits"]
 command = "claude-worker"
 description = "A patch worker"
+type = "code"
 [alias.claude-write.launch]
 model = "chosen-model"
 effort = "high"
@@ -121,6 +122,7 @@ context = "400k"
 | `args` | Arguments handed to the harness as written. |
 | `command` | The program started in place of the harness, a wrapper that runs it; becomes the worker launch's `--command`. User file only. |
 | `description` | One line saying when to choose the worker. |
+| `type` | The kind of work its worker does unless `space open --type` or `--no-type` says otherwise ([worker-types.md](worker-types.md)). |
 | `[alias.<name>.launch] model` | Applied by the adapter: `--model` on Claude Code and pi. |
 | `launch.effort` | Applied as Claude Code's `--effort` or pi's `--thinking`. |
 | `launch.context` | The auto-compact window, applied on Claude Code as `--autocompact`: `auto`, or 100k–1M tokens such as `300k` or `1M`, any other value refused. Shown only on a harness without such a flag (pi). |
@@ -134,17 +136,25 @@ room), `main` (main is started with `rewake <harness>`), `launch.apply` (setting
 apply; flags that should not go in `args`). The whole file is refused then, so it is
 rewritten once.
 
+**The project file's place, since October 21, 2026** (the owner's decision): a project's aliases
+live in `.rewake/aliases.toml`, beside its types in `.rewake/types/`. A `.rewake.toml` in the
+working directory, where they lived before, refuses the catalogue, naming the new place: read
+silently or skipped, either would open workers other than the project says. Nothing is moved
+for the person. Either alias file may also hold `[types] off = [...]`, the built-in types it
+turns off ([worker-types.md](worker-types.md)).
+
 **A project file may not choose a role, or the program.** `role` and `command` belong in the
-user's own file; an alias in `.rewake.toml` that carries one is refused by name. The program is
+user's own file; an alias in `.rewake/aliases.toml` that carries one is refused by name. The program is
 whatever runs with the person's credentials, and a file sitting in whatever directory somebody
 happens to be in should not decide that or what a worker may do. The user file is held to
 `0600`, and a wider one produces a note.
 
 `rewake workers` is a view available to any role, even outside a session. It reads the user
-file and the current directory's `.rewake.toml`, a project alias replacing the user's of the
-same name, and shows name, harness, role, command (the harness when none), description and each
-setting's value marked applied or shown only; `--json` returns `workers`, whose `model`,
-`effort` and `context` each have `value` and `applied`. A file that cannot be read refuses the
+file and the current directory's `.rewake/aliases.toml`, a project alias replacing the user's of
+the same name, and shows name, harness, role, command (the harness when none), description, type
+and each setting's value marked applied or shown only, then the types `space open --type` takes;
+`--json` returns `workers`, whose `model`, `effort` and `context` each have `value` and
+`applied`, and `types`. A file that cannot be read refuses the
 catalogue rather than silently omit workers; TOML errors include the source path, line and
 column. An alias that makes no sense — no harness or an unknown one, a role that is not a
 worker's, settings on a harness with no flags for them — refuses it too, naming the alias.
