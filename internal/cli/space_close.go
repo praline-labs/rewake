@@ -8,6 +8,8 @@ import (
 
 	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/core/space"
+	"github.com/praline-labs/rewake/internal/host/spacehost"
+	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -111,6 +113,19 @@ func handleSpaceClose(ctx *Context, call Call) error {
 		}
 	}
 	// A space already closing is waited for as it is: its host is ending it.
+	// One whose host is proven gone has nobody to end it, so the close does,
+	// by the same sequence.
+	if space.HostRuns(record) == proc.IdentityEnded {
+		current, err := space.Load(dir, record.ID)
+		if err != nil {
+			return failf("could not read the record of space %s: %v", name, err)
+		}
+		if current.State == space.Closing {
+			if err := spacehost.FinishGone(dir, current); err != nil {
+				return failf("the space host of %s is gone and the close could not finish it: %v", name, err)
+			}
+		}
+	}
 	over, err := awaitOver(dir, record)
 	if err != nil {
 		return err

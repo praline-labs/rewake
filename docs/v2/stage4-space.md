@@ -241,9 +241,10 @@ effort, under the hook's bound; an abort loses nothing, since the wrapper also s
 exit. Built on October 19, 2026 for the shell alone: the mod sends it at `session.end` for
 `prompt_input_exit` and `other` (until October 20 also at `/exit` before the command ran), waiting
 at most 300 ms for the answer, and the wrapper of a main in the shell writes the shell's closing mark
-([shell.md](shell.md#who-owns-which-pty)); the host stops nothing on it. As planned, on either
-signal the host would write each open space's record as closing and stop each worker; today
-the workers end when main's run does. Once each worker's end is observed the host inspects its checkout — gone, kept with
+([shell.md](shell.md#who-owns-which-pty)); the host stops nothing on it, but since October 21, 2026
+the same wrapper moves each of main's open spaces to closing ("main's session ended"), and their
+hosts stop the workers at their next tick instead of after main's run is gone ([SP1](../rules/space.md)).
+Once each worker's end is observed the host inspects its checkout — gone, kept with
 changes or commits — and marks each record closed
 with what it saw. A record is closed from that observation, never from a release sent. **The
 reminder of kept checkouts covers what stays** (the owner, October 13, 2026): such a checkout is
