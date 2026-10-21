@@ -16,9 +16,8 @@ const appendFlag = "--append-system-prompt"
 // only when no such flag is given (resource-loader.js, read October 21,
 // 2026), so a project's .pi/APPEND_SYSTEM.md vanished from every run rewake
 // started. rewake names it after the briefing as pi would have found it: the
-// project's in the working directory when the project is trusted — rewake
-// approves it unless the launch says --no-approve — else the agent
-// directory's. Empty when there is none, or when the caller's own flag
+// project's in the working directory when the project is trusted (trusted),
+// else the agent directory's. Empty when there is none, or when the caller's own flag
 // already turned discovery off, as pi would have.
 func appendSystemFile(callerArgs []string, cwd, agentDir string) string {
 	if adapter.HasFlag(callerArgs, appendFlag) {
@@ -26,7 +25,7 @@ func appendSystemFile(callerArgs []string, cwd, agentDir string) string {
 	}
 	const name = "APPEND_SYSTEM.md"
 	var candidates []string
-	if !adapter.HasFlag(callerArgs, "--no-approve") && !adapter.HasFlag(callerArgs, "-na") {
+	if trusted(callerArgs) {
 		candidates = append(candidates, filepath.Join(cwd, ".pi", name))
 	}
 	candidates = append(candidates, filepath.Join(agentDir, name))
@@ -36,4 +35,21 @@ func appendSystemFile(callerArgs []string, cwd, agentDir string) string {
 		}
 	}
 	return ""
+}
+
+// trusted is the project trust pi takes from the launch: the last of its
+// trust switches, as pi 1.3.0 parses them (projectTrustOverride), so an
+// alias's --no-approve with --approve typed after it trusts the project.
+// With neither, rewake adds --approve.
+func trusted(args []string) bool {
+	trust := true
+	for _, arg := range adapter.BeforeTerminator(args) {
+		switch arg {
+		case "--approve", "-a":
+			trust = true
+		case "--no-approve", "-na":
+			trust = false
+		}
+	}
+	return trust
 }

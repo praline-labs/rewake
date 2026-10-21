@@ -5,7 +5,6 @@ package claude
 import (
 	"fmt"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter"
@@ -246,25 +245,29 @@ func (claudeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, 
 	// Claude Code keeps only the last --append-system-prompt (probed on
 	// 2.1.302), so the caller's own joins the briefing in the one rewake adds
 	// rather than replacing it.
-	var parts []string
+	var parts []promptPart
 	if request.Intro {
 		context := request.BriefContext()
 		if worker.enter {
 			context.Harness = entryBrief
 		}
-		parts = append(parts, brief.Intro(context))
+		parts = append(parts, promptPart{"rewake's briefing", brief.Intro(context)})
 	}
 	if worker.instructions != "" {
-		parts = append(parts, worker.instructions)
+		parts = append(parts, promptPart{"the worker's CLAUDE.md", worker.instructions})
 	}
 	if own := adapter.FlagValues(args, introFlag); len(own) > 0 {
 		args = withoutFlag(args, introFlag)
 		if text := own[len(own)-1]; text != "" {
-			parts = append(parts, text)
+			parts = append(parts, promptPart{"the launch's own --append-system-prompt", text})
 		}
 	}
 	if len(parts) > 0 {
-		args = adapter.AddFlags(args, introFlag, strings.Join(parts, "\n\n"))
+		prompt, err := composePrompt(parts, request)
+		if err != nil {
+			return adapter.LaunchPlan{}, err
+		}
+		args = adapter.AddFlags(args, introFlag, prompt)
 	}
 	if len(adapter.FlagValues(args, toolFlag, toolFlagKebab)) == 0 {
 		args = adapter.AddFlags(args, toolFlag, "Bash(rewake:*)")

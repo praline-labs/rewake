@@ -60,7 +60,9 @@ not the room's state. The briefing ends, after the role's sections, with
 `YOUR KIND OF WORK: <type>`, a line saying the text changes how the worker works and not what
 it may do — the role's rules stand and the project's own instructions win where they speak —
 and the text. On Claude Code it travels in the one `--append-system-prompt`, on pi in the
-briefing's own.
+briefing's own. A type within its 32 KiB can still take Claude Code's one argument past what a
+launch may carry, beside a large worker `CLAUDE.md`: the launch is refused, naming the sizes
+([launch.md](launch.md#claude-code)), and `--no-type` or a shorter text opens it.
 
 ## Memory
 

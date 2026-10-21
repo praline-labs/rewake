@@ -35,6 +35,10 @@ func TestABriefingKeepsWhatPiWouldAppend(t *testing.T) {
 	}{
 		{nil, true, true, filepath.Join(work, ".pi", "APPEND_SYSTEM.md")},
 		{[]string{"-na"}, true, true, "global"},
+		// The last trust switch wins, as in pi: an alias's --no-approve with
+		// --approve typed after it trusts the project.
+		{[]string{"--no-approve", "--approve"}, true, true, filepath.Join(work, ".pi", "APPEND_SYSTEM.md")},
+		{[]string{"--approve", "-na"}, true, true, "global"},
 		{nil, false, true, "global"},
 		{nil, false, false, ""},
 		{[]string{"--append-system-prompt", "mine"}, true, true, ""},

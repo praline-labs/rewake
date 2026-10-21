@@ -145,7 +145,10 @@ rewake --command my-claude claude
   joined by blank lines. Claude Code keeps only the last `--append-system-prompt` (probed on
   2.1.302: of two, the first is lost; `--append-system-prompt-file` applies beside it), so the
   caller's is taken out of the arguments and kept in rewake's rather than added beside it; of
-  several, the last is kept, as Claude Code would. Until October 19, 2026 a caller's flag
+  several, the last is kept, as Claude Code would. The whole is one argument, which Linux holds
+  to 131071 bytes (probed October 21, 2026: one more fails exec with "argument list too long"):
+  a longer prompt refuses the launch, naming each part's size and the type's, rather than be cut
+  — each part can be within its own bound and the sum not, a type over a large `CLAUDE.md`. Until October 19, 2026 a caller's flag
   replaced the briefing and the worker's instructions silently (the briefings audit, F2).
 - Allow the tool's own commands without confirmation:
   `--allowedTools "Bash(rewake:*)"`, only when the caller passed no allow list of their
@@ -287,8 +290,9 @@ The adapter embeds `extension.ts`, its management module and its `worktree_statu
 repeatable `--append-system-prompt`, the type's text at its end for a worker raised for one
 ([worker-types.md](worker-types.md)). That flag turns off pi's own discovery of
 `APPEND_SYSTEM.md`, so since October 21, 2026 the adapter adds, after the briefing, the file pi
-would have read: the project's `.pi/APPEND_SYSTEM.md` in the working directory unless the launch
-says `--no-approve`, else the agent directory's; none when the caller's own
+would have read: the project's `.pi/APPEND_SYSTEM.md` in the working directory when the project
+is trusted — the last of the launch's `--approve`, `-a`, `--no-approve` and `-na` decides, as pi
+parses them, and with none rewake adds `--approve` — else the agent directory's; none when the caller's own
 `--append-system-prompt` had turned discovery off already, as pi does. `-e` adds rewake's extension to those pi finds: the
 person's, packages and built-ins load as without rewake, and so do a project's resources:
 in a project with `.pi` resources or `.agents/skills` pi would otherwise ask whether to trust
