@@ -205,11 +205,14 @@ shell replaced the host mode: the socket serves the raw stream only, to the shel
   itself, by the same sequence and under the same rules (`spacehost.FinishGone`): it stops what
   runs of the worker's process group, releases the checkout by SP7, and closes the record from
   what it saw, the reason adding "; its space host was gone". A worker whose wrapper cannot be
-  told alive or ended leaves the space closing. Known limit: a harness process that outlived its
-  wrapper after the host's death is not looked for, and the host's socket file stays in the room.
+  told alive or ended leaves the space closing, and so does a group still there after SIGKILL: the
+  group is stopped whatever the wrapper reads, since a harness it started may outlive it, and the
+  checkout is released only once the whole group is seen gone (a wrapper's pid taken by another
+  live process leaves nothing to stop). Known limit: the host's socket file stays in the room.
   Tests:
   - `internal/host/spacehost/close_main_test.go` `TestMainsCloseEndsTheWorkerThroughTheSpaceHost`
   - `internal/cli/space_close_test.go` `TestSpaceCloseIsRefusedButForMainsOwnOpenSpace`
   - `test/workflow/fixture_space_close_test.go` `TestFixtureSpaceClose`
   - `internal/host/spacehost/gone_test.go` `TestASpaceWhoseHostIsGoneIsFinishedByTheClose`
+  - `internal/host/spacehost/gone_test.go` `TestAGroupLeftByADeadWrapperIsStoppedBeforeTheEndIsRecorded`
   - `internal/core/space/mainend_test.go` `TestMainsEndingClosesOnlyItsOpenSpaces`

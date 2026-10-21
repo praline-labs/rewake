@@ -17,7 +17,50 @@ import (
 // host proven gone, main's close ends what runs of the worker, releases the
 // checkout and closes the record with a reason that says the host was gone.
 func TestASpaceWhoseHostIsGoneIsFinishedByTheClose(t *testing.T) {
-	dir := buildtest.Dir(t)
+	const why = "main closed it with rewake space close"
+	dir, id, record, worker, _ := goneSpace(t, why)
+	if err := FinishGone(dir, record); err != nil {
+		t.Fatal(err)
+	}
+	closed, err := space.Load(dir, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closed.State != space.Closed || closed.End.Worker != space.WorkerEnded || !strings.HasPrefix(closed.End.Why, why+"; its space host was gone") {
+		t.Fatalf("closed as %s with %+v", closed.State, closed.End)
+	}
+	if err := syscall.Kill(-worker.Process.Pid, 0); !errors.Is(err, syscall.ESRCH) {
+		t.Fatalf("something of the worker's group is left: %v", err)
+	}
+}
+
+// A worker's wrapper may be gone while a process it started still runs in its
+// group: the checkout is released and the end recorded only once the whole
+// group is seen gone, so that process is stopped first.
+func TestAGroupLeftByADeadWrapperIsStoppedBeforeTheEndIsRecorded(t *testing.T) {
+	dir, id, record, worker, reaped := goneSpace(t, "main closed it with rewake space close")
+	_ = worker.Process.Kill()
+	<-reaped
+	if !proc.GroupAlive(worker.Process.Pid) {
+		t.Fatal("setup: nothing of the group survives its wrapper")
+	}
+	if err := FinishGone(dir, record); err != nil {
+		t.Fatal(err)
+	}
+	if proc.GroupAlive(worker.Process.Pid) {
+		closed, _ := space.Load(dir, id)
+		t.Fatalf("the space is %s with its worker's group still running", closed.State)
+	}
+	if closed, err := space.Load(dir, id); err != nil || closed.State != space.Closed {
+		t.Fatalf("the space is %+v, %v", closed.State, err)
+	}
+}
+
+// goneSpace is a space closing with a host that is over and a worker whose
+// group runs, as a killed host leaves it.
+func goneSpace(t *testing.T, why string) (dir, id string, record space.Record, worker *exec.Cmd, reaped chan struct{}) {
+	t.Helper()
+	dir = buildtest.Dir(t)
 	self, err := selfRun()
 	if err != nil {
 		t.Fatal(err)
@@ -34,12 +77,12 @@ func TestASpaceWhoseHostIsGoneIsFinishedByTheClose(t *testing.T) {
 	if err := dead.Wait(); err != nil {
 		t.Fatal(err)
 	}
-	worker, _ := startGroup(t, `sleep 60 & echo ready; wait`)
+	worker, reaped = startGroup(t, `sleep 60 & echo ready; wait`)
 	workerRun, err := childRun(worker.Process.Pid)
 	if err != nil {
 		t.Fatal(err)
 	}
-	id, err := space.NewID()
+	id, err = space.NewID()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -57,26 +100,12 @@ func TestASpaceWhoseHostIsGoneIsFinishedByTheClose(t *testing.T) {
 	if _, err := space.Opened(dir, id, workerRun); err != nil {
 		t.Fatal(err)
 	}
-	const why = "main closed it with rewake space close"
-	record, err := space.BeginClosing(dir, id, why)
+	record, err = space.BeginClosing(dir, id, why)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if got := space.HostRuns(record); got != proc.IdentityEnded {
 		t.Fatalf("the dead host reads %v, not ended", got)
 	}
-
-	if err := FinishGone(dir, record); err != nil {
-		t.Fatal(err)
-	}
-	closed, err := space.Load(dir, id)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if closed.State != space.Closed || closed.End.Worker != space.WorkerEnded || !strings.HasPrefix(closed.End.Why, why+"; its space host was gone") {
-		t.Fatalf("closed as %s with %+v", closed.State, closed.End)
-	}
-	if err := syscall.Kill(-worker.Process.Pid, 0); !errors.Is(err, syscall.ESRCH) {
-		t.Fatalf("something of the worker's group is left: %v", err)
-	}
+	return dir, id, record, worker, reaped
 }
