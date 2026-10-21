@@ -7,4 +7,4 @@ Built-in `code`, `analysis`, `process`, `review` (`internal/core/worktype/builti
 type; a project's aliases in `.rewake/aliases.toml`, `.rewake.toml` refused; pi's `APPEND_SYSTEM.md` passed after
 the briefing. Live, `--type analysis`: Claude Code on the cheapest model had the text in its prompt and memory
 `…/<project>/analysis`, answered first with `path:line` evidence and numbered notes, changed nothing; pi 1.3.0 on a
-local stub model got the text, then the project's `.pi/APPEND_SYSTEM.md`. **Open.** `rewake list` showing the type.
+local stub model got the text, then the project's `.pi/APPEND_SYSTEM.md`. `rewake list` showing the type came after ([list-worker-type](2026-10-21-list-worker-type.md)).

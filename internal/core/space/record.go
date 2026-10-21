@@ -107,6 +107,10 @@ type Worker struct {
 	// <name>-<harness>.
 	Name string `json:"name"`
 	Role string `json:"role"`
+	// Type is the worker type the space was opened with, its name only (the
+	// text travels in the spec); optional, absent from records of before the
+	// field and of a worker without a type.
+	Type string `json:"type,omitempty"`
 	// SessionID is the conversation id rewake chose before the launch;
 	// empty for a harness that takes none, which the record so says.
 	SessionID string `json:"sessionId,omitempty"`

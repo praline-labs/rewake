@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"cmp"
 	"fmt"
 	"math"
 	"strconv"
@@ -23,7 +24,16 @@ func sessionTable(room string, sessions []sessionView, visible bool) []string {
 	if commonHarness {
 		lines = append(lines, "Harness: "+strconv.Quote(sessions[0].Harness))
 	}
+	// The column is there only when some session has a type, so a room
+	// without typed workers keeps the table it had.
+	typed := false
+	for _, session := range sessions {
+		typed = typed || session.Type != ""
+	}
 	header := []string{"Session", "Role"}
+	if typed {
+		header = append(header, "Type")
+	}
 	if !commonHarness {
 		header = append(header, "Harness")
 	}
@@ -39,6 +49,9 @@ func sessionTable(room string, sessions []sessionView, visible bool) []string {
 	_, _ = fmt.Fprintln(writer, strings.Join(header, "\t"))
 	for _, session := range sessions {
 		row := []string{session.Name, session.Role}
+		if typed {
+			row = append(row, cmp.Or(session.Type, "-"))
+		}
 		if !commonHarness {
 			row = append(row, strconv.Quote(session.Harness))
 		}

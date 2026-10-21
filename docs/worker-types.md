@@ -59,8 +59,9 @@ the answer of `space open`.
 `space open` resolves the type in main's directory and the space host passes its name and text
 to the worker's launch as `REWAKE_SPACE_TYPE` and `REWAKE_SPACE_TYPE_TEXT` beside
 `REWAKE_SPACE_TEMPLATE` ([launch.md](launch.md#a-space-for-a-worker)); the launch unsets them.
-Nothing of the type is recorded in the space's record: a type changes the worker's briefing,
-not the room's state. The briefing ends, after the role's sections, with
+The space's record keeps only the type's name, as the optional `worker.type` (October 21,
+2026; additive, absent from older records and from a worker without a type); the text is not
+recorded, and a type still changes the worker's briefing, not the room's state. The briefing ends, after the role's sections, with
 `YOUR KIND OF WORK: <type>`, a line saying the text changes how the worker works and not what
 it may do — the role's rules stand and the project's own instructions win where they speak —
 and the text. On Claude Code it travels in the one `--append-system-prompt`, on pi in the
@@ -83,6 +84,10 @@ its types; the old file refuses the catalogue, naming the new place
 ([launch-defaults.md](launch-defaults.md#the-worker-catalogue)). A project template still may
 not set `role` or `command`; it may set `type`.
 
-## Later
+## In `rewake list`
 
-`rewake list` showing a worker's type is not built.
+`rewake list` joins each session to the space record whose `worker.run` is the session's run,
+and shows the type in a `Type` column after `Role`, `-` for main, a worker without a type or
+a session no space hosts. The column is there only when some session has a type, so a room
+without typed workers keeps the table it had. `--json` carries it as `type` on the session,
+omitted when empty. A space record that does not read shows no type; it fails nothing else.

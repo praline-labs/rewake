@@ -9,6 +9,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/core/role"
+	"github.com/praline-labs/rewake/internal/core/space"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -50,12 +51,13 @@ func handleList(ctx *Context, _ Call) error {
 	}
 
 	visible := canSeeSessionState(dir)
+	types := workerTypes(dir)
 	var views []sessionView
 	room := filepath.Base(dir)
 	for index := range sessions {
 		sessions[index].Room = room
 		sessions[index].Role = role.Of(sessions[index].Role).ID
-		view := sessionView{Session: sessions[index]}
+		view := sessionView{Session: sessions[index], Type: types[sessions[index].Epoch()]}
 		if !visible {
 			view.MessagingReadyAt = nil
 		}
@@ -91,6 +93,19 @@ func handleList(ctx *Context, _ Call) error {
 		}
 		return lines
 	})
+}
+
+// workerTypes maps a worker's run to the type its space was opened with. A
+// space record that does not read leaves its worker without a type shown.
+func workerTypes(dir string) map[string]string {
+	records, _, _ := space.List(dir)
+	types := map[string]string{}
+	for _, record := range records {
+		if record.Worker.Type != "" && record.Worker.Run != "" {
+			types[record.Worker.Run] = record.Worker.Type
+		}
+	}
+	return types
 }
 
 // whoamiModel is the machine form of the session's own identity.

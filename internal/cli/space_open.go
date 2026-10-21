@@ -93,7 +93,7 @@ func handleSpaceOpen(ctx *Context, call Call) error {
 	record := space.Record{
 		Name:     name,
 		Main:     space.Run{Name: self.Name, Run: epoch, PIDNamespace: proc.Namespace()},
-		Worker:   space.Worker{Harness: h.ID(), Name: name, Role: part.ID},
+		Worker:   space.Worker{Harness: h.ID(), Name: name, Role: part.ID, Type: target.work.Name},
 		OpenedAt: time.Now().UTC(),
 	}
 	if conversation := catalog.Offers(h.ID()).Conversation; conversation.Names() {
