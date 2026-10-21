@@ -71,9 +71,14 @@ test is never somebody else's: everything in the working tree belongs to the cur
 variant, staticcheck, the tagged `-race` runs and the whole workflow suite
 ([docs/testing.md](docs/testing.md#before-a-publication-to-npm), with the tools to install).
 
-Every `go test` here, the workflow suite's included, runs with the `REWAKE_*` variables
-cleared: `go test` inherits this session's variables, and a test could write into the
-owner's live state directory or read the running session as its own. The import rule — the
+Every `go test` here, the workflow suite's included, runs with the four variables naming a
+session cleared: `go test` inherits this session's variables, and a test could write into the
+owner's live state directory or read the running session as its own. The others a session
+carries (`REWAKE_ROLE`, `REWAKE_EXECUTABLE`, `REWAKE_WORKTREES`, `REWAKE_MOD_SOCKET`,
+`REWAKE_WORKTREE_ENTER`, …) stay, so the tests are hermetic themselves: a test that starts
+rewake's own code in a child — `bun test`, `claude plugin` — gives it the environment less every
+`REWAKE_*`, and one whose code reads such a variable sets it with `t.Setenv` (pi's tool test
+inherited `REWAKE_ROLE=main` from main's session, October 21, 2026). The import rule — the
 core knows no harness, each layer imports only what it may — is held by `depguard` in
 `.golangci.yml` ([docs/rules/layout.md](docs/rules/layout.md)).
 

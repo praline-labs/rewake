@@ -26,6 +26,8 @@ func TestWorktreeEnterMakesOneCheckoutPerRun(t *testing.T) {
 	lab := newWorktreeLab(t)
 	asStatusRun(t, lab, false, true)
 	t.Chdir(lab.repo)
+	// A worker that may enter a checkout exports it to the tests it runs.
+	t.Setenv(adapter.WorktreeEnterEnv, "")
 	if code, _, errOut := run("worktree", "enter", "--json"); code != ExitUsage || !strings.Contains(errOut, "enter_worktree = true") {
 		t.Fatalf("without leave: %d %s", code, errOut)
 	}

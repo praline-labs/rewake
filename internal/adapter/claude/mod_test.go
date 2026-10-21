@@ -78,6 +78,15 @@ func claudeProgram(t *testing.T) string {
 	return program
 }
 
+// withoutRewakeEnv is this process's environment less every variable of
+// rewake's: a session running the tests exports its own, which the harness
+// would carry into the mod it checks.
+func withoutRewakeEnv() []string {
+	return slices.DeleteFunc(os.Environ(), func(entry string) bool {
+		return strings.HasPrefix(entry, "REWAKE_")
+	})
+}
+
 // The mod a run writes passes the harness's validator, strict: it is inside
 // the static rules the engine loads a module by.
 func TestTheWrittenModPassesTheValidator(t *testing.T) {
@@ -89,7 +98,9 @@ func TestTheWrittenModPassesTheValidator(t *testing.T) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
-	out, err := exec.CommandContext(ctx, program, "plugin", "validate", "--strict", dir).CombinedOutput()
+	command := exec.CommandContext(ctx, program, "plugin", "validate", "--strict", dir)
+	command.Env = withoutRewakeEnv()
+	out, err := command.CombinedOutput()
 	if err != nil || !regexp.MustCompile(`env reads: .*\b`+modSocketEnv+`\b`).Match(out) {
 		t.Fatalf("the validator: %v\n%s", err, out)
 	}
@@ -100,7 +111,9 @@ func TestTheModsTestsPass(t *testing.T) {
 	program := claudeProgram(t)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
-	out, err := exec.CommandContext(ctx, program, "plugin", "test", "mod").CombinedOutput()
+	command := exec.CommandContext(ctx, program, "plugin", "test", "mod")
+	command.Env = withoutRewakeEnv()
+	out, err := command.CombinedOutput()
 	if err != nil || !strings.Contains(string(out), " 0 fail") {
 		t.Fatalf("the mod's tests: %v\n%s", err, out)
 	}
