@@ -37,6 +37,28 @@ func followJob(pid int) { followStop(pid, stillStopped, stopSelf) }
 // pane, where no shell behind it could.
 func continueHarness(pid int) { _ = syscall.Kill(pid, syscall.SIGCONT) }
 
+// catchSuspends catches the SIGTSTP a harness sends its own group to suspend.
+//
+// Main's group in the shell is orphaned: the wrapper leads the session of the
+// shell's pty, and its parent, the shell, is in another session. The kernel
+// discards a SIGTSTP sent to an orphaned group, so Claude Code 2.1.302's Ctrl+Z
+// — leave the screen, wait for SIGCONT, kill(0, SIGTSTP) — stopped nothing and
+// left it on "has been suspended" until Ctrl+C. A caught signal is delivered
+// all the same, and is reset to its default in the harness.
+func catchSuspends() chan os.Signal {
+	suspends := make(chan os.Signal, 8)
+	signal.Notify(suspends, syscall.SIGTSTP)
+	return suspends
+}
+
+// continueSuspends answers each suspend with the SIGCONT the harness waits
+// for, so it takes its screen and its keys back at once, as after an fg.
+func continueSuspends(suspends chan os.Signal, pid int) {
+	for range suspends {
+		_ = syscall.Kill(pid, syscall.SIGCONT)
+	}
+}
+
 // stillStopped reports whether a process is in a job-control stop now.
 func stillStopped(pid int) bool {
 	state, err := proc.State(pid)

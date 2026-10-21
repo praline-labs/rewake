@@ -17,13 +17,23 @@ import (
 //
 // A main in rewake's shell has a stop continued at once: its terminal is the
 // shell's pane, and no shell behind it has an fg to bring a stopped job back.
+// Its suspend is answered too (continueSuspends), since on that pane the
+// kernel never carries it out.
 func startHarness(request Request, command *exec.Cmd) (func(int), error) {
 	command.Stdin, command.Stdout, command.Stderr = os.Stdin, os.Stdout, os.Stderr
 	onStop := followJob
+	var suspends chan os.Signal
 	if request.Shell {
 		onStop = continueHarness
+		suspends = catchSuspends()
 	}
-	return onStop, command.Start()
+	if err := command.Start(); err != nil {
+		return onStop, err
+	}
+	if suspends != nil {
+		go continueSuspends(suspends, command.Process.Pid)
+	}
+	return onStop, nil
 }
 
 // shellClosing is the private sequence main's wrapper writes on its terminal,

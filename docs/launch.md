@@ -26,7 +26,12 @@ The common part of the wrapper:
    stop is taken by another thread while the caller runs on, and continued the
    harness before the wrapper had stopped. A main in the shell has a stop
    continued at once instead: its terminal is the shell's pane, and no shell
-   behind it has an `fg`.
+   behind it has an `fg`. Its own suspend is answered too: Claude Code and pi
+   suspend by waiting for `SIGCONT` and sending `SIGTSTP` to their group, which
+   on the shell's pane is orphaned — the wrapper leads the pty's session, its
+   parent the shell outside it — so the kernel drops the stop; the wrapper
+   catches that `SIGTSTP` and sends the harness the `SIGCONT` it waits for
+   (October 21, 2026).
 5. Service the inbox (below) until the harness exits.
 6. Remove the record, close the inbox (pending messages get the status `failed:
    session ended`), exit with the harness's code.

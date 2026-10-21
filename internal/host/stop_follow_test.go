@@ -138,3 +138,48 @@ func TestAShellMainsStopIsContinued(t *testing.T) {
 		}
 	}
 }
+
+// suspenderEnv makes the test binary a shell main's wrapper whose harness
+// suspends itself.
+const suspenderEnv = "REWAKE_SUSPENDER_TEST"
+
+// A main in the shell that suspends itself as Claude Code and pi do — wait
+// for SIGCONT, then SIGTSTP to the whole group — gets its SIGCONT. Its group is
+// orphaned, so the kernel drops the stop, and before the fix nothing continued
+// it: Claude Code stayed on "has been suspended" until Ctrl+C.
+func TestAShellMainsSuspendIsAnswered(t *testing.T) {
+	if os.Getenv(suspenderEnv) != "" {
+		os.Exit(suspendOnce())
+	}
+	wrapper := exec.Command(os.Args[0], "-test.run=^"+t.Name()+"$", "-test.timeout=20s")
+	wrapper.Env = append(os.Environ(), suspenderEnv+"=1")
+	// A session of its own, as main's wrapper leads the session of the shell's
+	// pty with its parent outside it: that orphans its group.
+	wrapper.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
+	if err := wrapper.Start(); err != nil {
+		t.Fatalf("start the wrapper: %v", err)
+	}
+	done := make(chan error, 1)
+	go func() { done <- wrapper.Wait() }()
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatalf("the suspended harness did not end on its SIGCONT: %v", err)
+		}
+	case <-time.After(10 * time.Second):
+		_ = syscall.Kill(-wrapper.Process.Pid, syscall.SIGKILL)
+		<-done
+		t.Fatal("the harness still waited for SIGCONT 10s after its suspend")
+	}
+}
+
+// suspendOnce is the wrapper's side: its harness ends on the SIGCONT it waits
+// for after suspending its group.
+func suspendOnce() int {
+	harness := exec.Command("sh", "-c", `trap 'kill $! 2>/dev/null; exit 0' CONT; kill -TSTP 0; sleep 30 & wait`)
+	onStop, err := startHarness(Request{Shell: true}, harness)
+	if err != nil {
+		return 2
+	}
+	return waitForHarness(harness.Process.Pid, onStop)
+}

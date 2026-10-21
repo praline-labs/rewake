@@ -49,8 +49,8 @@ terminal in a pty; the owner checked step 1 on their own terminal the same day.
   that would show main's left screen shows the layer instead. A leave may be no end, so under a
   layer begun by a leave alone main keeps its focus and keys, and the layer is lifted when main
   comes back to the alternate screen — an external editor's end, 6 ms after the leave, before a
-  frame drew it — or when main still runs 5 s after the last sign. Ctrl+Z leaves the screen with
-  no return (below), so a leave within a second after the shell sent main a Ctrl+Z (0x1a, or its
+  frame drew it — or when main still runs 5 s after the last sign. Ctrl+Z leaves the screen too
+  (below), so a leave within a second after the shell sent main a Ctrl+Z (0x1a, or its
   kitty or modifyOtherKeys form, `isSuspend` in `shell/src/keys.ts`) begins nothing; Claude Code
   2.1.302 leaves 4 ms after the key. Text main writes after a leave is no sign of a pause: an exit
   prints "Resume this session with: claude --resume …" on the screen it went to. Then **main's closing mark** (the owner's idea, October 19,
@@ -63,9 +63,16 @@ terminal in a pty; the owner checked step 1 on their own terminal the same day.
   `/exit`'s `command.run`, and the shell held main's bytes 250 ms after a leave waiting for the
   mark; `/exit` with work running opens Claude Code's dialog "Background work is running" after
   that hook, so the layer hid the dialog for 5 s with the keys going nowhere, and after the dialog
-  the mark comes only once the tasks are stopped, past any fixed hold. Ctrl+Z inside the shell
-  leaves Claude Code 2.1.302 on its "has been suspended" text though the wrapper continues it at
-  once, its keys echoed by the pty until Ctrl+C ends it; the pane shows that, with no layer. The fallbacks stay: the room's listing reading main's run
+  the mark comes only once the tasks are stopped, past any fixed hold. That hold also drew main's
+  pane 256–259 ms late after an external editor (vim) and after Ctrl+Z; since it went, 19–22 ms
+  after the editor ends (live, October 21, 2026; nvim takes 180–300 ms of its own after `:wq`
+  before it leaves its screen). **Ctrl+Z** suspends and resumes at once: Claude Code 2.1.302 leaves
+  the screen, writes "has been suspended", waits for `SIGCONT` and sends `SIGTSTP` to its group,
+  which on the shell's pane is orphaned, so the kernel dropped the stop and Claude Code stayed on
+  that text, its keys echoed by the pty, until Ctrl+C. Main's wrapper now catches that `SIGTSTP`
+  and sends the `SIGCONT` ([launch.md](../launch.md)); Claude Code's screen is back 19–21 ms after
+  the key, its prompt taking keys, the normal screen with "has been suspended" showing for one
+  frame between. The fallbacks stay: the room's listing reading main's run
   ended for a space the shell shows, main's process ending, and the shell ending itself on
   SIGTERM, SIGINT or SIGQUIT; not when the terminal is lost (a hangup, its input ended, the
   parent gone), with nowhere to draw.
