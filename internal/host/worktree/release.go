@@ -18,9 +18,10 @@ import (
 // hold of the repository's lock, as rm does, and says why the checkout stays,
 // or "" once it is gone.
 func Release(record Record) string {
-	why := ""
+	why, switched := "", ""
 	err := RemoveChecked(record, false, func(current Record) error {
-		reasons, err := closeReasons(current, nil)
+		reasons, check, err := closeReasons(current, nil)
+		switched = check.Branch
 		switch {
 		case err != nil:
 			why = "rewake could not tell whether removing it would lose work: " + err.Error()
@@ -38,6 +39,15 @@ func Release(record Record) string {
 		return "it could not be removed: " + err.Error()
 	}
 	_, _ = DropBranch(record)
+	if switched != "" && switched != record.Branch {
+		// The branch the worker made inside it: same rule, same code. Its
+		// tip is HEAD, which unmerged has just seen on a branch that is not
+		// the record's, so dropping it only ever follows a ref that holds
+		// the tip too.
+		other := record
+		other.Branch = switched
+		_, _ = DropBranch(other)
+	}
 	return ""
 }
 
@@ -49,17 +59,18 @@ func Release(record Record) string {
 // writing nothing; edits, merges and other sessions may change the answer
 // before the close comes.
 func CloseForecast(record Record) ([]string, error) {
-	return closeReasons(record, record.Session)
+	reasons, _, err := closeReasons(record, record.Session)
+	return reasons, err
 }
 
 // closeReasons is what keeps a checkout at its space's close: what rm keeps
 // it for but files git ignores, and commits no other local branch holds.
-func closeReasons(record Record, ending *Owner) ([]string, error) {
+func closeReasons(record Record, ending *Owner) ([]string, Check, error) {
 	reasons, check, err := keepReasons(record, false, ending)
 	if err == nil && len(reasons) == 0 {
 		reasons, err = unmerged(record, check)
 	}
-	return reasons, err
+	return reasons, check, err
 }
 
 // errKept refuses a release inside the lock; the reason is kept apart.

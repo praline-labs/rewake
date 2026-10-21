@@ -162,7 +162,8 @@ checkout; pi launches take the flag the same way. Codex does not return soon (Oc
   made by `rewake space open --worktree`, is the exception: since October 20, 2026, by the
   owner's decision, its space's close removes it and its branch when nothing would be lost —
   what rm would keep it for, and any commit no local branch but its own holds, keeps it
-  ([SP7](rules/space.md)); files git ignores do not, and go with it (the owner's decision of
+  ([SP7](rules/space.md)); the branch the worker switched the checkout to is dropped too, when
+  another ref holds its tip; files git ignores do not, and go with it (the owner's decision of
   the same day: of seventeen kept checkouts, fourteen were kept only for them). A launch that fails
   after the checkout was made, or whose harness exits with an error — a resume of a
   conversation that does not exist, say — takes it back when it is still at its commit

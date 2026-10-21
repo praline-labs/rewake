@@ -90,3 +90,41 @@ func TestReleaseRemovesOnlyWhatLosesNothing(t *testing.T) {
 		})
 	}
 }
+
+// The branch a worker switched its checkout to goes with it by DropBranch's
+// rule: when another ref holds its tip. One that holds work nothing else has
+// stays — the checkout may go, since its commits are on that branch.
+func TestReleaseDropsTheBranchTheCheckoutSwitchedTo(t *testing.T) {
+	isolate(t)
+	t.Setenv(state.DirEnv, t.TempDir())
+	source := repository(t, "project")
+	root := t.TempDir()
+	for _, landed := range []bool{true, false} {
+		name := "unlanded"
+		if landed {
+			name = "landed"
+		}
+		t.Run(name, func(t *testing.T) {
+			record, err := Create(root, source, name)
+			if err != nil {
+				t.Fatal(err)
+			}
+			own := "own-" + name
+			must(t, record.Path, "switch", "-q", "-c", own)
+			must(t, record.Path, "commit", "-q", "--allow-empty", "-m", "Work")
+			if landed {
+				must(t, source, "merge", "-q", "--ff-only", own)
+			}
+			if stays := Release(record); stays != "" {
+				t.Fatalf("kept: %s", stays)
+			}
+			if tip, _ := refTip(record.CommonDir, branchRef(record.Branch)); tip != "" {
+				t.Fatalf("the record's branch stays at %s", tip)
+			}
+			tip, _ := refTip(record.CommonDir, branchRef(own))
+			if landed && tip != "" || !landed && tip == "" {
+				t.Fatalf("landed %v, yet the switched branch is %q", landed, tip)
+			}
+		})
+	}
+}
