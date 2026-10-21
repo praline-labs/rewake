@@ -146,9 +146,20 @@ var (
 // ended, or cannot be told from here: from another pid namespace, or one the
 // record does not name, a pid says nothing.
 func MainRuns(r Record) proc.IdentityEvidence {
+	return runsHere(r, r.Main.Run)
+}
+
+// HostRuns says the same of the space host that closes the space, which runs
+// in main's pid namespace: it is detached from main's tree, not moved out of
+// its namespace. A host not yet recorded cannot be told.
+func HostRuns(r Record) proc.IdentityEvidence {
+	return runsHere(r, r.Host)
+}
+
+func runsHere(r Record, epoch string) proc.IdentityEvidence {
 	here := namespace()
-	if here == "" || r.Main.PIDNamespace != here {
+	if here == "" || r.Main.PIDNamespace != here || epoch == "" {
 		return proc.IdentityUnknown
 	}
-	return observeRun(r.Main.Run)
+	return observeRun(epoch)
 }

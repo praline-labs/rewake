@@ -21,6 +21,7 @@ import (
 	"github.com/praline-labs/rewake/internal/core/control"
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/core/role"
+	"github.com/praline-labs/rewake/internal/core/space"
 	"github.com/praline-labs/rewake/internal/host/delivery"
 	"github.com/praline-labs/rewake/internal/host/launch"
 	"github.com/praline-labs/rewake/internal/host/terminal"
@@ -204,7 +205,12 @@ func Run(ctx context.Context, request Request) (int, error) {
 		// The shell's pane draws main as a space host's draws a worker, so
 		// main gets the same locale (docs/v2/shell.md); its workers inherit it.
 		launchRequest.Env = terminal.UTF8Locale(launchRequest.Env)
-		launchRequest.Closing = tellShellClosing
+		// The workers' close starts here too, not at the main's run gone:
+		// the process takes about half a second more to exit.
+		launchRequest.Closing = func() {
+			tellShellClosing()
+			_ = space.BeginClosingFor(request.Dir, epoch, space.MainEnding)
+		}
 	}
 	plan, err := request.Harness.Launch(launchRequest)
 	if err != nil {

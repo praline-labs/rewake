@@ -41,7 +41,14 @@ shell replaced the host mode: the socket serves the raw stream only, to the shel
   run once a second; once it reads ended, it sends the worker's process group SIGHUP, after a
   second SIGTERM, after five more SIGKILL, waits up to two seconds for the group to be gone, and
   closes the record with the worker seen ended and the signal that ended it; a group still
-  there after SIGKILL leaves the record closing, since no end was seen. A worker that ends
+  there after SIGKILL leaves the record closing, since no end was seen. Since October 21, 2026
+  the sequence starts earlier than main's run read ended: main's mod tells its wrapper
+  `session/closing` at `session.end` of an exit, about half a second before the process is gone,
+  and a main in the shell then moves each of its open spaces to closing with "main's session
+  ended" (`space.BeginClosingFor`), which the hosts read at their next tick (SP10's path); main's
+  own end is final, so no work that would have gone on is stopped. Live, `/exit` with two haiku
+  workers: the last worker's record closed 2.6–3.4 s after the key before (hosts reading main's run
+  gone, up to a second after its exit), 1.5–1.9 s after. A worker that ends
   by itself closes the space the same way, with its exit and its last line. Main's run read as
   unknown ends nothing.
   Tests:
@@ -191,7 +198,21 @@ shell replaced the host mode: the socket serves the raw stream only, to the shel
   Held since October 19, 2026: the space host re-reads the record once a second, and one found
   closing ends its watch with the record's reason; the command answers once the record is
   closed or kept, within 20 s ([launch.md](../launch.md#a-space-for-a-worker)).
+
+  A space whose host is gone — killed or crashed, proven by the host's run read ended
+  (`space.HostRuns`, the test every run's liveness uses) — has nobody to read the record, and its
+  closing used to stay for good (seen October 21, 2026). Then `rewake space close` finishes it
+  itself, by the same sequence and under the same rules (`spacehost.FinishGone`): it stops what
+  runs of the worker's process group, releases the checkout by SP7, and closes the record from
+  what it saw, the reason adding "; its space host was gone". A worker whose wrapper cannot be
+  told alive or ended leaves the space closing, and so does a group still there after SIGKILL: the
+  group is stopped whatever the wrapper reads, since a harness it started may outlive it, and the
+  checkout is released only once the whole group is seen gone (a wrapper's pid taken by another
+  live process leaves nothing to stop). Known limit: the host's socket file stays in the room.
   Tests:
   - `internal/host/spacehost/close_main_test.go` `TestMainsCloseEndsTheWorkerThroughTheSpaceHost`
   - `internal/cli/space_close_test.go` `TestSpaceCloseIsRefusedButForMainsOwnOpenSpace`
   - `test/workflow/fixture_space_close_test.go` `TestFixtureSpaceClose`
+  - `internal/host/spacehost/gone_test.go` `TestASpaceWhoseHostIsGoneIsFinishedByTheClose`
+  - `internal/host/spacehost/gone_test.go` `TestAGroupLeftByADeadWrapperIsStoppedBeforeTheEndIsRecorded`
+  - `internal/core/space/mainend_test.go` `TestMainsEndingClosesOnlyItsOpenSpaces`

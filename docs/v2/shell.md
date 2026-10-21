@@ -82,7 +82,9 @@ terminal in a pty; the owner checked step 1 on their own terminal the same day.
   a cheap model, one worker, under a stand-in terminal): after `/exit`'s Enter, or the second
   Ctrl+C, Claude Code leaves the alternate screen within 15 ms, and main's process, wrapper and all,
   exits 340–420 ms later; the room's listing reads main's run ended only after that, and the worker
-  reads closed 0.9–1.0 s after main's exit. The shell used to exit 30 ms after main, before a frame
+  reads closed 0.9–1.0 s after main's exit (from October 21, 2026 the workers' close starts at the
+  closing mark, about half a second before main's exit: the last worker read closed 1.5–1.9 s after
+  `/exit`'s Enter, 2.6–3.4 s before). The shell used to exit 30 ms after main, before a frame
   of the layer was drawn, and the worker ended unseen.
 - **Timeline with the mark** (live, the same day, main alone on a cheap model in the shell under a
   stand-in terminal that read its screen after every write). Before: `/exit`'s Enter emptied main's
