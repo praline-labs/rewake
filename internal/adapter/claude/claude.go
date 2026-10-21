@@ -248,7 +248,11 @@ func (claudeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, 
 	// rather than replacing it.
 	var parts []string
 	if request.Intro {
-		parts = append(parts, brief.Intro(request.BriefContext()))
+		context := request.BriefContext()
+		if worker.enter {
+			context.Harness = entryBrief
+		}
+		parts = append(parts, brief.Intro(context))
 	}
 	if worker.instructions != "" {
 		parts = append(parts, worker.instructions)

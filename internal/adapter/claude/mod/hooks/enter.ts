@@ -11,7 +11,7 @@ import { type Answer, answer, runEnv, unrun } from "./worktree.ts";
 export const worktreeEnterTool = {
   name: "worktree_enter",
   description:
-    "Move this session into a git worktree of its own, which rewake makes from the commit the session is at, on a new branch, and removes at this worker's close when nothing in it would be lost (landed or unchanged); otherwise the close keeps it and says why. Use it when main's task asks you to work in a worktree, before changing files. One worktree per worker: called again it answers the same one, and there is no way back to the launch directory. name is optional, the worktree's and its branch's name; leave it out for a generated one.",
+    "Move this session into a git worktree of its own, which rewake makes from the commit the session is at, on a new branch, and removes at this worker's close when nothing in it would be lost (landed or unchanged); otherwise the close keeps it and says why. This session starts in main's own checkout, which must not be changed: call this before your first change to any file of the repository, and before any commit or branch change, whether or not main's task mentions a worktree. One worktree per worker: called again it answers the same one, and there is no way back to the launch directory. name is optional, the worktree's and its branch's name; leave it out for a generated one.",
   inputSchema: {
     type: "object",
     properties: {

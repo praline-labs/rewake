@@ -87,8 +87,8 @@ The role texts and the CLI's help name no harness. A help text that needs one ta
 from the catalogue it was built from (`internal/cli/registry_words.go`): a launch to show. A briefing that
 needs a sentence about its own harness — how a session on it commits — gets it from the
 adapter that builds it, as `brief.Context.Harness`, a section after the role's own; the
-Claude Code adapter tells a role that may commit that it does so within its own
-permissions.
+Claude Code adapter tells a worker that may enter a checkout that it starts in main's and enters
+before its first change ([worktree-tools.md](worktree-tools.md#a-workers-entry-enter_worktree--true-and-worktree_enter)).
 
 What an adapter offers beyond Launch is a value, `Offers()` (`internal/adapter/offer.go`),
 known before any launch: whether it wakes a session, whether it reports turn ends and can

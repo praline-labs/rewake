@@ -154,8 +154,19 @@ format or protocol changes.
   engine's own `ask` into `allow`; a deny, and an ask a PreToolUse hook, a rule or a setting
   gave, stand (a person's policy outranks the entry, found in review), and every other call keeps
   the engine's verdict. A refused or failed entry is an error that says the checkout stays this
-  worker's and a second call enters it. The tool's text invites the call when main's task asks
-  for a worktree: the probe saw a worker decline the native tool on a peer's request.
+  worker's and a second call enters it. The tool's text says the session starts in main's checkout
+  and asks for the call before the first change, whether or not main's task names a worktree: the
+  probe saw a worker decline the native tool on a peer's request.
+- **The briefing.** A run that may enter — the adapter's answer, not the template's wish: no
+  run directory means no entry — gets a section YOUR CHECKOUT after its role's (`entryBrief`,
+  `brief.Context.Harness`): it starts in main's own checkout, changes nothing there — no edits,
+  commits, branch switches, stashes or resets — calls `worktree_enter` before its first change to
+  a file of the repository, and tells main if the call fails rather than fall back. Nothing said
+  so before October 21, 2026: a worker of such a template never called the tool, ran
+  `git switch -c` in main's checkout, and main's merge and push went to the wrong branch. The
+  briefing is what the model reads every time; the tool's text only when it weighs the tool.
+  No guard refuses an edit outside a checkout: the live case was a shell command, which a guard on
+  the edit tools would not have stopped, and a guard on git commands is not simple.
 - **The guard.** A `tool.call` hook on `EnterWorktree`, in a run where `REWAKE_WORKTREE_ENTER`
   is `1`, passes only rewake's own call (`next.origin.plugin === "rewake"`) and refuses the
   model's, which would make a checkout rewake does not know; its `.catch` refuses unless the
@@ -168,6 +179,7 @@ format or protocol changes.
   rewake's registry keeps the launch directory as the session's `cwd`.
 
 The tests: `internal/cli/worktree_enter_test.go`, `TestATemplatesEntryIsItsOneCheckout`,
-`TestLaunchSettingsWithEntry`, `TestACheckoutClaimedBeforeAnyPollIsKeptWhenMainEndsFirst` (both
+`TestLaunchSettingsWithEntry`, `TestTheBriefingFollowsTheRunsEntry`,
+`TestACheckoutClaimedBeforeAnyPollIsKeptWhenMainEndsFirst` (both
 flags), the mod's `tests/enter.test.ts`, and the workflow scenario
 `fixture-space-worktree-enter` (the fixture offers entry by running the command).

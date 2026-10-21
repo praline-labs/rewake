@@ -5,8 +5,23 @@ import (
 	"path/filepath"
 	"slices"
 
+	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
+
+// entryBrief is what a worker that may enter a checkout is told at its start:
+// it starts in main's own checkout, and nothing else says so. A worker of
+// such a template, never told, ran git switch -c in main's checkout and
+// main's merge went to the wrong branch (October 21, 2026); the briefing is
+// what the model reads every time, the tool's text only when it looks at it.
+var entryBrief = role.Section{
+	Title: "YOUR CHECKOUT",
+	Lines: []string{
+		"You start in main's own checkout, which main and other sessions work in. Do not change it: no edits, new or deleted files, commits, branch switches or creations, stashes or resets there.",
+		"Before your first change to any file of the repository, call the tool worktree_enter: it makes a worktree of your own on a new branch from the commit you are at and moves this session into it; work and commit there. A task that only reads needs none.",
+		"If worktree_enter fails, do not fall back to main's checkout: tell main with --notify what failed.",
+	},
+}
 
 // enterTool is Claude Code's tool that moves a session into a checkout; a
 // worker of a template with enter_worktree = true gets it back for rewake's
