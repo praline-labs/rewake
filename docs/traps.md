@@ -100,6 +100,31 @@ given a private HOME would still write into the person's directory. Unset
 
 *September 23, 2026.*
 
+### A private HOME linked to the person's `~/.claude` wrote into their settings
+
+A live check kept Claude Code's login by linking `~/.claude` into its private HOME.
+Accepting a worker's bypass-permissions warning there appended
+`skipDangerousModePermissionPrompt` to the person's own `settings.json`: a dialog's
+"don't ask again" is written to the user settings whatever `--setting-sources` says.
+Main removed the key. A check that needs the login asks main first; nothing of the
+person's is linked where Claude Code can write.
+
+*October 21, 2026.*
+
+### A harness stuck in the kernel hung the suite past its timeout
+
+`TestWorktreeEnterKeepsThePersonsPolicy` ran `claude -p` with a one-minute context and
+`CombinedOutput`; it hung for good. The machine's network device was failing to come
+up (`hv_netvsc … page allocation failure` in `dmesg`), so one thread of every Claude
+Code start blocked in `rtnl_dumpit`, as `ip addr` did. A process with such a thread is
+shown as `Zl` and is never reaped. The kill lands, but `Cmd.Wait` waits in
+`Process.Wait` before `WaitDelay` ever applies. A test that runs a harness therefore
+stops waiting by itself: output to a file, its own process group, and a deadline
+outside `Wait` (`runBounded` in `internal/adapter/claude/mod_enter_test.go`). The
+machine needs a restart; the test fails in about a minute and says so.
+
+*October 21, 2026.*
+
 ### `pgrep -x codex` finds somebody else's Codex
 
 Take the harness process from the session record — `harnessPid` in

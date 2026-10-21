@@ -1,11 +1,11 @@
 package claude
 
 import (
-	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 )
@@ -65,21 +65,61 @@ func enterOnce(t *testing.T, program, settings string) string {
 		t.Fatal(err)
 	}
 	output := filepath.Join(base, "answer.json")
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-	defer cancel()
-	command := exec.CommandContext(ctx, program, "-p", "probe", "--plugin-dir", plugin,
+	command := exec.Command(program, "-p", "probe", "--plugin-dir", plugin,
 		"--settings", filepath.Join(base, "settings.json"), "--setting-sources", "")
 	command.Dir = work
 	command.Env = []string{
 		"HOME=" + base, "CLAUDE_CONFIG_DIR=" + filepath.Join(base, "config"), "PATH=" + os.Getenv("PATH"),
 		"REWAKE_WORKTREE_ENTER=1", "ENTER_PROBE_OUTPUT=" + output,
 	}
-	out, _ := command.CombinedOutput()
+	out := runBounded(t, command, time.Minute, filepath.Join(base, "output.txt"))
 	answer, err := os.ReadFile(output)
 	if err != nil {
 		t.Fatalf("the probe wrote no answer: %v\n%s", err, out)
 	}
 	return string(answer)
+}
+
+// runBounded runs the command in a group of its own, its output in the file
+// log, and fails the test with that output once limit passes. It never waits
+// on the harness past the limit and a few seconds: a process with a thread
+// stuck in the kernel cannot be reaped, so Wait, WaitDelay or not, would hang
+// the suite (October 21, 2026: claude -p stuck in rtnl_dumpit while the
+// machine's network device failed to come up; ip addr hung the same).
+func runBounded(t *testing.T, command *exec.Cmd, limit time.Duration, log string) []byte {
+	t.Helper()
+	file, err := os.Create(log)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = file.Close() }()
+	// A file, not a pipe: no copying goroutine waits for a child that keeps
+	// it open.
+	command.Stdout, command.Stderr = file, file
+	command.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	if err := command.Start(); err != nil {
+		t.Fatal(err)
+	}
+	// What the harness started goes with it, on time or not.
+	defer func() { _ = syscall.Kill(-command.Process.Pid, syscall.SIGKILL) }()
+	done := make(chan struct{})
+	go func() {
+		_ = command.Wait()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(limit):
+		_ = syscall.Kill(-command.Process.Pid, syscall.SIGKILL)
+		select {
+		case <-done:
+		case <-time.After(5 * time.Second):
+		}
+		out, _ := os.ReadFile(log)
+		t.Fatalf("%s ran past %s and was killed; output:\n%s", command.Path, limit, out)
+	}
+	out, _ := os.ReadFile(log)
+	return out
 }
 
 // rewake's own EnterWorktree gets past the ask Claude Code puts to a person
