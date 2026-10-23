@@ -30,20 +30,37 @@ again. Main's own permission dialogs are not caught. pi has no permission gate o
 of its own (`question.ts` and `permission-gate.ts` are examples, not defaults), so its adapter
 carries nothing.
 
+Main's decision of October 23, 2026, after a worker stood on a dialog in its pane with main told
+nothing: Claude Code 2.1.302 runs a launch with no mode in auto mode, its default, so workers run in
+it, and there the check carries nothing; any permission dialog the engine draws itself is carried to
+main as well (step 2 below).
+
 ## The path
 
-On Claude Code 2.1.302, through the mod (`internal/adapter/claude/mod/hooks/asks.ts`):
+On Claude Code 2.1.302, through the mod (`internal/adapter/claude/mod/hooks/asks.ts`, its hooks in `dialogs.ts`):
 
 1. **A permission.** `tool.check` awaits the engine's verdict. An `ask` of a real call is
    carried when the run is a worker, the mode the harness last reported in its classic events
    is one where the person would be asked (`default`, `manual`, `acceptEdits`), no
    administrator's ceiling is set, and the tool is not `AskUserQuestion` or `ExitPlanMode`.
    An `ask` in `auto` precedes the classifier, and one in `plan`, `dontAsk` or
-   `bypassPermissions` is not the person's: those stay with the engine. A call allowed for the
+   `bypassPermissions` is not the person's: those stay with the engine, and a dialog it then
+   draws is carried by step 2. A call allowed for the
    session passes at once; any other becomes `$.ui.ask` of the engine's own dialog with the three
    choices, and its answer becomes the check's verdict. A failure of the hook refuses the call:
    nothing has run.
-2. **Every question dialog of a worker** — that one and the model's `AskUserQuestion` — reaches
+2. **A permission dialog the engine draws.** Where the check carried nothing — auto mode, or a
+   mode it does not carry — an ask of a worker's call is recorded at the check with the call's
+   id, and the engine draws its own dialog, firing `classic.PermissionRequest`, which carries no
+   id; the call is found by its tool and input. Unless an administrator's ceiling made the ask, the
+   mod opens a permission request on its wrapper with the same three choices and holds the event
+   by the same polls, the dialog staying on the screen. Main's answer returns as the event's
+   decision, which closes the dialog; a call allowed for the session passes at once. The person
+   answering first ends the call — `classic.PostToolUse`, `PostToolUseFailure` or
+   `PermissionDenied` with its id — or, refused, the next step of the main loop or the turn's end
+   comes; either settles the request as the person's, and the event is left undecided
+   ([the probe](research-claude-mod.md#a-workers-dialogs-in-auto-mode)).
+3. **Every question dialog of a worker** — that one and the model's `AskUserQuestion` — reaches
    `tool.call` of `AskUserQuestion`. The mod opens a request on its wrapper (`ask/open`); the
    wrapper keeps it in the run's broker (`internal/core/ask`), leaves main the letter, and
    answers its id. The mod starts the dialog (`next`), which the person may answer, and polls the
@@ -54,11 +71,11 @@ On Claude Code 2.1.302, through the mod (`internal/adapter/claude/mod/hooks/asks
    with its winner (`ask/settle`), which wakes a held poll and tells main's waiting answer. A
    wrapper that will not open a request — no main in the room, a run main does not answer for —
    leaves the dialog the person's alone, and so does a wrapper that stops answering polls.
-3. **The deadline** is 120 seconds from the opening. Past it a permission is refused, and the
+4. **The deadline** is 120 seconds from the opening. Past it a permission is refused, and the
    model's question refused, with the text the model reads: no answer came; do not retry
    blindly; end the turn with `rewake pending "needs <what>"` if the work needs it. An interrupt
    cancels the dialog and the request.
-4. **Main's answer.** `rewake answer` goes through the worker's control directory as `compact`
+5. **Main's answer.** `rewake answer` goes through the worker's control directory as `compact`
    does (`internal/core/control`, action `answer`); the wrapper reads the words against the
    request's offer, gives the open request main's answer, and waits up to 15 seconds for the mod
    to settle it. The command's success is the mod's acceptance, not its queueing; an answer the
@@ -99,7 +116,9 @@ command table's.
 - A request lives in the wrapper's memory: a wrapper or mod restart loses it, and the dialog
   stays the person's at the screen; the model asks again on its next call.
 - Session allowances live in the mod's memory and go with a reload of the mod. The request bridge is Claude Code's; pi has none built in (October 19, 2026).
-- The mode comes from the harness's classic events; a mode never reported carries nothing to
-  main, and the dialog stays the person's.
+- The mode comes from the harness's classic events; a mode never reported carries nothing at
+  the check, and the engine's own dialog is then carried as in step 2.
+- A person who refuses an engine-drawn dialog is seen only at the next step or the turn's end;
+  main's answer before that is reported as taken, and changes nothing.
 - A request settled while main's answer is on its way is reported to main as answered first or
   expired; one whose settling never reaches the wrapper ends at its deadline there.

@@ -26,6 +26,8 @@ function engine(on: any, run: ReturnType<typeof world>, local?: string, waitMs =
   on("tool.check", () => ({ decision: "ask" }));
   on("session.cwd", () => ({ value: "/work" }));
   on("classic.SessionStart", () => ({}));
+  on("classic.PermissionRequest", () => ({}));
+  on("classic.PostToolUse", () => ({}));
   on("tool.call", async (_: any, e: any) => {
     await run.clock.sleep(waitMs);
     return { result: { questions: e.questions, answers: { [e.questions[0].question]: local } } };
@@ -197,4 +199,53 @@ test("a worker's ask in a mode the person is not asked in stays with the engine"
     await $.tool.check({ tool: "Bash", input: { command: "make" }, tool_use_id: "t1" } as any),
   ).toEqual({ decision: "ask" });
   expect(run.sent.some((one) => one.path === "/v1/ask/open")).toBe(false);
+});
+
+// dialogs is a worker in auto mode, Claude Code's default, whose check left
+// an ask of t1 to the engine, which then draws its own dialog.
+async function dialogs($: any, on: any, replies: Record<string, Reply[]>) {
+  const run = await worker($, on, replies, undefined, undefined, "auto");
+  expect(await $.tool.check({ ...read, tool_use_id: "t1" } as any)).toEqual({ decision: "ask" });
+  return run;
+}
+
+const read = { tool: "Read", input: { file_path: "/main/brief.md" } };
+const drawn = { tool_name: "Read", tool_input: read.input, permission_mode: "auto" };
+
+test("in auto mode the engine's own permission dialog is carried to main, and main's answer decides it", async ($, on) => {
+  const replies: Record<string, Reply[]> = { "/v1/ask/open": [opened] };
+  const run = await dialogs($, on, replies);
+  replies["/v1/ask/poll"] = [keyed(run, answered("Allow once"))];
+  expect(await $.classic.PermissionRequest(drawn as any)).toMatchObject({
+    decision: { behavior: "allow" },
+  });
+  expect(run.sent.find((one) => one.path === "/v1/ask/open")!.body).toMatchObject({
+    kind: "permission",
+    call: "t1",
+    tool: "Read",
+    input: '{"file_path":"/main/brief.md"}',
+    cwd: "/work",
+  });
+  expect(settled(run)).toEqual(["main"]);
+  replies["/v1/ask/poll"] = [keyed(run, answered("Refuse", "read your own checkout"))];
+  const refused = await $.classic.PermissionRequest(drawn as any);
+  expect(refused).toMatchObject({ decision: { behavior: "deny" } });
+  expect((refused as any).decision.message).toContain("read your own checkout");
+});
+
+test("a dialog the person answers at the screen first is left to them, and the wrapper hears it", async ($, on) => {
+  const replies: Record<string, Reply[]> = { "/v1/ask/open": [opened] };
+  const run = await dialogs($, on, replies);
+  replies["/v1/ask/poll"] = [
+    async () => {
+      while (!settled(run).includes("local")) await run.clock.sleep(100);
+      return { status: 200, text: '{"state":"settled"}' };
+    },
+  ];
+  const asking = $.classic.PermissionRequest(drawn as any);
+  await run.clock.advance(500);
+  await $.classic.PostToolUse({ ...drawn, tool_use_id: "t1", tool_response: {} } as any);
+  await run.clock.advance(500);
+  expect((await asking) as any).not.toHaveProperty("decision");
+  expect(settled(run)).toEqual(["local"]);
 });

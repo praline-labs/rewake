@@ -5,7 +5,9 @@
 // opened as a request of the run's wrapper, which tells main, and held by
 // successive polls while the person at the screen may answer it too. The
 // first answer wins: the person's through the dialog, main's through a poll,
-// or the deadline's refusal. Nothing is kept past this load.
+// or the deadline's refusal. A permission dialog the engine draws itself — in
+// auto mode, where the check carries nothing — is opened the same way when it
+// is drawn and answered with main's decision. Nothing is kept past this load.
 
 import type {
   AskOpenAnswer,
@@ -59,6 +61,23 @@ export interface QuestionEvent {
   }>;
 }
 
+// DialogEvent is the engine's own permission dialog, as
+// classic.PermissionRequest tells it when the dialog is drawn: no call id.
+export interface DialogEvent {
+  tool_name: string;
+  tool_input: unknown;
+}
+
+// DialogDecision answers such a dialog, as PermissionRequest's decision.
+export type DialogDecision = { behavior: "allow" } | { behavior: "deny"; message: string };
+
+// atScreen is the result of a dialog the person answered at the screen.
+const atScreen = Symbol("answered at the screen");
+
+// callKey names a call by its tool and input, as both the check and the
+// dialog that follows it see them.
+const callKey = (tool: string, input: unknown) => tool + "\u0000" + canonical(input);
+
 interface Permission {
   tool: string;
   input: string;
@@ -105,6 +124,11 @@ export class Asks {
   // permissions are the open permission questions, by their text.
   private permissions = new Map<string, Permission>();
   private serial = 0;
+  // checks are the asks the check left to the engine, by callKey: the call's
+  // id, and whether an administrator's ceiling made it the person's.
+  private checks = new Map<string, { id: string; ceiling: boolean }>();
+  // waiting are the dialogs carried to main, each ended when its call is over.
+  private waiting: { id?: string; end: () => void }[] = [];
 
   constructor(
     private host: Host,
@@ -181,6 +205,80 @@ export class Asks {
     };
   }
 
+  // checked records an ask the check left to the engine, so the dialog that
+  // follows it, which carries no call id, is known by its call.
+  checked(e: CheckEvent) {
+    if (!this.worker() || e.tool_use_id === undefined) return;
+    this.checks.set(callKey(e.tool, e.input), {
+      id: e.tool_use_id,
+      ceiling: e.ceiling !== undefined,
+    });
+  }
+
+  // ended says a carried dialog is over at the screen: its call ran or was
+  // refused, or, with no id, the loop went on — a next step or the turn's
+  // end comes only once every dialog of the step is answered.
+  ended(id?: string) {
+    this.waiting = this.waiting.filter((one) => {
+      if (id !== undefined && one.id !== id) return true;
+      one.end();
+      return false;
+    });
+  }
+
+  // dialog carries a permission dialog the engine drew — in auto mode, or any
+  // mode the check did not carry — to main as a permission request, held
+  // while the person may answer it at the screen. Its answer is main's
+  // decision, the deadline's refusal, or undefined: the person answered, or
+  // the dialog is not main's to answer.
+  async dialog(
+    cwd: string,
+    e: DialogEvent,
+    signal: AbortSignal,
+  ): Promise<DialogDecision | undefined> {
+    if (!this.worker() || screenOnly.includes(e.tool_name)) return undefined;
+    const call = this.checks.get(callKey(e.tool_name, e.tool_input));
+    this.checks.delete(callKey(e.tool_name, e.tool_input));
+    if (call?.ceiling) return undefined;
+    const check: CheckEvent = { tool: e.tool_name, input: e.tool_input };
+    const key = this.key(cwd, check);
+    if (this.allows(key)) return { behavior: "allow" };
+    const question = this.permission(cwd, check, key);
+    const asked: QuestionEvent = {
+      ...(call ? { tool_use_id: call.id } : {}),
+      questions: [
+        {
+          question,
+          header: "Permission",
+          options: [{ label: allowOnce }, { label: allowSession }, { label: refuseCall }],
+        },
+      ],
+    };
+    const id = await this.open(asked);
+    if (id === undefined) {
+      this.permissions.delete(question);
+      return undefined;
+    }
+    const over = new Promise<unknown>((end) => {
+      this.waiting.push({ id: call?.id, end: () => end(atScreen) });
+    });
+    const result = await this.hold(id, asked, () => over, signal);
+    if (result === atScreen) {
+      this.permissions.delete(question);
+      return undefined;
+    }
+    const denied = (result as { deny?: string }).deny;
+    if (denied !== undefined) {
+      this.permissions.delete(question);
+      return { behavior: "deny", message: denied };
+    }
+    const answers = (result as { result?: { answers?: Record<string, string> } }).result?.answers;
+    const verdict = this.decide(question, answers?.[question] ?? "");
+    return verdict.decision === "allow"
+      ? { behavior: "allow" }
+      : { behavior: "deny", message: verdict.reason ?? "Refused." };
+  }
+
   // bridge holds one question dialog: the dialog itself, which native()
   // opens and the person may answer, against main's answer through the
   // wrapper's polls, until the first of them or the deadline. A request the
@@ -190,6 +288,14 @@ export class Asks {
     native: () => Promise<unknown>,
     signal: AbortSignal,
   ): Promise<unknown> {
+    const id = await this.open(e);
+    if (id === undefined) return native();
+    return this.hold(id, e, native, signal);
+  }
+
+  // open asks the wrapper to open a request for the dialog's questions, and
+  // is its id, or undefined when the wrapper will not.
+  private async open(e: QuestionEvent): Promise<string | undefined> {
     const questions: AskQuestion[] = e.questions.map((one) => {
       const question: AskQuestion = {
         question: one.question,
@@ -218,15 +324,25 @@ export class Asks {
       open.input = permission.input;
       open.cwd = permission.cwd;
     }
-    let id: string;
     try {
       const opened = await this.host.post(paths.askOpen, open);
-      if (!opened.ok) return native();
-      id = (JSON.parse(opened.text) as AskOpenAnswer).id;
+      if (!opened.ok) return undefined;
+      return (JSON.parse(opened.text) as AskOpenAnswer).id;
     } catch {
-      return native();
+      return undefined;
     }
+  }
 
+  // hold races the open request id: native(), the person's answer at the
+  // screen, against main's answer through the wrapper's polls and the
+  // deadline; the first wins, and the wrapper is told which.
+  private async hold(
+    id: string,
+    e: QuestionEvent,
+    native: () => Promise<unknown>,
+    signal: AbortSignal,
+  ): Promise<unknown> {
+    const permission = this.permissions.get(e.questions[0]?.question ?? "");
     let winner: { by: AskWinner; result: unknown } | undefined;
     const local = native().then(
       (result) => result,

@@ -13,8 +13,9 @@ import type {
   TurnStartRequest,
 } from "../protocol.gen.ts";
 import { paths } from "../protocol.gen.ts";
-import { Asks, allowOnce, allowSession, refuseCall } from "./asks.ts";
+import { Asks } from "./asks.ts";
 import { exitReasons, tellClosing } from "./closing.ts";
+import { serveDialogs } from "./dialogs.ts";
 import { serveWorktreeEnter, worktreeEnterTool } from "./enter.ts";
 import { Heartbeat } from "./heartbeat.ts";
 import { Management } from "./management.ts";
@@ -272,7 +273,10 @@ export const register: Register = (on) => {
   // Each main-loop response moves the context, which session.measure tells
   // only at the turn's end: sampled after each, a long turn's fill shows as
   // it grows rather than at the next heartbeat.
+  // A main-loop step begins only once every dialog of the last one is
+  // answered, so a dialog carried to main is over at the screen by then.
   on("turn.step", async function* ($, e, next) {
+    if (e.agentId === undefined) load?.asks.ended();
     if (e.agentId === undefined) load?.management.effortSeen(e.effort);
     const step = yield* next(e);
     if (e.agentId === undefined) load?.management.changed();
@@ -286,6 +290,7 @@ export const register: Register = (on) => {
     if (load === undefined || e.agentId !== undefined) {
       return done;
     }
+    load.asks.ended();
     const actor = await load.management.ended(e.turnId, e.reason === "aborted");
     let answer = actor ?? e.answer;
     if (answer === "" && e.reason === "refusal") {
@@ -305,62 +310,8 @@ export const register: Register = (on) => {
     return done;
   });
 
-  // The permission mode the harness reports with its classic events, which an
-  // ask is carried to main in only where the person would be asked
-  // (asks.ts).
-  on("classic.SessionStart", async ($, e, next) => {
-    if (load && e.permission_mode) load.asks.mode = e.permission_mode;
-    return next(e);
-  });
-  on("classic.UserPromptSubmit", async ($, e, next) => {
-    if (load && e.permission_mode) load.asks.mode = e.permission_mode;
-    return next(e);
-  });
-  on("classic.PostToolUse", async ($, e, next) => {
-    if (load && e.permission_mode) load.asks.mode = e.permission_mode;
-    return next(e);
-  });
-
-  // A worker's call the engine would ask the person about is asked as a
-  // question with three choices, which the question bridge below carries to
-  // main too; an exact call allowed for the session passes without asking.
-  // A failure of the bridge refuses the call: nothing has run.
-  on("tool.check", async ($, e, next) => {
-    const verdict = await next(e);
-    if (verdict.decision !== "ask" || !load?.asks.asking(e)) return verdict;
-    const cwd = await $.session.cwd();
-    const key = load.asks.key(cwd, e);
-    if (load.asks.allows(key))
-      return { decision: "allow", reason: "allowed for this session through rewake" };
-    const question = load.asks.permission(cwd, e, key);
-    try {
-      const answer = await $.ui.ask(question, {
-        header: "Permission",
-        options: [allowOnce, allowSession, refuseCall],
-      });
-      return load.asks.decide(question, answer);
-    } catch {
-      return load.asks.refused(question);
-    }
-  }).catch(($, e, next) => ({
-    decision: "deny",
-    reason:
-      "rewake could not carry this permission request (" +
-      next.error.message +
-      "), so the call was refused.",
-  }));
-
-  // Every question dialog of a worker — a permission's and the model's own —
-  // is opened for main as well, and the first answer wins (asks.ts). A
-  // failure before the dialog opened leaves it to the person.
-  on("tool.call", { tool: "AskUserQuestion" }, async ($, e, next) => {
-    if (!load?.run || !load.asks.worker()) return next(e);
-    return load.asks.bridge(e, () => next(e), next.signal);
-  }).catch(($, e, next) =>
-    next.called
-      ? { deny: "rewake could not carry this question (" + next.error.message + ")." }
-      : next(e),
-  );
+  // A worker's permission requests and questions, carried to main.
+  serveDialogs(on, () => load);
 
   // The process's end, told at session.end (closing.ts): /exit, Ctrl+C and
   // Ctrl+D alike.
