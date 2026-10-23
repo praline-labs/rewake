@@ -41,6 +41,7 @@ func documentedForms(launch string) []formCase {
 		{[]string{"whoami", "--json"}, view},
 		{[]string{"inbox", "--owed"}, view},
 		{[]string{"inbox", "--awaited", "--json"}, view},
+		{[]string{"statusline"}, view},
 		{[]string{"worktree", "ls"}, view},
 		{[]string{"worktree", "ls", "--json"}, view},
 		// Refused by the handler before any effect.

@@ -44,7 +44,7 @@ func buildGroups(catalog adapter.Catalog) []Group {
 	for _, h := range catalog.All() {
 		run.Commands = append(run.Commands, launchCommand(h))
 	}
-	run.Commands = append(run.Commands, worktreeCommand(catalog))
+	run.Commands = append(run.Commands, worktreeCommand(catalog), statuslineCommand(catalog))
 
 	talk := Group{
 		Title:   "TALK",

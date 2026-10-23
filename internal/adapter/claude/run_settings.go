@@ -2,7 +2,9 @@ package claude
 
 import (
 	"encoding/json"
+	"os"
 	"slices"
+	"strings"
 
 	"github.com/praline-labs/rewake/internal/core/role"
 )
@@ -49,6 +51,16 @@ func runSettings(settings map[string]any, folder, root, memoryKey string, enter 
 		overlay["autoMemoryEnabled"] = true
 		overlay["autoMemoryDirectory"] = dir
 	}
+	// The status line is where Claude Code tells the cache's lifetime
+	// (statusline.go); it needs the run's host, which a launch with no run
+	// directory has no mod for.
+	if executable, err := os.Executable(); err == nil && runDir != "" {
+		overlay["statusLine"] = map[string]any{
+			"type":            "command",
+			"command":         shellQuote(executable) + " statusline",
+			"refreshInterval": statusLineInterval(settings),
+		}
+	}
 	var notes []string
 	switch {
 	case !enter:
@@ -76,4 +88,23 @@ func deniedIn(settings map[string]any) []any {
 	permissions, _ := settings["permissions"].(map[string]any)
 	deny, _ := permissions["deny"].([]any)
 	return deny
+}
+
+// statusLineInterval is how often the run's status line command runs beside
+// the harness's events: the person's own interval where the folder's settings
+// have a status line with one, since that line is run by ours.
+func statusLineInterval(settings map[string]any) any {
+	line, _ := settings["statusLine"].(map[string]any)
+	// The folder's settings are read with numbers kept as json.Number.
+	if every, ok := line["refreshInterval"].(json.Number); ok {
+		if seconds, err := every.Float64(); err == nil && seconds >= 1 {
+			return every
+		}
+	}
+	return statusLineRefresh
+}
+
+// shellQuote makes a path one word of the status line's shell command.
+func shellQuote(path string) string {
+	return "'" + strings.ReplaceAll(path, "'", `'\''`) + "'"
 }
