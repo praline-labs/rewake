@@ -87,7 +87,10 @@ Each principle names where it comes from.
   options of that one launch; what rewake keeps for itself — the worker's service folder, the
   bundled pi's directory — lives under rewake's own directory, which it creates and never
   overwrites, but for the worker's settings file, where it writes its defaults and later adds
-  only newer ones (the owner's decision, October 19, 2026). ([v2/design.md](v2/design.md#what-does-not-change),
+  only newer ones (the owner's decision, October 19, 2026). Besides that file, rewake adds to
+  the workers' own `.claude.json` in the service folder, the workers' Claude Code configuration
+  directory, only the onboarding-done mark and trust for the repository main runs in (the
+  owner's decision, October 23, 2026). ([v2/design.md](v2/design.md#what-does-not-change),
   [v2/design-rules.md](v2/design-rules.md#what-a-launch-adds-l1l3).)
 - **Transcript contents are not read.** ([design.md](design.md#scope-of-the-first-version),
   [v2/design.md](v2/design.md#what-does-not-change).)
