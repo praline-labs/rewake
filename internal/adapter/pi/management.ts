@@ -11,7 +11,17 @@ export type State = {
   window: number | null;
   percent: number | null;
   compacting: boolean;
-  cache: { read: number; write: number; input: number } | null;
+  cache: Cache | null;
+};
+// ttl is the lifetime in seconds of the tier the request was sent with and
+// expiresAt when it ends (epoch milliseconds), both absent where the model names
+// no lifetime for that tier.
+type Cache = {
+  read: number;
+  write: number;
+  input: number;
+  ttl?: number | null;
+  expiresAt?: number | null;
 };
 type Pending = {
   frame: Frame;
@@ -28,12 +38,33 @@ type Pending = {
 export function cacheOf(message: {
   role: string;
   usage?: { input?: number; cacheRead?: number; cacheWrite?: number };
-}): State["cache"] {
+}): Cache | null {
   if (message.role !== "assistant" || !message.usage) return null;
   const { input = 0, cacheRead = 0, cacheWrite = 0 } = message.usage;
   if (!(input >= 0 && cacheRead >= 0 && cacheWrite >= 0) || input + cacheRead + cacheWrite <= 0)
     return null;
   return { read: cacheRead, write: cacheWrite, input };
+}
+
+// lifeOf is how long the cache the message's request read or wrote lives. pi's
+// own requests name no retention, so the tier is "long" when
+// PI_CACHE_RETENTION=long and "short" otherwise, as pi's cache warmer reads it;
+// the model's promptCache gives the tier's best-effort lifetime in seconds,
+// unset where the provider's is not known. The provider counts it from the
+// request, the message's timestamp, not from the end of the answer. A model
+// other than the one that answered says nothing of this cache.
+export function lifeOf(
+  message: { provider?: string; model?: string; timestamp?: number },
+  model:
+    | { provider: string; id: string; promptCache?: { short?: number; long?: number } }
+    | undefined,
+  retention: string | undefined,
+): Pick<Cache, "ttl" | "expiresAt"> {
+  const ttl = model?.promptCache?.[retention === "long" ? "long" : "short"];
+  const at = message.timestamp;
+  if (!model || model.provider !== message.provider || model.id !== message.model) return {};
+  if (!(typeof ttl === "number" && ttl > 0 && typeof at === "number" && at > 0)) return {};
+  return { ttl, expiresAt: at + ttl * 1000 };
 }
 
 export function management(
@@ -67,10 +98,10 @@ export function management(
     };
   }
 
-  function usageSeen(message: Parameters<typeof cacheOf>[0]) {
+  function usageSeen(message: Parameters<typeof cacheOf>[0] & Parameters<typeof lifeOf>[0]) {
     const seen = cacheOf(message);
     if (!seen) return;
-    cache = seen;
+    cache = { ...seen, ...lifeOf(message, context()?.model, process.env.PI_CACHE_RETENTION) };
     changed();
   }
 

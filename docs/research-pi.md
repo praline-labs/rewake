@@ -156,6 +156,34 @@ Read on the same installed 1.2.0 in `dist/core/extensions/types.d.ts`,
   message, appended without starting a turn, leaves that same actor in the next turn's
   history. An idle session refuses interrupt as `no turn running`.
 
+The prompt cache's lifetime, read on the bundled 1.3.0 on October 23, 2026. No provider tells pi
+when its cache expires. A model's `promptCache` names the provider's best-effort lifetime in
+seconds per retention tier, `short` and `long`, "a missing tier means the lifetime is unknown"
+(`pi-ai/dist/providers/model-schema.js`; `docs/models.md`, "Describe model input and caching": a
+`models.json` model or a `modelOverrides` entry can set it). In 1.3.0's own catalogue
+(`pi-ai/dist/providers/data/*.json`) only one provider's models name lifetimes, 300 s short and
+3600 s long; every other model gives the hit rate alone. pi's own session requests name no
+`cacheRetention`, so the tier is `long` when `PI_CACHE_RETENTION=long` and `short` otherwise, as
+`getPromptCacheTtlMs` of `dist/core/cache-warmer.js` reads it (`dist/core/sdk.js` builds the
+request without one; only compaction sends `none`). An assistant message's `timestamp` is when its
+request started (`pi-ai/dist/types.d.ts`), which is when the provider read or wrote the cache. The
+extension therefore reckons `expiresAt` as the last assistant message's `timestamp` plus the tier's
+lifetime, where the model in use is the one that answered and names that tier; the host carries it
+as `cacheLife` with `ttl` as `5m`, `1h` or the seconds, and `warm` while the reckoned expiry is
+ahead. Known limit: pi's cache warming (`cacheWarming` in settings) re-sends a request to keep the
+cache alive; in its default `streaming` mode it stops when the run settles, but in `idle` mode it
+goes on up to 30 minutes, which the extension does not see — the cell then shows less time left
+than there is.
+
+**[live]** October 23, 2026, the branch's build, the bundled pi 1.3.0 through `REWAKE_PI` as main
+in print mode, a private HOME (its agent directory holding only a `models.json`) and `REWAKE_DIR`
+under `/tmp`, no login: a stand-in provider on `127.0.0.1` speaking `openai-completions`, its model
+naming `promptCache` 300/3600, answered every request with 900 of 1000 prompt tokens cached and
+first with a bash call running `rewake list` once a minute. The Cache cell read `90% 4m`, `90% 3m`,
+`90% 2m`; `--json` had `cacheLife` `{"ttl":"5m","expiresAt":<the first request's start + 300 s>,
+"warm":true}`. With `PI_CACHE_RETENTION=long` it read `90% 60m`; a model naming no `promptCache`,
+`90%`. The listing through the shell's own reader and `stripParts` ended `· 90% 60m`.
+
 A third mock probe loaded both shipped modules and verified on 1.2.0:
 
 1. Protocol 2 hello and requested state exposed the selected model, thinking level,
@@ -186,7 +214,7 @@ harness pid and rechecks its process start time before accepting the first frame
 | Host to extension | `wake` | `thread`, `notice`; answer says `ok` and whether it was `steered`, or `pending` while compacting |
 | Extension to host | `turn-start` | `thread`, `turn`; acknowledgment precedes model work |
 | Extension to host | `turn-end` | `thread`, `turn`, `outcome`, `text` (the final text, or pi's error message when a failed turn has none); acknowledgment follows publication |
-| Either | `state` | host asks with `thread`; extension answers or pushes `state` with sequence, activity, model, effort, tokens, window, percent, compacting and (from October 23, 2026, optional) `cache`: the last assistant message's `usage` as `read`, `write`, `input` (`cacheRead`, `cacheWrite`, `input`), kept from `message_end`, `null` before the first response, so an older extension leaves it out |
+| Either | `state` | host asks with `thread`; extension answers or pushes `state` with sequence, activity, model, effort, tokens, window, percent, compacting and (from October 23, 2026, optional) `cache`: the last assistant message's `usage` as `read`, `write`, `input` (`cacheRead`, `cacheWrite`, `input`), kept from `message_end`, `null` before the first response, so an older extension leaves it out; with it, where the model names a lifetime for the request's tier, `ttl` (seconds) and `expiresAt` (epoch milliseconds), the host's `cacheLife` (October 23, 2026, optional) |
 | Host to extension | `control` | `thread`, `action`, `request`, `from`, optional `focus`; answer carries outcome, reason, detail, open and token counts where known |
 | Extension to host | `compacted` | `thread`, event `sequence`, optional remote `request` and `from`; acknowledgment follows counting |
 | Extension to host | `compaction-result` | `thread`, `request`, `from`, outcome and optional token counts; acknowledgment follows retaining the outcome for main's letter |
