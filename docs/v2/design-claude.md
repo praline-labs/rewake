@@ -211,7 +211,11 @@ sample needs a login). A worker's run therefore sets `statusLine` in its `--sett
 `settings.json`. The hidden `rewake statusline` reads that input, posts `ttl`, `expiresAt` and `warm`
 to the run's host at `status/line` of the mod socket, and prints the person's own `statusLine` command
 from the folder's `settings.json` (run with the same input) or nothing, always exiting 0. The expiry is
-absolute, so a slow timer loses nothing; the command runs after each response too.
+absolute, so a slow timer loses nothing; the command runs after each response too. The post (2 s) and the
+person's command (5 s) run side by side with deadlines of their own; the person's command runs in a process
+group of its own with its output in a pipe rewake reads, killed whole at the deadline, so it cannot keep the
+harness's output open, and `REWAKE_STATUSLINE_PASSTHROUGH` in its environment makes a `rewake statusline` it
+calls print and post nothing. The stdin read is bounded in time (3 s) as well as size.
 
 `status/line` is the one endpoint served to the harness's descendants and not only its own process
 (`fromHarnessOrChild`): the status line is Claude Code's child, and the payload is telemetry that is

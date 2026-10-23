@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"syscall"
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter"
@@ -27,9 +28,18 @@ import (
 // events; the expiry it reports is absolute, so a slow timer loses nothing.
 const statusLineRefresh = 30
 
-// statusLineTimeout bounds the whole command: a status line that stalls
-// stalls nothing else, but the pane waits for its text.
-const statusLineTimeout = 5 * time.Second
+// The two deadlines are separate and the two jobs run side by side: the
+// telemetry is optional and must not spend the person's line's time, and the
+// pane waits for the line's text. Variables so a test can shorten them.
+var (
+	statusLineTimeout = 5 * time.Second
+	postTimeout       = 2 * time.Second
+)
+
+// statusLineGuardEnv marks the environment of the person's own command: a
+// `rewake statusline` that finds it is that command calling us again, and
+// prints and posts nothing, so a person's line that is ours cannot recurse.
+const statusLineGuardEnv = "REWAKE_STATUSLINE_PASSTHROUGH"
 
 var _ adapter.StatusLiner = claudeHarness{}
 
@@ -42,15 +52,25 @@ type promptCache struct {
 // StatusLine posts the input's prompt_cache to the run's host and prints the
 // person's own line. Either failing leaves the other alone.
 func (claudeHarness) StatusLine(ctx context.Context, input []byte, out io.Writer) {
-	ctx, cancel := context.WithTimeout(ctx, statusLineTimeout)
-	defer cancel()
+	if os.Getenv(statusLineGuardEnv) != "" {
+		return
+	}
 	var seen struct {
 		PromptCache *promptCache `json:"prompt_cache"`
 	}
-	if json.Unmarshal(input, &seen) == nil && seen.PromptCache != nil {
-		postCache(ctx, os.Getenv(modSocketEnv), *seen.PromptCache)
-	}
-	personal(ctx, input, out)
+	posted := make(chan struct{})
+	go func() {
+		defer close(posted)
+		if json.Unmarshal(input, &seen) == nil && seen.PromptCache != nil {
+			post, cancel := context.WithTimeout(ctx, postTimeout)
+			defer cancel()
+			postCache(post, os.Getenv(modSocketEnv), *seen.PromptCache)
+		}
+	}()
+	line, cancel := context.WithTimeout(ctx, statusLineTimeout)
+	defer cancel()
+	personal(line, input, out)
+	<-posted
 }
 
 func postCache(ctx context.Context, socket string, cache promptCache) {
@@ -103,9 +123,18 @@ func personal(ctx context.Context, input []byte, out io.Writer) {
 	if json.Unmarshal(data, &settings) != nil || settings.StatusLine.Type != "command" || settings.StatusLine.Command == "" {
 		return
 	}
+	// The command runs in a process group of its own with its output in a
+	// pipe this process reads: at the deadline the whole group is killed and
+	// the pipe closed, so nothing a child still holds keeps the harness's
+	// output open, and only what came in time is printed.
+	var line bytes.Buffer
 	command := exec.CommandContext(ctx, "sh", "-c", settings.StatusLine.Command)
 	command.Stdin = bytes.NewReader(input)
-	command.Stdout = out
-	command.WaitDelay = time.Second
+	command.Stdout = &line
+	command.Env = append(os.Environ(), statusLineGuardEnv+"=1")
+	command.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	command.Cancel = func() error { return syscall.Kill(-command.Process.Pid, syscall.SIGKILL) }
+	command.WaitDelay = 500 * time.Millisecond
 	_ = command.Run()
+	_, _ = out.Write(line.Bytes())
 }
