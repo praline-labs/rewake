@@ -280,7 +280,10 @@ export const register: Register = (on) => {
     if (e.agentId === undefined) load?.management.waits();
     if (e.agentId === undefined) load?.management.effortSeen(e.effort);
     const step = yield* next(e);
-    if (e.agentId === undefined) load?.management.changed();
+    if (e.agentId === undefined) {
+      load?.management.usageSeen(step.usage);
+      load?.management.changed();
+    }
     return step;
   });
 

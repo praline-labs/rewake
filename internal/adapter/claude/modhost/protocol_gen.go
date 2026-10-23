@@ -34,6 +34,12 @@ const (
 	// (docs/v2/shell.md), and nothing else changes on the host. Asked ClosingRequest, answered
 	// Done.
 	PathSessionClosing = "/v1/session/closing"
+	// PathStatusLine reports the prompt cache's life from the status line of a worker's run, which
+	// Claude Code starts as a child of the harness and rewake's `rewake statusline` fills; unlike
+	// every other endpoint its peer may be any descendant of the harness's process, since its
+	// payload is telemetry and nothing it says is acted on. Not an endpoint of the mod. Asked
+	// StatusLineRequest, answered Done.
+	PathStatusLine = "/v1/status/line"
 	// PathAskOpen opens a permission request or a question of a worker's run for main to answer
 	// (docs/permission-requests.md): the host leaves main a notify naming it and answers its id;
 	// 409 says the run is no worker or the room has no main to ask, and the question stays the
@@ -215,6 +221,19 @@ type Refusal struct {
 	// number: a load whose store shows no number above its own takes the next above this one and
 	// says hello once more.
 	LoadSeq *int `json:"loadSeq,omitempty"`
+}
+
+// StatusLineRequest is the status line's prompt_cache as Claude Code gave it, without
+// transcript content.
+type StatusLineRequest struct {
+	// Ttl is the cache's lifetime of the last request, 5m or 1h, absent when unknown.
+	Ttl *string `json:"ttl,omitempty"`
+
+	// ExpiresAt is when the cache expires, in seconds since the epoch, absent when unknown.
+	ExpiresAt *int `json:"expiresAt,omitempty"`
+
+	// Warm says Claude Code takes the cache for warm.
+	Warm bool `json:"warm"`
 }
 
 // ClosingRequest says the harness's process has begun to end.
@@ -400,6 +419,16 @@ type StateRequest struct {
 
 	// Percent is the filled percentage, absent when unknown.
 	Percent *int `json:"percent,omitempty"`
+
+	// CacheRead is the input tokens the prompt cache served on the latest main-loop response of
+	// this load, absent until one reports usage.
+	CacheRead *int `json:"cacheRead,omitempty"`
+
+	// CacheWrite is the input tokens that response wrote to the prompt cache.
+	CacheWrite *int `json:"cacheWrite,omitempty"`
+
+	// CacheInput is the input tokens that response neither read from nor wrote to the cache.
+	CacheInput *int `json:"cacheInput,omitempty"`
 
 	// Compacting says a native compaction is in progress.
 	Compacting bool `json:"compacting"`

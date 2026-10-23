@@ -25,9 +25,17 @@ import (
 // it names and prints the status it was answered with.
 const helperSocket = "REWAKE_MODHOST_HELPER_SOCKET"
 
+// helperStatusLine makes the helper post that body to the status line's
+// endpoint instead.
+const helperStatusLine = "REWAKE_MODHOST_HELPER_STATUSLINE"
+
 func TestMain(m *testing.M) {
 	if socket := os.Getenv(helperSocket); socket != "" {
-		status, _, err := post(socket, PathHello, validHello("helper"))
+		path, body := PathHello, validHello("helper")
+		if os.Getenv(helperStatusLine) != "" {
+			path, body = PathStatusLine, []byte(os.Getenv(helperStatusLine))
+		}
+		status, _, err := post(socket, path, body)
 		if err != nil {
 			fmt.Println("error:", err)
 			os.Exit(1)

@@ -123,3 +123,17 @@ func TestControlDoesNotRepeatUnknownRequestsAndCompactionDefersWake(t *testing.T
 	}
 	l.close()
 }
+
+func TestStateCarriesTheCacheOfTheLastResponseAndOldExtensionsLeaveItEmpty(t *testing.T) {
+	rig := newRig(t, func(r *run) { r.epoch = "run-epoch" })
+	l := rig.client(t, "conversation", nil)
+	askOK(t, l, frame{Op: "state", Thread: "conversation", State: &sample{Sequence: 2, Activity: "idle"}})
+	if got := rig.run.SessionState(); got.Cache != nil {
+		t.Fatalf("cache before any response: %+v", got.Cache)
+	}
+	value := &sample{Sequence: 3, Activity: "idle", Cache: &cacheUsage{Read: 900, Write: 50, Input: 50}}
+	askOK(t, l, frame{Op: "state", Thread: "conversation", State: value})
+	if got := rig.run.SessionState().Cache; got == nil || got.HitPercent != 90 || got.Read != 900 || got.Write != 50 || got.Input != 50 {
+		t.Fatalf("cache: %+v", got)
+	}
+}

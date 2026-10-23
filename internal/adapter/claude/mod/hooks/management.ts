@@ -25,6 +25,7 @@ export class Management {
   private last = { request: "", from: "" };
   private turn?: string;
   private effort?: string;
+  private cache?: { cacheRead: number; cacheWrite: number; cacheInput: number };
   private compacting = false;
   // dialog is what the engine said of a dialog the session waits at that no
   // request carries to main (dialogs.ts), until the next tool result or step.
@@ -64,6 +65,23 @@ export class Management {
     if (message === this.dialog) return;
     this.dialog = message;
     this.changed();
+  }
+
+  // The usage the API reported for a main-loop response is the cache's only
+  // source; a response without usage keeps the last one's.
+  usageSeen(
+    usage: {
+      cache_read_input_tokens?: number | null;
+      cache_creation_input_tokens?: number | null;
+      input_tokens?: number | null;
+    } | null,
+  ) {
+    if (!usage) return;
+    this.cache = {
+      cacheRead: usage.cache_read_input_tokens ?? 0,
+      cacheWrite: usage.cache_creation_input_tokens ?? 0,
+      cacheInput: usage.input_tokens ?? 0,
+    };
   }
 
   // Return the actor for the durable end, and leave the same trace in native
@@ -110,6 +128,7 @@ export class Management {
       compactions: this.compactions,
       effort: this.effort,
       dialog: this.dialog,
+      ...this.cache,
       ...this.last,
     };
     this.sending = this.sending

@@ -22,6 +22,9 @@ type observations struct {
 	snapshot session.Snapshot
 	events   []session.CompactionEvent
 	outcomes []session.CompactionOutcome
+	// life is the last the status line told of the prompt cache; the cache
+	// outlives a reload of the mod, so it is kept across loads (statusline.go).
+	life *session.CacheLife
 }
 
 // currentGeneration excludes old loads, even though their durable turn ends
@@ -112,6 +115,9 @@ func (s *Server) observeLocked(sample StateRequest) {
 		snapshot.Effort, snapshot.EffortSource = &effort, session.EffortFromLaunch
 	}
 	snapshot.Interruptions = session.InterruptionsObserved
+	if sample.CacheRead != nil && sample.CacheWrite != nil && sample.CacheInput != nil {
+		snapshot.Cache = session.NewCache(int64(*sample.CacheRead), int64(*sample.CacheWrite), int64(*sample.CacheInput))
+	}
 	snapshot.ContextUsed, snapshot.ContextWindow = tokenCount(sample.Tokens), tokenCount(sample.Window)
 	if snapshot.ContextWindow != nil && *snapshot.ContextWindow == 0 {
 		snapshot.ContextWindow = nil
@@ -172,6 +178,10 @@ func (s *Server) SessionState() session.Snapshot {
 		if observed.partial {
 			snapshot.Coverage = "partial"
 		}
+	}
+	if observed.life != nil {
+		life := *observed.life
+		snapshot.CacheLife = &life
 	}
 	snapshot.CompactionEvents = append([]session.CompactionEvent{}, observed.events...)
 	snapshot.CompactionOutcomes = append([]session.CompactionOutcome{}, observed.outcomes...)

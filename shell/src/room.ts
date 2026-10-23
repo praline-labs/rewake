@@ -146,6 +146,9 @@ export type Session = {
   used?: number;
   window?: number;
   percent?: number;
+  // cache is the prompt cache's hit percent of the last request, and when it
+  // expires (epoch milliseconds) where the harness says; absent when unknown.
+  cache?: { hit: number; expiresAt?: number };
 };
 
 type Telemetry = {
@@ -160,6 +163,8 @@ type Telemetry = {
   contextUsedTokens?: number | null;
   contextWindowTokens?: number | null;
   contextFilledPercent?: number | null;
+  cache?: { hitPercent: number } | null;
+  cacheLife?: { expiresAt?: string | null } | null;
 };
 
 type SessionListing = {
@@ -180,6 +185,12 @@ function epochOf(s: { servicePid: number; serviceStart: number; boot?: string })
   return `${s.servicePid}.${s.serviceStart}${s.boot ? `.${s.boot}` : ""}`;
 }
 
+function cacheOf(t: Telemetry | undefined): Session["cache"] {
+  if (typeof t?.cache?.hitPercent !== "number") return undefined;
+  const at = t.cacheLife?.expiresAt ? Date.parse(t.cacheLife.expiresAt) : Number.NaN;
+  return { hit: t.cache.hitPercent, expiresAt: Number.isNaN(at) ? undefined : at };
+}
+
 function sessionsOf(listing: SessionListing): Map<string, Session> {
   const out = new Map<string, Session>();
   for (const s of listing.sessions ?? []) {
@@ -198,6 +209,7 @@ function sessionsOf(listing: SessionListing): Map<string, Session> {
       used: t?.contextUsedTokens ?? undefined,
       window: t?.contextWindowTokens ?? undefined,
       percent: t?.contextFilledPercent ?? undefined,
+      cache: cacheOf(t),
     });
   }
   return out;

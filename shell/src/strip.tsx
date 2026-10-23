@@ -2,7 +2,7 @@
 // strip"): who the worker is, what it does, where it works, its model and how
 // full its context is, from rewake's own records, the same for every harness.
 import { RGBA, TextAttributes } from "@opentui/core";
-import { createSignal, For } from "solid-js";
+import { createSignal, For, onCleanup } from "solid-js";
 import type { Session, Space } from "./room.ts";
 import type { Theme } from "./theme.ts";
 
@@ -25,6 +25,10 @@ function stripOf(id: string): StripState {
 }
 
 type Part = { text: string; kind: "name" | "plain" | "context"; fill?: number };
+
+// How often the remaining life of the cache is counted again from the clock:
+// the cell moves by the minute, and the poll is slower than that.
+const tick = 5000;
 
 const separator = " · ";
 
@@ -60,27 +64,43 @@ function contextOf(s: Session): Part | undefined {
   };
 }
 
+// cacheOf is the cache as `rewake list` shows it: the hit percent and, where
+// the harness says when the cache expires, what is left on the shell's own
+// clock — "42m", "<1m", "—" once expired.
+export function cacheOf(s: Session, now: number): Part | undefined {
+  if (!s.cache) return undefined;
+  let text = `${s.cache.hit}%`;
+  if (s.cache.expiresAt !== undefined) {
+    const left = s.cache.expiresAt - now;
+    text += left <= 0 ? " —" : left < 60_000 ? " <1m" : ` ${Math.ceil(left / 60_000)}m`;
+  }
+  return { text, kind: "plain" };
+}
+
 // stripParts is the line for a width: the name, activity and context always,
-// the model and then the branch left out while the line is too long, and the
-// rest cut at the width.
-export function stripParts(state: StripState, width: number): Part[] {
+// the model, then the cache, then the branch left out while the line is too
+// long, and the rest cut at the width.
+export function stripParts(state: StripState, width: number, now = Date.now()): Part[] {
   const s = state.status;
   const name = s?.type ? `${state.session} (${s.type})` : state.session;
   const activity = s && activityOf(s);
-  // In the order shown; the optional ones are left out, 1 then 2.
+  const cache = s && cacheOf(s, now);
+  // In the order shown; the optional ones are left out, 1 then 2 then 3.
   const all: ((Part & { optional?: number }) | undefined)[] = [
     { text: name, kind: "name" },
     activity ? { text: activity, kind: "plain" } : undefined,
-    state.branch ? { text: `⎇ ${state.branch}`, kind: "plain", optional: 2 } : undefined,
+    state.branch ? { text: `⎇ ${state.branch}`, kind: "plain", optional: 3 } : undefined,
     s?.model
       ? { text: [s.model, s.effort].filter(Boolean).join(" "), kind: "plain", optional: 1 }
       : undefined,
     s ? contextOf(s) : undefined,
+    cache ? { ...cache, optional: 2 } : undefined,
   ];
   let parts = all.filter((p) => p !== undefined);
   const length = () =>
     parts.reduce((n, p) => n + p.text.length, 0) + separator.length * (parts.length - 1);
-  for (const drop of [1, 2]) if (length() > width) parts = parts.filter((p) => p.optional !== drop);
+  for (const drop of [1, 2, 3])
+    if (length() > width) parts = parts.filter((p) => p.optional !== drop);
   // What still does not fit is cut at the width.
   let room = width;
   const out: Part[] = [];
@@ -113,7 +133,10 @@ function fillColour(fill: number | undefined): RGBA {
 // Strip is the strip of the space id's worker.
 export function Strip(props: { id: string; width: number; theme: Theme }) {
   const plain = RGBA.defaultForeground();
-  const parts = () => stripParts(stripOf(props.id), props.width);
+  const [now, setNow] = createSignal(Date.now());
+  const timer = setInterval(() => setNow(Date.now()), tick);
+  onCleanup(() => clearInterval(timer));
+  const parts = () => stripParts(stripOf(props.id), props.width, now());
   return (
     <text height={1} width={props.width} wrapMode="none" fg={plain}>
       {indent(parts(), props.width)}

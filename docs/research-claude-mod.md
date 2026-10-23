@@ -599,3 +599,8 @@ the types its settings list: `permission_prompt`, `idle_prompt`, `auth_success`,
   `agent_completed` a background agent's end, `worker_permission_prompt` a teammate's request
   shown to its leader, `computer_use_exit` the end of computer use, `push_notification` the
   model's push.
+
+## The prompt cache (October 23, 2026, 2.1.302)
+
+- `turn.step`'s `usage` (`TurnUsage`) carries the API's `input_tokens`, `cache_read_input_tokens` and `cache_creation_input_tokens` of each response: the source of the hit percent. It has no ttl or expiry; `PreModelSwitch` (`prompt_cache_warm`, `cache_ttl`) and a resume's `SessionStart` (`prompt_cache_likely_expired`) mention it only at their moments.
+- The status-line input has `prompt_cache` once a request was made: `warm`, `caching_observed`, `ttl` (`5m`/`1h`), `expires_at` (epoch seconds), `requests`, `misses`, `hit_ratio`, `cache_write_tokens` and more — read from the strings of the installed binary, not from a live sample (it needs a login). `statusLine.refreshInterval` is seconds, at least 1, beside the event-driven runs; the command inherits the harness's environment, `REWAKE_MOD_SOCKET` among it, and is a child of the harness process. The run's `--settings` `statusLine` beats the user settings'. See [design-claude.md](v2/design-claude.md#the-cache-ttl).

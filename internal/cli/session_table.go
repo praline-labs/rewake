@@ -4,9 +4,11 @@ import (
 	"cmp"
 	"fmt"
 	"math"
+	"slices"
 	"strconv"
 	"strings"
 	"text/tabwriter"
+	"time"
 
 	"github.com/praline-labs/rewake/internal/core/session"
 )
@@ -37,8 +39,17 @@ func sessionTable(room string, sessions []sessionView, visible bool) []string {
 	if !commonHarness {
 		header = append(header, "Harness")
 	}
+	// Likewise the cache column: only a harness that reports the cache fills it.
+	cached := false
+	for _, session := range sessions {
+		cached = cached || (session.Telemetry != nil && session.Telemetry.Cache != nil)
+	}
 	if visible {
-		header = append(header, "Status", "Model", "Effort", "Context", "Compactions")
+		header = append(header, "Status", "Model", "Effort", "Context")
+		if cached {
+			header = append(header, "Cache")
+		}
+		header = append(header, "Compactions")
 	}
 	header = append(header, "Age")
 	if !commonDirectory {
@@ -56,7 +67,11 @@ func sessionTable(room string, sessions []sessionView, visible bool) []string {
 			row = append(row, strconv.Quote(session.Harness))
 		}
 		if visible {
-			row = append(row, stateCells(session.Telemetry)...)
+			cells := stateCells(session.Telemetry)
+			if cached {
+				cells = slices.Insert(cells, 4, cacheCell(session.Telemetry))
+			}
+			row = append(row, cells...)
 		}
 		row = append(row, age(session.Age()))
 		if !commonDirectory {
@@ -67,6 +82,33 @@ func sessionTable(room string, sessions []sessionView, visible bool) []string {
 	_ = writer.Flush()
 	lines = append(lines, strings.TrimSuffix(buffer.String(), "\n"))
 	return lines
+}
+
+func cacheCell(snapshot *session.Snapshot) string {
+	if snapshot == nil || snapshot.Cache == nil {
+		return "-"
+	}
+	cell := strconv.Itoa(snapshot.Cache.HitPercent) + "%" + cacheLeft(snapshot.CacheLife, time.Now())
+	if !snapshot.Fresh || !snapshot.ContextFresh {
+		cell += " (stale)"
+	}
+	return cell
+}
+
+// cacheLeft is what the cache has left to live, as " 42m" or " —" once it has
+// expired; nothing where the harness told no expiry.
+func cacheLeft(life *session.CacheLife, now time.Time) string {
+	if life == nil || life.ExpiresAt == nil {
+		return ""
+	}
+	left := life.Remaining(now)
+	switch {
+	case left <= 0:
+		return " —"
+	case left < time.Minute:
+		return " <1m"
+	}
+	return " " + strconv.Itoa(int((left+59*time.Second)/time.Minute)) + "m"
 }
 
 func stateCells(snapshot *session.Snapshot) []string {

@@ -275,7 +275,7 @@ line. Each worker pane's last row, inside its padding, is one line drawn by the 
 gets none: its own status line shows the same.
 
 ```
-write-claude (code) · working · ⎇ wt-fd7596 · <model> low · 23% 230k/1M
+write-claude (code) · working · ⎇ wt-fd7596 · <model> low · 23% 230k/1M · 90% 42m
 ```
 
 - **What it says**: the session and its type, the activity (`working`, `waiting for <name>`,
@@ -287,7 +287,11 @@ write-claude (code) · working · ⎇ wt-fd7596 · <model> low · 23% 230k/1M
   as the harness's display name (`configuredModelName` of the telemetry: pi's registry name), else the
   template's `launch.label`, else the id. The window is the limit the conversation is kept to: Claude
   Code's launch `--autocompact`, which the host applies over the mod's model window, the percent
-  recomputed against it. (October 23, 2026.)
+  recomputed against it. (October 23, 2026.) Last, the prompt cache as `rewake list`'s Cache cell
+  has it (`cache` and `cacheLife` of the telemetry): the hit percent of the last request and the time
+  the cache has left — `90% 42m`, `90% <1m`, `90% —` once it expired, `90%` where the harness gives no
+  expiry; left out where it gives no cache. The time is counted from `expiresAt` on the shell's own clock,
+  every five seconds, so it ticks down between polls. (October 23, 2026.)
 - **Centred** in the pane's width, after the dropping below; a line that fills the width has no
   margin.
 - **Where it comes from**: `rewake list --json` shows telemetry only to a verified main
@@ -299,7 +303,7 @@ write-claude (code) · working · ⎇ wt-fd7596 · <model> low · 23% 230k/1M
   (made by its launch, or entered); otherwise the branch checked out where the session started,
   read from `git` at most every five seconds, a detached head as its short commit.
 - **Narrow**: the line fits the pane, whatever the width. Too long, it leaves out the model and
-  effort, then the branch; what still does not fit is cut with `…`. The name, the activity and the
+  effort, then the cache, then the branch; what still does not fit is cut with `…`. The name, the activity and the
   context stay.
 - **Colours**: the name bold in the workers' colour of the bar; the rest in the terminal's own
   foreground with dim separators, no colour forced (herdr answers no OSC 10/11); the context in the

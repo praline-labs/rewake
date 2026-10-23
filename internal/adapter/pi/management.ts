@@ -11,6 +11,7 @@ export type State = {
   window: number | null;
   percent: number | null;
   compacting: boolean;
+  cache: { read: number; write: number; input: number } | null;
 };
 type Pending = {
   frame: Frame;
@@ -18,6 +19,22 @@ type Pending = {
   resolve: (answer: Partial<Frame>) => void;
   timer: ReturnType<typeof setTimeout>;
 };
+
+// What the provider reported for an assistant message, as pi normalises it:
+// input is the part neither read from nor written to the cache. Whatever the
+// stop reason: a response cut short or failed after its input usage arrived
+// still sent that request, and a placeholder with no input counts has none to
+// show, so the caller keeps the last observation.
+export function cacheOf(message: {
+  role: string;
+  usage?: { input?: number; cacheRead?: number; cacheWrite?: number };
+}): State["cache"] {
+  if (message.role !== "assistant" || !message.usage) return null;
+  const { input = 0, cacheRead = 0, cacheWrite = 0 } = message.usage;
+  if (!(input >= 0 && cacheRead >= 0 && cacheWrite >= 0) || input + cacheRead + cacheWrite <= 0)
+    return null;
+  return { read: cacheRead, write: cacheWrite, input };
+}
 
 export function management(
   pi: ExtensionAPI,
@@ -29,6 +46,7 @@ export function management(
   let sequence = 0;
   let compactions = 0;
   let compacting = false;
+  let cache: State["cache"] = null;
   let compact: Pending | undefined;
   let interrupt: (Pending & { turn: Turn }) | undefined;
 
@@ -45,7 +63,15 @@ export function management(
       window: usage?.contextWindow ?? ctx?.model?.contextWindow ?? null,
       percent: usage?.percent ?? null,
       compacting: compacting || !!compact,
+      cache,
     };
+  }
+
+  function usageSeen(message: Parameters<typeof cacheOf>[0]) {
+    const seen = cacheOf(message);
+    if (!seen) return;
+    cache = seen;
+    changed();
   }
 
   function changed() {
@@ -207,6 +233,7 @@ export function management(
     compact = undefined;
     interrupt = undefined;
     compacting = false;
+    cache = null;
   }
 
   pi.on("session_before_compact", async () => {
@@ -231,6 +258,7 @@ export function management(
     compacting = false;
     changed();
   });
+  pi.on("message_end", async (event) => usageSeen(event.message));
   pi.on("model_select", async () => changed());
   pi.on("thinking_level_select", async () => changed());
   return { sample, changed, control, settled, reset, busy: () => compacting || !!compact };

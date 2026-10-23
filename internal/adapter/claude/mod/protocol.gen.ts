@@ -34,6 +34,11 @@ export const paths = {
   // the harness tells; a main in rewake's shell has its closing screen started by it
   // (docs/v2/shell.md), and nothing else changes on the host.
   sessionClosing: "/v1/session/closing",
+  // statusLine reports the prompt cache's life from the status line of a worker's run, which
+  // Claude Code starts as a child of the harness and rewake's `rewake statusline` fills; unlike
+  // every other endpoint its peer may be any descendant of the harness's process, since its
+  // payload is telemetry and nothing it says is acted on. Not an endpoint of the mod.
+  statusLine: "/v1/status/line",
   // askOpen opens a permission request or a question of a worker's run for main to answer
   // (docs/permission-requests.md): the host leaves main a notify naming it and answers its id;
   // 409 says the run is no worker or the room has no main to ask, and the question stays the
@@ -58,6 +63,7 @@ export interface Endpoints {
   "/v1/mod/state": { request: StateRequest; answer: Done }
   "/v1/mod/control": { request: ControlReply; answer: Done }
   "/v1/session/closing": { request: ClosingRequest; answer: Done }
+  "/v1/status/line": { request: StatusLineRequest; answer: Done }
   "/v1/ask/open": { request: AskOpenRequest; answer: AskOpenAnswer }
   "/v1/ask/poll": { request: AskPollRequest; answer: AskPollAnswer }
   "/v1/ask/settle": { request: AskSettleRequest; answer: Done }
@@ -188,6 +194,17 @@ export interface Refusal {
   // number: a load whose store shows no number above its own takes the next above this one and
   // says hello once more.
   loadSeq?: number
+}
+
+// StatusLineRequest is the status line's prompt_cache as Claude Code gave it, without
+// transcript content.
+export interface StatusLineRequest {
+  // ttl is the cache's lifetime of the last request, 5m or 1h, absent when unknown.
+  ttl?: string
+  // expiresAt is when the cache expires, in seconds since the epoch, absent when unknown.
+  expiresAt?: number
+  // warm says Claude Code takes the cache for warm.
+  warm: boolean
 }
 
 // ClosingRequest says the harness's process has begun to end.
@@ -337,6 +354,13 @@ export interface StateRequest {
   window?: number
   // percent is the filled percentage, absent when unknown.
   percent?: number
+  // cacheRead is the input tokens the prompt cache served on the latest main-loop response of
+  // this load, absent until one reports usage.
+  cacheRead?: number
+  // cacheWrite is the input tokens that response wrote to the prompt cache.
+  cacheWrite?: number
+  // cacheInput is the input tokens that response neither read from nor wrote to the cache.
+  cacheInput?: number
   // compacting says a native compaction is in progress.
   compacting: boolean
   // compactions counts completed compactions observed by this load.

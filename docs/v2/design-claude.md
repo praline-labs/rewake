@@ -184,12 +184,48 @@ main-loop `turn.step` asked for, kept by the host across loads; before one, the 
 tells main of it once ([permission-requests.md](../permission-requests.md#a-dialog-nobody-is-asked-about)). Rate limits remain
 absent. A lapse makes every field stale until a new generation supplies a sample.
 
+The prompt cache (October 23, 2026) is the usage the API reported for the latest main-loop
+`turn.step` response (`usage.cache_read_input_tokens`, `cache_creation_input_tokens`,
+`input_tokens`; Claude Code 2.1.302): the mod keeps it and sends `cacheRead`, `cacheWrite` and
+`cacheInput` with every sample, an additive change of `mod/state`; a response with no usage and a
+subagent's leave the last. The host publishes `Snapshot.Cache` (`cache` of the telemetry): the raw
+counts and `hitPercent`, the share of all the request's input tokens — read, written and neither —
+that the cache served. It is the last request's, not a running total, since that is what says whether
+the prefix is still warm; providers count input differently, so the harness's own usage is the only
+source and rewake adds nothing to it. pi's extension sends the same three counts from
+`message_end` ([pi record](../research-pi.md)); a harness or an older mod that reports none leaves
+the field out, and `rewake list` shows a `Cache` column only when some session has it.
+
 Completed compactions have a load-local count; the host folds its increases into the run's
 count and bounded notification events. A reload keeps the run's count and marks coverage
 partial. Native manual and automatic compactions are observed through the mod's event hook;
 remote ones through the native call's result, so re-entry cannot count one twice. A skipped
 or failed compaction clears the in-progress state and adds no completion. Managed-policy
 limits and the tests' scope are in [the parity record](../research-claude-parity.md).
+
+## The cache ttl
+
+October 23, 2026. The mod cannot read how long the prompt cache lives; Claude Code's status-line input
+carries it as `prompt_cache` (`warm`, `ttl` of `5m` or `1h`, `expires_at` in epoch seconds,
+`requests`, `misses`, `hit_ratio` …), once a request was made (read from the strings of 2.1.302; a live
+sample needs a login). A worker's run therefore sets `statusLine` in its `--settings` overlay —
+`'<rewake>' statusline`, `refreshInterval` 30 or the person's own — which beats the folder's
+`settings.json`. The hidden `rewake statusline` reads that input, posts `ttl`, `expiresAt` and `warm`
+to the run's host at `status/line` of the mod socket, and prints the person's own `statusLine` command
+from the folder's `settings.json` (run with the same input) or nothing, always exiting 0. The expiry is
+absolute, so a slow timer loses nothing; the command runs after each response too. The post (2 s) and the
+person's command (5 s) run side by side with deadlines of their own; the person's command runs in a process
+group of its own with its output in a pipe rewake reads, killed whole at the deadline, so it cannot keep the
+harness's output open, and `REWAKE_STATUSLINE_PASSTHROUGH` in its environment makes a `rewake statusline` it
+calls print and post nothing. The stdin read is bounded in time (3 s) as well as size.
+
+`status/line` is the one endpoint served to the harness's descendants and not only its own process
+(`fromHarnessOrChild`): the status line is Claude Code's child, and the payload is telemetry that is
+acted on nowhere — a Bash call posting it is harmless (main's decision, October 23). The host keeps
+the last in `Snapshot.CacheLife` (`cacheLife`: `ttl`, `expiresAt`, `warm`), beside `Cache`, which comes from
+the responses' usage; `rewake list` shows the Cache cell as `90% 42m` (`—` once expired, `<1m`), the
+remaining time counted by the reader's clock. Main's own run has no such status line. pi has no
+observed expiry (only a model's best-effort lifetimes per retention tier), so nothing is shown there.
 
 ## Control
 
