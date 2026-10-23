@@ -20,6 +20,22 @@ type Pending = {
   timer: ReturnType<typeof setTimeout>;
 };
 
+// What the provider reported for an assistant message, as pi normalises it:
+// input is the part neither read from nor written to the cache. Whatever the
+// stop reason: a response cut short or failed after its input usage arrived
+// still sent that request, and a placeholder with no input counts has none to
+// show, so the caller keeps the last observation.
+export function cacheOf(message: {
+  role: string;
+  usage?: { input?: number; cacheRead?: number; cacheWrite?: number };
+}): State["cache"] {
+  if (message.role !== "assistant" || !message.usage) return null;
+  const { input = 0, cacheRead = 0, cacheWrite = 0 } = message.usage;
+  if (!(input >= 0 && cacheRead >= 0 && cacheWrite >= 0) || input + cacheRead + cacheWrite <= 0)
+    return null;
+  return { read: cacheRead, write: cacheWrite, input };
+}
+
 export function management(
   pi: ExtensionAPI,
   context: () => ExtensionContext | undefined,
@@ -51,18 +67,10 @@ export function management(
     };
   }
 
-  // What the provider reported for the last assistant message, as pi
-  // normalises it: input is the part neither read from nor written to the
-  // cache. A failed or aborted message carries no usage worth showing.
-  function usageSeen(message: {
-    role: string;
-    stopReason?: string;
-    usage?: { input?: number; cacheRead?: number; cacheWrite?: number };
-  }) {
-    if (message.role !== "assistant" || !message.usage) return;
-    if (message.stopReason === "error" || message.stopReason === "aborted") return;
-    const { input, cacheRead, cacheWrite } = message.usage;
-    cache = { read: cacheRead ?? 0, write: cacheWrite ?? 0, input: input ?? 0 };
+  function usageSeen(message: Parameters<typeof cacheOf>[0]) {
+    const seen = cacheOf(message);
+    if (!seen) return;
+    cache = seen;
     changed();
   }
 
