@@ -178,7 +178,8 @@ mode:
   0.9.3, the owner's, answers OSC 4 from its own palette and OSC 10/11 only when it learned its
   host's colours itself, and on October 19, 2026 it answered neither — the owner's shell got the
   palette alone, `REWAKE_HOST_COLORS` stayed unset, and the panes showed white text on the
-  terminal's background, read as "black" (the owner's check, the same day).
+  terminal's background, read as "black" (the owner's check, the same day). Under herdr, then,
+  an empty `REWAKE_HOST_COLORS` and a transparent background are not a fault.
   `renderer.getPalette` is not used: it gives up after a fixed 300 ms of silence before the first
   reply whatever its timeout, and returns nothing without failing (a slow Windows Terminal over
   WSL lost the colours that way; replies delayed 1 and 2 s are now heard).

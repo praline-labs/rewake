@@ -226,6 +226,15 @@ linked from the case folder if the case wants it there — and pass that as `REW
 
 *October 11, 2026.*
 
+### A worker's `worktree_enter` switched the branch of main's checkout
+
+A worker that called `worktree_enter` changed the branch in the owner's main folder before it
+entered its own copy (October 21, 2026). Before a fast-forward merge, check the main folder
+with `git status -sb`: it must be on `v2`. A brief says "before the first edit, call
+`worktree_enter`"; the briefing was fixed in 8924fcb.
+
+*October 21, 2026.*
+
 ## Arguments and continuing a conversation
 
 ### Under `--remote`, continuing a thread refuses because of our own flag

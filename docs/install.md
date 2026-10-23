@@ -136,7 +136,10 @@ exec "$HOME/.local/share/rewake2/rewake" "$@"
 
 and make it runnable: `chmod +x ~/.local/bin/rewake2`. Check it: `rewake2 --version` prints a
 line with `build` and the time of your build (the version number still reads 1.0.3 until 2.0 is
-released), and `rewake2 list` says no sessions are running.
+released; the build is told by `build <commit>`), and `rewake2 list` says no sessions are running.
+
+To see which build a running service is, `readlink /proc/<servicePid>/exe`: a path ending in
+`(deleted)` means the file was replaced under it and the service needs a restart.
 
 Why a script and not a binary named `rewake2`: the script gives every 2.0 command its own state
 base (`REWAKE_DIR`) and its own place for `--worktree` checkouts (`REWAKE_WORKTREES`), so

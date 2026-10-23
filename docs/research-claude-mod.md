@@ -31,7 +31,10 @@ run had the calling session's rewake and Claude Code variables removed and a pri
 On 2.1.296 the folder-trust question of a first start reads "Quick safety check: Is this a
 project you created or one you trust?" with "No, exit" preselected: the first run stopped
 there, and the driver then answered Down, Enter, one second after the text appeared (a
-key sent sooner was lost).
+key sent sooner was lost). To find the dialog in a screen dump, look for "Enter to confirm" in
+the text with the escape codes removed (checked October 16, 2026). A worker's profile presets
+the trust of the repository it runs in (`markReady` in `internal/adapter/claude/claude_json.go`),
+so the dialog is met only in a directory outside it or in a probe's private HOME.
 
 ## P4: the peer of the mod's requests
 
