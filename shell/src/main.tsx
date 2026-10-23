@@ -284,11 +284,11 @@ function App() {
   const height = (p: Pane) => (p === mainPane ? Math.max(dims().height - 2, 1) : rowHeight());
   // A pane sits in a box with a column of padding on each side, so the text
   // does not touch the edge; the widget's size, and so the program's, is the
-  // inside. A press on the padding chooses the pane like one on its text.
-  const padded = (p: Pane) => ({
-    visible: shown(p),
+  // inside. A worker's box leaves its last row to the strip, a shell's row of
+  // the full width. A press on the padding chooses the pane like one on its text.
+  const padded = (p: Pane, rows: number) => ({
     width: widthOf(p),
-    height: height(p),
+    height: rows,
     paddingLeft: 1,
     paddingRight: 1,
     backgroundColor: seed.transparent ? undefined : theme.background,
@@ -313,7 +313,7 @@ function App() {
       <box flexDirection="column" width="100%" height="100%" visible={!closing()}>
         <box flexDirection="row" height={rowHeight()}>
           <box flexDirection="column" visible={shown(mainPane)} width={widthOf(mainPane)}>
-            <box {...padded(mainPane)}>
+            <box {...padded(mainPane, height(mainPane))}>
               <pane_terminal
                 id="main"
                 ref={(t: PaneTerminal) => startMainPane(t)}
@@ -322,26 +322,29 @@ function App() {
                 height={height(mainPane)}
               />
             </box>
-            <Show when={wide()}>
-              <box paddingLeft={1} paddingRight={1}>
-                {bar()}
-              </box>
-            </Show>
+            <Show when={wide()}>{bar()}</Show>
           </box>
           <Show when={wide()}>
             <box width={1} height={rowHeight()} backgroundColor="#444444" />
           </Show>
           <For each={workers()}>
             {(pane) => (
-              <box {...padded(pane)} flexDirection="column">
-                <pane_terminal
+              <box visible={shown(pane)} flexDirection="column" width={widthOf(pane)}>
+                <box {...padded(pane, Math.max(height(pane) - 1, 1))}>
+                  <pane_terminal
+                    id={pane.id}
+                    ref={(t: PaneTerminal) => startWorkerPane(pane, t)}
+                    transparentBackground={seed.transparent}
+                    width={inner(pane)}
+                    height={Math.max(height(pane) - 1, 1)}
+                  />
+                </box>
+                <Strip
                   id={pane.id}
-                  ref={(t: PaneTerminal) => startWorkerPane(pane, t)}
-                  transparentBackground={seed.transparent}
-                  width={inner(pane)}
-                  height={Math.max(height(pane) - 1, 1)}
+                  width={widthOf(pane)}
+                  theme={theme}
+                  pick={() => paneHooks.pressed(pane.id)}
                 />
-                <Strip id={pane.id} width={inner(pane)} theme={theme} />
               </box>
             )}
           </For>
@@ -355,7 +358,6 @@ function App() {
             zoomed: zoomed(),
             workers: workers().length,
           }}
-          width={dims().width}
           theme={theme}
           accent={focusedPane() === mainPane ? theme.main : theme.worker}
         />

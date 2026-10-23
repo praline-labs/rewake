@@ -3,6 +3,7 @@
 // and a light background alike: a terminal that answers nothing must not get
 // black on black.
 import type { TerminalColors } from "@opentui/core";
+import { standInForeground } from "./colors.ts";
 
 export type Theme = {
   // main and worker are the buttons' own colours, main's apart from the
@@ -10,30 +11,71 @@ export type Theme = {
   main: string;
   worker: string;
   idle: string;
-  // text is the hint line's words; background is the terminal's own when it
-  // said, for the layers drawn over the panes.
+  // text is the closing screen's words, and background the terminal's own
+  // when it said, for the layers drawn over the panes; the shell's rows draw
+  // their words in the terminal's own foreground.
   text: string;
   background?: string;
+  // band is the background of the shell's own rows — the strip, the bar,
+  // the hints — a shade off the terminal's background that sets them apart
+  // from the programs' last lines without a row of their own; none when the
+  // terminal did not say its background.
+  band?: string;
+  // faint is the separators' colour, and what has gone stale: the renderer
+  // draws no dim over the terminal's own foreground, so it is a colour of its
+  // own, halfway to the background where the terminal said both.
+  faint: string;
+  // selection is the colours of a selection over the shell's own rows, the
+  // ones a pane's has: the widget swaps a selected cell's colours, and a
+  // pane's text is mostly the default foreground on the default background.
+  selection: { bg: string; fg: string };
 };
 
 const fallback = { main: "#5f87d7", worker: "#87af5f", idle: "#585858", text: "#a8a8a8" };
 
+// bandShare is how far the band moves from the background towards the ink
+// on it: enough to read as a band, not as a bar.
+const bandShare = 0.06;
+
 export function themeOf(colors: TerminalColors | undefined): Theme {
   const p = colors?.palette ?? [];
+  const background = colors?.defaultBackground ?? undefined;
+  const selected = colors?.defaultForeground ?? standInForeground;
   return {
     main: p[4] ?? fallback.main,
     worker: p[2] ?? fallback.worker,
     idle: p[8] ?? fallback.idle,
     text: colors?.defaultForeground ?? p[7] ?? fallback.text,
-    background: colors?.defaultBackground ?? undefined,
+    background,
+    faint:
+      background && colors?.defaultForeground
+        ? mix(colors.defaultForeground, background, 0.5)
+        : (p[8] ?? fallback.idle),
+    band: background && mix(background, ink(background), bandShare),
+    selection: { bg: selected, fg: background ?? ink(selected) },
   };
 }
 
+function channels(hex: string): number[] {
+  const v = /^#?([0-9a-f]{6})$/i.exec(hex)?.[1] ?? "000000";
+  return [0, 2, 4].map((i) => parseInt(v.slice(i, i + 2), 16));
+}
+
+// mix is a moved share of the way from a to b.
+function mix(a: string, b: string, share: number): string {
+  const [x, y] = [channels(a), channels(b)];
+  return `#${x
+    .map((c, i) =>
+      Math.round(c + ((y[i] ?? c) - c) * share)
+        .toString(16)
+        .padStart(2, "0"),
+    )
+    .join("")}`;
+}
+
 function luminance(hex: string): number {
-  const v = /^#?([0-9a-f]{6})$/i.exec(hex)?.[1];
-  if (!v) return 0;
-  const [r, g, b] = [0, 2, 4].map((i) => {
-    const c = parseInt(v.slice(i, i + 2), 16) / 255;
+  const [r, g, b] = channels(hex).map((n) => {
+    const c = n / 255;
     return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
   });
   return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!;

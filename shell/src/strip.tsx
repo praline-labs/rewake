@@ -1,8 +1,9 @@
 // The strip, the last row of a worker's pane (docs/v2/shell.md, "The
 // strip"): who the worker is, what it does, where it works, its model and how
 // full its context is, from rewake's own records, the same for every harness.
-import { RGBA, TextAttributes } from "@opentui/core";
+import { RGBA } from "@opentui/core";
 import { createSignal, For, onCleanup } from "solid-js";
+import { ShellRow, selecting, separator } from "./bar.tsx";
 import type { Session, Space } from "./room.ts";
 import type { Theme } from "./theme.ts";
 
@@ -34,8 +35,6 @@ type Part = {
 // How often the remaining life of the cache is counted again from the clock:
 // the cell moves by the minute, and the poll is slower than that.
 const tick = 5000;
-
-const separator = " · ";
 
 // tokens is a count as the owner's own status line writes it: 950, 230k, 1M,
 // 1.5M.
@@ -122,14 +121,6 @@ export function stripParts(state: StripState, width: number, now = Date.now()): 
   return out;
 }
 
-// indent is the spaces that centre the parts in the width; none once they
-// fill it.
-export function indent(parts: Part[], width: number): string {
-  const length =
-    parts.reduce((n, p) => n + p.text.length, 0) + separator.length * (parts.length - 1);
-  return " ".repeat(Math.max(0, Math.floor((width - length) / 2)));
-}
-
 // fillColour is the context's colour by how full it is, the owner's own
 // thresholds: the terminal's own green, yellow and red.
 function fillColour(fill: number | undefined): RGBA {
@@ -137,43 +128,36 @@ function fillColour(fill: number | undefined): RGBA {
   return RGBA.fromIndex(fill >= 80 ? 1 : fill >= 50 ? 3 : 2);
 }
 
-// Strip is the strip of the space id's worker.
-export function Strip(props: { id: string; width: number; theme: Theme }) {
+// Strip is the strip of the space id's worker, for a pane width wide: a
+// shell's row like the bar, its line fitted to the width less the padding.
+export function Strip(props: { id: string; width: number; theme: Theme; pick: () => void }) {
   const plain = RGBA.defaultForeground();
   const [now, setNow] = createSignal(Date.now());
   const timer = setInterval(() => setNow(Date.now()), tick);
   onCleanup(() => clearInterval(timer));
-  const parts = () => stripParts(stripOf(props.id), props.width, now());
+  const parts = () => stripParts(stripOf(props.id), Math.max(props.width - 2, 1), now());
   return (
-    <text height={1} width={props.width} wrapMode="none" fg={plain}>
-      {indent(parts(), props.width)}
-      <For each={parts()}>
-        {(part, i) => (
-          <>
-            {i() > 0 ? (
-              <span style={{ fg: plain, attributes: TextAttributes.DIM }}>{separator}</span>
-            ) : (
-              ""
-            )}
-            {part.kind === "name" ? (
-              <b style={{ fg: props.theme.worker }}>{part.text}</b>
-            ) : part.kind === "context" ? (
-              <span style={{ fg: fillColour(part.fill) }}>{part.text}</span>
-            ) : part.kind === "cache" ? (
-              <span
-                style={{
-                  fg: plain,
-                  ...(part.cold ? { attributes: TextAttributes.DIM } : { fg: RGBA.fromIndex(6) }),
-                }}
-              >
-                {part.text}
-              </span>
-            ) : (
-              part.text
-            )}
-          </>
-        )}
-      </For>
-    </text>
+    <ShellRow theme={props.theme} onMouseDown={props.pick}>
+      <text height={1} wrapMode="none" flexGrow={1} fg={plain} {...selecting(props.theme)}>
+        <For each={parts()}>
+          {(part, i) => (
+            <>
+              {i() > 0 ? <span style={{ fg: props.theme.faint }}>{separator}</span> : ""}
+              {part.kind === "name" ? (
+                <b style={{ fg: props.theme.worker }}>{part.text}</b>
+              ) : part.kind === "context" ? (
+                <span style={{ fg: fillColour(part.fill) }}>{part.text}</span>
+              ) : part.kind === "cache" ? (
+                <span style={{ fg: part.cold ? props.theme.faint : RGBA.fromIndex(6) }}>
+                  {part.text}
+                </span>
+              ) : (
+                part.text
+              )}
+            </>
+          )}
+        </For>
+      </text>
+    </ShellRow>
   );
 }

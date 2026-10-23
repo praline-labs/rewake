@@ -1,12 +1,43 @@
 // The navigation's two lines (docs/v2/shell.md, "The bar"): a button for
 // main and for each worker, the focused one filled in its colour and main's
-// colour apart from the workers'; and the hints for the current focus.
-import { TextAttributes } from "@opentui/core";
-import { For, Show } from "solid-js";
-import { type Context, centring, hintsFor } from "./hints.ts";
+// colour apart from the workers'; and the hints for the current focus. Both,
+// and the strip, are the shell's own rows, drawn alike by ShellRow.
+import { RGBA, TextAttributes } from "@opentui/core";
+import { For, type JSX, Show } from "solid-js";
+import { type Context, hintsFor } from "./hints.ts";
 import { ink, inkOr, type Theme } from "./theme.ts";
 
 export type Tab = { id: string; label: string; main: boolean };
+
+// separator parts the hints as it parts the strip.
+export const separator = " · ";
+
+// ShellRow is one of the shell's own rows: the band behind it, the panes'
+// column of padding on each side, its content from the left.
+export function ShellRow(props: { theme: Theme; children: JSX.Element; onMouseDown?: () => void }) {
+  return (
+    <box
+      flexDirection="row"
+      height={1}
+      flexShrink={0}
+      width="100%"
+      overflow="hidden"
+      paddingLeft={1}
+      paddingRight={1}
+      onMouseDown={props.onMouseDown}
+      {...(props.theme.band ? { backgroundColor: props.theme.band } : {})}
+    >
+      {props.children}
+    </box>
+  );
+}
+
+// selecting is a text's selection in the panes' one colour, so a selection
+// over the shell's rows does not show each part in its own.
+export const selecting = (theme: Theme) => ({
+  selectionBg: theme.selection.bg,
+  selectionFg: theme.selection.fg,
+});
 
 export function Bar(props: {
   tabs: Tab[];
@@ -28,7 +59,7 @@ export function Bar(props: {
     return { bg, fg: inkOr(colour(t), bg), attributes: marked };
   };
   return (
-    <box flexDirection="row" height={1} width="100%" overflow="hidden">
+    <ShellRow theme={props.theme}>
       <For each={props.tabs}>
         {(t) => (
           <text
@@ -36,6 +67,7 @@ export function Bar(props: {
             marginRight={1}
             flexShrink={0}
             {...style(t)}
+            {...selecting(props.theme)}
             content={` ${t.label} `}
             onMouseDown={() => props.pick(t.id)}
           />
@@ -43,36 +75,34 @@ export function Bar(props: {
       </For>
       <box flexGrow={1} />
       <Show when={props.zoomed}>
-        <text height={1} flexShrink={0} fg={props.theme.text} content=" zoomed " />
+        <text
+          height={1}
+          flexShrink={0}
+          fg={RGBA.defaultForeground()}
+          {...selecting(props.theme)}
+          content="zoomed"
+        />
       </Show>
-    </box>
+    </ShellRow>
   );
 }
 
-export function Hints(props: { context: Context; width: number; theme: Theme; accent: string }) {
+export function Hints(props: { context: Context; theme: Theme; accent: string }) {
   const hints = () => hintsFor(props.context);
+  const plain = RGBA.defaultForeground();
   return (
-    <text height={1} width="100%" wrapMode="none" fg={props.theme.text}>
-      {(() => {
-        const lead = hints().lead;
-        return lead ? (
-          <>
-            {" "}
-            <b style={{ fg: props.accent }}>{lead.keys}</b>
-            {` ${lead.does}`}
-          </>
-        ) : null;
-      })()}
-      {centring(props.width, hints().lead, hints().rest)}
-      <For each={hints().rest}>
-        {(h, i) => (
-          <>
-            {i() > 0 ? "   " : ""}
-            <b style={{ fg: props.accent }}>{h.keys}</b>
-            {` ${h.does}`}
-          </>
-        )}
-      </For>
-    </text>
+    <ShellRow theme={props.theme}>
+      <text height={1} wrapMode="none" flexGrow={1} fg={plain} {...selecting(props.theme)}>
+        <For each={hints()}>
+          {(h, i) => (
+            <>
+              {i() > 0 ? <span style={{ fg: props.theme.faint }}>{separator}</span> : ""}
+              <b style={{ fg: props.accent }}>{h.keys}</b>
+              {` ${h.does}`}
+            </>
+          )}
+        </For>
+      </text>
+    </ShellRow>
   );
 }

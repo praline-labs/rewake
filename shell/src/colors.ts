@@ -38,6 +38,10 @@ export function seedOf(colors: TerminalColors | undefined): Seed {
   return { widget: `${widget}\x1b]10;rgb:c0/c1/bf\x1b\\`, host, transparent: !bg, standIn };
 }
 
+// standInForeground is the stand-in as a colour, what a selection in a pane
+// shows behind the default foreground's text.
+export const standInForeground = "#c0c1bf";
+
 // keepDefaultForeground gives the cells the widget drew in the stand-in
 // colour the default foreground's intent, so the renderer writes SGR 39 and
 // the terminal draws them in its own colour (docs/v2/shell.md). A colour is

@@ -248,8 +248,7 @@ navigation. Where they sit is the owner's decision of October 23, 2026: the hint
 bottom row across the whole width in every layout. The bar, while both panes show (the wide layout),
 sits under main's pane, in main's column, the way the strip sits under a worker's pane: main's pane
 ends two rows above the bottom, and the worker's column ends one row above it with its strip on the
-bar's row, so both columns end together. The bar sits inside the column's padding, one column in from each side, so it lines up with
-main's text above. While one pane shows (the narrow layout, or a zoom), the bar
+bar's row, so both columns end together. While one pane shows (the narrow layout, or a zoom), the bar
 and the hints take the two bottom lines across the whole width, and the pane the rest.
 
 - **The buttons** (`shell/src/bar.tsx`): ` main `, then each worker by its name, in the order the
@@ -258,21 +257,46 @@ and the hints take the two bottom lines across the whole width, and the pane the
   on a grey with their colour as the text. Main's colour is apart from the workers': the person's
   palette entry 4 for main and 2 for the workers, 8 for the grey, each with a fallback of its own
   (`shell/src/theme.ts`). In the wide layout, while main has the focus, the worker shown beside it
-  is underlined. A zoom shows ` zoomed ` at the right end.
+  is underlined: filled is where the keys go, underlined is shown beside it without them, and
+  narrow, where only the focused program shows, no button is underlined. A zoom shows `zoomed` at
+  the right end.
 - **The hints** (`shell/src/hints.ts`): what the keys do now — where typing goes, the prefix
   commands that apply, and after a Ctrl+\\ the commands themselves until one is taken or the two
   seconds pass. A hint is a row of one table keyed by the context (main focused, a worker focused,
   the prefix waiting), kept by a `when` over the focus, the zoom and the number of workers; a new
-  hint or a new context is a row there. The keys are drawn in the focused program's colour, the
-  words in the terminal's foreground. "keys go to <name>" is pressed to the left edge and the
-  other hints are centred in the rest of the width (the owner's wish, October 19, 2026); after
-  Ctrl+\\, with no such hint, they are centred in the whole width. A line longer than the width
-  starts at the left and is cut at its end.
+  hint or a new context is a row there. "keys go to <name>" comes first, the rest after it in the
+  table's order, all from the left; until October 24, 2026 the rest were centred (the owner's wish
+  of October 19), given up for one alignment of the shell's rows. A line longer than the width is
+  cut at its end.
+
+**One look for the shell's own rows** (October 24, 2026, on the owner's wish that the strip, the
+bar and the hints read as one): each is a `ShellRow` (`shell/src/bar.tsx`), and they share these rules.
+
+- **Inset and alignment.** A row keeps the panes' column of padding on both sides, and its content
+  starts at the left of what is inside, so the buttons, the hints and the strip begin in the column
+  of the programs' own text, in both layouts. Nothing is centred; only `zoomed` keeps the right end.
+- **Air.** A row is drawn on a band, the terminal's background moved 6% towards the ink that reads
+  on it (`#282828` gives `#343434`), across its whole width, padding included. The band sets the
+  shell's rows apart from a program's last line without a row of emptiness: wide, the bar's and
+  the strip's row and the hints' row read as one band of two rows; narrow, the strip, the bar and
+  the hints as one of three. A terminal that does not say its background gets no band. Compared on
+  screen with a row of `▄` in the band's colour above it, which reads as half a row of air but
+  takes a row from every program, and with no band at all.
+- **Colours and weights.** Words are in the terminal's own foreground; what names a program is bold
+  in its colour — the focused button filled, the strip's name, the hints' keys in the focused
+  program's colour. Parts are separated by ` · ` in a faint colour, halfway from the foreground
+  to the background (palette 8 where the terminal did not say both): OpenTUI 0.6.6 writes no dim
+  over the terminal's own foreground, so a dim attribute there never showed.
+- **Selection.** A selection over these rows is one colour, a pane's: the panes' widget swaps a
+  selected cell's colours, and their text is mostly the default foreground on the default
+  background, so the rows select in the terminal's foreground behind its background
+  (`selectionBg`/`selectionFg`, the stand-in grey where the terminal said no foreground), not each
+  part in its own colour.
 
 ## The strip
 
 Main's decisions of October 21, 2026, after the owner's screenshot showed workers with no status
-line. Each worker pane's last row, inside its padding, is one line drawn by the shell
+line. Each worker pane's last row, a shell's row ([above](#the-bar)), is one line drawn by the shell
 (`shell/src/strip.tsx`), the same for every harness; the worker's program has one row less. Main
 gets none: its own status line shows the same.
 
@@ -294,8 +318,8 @@ write-claude (code) · working · ⎇ wt-fd7596 · <model> low · 23% 230k/1M ·
   the cache has left — `90% 42m`, `90% <1m`, `90% —` once it expired, `90%` where the harness gives no
   expiry; left out where it gives no cache. The time is counted from `expiresAt` on the shell's own clock,
   every five seconds, so it ticks down between polls. (October 23, 2026.)
-- **Centred** in the pane's width, after the dropping below; a line that fills the width has no
-  margin.
+- **From the left**, inside the pane's padding, like the bar and the hints (it was centred until
+  October 24, 2026).
 - **Where it comes from**: `rewake list --json` shows telemetry only to a verified main
   (`internal/cli/session_state.go`), and the shell is main's terminal, so it asks as main's run.
   That run's record is the main whose `servicePid` is the shell's own child, main's wrapper; its
@@ -308,9 +332,9 @@ write-claude (code) · working · ⎇ wt-fd7596 · <model> low · 23% 230k/1M ·
   effort, then the cache, then the branch; what still does not fit is cut with `…`. The name, the activity and the
   context stay.
 - **Colours**: the name bold in the workers' colour of the bar; the rest in the terminal's own
-  foreground with dim separators, no colour forced (herdr answers no OSC 10/11); the context in the
+  foreground with faint separators, no colour forced (herdr answers no OSC 10/11); the context in the
   palette's green, yellow or red from 50% and 80%; the cache in the palette's cyan while it is warm,
-  dim once it expired.
+  faint once it expired.
 - **How fresh**: a Claude Code worker's mod samples after each main-loop step's response, at a
   turn's end and with each heartbeat ([design-claude.md](design-claude.md)), so the context grows
   through a long turn; pi publishes on its own events. The poll adds up to a second.
