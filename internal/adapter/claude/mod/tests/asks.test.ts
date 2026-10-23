@@ -28,6 +28,7 @@ function engine(on: any, run: ReturnType<typeof world>, local?: string, waitMs =
   on("classic.SessionStart", () => ({}));
   on("classic.PermissionRequest", () => ({}));
   on("classic.PostToolUse", () => ({}));
+  on("classic.Notification", () => ({}));
   on("tool.call", async (_: any, e: any) => {
     await run.clock.sleep(waitMs);
     return { result: { questions: e.questions, answers: { [e.questions[0].question]: local } } };
@@ -248,4 +249,33 @@ test("a dialog the person answers at the screen first is left to them, and the w
   await run.clock.advance(500);
   expect((await asking) as any).not.toHaveProperty("decision");
   expect(settled(run)).toEqual(["local"]);
+});
+
+const dialogsWaited = (run: ReturnType<typeof world>) =>
+  run.sent.filter((one) => one.path === "/v1/mod/state").map((one) => one.body.dialog);
+
+test("a dialog no request carries is named in the state until the next tool result, and a carried one is not", async ($, on) => {
+  const replies: Record<string, Reply[]> = { "/v1/ask/open": [opened] };
+  const run = await dialogs($, on, replies);
+  replies["/v1/ask/poll"] = [
+    async () => {
+      await run.clock.sleep(1000);
+      return keyed(run, answered("Allow once"))({});
+    },
+  ];
+  const asking = $.classic.PermissionRequest(drawn as any);
+  await run.clock.advance(500);
+  const shown = { notification_type: "permission_prompt", message: "Claude needs your permission" };
+  await $.classic.Notification(shown as any);
+  await run.clock.advance(1000);
+  expect(await asking).toMatchObject({ decision: { behavior: "allow" } });
+  await $.classic.Notification({ notification_type: "idle_prompt", message: "waiting" } as any);
+  await run.clock.settle();
+  expect(dialogsWaited(run).filter(Boolean)).toEqual([]);
+  await $.classic.Notification(shown as any);
+  await run.clock.settle();
+  expect(dialogsWaited(run).at(-1)).toBe("Claude needs your permission");
+  await $.classic.PostToolUse({ ...drawn, tool_use_id: "t2", tool_response: {} } as any);
+  await run.clock.settle();
+  expect(dialogsWaited(run).at(-1)).toBeUndefined();
 });

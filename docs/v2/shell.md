@@ -279,6 +279,7 @@ write-claude (code) · working · ⎇ wt-fd7596 · <model> low · 23% 230k/1M
 ```
 
 - **What it says**: the session and its type, the activity (`working`, `waiting for <name>`,
+  `waiting at a dialog` ([a dialog nobody is asked about](../permission-requests.md#a-dialog-nobody-is-asked-about)),
   `idle`, `, compacting`, ` (stale)` once the run stopped publishing), the branch, the model and
   effort, and the context as filled percent, used and window. A value rewake does not know is left
   out; a window without a measure reads `–/<window>`. The model and effort stay even where a

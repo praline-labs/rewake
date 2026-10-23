@@ -33,7 +33,8 @@ carries nothing.
 Main's decision of October 23, 2026, after a worker stood on a dialog in its pane with main told
 nothing: Claude Code 2.1.302 runs a launch with no mode in auto mode, its default, so workers run in
 it, and there the check carries nothing; any permission dialog the engine draws itself is carried to
-main as well (step 2 below).
+main as well (step 2 below), and main is told of any other dialog a worker waits at
+([below](#a-dialog-nobody-is-asked-about)).
 
 ## The path
 
@@ -97,6 +98,33 @@ A person at the worker's screen may answer first; the first answer counts, and w
 A question lists its options numbered, says when several may be chosen, and names the command
 with one answer per question. The input shown is cut at 2,000 characters, the mod's copy at
 16,000. No report is owed for the letter, and none comes for the answer.
+
+## A dialog nobody is asked about
+
+Main's decision of October 23, 2026: a worker waiting at a dialog rewake does not carry — one main
+cannot answer through the mod, or one whose request could not be opened — must not look like work.
+Claude Code sends `classic.Notification` while a session waits at a dialog (2.1.302: a permission
+dialog's `permission_prompt`, about six seconds after it is drawn,
+[the probe](research-claude-mod.md#a-workers-dialogs-in-auto-mode)); the engine draws trust,
+onboarding and login before the mod, and they have no such event.
+
+- **The mod** (`dialogs.ts`) of a worker's admitted load takes any notification but
+  `idle_prompt` and `auth_success` while no request of steps 2 and 3 is held — the notification of
+  a carried dialog is not another dialog — and puts its message, cut at 300 characters, in the
+  state it samples (`StateRequest.dialog`, optional, the protocol's one addition). The next tool
+  result (`PostToolUse`, `PostToolUseFailure`, `PermissionDenied`), main-loop step or turn end
+  clears it.
+- **The wrapper** keeps it in the snapshot (`session.Snapshot.dialog`, optional) and, the first
+  time a sample names a dialog, leaves main one notify through `Config.Dialog`
+  (`ask.TellMainDialog`): `Rewake: api waits at a dialog in its pane: <message>`, then that rewake
+  cannot answer it, so main answers it in the pane or asks the person. A letter that could not be
+  left is tried with the next sample, which the heartbeat brings; a dialog cleared and another
+  drawn is told again.
+- **`rewake list` and the shell's strip** read `waiting at a dialog` for it, in place of `idle`,
+  `working` or `waiting for`.
+
+Not covered: a dialog of the engine that sends no notification, and one drawn while a carried
+request is held, which by the screen's order is the carried one.
 
 ## The command
 

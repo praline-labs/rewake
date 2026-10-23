@@ -19,6 +19,9 @@ unheard` — in 1.x a Claude Code session whose plugin did not load
 adapter of this build reports it so. Only the gap is named: a session that hears them
 needs no word in a narrow cell, and an adapter that never sets the field would leave a
 column of its own empty for most rows.
+A Claude Code worker waiting at a dialog no request carries to main reads `waiting at a
+dialog` in place of its activity, and main is told once
+([permission-requests.md](permission-requests.md#a-dialog-nobody-is-asked-about)).
 Unknown activity is never inferred to be idle. Active status with missing or
 unrecognized waiting flags keeps waiting state explicitly unknown.
 

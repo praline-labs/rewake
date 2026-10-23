@@ -16,7 +16,9 @@ type observations struct {
 	partial    bool
 	// effort is the latest a mod saw the main loop ask for, kept across
 	// loads: a reload forgets it until the next request.
-	effort   string
+	effort string
+	// told says main was told of the dialog the snapshot names.
+	told     bool
 	snapshot session.Snapshot
 	events   []session.CompactionEvent
 	outcomes []session.CompactionOutcome
@@ -66,8 +68,27 @@ func (s *Server) state(w http.ResponseWriter, r *http.Request) {
 	if sample.Sequence > observed.sequence {
 		s.observeLocked(sample)
 	}
+	dialog := observed.snapshot.Dialog
+	tell := dialog != nil && !observed.told && s.cfg.Dialog != nil
 	s.mu.Unlock()
+	if tell {
+		s.tellDialog(*dialog)
+	}
 	s.answer(w, r, Done{})
+}
+
+// tellDialog tells main of the dialog a worker waits at, outside the lock: a
+// letter that could not be left is tried again with the next sample, which
+// the heartbeat brings while the dialog lasts.
+func (s *Server) tellDialog(message string) {
+	if s.cfg.Dialog(message) != nil {
+		return
+	}
+	s.mu.Lock()
+	if dialog := s.management.observed.snapshot.Dialog; dialog != nil && *dialog == message {
+		s.management.observed.told = true
+	}
+	s.mu.Unlock()
 }
 
 func (s *Server) observeLocked(sample StateRequest) {
@@ -113,6 +134,12 @@ func (s *Server) observeLocked(sample StateRequest) {
 			observed.events = observed.events[len(observed.events)-64:]
 		}
 		observed.localCount = sample.Compactions
+	}
+	if sample.Dialog != nil && *sample.Dialog != "" {
+		dialog := *sample.Dialog
+		snapshot.Dialog = &dialog
+	} else {
+		observed.told = false
 	}
 	observed.snapshot, observed.sequence, observed.generation = snapshot, sample.Sequence, sample.Generation
 }

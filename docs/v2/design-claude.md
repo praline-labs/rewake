@@ -179,7 +179,9 @@ reading. It publishes cached observations through `core/session.Snapshot`, witho
 transcripts, wrapping the person's status line or measuring a full context breakdown.
 The native model window and percentage are used as given. Effort is what the latest
 main-loop `turn.step` asked for, kept by the host across loads; before one, the launch's
-`--effort`, marked as the launch's (`reasoningEffortSource`), or unknown. Rate limits remain
+`--effort`, marked as the launch's (`reasoningEffortSource`), or unknown. From October 23,
+2026 a worker's sample names a dialog it waits at that nobody is asked about, and the host
+tells main of it once ([permission-requests.md](../permission-requests.md#a-dialog-nobody-is-asked-about)). Rate limits remain
 absent. A lapse makes every field stale until a new generation supplies a sample.
 
 Completed compactions have a load-local count; the host folds its increases into the run's

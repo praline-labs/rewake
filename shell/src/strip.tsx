@@ -43,6 +43,7 @@ function activityOf(s: Session): string | undefined {
   else if (s.activity === "not_loaded") text = "not loaded";
   else if (s.activity === "system_error") text = "system error";
   else text = s.activity;
+  if (s.dialog && (s.activity === "working" || s.activity === "idle")) text = "waiting at a dialog";
   if (s.compacting) text = text ? `${text}, compacting` : "compacting";
   if (text && !s.fresh) text += " (stale)";
   return text;

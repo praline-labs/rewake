@@ -3,6 +3,7 @@ package modhost
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"path/filepath"
 	"testing"
@@ -225,5 +226,34 @@ func TestDispatchedControlWithoutAcknowledgementIsUnknown(t *testing.T) {
 	body, _ := json.Marshal(ControlReply{LoadID: "load", Generation: 1, ID: "r", Outcome: control.Done})
 	if status, _, _ := post(socket, PathModControl, body); status != http.StatusConflict {
 		t.Fatalf("old generation outcome: %d", status)
+	}
+}
+
+// A dialog the mod names is told to main once while it lasts, again after
+// a letter that could not be left, and anew once it cleared and another came.
+func TestADialogIsToldToMainOncePerDialog(t *testing.T) {
+	var told []string
+	fail := true
+	server, socket := servingWith(t, func(s *Server) {
+		s.cfg.Dialog = func(message string) error {
+			told = append(told, message)
+			if fail {
+				fail = false
+				return errors.New("no main")
+			}
+			return nil
+		}
+	})
+	postValue(t, socket, PathHello, HelloRequest{LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
+	sample, waiting := testState(), "Claude needs your permission"
+	for sequence, dialog := range []*string{&waiting, &waiting, &waiting, nil, &waiting} {
+		sample.Sequence, sample.Dialog = sequence+1, dialog
+		postValue(t, socket, PathModState, sample)
+		if got := server.SessionState().Dialog; (got == nil) != (dialog == nil) {
+			t.Fatalf("sample %d: dialog %v", sequence+1, got)
+		}
+	}
+	if len(told) != 3 {
+		t.Fatalf("told %q", told)
 	}
 }

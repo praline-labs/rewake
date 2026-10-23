@@ -2,18 +2,29 @@
 // (docs/permission-requests.md): the mode the harness reports, the check that
 // asks main where the person would be asked, the question bridge, and the
 // engine's own permission dialog, carried to main where the check carried
-// nothing — auto mode, Claude Code's default.
+// nothing — auto mode, Claude Code's default — and any other dialog the
+// session waits at, which main is told of.
 import type { Register } from "claude-code";
 import { type Asks, allowOnce, allowSession, refuseCall } from "./asks.ts";
 
 // Dialogs is what the hooks read of the current load.
 interface Dialogs {
   asks: Asks;
+  management: { waits(message?: string): void };
   // run is set once the wrapper admitted the load.
   run?: unknown;
 }
 
+// notDialogs are the notifications that name no dialog the session waits at.
+const notDialogs = ["idle_prompt", "auth_success"];
+
+// maxDialog bounds what the state carries of a dialog's message.
+const maxDialog = 300;
+
 export function serveDialogs(on: Parameters<Register>[0], current: () => Dialogs | undefined) {
+  // held counts the dialogs a request carries to main now: the engine's
+  // notification of such a dialog is not another dialog.
+  let held = 0;
   // The permission mode the harness reports with its classic events, which an
   // ask is carried to main in at the check only where the person would be
   // asked (asks.ts). A call's end also ends its dialog carried to main.
@@ -31,14 +42,17 @@ export function serveDialogs(on: Parameters<Register>[0], current: () => Dialogs
     const load = current();
     if (load && e.permission_mode) load.asks.mode = e.permission_mode;
     load?.asks.ended(e.tool_use_id);
+    load?.management.waits();
     return next(e);
   });
   on("classic.PostToolUseFailure", async ($, e, next) => {
     current()?.asks.ended(e.tool_use_id);
+    current()?.management.waits();
     return next(e);
   });
   on("classic.PermissionDenied", async ($, e, next) => {
     current()?.asks.ended(e.tool_use_id);
+    current()?.management.waits();
     return next(e);
   });
 
@@ -83,7 +97,12 @@ export function serveDialogs(on: Parameters<Register>[0], current: () => Dialogs
   on("tool.call", { tool: "AskUserQuestion" }, async ($, e, next) => {
     const load = current();
     if (!load?.run || !load.asks.worker()) return next(e);
-    return load.asks.bridge(e, () => next(e), next.signal);
+    held++;
+    try {
+      return await load.asks.bridge(e, () => next(e), next.signal);
+    } finally {
+      held--;
+    }
   }).catch(($, e, next) =>
     next.called
       ? { deny: "rewake could not carry this question (" + next.error.message + ")." }
@@ -97,7 +116,23 @@ export function serveDialogs(on: Parameters<Register>[0], current: () => Dialogs
   on("classic.PermissionRequest", async ($, e, next) => {
     const load = current();
     if (!load?.run) return next(e);
-    const decision = await load.asks.dialog(await $.session.cwd(), e, next.signal);
-    return decision ? { decision } : next(e);
+    held++;
+    try {
+      const decision = await load.asks.dialog(await $.session.cwd(), e, next.signal);
+      return decision ? { decision } : next(e);
+    } finally {
+      held--;
+    }
   }).catch(($, e, next) => next(e));
+
+  // Any other dialog a worker waits at — one main cannot answer, or one whose
+  // request could not be opened — is known by the notification the engine
+  // sends while it waits: the state names it until the next tool result or
+  // step, and the wrapper tells main once (docs/permission-requests.md).
+  on("classic.Notification", async ($, e, next) => {
+    const load = current();
+    if (load?.run && load.asks.worker() && held === 0 && !notDialogs.includes(e.notification_type))
+      load.management.waits((e.message || e.notification_type).slice(0, maxDialog));
+    return next(e);
+  });
 }

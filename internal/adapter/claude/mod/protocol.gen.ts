@@ -345,6 +345,9 @@ export interface StateRequest {
   request: string
   // from names its requester, empty for native compaction.
   from: string
+  // dialog is what the harness said of a dialog the session waits at on its screen that the mod
+  // carries to nobody, absent when none; the host tells main once per dialog.
+  dialog?: string
 }
 
 // ControlReply is an initial or final result for a dispatched command.

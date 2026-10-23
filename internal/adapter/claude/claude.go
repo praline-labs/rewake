@@ -310,7 +310,7 @@ func (claudeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, 
 			Socket: modSocket, Role: request.Role.ID, Record: filepath.Join(request.RunDir, "hello.json"), Wait: harnessWait,
 			ControlDir: request.ControlDir, Epoch: request.Epoch,
 			Live: run.transition, Ended: runEnded,
-			Asked: askedOf(request), Effort: flagValue(args, effortFlag), Window: windowTokens(flagValue(args, autocompactFlag)), Closing: request.Closing,
+			Asked: askedOf(request), Dialog: dialogOf(request), Effort: flagValue(args, effortFlag), Window: windowTokens(flagValue(args, autocompactFlag)), Closing: request.Closing,
 		})
 		service, live, turns, telemetry = run, run, run, run.server
 	}
@@ -338,6 +338,17 @@ func askedOf(request adapter.LaunchRequest) func(string, ask.Offer, time.Time) e
 	}
 	return func(id string, offer ask.Offer, deadline time.Time) error {
 		return ask.TellMain(request.RoomDir, request.Name, request.Epoch, id, offer, deadline)
+	}
+}
+
+// dialogOf tells main of a dialog a worker waits at that no request carries,
+// for the same roles as askedOf.
+func dialogOf(request adapter.LaunchRequest) func(string) error {
+	if askedOf(request) == nil {
+		return nil
+	}
+	return func(message string) error {
+		return ask.TellMainDialog(request.RoomDir, request.Name, request.Epoch, message)
 	}
 }
 

@@ -412,6 +412,10 @@ type StateRequest struct {
 
 	// From names its requester, empty for native compaction.
 	From string `json:"from"`
+
+	// Dialog is what the harness said of a dialog the session waits at on its screen that the mod
+	// carries to nobody, absent when none; the host tells main once per dialog.
+	Dialog *string `json:"dialog,omitempty"`
 }
 
 // ControlReply is an initial or final result for a dispatched command.

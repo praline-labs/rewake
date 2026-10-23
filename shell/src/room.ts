@@ -136,6 +136,9 @@ export type Session = {
   // when the run stopped publishing, and every value is then its last.
   activity?: string;
   waitingFor?: string[];
+  // dialog is set while the session waits at a dialog on its screen that no
+  // request carries to main.
+  dialog?: string;
   compacting?: boolean;
   fresh: boolean;
   model?: string;
@@ -148,6 +151,7 @@ export type Session = {
 type Telemetry = {
   activity?: string | null;
   waitingFor?: string[] | null;
+  dialog?: string | null;
   fresh?: boolean;
   compactionInProgress?: boolean | null;
   configuredModel?: string | null;
@@ -186,6 +190,7 @@ function sessionsOf(listing: SessionListing): Map<string, Session> {
       cwd: s.cwd,
       activity: t?.activity ?? undefined,
       waitingFor: t?.waitingFor ?? undefined,
+      dialog: t?.dialog ?? undefined,
       compacting: t?.compactionInProgress ?? undefined,
       fresh: t?.fresh ?? false,
       model: t?.configuredModelName ?? t?.configuredModel ?? undefined,

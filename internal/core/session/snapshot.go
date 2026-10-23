@@ -46,6 +46,10 @@ type Snapshot struct {
 	// command answered before the end: that main's wrapper sends each as a
 	// letter.
 	CompactionOutcomes []CompactionOutcome `json:"compactionOutcomes,omitempty"`
+	// Dialog is what the harness said of a dialog the session waits at on its
+	// screen that nobody else is asked about, nil when none: main is told of
+	// it once, and it is cleared by the next tool result or step.
+	Dialog *string `json:"dialog,omitempty"`
 	// PublishedBoot is the boot clock's reading at PublishedAt (package
 	// boottime), 0 from a build that did not write it. Freshness is judged by
 	// it: the publisher and the reader are different processes, and the wall

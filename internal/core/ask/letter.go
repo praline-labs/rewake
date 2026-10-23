@@ -21,6 +21,20 @@ var ErrNoMain = errors.New("the room has no main session to answer the request")
 // TellMain leaves main an ordinary notify from the worker naming the request,
 // what it shows and how to answer it. No report is owed for it.
 func TellMain(dir, worker, epoch, id string, offer Offer, deadline time.Time) error {
+	return tell(dir, worker, epoch, Letter(worker, id, offer, deadline))
+}
+
+// TellMainDialog leaves main an ordinary notify that the worker waits at a
+// dialog on its screen that no request carries, with what the harness said
+// of it: main answers it at the worker's pane or asks the person.
+func TellMainDialog(dir, worker, epoch, message string) error {
+	return tell(dir, worker, epoch, fmt.Sprintf(
+		"Rewake: %s waits at a dialog in its pane: %s\nrewake cannot answer this dialog for it: answer it in %s's pane, or ask the person.",
+		worker, message, worker))
+}
+
+// tell leaves the room's main a notify from the worker.
+func tell(dir, worker, epoch, text string) error {
 	sessions, err := registry.List(dir)
 	if err != nil {
 		return err
@@ -31,7 +45,7 @@ func TellMain(dir, worker, epoch, id string, offer Offer, deadline time.Time) er
 		}
 		return mail.Put(dir, mail.Message{
 			ID: mail.NewID(), From: worker, FromEpoch: epoch, To: session.Name, ToEpoch: session.Epoch(),
-			Kind: mail.Note, Text: Letter(worker, id, offer, deadline), CreatedAt: time.Now(),
+			Kind: mail.Note, Text: text, CreatedAt: time.Now(),
 		})
 	}
 	return ErrNoMain

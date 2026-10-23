@@ -142,6 +142,11 @@ func activityText(snapshot *session.Snapshot) string {
 		case "system_error":
 			label = "system error"
 		}
+		// A dialog nobody else is asked about stops the session whatever its
+		// turn is doing; main was told of it.
+		if snapshot.Dialog != nil && (label == "idle" || strings.HasPrefix(label, "working") || strings.HasPrefix(label, "waiting for")) {
+			label = "waiting at a dialog"
+		}
 	}
 	if snapshot.Compacting != nil && *snapshot.Compacting {
 		label += "; compacting"

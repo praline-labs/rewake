@@ -274,9 +274,10 @@ export const register: Register = (on) => {
   // only at the turn's end: sampled after each, a long turn's fill shows as
   // it grows rather than at the next heartbeat.
   // A main-loop step begins only once every dialog of the last one is
-  // answered, so a dialog carried to main is over at the screen by then.
+  // answered, so a dialog carried to main, or waited at, is over by then.
   on("turn.step", async function* ($, e, next) {
     if (e.agentId === undefined) load?.asks.ended();
+    if (e.agentId === undefined) load?.management.waits();
     if (e.agentId === undefined) load?.management.effortSeen(e.effort);
     const step = yield* next(e);
     if (e.agentId === undefined) load?.management.changed();

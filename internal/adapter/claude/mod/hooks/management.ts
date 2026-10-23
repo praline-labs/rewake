@@ -26,6 +26,9 @@ export class Management {
   private turn?: string;
   private effort?: string;
   private compacting = false;
+  // dialog is what the engine said of a dialog the session waits at that no
+  // request carries to main (dialogs.ts), until the next tool result or step.
+  private dialog?: string;
   private remote?: ControlCommand;
   private interrupt?: { command: ControlCommand; turn: string; generation: number };
   private sending = Promise.resolve();
@@ -55,10 +58,19 @@ export class Management {
     this.changed();
   }
 
+  // waits says the session waits at a dialog nobody else is told of, or with
+  // no message that it no longer does.
+  waits(message?: string) {
+    if (message === this.dialog) return;
+    this.dialog = message;
+    this.changed();
+  }
+
   // Return the actor for the durable end, and leave the same trace in native
   // history without starting a model turn. Other turns cannot settle it.
   async ended(turnId: string, aborted: boolean): Promise<string | undefined> {
     if (this.turn === turnId) this.turn = undefined;
+    this.dialog = undefined;
     const pending = this.interrupt;
     let actor: string | undefined;
     if (pending?.turn === turnId) {
@@ -97,6 +109,7 @@ export class Management {
       compacting: this.compacting,
       compactions: this.compactions,
       effort: this.effort,
+      dialog: this.dialog,
       ...this.last,
     };
     this.sending = this.sending
