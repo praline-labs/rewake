@@ -16,17 +16,19 @@ import (
 // A template that may enter a checkout is allowed EnterWorktree in its
 // run's settings, and any other run has it denied there; an entry the
 // folder's settings deny, or a launch with no run directory for the mod,
-// gets none, said.
+// gets none, said. Every run may read main's checkout.
 func TestRunSettingsWithEntry(t *testing.T) {
 	permissions := func(passed string) map[string]any {
 		return overlayOf(t, passed)["permissions"].(map[string]any)
 	}
-	passed, enter, notes, err := runSettings(map[string]any{"autoMemoryEnabled": false}, t.TempDir(), t.TempDir(), "opus", true, "/run")
-	if err != nil || !enter || len(notes) != 0 || !slices.Equal(permissions(passed)["allow"].([]any), []any{enterTool}) || permissions(passed)["deny"] != nil {
+	root := t.TempDir()
+	read := "Read(/" + filepath.ToSlash(root) + "/**)"
+	passed, enter, notes, err := runSettings(map[string]any{"autoMemoryEnabled": false}, t.TempDir(), root, "opus", true, "/run")
+	if err != nil || !enter || len(notes) != 0 || !slices.Equal(permissions(passed)["allow"].([]any), []any{read, enterTool}) || permissions(passed)["deny"] != nil {
 		t.Fatalf("entry: %s %v %v %v", passed, enter, notes, err)
 	}
-	passed, enter, _, _ = runSettings(map[string]any{}, t.TempDir(), t.TempDir(), "opus", false, "/run")
-	if enter || !slices.Equal(permissions(passed)["deny"].([]any), []any{enterTool}) {
+	passed, enter, _, _ = runSettings(map[string]any{}, t.TempDir(), root, "opus", false, "/run")
+	if enter || !slices.Equal(permissions(passed)["deny"].([]any), []any{enterTool}) || !slices.Equal(permissions(passed)["allow"].([]any), []any{read}) {
 		t.Fatalf("no entry: %s", passed)
 	}
 	person := map[string]any{"permissions": map[string]any{"deny": []any{"Agent", enterTool}}}

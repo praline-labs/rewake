@@ -230,6 +230,15 @@ rewake --command my-claude claude
     Code over the folder's settings: the worker's memory and `EnterWorktree`, allowed for a
     template with `enter_worktree = true`, denied for every other run. Until October 23 it was
     the folder's whole file, or a copy of it in the run's directory, `worker-settings.json`.
+  - **Main's checkout is readable** (main's decision, October 23, 2026): the run's
+    `permissions.allow` holds `Read(//<root>/**)`, `<root>` the main repository's root as the
+    memory names it below, where main keeps the briefs and reviews a worker reads. A worker in a
+    checkout of its own stopped on auto mode's one-time prompt for a read outside its working
+    directories, with nobody at its screen; under the rule the read passes and no prompt shows
+    ([research-launch.md](research-launch.md#a-read-outside-the-working-directories)). A `Read`
+    rule covers Read, Grep and Glob and grants no edit. `--add-dir` is not used: it makes main's
+    checkout a working directory, where edits pass as in the worker's own and its `.claude/`
+    loads.
   - **The worker's memory** (the owner's decision, October 19, 2026) is Claude Code's own
     auto-memory, `MEMORY.md` loaded into the context and kept by the model as main's is, but
     one per worker template and project:

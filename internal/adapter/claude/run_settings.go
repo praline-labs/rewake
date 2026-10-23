@@ -2,6 +2,7 @@ package claude
 
 import (
 	"encoding/json"
+	"path/filepath"
 	"slices"
 
 	"github.com/praline-labs/rewake/internal/core/role"
@@ -30,9 +31,10 @@ const enterTool = "EnterWorktree"
 // runSettings is the one --settings a worker's launch passes, as a JSON
 // object: what this run alone gets over the folder's settings.json, which
 // Claude Code reads itself as the user's settings — its memory, under the
-// key memoryKey chose, and EnterWorktree, denied unless the run may enter a
-// checkout. Flag settings merge with the user's (probed on 2.1.302), but a
-// deny there is not lifted by an allow here, so the folder's file no longer
+// key memoryKey chose; EnterWorktree, denied unless the run may enter a
+// checkout; and a read of main's checkout (readRule). Flag settings merge
+// with the user's (probed on 2.1.302), but a deny there is not lifted by an
+// allow here, so the folder's file no longer
 // holds EnterWorktree (defaults version 3). It says whether the run may
 // enter. A worker raised from no template — only a test build's direct
 // launch — has no memory.
@@ -59,16 +61,31 @@ func runSettings(settings map[string]any, folder, root, memoryKey string, enter 
 	case slices.Contains(deniedIn(settings), any(enterTool)):
 		notes, enter = append(notes, "no worktree entry: the worker settings deny "+enterTool+"; take it out of permissions.deny there"), false
 	}
+	permissions := map[string]any{}
+	allow := []any{readRule(root)}
 	if enter {
-		overlay["permissions"] = map[string]any{"allow": []any{enterTool}}
+		allow = append(allow, enterTool)
 	} else {
-		overlay["permissions"] = map[string]any{"deny": []any{enterTool}}
+		permissions["deny"] = []any{enterTool}
 	}
+	permissions["allow"] = allow
+	overlay["permissions"] = permissions
 	data, err := json.Marshal(overlay)
 	if err != nil {
 		return "", false, nil, err
 	}
 	return string(data), enter, notes, nil
+}
+
+// readRule lets the run read main's checkout, the repository's root every
+// worktree of it shares, where main keeps the briefs and reviews a worker
+// reads: a worker in a checkout of its own otherwise met auto mode's
+// one-time prompt for a read outside its working directories, with nobody at
+// its screen (October 23, 2026). A Read rule covers Read, Grep and Glob and
+// grants no edit, which --add-dir would (docs/launch.md). The leading slash
+// makes the rule's path absolute, "//home/...".
+func readRule(root string) string {
+	return "Read(/" + filepath.ToSlash(root) + "/**)"
 }
 
 // deniedIn is the settings' permissions.deny, none where it is missing.

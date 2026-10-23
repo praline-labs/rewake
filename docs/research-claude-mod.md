@@ -556,3 +556,25 @@ builds on:
   `tool.check` hook that answers without `next(e)` overrides it (`claude -p` with a plugin
   dropping the prompt, no model turn, 2.1.302). The entered worker's transcript was under the checkout's project directory
   (`~/.claude/projects/<checkout's slug>/<session id>.jsonl`), not the launch directory's.
+
+## A worker's dialogs in auto mode (October 23, 2026, 2.1.302)
+
+The probe of [research-launch.md](research-launch.md#a-read-outside-the-working-directories), with
+a mod (`--plugin-dir`) logging `tool.check`'s verdict and the classic events; a cheap model; ms
+from the start, one run per case.
+
+- Auto mode is the default: `classic.SessionStart` and `PermissionRequest` carry
+  `permission_mode: "auto"`, so a worker launched with no mode runs in it.
+- The read-outside prompt's check: `{decision: "ask", reason: "Claude requested permissions to
+  read from <path>, but you haven't granted it yet."}`, with no `setting`, `rule` or `hook` — not
+  the read block's setting-named ask. 7–15 ms later `classic.PermissionRequest` fired, with
+  `tool_name`, `tool_input` and a `permission_suggestions` entry `addRules` `Read(//<dir>/**)`,
+  destination `session`, and no `tool_use_id`; the dialog was drawn. `classic.Notification`
+  `{notification_type: "permission_prompt", message: "Claude needs your permission"}` came 6.0 s
+  after `PermissionRequest`, in all three runs that left the dialog up.
+- A `PermissionRequest` hook that held 15 s, waiting inside `$.process.run`, left the engine's
+  dialog on the screen meanwhile, and its `{decision: {behavior: "allow"}}` closed it: the tool
+  row read "Allowed by PermissionRequest hook" and the read ran. No budget skip.
+- The person answering first, 5 s into such a hold (choice 4): the read ran at once,
+  `classic.PostToolUse` with the call's `tool_use_id`; the hook was not aborted
+  (`next.signal.aborted` false at its end) and its allow 10 s later changed nothing.

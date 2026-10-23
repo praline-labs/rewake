@@ -399,6 +399,23 @@ beyond the above; the account, plan and usage against the person's; whether Clau
 the unknown `rewake` key when it rewrites `settings.json`; the interactive `/resume` picker,
 which by construction reads the directory's `projects/`.
 
+## A read outside the working directories
+
+**[verified live, installed 2.1.302, a cheap model, October 23, 2026]** Interactive `claude` in a
+pseudo-terminal, `CLAUDE_CODE_NO_FLICKER=1`, a private HOME and a private copy of the workers'
+folder (its login, `.claude.json` and `settings.json`) without `hasSeenAutoModeOutsideReadPrompt`,
+started in a fresh repository and asked to read a file in a sibling directory. Auto mode is the
+default there.
+
+- Without a rule: the dialog "Read outside the working directories", four choices (keep allowing,
+  block from now on, no and ask again, yes and ask again), waiting for the person. The owner's
+  first choice in the workers' real folder set `hasSeenAutoModeOutsideReadPrompt: true` in its
+  `.claude.json` and wrote nothing to `settings.json`.
+- With `--settings '{"permissions":{"allow":["Read(//<dir>/**)"]}}'` the same read passed, the
+  check's verdict `allow` naming that rule, and no dialog showed.
+- What the mod sees of the dialog is in
+  [research-claude-mod.md](research-claude-mod.md#a-workers-dialogs-in-auto-mode).
+
 ## Claude Code's cross-session inbound gate
 
 **[the binary's bundled source, installed 2.1.280; September 23, 2026]** Every line that
