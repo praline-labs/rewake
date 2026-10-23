@@ -9,7 +9,8 @@ the left and the chosen worker on the right, half of the width less a divider co
 narrower part when the width is odd; below 120 columns, with no worker, or zoomed, the focused
 program takes the whole width and the bar switches the window between main and the workers. Each
 pane keeps a column of padding on both sides; the program's size is the width less two. The
-bar is a button per program and a line of key hints under it ([below](#the-bar)); a click on a
+bar is a button per program and a line of key hints under it, under main's pane while both panes
+show and across the whole width while one does ([below](#the-bar)); a click on a
 button or in a pane focuses it. The prefix is Ctrl+\\, which no harness binds. The host mode was
 removed on October 19, 2026, deleted rather than archived (the owner's rule: what is no longer needed
 goes at once). "Checked live" below means the spike of October 19, 2026: Claude Code
@@ -241,8 +242,12 @@ mode:
 
 ## The bar
 
-The owner's wishes of October 19, 2026. The two bottom lines are the shell's; the panes take the
-rest, in the wide layout and the narrow one alike.
+The owner's wishes of October 19, 2026. The bar and the hints are the shell's two lines of
+navigation. Where they sit is the owner's decision of October 23, 2026: while both panes show (the
+wide layout), under main's pane, in main's column, the way the strip sits under a worker's pane;
+main's pane is two rows shorter and the worker's column takes the whole height, so both columns end
+together. While one pane shows (the narrow layout, or a zoom), they take the two bottom lines across
+the whole width, and the pane the rest.
 
 - **The buttons** (`shell/src/bar.tsx`): ` main `, then each worker by its name, in the order the
   spaces opened, with no number — the prefix's digits still choose by place. The focused one is
@@ -257,9 +262,10 @@ rest, in the wide layout and the narrow one alike.
   the prefix waiting), kept by a `when` over the focus, the zoom and the number of workers; a new
   hint or a new context is a row there. The keys are drawn in the focused program's colour, the
   words in the terminal's foreground. "keys go to <name>" is pressed to the left edge and the
-  other hints are centred in the rest of the width (the owner's wish, October 19, 2026); after
-  Ctrl+\\, with no such hint, they are centred in the whole width. A line longer than the width
-  starts at the left and is cut at its end.
+  other hints are centred in the rest of the line's width — main's column in the wide layout
+  (the owner's wish, October 19, 2026); after Ctrl+\\, with no such hint, they are centred in the
+  whole line. A line longer than its width starts at the left and is cut at its end, which in main's
+  column of a wide layout cuts the last hints.
 
 ## The strip
 

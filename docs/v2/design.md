@@ -180,7 +180,7 @@ probe ([research-claude-mod.md](../research-claude-mod.md)):
 
 How a space is shown: rewake's shell, every main's screen at a terminal since October 19, 2026, a TypeScript
 application in the person's terminal with a pane per program, main on the left and the chosen
-worker on the right above a bottom tab bar ([shell.md](shell.md),
+worker on the right, a tab bar under main's pane ([shell.md](shell.md),
 [project.md](../project.md#what-the-tool-does), "Main starts its workers"). It replaced the host
 mode of October 18, 2026, a compositor in main's wrapper, by the owner's decision of October 19,
 2026; the host mode was removed the same day. A main started without the shell opens spaces as

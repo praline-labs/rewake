@@ -1,6 +1,6 @@
-// The two bottom lines (docs/v2/shell.md, "The bar"): a button for main and
-// for each worker, the focused one filled in its colour and main's colour
-// apart from the workers'; under them the hints for the current focus.
+// The navigation's two lines (docs/v2/shell.md, "The bar"): a button for
+// main and for each worker, the focused one filled in its colour and main's
+// colour apart from the workers'; under them the hints for the current focus.
 import { TextAttributes } from "@opentui/core";
 import { For, Show } from "solid-js";
 import { type Context, centring, hintsFor } from "./hints.ts";
@@ -46,6 +46,47 @@ export function Bar(props: {
         <text height={1} flexShrink={0} fg={props.theme.text} content=" zoomed " />
       </Show>
     </box>
+  );
+}
+
+// Nav is the bar and the hints under it, in the width they are given: main's
+// column while both panes show, the whole width while one does.
+export function Nav(props: {
+  tabs: Tab[];
+  focused: string;
+  chosen?: string;
+  zoomed: boolean;
+  // prefix is a Ctrl+\ waiting for its command.
+  prefix: boolean;
+  width: number;
+  theme: Theme;
+  pick: (id: string) => void;
+}) {
+  const focus = () => props.tabs.find((t) => t.id === props.focused);
+  const context = (): Context => ({
+    focus: focus()?.main === false ? "worker" : "main",
+    name: focus()?.label ?? "main",
+    prefix: props.prefix,
+    zoomed: props.zoomed,
+    workers: props.tabs.filter((t) => !t.main).length,
+  });
+  return (
+    <>
+      <Bar
+        tabs={props.tabs}
+        focused={props.focused}
+        chosen={props.chosen}
+        zoomed={props.zoomed}
+        theme={props.theme}
+        pick={props.pick}
+      />
+      <Hints
+        context={context()}
+        width={props.width}
+        theme={props.theme}
+        accent={context().focus === "main" ? props.theme.main : props.theme.worker}
+      />
+    </>
   );
 }
 

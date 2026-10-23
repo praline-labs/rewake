@@ -1,13 +1,14 @@
 // rewake's shell (docs/v2/shell.md): main on the left, from 120 columns the
-// chosen worker on the right, a bar below choosing the worker and a line of
-// key hints under it; below 120 columns the bar switches the whole window.
+// chosen worker on the right, under main's pane a bar choosing the worker and
+// a line of key hints; below 120 columns they take the whole width and the
+// bar switches the whole window.
 // Started by rewake --shell as
 //   rewake-shell --room <room> -- <main's command line>
 
 import { createCliRenderer } from "@opentui/core";
 import { render, useTerminalDimensions } from "@opentui/solid";
 import { createEffect, createSignal, For, Show } from "solid-js";
-import { Bar, Hints } from "./bar.tsx";
+import { Nav } from "./bar.tsx";
 import { Closing } from "./closing.tsx";
 import { askColors, seedOf } from "./colors.ts";
 import { endMain, tailText, watchTerminal } from "./ending.ts";
@@ -274,39 +275,60 @@ function App() {
   const shown = (p: Pane) => (wide() ? p === mainPane || p.id === chosen() : p.id === focused());
   const widthOf = (p: Pane) =>
     !wide() ? dims().width : p === mainPane ? dims().width - 1 - right() : right();
-  // The panes leave the two bottom lines to the bar and the hints.
-  const height = () => Math.max(dims().height - 2, 1);
+  // The bar and the hints take two lines under main's pane in the wide
+  // layout, and under the whole row in the narrow one; a worker's column
+  // takes the full height in the wide layout, so both columns end together.
+  const navHeight = 2;
+  const rowHeight = () => Math.max(dims().height - (wide() ? 0 : navHeight), 1);
+  const height = (p: Pane) =>
+    p === mainPane ? Math.max(dims().height - navHeight, 1) : rowHeight();
   // A pane sits in a box with a column of padding on each side, so the text
   // does not touch the edge; the widget's size, and so the program's, is the
   // inside. A press on the padding chooses the pane like one on its text.
   const padded = (p: Pane) => ({
     visible: shown(p),
     width: widthOf(p),
-    height: height(),
+    height: height(p),
     paddingLeft: 1,
     paddingRight: 1,
     backgroundColor: seed.transparent ? undefined : theme.background,
     onMouseDown: () => paneHooks.pressed(p.id),
   });
   const inner = (p: Pane) => Math.max(widthOf(p) - 2, 1);
-  const focusedPane = () => paneOf(focused()) ?? mainPane;
+  // The navigation is one: under main's pane, in main's column, while both
+  // panes show; across the whole width while one does.
+  const nav = (width: number) => (
+    <Nav
+      tabs={allPanes().map((p) => ({ id: p.id, label: p.label, main: p === mainPane }))}
+      focused={focused()}
+      chosen={wide() && focused() === "main" ? chosen() : undefined}
+      zoomed={zoomed()}
+      prefix={prefixWaits()}
+      width={width}
+      theme={theme}
+      pick={show}
+    />
+  );
   // The work is hidden as a whole under the closing layer, so a terminal
   // background the shell does not know never lets a pane show through.
   return (
     <box width="100%" height="100%">
       <box flexDirection="column" width="100%" height="100%" visible={!closing()}>
-        <box flexDirection="row" height={height()}>
-          <box {...padded(mainPane)}>
-            <pane_terminal
-              id="main"
-              ref={(t: PaneTerminal) => startMainPane(t)}
-              transparentBackground={seed.transparent}
-              width={inner(mainPane)}
-              height={height()}
-            />
+        <box flexDirection="row" height={rowHeight()}>
+          <box flexDirection="column" visible={shown(mainPane)} width={widthOf(mainPane)}>
+            <box {...padded(mainPane)}>
+              <pane_terminal
+                id="main"
+                ref={(t: PaneTerminal) => startMainPane(t)}
+                transparentBackground={seed.transparent}
+                width={inner(mainPane)}
+                height={height(mainPane)}
+              />
+            </box>
+            <Show when={wide()}>{nav(widthOf(mainPane))}</Show>
           </box>
           <Show when={wide()}>
-            <box width={1} height={height()} backgroundColor="#444444" />
+            <box width={1} height={rowHeight()} backgroundColor="#444444" />
           </Show>
           <For each={workers()}>
             {(pane) => (
@@ -316,33 +338,14 @@ function App() {
                   ref={(t: PaneTerminal) => startWorkerPane(pane, t)}
                   transparentBackground={seed.transparent}
                   width={inner(pane)}
-                  height={Math.max(height() - 1, 1)}
+                  height={Math.max(height(pane) - 1, 1)}
                 />
                 <Strip id={pane.id} width={inner(pane)} theme={theme} />
               </box>
             )}
           </For>
         </box>
-        <Bar
-          tabs={allPanes().map((p) => ({ id: p.id, label: p.label, main: p === mainPane }))}
-          focused={focused()}
-          chosen={wide() && focused() === "main" ? chosen() : undefined}
-          zoomed={zoomed()}
-          theme={theme}
-          pick={show}
-        />
-        <Hints
-          context={{
-            focus: focusedPane() === mainPane ? "main" : "worker",
-            name: focusedPane().label,
-            prefix: prefixWaits(),
-            zoomed: zoomed(),
-            workers: workers().length,
-          }}
-          width={dims().width}
-          theme={theme}
-          accent={focusedPane() === mainPane ? theme.main : theme.worker}
-        />
+        <Show when={!wide()}>{nav(dims().width)}</Show>
       </box>
       <Show when={closing()}>
         <Closing theme={theme} />
