@@ -19,8 +19,13 @@ import (
 const configDirEnv = "CLAUDE_CONFIG_DIR"
 
 // loginWait bounds the status check; on 2.1.302 it answers in a fifth of a
-// second with no network.
-const loginWait = 10 * time.Second
+// second with no network. A variable for the test of a status that hangs.
+var loginWait = 10 * time.Second
+
+// statusWaitDelay bounds the wait for the status's output after loginWait
+// kills it: a claude on PATH that is a wrapper may leave a child holding the
+// pipes open, and the open would wait on it (review, October 23, 2026).
+const statusWaitDelay = 2 * time.Second
 
 // WorkerNotice tells main when the folder has no login of its own yet: the
 // person logs in once, in the worker's pane, where Claude Code starts to its
@@ -30,7 +35,8 @@ const loginWait = 10 * time.Second
 // loggedIn false when there is none (probed on 2.1.302). A task sent before
 // the login is delivered, its turn stops at once on the missing login, and
 // the task stays unread (probed on 2.1.302). Under a wrapper the wrapper
-// decides the configuration; a status that cannot be read says nothing.
+// decides the configuration; a status that cannot be read, or does not
+// answer in time, says nothing.
 func (claudeHarness) WorkerNotice(command string) string {
 	if command != "" {
 		return ""
@@ -43,9 +49,10 @@ func (claudeHarness) WorkerNotice(command string) string {
 	defer cancel()
 	status := exec.CommandContext(ctx, "claude", "auth", "status", "--json")
 	status.Env = append(os.Environ(), configDirEnv+"="+dir)
+	status.WaitDelay = statusWaitDelay
 	out, err := status.Output()
 	var exit *exec.ExitError
-	if !errors.As(err, &exit) || !loggedOut(out) {
+	if ctx.Err() != nil || !errors.As(err, &exit) || !loggedOut(out) {
 		return ""
 	}
 	return fmt.Sprintf("The workers' Claude Code is not logged in: %s has no login of its own yet. Tell the person to log in once in this worker's pane with /login; the login is kept in that folder and serves every later Claude Code worker. Until then a task's turn stops at once on the missing login and the task stays unread in the worker's inbox: send tasks after the login, and the worker's next rewake inbox reads one sent before.", dir)

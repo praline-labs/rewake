@@ -177,7 +177,8 @@ rewake --command my-claude claude
     status --json` under that variable; when it answers `loggedIn: false` (exit 1) the worker is
     opened all the same, and the answer adds a line — `notice` under `--json` — telling main the
     workers' Claude Code is not logged in and the person is to type `/login` once in this
-    worker's pane; main passes it on. A status that cannot be read adds nothing. Not logged in,
+    worker's pane; main passes it on. A status that cannot be read, or does not answer within ten seconds — two
+    more for its output, should a wrapper's child hold it open —, adds nothing. Not logged in,
     Claude Code shows no login screen of its own: the worker starts to its prompt, the footer
     saying "Not logged in · Run /login", its mod live. A task sent before the login is delivered,
     its turn stops at once on "Not logged in · Please run /login", and the task stays unread —
