@@ -27,6 +27,8 @@ type workerTarget struct {
 	enter bool
 	// work is the kind of work the worker is raised for, empty Name for none.
 	work worktype.Type
+	// label is the template's name for its model, empty when it has none.
+	label string
 }
 
 func (ctx *Context) spaceTarget(call Call) (workerTarget, error) {
@@ -59,7 +61,7 @@ func (ctx *Context) spaceTarget(call Call) (workerTarget, error) {
 	}
 	return workerTarget{
 		harness: template.Harness, part: template.Role, command: template.Command, template: alias, worktree: checkout,
-		enter: template.EnterWorktree && checkout == "", work: work,
+		enter: template.EnterWorktree && checkout == "", work: work, label: template.Settings.Label,
 		args: launch.MergeArguments(aliasArgs, typedArgs, template.Harness.SingleUseFlags()),
 	}, nil
 }

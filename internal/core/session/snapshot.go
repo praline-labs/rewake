@@ -28,7 +28,10 @@ type Snapshot struct {
 	FilledPercent    *int              `json:"contextFilledPercent"`
 	ContextAt        *time.Time        `json:"contextObservedAt"`
 	Model            *string           `json:"configuredModel"`
-	Effort           *string           `json:"configuredReasoningEffort"`
+	// ModelName is the harness's own display name of the model, else the
+	// template's label (rewake list adds it); nil when neither is known.
+	ModelName *string `json:"configuredModelName,omitempty"`
+	Effort    *string `json:"configuredReasoningEffort"`
 	// EffortSource is EffortFromLaunch when Effort is what the launch passed,
 	// not what the harness was seen to run at; empty when observed.
 	EffortSource string     `json:"reasoningEffortSource,omitempty"`

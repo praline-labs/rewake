@@ -69,6 +69,9 @@ type AliasSettings struct {
 	Model   string `toml:"model"`
 	Effort  string `toml:"effort"`
 	Context string `toml:"context"`
+	// Label is how the strip and rewake list name the model, for a harness
+	// that gives its model no name of its own.
+	Label string `toml:"label"`
 }
 
 // CommandFlag is rewake's flag for the program a launch starts, which the
@@ -248,7 +251,7 @@ func (a Alias) check(name, source string, knownHarnesses []string, fromProject b
 	if a.Type != "" && !worktype.ValidName(a.Type) {
 		return fmt.Errorf("alias %q in %s has type = %q, which cannot name a type; rewake workers lists them", name, source, a.Type)
 	}
-	for _, value := range []string{a.Description, a.Launch.Model, a.Launch.Effort, a.Launch.Context} {
+	for _, value := range []string{a.Description, a.Launch.Model, a.Launch.Effort, a.Launch.Context, a.Launch.Label} {
 		if strings.ContainsAny(value, "\r\n") {
 			return fmt.Errorf("alias %q in %s has a multiline description or launch setting; each must be one line", name, source)
 		}

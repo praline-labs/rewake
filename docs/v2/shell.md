@@ -276,7 +276,13 @@ write-claude (code) · working · ⎇ wt-fd7596 · <model> low · 23% 230k/1M
   `idle`, `, compacting`, ` (stale)` once the run stopped publishing), the branch, the model and
   effort, and the context as filled percent, used and window. A value rewake does not know is left
   out; a window without a measure reads `–/<window>`. The model and effort stay even where a
-  worker's own status line shows them: the strip is the one line every harness has.
+  worker's own status line shows them: the strip is the one line every harness has. The model reads
+  as the harness's display name (`configuredModelName` of the telemetry: pi's registry name), else the
+  template's `launch.label`, else the id. The window is the limit the conversation is kept to: Claude
+  Code's launch `--autocompact`, which the host applies over the mod's model window, the percent
+  recomputed against it. (October 23, 2026.)
+- **Centred** in the pane's width, after the dropping below; a line that fills the width has no
+  margin.
 - **Where it comes from**: `rewake list --json` shows telemetry only to a verified main
   (`internal/cli/session_state.go`), and the shell is main's terminal, so it asks as main's run.
   That run's record is the main whose `servicePid` is the shell's own child, main's wrapper; its

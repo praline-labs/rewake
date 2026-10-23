@@ -51,18 +51,24 @@ func handleList(ctx *Context, _ Call) error {
 	}
 
 	visible := canSeeSessionState(dir)
-	types := workerTypes(dir)
+	workers := spaceWorkers(dir)
 	var views []sessionView
 	room := filepath.Base(dir)
 	for index := range sessions {
 		sessions[index].Room = room
 		sessions[index].Role = role.Of(sessions[index].Role).ID
-		view := sessionView{Session: sessions[index], Type: types[sessions[index].Epoch()]}
+		worker := workers[sessions[index].Epoch()]
+		view := sessionView{Session: sessions[index], Type: worker.Type}
 		if !visible {
 			view.MessagingReadyAt = nil
 		}
 		if visible {
 			view.Telemetry = sessionSnapshot(dir, view.Name, view.Epoch())
+			// The harness's own name wins; the template's label stands in
+			// for a harness that gives none.
+			if t := view.Telemetry; t != nil && t.ModelName == nil && t.Model != nil && worker.Label != "" {
+				t.ModelName = &worker.Label
+			}
 		}
 		views = append(views, view)
 	}
@@ -95,17 +101,18 @@ func handleList(ctx *Context, _ Call) error {
 	})
 }
 
-// workerTypes maps a worker's run to the type its space was opened with. A
-// space record that does not read leaves its worker without a type shown.
-func workerTypes(dir string) map[string]string {
+// spaceWorkers maps a worker's run to its space record's worker, for the type
+// and the model label its space was opened with. A space record that does not
+// read leaves its worker without them.
+func spaceWorkers(dir string) map[string]space.Worker {
 	records, _, _ := space.List(dir)
-	types := map[string]string{}
+	workers := map[string]space.Worker{}
 	for _, record := range records {
-		if record.Worker.Type != "" && record.Worker.Run != "" {
-			types[record.Worker.Run] = record.Worker.Type
+		if record.Worker.Run != "" {
+			workers[record.Worker.Run] = record.Worker
 		}
 	}
-	return types
+	return workers
 }
 
 // whoamiModel is the machine form of the session's own identity.

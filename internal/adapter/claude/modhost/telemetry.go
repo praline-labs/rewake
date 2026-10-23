@@ -95,7 +95,15 @@ func (s *Server) observeLocked(sample StateRequest) {
 	if snapshot.ContextWindow != nil && *snapshot.ContextWindow == 0 {
 		snapshot.ContextWindow = nil
 	}
-	if snapshot.ContextUsed != nil && snapshot.ContextWindow != nil && sample.Percent != nil && *sample.Percent >= 0 && *sample.Percent <= 100 {
+	// The mod's window and percent are the model's; the window the launch
+	// limited the conversation to is the limit the person means.
+	if limit := s.cfg.Window; limit > 0 && (snapshot.ContextWindow == nil || limit < *snapshot.ContextWindow) {
+		snapshot.ContextWindow = &limit
+		if snapshot.ContextUsed != nil {
+			percent := min(100, int((*snapshot.ContextUsed*100+limit/2)/limit))
+			snapshot.FilledPercent = &percent
+		}
+	} else if snapshot.ContextUsed != nil && snapshot.ContextWindow != nil && sample.Percent != nil && *sample.Percent >= 0 && *sample.Percent <= 100 {
 		snapshot.FilledPercent = sample.Percent
 	}
 	if sample.Compactions > observed.localCount {

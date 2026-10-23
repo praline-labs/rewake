@@ -94,6 +94,14 @@ export function stripParts(state: StripState, width: number): Part[] {
   return out;
 }
 
+// indent is the spaces that centre the parts in the width; none once they
+// fill it.
+export function indent(parts: Part[], width: number): string {
+  const length =
+    parts.reduce((n, p) => n + p.text.length, 0) + separator.length * (parts.length - 1);
+  return " ".repeat(Math.max(0, Math.floor((width - length) / 2)));
+}
+
 // fillColour is the context's colour by how full it is, the owner's own
 // thresholds: the terminal's own green, yellow and red.
 function fillColour(fill: number | undefined): RGBA {
@@ -104,9 +112,11 @@ function fillColour(fill: number | undefined): RGBA {
 // Strip is the strip of the space id's worker.
 export function Strip(props: { id: string; width: number; theme: Theme }) {
   const plain = RGBA.defaultForeground();
+  const parts = () => stripParts(stripOf(props.id), props.width);
   return (
     <text height={1} width={props.width} wrapMode="none" fg={plain}>
-      <For each={stripParts(stripOf(props.id), props.width)}>
+      {indent(parts(), props.width)}
+      <For each={parts()}>
         {(part, i) => (
           <>
             {i() > 0 ? (

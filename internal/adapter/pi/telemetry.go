@@ -14,6 +14,7 @@ type sample struct {
 	Sequence   uint64   `json:"sequence"`
 	Activity   string   `json:"activity"`
 	Model      *string  `json:"model"`
+	ModelName  *string  `json:"modelName"`
 	Effort     *string  `json:"effort"`
 	Tokens     *int64   `json:"tokens"`
 	Window     *int64   `json:"window"`
@@ -53,6 +54,9 @@ func (r *run) observeLocked(l *link, thread string, value *sample) bool {
 	snapshot.ObservedAt, snapshot.ActivityAt, snapshot.SettingsAt, snapshot.ContextAt = &now, &now, &now, &now
 	snapshot.Fresh, snapshot.ActivityFresh, snapshot.SettingsFresh, snapshot.ContextFresh = true, true, true, true
 	snapshot.Activity, snapshot.Model, snapshot.Effort = &value.Activity, value.Model, value.Effort
+	if value.ModelName != nil && *value.ModelName != "" {
+		snapshot.ModelName = value.ModelName
+	}
 	snapshot.Compacting = &value.Compacting
 	snapshot.Interruptions = session.InterruptionsObserved
 	if value.Window != nil && *value.Window > 0 {

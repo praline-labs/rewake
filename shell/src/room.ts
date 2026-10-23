@@ -151,6 +151,7 @@ type Telemetry = {
   fresh?: boolean;
   compactionInProgress?: boolean | null;
   configuredModel?: string | null;
+  configuredModelName?: string | null;
   configuredReasoningEffort?: string | null;
   contextUsedTokens?: number | null;
   contextWindowTokens?: number | null;
@@ -187,7 +188,7 @@ function sessionsOf(listing: SessionListing): Map<string, Session> {
       waitingFor: t?.waitingFor ?? undefined,
       compacting: t?.compactionInProgress ?? undefined,
       fresh: t?.fresh ?? false,
-      model: t?.configuredModel ?? undefined,
+      model: t?.configuredModelName ?? t?.configuredModel ?? undefined,
       effort: t?.configuredReasoningEffort ?? undefined,
       used: t?.contextUsedTokens ?? undefined,
       window: t?.contextWindowTokens ?? undefined,

@@ -37,6 +37,23 @@ func (claudeHarness) LaunchSettings(model, effort, context string) ([]string, er
 
 func (claudeHarness) AppliesContext() bool { return true }
 
+// windowTokens is a window in tokens, 0 for auto, empty or anything
+// checkWindow refuses.
+func windowTokens(value string) int64 {
+	if value == "" || value == "auto" || checkWindow(value) != nil {
+		return 0
+	}
+	scale := int64(1)
+	switch value[len(value)-1] {
+	case 'k', 'K':
+		scale = 1_000
+	case 'm', 'M':
+		scale = 1_000_000
+	}
+	count, _ := strconv.Atoi(strings.TrimRight(value, "kKmM"))
+	return int64(count) * scale
+}
+
 // checkWindow accepts auto, or a count of tokens written as 200000, 300k or
 // 1M, between the bounds Claude Code allows.
 func checkWindow(value string) error {

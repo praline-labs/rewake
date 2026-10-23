@@ -5,6 +5,7 @@ export type State = {
   sequence: number;
   activity: "idle" | "working";
   model: string | null;
+  modelName: string | null;
   effort: string | null;
   tokens: number | null;
   window: number | null;
@@ -38,6 +39,7 @@ export function management(
       sequence: ++sequence,
       activity: ctx?.isIdle() ? "idle" : "working",
       model: ctx?.model?.id ?? null,
+      modelName: ctx?.model?.name || null,
       effort: ctx?.thinkingLevel ?? null,
       tokens: usage?.tokens ?? null,
       window: usage?.contextWindow ?? ctx?.model?.contextWindow ?? null,

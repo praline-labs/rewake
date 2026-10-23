@@ -41,6 +41,9 @@ type Config struct {
 	// Effort is the reasoning effort the launch passed, empty when it passed
 	// none: shown, marked, until the mod sees a request of the main loop.
 	Effort string
+	// Window is the context window the launch passed, in tokens, 0 when it
+	// passed none or auto: the model's own window is then the limit.
+	Window int64
 	// Closing hears the mod say the harness has begun to end its process
 	// (closing.go); nil hears nothing.
 	Closing func()
