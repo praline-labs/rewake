@@ -269,7 +269,6 @@ test("a dialog no request carries is named in the state until the next tool resu
   await $.classic.Notification(shown as any);
   await run.clock.advance(1000);
   expect(await asking).toMatchObject({ decision: { behavior: "allow" } });
-  await $.classic.Notification({ notification_type: "idle_prompt", message: "waiting" } as any);
   await run.clock.settle();
   expect(dialogsWaited(run).filter(Boolean)).toEqual([]);
   await $.classic.Notification(shown as any);
@@ -278,4 +277,27 @@ test("a dialog no request carries is named in the state until the next tool resu
   await $.classic.PostToolUse({ ...drawn, tool_use_id: "t2", tool_response: {} } as any);
   await run.clock.settle();
   expect(dialogsWaited(run).at(-1)).toBeUndefined();
+});
+
+// The engine's informational notifications of 2.1.302 name no dialog: a
+// plugin's $.ui.notify, a background agent's end or need, computer use's
+// end, the prompt's idleness. An MCP server's input dialog does.
+test("only a notification of a drawn dialog names one", async ($, on) => {
+  const run = await dialogs($, on, {});
+  for (const notification_type of [
+    "plugin_notification",
+    "agent_completed",
+    "agent_needs_input",
+    "computer_use_exit",
+    "idle_prompt",
+    "auth_success",
+  ]) {
+    await $.classic.Notification({ notification_type, message: "not a dialog" } as any);
+  }
+  await run.clock.settle();
+  expect(dialogsWaited(run).filter(Boolean)).toEqual([]);
+  const input = { notification_type: "elicitation_dialog", message: "An MCP server needs input" };
+  await $.classic.Notification(input as any);
+  await run.clock.settle();
+  expect(dialogsWaited(run).at(-1)).toBe("An MCP server needs input");
 });

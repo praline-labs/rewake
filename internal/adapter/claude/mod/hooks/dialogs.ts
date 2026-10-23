@@ -15,8 +15,13 @@ interface Dialogs {
   run?: unknown;
 }
 
-// notDialogs are the notifications that name no dialog the session waits at.
-const notDialogs = ["idle_prompt", "auth_success"];
+// dialogTypes are the notifications the engine sends while the session's own
+// screen holds a dialog (2.1.302): a drawn dialog names permission_prompt
+// unless it names another type, an MCP server's input dialog an elicitation
+// one. Every other type — a plugin's $.ui.notify, a background agent's end
+// or need, computer use, quota — tells of something else
+// (docs/research-claude-mod.md#the-notifications-of-a-dialog).
+const dialogTypes = ["permission_prompt", "elicitation_dialog", "elicitation_url_dialog"];
 
 // maxDialog bounds what the state carries of a dialog's message.
 const maxDialog = 300;
@@ -131,7 +136,7 @@ export function serveDialogs(on: Parameters<Register>[0], current: () => Dialogs
   // step, and the wrapper tells main once (docs/permission-requests.md).
   on("classic.Notification", async ($, e, next) => {
     const load = current();
-    if (load?.run && load.asks.worker() && held === 0 && !notDialogs.includes(e.notification_type))
+    if (load?.run && load.asks.worker() && held === 0 && dialogTypes.includes(e.notification_type))
       load.management.waits((e.message || e.notification_type).slice(0, maxDialog));
     return next(e);
   });

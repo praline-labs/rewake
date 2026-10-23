@@ -578,3 +578,24 @@ from the start, one run per case.
 - The person answering first, 5 s into such a hold (choice 4): the read ran at once,
   `classic.PostToolUse` with the call's `tool_use_id`; the hook was not aborted
   (`next.signal.aborted` false at its end) and its allow 10 s later changed nothing.
+
+### The notifications of a dialog
+
+Read from the installed 2.1.302 binary, not probed; review-pi found the informational ones
+(October 23, 2026). `classic.Notification` is raised for every notification the engine sends, of
+the types its settings list: `permission_prompt`, `idle_prompt`, `auth_success`,
+`elicitation_dialog`, `agent_needs_input`, `agent_completed`, `elicitation_url_dialog`,
+`worker_permission_prompt`, `push_notification`, `computer_use_enter`, `computer_use_exit`, three
+`quota_auto_resume_*`, `model_refusal_fallback`, `auth_storage_failure`, `plugin_notification`.
+
+- A dialog the engine draws in the session's screen, left unanswered for the idle delay, sends
+  its entry's notification with its type or, with none, `permission_prompt` — permission dialogs,
+  managed settings, a sandbox's network request, plan mode. An MCP server's input dialog names
+  `elicitation_dialog` or `elicitation_url_dialog`. The probe's "Claude needs your permission" is
+  this path.
+- Two dialogs, the teammate setup and auto mode's classifier billing notice, name
+  `agent_needs_input`, which a background agent's "needs your input" also sends.
+- The rest name no dialog of this screen: `plugin_notification` is any plugin's `$.ui.notify`,
+  `agent_completed` a background agent's end, `worker_permission_prompt` a teammate's request
+  shown to its leader, `computer_use_exit` the end of computer use, `push_notification` the
+  model's push.

@@ -103,14 +103,16 @@ with one answer per question. The input shown is cut at 2,000 characters, the mo
 
 Main's decision of October 23, 2026: a worker waiting at a dialog rewake does not carry — one main
 cannot answer through the mod, or one whose request could not be opened — must not look like work.
-Claude Code sends `classic.Notification` while a session waits at a dialog (2.1.302: a permission
-dialog's `permission_prompt`, about six seconds after it is drawn,
-[the probe](research-claude-mod.md#a-workers-dialogs-in-auto-mode)); the engine draws trust,
-onboarding and login before the mod, and they have no such event.
+Claude Code sends `classic.Notification` while a session waits at a dialog — `permission_prompt`
+for most, an elicitation type for an MCP server's input, about six seconds after it is drawn — and
+for much else that is no dialog: a plugin's `$.ui.notify`, a background agent's end or need,
+computer use, quotas ([the types](research-claude-mod.md#the-notifications-of-a-dialog)). The engine
+draws trust, onboarding and login before the mod, and they have no such event.
 
-- **The mod** (`dialogs.ts`) of a worker's admitted load takes any notification but
-  `idle_prompt` and `auth_success` while no request of steps 2 and 3 is held — the notification of
-  a carried dialog is not another dialog — and puts its message, cut at 300 characters, in the
+- **The mod** (`dialogs.ts`) of a worker's admitted load takes only the notifications of a drawn
+  dialog — `permission_prompt`, `elicitation_dialog`, `elicitation_url_dialog` — while no request
+  of steps 2 and 3 is held — the notification of a carried dialog is not another dialog — and puts
+  its message, cut at 300 characters, in the
   state it samples (`StateRequest.dialog`, optional, the protocol's one addition). The next tool
   result (`PostToolUse`, `PostToolUseFailure`, `PermissionDenied`), main-loop step or turn end
   clears it.
@@ -123,8 +125,9 @@ onboarding and login before the mod, and they have no such event.
 - **`rewake list` and the shell's strip** read `waiting at a dialog` for it, in place of `idle`,
   `working` or `waiting for`.
 
-Not covered: a dialog of the engine that sends no notification, and one drawn while a carried
-request is held, which by the screen's order is the carried one.
+Not covered: a dialog of the engine that sends no notification, one drawn while a carried
+request is held, which by the screen's order is the carried one, and the few dialogs that name
+`agent_needs_input`, a type a background agent's need shares (October 23, 2026).
 
 ## The command
 
