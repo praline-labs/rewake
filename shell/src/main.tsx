@@ -1,14 +1,14 @@
 // rewake's shell (docs/v2/shell.md): main on the left, from 120 columns the
-// chosen worker on the right, under main's pane a bar choosing the worker and
-// a line of key hints; below 120 columns they take the whole width and the
-// bar switches the whole window.
+// chosen worker on the right, under main's pane a bar choosing the worker,
+// and a line of key hints across the whole width at the bottom; below 120
+// columns the bar takes the whole width too and switches the whole window.
 // Started by rewake --shell as
 //   rewake-shell --room <room> -- <main's command line>
 
 import { createCliRenderer } from "@opentui/core";
 import { render, useTerminalDimensions } from "@opentui/solid";
 import { createEffect, createSignal, For, Show } from "solid-js";
-import { Nav } from "./bar.tsx";
+import { Bar, Hints } from "./bar.tsx";
 import { Closing } from "./closing.tsx";
 import { askColors, seedOf } from "./colors.ts";
 import { endMain, tailText, watchTerminal } from "./ending.ts";
@@ -275,13 +275,13 @@ function App() {
   const shown = (p: Pane) => (wide() ? p === mainPane || p.id === chosen() : p.id === focused());
   const widthOf = (p: Pane) =>
     !wide() ? dims().width : p === mainPane ? dims().width - 1 - right() : right();
-  // The bar and the hints take two lines under main's pane in the wide
-  // layout, and under the whole row in the narrow one; a worker's column
-  // takes the full height in the wide layout, so both columns end together.
-  const navHeight = 2;
-  const rowHeight = () => Math.max(dims().height - (wide() ? 0 : navHeight), 1);
-  const height = (p: Pane) =>
-    p === mainPane ? Math.max(dims().height - navHeight, 1) : rowHeight();
+  // The hints take the bottom line across the whole width; the bar sits
+  // under main's pane in the wide layout and above the hints in the narrow
+  // one, so main's pane is two lines short of the screen in both. A worker's
+  // column takes the rest of the height in the wide layout, its strip last,
+  // so both columns end on the bar's row.
+  const rowHeight = () => Math.max(dims().height - (wide() ? 1 : 2), 1);
+  const height = (p: Pane) => (p === mainPane ? Math.max(dims().height - 2, 1) : rowHeight());
   // A pane sits in a box with a column of padding on each side, so the text
   // does not touch the edge; the widget's size, and so the program's, is the
   // inside. A press on the padding chooses the pane like one on its text.
@@ -295,16 +295,13 @@ function App() {
     onMouseDown: () => paneHooks.pressed(p.id),
   });
   const inner = (p: Pane) => Math.max(widthOf(p) - 2, 1);
-  // The navigation is one: under main's pane, in main's column, while both
-  // panes show; across the whole width while one does.
-  const nav = (width: number) => (
-    <Nav
+  const focusedPane = () => paneOf(focused()) ?? mainPane;
+  const bar = () => (
+    <Bar
       tabs={allPanes().map((p) => ({ id: p.id, label: p.label, main: p === mainPane }))}
       focused={focused()}
       chosen={wide() && focused() === "main" ? chosen() : undefined}
       zoomed={zoomed()}
-      prefix={prefixWaits()}
-      width={width}
       theme={theme}
       pick={show}
     />
@@ -325,7 +322,7 @@ function App() {
                 height={height(mainPane)}
               />
             </box>
-            <Show when={wide()}>{nav(widthOf(mainPane))}</Show>
+            <Show when={wide()}>{bar()}</Show>
           </box>
           <Show when={wide()}>
             <box width={1} height={rowHeight()} backgroundColor="#444444" />
@@ -345,7 +342,19 @@ function App() {
             )}
           </For>
         </box>
-        <Show when={!wide()}>{nav(dims().width)}</Show>
+        <Show when={!wide()}>{bar()}</Show>
+        <Hints
+          context={{
+            focus: focusedPane() === mainPane ? "main" : "worker",
+            name: focusedPane().label,
+            prefix: prefixWaits(),
+            zoomed: zoomed(),
+            workers: workers().length,
+          }}
+          width={dims().width}
+          theme={theme}
+          accent={focusedPane() === mainPane ? theme.main : theme.worker}
+        />
       </box>
       <Show when={closing()}>
         <Closing theme={theme} />

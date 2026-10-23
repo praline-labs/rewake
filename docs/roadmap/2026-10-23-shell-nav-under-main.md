@@ -1,9 +1,10 @@
-# The shell's navigation under main's pane
+# The shell's bar under main's pane, the hints across the whole width
 
-October 23, 2026, on the owner's decision ([shell.md](../v2/shell.md#the-bar)). **Done; the owner's look open.**
-While both panes show, the bar and the hints sit under main's pane, in main's column; the worker's column takes the
-whole height with its strip as the last row, so both columns end together. While one pane shows — narrow or zoomed —
-they take the two bottom lines across the whole width as before. The hints centre in main's column and are cut from
-the right there; `Nav` in `shell/src/bar.tsx` draws both lines at the width it is given. Live under a stand-in
-terminal with stand-in main and space hosts: wide with main or a worker focused, the prefix waiting, 124 columns,
-narrow, zoomed; clicks on the bar chose a worker wide and narrow. **Open:** the owner's look on their terminal.
+October 23, 2026, on the owner's decisions ([shell.md](../v2/shell.md#the-bar)). **Done; the owner's look open.**
+The bar and the hints first both moved under main's pane in the wide layout; after a live look the same day the owner
+had the hints shared again: they are the bottom row across the whole width in every layout, placed as on October 19.
+While both panes show, the bar sits under main's pane, main's pane ends two rows above the bottom and the worker's
+column one row above it, its strip on the bar's row. Narrow or zoomed, bar and hints take the two bottom lines.
+Live under a stand-in terminal with stand-in main and space hosts: wide with main or a worker focused, the prefix
+waiting, 124 columns, narrow, zoomed, taller; programs' sizes after each resize; clicks on the bar chose a worker wide
+and narrow. **Open:** the owner's look on their terminal.
