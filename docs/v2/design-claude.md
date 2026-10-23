@@ -201,6 +201,26 @@ remote ones through the native call's result, so re-entry cannot count one twice
 or failed compaction clears the in-progress state and adds no completion. Managed-policy
 limits and the tests' scope are in [the parity record](../research-claude-parity.md).
 
+## The cache ttl
+
+October 23, 2026. The mod cannot read how long the prompt cache lives; Claude Code's status-line input
+carries it as `prompt_cache` (`warm`, `ttl` of `5m` or `1h`, `expires_at` in epoch seconds,
+`requests`, `misses`, `hit_ratio` …), once a request was made (read from the strings of 2.1.302; a live
+sample needs a login). A worker's run therefore sets `statusLine` in its `--settings` overlay —
+`'<rewake>' statusline`, `refreshInterval` 30 or the person's own — which beats the folder's
+`settings.json`. The hidden `rewake statusline` reads that input, posts `ttl`, `expiresAt` and `warm`
+to the run's host at `status/line` of the mod socket, and prints the person's own `statusLine` command
+from the folder's `settings.json` (run with the same input) or nothing, always exiting 0. The expiry is
+absolute, so a slow timer loses nothing; the command runs after each response too.
+
+`status/line` is the one endpoint served to the harness's descendants and not only its own process
+(`fromHarnessOrChild`): the status line is Claude Code's child, and the payload is telemetry that is
+acted on nowhere — a Bash call posting it is harmless (main's decision, October 23). The host keeps
+the last in `Snapshot.CacheLife` (`cacheLife`: `ttl`, `expiresAt`, `warm`), beside `Cache`, which comes from
+the responses' usage; `rewake list` shows the Cache cell as `90% 42m` (`—` once expired, `<1m`), the
+remaining time counted by the reader's clock. Main's own run has no such status line. pi has no
+observed expiry (only a model's best-effort lifetimes per retention tier), so nothing is shown there.
+
 ## Control
 
 Built October 18, 2026: compact with optional focus and interrupt. Clear is not offered.

@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"text/tabwriter"
+	"time"
 
 	"github.com/praline-labs/rewake/internal/core/session"
 )
@@ -87,11 +88,27 @@ func cacheCell(snapshot *session.Snapshot) string {
 	if snapshot == nil || snapshot.Cache == nil {
 		return "-"
 	}
-	cell := strconv.Itoa(snapshot.Cache.HitPercent) + "%"
+	cell := strconv.Itoa(snapshot.Cache.HitPercent) + "%" + cacheLeft(snapshot.CacheLife, time.Now())
 	if !snapshot.Fresh || !snapshot.ContextFresh {
 		cell += " (stale)"
 	}
 	return cell
+}
+
+// cacheLeft is what the cache has left to live, as " 42m" or " —" once it has
+// expired; nothing where the harness told no expiry.
+func cacheLeft(life *session.CacheLife, now time.Time) string {
+	if life == nil || life.ExpiresAt == nil {
+		return ""
+	}
+	left := life.Remaining(now)
+	switch {
+	case left <= 0:
+		return " —"
+	case left < time.Minute:
+		return " <1m"
+	}
+	return " " + strconv.Itoa(int((left+59*time.Second)/time.Minute)) + "m"
 }
 
 func stateCells(snapshot *session.Snapshot) []string {

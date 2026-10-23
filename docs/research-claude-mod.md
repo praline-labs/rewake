@@ -556,3 +556,8 @@ builds on:
   `tool.check` hook that answers without `next(e)` overrides it (`claude -p` with a plugin
   dropping the prompt, no model turn, 2.1.302). The entered worker's transcript was under the checkout's project directory
   (`~/.claude/projects/<checkout's slug>/<session id>.jsonl`), not the launch directory's.
+
+## The prompt cache (October 23, 2026, 2.1.302)
+
+- `turn.step`'s `usage` (`TurnUsage`) carries the API's `input_tokens`, `cache_read_input_tokens` and `cache_creation_input_tokens` of each response: the source of the hit percent. It has no ttl or expiry; `PreModelSwitch` (`prompt_cache_warm`, `cache_ttl`) and a resume's `SessionStart` (`prompt_cache_likely_expired`) mention it only at their moments.
+- The status-line input has `prompt_cache` once a request was made: `warm`, `caching_observed`, `ttl` (`5m`/`1h`), `expires_at` (epoch seconds), `requests`, `misses`, `hit_ratio`, `cache_write_tokens` and more — read from the strings of the installed binary, not from a live sample (it needs a login). `statusLine.refreshInterval` is seconds, at least 1, beside the event-driven runs; the command inherits the harness's environment, `REWAKE_MOD_SOCKET` among it, and is a child of the harness process. The run's `--settings` `statusLine` beats the user settings'. See [design-claude.md](v2/design-claude.md#the-cache-ttl).

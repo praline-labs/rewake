@@ -281,9 +281,13 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 		refuse(w, http.StatusServiceUnavailable, err.Error())
 		return
 	}
-	if err := s.fromHarness(r.Context()); err != nil {
-		refuse(w, http.StatusForbidden, err.Error())
-		return
+	// The status line's endpoint checks its own peer, widened to the
+	// harness's descendants (statusline.go).
+	if r.URL.Path != PathStatusLine {
+		if err := s.fromHarness(r.Context()); err != nil {
+			refuse(w, http.StatusForbidden, err.Error())
+			return
+		}
 	}
 	endpoint, known := s.endpoints()[r.URL.Path]
 	if !known {
@@ -309,6 +313,7 @@ func (s *Server) endpoints() map[string]http.HandlerFunc {
 		PathModState:       s.state,
 		PathModControl:     s.controlReply,
 		PathSessionClosing: s.sessionClosing,
+		PathStatusLine:     s.statusLine,
 		PathAskOpen:        s.askOpen,
 		PathAskPoll:        s.askPoll,
 		PathAskSettle:      s.askSettle,
