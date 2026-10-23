@@ -257,7 +257,14 @@ func TestAWorkersSessionsAreKeptApart(t *testing.T) {
 	if _, err := (harness{}).Launch(request); err == nil || !strings.Contains(err.Error(), workerSessions) {
 		t.Errorf("a worker's own %s: %v", sessionDirFlag, err)
 	}
+	// Main's environment reaches the adapter through the host's
+	// launch.SessionEnv, which drops every EnvNotInherited name first (the
+	// review of October 23, 2026 found main's choice lost there).
 	request.Role, request.Args = role.Main, nil
+	request.Env = slices.DeleteFunc(request.Env, func(value string) bool {
+		name, _, _ := strings.Cut(value, "=")
+		return slices.Contains(harness{}.EnvNotInherited(), name)
+	})
 	plan, err = harness{}.Launch(request)
 	if err != nil || !slices.Contains(plan.Env, SessionDirEnv+"=/home/someone/sessions") {
 		t.Errorf("main's environment: %q, %v", plan.Env, err)

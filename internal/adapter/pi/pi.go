@@ -15,7 +15,8 @@ const (
 	SkipVersionCheckEnv = "PI_SKIP_VERSION_CHECK"
 	// SessionDirEnv moves pi's session storage alone, below --session-dir
 	// and above the sessionDir setting (pi 1.3.0's docs); a worker's is
-	// workerSessions in the agent directory.
+	// workerSessions in the agent directory. It is not in EnvNotInherited:
+	// main keeps the person's, and Launch replaces a worker's.
 	SessionDirEnv  = "PI_CODING_AGENT_SESSION_DIR"
 	sessionDirFlag = "--session-dir"
 	workerSessions = "worker-sessions"
@@ -98,7 +99,7 @@ func isolation(dir string) []string {
 }
 
 func (harness) EnvNotInherited() []string {
-	return []string{socketEnv, AgentDirEnv, SkipVersionCheckEnv, SessionDirEnv, "PI_CODING_AGENT", "PI_SESSION_ID", "PI_SESSION_FILE", "PI_PROVIDER", "PI_MODEL", "PI_REASONING_LEVEL"}
+	return []string{socketEnv, AgentDirEnv, SkipVersionCheckEnv, "PI_CODING_AGENT", "PI_SESSION_ID", "PI_SESSION_FILE", "PI_PROVIDER", "PI_MODEL", "PI_REASONING_LEVEL"}
 }
 
 func (harness) Offers() adapter.Offer {

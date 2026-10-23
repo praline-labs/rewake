@@ -21,29 +21,30 @@ func fakeClaude(t *testing.T, answer string, exit int) string {
 	return out
 }
 
-// A worker is refused while the folder has no login, naming the command the
-// person runs; a login, a wrapper, or a status that says nothing lets it go.
-func TestAWorkerWaitsForItsOwnLogin(t *testing.T) {
+// While the folder has no login, main is told to have the person log in in
+// the worker's pane; a login, a wrapper, or a status that says nothing tells
+// it nothing.
+func TestMainIsToldTheWorkersHaveNoLogin(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	dir := profileDir(home)
 	seen := fakeClaude(t, `{"loggedIn": false, "authMethod": "none"}`, 1)
-	err := New().(claudeHarness).WorkerRefusal("")
-	if err == nil || !strings.Contains(err.Error(), configDirEnv+"="+dir+" claude auth login") {
-		t.Fatalf("not logged in: %v", err)
+	notice := New().(claudeHarness).WorkerNotice("")
+	if !strings.Contains(notice, dir) || !strings.Contains(notice, "in this worker's pane with /login") {
+		t.Fatalf("not logged in: %q", notice)
 	}
 	if asked, _ := os.ReadFile(seen); strings.TrimSpace(string(asked)) != dir+" auth status --json" {
 		t.Fatalf("asked %q", asked)
 	}
-	if err := New().(claudeHarness).WorkerRefusal("my-claude"); err != nil {
-		t.Fatalf("under a wrapper: %v", err)
+	if notice := New().(claudeHarness).WorkerNotice("my-claude"); notice != "" {
+		t.Fatalf("under a wrapper: %q", notice)
 	}
 	fakeClaude(t, `{"loggedIn": true}`, 0)
-	if err := New().(claudeHarness).WorkerRefusal(""); err != nil {
-		t.Fatalf("logged in: %v", err)
+	if notice := New().(claudeHarness).WorkerNotice(""); notice != "" {
+		t.Fatalf("logged in: %q", notice)
 	}
 	fakeClaude(t, `unknown command`, 1)
-	if err := New().(claudeHarness).WorkerRefusal(""); err != nil {
-		t.Fatalf("a status that says nothing: %v", err)
+	if notice := New().(claudeHarness).WorkerNotice(""); notice != "" {
+		t.Fatalf("a status that says nothing: %q", notice)
 	}
 }

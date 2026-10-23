@@ -16,8 +16,9 @@ so `claude --resume`, `--continue` and `/resume` offered them as the person's ow
 October 23 the service folder `~/.config/rewake/claude/worker/` is the workers' Claude Code
 configuration directory, `CLAUDE_CONFIG_DIR`, which every worker's launch sets and the person
 logs in once. What the design of October 19 weighed against it is answered: the login is the
-person's once, in a terminal — `CLAUDE_CONFIG_DIR=~/.config/rewake/claude/worker claude auth
-login` — and `space open` refuses a Claude Code worker until then; onboarding and the trust of
+person's once, in the first worker's own pane with `/login` (the owner's decision, October 23:
+`space open` opens the worker and its answer tells main the person is to log in there, rather
+than refusing and naming a command typed elsewhere); onboarding and the trust of
 the repository main runs in are marked by rewake in the folder's `.claude.json` before each
 launch (main's decision on the owner's behalf, October 23: the person's own sessions there
 already have that trust); separate history is the point. The account is the same, logged in a
@@ -115,7 +116,7 @@ went with the wrapper it served (step 2).
 
 **Under `--command`** the profile is not applied, with a launch note: the wrapper decides the
 configuration Claude Code starts with, as it did before, its `CLAUDE_CONFIG_DIR` among it: rewake
-sets none, and `space open` asks no login. A wrapper that moves `CLAUDE_CONFIG_DIR` keeps its own
+sets none, and `space open` asks after no login. A wrapper that moves `CLAUDE_CONFIG_DIR` keeps its own
 settings, whose `env` then beats `--autocompact`.
 
 ## `rewake claude [claude flags]`
@@ -254,7 +255,7 @@ Main's, October 19, 2026, on the design's questions; the room's identity is the 
    ([its entry](../roadmap/2026-10-23-worker-config-dir.md)): the folder as `CLAUDE_CONFIG_DIR`,
    its files read natively, the run's `--settings` a JSON object of memory and `EnterWorktree`
    (no run-directory copy), defaults version 3 taking `EnterWorktree` out of the file,
-   onboarding and trust in the folder's `.claude.json`, the login check of `space open`; pi's
+   onboarding and trust in the folder's `.claude.json`, the login notice of `space open`; pi's
    workers keep their sessions in `worker-sessions/` of its agent directory. Probed without a
    login ([research-launch.md](../research-launch.md#a-configuration-directory-of-the-workers));
    the live check with a worker waits for the owner's login.

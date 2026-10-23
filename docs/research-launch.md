@@ -378,7 +378,23 @@ pseudo-terminal killed after a few seconds. What the workers' own directory
   `sessions/` and `session-env/`, and `plugins/` for installed plugins and a mod's `$.store`
   (`plugins/store/<name>_inline-<hash>.json`, from the `mods` skill).
 
-Not verified until the workers' directory is logged in: what a logged-in first start shows
+**[verified live, installed 2.1.302, no login, no model call; October 23, 2026]** A worker of a
+test build of rewake started directly in a private HOME, its folder holding only what rewake
+writes, on a pseudo-terminal, then sent a task from a plain shell:
+
+- Not logged in, after rewake's onboarding and trust keys, Claude Code shows no login screen: it
+  starts to its prompt with the auto-mode banner, the footer saying "Not logged in · Run
+  /login"; it neither exits nor waits on a dialog. The mod loads and its hello lands: `wake`,
+  `turn-boundary`, `telemetry` and `control` live.
+- The task is delivered through the socket and announced; the turn ends at once with "Not
+  logged in · Please run /login". The task stays in the worker's `unread/` with status
+  `delivered`, so a sender's `--awaited` lists it `unread`; the failed turn, with nothing read,
+  writes an `error` letter to the worker's own mailbox and no report to the sender.
+- A rewake main in the same private HOME, not logged in and run inside the shell, did not get
+  its mod's hello within a minute (`wake` alone live) and so opened no space; not pursued, since
+  main runs on the person's own login.
+
+Not verified until the workers' directory is logged in: that `/login` in a running worker's pane serves that session without a restart; what a logged-in first start shows
 beyond the above; the account, plan and usage against the person's; whether Claude Code keeps
 the unknown `rewake` key when it rewrites `settings.json`; the interactive `/resume` picker,
 which by construction reads the directory's `projects/`.

@@ -172,12 +172,18 @@ rewake --command my-claude claude
     worker's launch makes (October 19) — the folder itself (0700), an empty `CLAUDE.md` and an
     empty `skills/`. A file or directory already there is the person's or Claude Code's and is
     never changed, but for `settings.json` (below) and two keys of `.claude.json`.
-  - **The login is the person's, once**, in a terminal: `CLAUDE_CONFIG_DIR=~/.config/rewake/claude/worker
-    claude auth login`. `space open` of a Claude Code template without `--command` first runs
-    `claude auth status --json` under that variable, and refuses, exit 1 and naming that command,
-    when it answers `loggedIn: false` (exit 1); a status that cannot be read lets the open go on.
-    A worker started without a login would sit at its prompt, and the open would show only its
-    timeout. The account is the person's, logged in a second time.
+  - **The login is the person's, once, in a worker's pane** (the owner's decision, October 23,
+    2026). `space open` of a Claude Code template without `--command` first runs `claude auth
+    status --json` under that variable; when it answers `loggedIn: false` (exit 1) the worker is
+    opened all the same, and the answer adds a line — `notice` under `--json` — telling main the
+    workers' Claude Code is not logged in and the person is to type `/login` once in this
+    worker's pane; main passes it on. A status that cannot be read adds nothing. Not logged in,
+    Claude Code shows no login screen of its own: the worker starts to its prompt, the footer
+    saying "Not logged in · Run /login", its mod live. A task sent before the login is delivered,
+    its turn stops at once on "Not logged in · Please run /login", and the task stays unread —
+    `rewake inbox --awaited` lists it as `unread`, nothing reports it failed — until the worker
+    runs `rewake inbox` on a later notice (probed on 2.1.302). The account is the person's,
+    logged in a second time.
   - **Onboarding and trust.** Before each launch rewake makes sure the folder's `.claude.json`
     holds `hasCompletedOnboarding: true` and `projects[<root>].hasTrustDialogAccepted: true` for
     the worker's project — the main repository's root, as for its memory, under its path as
@@ -313,7 +319,7 @@ directory, made 0700 with the folders below, over any of the person's environmen
 stores and looks up sessions there, below `--session-dir` and above the `sessionDir` setting
 (its `environment-variables.md`, `cli.md`; not run, since a session file needs a turn). So a
 person's `--continue` or picker in a checkout a worker shared no longer lands in the worker's.
-A worker's own `--session-dir` is refused, naming the folder. Sessions of workers from before
+A worker's own `--session-dir` is refused, naming the folder. Main keeps the person's variable: it is not among the names a launch drops before the adapter, which replaces it for a worker alone. Sessions of workers from before
 stay in `sessions/`.
 
 The launch also makes `extensions/` and `skills/` in that directory (0700) when they are

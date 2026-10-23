@@ -22,19 +22,22 @@ const configDirEnv = "CLAUDE_CONFIG_DIR"
 // second with no network.
 const loginWait = 10 * time.Second
 
-// WorkerRefusal refuses a worker while the folder has no login of its own:
-// the person logs it in once, in a terminal, since a login waits for a
-// browser and rewake never waits for input. `claude auth status` exits 1
-// with loggedIn false when there is none (probed on 2.1.302). Under a wrapper
-// the wrapper decides the configuration; a status that cannot be read says
-// nothing, and the launch goes on.
-func (claudeHarness) WorkerRefusal(command string) error {
+// WorkerNotice tells main when the folder has no login of its own yet: the
+// person logs in once, in the worker's pane, where Claude Code starts to its
+// prompt with "Not logged in · Run /login" in the footer — it shows no login
+// screen of its own — and the login then covers every later worker (the
+// owner's decision, October 23, 2026). `claude auth status` exits 1 with
+// loggedIn false when there is none (probed on 2.1.302). A task sent before
+// the login is delivered, its turn stops at once on the missing login, and
+// the task stays unread (probed on 2.1.302). Under a wrapper the wrapper
+// decides the configuration; a status that cannot be read says nothing.
+func (claudeHarness) WorkerNotice(command string) string {
 	if command != "" {
-		return nil
+		return ""
 	}
 	dir, _, err := profileDirPath()
 	if err != nil {
-		return nil
+		return ""
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), loginWait)
 	defer cancel()
@@ -43,9 +46,9 @@ func (claudeHarness) WorkerRefusal(command string) error {
 	out, err := status.Output()
 	var exit *exec.ExitError
 	if !errors.As(err, &exit) || !loggedOut(out) {
-		return nil
+		return ""
 	}
-	return fmt.Errorf("a Claude Code worker has a login of its own, and %s has none yet: the person logs it in once, in a terminal, with %s=%s claude auth login", dir, configDirEnv, dir)
+	return fmt.Sprintf("The workers' Claude Code is not logged in: %s has no login of its own yet. Tell the person to log in once in this worker's pane with /login; the login is kept in that folder and serves every later Claude Code worker. Until then a task's turn stops at once on the missing login and the task stays unread in the worker's inbox: send tasks after the login, and the worker's next rewake inbox reads one sent before.", dir)
 }
 
 // loggedOut reads the status's answer: only an explicit loggedIn false.

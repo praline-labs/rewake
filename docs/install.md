@@ -148,13 +148,9 @@ launch puts the directory of the binary that started it first on the session's `
 **Log the Claude Code workers in, once.** Claude Code workers have a configuration directory of
 their own, rewake's `~/.config/rewake/claude/worker/`, with its own login, so their
 conversations stay out of your `claude --resume` and your login is never refreshed by a
-worker. Log it in once with your account, from your own terminal:
-
-```bash
-CLAUDE_CONFIG_DIR=~/.config/rewake/claude/worker claude auth login
-```
-
-Until then main's `rewake space open` refuses a Claude Code worker, naming this command.
+worker. The first Claude Code worker main opens shows "Not logged in · Run /login" in its
+pane, and main tells you so: type `/login` in that worker's pane and log in with your account.
+That once serves every later Claude Code worker.
 
 **Start a room.** Start main in the project's directory, from your own terminal, not a shell an
 agent runs (started inside a rewake session, a launch refuses and exits 2):

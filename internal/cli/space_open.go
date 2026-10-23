@@ -36,6 +36,9 @@ type spaceOpened struct {
 	Worktree  bool   `json:"worktree,omitempty"`
 	// Type is the kind of work the worker was raised for, when it has one.
 	Type string `json:"type,omitempty"`
+	// Notice is what the worker still lacks that the person gives in its
+	// pane — a login of its own —, for main to tell the person.
+	Notice string `json:"notice,omitempty"`
 }
 
 func (o spaceOpened) lines() []string {
@@ -43,10 +46,14 @@ func (o spaceOpened) lines() []string {
 	if o.Type != "" {
 		kind += ", type " + o.Type
 	}
-	return []string{
+	lines := []string{
 		fmt.Sprintf("Rewake: opened space %s: %s (%s, %s) runs in room %s and closes when this run ends or on rewake space close %s.", o.Space, o.Session, o.Harness, kind, o.Room, o.Space),
 		fmt.Sprintf("Give it a task with rewake send %s \"...\"; main in the shell shows its terminal as the worker pane the bar selects.", o.Session),
 	}
+	if o.Notice != "" {
+		lines = append(lines, o.Notice)
+	}
+	return lines
 }
 
 // handleSpaceOpen starts a worker in a space of main's run: it writes the
@@ -83,10 +90,11 @@ func handleSpaceOpen(ctx *Context, call Call) error {
 	if err := refuseReportingRole(h, part); err != nil {
 		return err
 	}
+	// Asked before the worker starts: the harness's own status command may
+	// write the state the worker's harness then reads.
+	var notice string
 	if ready, ok := h.(adapter.WorkerReadiness); ok {
-		if err := ready.WorkerRefusal(target.command); err != nil {
-			return failf("%v", err)
-		}
+		notice = ready.WorkerNotice(target.command)
 	}
 	session := name + "-" + h.ID()
 	if !state.ValidName(name) || !state.ValidName(session) {
@@ -135,6 +143,7 @@ func handleSpaceOpen(ctx *Context, call Call) error {
 		return err
 	}
 	opened := spaceOpened{Space: name, ID: record.ID, Session: session, Harness: h.ID(), Role: part.ID, Room: filepath.Base(dir), SessionID: record.Worker.SessionID, Worktree: spec.Worktree, Type: spec.Type}
+	opened.Notice = notice
 	return printValue(ctx, opened, opened.lines)
 }
 

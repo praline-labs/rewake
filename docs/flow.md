@@ -338,7 +338,10 @@ checkout later, which the host then captures as a launch's, and `REWAKE_SPACE_TY
 text for a worker raised for a kind of work, its briefing's last section
 ([worker-types.md](worker-types.md)) — and none of main's session in its environment; the launch believes the variable only from its parent, that space's host. From there the worker is any session: Act
 1 for it, its record `sessions/api-claude.json`. The space host records the worker's run, open;
-the command answers once that run is registered, within 30 s.
+the command answers once that run is registered, within 30 s. A harness whose workers need
+something only the person gives in the worker's pane adds it to the answer: a Claude Code
+worker whose configuration directory has no login yet opens all the same, and the answer tells
+main the person is to type `/login` once in that pane ([launch.md](launch.md#claude-code)).
 
 Main sends `api-claude` a task, and its report comes back as in Acts 2 to 5. When main was
 started in the shell — at a terminal, always — main runs on the shell's own pty and each worker's pane is
