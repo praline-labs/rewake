@@ -1,6 +1,7 @@
 # The worker profile and `rewake claude` as main
 
-A design; all three steps built October 19, 2026 (below). The owner's decisions of October 19, 2026: rewake carries its own
+A design; its steps built October 19, 2026, and the configuration directory of its own
+October 23 (below). The owner's decisions of October 19, 2026: rewake carries its own
 Claude Code worker profile, so a worker does not carry everything of the person's own Claude
 Code, and the person's wrapper made for that is deleted; the person starts everything with
 `rewake claude` and Claude Code's own flags, which always makes main; workers are raised only
@@ -8,46 +9,61 @@ by main (`rewake space open`), later also from the shell's UI. Facts below were 
 Claude Code 2.1.302 with `claude -p --no-session-persistence "/context"`, which makes no model
 call, in a private HOME where the person's files would have answered instead.
 
-## Why launch options and not a configuration directory
+## A configuration directory of its own
 
-A separate `CLAUDE_CONFIG_DIR` — what the wrapper does — swaps the whole global layer, and with
-it the login, the transcripts, `~/.claude.json` with its folder-trust decisions, and history. A
-worker then logs in on its own, asks for trust in every new checkout with nobody at its screen,
-and keeps conversations main's account cannot resume. It also does not do its job: Claude Code
-reads `CLAUDE.md` and `.claude/CLAUDE.md` of every directory above the working one, so for any
-checkout under the home directory the person's `~/.claude/CLAUDE.md` loads anyway, as a
-*Project* memory (probed: with the user source off or another configuration directory, the file
-still shows as `Project`). Launch options do all of it and keep the person's directory as is:
+The owner's decision, October 21–23, 2026: a worker's conversations sat beside the person's,
+so `claude --resume`, `--continue` and `/resume` offered them as the person's own. Since
+October 23 the service folder `~/.config/rewake/claude/worker/` is the workers' Claude Code
+configuration directory, `CLAUDE_CONFIG_DIR`, which every worker's launch sets and the person
+logs in once. What the design of October 19 weighed against it is answered: the login is the
+person's once, in a terminal — `CLAUDE_CONFIG_DIR=~/.config/rewake/claude/worker claude auth
+login` — and `space open` refuses a Claude Code worker until then; onboarding and the trust of
+the repository main runs in are marked by rewake in the folder's `.claude.json` before each
+launch (main's decision on the owner's behalf, October 23: the person's own sessions there
+already have that trust); separate history is the point. The account is the same, logged in a
+second time: the same plan and usage. Probed on 2.1.302, October 23, in private HOMEs with no
+login ([research-launch.md](../research-launch.md#a-configuration-directory-of-the-workers)):
 
-| What the profile does | Option | Probed |
-| --- | --- | --- |
-| drops the person's user layer: `settings.json` (hooks, status line, plugins, permissions, env, model, language), user skills, user MCP servers of `~/.claude.json`, the user `CLAUDE.md` | `--setting-sources project,local` | yes |
-| drops the person's `CLAUDE.md` read as an ancestor's | `claudeMdExcludes: ["<config dir>/CLAUDE.md"]` in `--settings` | yes |
-| carries the profile's settings; precedence is user < project < local < flag < policy | `--settings` of the service folder's `settings.json` | yes |
-| the profile's skills, as a plugin (skills appear as `<plugin>:<skill>`) | `--plugin-dir` of the profile's plugins folder | yes |
-| the profile's MCP servers | `--mcp-config` | from help |
-| the worker's instructions | folded into the one `--append-system-prompt` after rewake's briefing | from help |
-| the auto-compact window | `--autocompact <auto\|100k–1M>` | yes |
+| What Claude Code reads from the folder | as |
+| --- | --- |
+| `settings.json` | the user's settings: its `env` reaches the process, its hooks run |
+| `CLAUDE.md` | the user's memory file (`/context`: *User*) |
+| `skills/<skill>/` | user skills, named as their folders |
+| `agents/`, commands, plugins installed there | the user's own |
+| `.claude.json` | onboarding, folder trust, user MCP servers, counters |
+| `projects/`, `sessions/`, history, `.credentials.json` | the workers' transcripts and login |
 
-What stays the person's: the login and account, transcripts and `/resume`, folder trust, the
+What the launch still adds: `--settings` with what this run alone gets, a JSON object of the
+worker's memory and `EnterWorktree` — allowed for a template that enters, denied for any
+other; `mcp.json` as `--mcp-config`; rewake's briefing in `--append-system-prompt`; the mod.
+Gone: `--setting-sources project,local`, the whole file as `--settings`, the folder as the plugin
+`worker` and its `CLAUDE.md` folded into the system prompt. What stays the person's: the
 project's and local settings, the project's `CLAUDE.md`/`AGENTS.md`, skills, agents and
-`.mcp.json`, and managed policy. The claude.ai connectors are dropped by the profile's
-`disableClaudeAiConnectors: true` (the owner's decision below), which leaves the project's
-servers; `--strict-mcp-config` would drop both.
+`.mcp.json`, and managed policy; the person's own `~/.claude/CLAUDE.md`, read as an ancestor's
+under another configuration directory too, stays excluded by `claudeMdExcludes`. rewake's
+defaults moved from the flag layer to the user layer, so a project's settings can override one
+of them that is a single value; deny lists merge, so the off-list's denies hold. The mod's
+`$.store` lies in the folder's `plugins/store/` now; its keys are per run.
 
-Two facts that shape the build. `--settings` is single-use — a second one replaces the first,
+Until October 23 a worker kept the person's configuration directory and launch options laid
+the profile over it, for the reasons the owner then set aside: a separate directory's own
+login, trust and history. Two facts of that build still hold.
+
+`--settings` is single-use — a second one replaces the first,
 not merges (probed) — so the profile owns it: a worker's `--settings` or `--setting-sources`
-after `--` is refused, naming the profile file. And an `env` value in user settings beats both
-`--autocompact` and the process environment, while `env` in `--settings` beats user settings;
-with the user source off, `--autocompact` holds unless the project's settings set the variable.
+after `--` is refused, naming the profile file; one leaving out the user layer would now drop
+rewake's defaults with it. And an `env` value in user settings beats both `--autocompact` and
+the process environment, while `env` in `--settings` beats user settings: since October 23 the
+folder's `settings.json` is the user layer, so a window variable set in its `env` beats a
+template's `launch.context`.
 
 ## The profile
 
 **Every Claude Code worker gets it; main never.** It is the worker role's, not an alias's: a
 worker raised from any alias gets it; main is exactly the person's Claude Code.
 
-**rewake's defaults**, with no file of the person's: the user layer off and the ancestor exclude
-above; the auto-memory, off until October 19, 2026 and since then one per template and project,
+**rewake's defaults**, with no file of the person's: the folder as the user layer and the
+ancestor exclude above; the auto-memory, off until October 19, 2026 and since then one per template and project,
 since October 21 one per type and project for a worker raised for a type (step 5); `env` with
 `DISABLE_AUTOUPDATER=1` (a worker must not update Claude Code under a running room) and
 `DISABLE_FEEDBACK_COMMAND=1` (no survey in an unattended pane); `Bash(rewake:*)` as today;
@@ -62,28 +78,32 @@ the person's changes (below).
 
 **The person's profile**, optional, in rewake's own directory beside pi's,
 `~/.config/rewake/claude/worker/`, never in the state directory. A worker's launch makes what
-of it is missing — the folder (0700), an empty `CLAUDE.md`, `skills/` and
-`.claude-plugin/plugin.json` naming the plugin `worker` — and never changes what is there but
-`settings.json` (the owner's decisions, October 19, 2026); the folder itself is passed as
-`--plugin-dir`, so a skill placed or symlinked into `skills/` loads as `worker:<skill>`. An entry
-of the wrong kind refuses the launch naming the path:
+of it is missing — the folder (0700), an empty `CLAUDE.md` and `skills/` — and never changes
+what is there but `settings.json` (the owner's decisions, October 19, 2026) and two keys of
+Claude Code's `.claude.json` (October 23). Claude Code reads the folder as the user's own since
+October 23; until then it was passed as the plugin `worker`, whose `.claude-plugin/` a folder
+made then still holds, unread. An entry of the wrong kind refuses the launch naming the path:
 
-- `settings.json` — the whole of the worker's settings, passed as the run's one `--settings`
-  as the file it is (the owner's decision, October 19, 2026, in place of a JSON string of the
-  defaults merged with the person's file). rewake writes its defaults there on the first launch
-  and marks the file `"rewake": {"defaults": <n>}`; a build with newer defaults runs only the
-  steps after the file's version — adding what each brings where the file has no value,
-  taking out what each retires where the file still holds rewake's value — so a default the
-  person removed stays removed. The rule, the refusals and the write are in
-  [launch.md](../launch.md#claude-code). Where the person's permissions allow-list, `env`,
-  model per effort, `skillOverrides` go, beside rewake's defaults.
-- `CLAUDE.md` — the worker's instructions, after rewake's briefing.
-- `skills/` — the worker's own skills, each folder or symlink one skill of the plugin `worker`.
-- `plugins/` — each child a whole plugin, loaded with `--plugin-dir`.
-- `mcp.json` — passed with `--mcp-config`.
+- `settings.json` — Claude Code's user settings of the workers, which it reads itself (October
+  23, 2026; passed as the run's one `--settings` from October 19). rewake writes its defaults
+  there on the first launch and marks the file `"rewake": {"defaults": <n>}`; a build with
+  newer defaults runs only the steps after the file's version — adding what each brings where
+  the file has no value, taking out what each retires where the file still holds rewake's
+  value — so a default the person removed stays removed. The rule, the refusals and the write
+  are in [launch.md](../launch.md#claude-code). Where the person's permissions allow-list, `env`,
+  model per effort, `skillOverrides`, a status line go, beside rewake's defaults.
+- `CLAUDE.md` — the workers' instructions, Claude Code's user memory file.
+- `skills/` — the workers' own skills, each folder or symlink one skill, named as the folder
+  (`mods`; `worker:mods` until October 23).
+- `agents/`, and plugins installed with `CLAUDE_CONFIG_DIR` set to the folder (`claude plugin
+  install`, or `/plugin` in a worker's pane) — Claude Code's own. `plugins/` is Claude Code's
+  directory there; until October 23 each child of it was a plugin rewake passed.
+- `mcp.json` — passed with `--mcp-config`; user servers added with `claude mcp add -s user`
+  under the variable work too.
+- `memory/` — rewake's: each worker's auto-memory directory (step 5).
 
 rewake reads and makes only its own directory and never `~/.claude`, `~/.claude.json` or a project's
-files; it does not know where the person's instructions and skills are built from. Filling the
+files — the folder's own `.claude.json` is the workers', not the person's; it does not know where the person's instructions and skills are built from. Filling the
 profile is the person's: the owner's installers get a target writing these paths.
 
 **Context per worker.** The alias field `launch.context` is applied on Claude Code as
@@ -94,8 +114,9 @@ and stays shown-only on a harness with no such flag (`AppliesContext`). `launch.
 went with the wrapper it served (step 2).
 
 **Under `--command`** the profile is not applied, with a launch note: the wrapper decides the
-configuration Claude Code starts with, as it did before. A wrapper that moves
-`CLAUDE_CONFIG_DIR` keeps its own settings, whose `env` then beats `--autocompact`.
+configuration Claude Code starts with, as it did before, its `CLAUDE_CONFIG_DIR` among it: rewake
+sets none, and `space open` asks no login. A wrapper that moves `CLAUDE_CONFIG_DIR` keeps its own
+settings, whose `env` then beats `--autocompact`.
 
 ## `rewake claude [claude flags]`
 
@@ -229,4 +250,11 @@ Main's, October 19, 2026, on the design's questions; the room's identity is the 
    | `space open wa --alias haiku-a --worktree`, `wb --alias haiku-b --worktree` | two checkouts; each worker's `--settings` a run-directory copy, `autoMemoryDirectory` `…/memory/repo-d9ecc4f0fee9/haiku-a` and `…/haiku-b`, both made 0700 |
    | `/context` with each worker's settings in its checkout | `AutoMem …/haiku-a/MEMORY.md` and `…/haiku-b/MEMORY.md`, each seeded with one line |
    | a haiku call asking each for the code word in its memory | `HERON` for template A, `OSPREY` for B |
-
+6. **A configuration directory of its own** — built
+   ([its entry](../roadmap/2026-10-23-worker-config-dir.md)): the folder as `CLAUDE_CONFIG_DIR`,
+   its files read natively, the run's `--settings` a JSON object of memory and `EnterWorktree`
+   (no run-directory copy), defaults version 3 taking `EnterWorktree` out of the file,
+   onboarding and trust in the folder's `.claude.json`, the login check of `space open`; pi's
+   workers keep their sessions in `worker-sessions/` of its agent directory. Probed without a
+   login ([research-launch.md](../research-launch.md#a-configuration-directory-of-the-workers));
+   the live check with a worker waits for the owner's login.

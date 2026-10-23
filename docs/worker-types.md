@@ -66,7 +66,7 @@ recorded, and a type still changes the worker's briefing, not the room's state. 
 it may do — the role's rules stand and the project's own instructions win where they speak —
 and the text. On Claude Code it travels in the one `--append-system-prompt`, on pi in the
 briefing's own. A type within its 32 KiB can still take Claude Code's one argument past what a
-launch may carry, beside a large worker `CLAUDE.md`: the launch is refused, naming the sizes
+launch may carry, beside a large `--append-system-prompt` of the launch's own: the launch is refused, naming the sizes
 ([launch.md](launch.md#claude-code)), and `--no-type` or a shorter text opens it.
 
 ## Memory

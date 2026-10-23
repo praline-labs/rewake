@@ -105,8 +105,10 @@ same steps, with its name, role and room from the space's record.
      `--append-system-prompt <intro>`, `--allowedTools "Bash(rewake:*)"` unless the
      line gives its own, `--plugin-dir` naming the mod written into the run's directory
      ([design-claude.md](v2/design-claude.md#loading-the-mod-for-one-run)), and
-     `--session-id` naming the new conversation unless the line continues one. The mod
-     tells the wrapper when a turn starts and ends (Act 5).
+     `--session-id` naming the new conversation unless the line continues one; a worker
+     also gets `CLAUDE_CONFIG_DIR` naming rewake's worker folder and a `--settings` of its
+     run ([launch.md](launch.md#claude-code)). The mod tells the wrapper when a turn starts
+     and ends (Act 5).
 6. **The environment.** `REWAKE_SESSION=<name>`, `REWAKE_EPOCH=<epoch>`,
    `REWAKE_DIR=<base>` and `REWAKE_ROOM=<room>`; inherited Claude Code markers are stripped, so the harness
    never borrows another session's socket. A launch from inside a session never gets

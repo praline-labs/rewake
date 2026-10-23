@@ -46,7 +46,7 @@ func TestATypeReachesTheBriefingAndKeysTheMemory(t *testing.T) {
 		if told != (c.work.Name != "") {
 			t.Fatalf("%q: briefing %q", c.work.Name, intro)
 		}
-		dir, _ := settingsOf(t, plan.Args)["autoMemoryDirectory"].(string)
+		dir, _ := overlayOf(t, adapter.FlagValues(plan.Args, settingsFlag)[0])["autoMemoryDirectory"].(string)
 		if filepath.Base(dir) != c.memory {
 			t.Fatalf("%q: memory %q, want under %s", c.work.Name, dir, c.memory)
 		}

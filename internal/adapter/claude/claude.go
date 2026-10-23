@@ -130,10 +130,10 @@ func (claudeHarness) Notes() []string {
 	return []string{
 		"Messages arrive through the session's inbox socket within seconds and wake an idle session.",
 		"Each turn's end reaches rewake through the rewake mod, which rewake writes into the run's directory and loads for that launch alone; a task or question to the session fails until the mod's hello is admitted, and a role that owes reports refuses to start when rewake knows the mod will not load.",
-		"A worker — any role but main — starts with rewake's worker profile in place of the person's user layer (--setting-sources project,local) and the service folder ~/.config/rewake/claude/worker/, whose missing entries the launch makes without overwriting what is there: skills or symlinks to them in skills/, loaded as worker:<skill>; instructions in CLAUDE.md, after the briefing; whole plugins in plugins/; MCP servers in mcp.json. Its settings.json is the worker's one --settings, written by rewake with its defaults — subagents, Claude Code's own messaging, waking itself, worktree and plan-mode tools, workflows, the claude.ai connectors and other features of an unattended pane off, the person's own CLAUDE.md left out — which the person edits: taking \"Agent\" out of permissions.deny gives subagents back. A newer rewake adds only its newer defaults and keeps the person's changes. A worker has Claude Code's own auto-memory, one per alias and project, in the folder's memory/<project>/<alias>/, unless settings.json sets autoMemoryEnabled false. A worker's own --settings or --setting-sources is refused; under --command the wrapper decides and the profile is not applied.",
+		"A worker — any role but main — runs with rewake's worker profile: Claude Code's configuration directory of its own (CLAUDE_CONFIG_DIR), the service folder ~/.config/rewake/claude/worker/, whose missing entries the launch makes without overwriting what is there. Claude Code reads it as the user's: CLAUDE.md as the user's instructions, skills or symlinks to them in skills/, agents/, plugins installed there, and settings.json as the user's settings; mcp.json is added with --mcp-config. The person logs the folder in once, in a terminal — CLAUDE_CONFIG_DIR=~/.config/rewake/claude/worker claude auth login — and space open refuses a Claude Code worker until then; the workers' conversations stay there, out of the person's resume lists. rewake writes its defaults into settings.json — subagents, Claude Code's own messaging, waking itself, worktree and plan-mode tools, workflows, the claude.ai connectors and other features of an unattended pane off, the person's own CLAUDE.md left out — which the person edits: taking \"Agent\" out of permissions.deny gives subagents back. A newer rewake adds only its newer defaults and keeps the person's changes. Before each launch rewake marks onboarding done and the repository it runs in trusted in the folder's .claude.json. A worker has Claude Code's own auto-memory, one per type or alias and project, in the folder's memory/<project>/<type or alias>/, unless settings.json sets autoMemoryEnabled false. A worker's own --settings or --setting-sources is refused; under --command the wrapper decides and the profile is not applied.",
 		"A turn's end is not held open: a turn that ends after rewake pending without a new mark closes the task as answered.",
 		"A launch through --command reaches the mod only when the command ends by exec-ing claude: a wrapper that runs it as a child is never admitted, and the session takes no tasks.",
-		"Arguments after claude reach it as written, beside the flags rewake adds for delivery, except: a --append-system-prompt of the caller's is kept, joined after rewake's briefing and a worker's CLAUDE.md into the one such flag Claude Code reads, and --no-intro drops only the briefing; a --help first asks rewake for this page; --worktree is rewake's, below; and a typed flag replaces an alias's copy of it.",
+		"Arguments after claude reach it as written, beside the flags rewake adds for delivery, except: a --append-system-prompt of the caller's is kept, joined after rewake's briefing into the one such flag Claude Code reads, and --no-intro drops only the briefing; a --help first asks rewake for this page; --worktree is rewake's, below; and a typed flag replaces an alias's copy of it.",
 		"--worktree starts the session in a new checkout of HEAD on a new branch under rewake's worktree directory, at the same place within the repository; --worktree=<name> names both, and a name after a space is refused, since it would reach claude as the prompt. rewake worktree --help says how to land and remove it. It starts a new conversation only: --continue or -c, --resume or -r, --from-pr, --teleport, --fork-session, the attach and respawn commands, Claude Code's own -w and --tmux, --cloud and --environment are refused beside it. -w alone stays Claude Code's own worktree, inside the repository.",
 	}
 }
@@ -253,9 +253,6 @@ func (claudeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, 
 		}
 		parts = append(parts, promptPart{"rewake's briefing", brief.Intro(context)})
 	}
-	if worker.instructions != "" {
-		parts = append(parts, promptPart{"the worker's CLAUDE.md", worker.instructions})
-	}
 	if own := adapter.FlagValues(args, introFlag); len(own) > 0 {
 		args = withoutFlag(args, introFlag)
 		if text := own[len(own)-1]; text != "" {
@@ -292,6 +289,9 @@ func (claudeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, 
 	}
 	if worker.enter {
 		env = withEnv(env, adapter.WorktreeEnterEnv, "1")
+	}
+	if worker.configDir != "" {
+		env = withEnv(env, configDirEnv, worker.configDir)
 	}
 	modSocket := modSocketPath(request)
 	switch {

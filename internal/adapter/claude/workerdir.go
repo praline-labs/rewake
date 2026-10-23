@@ -8,26 +8,24 @@ import (
 	"path/filepath"
 )
 
-// The service folder (the owner's decision, October 19, 2026): rewake makes
-// the profile's directory on a worker's launch, so the person only drops
-// things in. The directory is a plugin of its own, so a skill placed or
-// linked into skills/ loads as worker:<skill> with no plugin layout to learn.
-// Whatever is there already is the person's and stays as it is, but for
-// settings.json, which workerSettings writes and brings up to date.
-
-// profilePlugin names the plugin the directory is.
-const profilePlugin = "worker"
+// The service folder (the owner's decisions, October 19 and 23, 2026): rewake
+// makes the profile's directory on a worker's launch, so the person only
+// drops things in. It is the workers' Claude Code configuration directory:
+// its CLAUDE.md, skills/ and settings.json are what Claude Code reads as the
+// user's own, beside the login, trust and transcripts it keeps there itself.
+// Whatever is there already is the person's or Claude Code's and stays as it
+// is, but for settings.json, which workerSettings writes and brings up to
+// date, and the two keys of .claude.json prepareClaudeState adds.
 
 // profileFiles are the files the folder starts with, by path within it.
 var profileFiles = map[string]string{
-	"CLAUDE.md":                  "",
-	".claude-plugin/plugin.json": `{"name": "` + profilePlugin + `", "description": "The skills of rewake's Claude Code workers: each folder in skills/ is one.", "version": "1.0.0"}` + "\n",
+	"CLAUDE.md": "",
 }
 
 // makeProfileDir makes what of the folder is missing, never replacing a file
 // or a directory the person has.
 func makeProfileDir(dir string) error {
-	for _, sub := range []string{"skills", ".claude-plugin"} {
+	for _, sub := range []string{"skills"} {
 		if err := os.MkdirAll(filepath.Join(dir, sub), 0o700); err != nil {
 			return fmt.Errorf("the worker profile's directory %s could not be made: %w", dir, err)
 		}

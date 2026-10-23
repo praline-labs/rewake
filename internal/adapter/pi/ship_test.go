@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/adapter"
+	"github.com/praline-labs/rewake/internal/core/role"
 )
 
 // shippedPackage lays out pi's package under dir/node_modules as npm does.
@@ -225,5 +226,40 @@ func TestPiTrustsTheProjectUnlessTheLaunchDecides(t *testing.T) {
 		if terminator := slices.Index(plan.Args, "--"); terminator >= 0 && slices.Index(plan.Args, "--approve") > terminator {
 			t.Errorf("launch %q: --approve after the terminator: %q", tc.args, plan.Args)
 		}
+	}
+}
+
+// A worker keeps its sessions in a folder of its own in the agent directory,
+// whatever the person's environment names, and its own --session-dir is
+// refused; main keeps pi's own place.
+func TestAWorkersSessionsAreKeptApart(t *testing.T) {
+	request := launchRequest(t)
+	request.Role = role.Write
+	request.Env = append(request.Env, SessionDirEnv+"=/home/someone/sessions")
+	plan, err := harness{}.Launch(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	folder := filepath.Join(request.Dir, ".config", "rewake", "pi", "agent", workerSessions)
+	var named []string
+	for _, value := range plan.Env {
+		if strings.HasPrefix(value, SessionDirEnv+"=") {
+			named = append(named, value)
+		}
+	}
+	if !slices.Equal(named, []string{SessionDirEnv + "=" + folder}) {
+		t.Errorf("the worker's sessions: %q", named)
+	}
+	if info, err := os.Stat(folder); err != nil || info.Mode().Perm() != 0o700 {
+		t.Errorf("the sessions folder: %v, %v", info, err)
+	}
+	request.Args = []string{sessionDirFlag + "=/x"}
+	if _, err := (harness{}).Launch(request); err == nil || !strings.Contains(err.Error(), workerSessions) {
+		t.Errorf("a worker's own %s: %v", sessionDirFlag, err)
+	}
+	request.Role, request.Args = role.Main, nil
+	plan, err = harness{}.Launch(request)
+	if err != nil || !slices.Contains(plan.Env, SessionDirEnv+"=/home/someone/sessions") {
+		t.Errorf("main's environment: %q, %v", plan.Env, err)
 	}
 }

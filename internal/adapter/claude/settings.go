@@ -14,15 +14,16 @@ import (
 	"strings"
 )
 
-// The worker's settings (the owner's decision, October 19, 2026): the service
-// folder's settings.json is the whole of a worker's --settings, passed as the
-// file it is. rewake writes its defaults there on the first launch, and when a
-// later build brings new ones it adds only those, so what the person took out
-// of an older version stays out.
+// The worker's settings (the owner's decisions, October 19 and 23, 2026): the
+// service folder's settings.json is Claude Code's own user settings of the
+// workers' configuration directory, read by Claude Code itself. rewake writes
+// its defaults there on the first launch, and when a later build brings new
+// ones it adds only those, so what the person took out of an older version
+// stays out.
 
 // defaultsVersion is the version of rewake's defaults this build brings. A
 // default added or retired raises it and names it in since or retired.
-const defaultsVersion = 2
+const defaultsVersion = 3
 
 // rewakeKey is rewake's own object in the file, {"defaults": <version>}, the
 // version the file is at. Claude Code ignores a key it does not know (probed
@@ -63,8 +64,8 @@ func workerDefaults(home string) []setting {
 		{path: []string{"autoMemoryEnabled"}, value: false, since: 1, retired: 2},
 		// Claude Code reads .claude/CLAUDE.md of every directory above the
 		// working one, so the person's own loads as a project's for any
-		// checkout under the home directory, with the user source off too.
-		// A CLAUDE_CONFIG_DIR elsewhere is not read with the user source off.
+		// checkout under the home directory, under another configuration
+		// directory too (probed on 2.1.302).
 		item(filepath.Join(home, ".claude", "CLAUDE.md"), "claudeMdExcludes"),
 		// Not updated under a running room, nor a survey in a pane nobody
 		// may watch, nor the person's IDE opened from one.
@@ -76,7 +77,14 @@ func workerDefaults(home string) []setting {
 		key("1", "env", "CLAUDE_CODE_DISABLE_CRON"),
 	}
 	for _, tool := range deniedTools {
-		defaults = append(defaults, item(tool, "permissions", "deny"))
+		denied := item(tool, "permissions", "deny")
+		if tool == enterTool {
+			// Retired in 3, when the file became the user's settings: a
+			// deny there is not lifted by a run's allow, so each run's
+			// --settings denies it unless its template enters (run_settings.go).
+			denied.retired = 3
+		}
+		defaults = append(defaults, denied)
 	}
 	return append(defaults,
 		// Fan-out, a session steered from outside the room, and model calls

@@ -1,12 +1,10 @@
 package claude
 
 import (
-	"maps"
-	"path/filepath"
+	"encoding/json"
 	"slices"
 
 	"github.com/praline-labs/rewake/internal/core/role"
-	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // entryBrief is what a worker that may enter a checkout is told at its start:
@@ -29,75 +27,53 @@ var entryBrief = role.Section{
 // refuses the model's own call.
 const enterTool = "EnterWorktree"
 
-// launchSettings is the --settings a worker's launch passes: the folder's
-// settings.json, or a copy in the run's directory with what this run alone
-// gets laid over it — its memory, under the key memoryKey chose, and the entry into a checkout —
-// since --settings is single-use. It says whether the run may enter a
-// checkout. With no run directory to write in, the worker starts without
-// either, noted. A worker raised from no template — only a test build's
-// direct launch — has none.
-func launchSettings(path string, settings map[string]any, folder, runDir, memoryKey string, enter bool) (string, bool, []string, error) {
-	if memoryKey == "" {
-		return path, false, nil, nil
-	}
-	refused := func(why string, memory bool) []string {
-		var notes []string
-		if memory {
-			notes = append(notes, "no worker memory: "+why)
+// runSettings is the one --settings a worker's launch passes, as a JSON
+// object: what this run alone gets over the folder's settings.json, which
+// Claude Code reads itself as the user's settings — its memory, under the
+// key memoryKey chose, and EnterWorktree, denied unless the run may enter a
+// checkout. Flag settings merge with the user's (probed on 2.1.302), but a
+// deny there is not lifted by an allow here, so the folder's file no longer
+// holds EnterWorktree (defaults version 3). It says whether the run may
+// enter. A worker raised from no template — only a test build's direct
+// launch — has no memory.
+func runSettings(settings map[string]any, folder, root, memoryKey string, enter bool, runDir string) (string, bool, []string, error) {
+	overlay := map[string]any{}
+	if memoryKey != "" && settings["autoMemoryEnabled"] != false {
+		dir, err := memoryDir(folder, root, memoryKey)
+		if err != nil {
+			return "", false, nil, err
 		}
-		if enter {
-			notes = append(notes, "no worktree entry: "+why)
+		if err := makeMemoryDir(dir); err != nil {
+			return "", false, nil, err
 		}
-		return notes
+		overlay["autoMemoryEnabled"] = true
+		overlay["autoMemoryDirectory"] = dir
 	}
-	if runDir == "" {
-		return path, false, refused("the launch has no run directory to write its settings in", true), nil
-	}
-	overlaid, memory, err := memorySettings(settings, folder, memoryKey)
-	if err != nil {
-		return "", false, nil, err
+	var notes []string
+	switch {
+	case !enter:
+	case runDir == "":
+		// worktree_enter is a tool of the run's mod, which loads from the
+		// run's directory.
+		notes, enter = append(notes, "no worktree entry: the launch has no run directory for rewake's mod"), false
+	case slices.Contains(deniedIn(settings), any(enterTool)):
+		notes, enter = append(notes, "no worktree entry: the worker settings deny "+enterTool+"; take it out of permissions.deny there"), false
 	}
 	if enter {
-		overlaid = withEntry(overlaid)
+		overlay["permissions"] = map[string]any{"allow": []any{enterTool}}
+	} else {
+		overlay["permissions"] = map[string]any{"deny": []any{enterTool}}
 	}
-	if !memory && !enter {
-		return path, false, nil, nil
-	}
-	data, err := encodeSettings(overlaid)
+	data, err := json.Marshal(overlay)
 	if err != nil {
 		return "", false, nil, err
 	}
-	// A run whose directory cannot be written fails its mod at the start;
-	// the memory and the entry alone stop nothing.
-	run := filepath.Join(runDir, "worker-settings.json")
-	err = state.EnsureSubdir(runDir)
-	if err == nil {
-		err = state.WriteFile(run, data, 0o600)
-	}
-	if err != nil {
-		return path, false, refused("its settings could not be written to the run directory: "+err.Error(), memory), nil
-	}
-	return run, enter, nil, nil
+	return string(data), enter, notes, nil
 }
 
-// withEntry is the settings with EnterWorktree taken out of permissions.deny
-// and allowed, nothing else changed: a whole-tool deny hides the tool from
-// the mod's own call too (probed on 2.1.302). A deny the person wrote in
-// another form, a rule with a specifier, stays and wins.
-func withEntry(settings map[string]any) map[string]any {
-	out := maps.Clone(settings)
-	permissions, _ := out["permissions"].(map[string]any)
-	permissions = maps.Clone(permissions)
-	if permissions == nil {
-		permissions = map[string]any{}
-	}
-	if deny, ok := permissions["deny"].([]any); ok {
-		permissions["deny"] = slices.DeleteFunc(slices.Clone(deny), func(value any) bool { return value == enterTool })
-	}
-	allow, _ := permissions["allow"].([]any)
-	if !slices.Contains(allow, any(enterTool)) {
-		permissions["allow"] = append(slices.Clone(allow), enterTool)
-	}
-	out["permissions"] = permissions
-	return out
+// deniedIn is the settings' permissions.deny, none where it is missing.
+func deniedIn(settings map[string]any) []any {
+	permissions, _ := settings["permissions"].(map[string]any)
+	deny, _ := permissions["deny"].([]any)
+	return deny
 }

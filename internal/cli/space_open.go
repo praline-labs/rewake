@@ -83,6 +83,11 @@ func handleSpaceOpen(ctx *Context, call Call) error {
 	if err := refuseReportingRole(h, part); err != nil {
 		return err
 	}
+	if ready, ok := h.(adapter.WorkerReadiness); ok {
+		if err := ready.WorkerRefusal(target.command); err != nil {
+			return failf("%v", err)
+		}
+	}
 	session := name + "-" + h.ID()
 	if !state.ValidName(name) || !state.ValidName(session) {
 		return usage("%q cannot name a space whose worker is %s: lower-case letters, digits, dot, dash or underscore, the session 32 characters at most.", name, session)

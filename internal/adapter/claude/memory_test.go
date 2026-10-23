@@ -5,9 +5,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"testing"
-
-	"github.com/praline-labs/rewake/internal/infra/build/buildtest"
-	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 func git(t *testing.T, dir string, args ...string) {
@@ -34,20 +31,20 @@ func TestMemoryIsPerProjectAndTemplate(t *testing.T) {
 	if err := os.MkdirAll(other, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	want, err := memoryDir("/f", repo, "opus-high-write")
+	want, err := memoryDir("/f", projectRoot(repo), "opus-high-write")
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, dir := range []string{filepath.Join(repo, "sub"), filepath.Join(top, "wt")} {
-		if got, err := memoryDir("/f", dir, "opus-high-write"); err != nil || got != want {
+		if got, err := memoryDir("/f", projectRoot(dir), "opus-high-write"); err != nil || got != want {
 			t.Errorf("%s: %s, want %s (%v)", dir, got, want, err)
 		}
 	}
 	if filepath.Dir(want) != filepath.Join("/f", "memory", filepath.Base(filepath.Dir(want))) || filepath.Base(want) != "opus-high-write" {
 		t.Fatalf("the layout: %s", want)
 	}
-	sonnet, _ := memoryDir("/f", filepath.Join(top, "wt"), "sonnet-medium-write")
-	plain, _ := memoryDir("/f", other, "opus-high-write")
+	sonnet, _ := memoryDir("/f", projectRoot(filepath.Join(top, "wt")), "sonnet-medium-write")
+	plain, _ := memoryDir("/f", projectRoot(other), "opus-high-write")
 	if filepath.Dir(sonnet) != filepath.Dir(want) || sonnet == want || filepath.Dir(plain) == filepath.Dir(want) {
 		t.Fatalf("templates %s, %s; another project %s", want, sonnet, plain)
 	}
@@ -55,22 +52,6 @@ func TestMemoryIsPerProjectAndTemplate(t *testing.T) {
 		if _, err := memoryDir("/f", repo, bad); err == nil {
 			t.Errorf("%q named a directory", bad)
 		}
-	}
-}
-
-// The memory keys are laid over the settings and nothing else changes; the
-// person's own false keeps the memory off.
-func TestMemoryOverlay(t *testing.T) {
-	settings := map[string]any{"idleCompaction": false, "rewake": map[string]any{"defaults": 2}}
-	overlaid, on := withMemory(settings, "/m")
-	if !on || len(overlaid) != 4 || overlaid["autoMemoryEnabled"] != true || overlaid["autoMemoryDirectory"] != "/m" || overlaid["idleCompaction"] != false {
-		t.Fatalf("%v", overlaid)
-	}
-	if _, touched := settings["autoMemoryDirectory"]; touched {
-		t.Fatal("the folder's settings were changed")
-	}
-	if _, on := withMemory(map[string]any{"autoMemoryEnabled": false}, "/m"); on {
-		t.Fatal("the person's false was overridden")
 	}
 }
 
@@ -85,35 +66,42 @@ func TestMemoryDefaultRetired(t *testing.T) {
 	}
 	written := readBack(t, path)
 	_, memory := written["autoMemoryEnabled"]
-	if version, _ := settingsVersion(written); memory || version != 2 || len(denied(settings)) != 1 {
+	if version, _ := settingsVersion(written); memory || version != defaultsVersion || len(denied(settings)) != 1 {
 		t.Fatalf("%v", settings)
 	}
 }
 
-// A worker's launch passes a copy in its run directory with memory on, the
+// A worker's launch passes its memory on in the run's --settings, the
 // directory made private; with the person's false, or raised from no
-// template, it passes the file.
-func TestLaunchSettingsWithMemory(t *testing.T) {
-	base, err := os.MkdirTemp("", "mt")
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = os.RemoveAll(base) })
-	runDir := filepath.Join(buildtest.Room(t, base, state.DefaultRoom), "runs", "api.e1")
-	folder := t.TempDir()
-	passed, enter, notes, err := launchSettings("/f/settings.json", map[string]any{"a": true}, folder, runDir, "opus", false)
-	if err != nil || enter || len(notes) != 0 || passed != filepath.Join(runDir, "worker-settings.json") {
+// template, none.
+func TestRunSettingsWithMemory(t *testing.T) {
+	folder, root := t.TempDir(), t.TempDir()
+	passed, enter, notes, err := runSettings(map[string]any{"a": true}, folder, root, "opus", false, "/run")
+	if err != nil || enter || len(notes) != 0 {
 		t.Fatalf("%s %v %v", passed, notes, err)
 	}
-	settings := readBack(t, passed)
-	memory, _ := settings["autoMemoryDirectory"].(string)
-	if info, err := os.Stat(memory); err != nil || info.Mode().Perm() != 0o700 || filepath.Base(memory) != "opus" || settings["a"] != true {
-		t.Fatalf("%v: %v", settings, err)
+	overlay := overlayOf(t, passed)
+	memory, _ := overlay["autoMemoryDirectory"].(string)
+	if info, err := os.Stat(memory); err != nil || info.Mode().Perm() != 0o700 || filepath.Base(memory) != "opus" || overlay["autoMemoryEnabled"] != true || overlay["a"] != nil {
+		t.Fatalf("%v: %v", overlay, err)
 	}
-	if passed, _, _, err := launchSettings("/f/settings.json", map[string]any{"autoMemoryEnabled": false}, folder, runDir, "opus", false); err != nil || passed != "/f/settings.json" {
-		t.Fatalf("the person's false: %s %v", passed, err)
+	for _, c := range []struct {
+		settings map[string]any
+		key      string
+	}{{map[string]any{"autoMemoryEnabled": false}, "opus"}, {map[string]any{}, ""}} {
+		passed, _, _, err := runSettings(c.settings, folder, root, c.key, false, "/run")
+		if overlay := overlayOf(t, passed); err != nil || overlay["autoMemoryEnabled"] != nil || overlay["autoMemoryDirectory"] != nil {
+			t.Fatalf("%v %q: %v %v", c.settings, c.key, overlay, err)
+		}
 	}
-	if passed, _, _, err := launchSettings("/f/settings.json", map[string]any{}, folder, runDir, "", false); err != nil || passed != "/f/settings.json" {
-		t.Fatalf("no template: %s %v", passed, err)
+}
+
+// overlayOf decodes the JSON a run passes as its --settings.
+func overlayOf(t *testing.T, passed string) map[string]any {
+	t.Helper()
+	overlay, err := parseSettings([]byte(passed))
+	if err != nil {
+		t.Fatalf("%s: %v", passed, err)
 	}
+	return overlay
 }

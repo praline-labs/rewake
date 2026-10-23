@@ -13,8 +13,14 @@ const (
 	// keeps pi from offering an update of a copy rewake updates.
 	AgentDirEnv         = "PI_CODING_AGENT_DIR"
 	SkipVersionCheckEnv = "PI_SKIP_VERSION_CHECK"
-	sessionIDFlag       = "--session-id"
-	worktreeFlag        = "--worktree"
+	// SessionDirEnv moves pi's session storage alone, below --session-dir
+	// and above the sessionDir setting (pi 1.3.0's docs); a worker's is
+	// workerSessions in the agent directory.
+	SessionDirEnv  = "PI_CODING_AGENT_SESSION_DIR"
+	sessionDirFlag = "--session-dir"
+	workerSessions = "worker-sessions"
+	sessionIDFlag  = "--session-id"
+	worktreeFlag   = "--worktree"
 )
 
 type harness struct{}
@@ -54,7 +60,7 @@ func (harness) SingleUseFlags() []adapter.Flag {
 		{Spellings: []string{"--api-key"}, TakesValue: true},
 		{Spellings: []string{"--session"}, TakesValue: true},
 		{Spellings: []string{sessionIDFlag}, TakesValue: true},
-		{Spellings: []string{"--session-dir"}, TakesValue: true},
+		{Spellings: []string{sessionDirFlag}, TakesValue: true},
 		{Spellings: []string{"--fork"}, TakesValue: true},
 		{Spellings: []string{"--name", "-n"}, TakesValue: true},
 		{Spellings: []string{"--tools", "-t"}, TakesValue: true},
@@ -92,7 +98,7 @@ func isolation(dir string) []string {
 }
 
 func (harness) EnvNotInherited() []string {
-	return []string{socketEnv, AgentDirEnv, SkipVersionCheckEnv, "PI_CODING_AGENT", "PI_SESSION_ID", "PI_SESSION_FILE", "PI_PROVIDER", "PI_MODEL", "PI_REASONING_LEVEL"}
+	return []string{socketEnv, AgentDirEnv, SkipVersionCheckEnv, SessionDirEnv, "PI_CODING_AGENT", "PI_SESSION_ID", "PI_SESSION_FILE", "PI_PROVIDER", "PI_MODEL", "PI_REASONING_LEVEL"}
 }
 
 func (harness) Offers() adapter.Offer {

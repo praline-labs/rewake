@@ -8,6 +8,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/core/brief"
+	"github.com/praline-labs/rewake/internal/core/role"
 )
 
 func (harness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, error) {
@@ -20,6 +21,13 @@ func (harness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, error)
 	args := append([]string{}, request.Args...)
 	if adapter.HasFlag(args, worktreeFlag) {
 		return adapter.LaunchPlan{}, fmt.Errorf("%s reached pi's launch; start through rewake pi %s so rewake makes the checkout", worktreeFlag, worktreeFlag)
+	}
+	// A worker's conversations are kept apart from main's (the owner's
+	// decision, October 23, 2026), so a person's --continue or picker in a
+	// checkout a worker shared never lands in the worker's.
+	worker := request.Role.ID != role.Main.ID
+	if worker && adapter.HasFlag(args, sessionDirFlag) {
+		return adapter.LaunchPlan{}, fmt.Errorf("a pi worker's sessions are kept in rewake's %s; remove %s", workerSessions, sessionDirFlag)
 	}
 	if request.Conversation != "" {
 		if flag := continued(args); flag != "" {
@@ -64,11 +72,14 @@ func (harness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, error)
 	env := make([]string, 0, len(request.Env)+3)
 	for _, value := range request.Env {
 		name, _, _ := strings.Cut(value, "=")
-		if name != socketEnv && name != AgentDirEnv && name != SkipVersionCheckEnv {
+		if name != socketEnv && name != AgentDirEnv && name != SkipVersionCheckEnv && (!worker || name != SessionDirEnv) {
 			env = append(env, value)
 		}
 	}
 	env = append(append(env, socketEnv+"="+request.Socket), isolation(dir)...)
+	if worker {
+		env = append(env, SessionDirEnv+"="+filepath.Join(dir, workerSessions))
+	}
 	run := newRun(file, request.Socket)
 	run.epoch, run.controlDir = request.Epoch, request.ControlDir
 	command, args := request.Invocation(ID, args)

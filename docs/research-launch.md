@@ -339,6 +339,50 @@ call, in a private HOME as well as the person's. What the worker profile
 - `--plugin-dir` of a folder whose children are plugins loads each; a plugin's skills show as
   `<plugin>:<skill>`, source `Plugin`.
 
+## A configuration directory of the workers
+
+**[verified live, installed 2.1.302, no login, no model call; October 23, 2026]** Run in private
+HOMEs with `env -i` — no `CLAUDE_CONFIG_DIR`, `HOME` or `REWAKE_*` of the calling session —
+through `claude -p "/context"`, a `SessionStart` hook, or an interactive start in a
+pseudo-terminal killed after a few seconds. What the workers' own directory
+([worker-profile.md](v2/worker-profile.md#a-configuration-directory-of-its-own)) rests on:
+
+- `claude auth status` with a fresh `CLAUDE_CONFIG_DIR` prints JSON with `loggedIn: false`,
+  `configDirectory` and `projectsDirectory`, and **exits 1**, in about 0.16 s with no network;
+  `--text` says "Not logged in. Run claude auth login". It makes the directory's `.claude.json`.
+- An interactive start in a fresh directory stops on onboarding's theme picker. With
+  `.claude.json` holding `hasCompletedOnboarding: true` it stops next on the folder-trust dialog —
+  before any login. Trusted and not logged in, it starts to the prompt, the footer saying "Not
+  logged in · Run /login", with a banner "Auto mode is now Claude Code's default permission
+  mode" and auto mode on: no dialog.
+- `projects[<path>].hasTrustDialogAccepted: true` on a repository's root trusts the root, its
+  subfolders and a linked worktree elsewhere on disk; on a folder outside Git, its subfolders.
+  On a parent of a repository it does not reach the repository or its worktree.
+- The directory's `CLAUDE.md` loads as *User* memory, `skills/<s>/SKILL.md` as the skill `<s>`,
+  source *User*, `agents/<a>.md` as a custom agent, *User*, and `settings.json` as the user's
+  settings — its `env` reached the process and its `SessionStart` hook ran. With
+  `--setting-sources project,local` all of them are gone.
+- `--settings '{"autoMemoryEnabled": true, "autoMemoryDirectory": "<absolute>"}'` over that
+  `settings.json` gives the AutoMem at that path and keeps the file's `env` and hook: a flag's
+  settings merge with the user's. rewake's worker `settings.json`, copied in as the user's, drew
+  no warning at an interactive start.
+- A session running in the directory while another process replaced `.claude.json` with a copy
+  holding one more trusted project (read, change, rename) saved at its exit (`lastGracefulShutdown`)
+  and the other entry survived: Claude Code reads the file again before it saves (one run). It
+  holds a directory `.claude.json.lock` while it writes.
+- One `-p --session-id` run in the person's directory (`$HOME/.claude`) and one in the workers',
+  same working directory: each transcript under its own `projects/<slug>/`; from the person's,
+  `--resume <the worker's id>` answers "No conversation found" and `--continue` takes the
+  person's own; from the workers', the id resumes.
+- Claude Code makes in a directory `.claude.json`, `backups/`, `cache/`, `projects/`,
+  `sessions/` and `session-env/`, and `plugins/` for installed plugins and a mod's `$.store`
+  (`plugins/store/<name>_inline-<hash>.json`, from the `mods` skill).
+
+Not verified until the workers' directory is logged in: what a logged-in first start shows
+beyond the above; the account, plan and usage against the person's; whether Claude Code keeps
+the unknown `rewake` key when it rewrites `settings.json`; the interactive `/resume` picker,
+which by construction reads the directory's `projects/`.
+
 ## Claude Code's cross-session inbound gate
 
 **[the binary's bundled source, installed 2.1.280; September 23, 2026]** Every line that

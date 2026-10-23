@@ -140,16 +140,18 @@ rewake --command my-claude claude
 - Add `--messaging-socket-path <base>/v2/rooms/<room>/sock/<name>.<epoch>.sock` unless the user passed
   their own; before launch, remove a stale socket file at the same path.
 - Add one `--append-system-prompt`: rewake's briefing (turned off by `--no-intro`), which ends,
-  for a worker raised for a type, with the type's text ([worker-types.md](worker-types.md)), then a
-  worker's `CLAUDE.md` of the service folder, then the caller's own `--append-system-prompt`,
+  for a worker raised for a type, with the type's text ([worker-types.md](worker-types.md)), then
+  the caller's own `--append-system-prompt`,
   joined by blank lines. Claude Code keeps only the last `--append-system-prompt` (probed on
   2.1.302: of two, the first is lost; `--append-system-prompt-file` applies beside it), so the
   caller's is taken out of the arguments and kept in rewake's rather than added beside it; of
   several, the last is kept, as Claude Code would. The whole is one argument, which Linux holds
   to 131071 bytes (probed October 21, 2026: one more fails exec with "argument list too long"):
   a longer prompt refuses the launch, naming each part's size and the type's, rather than be cut
-  — each part can be within its own bound and the sum not, a type over a large `CLAUDE.md`. Until October 19, 2026 a caller's flag
-  replaced the briefing and the worker's instructions silently (the briefings audit, F2).
+  — each part can be within its own bound and the sum not, a type over a large prompt of the
+  caller's. Until October 19, 2026 a caller's flag replaced the briefing and the worker's
+  instructions silently (the briefings audit, F2); from then until October 23 the service
+  folder's `CLAUDE.md` was a part too, before Claude Code read it itself.
 - Allow the tool's own commands without confirmation:
   `--allowedTools "Bash(rewake:*)"`, only when the caller passed no allow list of their
   own under either spelling, `--allowedTools` or `--allowed-tools`. This adds a rule for
@@ -159,28 +161,51 @@ rewake --command my-claude claude
 - A caller's `--settings` reaches main's harness as given: rewake neither reads nor merges
   it. A worker's is refused, since the worker profile owns that flag.
 - **The worker profile.** Every launch but main's, unless `--command` names a wrapper, which
-  then decides the configuration (a launch note says so), adds `--setting-sources
-  project,local`, `--settings` naming the service folder's `settings.json` and the folder as a
-  plugin. The design and the probes are in [worker-profile.md](v2/worker-profile.md).
-  - **The service folder**, `~/.config/rewake/claude/worker/`: what of it is missing a
-    worker's launch makes (the owner's decision, October 19, 2026) — the folder itself
-    (0700), an empty `CLAUDE.md`, an empty `skills/` and `.claude-plugin/plugin.json` naming
-    the plugin `worker`. A file or directory already there is the person's and is never
-    changed, but for `settings.json` (below). It is not a `CLAUDE_CONFIG_DIR`: the worker
-    keeps the person's login, transcripts and folder trust.
-  - **A skill is attached** by placing its folder, or a symlink to it, in `skills/`: the folder
-    is passed as `--plugin-dir`, so the skill loads as `worker:<skill>` and shows under that
-    name in `/skills` and in `/context`'s Skills, source `Plugin (worker)`. Whole plugins go
-    in `plugins/`, each child one plugin (another `--plugin-dir`); `mcp.json` becomes
-    `--mcp-config`; `CLAUDE.md` follows the briefing in the one `--append-system-prompt`.
-  - **`settings.json` is the whole of the worker's settings** (the owner's decision, October
-    19, 2026), passed as the file it is, or with the worker's memory as a copy with two keys
-    laid over it (below). rewake writes its defaults there on the first launch,
+  then decides the configuration (a launch note says so), sets `CLAUDE_CONFIG_DIR` to the
+  service folder and adds one `--settings` with what the run alone gets (below). The design
+  and the probes are in [worker-profile.md](v2/worker-profile.md).
+  - **The service folder**, `~/.config/rewake/claude/worker/`, is the workers' Claude Code
+    configuration directory (the owner's decision, October 23, 2026): Claude Code reads its
+    `settings.json` as the user's settings, its `CLAUDE.md` as the user's memory file, its
+    `skills/` and `agents/` as the user's, keeps there the workers' login, folder trust,
+    transcripts and history, and installs plugins into its `plugins/`. What of it is missing a
+    worker's launch makes (October 19) — the folder itself (0700), an empty `CLAUDE.md` and an
+    empty `skills/`. A file or directory already there is the person's or Claude Code's and is
+    never changed, but for `settings.json` (below) and two keys of `.claude.json`.
+  - **The login is the person's, once**, in a terminal: `CLAUDE_CONFIG_DIR=~/.config/rewake/claude/worker
+    claude auth login`. `space open` of a Claude Code template without `--command` first runs
+    `claude auth status --json` under that variable, and refuses, exit 1 and naming that command,
+    when it answers `loggedIn: false` (exit 1); a status that cannot be read lets the open go on.
+    A worker started without a login would sit at its prompt, and the open would show only its
+    timeout. The account is the person's, logged in a second time.
+  - **Onboarding and trust.** Before each launch rewake makes sure the folder's `.claude.json`
+    holds `hasCompletedOnboarding: true` and `projects[<root>].hasTrustDialogAccepted: true` for
+    the worker's project — the main repository's root, as for its memory, under its path as
+    given and resolved, or the launch directory outside Git — adding what is missing and
+    keeping every other key (main's decision on the owner's behalf, October 23, 2026: the
+    person's own sessions there already trust it). A fresh directory otherwise stops on the
+    theme picker, then on the trust dialog, with nobody at the worker's screen; a trusted root
+    covers its worktrees and subfolders, a trusted parent of a repository does not
+    ([research-launch.md](research-launch.md#a-configuration-directory-of-the-workers)). The file
+    is replaced in one step, 0600; Claude Code reads it again before its own saves. Known limit:
+    a save between rewake's read and its rename drops the entry, and the worker shows the dialog
+    in its pane until the next launch adds it again. A `.claude.json` rewake cannot read refuses
+    the launch, naming it, and stays as it is.
+  - **A skill is attached** by placing its folder, or a symlink to it, in `skills/`: Claude
+    Code loads it as a user skill named as the folder (until October 23 the folder was passed as
+    the plugin `worker` and the skill was `worker:<skill>`). A plugin is installed with the
+    variable set (`claude plugin install`, or `/plugin` in a worker's pane); `plugins/` is Claude
+    Code's own directory now, no longer read by rewake child by child. `mcp.json` becomes
+    `--mcp-config`.
+  - **`settings.json` is the workers' user settings** (the owner's decisions, October 19 and
+    23, 2026), read by Claude Code itself; precedence is user < project < local < flag <
+    policy, so a project's settings can override one of rewake's defaults that is a single
+    value, while deny lists merge. rewake writes its defaults there on the first launch,
     with `"rewake": {"defaults": <n>}`, the version of rewake's defaults the file is at;
-    Claude Code ignores that key. The defaults of version 2: `claudeMdExcludes` naming
+    Claude Code ignores that key. The defaults of version 3: `claudeMdExcludes` naming
     `~/.claude/CLAUDE.md` as an absolute path; the owner's off-list —
     `permissions.deny` of `Agent` (every subagent, the built-in `Explore` and `Plan` among
-    them), `ScheduleWakeup`, `SendMessage`, `ListAgents`, `EnterWorktree`, `ExitWorktree`,
+    them), `ScheduleWakeup`, `SendMessage`, `ListAgents`, `ExitWorktree`,
     `EnterPlanMode`, `PushNotification`, `RemoteTrigger` and `Artifact`; `disableWorkflows:
     true`, `remoteControlAtStartup`, `promptSuggestionEnabled`, `awaySummaryEnabled`,
     `idleCompaction` and `spinnerTipsEnabled` false; `disableClaudeAiConnectors: true`, which
@@ -191,7 +216,13 @@ rewake --command my-claude claude
     search, `AskUserQuestion`, `ExitPlanMode`, the terminal title, auto-compact, background
     tasks and Claude Code's own messaging socket, which carries rewake's wake.
   - **Version 1 had `autoMemoryEnabled: false`**; version 2 retires it, so a file written
-    by the build before loses it where it still holds rewake's `false`.
+    by the build before loses it where it still holds rewake's `false`. Version 3 takes
+    `EnterWorktree` out of `permissions.deny`: a deny in the user's settings is not lifted by a
+    run's allow, so each run's `--settings` denies it unless its template enters (below).
+  - **The run's `--settings`** is a JSON object of what this run alone gets, merged by Claude
+    Code over the folder's settings: the worker's memory and `EnterWorktree`, allowed for a
+    template with `enter_worktree = true`, denied for every other run. Until October 23 it was
+    the folder's whole file, or a copy of it in the run's directory, `worker-settings.json`.
   - **The worker's memory** (the owner's decision, October 19, 2026) is Claude Code's own
     auto-memory, `MEMORY.md` loaded into the context and kept by the model as main's is, but
     one per worker template and project:
@@ -203,17 +234,14 @@ rewake --command my-claude claude
     was opened with, which every space has; an alias that cannot name a
     directory (only letters, digits, dot, dash and underscore, not starting with a dot)
     refuses the launch. Parallel workers of one template share the directory; the last write
-    of a fact wins. Since `--settings` is single-use, the launch writes
-    `worker-settings.json` in the run's directory — the folder's settings with
-    `autoMemoryEnabled: true` and `autoMemoryDirectory: <that absolute path>` laid over them,
-    nothing else — and passes it; Claude Code ignores a relative `autoMemoryDirectory`
-    (research-launch.md). A person's own `"autoMemoryEnabled": false` in `settings.json` is
-    respected: the file is then passed as it is and the worker has no memory. A run directory
-    that cannot be written leaves the worker without memory, with a launch note.
-  - **A template with `enter_worktree = true`** (October 20, 2026) gets the same copy, memory
-    on or off, with `EnterWorktree` taken out of `permissions.deny` and added to
-    `permissions.allow`, and the run gets `REWAKE_WORKTREE_ENTER=1`; a copy that cannot be
-    written leaves the worker without entry, noted
+    of a fact wins. The run's `--settings` carries `autoMemoryEnabled: true` and
+    `autoMemoryDirectory: <that absolute path>`; Claude Code ignores a relative
+    `autoMemoryDirectory` (research-launch.md). A person's own `"autoMemoryEnabled": false` in
+    `settings.json` is respected: the run's settings then carry no memory.
+  - **A template with `enter_worktree = true`** (October 20, 2026) gets `EnterWorktree` in the
+    run's `permissions.allow`, and the run gets `REWAKE_WORKTREE_ENTER=1`. A run with no
+    directory for rewake's mod, or whose folder settings deny `EnterWorktree` (the person put
+    it back), gets no entry, noted
     ([worktree-tools.md](worktree-tools.md#a-workers-entry-enter_worktree--true-and-worktree_enter)).
   - **The person edits the file**: a default is turned back on by changing or removing it —
     `"Agent"` taken out of `permissions.deny` gives workers their subagents back,
@@ -278,6 +306,15 @@ trust decisions and sessions live there, apart from the person's own pi, whose `
 neither read nor changed. Beside the alias file, not in the state directory: it is the
 person's, not a room's, and outlives a cleared temporary directory. A variable of the same
 name in the person's environment does not reach the run.
+
+A worker's sessions are kept apart from main's (the owner's decision, October 23, 2026): every
+launch but main's sets `PI_CODING_AGENT_SESSION_DIR` to `worker-sessions/` of the agent
+directory, made 0700 with the folders below, over any of the person's environment; pi 1.3.0
+stores and looks up sessions there, below `--session-dir` and above the `sessionDir` setting
+(its `environment-variables.md`, `cli.md`; not run, since a session file needs a turn). So a
+person's `--continue` or picker in a checkout a worker shared no longer lands in the worker's.
+A worker's own `--session-dir` is refused, naming the folder. Sessions of workers from before
+stay in `sessions/`.
 
 The launch also makes `extensions/` and `skills/` in that directory (0700) when they are
 missing, so it is visible where a person's additions go, and leaves what is in them alone
@@ -397,8 +434,9 @@ and no longer refuses a new worktree. Resume, continue, session and fork flags s
 `<name>-<harness>`. The command waits until the record is open and that session is registered
 with the worker's run, at most 30 s, and fails with the record's reason otherwise.
 
-What a harness needs to start unattended — Claude Code's folder trust, a permission mode — main
-passes after `--`; rewake types nothing into the worker on its own, only the person's keys from
+What a harness needs to start unattended beyond what its adapter sets — a Claude Code worker's
+onboarding and folder trust are set by the profile (above) — main passes after `--`, a
+permission mode among it; rewake types nothing into the worker on its own, only the person's keys from
 main's shell. The space host serves `sock/space.<id>.sock` to the shell as a raw stream: a
 preamble from the emulator that keeps the worker's screen, then the worker's bytes, and the keys
 and sizes the shell sends back; the last size set is the worker's ([shell.md](v2/shell.md)).

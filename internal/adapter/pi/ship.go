@@ -134,7 +134,8 @@ func agentDirPath() (string, error) {
 // agentDir makes that directory for a launch, private since it holds the
 // login: one made before, by the person or by pi, is made private too. It
 // also gets the two folders a person adds to, extensions/ and skills/, so
-// the layout is visible; what is already there is left as it is.
+// the layout is visible, and the workers' sessions folder, private before pi
+// would make it; what is already there is left as it is.
 func agentDir() (string, error) {
 	dir, err := agentDirPath()
 	if err != nil {
@@ -146,7 +147,7 @@ func agentDir() (string, error) {
 	if err := os.Chmod(dir, 0o700); err != nil {
 		return "", fmt.Errorf("could not make pi's directory private: %w", err)
 	}
-	for _, name := range []string{"extensions", "skills"} {
+	for _, name := range []string{"extensions", "skills", workerSessions} {
 		if err := os.MkdirAll(filepath.Join(dir, name), 0o700); err != nil {
 			return "", fmt.Errorf("could not make pi's %s directory: %w", name, err)
 		}

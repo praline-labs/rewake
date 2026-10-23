@@ -127,11 +127,13 @@ format or protocol changes.
   passes `REWAKE_SPACE_ENTER=1` to the worker's launch and captures a claimed checkout while the
   record names none, as for `worktree = true`; the launch hands it to the adapter as
   `LaunchRequest.WorktreeEntry`.
-- **The run.** Claude Code's adapter writes the worker's settings copy in the run's directory
-  even with memory off, `EnterWorktree` taken out of `permissions.deny` and added to
-  `permissions.allow`; the person's `settings.json` is not changed, and a deny they wrote in
-  another form (a rule with a specifier) stays and wins. A whole-tool deny would hide the tool
-  from the mod's own call too. Only then the run gets `REWAKE_WORKTREE_ENTER=1`
+- **The run.** Claude Code's adapter allows `EnterWorktree` in the run's own `--settings`, and
+  denies it there for every other run; since October 23, 2026 the folder's `settings.json` no
+  longer denies it (defaults version 3), since a deny in the user's settings is not lifted by a
+  run's allow. A whole-tool deny of `EnterWorktree` the person put back in that file stops the
+  entry, noted, and a deny they wrote in another form (a rule with a specifier) stays and wins.
+  A whole-tool deny would hide the tool from the mod's own call too. Only then the run gets
+  `REWAKE_WORKTREE_ENTER=1`
   (`adapter.WorktreeEnterEnv`), which no run inherits; under `--command`, whose wrapper decides
   the settings, the variable is set and the deny is the wrapper's. It is not a boundary — a
   session's own command could set it — only the run's way to say what its template allows.

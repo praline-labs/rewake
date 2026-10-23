@@ -35,6 +35,10 @@ func readBack(t *testing.T, path string) map[string]any {
 	return settings
 }
 
+// fileDenied is how many tools the file denies at this version: all but
+// EnterWorktree, which left it in version 3 for each run's own settings.
+var fileDenied = len(deniedTools) - 1
+
 func denied(settings map[string]any) []any {
 	return settings["permissions"].(map[string]any)["deny"].([]any)
 }
@@ -51,7 +55,7 @@ func TestSettingsFreshAndEmpty(t *testing.T) {
 		if version, _ := settingsVersion(settings); version != defaultsVersion {
 			t.Fatalf("%q: version %d", text, version)
 		}
-		if len(denied(settings)) != len(deniedTools) || settings["idleCompaction"] != false || !slices.Equal(settings["claudeMdExcludes"].([]any), []any{"/home/p/.claude/CLAUDE.md"}) {
+		if len(denied(settings)) != fileDenied || settings["idleCompaction"] != false || !slices.Equal(settings["claudeMdExcludes"].([]any), []any{"/home/p/.claude/CLAUDE.md"}) {
 			t.Fatalf("%q: %v", text, settings)
 		}
 	}
@@ -69,7 +73,7 @@ func TestSettingsKeepThePersons(t *testing.T) {
 	if settings["idleCompaction"] != true || settings["n"] != json.Number("1.50") || settings["env"].(map[string]any)["X"] != "a&b" || settings["env"].(map[string]any)["DISABLE_AUTOUPDATER"] != "1" {
 		t.Fatalf("%v", settings)
 	}
-	if deny := denied(settings); deny[0] != "WebFetch" || len(deny) != len(deniedTools)+1 {
+	if deny := denied(settings); deny[0] != "WebFetch" || len(deny) != fileDenied+1 {
 		t.Fatalf("deny %v", deny)
 	}
 	raw, _ := os.ReadFile(path)
@@ -85,6 +89,19 @@ func TestSettingsKeepThePersons(t *testing.T) {
 	}
 	if again, _ := os.ReadFile(path); string(again) != edited {
 		t.Fatalf("the file changed:\n%s", again)
+	}
+}
+
+// Version 3 takes EnterWorktree out of the file, which Claude Code now reads
+// as the user's settings, and leaves the rest of deny as the person had it.
+func TestEnterWorktreeLeavesTheFile(t *testing.T) {
+	dir := settingsFile(t, `{"rewake": {"defaults": 2}, "permissions": {"deny": ["Agent", "EnterWorktree", "ExitWorktree"]}}`)
+	path, _, wrote, err := workerSettings(dir, "/home/p")
+	if err != nil || !wrote {
+		t.Fatalf("%v %v", wrote, err)
+	}
+	if deny := denied(readBack(t, path)); !slices.Equal(deny, []any{"Agent", "ExitWorktree"}) {
+		t.Fatalf("deny %v", deny)
 	}
 }
 
@@ -173,7 +190,7 @@ func TestSettingsThroughALink(t *testing.T) {
 	if info, err := os.Lstat(filepath.Join(dir, "settings.json")); err != nil || info.Mode()&os.ModeSymlink == 0 {
 		t.Fatalf("the link was replaced: %v", err)
 	}
-	if len(denied(readBack(t, own))) != len(deniedTools) {
+	if len(denied(readBack(t, own))) != fileDenied {
 		t.Fatal("the linked file did not get the defaults")
 	}
 }

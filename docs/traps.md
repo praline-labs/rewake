@@ -98,7 +98,10 @@ Claude Code reads its configuration directory from that variable before HOME, so
 given a private HOME would still write into the person's directory. Unset
 `CLAUDE_CONFIG_DIR` as well as setting HOME. Noticed before a probe ran, not after.
 
-*September 23, 2026.*
+*September 23, 2026.* Since October 23, 2026 every Claude Code worker carries it, naming
+rewake's worker folder: a `claude` a worker runs — a probe, `claude plugin test` under
+`go test ./internal/adapter/claude/` — reads and writes the workers' directory and uses their
+login, not the person's, unless the variable is unset.
 
 ### A private HOME linked to the person's `~/.claude` wrote into their settings
 
