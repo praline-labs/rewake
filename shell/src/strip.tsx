@@ -24,7 +24,12 @@ function stripOf(id: string): StripState {
   return { session, status, branch: space?.checkout?.branch ?? status?.branch };
 }
 
-type Part = { text: string; kind: "name" | "plain" | "context"; fill?: number };
+type Part = {
+  text: string;
+  kind: "name" | "plain" | "context" | "cache";
+  fill?: number;
+  cold?: boolean;
+};
 
 // How often the remaining life of the cache is counted again from the clock:
 // the cell moves by the minute, and the poll is slower than that.
@@ -70,11 +75,13 @@ function contextOf(s: Session): Part | undefined {
 export function cacheOf(s: Session, now: number): Part | undefined {
   if (!s.cache) return undefined;
   let text = `${s.cache.hit}%`;
+  let cold = false;
   if (s.cache.expiresAt !== undefined) {
     const left = s.cache.expiresAt - now;
-    text += left <= 0 ? " —" : left < 60_000 ? " <1m" : ` ${Math.ceil(left / 60_000)}m`;
+    cold = left <= 0;
+    text += cold ? " —" : left < 60_000 ? " <1m" : ` ${Math.ceil(left / 60_000)}m`;
   }
-  return { text, kind: "plain" };
+  return { text, kind: "cache", cold };
 }
 
 // stripParts is the line for a width: the name, activity and context always,
@@ -152,6 +159,15 @@ export function Strip(props: { id: string; width: number; theme: Theme }) {
               <b style={{ fg: props.theme.worker }}>{part.text}</b>
             ) : part.kind === "context" ? (
               <span style={{ fg: fillColour(part.fill) }}>{part.text}</span>
+            ) : part.kind === "cache" ? (
+              <span
+                style={{
+                  fg: plain,
+                  ...(part.cold ? { attributes: TextAttributes.DIM } : { fg: RGBA.fromIndex(6) }),
+                }}
+              >
+                {part.text}
+              </span>
             ) : (
               part.text
             )}

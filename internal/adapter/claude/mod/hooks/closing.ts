@@ -13,8 +13,9 @@ import type { Host } from "./outbox.ts";
 export const closingWait = 300;
 
 // The reasons of a session's end whose process exits: clear and resume go on
-// in the same process, and logout is left to the shell's other signs.
-export const exitReasons = new Set(["prompt_input_exit", "other"]);
+// in the same process. logout (/logout) ends it too; it was left out until the
+// closing screen came late after it, the mark being the earliest sign there.
+export const exitReasons = new Set(["prompt_input_exit", "other", "logout"]);
 
 // tellClosing sends session/closing once and waits for its answer within
 // closingWait; any failure is silent, being only an earlier sign.

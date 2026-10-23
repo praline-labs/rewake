@@ -27,6 +27,15 @@ test("a conversation's end that keeps the process tells nothing", async ($, on) 
   expect(closings(run)).toEqual([]);
 });
 
+test("/logout's end tells the wrapper like an exit", async ($, on) => {
+  const run = world(on);
+  on("session.end", (_: any, e: any) => ({ sessionId: e.sessionId }));
+  await start($);
+  await run.clock.settle();
+  await $.session.end({ reason: "logout", sessionId: "conversation-1" } as any);
+  expect(closings(run)).toEqual(["logout"]);
+});
+
 test("a wrapper that does not answer holds the end no longer than the bound", async ($, on) => {
   const run = world(on, { replies: { "/v1/session/closing": [() => new Promise(() => {})] } });
   let ended = false;

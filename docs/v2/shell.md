@@ -56,8 +56,7 @@ terminal in a pty; the owner checked step 1 on their own terminal the same day.
   kitty or modifyOtherKeys form, `isSuspend` in `shell/src/keys.ts`) begins nothing; Claude Code
   2.1.302 leaves 4 ms after the key. Text main writes after a leave is no sign of a pause: an exit
   prints "Resume this session with: claude --resume …" on the screen it went to. Then **main's closing mark** (the owner's idea, October 19,
-  2026): main's mod tells its wrapper `session/closing` at `session.end`, for `/exit`, Ctrl+C and
-  Ctrl+D alike ([the record](../research-claude-mod.md#the-end-of-the-process-as-the-mod-hears-it)),
+  2026): main's mod tells its wrapper `session/closing` at `session.end`, for `/exit`, Ctrl+C, Ctrl+D and `/logout` alike ([the record](../research-claude-mod.md#the-end-of-the-process-as-the-mod-hears-it)),
   and the wrapper of a main in the shell writes `ESC ] 6262 ; rewake-closing BEL` on its terminal,
   main's pane (`internal/host/start.go`), which the scanner reads (the widget ignores an OSC it
   does not know); it makes the layer an end, the keys held, where no leave began it, and restarts
@@ -249,7 +248,8 @@ navigation. Where they sit is the owner's decision of October 23, 2026: the hint
 bottom row across the whole width in every layout. The bar, while both panes show (the wide layout),
 sits under main's pane, in main's column, the way the strip sits under a worker's pane: main's pane
 ends two rows above the bottom, and the worker's column ends one row above it with its strip on the
-bar's row, so both columns end together. While one pane shows (the narrow layout, or a zoom), the bar
+bar's row, so both columns end together. The bar sits inside the column's padding, one column in from each side, so it lines up with
+main's text above. While one pane shows (the narrow layout, or a zoom), the bar
 and the hints take the two bottom lines across the whole width, and the pane the rest.
 
 - **The buttons** (`shell/src/bar.tsx`): ` main `, then each worker by its name, in the order the
@@ -309,7 +309,8 @@ write-claude (code) · working · ⎇ wt-fd7596 · <model> low · 23% 230k/1M ·
   context stay.
 - **Colours**: the name bold in the workers' colour of the bar; the rest in the terminal's own
   foreground with dim separators, no colour forced (herdr answers no OSC 10/11); the context in the
-  palette's green, yellow or red from 50% and 80%.
+  palette's green, yellow or red from 50% and 80%; the cache in the palette's cyan while it is warm,
+  dim once it expired.
 - **How fresh**: a Claude Code worker's mod samples after each main-loop step's response, at a
   turn's end and with each heartbeat ([design-claude.md](design-claude.md)), so the context grows
   through a long turn; pi publishes on its own events. The poll adds up to a second.

@@ -322,7 +322,11 @@ function App() {
                 height={height(mainPane)}
               />
             </box>
-            <Show when={wide()}>{bar()}</Show>
+            <Show when={wide()}>
+              <box paddingLeft={1} paddingRight={1}>
+                {bar()}
+              </box>
+            </Show>
           </box>
           <Show when={wide()}>
             <box width={1} height={rowHeight()} backgroundColor="#444444" />
