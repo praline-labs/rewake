@@ -401,6 +401,16 @@ type StateRequest struct {
 	// Percent is the filled percentage, absent when unknown.
 	Percent *int `json:"percent,omitempty"`
 
+	// CacheRead is the input tokens the prompt cache served on the latest main-loop response of
+	// this load, absent until one reports usage.
+	CacheRead *int `json:"cacheRead,omitempty"`
+
+	// CacheWrite is the input tokens that response wrote to the prompt cache.
+	CacheWrite *int `json:"cacheWrite,omitempty"`
+
+	// CacheInput is the input tokens that response neither read from nor wrote to the cache.
+	CacheInput *int `json:"cacheInput,omitempty"`
+
 	// Compacting says a native compaction is in progress.
 	Compacting bool `json:"compacting"`
 

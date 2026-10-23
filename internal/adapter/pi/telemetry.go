@@ -20,6 +20,15 @@ type sample struct {
 	Window     *int64   `json:"window"`
 	Percent    *float64 `json:"percent"`
 	Compacting bool     `json:"compacting"`
+	// Cache is the last assistant message's usage; absent from an extension
+	// that predates it and before the first response.
+	Cache *cacheUsage `json:"cache,omitempty"`
+}
+
+type cacheUsage struct {
+	Read  int64 `json:"read"`
+	Write int64 `json:"write"`
+	Input int64 `json:"input"`
 }
 
 type observations struct {
@@ -58,6 +67,9 @@ func (r *run) observeLocked(l *link, thread string, value *sample) bool {
 		snapshot.ModelName = value.ModelName
 	}
 	snapshot.Compacting = &value.Compacting
+	if value.Cache != nil {
+		snapshot.Cache = session.NewCache(value.Cache.Read, value.Cache.Write, value.Cache.Input)
+	}
 	snapshot.Interruptions = session.InterruptionsObserved
 	if value.Window != nil && *value.Window > 0 {
 		snapshot.ContextWindow = value.Window

@@ -234,3 +234,49 @@ test("effort is the main loop's latest request's, and each main-loop step is sam
   await run.clock.settle();
   expect(states(run).at(-1).effort).toBe("high");
 });
+
+test("the cache is the latest main-loop response's usage; a response without usage and a subagent's leave it", async ($, on) => {
+  const run = world(on);
+  let usage: any = null;
+  on("turn.step", async function* (_: any, e: any) {
+    yield { kind: "text", index: 0, text: "" };
+    return {
+      turnId: e.turnId,
+      index: e.index,
+      answer: "",
+      toolUses: [],
+      stopReason: "end_turn",
+      usage,
+    };
+  });
+  const step = async (fields: object) => {
+    const stream = $.turn.step({
+      turnId: "t",
+      index: 0,
+      model: "test-model",
+      messageCount: 1,
+      ...fields,
+    } as any);
+    let next = await stream.next();
+    while (next.done !== true) next = await stream.next();
+  };
+  await start($);
+  await run.clock.settle();
+  expect(states(run).at(-1).cacheRead).toBeUndefined();
+  usage = {
+    model: "m",
+    input_tokens: 50,
+    output_tokens: 9,
+    cache_read_input_tokens: 900,
+    cache_creation_input_tokens: 50,
+  };
+  await step({});
+  await run.clock.settle();
+  expect(states(run).at(-1)).toMatchObject({ cacheRead: 900, cacheWrite: 50, cacheInput: 50 });
+  usage = { ...usage, cache_read_input_tokens: 1 };
+  await step({ agentId: "child" });
+  usage = null;
+  await step({ index: 1 });
+  await run.clock.settle();
+  expect(states(run).at(-1)).toMatchObject({ cacheRead: 900, cacheWrite: 50, cacheInput: 50 });
+});

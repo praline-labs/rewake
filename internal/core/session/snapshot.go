@@ -28,6 +28,9 @@ type Snapshot struct {
 	FilledPercent    *int              `json:"contextFilledPercent"`
 	ContextAt        *time.Time        `json:"contextObservedAt"`
 	Model            *string           `json:"configuredModel"`
+	// Cache is what the harness reported of the prompt cache on the last
+	// request; nil when it reports none.
+	Cache *Cache `json:"cache,omitempty"`
 	// ModelName is the harness's own display name of the model, else the
 	// template's label (rewake list adds it); nil when neither is known.
 	ModelName *string `json:"configuredModelName,omitempty"`
@@ -51,6 +54,28 @@ type Snapshot struct {
 	// it: the publisher and the reader are different processes, and the wall
 	// clock can be stepped by seconds between the two.
 	PublishedBoot int64 `json:"publishedBoot,omitempty"`
+}
+
+// Cache is the prompt-cache usage of the last request as the harness reports
+// it. HitPercent is Read's share of every input token the request carried —
+// the part served from the cache, the part written to it and the part neither
+// read nor written — so a request that wrote a fresh cache shows a low figure,
+// and one the cache served whole a high one. The raw counts ride along.
+type Cache struct {
+	HitPercent int   `json:"hitPercent"`
+	Read       int64 `json:"readTokens"`
+	Write      int64 `json:"writeTokens"`
+	Input      int64 `json:"uncachedInputTokens"`
+}
+
+// NewCache builds a Cache from one request's counts; nil for a negative count
+// or a request with no input, where no share exists.
+func NewCache(read, write, input int64) *Cache {
+	total := read + write + input
+	if read < 0 || write < 0 || input < 0 || total <= 0 {
+		return nil
+	}
+	return &Cache{HitPercent: int((read*100 + total/2) / total), Read: read, Write: write, Input: input}
 }
 
 // EffortFromLaunch marks an effort taken from the launch's flag: the person

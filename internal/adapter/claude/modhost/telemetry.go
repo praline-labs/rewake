@@ -91,6 +91,9 @@ func (s *Server) observeLocked(sample StateRequest) {
 		snapshot.Effort, snapshot.EffortSource = &effort, session.EffortFromLaunch
 	}
 	snapshot.Interruptions = session.InterruptionsObserved
+	if sample.CacheRead != nil && sample.CacheWrite != nil && sample.CacheInput != nil {
+		snapshot.Cache = session.NewCache(int64(*sample.CacheRead), int64(*sample.CacheWrite), int64(*sample.CacheInput))
+	}
 	snapshot.ContextUsed, snapshot.ContextWindow = tokenCount(sample.Tokens), tokenCount(sample.Window)
 	if snapshot.ContextWindow != nil && *snapshot.ContextWindow == 0 {
 		snapshot.ContextWindow = nil

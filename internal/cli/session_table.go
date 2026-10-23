@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"fmt"
 	"math"
+	"slices"
 	"strconv"
 	"strings"
 	"text/tabwriter"
@@ -37,8 +38,17 @@ func sessionTable(room string, sessions []sessionView, visible bool) []string {
 	if !commonHarness {
 		header = append(header, "Harness")
 	}
+	// Likewise the cache column: only a harness that reports the cache fills it.
+	cached := false
+	for _, session := range sessions {
+		cached = cached || (session.Telemetry != nil && session.Telemetry.Cache != nil)
+	}
 	if visible {
-		header = append(header, "Status", "Model", "Effort", "Context", "Compactions")
+		header = append(header, "Status", "Model", "Effort", "Context")
+		if cached {
+			header = append(header, "Cache")
+		}
+		header = append(header, "Compactions")
 	}
 	header = append(header, "Age")
 	if !commonDirectory {
@@ -56,7 +66,11 @@ func sessionTable(room string, sessions []sessionView, visible bool) []string {
 			row = append(row, strconv.Quote(session.Harness))
 		}
 		if visible {
-			row = append(row, stateCells(session.Telemetry)...)
+			cells := stateCells(session.Telemetry)
+			if cached {
+				cells = slices.Insert(cells, 4, cacheCell(session.Telemetry))
+			}
+			row = append(row, cells...)
 		}
 		row = append(row, age(session.Age()))
 		if !commonDirectory {
@@ -67,6 +81,17 @@ func sessionTable(room string, sessions []sessionView, visible bool) []string {
 	_ = writer.Flush()
 	lines = append(lines, strings.TrimSuffix(buffer.String(), "\n"))
 	return lines
+}
+
+func cacheCell(snapshot *session.Snapshot) string {
+	if snapshot == nil || snapshot.Cache == nil {
+		return "-"
+	}
+	cell := strconv.Itoa(snapshot.Cache.HitPercent) + "%"
+	if !snapshot.Fresh || !snapshot.ContextFresh {
+		cell += " (stale)"
+	}
+	return cell
 }
 
 func stateCells(snapshot *session.Snapshot) []string {
