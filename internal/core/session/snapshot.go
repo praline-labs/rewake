@@ -32,8 +32,9 @@ type Snapshot struct {
 	// request; nil when it reports none.
 	Cache *Cache `json:"cache,omitempty"`
 	// CacheLife is how long the cache lives, from the harness's own status
-	// line where it has one; a second source beside Cache, which comes from
-	// the responses' usage.
+	// line where it has one, or reckoned from the model's lifetime for its
+	// tier where the harness names one; a second source beside Cache, which
+	// comes from the responses' usage.
 	CacheLife *CacheLife `json:"cacheLife,omitempty"`
 	// ModelName is the harness's own display name of the model, else the
 	// template's label (rewake list adds it); nil when neither is known.
@@ -77,8 +78,8 @@ type Cache struct {
 }
 
 // CacheLife is the prompt cache's lifetime as the harness tells it: the tier
-// (5m or 1h, empty when unknown), when it expires and whether the harness takes
-// it for warm. The expiry is absolute, so a reader subtracts its own clock.
+// (5m or 1h, another length where the model names one, empty when unknown),
+// when it expires and whether the harness takes it for warm. The expiry is absolute, so a reader subtracts its own clock.
 type CacheLife struct {
 	TTL       string     `json:"ttl,omitempty"`
 	ExpiresAt *time.Time `json:"expiresAt,omitempty"`

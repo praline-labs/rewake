@@ -225,7 +225,8 @@ acted on nowhere — a Bash call posting it is harmless (main's decision, Octobe
 the last in `Snapshot.CacheLife` (`cacheLife`: `ttl`, `expiresAt`, `warm`), beside `Cache`, which comes from
 the responses' usage; `rewake list` shows the Cache cell as `90% 42m` (`—` once expired, `<1m`), the
 remaining time counted by the reader's clock. Main's own run has no such status line. pi has no
-observed expiry (only a model's best-effort lifetimes per retention tier), so nothing is shown there.
+observed expiry; its extension reckons one from the model's best-effort lifetime for the retention tier
+into the same `cacheLife` ([research-pi.md](../research-pi.md#telemetry-and-remote-control)).
 
 ## Control
 

@@ -3,6 +3,7 @@ package pi
 import (
 	"context"
 	"math"
+	"strconv"
 	"time"
 
 	"github.com/praline-labs/rewake/internal/core/session"
@@ -29,6 +30,34 @@ type cacheUsage struct {
 	Read  int64 `json:"read"`
 	Write int64 `json:"write"`
 	Input int64 `json:"input"`
+	// TTL is the lifetime in seconds of the tier the request was sent with,
+	// and ExpiresAt its end in epoch milliseconds: the extension's reckoning
+	// from the model's promptCache, absent where the model names none.
+	TTL       *int64 `json:"ttl,omitempty"`
+	ExpiresAt *int64 `json:"expiresAt,omitempty"`
+}
+
+// life is the cache's lifetime as the snapshot carries it; nil where the
+// extension had none to tell. pi gives no expiry and no warm flag of its own:
+// warm is whether the reckoned expiry is still ahead at now.
+func (c *cacheUsage) life(now time.Time) *session.CacheLife {
+	if c.TTL == nil || c.ExpiresAt == nil || *c.TTL <= 0 || *c.ExpiresAt <= 0 {
+		return nil
+	}
+	at := time.UnixMilli(*c.ExpiresAt)
+	return &session.CacheLife{TTL: tierName(*c.TTL), ExpiresAt: &at, Warm: now.Before(at)}
+}
+
+// tierName writes a lifetime as the status line of Claude Code names its
+// tiers: 5m, 1h, else seconds.
+func tierName(seconds int64) string {
+	switch {
+	case seconds%3600 == 0:
+		return strconv.FormatInt(seconds/3600, 10) + "h"
+	case seconds%60 == 0:
+		return strconv.FormatInt(seconds/60, 10) + "m"
+	}
+	return strconv.FormatInt(seconds, 10) + "s"
 }
 
 type observations struct {
@@ -69,6 +98,7 @@ func (r *run) observeLocked(l *link, thread string, value *sample) bool {
 	snapshot.Compacting = &value.Compacting
 	if value.Cache != nil {
 		snapshot.Cache = session.NewCache(value.Cache.Read, value.Cache.Write, value.Cache.Input)
+		snapshot.CacheLife = value.Cache.life(now)
 	}
 	snapshot.Interruptions = session.InterruptionsObserved
 	if value.Window != nil && *value.Window > 0 {

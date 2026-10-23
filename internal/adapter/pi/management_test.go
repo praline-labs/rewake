@@ -136,4 +136,14 @@ func TestStateCarriesTheCacheOfTheLastResponseAndOldExtensionsLeaveItEmpty(t *te
 	if got := rig.run.SessionState().Cache; got == nil || got.HitPercent != 90 || got.Read != 900 || got.Write != 50 || got.Input != 50 {
 		t.Fatalf("cache: %+v", got)
 	}
+	if got := rig.run.SessionState().CacheLife; got != nil {
+		t.Fatalf("a cache with no lifetime has a life: %+v", got)
+	}
+	ttl, expires := int64(300), time.Now().Add(4*time.Minute).UnixMilli()
+	value = &sample{Sequence: 4, Activity: "idle", Cache: &cacheUsage{Read: 900, Write: 50, Input: 50, TTL: &ttl, ExpiresAt: &expires}}
+	askOK(t, l, frame{Op: "state", Thread: "conversation", State: value})
+	got := rig.run.SessionState().CacheLife
+	if got == nil || got.TTL != "5m" || got.ExpiresAt == nil || got.ExpiresAt.UnixMilli() != expires || !got.Warm {
+		t.Fatalf("cache life: %+v", got)
+	}
 }
