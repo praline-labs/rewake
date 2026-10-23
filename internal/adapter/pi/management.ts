@@ -11,6 +11,7 @@ export type State = {
   window: number | null;
   percent: number | null;
   compacting: boolean;
+  cache: { read: number; write: number; input: number } | null;
 };
 type Pending = {
   frame: Frame;
@@ -29,6 +30,7 @@ export function management(
   let sequence = 0;
   let compactions = 0;
   let compacting = false;
+  let cache: State["cache"] = null;
   let compact: Pending | undefined;
   let interrupt: (Pending & { turn: Turn }) | undefined;
 
@@ -45,7 +47,23 @@ export function management(
       window: usage?.contextWindow ?? ctx?.model?.contextWindow ?? null,
       percent: usage?.percent ?? null,
       compacting: compacting || !!compact,
+      cache,
     };
+  }
+
+  // What the provider reported for the last assistant message, as pi
+  // normalises it: input is the part neither read from nor written to the
+  // cache. A failed or aborted message carries no usage worth showing.
+  function usageSeen(message: {
+    role: string;
+    stopReason?: string;
+    usage?: { input?: number; cacheRead?: number; cacheWrite?: number };
+  }) {
+    if (message.role !== "assistant" || !message.usage) return;
+    if (message.stopReason === "error" || message.stopReason === "aborted") return;
+    const { input, cacheRead, cacheWrite } = message.usage;
+    cache = { read: cacheRead ?? 0, write: cacheWrite ?? 0, input: input ?? 0 };
+    changed();
   }
 
   function changed() {
@@ -207,6 +225,7 @@ export function management(
     compact = undefined;
     interrupt = undefined;
     compacting = false;
+    cache = null;
   }
 
   pi.on("session_before_compact", async () => {
@@ -231,6 +250,7 @@ export function management(
     compacting = false;
     changed();
   });
+  pi.on("message_end", async (event) => usageSeen(event.message));
   pi.on("model_select", async () => changed());
   pi.on("thinking_level_select", async () => changed());
   return { sample, changed, control, settled, reset, busy: () => compacting || !!compact };

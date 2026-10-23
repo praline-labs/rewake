@@ -337,6 +337,13 @@ export interface StateRequest {
   window?: number
   // percent is the filled percentage, absent when unknown.
   percent?: number
+  // cacheRead is the input tokens the prompt cache served on the latest main-loop response of
+  // this load, absent until one reports usage.
+  cacheRead?: number
+  // cacheWrite is the input tokens that response wrote to the prompt cache.
+  cacheWrite?: number
+  // cacheInput is the input tokens that response neither read from nor wrote to the cache.
+  cacheInput?: number
   // compacting says a native compaction is in progress.
   compacting: boolean
   // compactions counts completed compactions observed by this load.

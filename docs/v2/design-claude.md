@@ -182,6 +182,18 @@ main-loop `turn.step` asked for, kept by the host across loads; before one, the 
 `--effort`, marked as the launch's (`reasoningEffortSource`), or unknown. Rate limits remain
 absent. A lapse makes every field stale until a new generation supplies a sample.
 
+The prompt cache (October 23, 2026) is the usage the API reported for the latest main-loop
+`turn.step` response (`usage.cache_read_input_tokens`, `cache_creation_input_tokens`,
+`input_tokens`; Claude Code 2.1.302): the mod keeps it and sends `cacheRead`, `cacheWrite` and
+`cacheInput` with every sample, an additive change of `mod/state`; a response with no usage and a
+subagent's leave the last. The host publishes `Snapshot.Cache` (`cache` of the telemetry): the raw
+counts and `hitPercent`, the share of all the request's input tokens — read, written and neither —
+that the cache served. It is the last request's, not a running total, since that is what says whether
+the prefix is still warm; providers count input differently, so the harness's own usage is the only
+source and rewake adds nothing to it. pi's extension sends the same three counts from
+`message_end` ([pi record](../research-pi.md)); a harness or an older mod that reports none leaves
+the field out, and `rewake list` shows a `Cache` column only when some session has it.
+
 Completed compactions have a load-local count; the host folds its increases into the run's
 count and bounded notification events. A reload keeps the run's count and marks coverage
 partial. Native manual and automatic compactions are observed through the mod's event hook;
