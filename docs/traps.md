@@ -226,12 +226,13 @@ linked from the case folder if the case wants it there — and pass that as `REW
 
 *October 11, 2026.*
 
-### A worker's `worktree_enter` switched the branch of main's checkout
+### A worker with worktree entry changed the branch of main's checkout without entering
 
-A worker that called `worktree_enter` changed the branch in the owner's main folder before it
-entered its own copy (October 21, 2026). Before a fast-forward merge, check the main folder
-with `git status -sb`: it must be on `v2`. A brief says "before the first edit, call
-`worktree_enter`"; the briefing was fixed in 8924fcb.
+A worker launched with worktree entry on started in the owner's main folder, never called
+`worktree_enter`, and ran `git switch -c` there (October 21, 2026); main's later merge and push
+went to that branch. Before a fast-forward merge, check the main folder with `git status -sb`:
+it must be on `v2`. A brief says "before the first edit, call `worktree_enter`"; the briefing
+was fixed in 8924fcb.
 
 *October 21, 2026.*
 
