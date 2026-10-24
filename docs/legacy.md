@@ -1,3 +1,7 @@
+---
+description: The legacy mark on code kept only for an older harness or for records an older rewake wrote — its form, how to find the marks, when one is due and how it is cleared; none are open now.
+---
+
 # Support for old versions: the legacy mark
 
 Code that exists only so an older harness version, or records an older rewake left on
@@ -41,12 +45,11 @@ rewritten in the current form as part of the same clean-up.
 ## Finding them
 
 ```bash
-grep -rn '// legacy(' --include=*.go .
+grep -rn '// legacy(' --include=*.go --exclude-dir=archive .
 ```
 
 A mark keeps to the form above so the search finds it, and the table below is kept equal
-to the code by hand; the test that held both was removed by the owner's decision of
-October 17, 2026.
+to the code by hand.
 
 ## When a mark is due
 
@@ -86,8 +89,7 @@ In one change, in this order:
 
 ### Documents per bound
 
-None open: the marks of `codex <0.157.1` left with the Codex adapter in S8, October 8,
-2026, kept in [archive/1.x/codex](../archive/1.x/codex/README.md) as written.
+None open.
 
 ## Oldest supported versions
 
@@ -97,8 +99,4 @@ None open: the marks of `codex <0.157.1` left with the Codex adapter in S8, Octo
 
 ## Current marks
 
-The `rewake <2026-09-*` marks were cleared on October 18, 2026 by the owner's decision of that day:
-2.0 starts from its own root `v2/`, so no record of those builds is read. Where the code under a mark
-also served a record without a boot clock or a namespace, that code stayed as an ordinary fallback.
-
-None: the two marks of `rewake <2026-10-12` left with the clearing of 1.x on the same day.
+None. 2.0 starts from its own root `v2/`, so no record of an earlier build is read.

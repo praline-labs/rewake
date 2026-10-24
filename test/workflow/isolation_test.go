@@ -20,7 +20,7 @@ import (
 // The boundaries here are the ones the free tiers need — a private HOME and
 // state directory, and a PATH that leads to the shims rather than to
 // anything installed. Network, mount and PID namespaces stay mandatory for the
-// paid tier only; the reasons are in docs/check-runner-proposal.md.
+// paid tier only (docs/testing.md#the-tiers).
 type Isolation struct {
 	// Home is the private HOME for anything the case launches.
 	Home string

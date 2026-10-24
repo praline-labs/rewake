@@ -13,8 +13,9 @@ import (
 //
 // One line per case, on standard output, in the one place a verdict is
 // published. A summarizer reads these and nothing else: the contract in
-// docs/check-runner.md asks for per-observation outcomes, evidence paths and
-// durations, and none of that survives a regular expression over free text.
+// docs/testing.md#reading-a-result asks for per-observation outcomes,
+// evidence paths and durations, and none of that survives a regular
+// expression over free text.
 
 func (c *Case) publishRecord(outcome Outcome, reason string, made map[string]observation, keptEvidence bool) {
 	if !c.scenario {

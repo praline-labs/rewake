@@ -52,7 +52,7 @@ func TestARealSuiteRunIsSummarized(t *testing.T) {
 		t.Errorf("the summary does not name what ran:\n%s", rendered)
 	}
 	if lines := strings.Count(strings.TrimSpace(rendered), "\n") + 1; lines > 12 {
-		// The budget in docs/check-runner.md, checked rather than promised.
+		// The budget in docs/testing.md#reading-a-result, checked rather than promised.
 		t.Errorf("a green run printed %d lines, over the budget of twelve:\n%s", lines, rendered)
 	}
 	entries, err := os.ReadDir(into)

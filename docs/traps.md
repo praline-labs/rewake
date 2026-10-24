@@ -1,14 +1,13 @@
+---
+description: What misbehaves in rewake and the harnesses it lives with, by symptom — roles and reports, tests next to a live session, arguments, delivery — each entry dated, with its cause and what to do.
+---
+
 # Traps in rewake and its harnesses
 
-What behaves other than expected, in rewake itself and in the harnesses it lives
-with. The heading is the symptom: that is what will be searched for.
-
-Moved here on September 22, 2026 from a handoff set deleted together with the
-archives. Traps of the craft — the ones about how we work rather than about rewake —
-stayed in the owner's private notes, along the line the owner drew on September 21.
-
-Some entries have already sunk into the code and the rules; they stay here because a
-rule without its reason is the first thing forgotten.
+What behaves other than expected, in rewake itself and in the harnesses it lives with. The
+heading is the symptom: that is what will be searched for. Some entries have already sunk into
+the code and the rules; they stay here because a rule without its reason is the first thing
+forgotten.
 
 ## Roles and reports
 
@@ -49,36 +48,35 @@ boundary, compare when main's run ended with when the worker read the task.
 
 ### An interrupted Claude Code task is reported finished with an unrelated answer
 
-A sender got `finished` for its task with a text that had nothing to do with it —
-observed at 20:03:12 and at 20:11:30 on September 23, 2026, once in the same
-conversation and once across a `/clear`. The worker's turn on the task had been
-interrupted with Esc, and the report was the end of the next, unrelated turn.
+A sender got `finished` for its task with a text that had nothing to do with it, once in the
+same conversation and once across a `/clear`. The worker's turn on the task had been interrupted
+with Esc, and the report was the end of the next, unrelated turn: obligations are kept per
+wrapper run, not per conversation, and the next turn end, whatever it was about, settled the
+task with its own last reply.
 
-Claude Code runs no Stop hook for an interrupted turn
-([research.md](research.md#interrupting-a-turn-commands-and-the-stop-hook)), so the
-task stays owed, and obligations are kept per wrapper run, not per conversation: the
-next turn end heard, whatever it was about, settles it with its own last reply. A
-shell-mode `!` command was seen to start a model turn that ends in Stop without a
-UserPromptSubmit, while nothing was owed; with a task owed it would settle it the same
-way — inferred, not observed.
+The mod hears an interrupted turn: its end comes as `aborted`, the sender reads `stopped` for
+the task at once, and the task stays owed — the next turn end that finishes still settles it,
+the owner's decision. The remaining risk is a person who, after Esc, turns the session to
+unrelated work: that work's `finished` then settles the interrupted task. Claude Code's adapter
+names no delivery thread, so a report after a `/clear` carries no `threadChanged`
+([delivery-turn-end.md](delivery-turn-end.md#reports-after-a-thread-change)).
 
-Across a `/clear` the report now carries `threadChanged`, so the sender is warned it may
-not answer the task (HF-10, [delivery-adapters.md](delivery-adapters.md#claude-code)).
+*September 23, 2026; the mod's `aborted` since October 16, 2026.*
 
-Mitigated, not removed, since September 23, 2026: rewake's function-hooks plugin hears
-the interruption, and the sender reads `stopped` for the task at once and waits for the
-person, as on Codex ([claude-plugin.md](archive/1.x/claude-plugin.md)). The task stays owed, and the
-next turn end that finishes still settles it — the owner's decision, the same on both
-harnesses. The remaining risk is a person who, after Esc, turns the session to unrelated
-work: that work's `finished` then settles the interrupted task. Where the plugin does
-not load — `--bare`, an untrusted workspace, another harness version — the session's
-telemetry reads `interruptions: unobserved` and the defect is as before.
+### A turn cut short to send a message was read as stopped
 
-Since S9, October 11, 2026, the plugin, the Stop hook and the telemetry are gone, and no
-task reaches a Claude Code session: a role that owes reports refuses to launch on it.
-The trap waits for stage 4, where Claude Code's turn boundary meets it again.
+On Claude Code 2.1.280 the owner typed a message into a worker's running turn and sent it at
+once with Ctrl+Enter. The harness ended the running turn to take the message, the plugin of the
+time heard its end as `aborted`, and main got `stopped` — "the person at the keyboard stopped
+this turn" — although the person had redirected the worker, and the worker went on working. A
+sender reading `stopped` does not resend and waits for the person
+([turn-outcomes.md](turn-outcomes.md#stops)), so the label sent it the wrong way.
 
-*September 23, 2026.*
+Not rechecked on the mod: whether its end of such a turn is `aborted` too, and what the harness
+tells the mod when an interruption carries a new message. Before taking a stop for the
+person's, look at whether the worker is still working (`rewake list`).
+
+*September 28, 2026, Claude Code 2.1.280; not rechecked since.*
 
 ## Tests next to a live session
 
@@ -128,21 +126,6 @@ machine needs a restart; the test fails in about a minute and says so.
 
 *October 21, 2026.*
 
-### `pgrep -x codex` finds somebody else's Codex
-
-Take the harness process from the session record — `harnessPid` in
-`<state>/v2/rooms/<room>/sessions/<name>.json` — not from a search by name: the owner's
-own Codex runs on the same machine.
-
-*September 16, 2026.*
-
-### A reader inside the sandbox declared live sessions dead
-
-The Codex sandbox has its own pid namespace, and live processes are not visible from
-it. Check any conclusion about another process against `/proc/self/ns/pid`.
-
-*September 16, 2026.*
-
 ### `/proc` does not see the real pids, and that means neither an old build nor death
 
 A managed shell has a different pid namespace: reading `/proc/<pid>/exe` gave
@@ -152,19 +135,6 @@ separate comparison of the installed file's hash and of new epochs in the regist
 Do not kill or restart on such a conclusion.
 
 *September 19, 2026.*
-
-### A Codex session started inside Codex's sandbox runs no command
-
-A live check run by a Codex session launched its subject Codex sessions from its own
-shell, inside its sandbox. The subject could not run a single command: `rewake guide`, a
-shell wait and `rewake inbox` all failed before starting because the nested sandbox
-could not open its mount registry lock, and the subject reported the work blocked. Not a
-delivery failure, and no rewake defect. The rerun passed `--sandbox danger-full-access`
-to the subject sessions only, for that launch and on main's decision, with the outer
-sandbox left in force. A live check that starts Codex from Codex decides this before
-the first turn, not after.
-
-*September 26, 2026, Codex CLI 0.155.1.*
 
 ### A probe in a fresh HOME cloned the plugin marketplace over SSH
 
@@ -182,20 +152,16 @@ clone.
 
 *September 26, 2026, Claude Code 2.1.280.*
 
-### `REWAKE_ROOM` in the environment put a probe's launch in `default`
+### `REWAKE_ROOM` in the environment put a probe's sessions in different rooms
 
-A probe exported `REWAKE_ROOM=probe` and launched two sessions. The one launched without
-`--room` went to room `default` of the probe's private state directory, the two sessions
-ended in different rooms, and neither could see the other until both were launched with
-`rewake --room probe …`. This is the contract, not a defect:
-launch takes its room from `--room` alone, and commands such as `list` and `send` read
-the variable ([design.md](design.md#rooms)). Put `--room` before the harness name, like
-`--main`.
+A probe exported `REWAKE_ROOM=probe` and launched two sessions, which ended in different rooms
+and could not see each other. This is the contract, not a defect: a person's launch takes the
+room of its directory and reads no `REWAKE_ROOM` (only the `rewaketest` build keeps a
+`--room`), while commands such as `list` and `send` outside a session read the variable or
+take the room of their own working directory ([design.md](design.md#rooms)). Run a probe's
+commands from main's directory, or export the room `rewake list` shows.
 
-*September 26, 2026.* Since October 19, 2026 a person's launch takes the room of its
-directory and has no `--room` (only the `rewaketest` build keeps it); it still reads no
-`REWAKE_ROOM`, so a probe's commands outside a session go to the room of their own working
-directory: run them from main's directory, or export the room `rewake list` shows.
+*September 26, 2026; rooms follow the directory since October 19, 2026.*
 
 ### An empty `.git` in `/tmp` turned the layout tests red
 
@@ -206,10 +172,7 @@ goes while a sandboxed command of a harness runs, which masks `.git` in its writ
 roots. The go command took it for a repository, asked git for the module's state, and
 git refused. The module's version-control state is nothing the layout rules judge, so
 their `go list` runs with `-buildvcs=false`, and a test puts an empty `.git` above a
-synthetic module to keep it so. The workflow suite's check of its `-X` values reads a
-module of its own the same way and failed the same evening for the same reason
-(`TestABuildValueTheLinkerWouldIgnoreFails`); its `go list` takes the same flag, and
-its test the same empty `.git`.
+synthetic module to keep it so.
 
 *October 7, 2026.*
 
@@ -238,50 +201,6 @@ was fixed in 8924fcb.
 
 ## Arguments and continuing a conversation
 
-### Under `--remote`, continuing a thread refuses because of our own flag
-
-`rewake --name write --write codex resume` answers at once with "Permission overrides
-are not supported when resuming a remote task". The Codex interface under `--remote`
-forbids any change of permissions on continuation, `--add-dir` included, which
-rewake gave to the write role (`tui/src/app/config_persistence.rs:49–80`). Fixed in
-`7aca589`.
-
-On `resume` and `fork`, look at the interface's argv: it must carry no `--add-dir`,
-`--sandbox`, `-c sandbox_*` or `-c permissions*`.
-
-*September 17, 2026.*
-
-### `rewake codex --add-dir` exits 1 on Codex 0.156 and later
-
-From 0.156 the Codex terminal refuses `--add-dir` and a
-`sandbox_workspace_write.writable_roots` override beside `--remote` and exits 1 before its
-first request (live on 0.157.1; 0.155.1 still took both,
-[research-codex.md](archive/research-codex.md#runtime-workspace-roots)). Every `rewake codex`
-launch runs the terminal under `--remote`, so a launch that asked for a second writable
-directory simply ended. Rewake then refused both itself with exit 2 and pointed at
-`rewake send --grant-dir`, which added the directory for one task and left the code with
-grants on October 18, 2026 ([grants.md](archive/grants.md)).
-
-*September 27, 2026.*
-
-### Native remote resume rejects permission flags even from a test recipe
-
-The same trap again, in the UI stand of September 20: `-c sandbox_mode` and
-`approval_policy` passed on the line blocked `/resume`. The cure is not editing the
-owner's configuration but an isolated private `HOME` carrying the same defaults — and
-a check of the actual argv. A protocol client does not prove that the continuation
-went through in the real TUI.
-
-*September 20, 2026.*
-
-### `codex app-server proxy` is not JSONL
-
-A JSON line on its stdin gets no answer: the proxy forwards bytes to a socket that
-expects WebSocket. The client has to do an HTTP Upgrade and send masked frames —
-which is what our shim in `test/workflow` does.
-
-*September 17, 2026.*
-
 ### A positional prompt eaten by a variadic
 
 The greeting for Claude Code ended up inside the `--allowedTools` list: `<tools...>`
@@ -292,43 +211,6 @@ for any prompt.
 *September 17, 2026.*
 
 ## Delivery and its proofs
-
-### The end of a model turn was confused with the boundary between tools
-
-Mail piled up and main slept until the owner's message. The false trail: since the
-ACK had already announced future mail, one could wait for a peek or for the end of
-the turn. The real cause was a wrong statement of the task: a newly ready batch must
-be sent at once, by native start-or-steer, without waiting for completion.
-
-*September 17–20, 2026.*
-
-### Delivery of a report to the mailbox does not prove its native announcement to the sender
-
-The old test passed on a single HTTP request. What has to be checked is the report's
-id and epoch on the sender's side, and then the reading of the report. An
-availability notification or a second arbitrary request does not stand in for the
-event that is needed.
-
-*September 19, 2026.*
-
-### The Ran row runs no command and confirms no reading
-
-The UI event goes downstream only, after the native ACK. It is not allowed to
-synthesize a turn's terminal, to pass cosmetics through the reading server, or to
-repeat a letter when the UI queue is full. Under streaming the row is deferred, and
-the exact order of events cannot be reconstructed from the final screen.
-
-*September 20, 2026.*
-
-### An idle fresh workspace turned out read-only without notice
-
-Main woke, but `.lock` was not written: an ordinary repository is trusted, a new
-temporary directory is read-only by default. That is no proof of a delivery defect.
-The owner's rules are not widened automatically; an isolated stand gets an explicit
-`workspace-write`, and if it needs remote resume, the defaults go into a private
-configuration, not into flags.
-
-*September 19–20, 2026.*
 
 ### A message reported delivered was held by Claude Code — the status is now honest
 
@@ -382,8 +264,7 @@ The wall clock can be stepped by seconds at any moment — a time sync does it, 
 virtual machines every half a minute — and a duration taken between two processes on
 the wall clock grows or shrinks by the step. The coalescing cap counted from the
 writer's `createdAt`, so a step forward inside the window closed it early and a burst
-went out as two notices; `TestNotesSecondsApartAreAnnouncedOnce` failed now and then
-for that alone. A waiting `send --question` was judged gone by its mark's
+went out as two notices, and the window's tests failed now and then for that alone. A waiting `send --question` was judged gone by its mark's
 modification time, and a telemetry snapshot read stale by its `publishedAt`. All three
 compare the boot clock now (`internal/infra/boottime`), which every process shares and nothing
 steps. A new comparison between processes over seconds belongs on it too; a term of
@@ -392,65 +273,20 @@ minutes or hours stays on the wall clock, which counts a sleeping host
 
 *September 26, 2026.*
 
-### A task sent after `rewake compact` on Codex failed, and so did the compaction
-
-A compaction of a long Codex conversation outlasted the 80 seconds the mark then held
-deliveries for. The task sent after it went into the compaction, the server refused it
-with `ActiveTurnNotSteerable { turn_kind: Compact }`, and the task was `failed` with
-"not retried automatically"; main's letter said the compaction had failed, while it
-finished half a minute later. Since September 26, 2026 a compaction seen running holds
-deliveries up to 10 minutes, that refusal leaves the message `pending` to go after the
-end, and a compaction outliving the wait is reported by its end
-([remote-control-codex.md](archive/1.x/remote-control-codex.md)). A running wrapper built before
-that day still does the old thing: send the task again once `rewake list` shows the
-compaction counted.
-
-*September 26, 2026.*
-
 ### A Claude Code session idle between tasks came back compacted
 
-Main in this room ended its turn after a handoff and waited for the person; when it was
-next woken, its conversation had been compacted, with no `rewake compact` and no `/compact`
-typed. Claude Code compacts an idle session on its own unless the user's settings turn it
-off: `"idleCompaction": false` in `~/.claude/settings.json`. A worker idle between tasks is
-exposed the same way, and its context in `rewake list` drops without anyone having asked.
+Main ended its turn after a handoff and waited for the person; when it was next woken, its
+conversation had been compacted, with no `rewake compact` and no `/compact` typed. Claude Code
+compacts an idle session on its own unless the settings turn it off: `"idleCompaction": false`.
+A worker's launch sets it in the workers' settings (`internal/adapter/claude/settings.go`); a
+main runs with the person's own settings, so a main idle between tasks is still exposed, and
+its context in `rewake list` drops without anyone having asked.
 
-When a session's context falls while it was idle, look at that setting before suspecting
-rewake. A session started before the setting changed keeps the old behaviour until it is
-restarted. Reported by the person and read from their settings on Claude Code 2.1.296.
+When a main's context falls while it was idle, look at that setting before suspecting rewake. A
+session started before the setting changed keeps the old behaviour until it is restarted.
+Reported by the person and read from their settings on Claude Code 2.1.296.
 
 *October 17, 2026.*
-
-### A resumed Codex worker got its task in a new, empty conversation
-
-The owner relaunched a worker with a resume of a conversation a plain Codex held through
-the shared daemon; the terminal went on in another, empty one, and rewake delivered the
-task there — where the worker's sandbox left rewake's state directory read-only, so it
-could not read the mail and stood still. Since September 29, 2026 the wrapper keeps the
-launch's conversation: a task sent then stays `pending`, `rewake send` exits 3 naming the
-expected and the selected conversation, main is told once, and the terminal shows a
-warning. Resume the intended conversation with `/resume` once the other program has let
-it go, or accept the selected one from a shell outside any session with `rewake accept
-<session> <conversation>` ([delivery-conversation.md](archive/1.x/delivery-conversation.md)). A
-wrapper built before that day still delivers into whatever the terminal selected. A
-conversation whose sandbox closes rewake's state directory still takes the notice and
-cannot read the mail: making the mail independent of the sandbox is the next change
-([work-queue.md](archive/work-queue.md#now-after-100)). Codex and `rewake accept` left the
-product in S8 (October 8, 2026); this trap applies to 1.x builds only.
-
-*September 29, 2026.*
-
-### A Codex 0.157.1 terminal is never selected
-
-The session registers and the terminal works, but `rewake send` refuses with
-`delivery thread is unavailable: ... selected conversation is not ready`, after the
-first launch, `/new`, `/resume` and `codex resume <id>` alike. Codex 0.157.1 sends
-`runtimeWorkspaceRoots: null` in remote mode, and the gateway recognized the terminal's
-start and resume by those roots. Since September 26, 2026 its configuration's
-`web_search` marks them instead ([gateway.md](archive/1.x/gateway.md#compatibility-and-limits)); a
-wrapper built before that day stays unavailable on 0.157.1 — run it on 0.155.1.
-
-*September 26, 2026.*
 
 ### After a new commit the running wrapper stays old
 

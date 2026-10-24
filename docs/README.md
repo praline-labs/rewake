@@ -74,8 +74,6 @@ Each fact carries where it was verified; they age with harness versions.
 
 - [testing.md](testing.md) — the entry point: the tiers, the full set before a publication, reading a summary and a red case, adding a scenario or a column.
 - [testing-cases.md](testing-cases.md) — what each end-to-end case claims, with its sessions, the fixture's play and its controls.
-- [testing-pool.md](testing-pool.md) — how the workflow suite runs cases side by side: `-parallel`, the pool, owner labels, the sweep.
-- [check-runner.md](check-runner.md) — the requirements the workflow suite answers: one command, evidence tiers, the output contract.
 
 ## When something behaves unexpectedly
 

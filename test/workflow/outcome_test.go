@@ -70,8 +70,9 @@
 package workflow
 
 // Outcome is the category of a case or of a single observation inside it. The
-// categories come from docs/check-runner.md and are not interchangeable: a
-// missing observation is not a skip, and a skipped case is not a success.
+// categories come from docs/testing.md#reading-a-result and are not
+// interchangeable: a missing observation is not a skip, and a skipped case is
+// not a success.
 type Outcome string
 
 const (

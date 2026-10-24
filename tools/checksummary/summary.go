@@ -16,10 +16,10 @@ import (
 // ends import it: the suite writes those structures and this program reads
 // them, so a renamed field is a compile error rather than an empty column.
 
-// The outcome names come from docs/check-runner.md. Only pass is green, and
-// unsupported is green *for the run* while staying visible in its own column:
-// a harness that cannot offer a capability has not failed, and has not passed
-// either.
+// The outcome names come from docs/testing.md#reading-a-result. Only pass is
+// green, and unsupported is green *for the run* while staying visible in its
+// own column: a harness that cannot offer a capability has not failed, and
+// has not passed either.
 const (
 	outcomePass        = "pass"
 	outcomeUnsupported = "unsupported"
@@ -92,8 +92,8 @@ func (s *summary) counts() ([]string, map[string]int) {
 }
 
 // render writes the few lines an agent reads. The budget in
-// docs/check-runner.md is twelve lines for a green run, and the failures that
-// follow are bounded rather than trusted to be short.
+// docs/testing.md#reading-a-result is twelve lines for a green run, and the
+// failures that follow are bounded rather than trusted to be short.
 func (s *summary) render(to io.Writer, path string) {
 	scenarios := len(s.Run.Scenarios)
 	names, byOutcome := s.counts()
@@ -199,9 +199,9 @@ func contains(list []string, value string) bool {
 //
 // The column is named because a red result does not mean the same thing in
 // each: the fixture column is the regression gate — its records carry gate —
-// and Claude Code searches beside it, and check-runner-scenarios.md
-// forbids this program from promoting a search column on its own. It says
-// which column, and stops there.
+// and a column searching beside it is not, and this program never promotes a
+// search column on its own (docs/testing.md#the-fixture-column-the-gate). It
+// says which column, and stops there.
 func (s *summary) renderFailures(to io.Writer) {
 	budget := excerptBudget
 	for _, one := range s.Cases {

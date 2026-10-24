@@ -25,8 +25,8 @@ import (
 // says the recipient is working.
 //
 // What this does not prove: that a model read the steered letter mid-turn.
-// This is the fixture tier; the only observation of that kind is the live one
-// of September 21, 2026 in claude-parity-2026-09-21.md.
+// This is the fixture tier, and only a live run on a real model shows that
+// (docs/testing.md#the-tiers).
 func TestMidTurn(t *testing.T) {
 	runInColumns(t, "mid-turn", runMidTurn)
 }

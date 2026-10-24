@@ -6,14 +6,13 @@ package workflow
 // the evidence a harness makes available, and that
 // difference is named rather than worked around. A column that cannot show
 // something records the observation as unsupported with the capability it
-// lacks — check-runner.md is explicit that a capability applies to a single
-// observation as well as to a whole case, and that unsupported is not a pass.
+// lacks — a capability applies to a single observation as well as to a whole
+// case, and unsupported is not a pass (docs/testing.md#extending-the-suite).
 //
 // They are not equal in what a red result means, either. The fixture is the
 // regression gate: the harness the core is proven on, where every observation
-// has to be made (docs/testing.md#three-columns-three-meanings). The
-// Claude Code column searched beside it until S9, when Claude Code's hooks
-// left; it returns with stage 4. Which column is the gate is a field of the
+// has to be made (docs/testing.md#the-fixture-column-the-gate). A column of
+// a real harness would search beside it. Which column is the gate is a field of the
 // column, set on exactly one, and the summary names the column of every red;
 // nothing here promotes one on its own.
 

@@ -294,7 +294,7 @@ changes nothing about the mail: reports stay readable for their epoch and the re
 as for any undelivered message on shutdown. The mailbox server a test builds has no window
 unless it sets `Window`; the wrapper sets `delivery.Coalescing`. A build may shorten that
 window through `-ldflags -X` on `builtQuiet` and `builtCap`, and the workflow suite's does
-([testing-pool.md](testing-pool.md#waits-the-suite-shortens)); a release build sets neither.
+([testing-pool.md](testing.md#waits-the-suite-shortens)); a release build sets neither.
 
 **A group's notice** says `Rewake: <n> new messages`, followed by one indented first-line
 preview of its latest member with sender and kind. A correcting letter — a recall, or an

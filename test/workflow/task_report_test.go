@@ -22,9 +22,9 @@ import (
 // shims — the sender sends with its own rewake and reads its own mailbox.
 //
 // What this does not prove: that a model read the message and decided to
-// answer. This is the fixture tier; the only observation of that kind is the
-// live one of September 21, 2026 in claude-parity-2026-09-21.md. A green run
-// here must never be read as evidence of understanding.
+// answer. This is the fixture tier, and only a live run on a real model shows
+// that (docs/testing.md#the-tiers). A green run here must never be read as
+// evidence of understanding.
 func TestTaskReport(t *testing.T) {
 	runInColumns(t, "task-report", runTaskReport)
 }
