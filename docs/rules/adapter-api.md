@@ -131,7 +131,7 @@ is held, within a bound, and refused after it; from then on a peer that is not t
 alive with that start, is refused. A launch through `--command` names the wrapper script it
 started, so a harness the script runs as a child is not the named process and is refused: such
 a run's mod is never admitted, and its run takes no tasks — a documented limit, not a refusal
-([stage4-turns.md](../v2/stage4-turns.md#readiness-and-admission)). No test holds the
+([claude-turns.md](../claude-turns.md#readiness-and-admission)). No test holds the
 `--command` cases; they were run live with the installed harness.
 
 ### Handlers that write the room
@@ -260,7 +260,7 @@ Tests:
 A capability is **offered** by the adapter, known from the catalogue before a launch, and
 **live** for one run once the run proves it: Claude Code offers TurnBoundary, but a run whose
 mod did not load does not have it
-([design-claude.md](../v2/design-claude.md#when-the-mod-does-not-load)). A run proves what it
+([claude.md](../claude.md#when-the-mod-does-not-load)). A run proves what it
 serves through its plan's `LiveReporter` (`internal/adapter/run.go`): the whole set once the
 exchange has run and again at every change, a lost capability at once. A run whose plan
 carries no reporter has live what its plan carries, from its start.
@@ -288,7 +288,7 @@ load's — the number each load takes from its run's counter before its first he
 refused and changes nothing, however late it arrives, and each report carries the number of
 the transition it follows, so a report of an earlier one changes nothing. An end that arrives
 after a withdrawal is still taken: a withdrawn boundary refuses new tasks, it drops no report
-([stage4-turns.md](../v2/stage4-turns.md#the-live-set)).
+([claude-turns.md](../claude-turns.md#the-live-set)).
 
 Tests:
 - `internal/core/registry/live_test.go` `TestModifyChangesTheRecordAsItStands`

@@ -13,13 +13,13 @@ of October 13, 2026 follow them there.
 | this file | the layout of 2.0, the import rule and the test that holds it, the stage plan, the owner's answers |
 | [adapter-api.md](../rules/adapter-api.md) | the adapter API: the capabilities, what the core does without each, the catalogue, minimum versions |
 | [design-rules.md](design-rules.md) | the core rules, restated from 1.x without its migration |
-| [design-claude.md](design-claude.md) | the Claude Code adapter as one mod: tools, turns, telemetry, control, wake, loading, and the stage 4 probe |
+| [claude.md](../claude.md) | the Claude Code adapter as one mod: tools, turns, telemetry, control, wake, loading, and the stage 4 probe |
 | [design-state.md](design-state.md) | the state directory of 2.0, clearing the state of 1.x, one build per room |
 
 Where a fact is marked, the marks are those of the recon: **[doc]** official
 documentation, **[live]** seen on a running harness, **[code]** read in the tree at
 `8a20bdd`. A fact about the Claude Code mod API carries no mark here: the `mods` skill
-holds it ([design-claude.md](design-claude.md#where-the-api-facts-live)), and a claim
+holds it ([claude.md](../claude.md)), and a claim
 about the mod that still needs a live check says so and names its stage 4 probe.
 
 ## What does not change
@@ -100,7 +100,7 @@ Every step of a stage goes through the chain of `AGENTS.md`, "Delegation and rev
 | Stage | What it builds | Acceptance requires |
 |---|---|---|
 | 3 core | the layout and its test; `core/*`, `tool`, `host`, `cli` with the full vocabulary on the shell; the state root of 2.0 and one build per room ([design-state.md](design-state.md)); a fixture adapter for tests | closed October 13, 2026 ([its entry](../roadmap/2026-10-13-stage3-s19.md)) |
-| 4 Claude Code | the probe first ([design-claude.md](design-claude.md#the-stage-4-probe)), its results written into research with the version (the first, October 13, 2026: [research-claude-mod.md](../research-claude-mod.md)); then the adapter and its mod; then the space, one step by the decision of October 18, 2026 ([stage4-space-steps.md](stage4-space-steps.md#the-build-steps)) | live: a Claude Code main and a Claude Code worker exchange a task, a question, a notify and a report, idle and busy; main opens a space, a worker started in it joins main's room, exchanges a task and its report, is reached by `rewake attach`, and ends when main's run ends, `kill -9` included; each worker's session id in the space's record for a restore (answer 7); the mod not loading is named under `--bare`, `--safe-mode` and `disableAllHooks`; a version below 2.1.287 refused |
+| 4 Claude Code | the probe first ([research-claude-mod.md](../research-claude-mod.md)), its results written into research with the version (the first, October 13, 2026: [research-claude-mod.md](../research-claude-mod.md)); then the adapter and its mod; then the space, one step by the decision of October 18, 2026 ([stage4-space-steps.md](stage4-space-steps.md#the-build-steps)) | live: a Claude Code main and a Claude Code worker exchange a task, a question, a notify and a report, idle and busy; main opens a space, a worker started in it joins main's room, exchanges a task and its report, is reached by `rewake attach`, and ends when main's run ends, `kill -9` included; each worker's session id in the space's record for a restore (answer 7); the mod not loading is named under `--bare`, `--safe-mode` and `disableAllHooks`; a version below 2.1.287 refused |
 | 4b pi | pi's adapter on its own duplex JSON-lines protocol, its extension loaded for its run, a minimum version; first Wake, TurnBoundary and Conversation, then Telemetry and Control; a read-only reviewer profile ([stage4-reading-pi.md](stage4-reading-pi.md)) | live: a Claude Code main and a pi worker exchange a task, a question, a notify and a report, idle and busy, beside Claude Code workers in the same room; a pi worker opened in a space; a version below the minimum refused |
 | 5 compaction and context | the parity the room uses on 1.0.3: `rewake compact`, `interrupt` and the context in `list`, through the mod on Claude Code and natively on pi | live on both harnesses: main sees a worker's context fill, compacts it and interrupts a turn |
 | 6 release 2.0.0 | live checks, briefings, notes for running 2.0 beside 1.0.3, the npm package | the full workflow suite; the room moved to 2.0 under its own `REWAKE_DIR`, with a way back to 1.0.3 |
@@ -164,7 +164,7 @@ probe ([research-claude-mod.md](../research-claude-mod.md)):
    worktree's path and branch, its role and name, so that main can restore the agents it
    needs later. The space's keeper may therefore live inside main's process and end with
    it; a keeper outside it, a background session, and background workers (P16) lose their
-   purpose ([design-claude.md](design-claude.md#the-stage-4-probe)).
+   purpose ([research-claude-mod.md](../research-claude-mod.md)).
 8. **A room is one main by default** (the owner's direction, October 13, 2026). In effect a
    room is now one main Claude Code session with its spaces and workers. The room is not
    removed: communication between two mains may need it, far in the future. For stage 4's

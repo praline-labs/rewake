@@ -15,7 +15,7 @@ recorded below, and the probe's records on Claude Code 2.1.296
 ([research-claude-mod.md](../research-claude-mod.md)). Its rules, tests, build steps and open
 questions are in [stage4-space-steps.md](stage4-space-steps.md). A call, event or field of
 the mod API named here is named only to say what rewake does with it; its shape and limits
-are the `mods` skill's ([design-claude.md](design-claude.md#where-the-api-facts-live)).
+are the `mods` skill's ([claude.md](../claude.md)).
 
 ## The target
 
@@ -34,7 +34,7 @@ screen reaches the person is the shell's since October 19, 2026 ([shell.md](shel
 | Piece | Where | Why there |
 |---|---|---|
 | the mod | `internal/adapter/claude/mod/`: TypeScript sources, `plugin.json`, `hooks.json`, the generated protocol types; embedded with `embed` | answer 9: TypeScript only in the part inside the harness, versioned with the binary. Embedded, not generated: the sources are static, so they are read, validated and tested as files; what differs per run comes from the run's environment |
-| writing it for a run | `internal/adapter/claude`, in `Launch`: the embedded tree written into the run directory, `--plugin-dir <run dir>/mod` added | L1 and L3: one launch's option, gone with the run ([design-claude.md](design-claude.md#loading-the-mod-for-one-run)) |
+| writing it for a run | `internal/adapter/claude`, in `Launch`: the embedded tree written into the run directory, `--plugin-dir <run dir>/mod` added | L1 and L3: one launch's option, gone with the run ([claude.md](../claude.md#loading-the-mod-for-one-run)) |
 | the mod's endpoint | `internal/adapter/claude/modhost`: an HTTP server on the run's mod socket, each request checked by its peer, translated into the adapter API's calls | the host side of the adapter is Go (answer 9); it speaks the mod's protocol and nothing else, and reaches the core only through what the host hands it, as a `TurnBoundary` reaches a `TurnHandler` today |
 | the space host | `internal/host/spacehost`: opening and closing spaces, the hosted launch of a worker, its pseudo-terminal and size | a host job: it starts processes, lives with main's wrapper and writes records; harness-neutral, so a pi or Codex worker is the same code |
 | the terminal | `internal/host/terminal`: the pseudo-terminal by the standard library (Linux `/dev/ptmx` and its ioctls, `Setsid` and `Setctty`), the emulator from a library behind one small interface, the screen as styled rows | rewake runs on Linux only (it reads `/proc`), so a pseudo-terminal needs no dependency; the emulator is the one place a library enters, so swapping it touches one package |
@@ -103,8 +103,8 @@ longer than 20 s; a wait is a loop of polls. A request body is at most 64 KiB â€
 |---|---|---|---|
 | `hello` | every mod load | the session id, the harness version, the load's id and number | the run's role, whether it hosts spaces, the heartbeat's generation; 410 to a load a higher-numbered one superseded, naming that one's number |
 | `turn/start`, `turn/end` | every load's mod, for its own conversation's turns | the turn's id; at its end the end's id, the reason and the answer | a receipt once the core took it ([section 5](#5-reports)) |
-| `mod/alive` | every admitted load, in a loop | the load | within 15 s, done; 409 once its generation lapsed or is not the current one, and the mod says hello again; 410 once a later load superseded it ([the live set](stage4-turns.md#the-live-set)) |
-| `mod/ended` | every admitted load, at its start | the epochs of other runs whose ends the store keeps | those rewake proves ended ([the outbox](stage4-turns.md#the-mods-side)) |
+| `mod/alive` | every admitted load, in a loop | the load | within 15 s, done; 409 once its generation lapsed or is not the current one, and the mod says hello again; 410 once a later load superseded it ([the live set](../claude-turns.md#the-live-set)) |
+| `mod/ended` | every admitted load, at its start | the epochs of other runs whose ends the store keeps | those rewake proves ended ([the outbox](../claude-turns.md#the-mods-side)) |
 | `session/closing` | every admitted load, at `session.end` with an exit reason | the reason | done; a main in rewake's shell has the wrapper write the shell's closing mark ([section 7](#7-closing)) |
 
 **One description.** The protocol is one JSON schema,
@@ -213,7 +213,7 @@ and `turn.complete` of the session's own conversation go to the host as `turn/st
 `turn/end`, the answer as the report, an end retried under its id until its receipt comes; a
 heartbeat whose lapse withdraws what the mod proved. The confirmation through `classic.Stop`
 with `block` (O1) is a later step of stage 4, with P3. The design, what not holding costs and
-the build are [stage4-turns.md](stage4-turns.md), written for S4-6 on October 16, 2026.
+the build are [claude-turns.md](../claude-turns.md), written for S4-6 on October 16, 2026.
 
 Wake stays Claude Code's inbox socket of stage 3; a worker's notices reach it as they reach
 any Claude Code session.

@@ -169,7 +169,7 @@ func (claudeHarness) SingleUseFlags() []adapter.Flag {
 
 // Offers: Wake, and a turn boundary that the run's mod proves with its hello
 // from inside the harness, so only after the harness starts; it reports every
-// end and holds none open (docs/v2/stage4-turns.md).
+// end and holds none open (docs/claude-turns.md).
 //
 // Spaces: a main run hosts them once its mod's hello is admitted; a run whose
 // mod did not load has none. Conversation: --session-id <uuid> starts the new

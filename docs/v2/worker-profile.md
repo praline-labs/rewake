@@ -36,7 +36,7 @@ login ([research-launch.md](../research-launch.md#a-configuration-directory-of-t
 
 What the launch still adds: `--settings` with what this run alone gets, a JSON object of the
 worker's memory, `EnterWorktree` and, for a run with a mod, rewake's `statusLine` (the cache's
-ttl: [design-claude.md](design-claude.md#the-cache-ttl); the person's own `statusLine` in the folder's
+ttl: [claude.md](../claude.md#the-cache-ttl); the person's own `statusLine` in the folder's
 settings is run by it and printed) — allowed for a template that enters, denied for any
 other; `mcp.json` as `--mcp-config`; rewake's briefing in `--append-system-prompt`; the mod.
 Gone: `--setting-sources project,local`, the whole file as `--settings`, the folder as the plugin

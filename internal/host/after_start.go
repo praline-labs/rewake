@@ -15,7 +15,7 @@ import (
 // boundary proven by the run's own service is (awaitBoundary).
 // The launch refuses on a cause it knows the proof will not come, starts the
 // harness otherwise, and the run's availability waits for the proof instead
-// (docs/v2/stage4-turns.md#readiness-and-admission).
+// (docs/claude-turns.md#readiness-and-admission).
 
 // afterStartBound is adapter.AfterStartBound, a variable so a test can
 // shorten it.

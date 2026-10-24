@@ -22,7 +22,7 @@ interrupted. The behaviour in full is [turn-outcomes.md](../turn-outcomes.md).
   Known limit: only the fixture holds an end. Claude Code and pi report their turns without
   holding one (`HoldsEnd` false), so there an interim end without a new mark publishes its
   answer as final and closes the task early, and the briefing alone asks for the mark
-  ([stage4-turns.md](../v2/stage4-turns.md#what-not-holding-costs)).
+  ([claude-turns.md](../claude-turns.md#what-not-holding-costs)).
   Tests:
   - `internal/core/mail/confirm_test.go` `TestTheInterimRecordKeepsTheLastWord`
   - `internal/core/mail/confirm_test.go` `TestAnInterimTieDoesNotDependOnOrder`
@@ -60,7 +60,7 @@ interrupted. The behaviour in full is [turn-outcomes.md](../turn-outcomes.md).
   refused. On Claude Code the event is the mod's `turn/end` of the session's own
   conversation, its reasons `answered`, `aborted`, `refused` and `failed`; a subagent's turn,
   which carries `agentId`, reports nothing — neither its end nor its start
-  ([stage4-turns.md](../v2/stage4-turns.md#the-mods-side)). On pi, `agent_settled` reports
+  ([claude-turns.md](../claude-turns.md#the-mods-side)). On pi, `agent_settled` reports
   aborted, a final `stop` answered, and other stop reasons failed
   ([research-pi.md](../research-pi.md)).
   Tests:

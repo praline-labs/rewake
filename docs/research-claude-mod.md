@@ -1,6 +1,6 @@
 # Research: what a probe mod observed inside a running Claude Code session
 
-The live records of stage 4's probe ([design-claude.md](v2/design-claude.md#the-stage-4-probe)):
+The live records of stage 4's probe ([research-claude-mod.md](research-claude-mod.md)):
 what a mod loaded for one run was seen to do inside an interactive Claude Code session —
 start processes, hold a subagent with a worktree of its own, draw into that subagent's
 transcript and take keys there, and show a real pseudo-terminal's screen in it with a
@@ -40,7 +40,7 @@ so the dialog is met only in a directory outside it or in a probe's private HOME
 
 Whether `$.http.fetch` with `socketPath` connects from the harness process itself, which
 every check of the mod's endpoint rests on
-([design-claude.md](v2/design-claude.md#the-socket-and-its-peer)). Two runs, both on October 13,
+([claude.md](claude.md#the-peer)). Two runs, both on October 13,
 2026, Claude Code 2.1.296.
 
 ### The probe's kit, extended (`Na99qK`)
@@ -655,4 +655,4 @@ the types its settings list: `permission_prompt`, `idle_prompt`, `auth_success`,
 ## The prompt cache (October 23, 2026, 2.1.302)
 
 - `turn.step`'s `usage` (`TurnUsage`) carries the API's `input_tokens`, `cache_read_input_tokens` and `cache_creation_input_tokens` of each response: the source of the hit percent. It has no ttl or expiry; `PreModelSwitch` (`prompt_cache_warm`, `cache_ttl`) and a resume's `SessionStart` (`prompt_cache_likely_expired`) mention it only at their moments.
-- The status-line input has `prompt_cache` once a request was made: `warm`, `caching_observed`, `ttl` (`5m`/`1h`), `expires_at` (epoch seconds), `requests`, `misses`, `hit_ratio`, `cache_write_tokens` and more — read from the strings of the installed binary, not from a live sample (it needs a login). `statusLine.refreshInterval` is seconds, at least 1, beside the event-driven runs; the command inherits the harness's environment, `REWAKE_MOD_SOCKET` among it, and is a child of the harness process. The run's `--settings` `statusLine` beats the user settings'. See [design-claude.md](v2/design-claude.md#the-cache-ttl).
+- The status-line input has `prompt_cache` once a request was made: `warm`, `caching_observed`, `ttl` (`5m`/`1h`), `expires_at` (epoch seconds), `requests`, `misses`, `hit_ratio`, `cache_write_tokens` and more — read from the strings of the installed binary, not from a live sample (it needs a login). `statusLine.refreshInterval` is seconds, at least 1, beside the event-driven runs; the command inherits the harness's environment, `REWAKE_MOD_SOCKET` among it, and is a child of the harness process. The run's `--settings` `statusLine` beats the user settings'. See [claude.md](claude.md#the-cache-ttl).

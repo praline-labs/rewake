@@ -10,7 +10,7 @@ import (
 	"github.com/praline-labs/rewake/internal/infra/boottime"
 )
 
-// The run's turns as the mod reports them (docs/v2/stage4-turns.md#the-hosts-side):
+// The run's turns as the mod reports them (docs/claude-turns.md#the-hosts-side):
 // a start is passed on with no time, since the mod has none to give; an end is
 // captured at its first arrival and that capture is the end from then on,
 // however often the mod sends it again, until the core took it.

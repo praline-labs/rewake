@@ -1,6 +1,6 @@
 // Command protogen writes the types of the mod's protocol from its one JSON
 // schema: TypeScript for the mod, Go for its endpoint
-// (docs/v2/stage4-space.md#2-the-protocol). Run it from the module root after
+// (docs/claude.md#the-protocol). Run it from the module root after
 // editing the schema:
 //
 //	go run ./tools/protogen

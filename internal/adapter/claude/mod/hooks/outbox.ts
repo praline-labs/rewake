@@ -1,5 +1,5 @@
 // The ends of the run's turns not yet answered for good, and their one sender
-// (docs/v2/stage4-turns.md#the-mods-side). An end is frozen when it is made:
+// (docs/claude-turns.md#the-mods-side). An end is frozen when it is made:
 // written to the harness's store under the run's key before anything is sent,
 // and every attempt sends the same end until a receipt or a refusal that says
 // it can never be taken.

@@ -136,7 +136,7 @@ Every adapter serves the directory through `control.Serve` in its wrapper, which
 request to the harness:
 
 - **Claude Code**: the wrapper hands the request to the mod on its heartbeat's answer
-  ([design-claude.md](v2/design-claude.md#control)). The mod refuses a compaction during a
+  ([claude.md](claude.md#control)). The mod refuses a compaction during a
   turn, answers `requested`, runs the native compaction with the focus, and reports its
   result — tokens before and after, or the native reason it was skipped — for main's letter.
   A request the mod does not acknowledge within 5 seconds is `not answering` if it was never

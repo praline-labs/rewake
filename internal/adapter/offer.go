@@ -71,7 +71,7 @@ type TurnBoundaryOffer struct {
 	// AfterStart says the run proves its boundary only once its harness
 	// runs — the harness's own process says so — so a launch does not wait
 	// for it before the start; the run's availability waits for it instead,
-	// up to AfterStartBound (docs/v2/stage4-turns.md#readiness-and-admission).
+	// up to AfterStartBound (docs/claude-turns.md#readiness-and-admission).
 	AfterStart bool
 }
 

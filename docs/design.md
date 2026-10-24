@@ -50,7 +50,7 @@ and the thread — and what an adapter offers before any launch is its `Offers()
 ([adapter-api.md](rules/adapter-api.md#wake)). An optional transport-neutral reservation holds
 a destination across inbox readability and ACK; native RPC stays inside its adapter.
 The Claude Code adapter delivers straight to the session's socket, reports its turns through
-its mod ([stage4-turns.md](v2/stage4-turns.md)), and its wrapper also listens on a reply socket of its own beside the session's: Claude
+its mod ([claude-turns.md](claude-turns.md)), and its wrapper also listens on a reply socket of its own beside the session's: Claude
 Code reports there what its inbound gate did with a line, and only to the process that
 wrote the line, so the wrapper — the one writer of its session's notices — is the one
 listener ([delivery-adapters.md](delivery-adapters.md#claude-code)).

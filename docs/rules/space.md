@@ -117,7 +117,7 @@ shell replaced the host mode: the socket serves the raw stream only, to the shel
   peer is checked again before any effect of a hello and again before the answer.
   The turn's endpoints and the heartbeat follow the same check: the peer is checked again before
   each effect of a start, an end and a poll, and again before the answer
-  ([stage4-turns.md](../v2/stage4-turns.md#the-hosts-side)). Held since S4-6, October 16,
+  ([claude-turns.md](../claude-turns.md#the-hosts-side)). Held since S4-6, October 16,
   2026: the start and the end since its part A, the poll since its part B.
   Tests:
   - `internal/adapter/claude/modhost/server_test.go` `TestOnlyTheHarnessesOwnProcessIsServed`

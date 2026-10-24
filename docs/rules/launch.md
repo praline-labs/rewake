@@ -28,7 +28,7 @@ What rewake adds to a harness's launch, in the full wording of
   Claude Code the mod keeps the ends its host has not acknowledged in the harness's own store,
   outside the run's directory, and removes those of a killed run only once a later load's
   hello has the host prove that run ended, so they outlive it until a later run on the same
-  machine ([stage4-turns.md](../v2/stage4-turns.md#the-mods-side)). The removal by proof is
+  machine ([claude-turns.md](../claude-turns.md#the-mods-side)). The removal by proof is
   held by the tests below and by the mod's own in the harness's test kit ("only the keys of
   runs mod/ended answers ended are removed").
   Tests:

@@ -17,7 +17,7 @@ changes between releases. The `mods` skill holds the current API (October 11, 20
 decision: the documents do not copy it); where a fact below is about the mod API, read the
 skill, not this record, before a stage relies on it, and check it against the installed
 version before the stage 4 probe
-([design-claude.md](design-claude.md#the-stage-4-probe)). Each fact is marked:
+([research-claude-mod.md](../research-claude-mod.md)). Each fact is marked:
 
 - *(types)* — the 2.1.289 types;
 - *(docs)* — the documentation;
@@ -200,7 +200,7 @@ view, not the worker, and main's exit closes the space. The owner made main laun
 workers the target the same day — main
 creates a space, a tab over a pseudo-terminal rewake owns, and seats a worker in it
 ([the target](../archive/v2/stage4-audit.md#the-target-a-space)). The probe above is P15 of
-[design-claude.md](design-claude.md#the-stage-4-probe), which runs beside stage 4's probe by
+[research-claude-mod.md](../research-claude-mod.md), which runs beside stage 4's probe by
 main's decision of the same day.
 
 ## 2. A room panel in the main's screen
@@ -241,7 +241,7 @@ Three mechanisms the stage 4 probe could look at beside its own points:
   beside rewake's own notices.
 
 **Stage.** 4, as checks added to the probe
-([design-claude.md](design-claude.md#the-stage-4-probe)). Not commitments.
+([research-claude-mod.md](../research-claude-mod.md)). Not commitments.
 
 ## 4. Headless workers
 
@@ -271,7 +271,7 @@ The worktree's Git metadata lives in the main repository's `.git/worktrees/<name
 Code's own worktree lies inside the repository.
 
 **Stage.** 4 for the Claude Code side (the audit of
-[design-claude.md](design-claude.md#before-the-probe-what-claude-code-already-does) and
+[claude.md](../claude.md) and
 the probe), 5 for seating a Codex worker. Owner's idea, October 12, 2026.
 
 Weighed in the stage 4 audit, October 13, 2026

@@ -172,7 +172,7 @@ either it is in the catalogue and fully described, or it does not exist.
 
 ## Working on the Claude Code mod
 
-Claude Code's adapter in 2.0 is one mod ([docs/v2/design-claude.md](docs/v2/design-claude.md)).
+Claude Code's adapter in 2.0 is one mod ([docs/claude.md](docs/claude.md)).
 The mod API — its events, `$`, rendering, the plugin layout, how a mod is loaded, tested and
 debugged, and what changed between versions — is not written down in this repository, and it
 changes with every Claude Code release. Load the `mods` skill before planning, writing or

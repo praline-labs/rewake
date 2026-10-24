@@ -17,7 +17,7 @@ import (
 	"github.com/praline-labs/rewake/internal/adapter/claude/modhost"
 )
 
-// The status line of a worker (docs/v2/design-claude.md#the-cache-ttl): Claude
+// The status line of a worker (docs/claude.md#the-cache-ttl): Claude
 // Code runs `rewake statusline` after each response and on a timer, with its
 // own JSON on stdin. Its prompt_cache is the only place the cache's lifetime is
 // told — the mod cannot read it — so the command forwards it to the run's

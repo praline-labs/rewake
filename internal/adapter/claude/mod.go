@@ -18,7 +18,7 @@ import (
 
 // The mod rides with the binary and is written into each run's directory, so
 // a run loads the mod of the build that started it and nothing in the
-// person's settings changes (docs/v2/design-claude.md#loading-the-mod-for-one-run).
+// person's settings changes (docs/claude.md#loading-the-mod-for-one-run).
 // The files are named one by one: a pattern skips names that begin with a
 // dot, and the manifest's directory is one, while the tests and the schema
 // are no part of what a run loads.
@@ -75,7 +75,7 @@ func writeMod(dir string) error {
 
 // modRun is the service of a run that loads the mod: the run's mod endpoint
 // beside the inbox lane, the mod written before either starts. Its turns
-// reach the core through the endpoint (docs/v2/stage4-turns.md).
+// reach the core through the endpoint (docs/claude-turns.md).
 type modRun struct {
 	*lane
 	dir    string
@@ -103,7 +103,7 @@ type modRun struct {
 // and spaces with it on a run that hosts them
 // (docs/rules/adapter-api.md#spaces), and both go together when the mod's
 // heartbeat lapses, until a hello opens a generation again
-// (docs/v2/stage4-turns.md#the-live-set). Each report is the whole set.
+// (docs/claude-turns.md#the-live-set). Each report is the whole set.
 func (r *modRun) ReportLive(live func([]adapter.Capability)) { r.live = live }
 
 func (r *modRun) report(proven bool) {

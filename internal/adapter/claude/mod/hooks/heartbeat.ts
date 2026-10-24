@@ -1,4 +1,4 @@
-// The load's heartbeat (docs/v2/stage4-turns.md#the-mods-side): one held
+// The load's heartbeat (docs/claude-turns.md#the-mods-side): one held
 // mod/alive poll at a time for the newest generation a hello of this load was
 // given, each sent from a timer's callback once the one before is answered,
 // so the chain keeps going between turns and a reload cancels it with the

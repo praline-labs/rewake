@@ -77,7 +77,7 @@ func (e TurnEnd) Check() error {
 // ErrRunGone is Publish's or Confirm's answer to an end of a run proven no
 // longer to own its name: the core took nothing, and the same end sent again
 // has nowhere to go, so the adapter drops it rather than retry. It is never a
-// receipt (docs/v2/stage4-turns.md#the-hosts-side).
+// receipt (docs/claude-turns.md#the-hosts-side).
 var ErrRunGone = errors.New("the run this end belongs to is gone; nothing was taken")
 
 // TurnHandler is what the host gives a TurnBoundary before the run starts:

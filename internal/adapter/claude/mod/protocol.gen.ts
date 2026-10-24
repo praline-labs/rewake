@@ -2,9 +2,9 @@
 //
 // rewake mod protocol v1. The protocol between the mod inside the harness and its run's
 // wrapper: HTTP/1.1 over the run's mod socket, every endpoint a POST with a JSON body under
-// /v1/, every request checked by its peer (docs/v2/stage4-space.md#2-the-protocol). An endpoint
-// answers 200 with its answer, or another status with a Refusal. tools/protogen writes the Go
-// and TypeScript types from this file; edit it, never them.
+// /v1/, every request checked by its peer (docs/claude.md#the-protocol). An endpoint answers
+// 200 with its answer, or another status with a Refusal. tools/protogen writes the Go and
+// TypeScript types from this file; edit it, never them.
 
 /** The paths of the protocol's endpoints, each a POST. */
 export const paths = {

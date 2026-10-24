@@ -114,7 +114,7 @@ sender's name lock or cleans up registry records, and goes once through `PutOnce
 The mod reports the native context use, the model's window and the percentage, the
 configured model, activity, compaction state and the prompt cache, sampled after its hello,
 measurements, turn and compaction events, and each heartbeat answer; its observations stay
-fresh only while the current mod's heartbeat holds ([design-claude.md](v2/design-claude.md#telemetry)).
+fresh only while the current mod's heartbeat holds ([claude.md](claude.md#telemetry)).
 The window and percentage are copied as the harness reports them. A fresh conversation or a
 completed compaction may have a known window and unknown usage until another response. Effort
 is the one the main loop's latest model request asked for; until the first such request it is

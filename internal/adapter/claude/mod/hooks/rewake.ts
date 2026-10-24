@@ -3,7 +3,7 @@
 // own conversation: each start once, each end through the outbox until its
 // receipt comes. The socket's path and the run's epoch come from the run's
 // environment, so the same files serve every run
-// (docs/v2/stage4-space.md#2-the-protocol, docs/v2/stage4-turns.md).
+// (docs/claude.md#the-protocol, docs/claude-turns.md).
 import type { Register } from "claude-code";
 import type {
   EndReason,
@@ -145,7 +145,7 @@ async function hello(load: Load, request: HelloRequest, delay: number, renumbere
       return;
     }
   } catch {
-    // No answer is no proof of anything (docs/v2/design-claude.md#when-the-mod-does-not-load):
+    // No answer is no proof of anything (docs/claude.md#when-the-mod-does-not-load):
     // the wrapper says what it has not observed, and the session goes on.
   }
   const next = nextDelay(delay);
@@ -247,7 +247,7 @@ export const register: Register = (on) => {
 
   // A turn's start of the main loop is sent once and not retried: no start
   // time rides on it, so a lost one costs nothing
-  // (docs/v2/stage4-turns.md#the-start-time). A subagent's, which carries its
+  // (docs/claude-turns.md#the-start-time). A subagent's, which carries its
   // agent id, is not the session's turn and is not sent, as its end is not.
   on("turn.start", async ($, e, next) => {
     if (e.agentId === undefined) load?.management.started(e.turnId);

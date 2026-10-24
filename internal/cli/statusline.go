@@ -26,7 +26,7 @@ func readStatusLineInput(in *os.File, wait time.Duration) []byte {
 }
 
 // statuslineCommand is what a worker's harness runs as its status line
-// (docs/v2/design-claude.md#the-cache-ttl): called by the harness on its own,
+// (docs/claude.md#the-cache-ttl): called by the harness on its own,
 // never by an agent.
 func statuslineCommand(catalog adapter.Catalog) *Command {
 	return &Command{

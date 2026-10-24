@@ -118,7 +118,7 @@ const AfterStartBound = 30 * time.Second
 // starts, a capability its adapter offers that this run will not prove, and
 // why. A launch of a role that owes reports is refused on a withheld turn
 // boundary, naming the cause; any other launch goes on, the cause said as a
-// note (docs/v2/stage4-turns.md#readiness-and-admission).
+// note (docs/claude-turns.md#readiness-and-admission).
 type Withholder interface {
 	Withheld() []Withheld
 }

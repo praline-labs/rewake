@@ -56,7 +56,7 @@ built against it (`AGENTS.md`, "Build for failures that were seen").
     one end as its first capture: the event, the read boundary and both times fixed on its
     first arrival, kept when the core's attempt fails; a copy whose content differs from the
     first is refused and hands the core nothing — Claude Code's mod
-    ([stage4-turns.md](../v2/stage4-turns.md#the-hosts-side)); pi's adapter captures an end
+    ([claude-turns.md](../claude-turns.md#the-hosts-side)); pi's adapter captures an end
     once and retries that capture, refusing a second end of the same turn. The core answers
     a receipt only for an end it took: a run whose name is proven to have passed on gets no
     receipt and its end is not sent again.

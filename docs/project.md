@@ -233,7 +233,7 @@ By the kind of work. Every document is on [the map](README.md); the current plan
   [v2/design-rules.md](v2/design-rules.md), [delivery.md](delivery.md) and the
   documents it links to, [mailbox-records.md](mailbox-records.md).
 - **Changing an adapter or adding a harness**: [adapter-api.md](rules/adapter-api.md),
-  the harness's own design ([v2/design-claude.md](v2/design-claude.md),
+  the harness's own design ([claude.md](claude.md),
   [v2/stage4-reading-pi.md](v2/stage4-reading-pi.md)), [launch.md](launch.md), and its
   facts in research below.
 - **Changing the command line**: [design.md](design.md#interface),

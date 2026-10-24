@@ -337,7 +337,7 @@ write-claude (code) · working · ⎇ wt-fd7596 · <model> low · 23% 230k/1M ·
   palette's green, yellow or red from 50% and 80%; the cache in the palette's cyan while it is warm,
   faint once it expired.
 - **How fresh**: a Claude Code worker's mod samples after each main-loop step's response, at a
-  turn's end and with each heartbeat ([design-claude.md](design-claude.md)), so the context grows
+  turn's end and with each heartbeat ([claude.md](../claude.md)), so the context grows
   through a long turn; pi publishes on its own events. The poll adds up to a second.
 
 ## How rewake starts the shell, and how it ships

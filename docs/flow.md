@@ -98,7 +98,7 @@ same steps, with its name, role and room from the space's record.
    space's. Main stays silent; write reports like general. A role that owes reports is refused,
    exit 1, on a harness whose contract reports no turn's end, and on Claude Code when a cause
    known to keep the mod from loading stands; the mod proves
-   the boundary after the start ([stage4-turns.md](v2/stage4-turns.md#readiness-and-admission)).
+   the boundary after the start ([claude-turns.md](claude-turns.md#readiness-and-admission)).
    Selecting a role requests no access. The record and intro say why the role was taken:
    "rewake <harness> always starts main, one per directory", or "raised by main with rewake
    space open as <role>".
@@ -108,7 +108,7 @@ same steps, with its name, role and room from the space's record.
    - Claude Code: `--messaging-socket-path sock/<name>.<epoch>.sock`,
      `--append-system-prompt <intro>`, `--allowedTools "Bash(rewake:*)"` unless the
      line gives its own, `--plugin-dir` naming the mod written into the run's directory
-     ([design-claude.md](v2/design-claude.md#loading-the-mod-for-one-run)), and
+     ([claude.md](claude.md#loading-the-mod-for-one-run)), and
      `--session-id` naming the new conversation unless the line continues one; a worker
      also gets `CLAUDE_CONFIG_DIR` naming rewake's worker folder and a `--settings` of its
      run ([launch.md](launch.md#claude-code)). The mod tells the wrapper when a turn starts
@@ -269,7 +269,7 @@ why it was refused or failed — comes later as a notify from the worker
 
 The harness itself says when a turn is over, through its adapter in the wrapper: the
 fixture's program with an end frame, Claude Code through the mod's `turn/end`
-([stage4-turns.md](v2/stage4-turns.md)), pi through its extension's `agent_settled`. Every adapter's end goes through the same internal
+([claude-turns.md](claude-turns.md)), pi through its extension's `agent_settled`. Every adapter's end goes through the same internal
 reporting function. A subagent's turn is not reported and changes none of the
 session's waits.
 

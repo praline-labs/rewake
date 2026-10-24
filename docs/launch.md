@@ -285,7 +285,7 @@ rewake --command my-claude claude
     the way. An entry of the wrong kind in the folder refuses the launch naming the path.
 - Every role launches here since S4-6: the run's mod reports each turn's end once its
   hello is admitted, after the harness starts, and a task to the run fails until then
-  ([stage4-turns.md](v2/stage4-turns.md#readiness-and-admission)). A cause the adapter knows
+  ([claude-turns.md](claude-turns.md#readiness-and-admission)). A cause the adapter knows
   will keep the mod from loading refuses a role that owes reports before anything is
   started, exit 1, naming the cause; a silent role starts with the cause printed as a note.
 

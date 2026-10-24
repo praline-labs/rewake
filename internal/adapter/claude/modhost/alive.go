@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-// The heartbeat (docs/v2/stage4-turns.md#the-live-set): the run's current
+// The heartbeat (docs/claude-turns.md#the-live-set): the run's current
 // load, the order its hellos are bound in, its generation's polls and the
 // watch that withdraws what the mod proved when they stop. Every transition
 // — a hello that opens a generation, a lapse, the close — takes the next

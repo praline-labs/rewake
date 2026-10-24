@@ -102,7 +102,7 @@ been created yet, or is being recreated); otherwise `failed`.
 **Turn ends and the conversation.** Claude Code's turns come through rewake's mod, not
 through the socket: the mod sends `turn/start` and `turn/end` to the host over the mod↔host
 protocol, the end carrying its reason, its answer and the conversation it ran in
-([stage4-turns.md](v2/stage4-turns.md)). A delivery records no thread on Claude Code: the
+([claude-turns.md](claude-turns.md)). A delivery records no thread on Claude Code: the
 adapter names none when a message is made readable, so a report there never carries
 `threadChanged`.
 

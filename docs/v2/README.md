@@ -16,7 +16,7 @@ The design:
 - [design-rules.md](design-rules.md) — the core rules restated for 2.0: effects E1–E8, turn
   outcomes, what a launch adds L1–L3; the tool transport's T1–T11, the channel record's
   C1–C8 and grants left with their code on October 18, 2026.
-- [design-claude.md](design-claude.md) — the Claude Code adapter as one mod: loading, what
+- [claude.md](../claude.md) — the Claude Code adapter as one mod: loading, what
   happens when it does not load, the turn boundary, telemetry, control, wake, and the stage 4
   probe P1–P16 with what it answered.
 - [design-state.md](design-state.md) — the state root of 2.0, clearing the state of 1.x, one
@@ -29,11 +29,11 @@ Stage 3's document that the living ones cite:
 
 Stage 4, Claude Code's adapter as one mod, then the space:
 
-- [stage4-turns.md](stage4-turns.md) — S4-6, built and accepted October 16, 2026: a Claude Code
+- [claude-turns.md](../claude-turns.md) — S4-6, built and accepted October 16, 2026: a Claude Code
   worker's turns reported through the mod, the end retried under its id and taken once, the
   heartbeat, the known causes that refuse a reporting role. Open it before changing how a turn
   of a Claude Code session reaches the core.
-- [stage4-turns-build.md](stage4-turns-build.md) — S4-6's second half: its clauses in
+- [claude-turns.md](../claude-turns.md) — S4-6's second half: its clauses in
   `docs/rules/`, its build in three parts and the live acceptance.
 - [stage4-space.md](stage4-space.md) — the space's design of October 13, 2026; its keeper,
   screen and keys superseded on October 18, 2026. Open it for the hosted launch and the record.
