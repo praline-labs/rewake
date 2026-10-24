@@ -12,8 +12,8 @@ import (
 )
 
 // Every lookup a mail path decides by answers one of three things: found,
-// proven absent, or an error saying it could not tell (rule 6 of
-// docs/archive/mail-bridge-cli.md#the-rules-the-code-holds). Only "no such file" is
+// proven absent, or an error saying it could not tell (docs/rules/effects.md,
+// E6). Only "no such file" is
 // absence: a file that cannot be read or does not parse may hold exactly what
 // the caller was looking for, and each caller decides what an unknown stops.
 

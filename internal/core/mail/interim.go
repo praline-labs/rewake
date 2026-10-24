@@ -11,7 +11,7 @@ import (
 )
 
 // interimRecord is a run's last word on whether the work goes on
-// (docs/turn-end-recovery.md#the-interim-record): the operation that wrote it,
+// (docs/delivery-turn-end.md#the-interim-record): the operation that wrote it,
 // the time its turn ended on the boot clock, and either the pending line or
 // Settled. A settling end writes Settled rather than removing the record, so a
 // late end cannot bring back a line an end after it settled. An earlier

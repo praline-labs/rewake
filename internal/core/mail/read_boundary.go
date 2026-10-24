@@ -102,7 +102,7 @@ func markScopedAwaiting(dir, name, epoch string, message Message) error {
 }
 
 // onReadClock takes the next position on a run's read clock for one read or
-// one hold (docs/turn-end-recovery.md#the-read-clock), under the mailbox lock
+// one hold (docs/delivery-turn-end.md#the-read-clock), under the mailbox lock
 // the caller holds, in one order: the position is reserved in the durable
 // high-water record, write records it, and only then is the word that
 // completions capture their boundary from committed. So a boundary never

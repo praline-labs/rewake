@@ -16,8 +16,7 @@ import (
 )
 
 // The shared lookups answer found, proven absent, or an error: only a file
-// that is not there is absence (rule 6 of
-// docs/archive/mail-bridge-cli.md#the-rules-the-code-holds). These pin the primitives
+// that is not there is absence (docs/rules/effects.md, E6). These pin the primitives
 // and the effects nearest to them.
 
 // A letter that cannot be read, or does not parse, may be the one asked for:

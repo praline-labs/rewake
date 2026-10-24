@@ -19,10 +19,9 @@ import (
 
 // lockedCallers names, for each of mail's functions that run under a mailbox
 // lock their caller holds, the only production functions that may refer to
-// them (docs/v2/stage3-moves.md#s15-the-delivery-server-to-hostdelivery-codex).
-// Each takes no lock of its own, since the lock is not reentrant, so a caller
-// outside its section would run it unlocked and nothing at run time would
-// say so. The table is a discipline of the repository, not a capability of the
+// them. Each takes no lock of its own, since the lock is not reentrant, so a
+// caller outside its section would run it unlocked and nothing at run time
+// would say so. The table is a discipline of the repository, not a capability of the
 // lock: a new caller is reviewed here before it lands.
 var lockedCallers = map[string][]string{
 	"internal/core/mail.SweepFinishedLocked": {"internal/host/delivery.(*Server).sweepFinished"},

@@ -36,7 +36,7 @@ func startServing(ctx context.Context, request Request, self registry.Session, n
 		stops = append(stops, clock.Close)
 		// A timed start is the evidence a pending mark of an earlier turn
 		// is judged by when that turn's end was lost
-		// (docs/archive/mail-bridge-turns.md#a-pending-mark-at-its-turns-end); a
+		// (docs/rules/effects.md#receipts-retries-and-once-marks); a
 		// start that cannot be recorded leaves the mark unproven, which
 		// fails to the side of a report.
 		record := func(at int64) { _ = mail.RecordTurnStart(request.Dir, name, epoch, at) }

@@ -24,7 +24,7 @@ var removeWaiting = state.Discard
 // Settling never removes a letter's last copy. The letter is the proof that a
 // publication landed while its mark may still say only intent, and retiring
 // that proof is the sweep's alone, under the lock and by the live run
-// (docs/v2/stage3-publication.md#the-contract), which settling is not. So a
+// (docs/rules/effects.md#publication-once), which settling is not. So a
 // copy goes only beside another that stands, and a copy whose archive failed
 // stays where it is for the next pass.
 //

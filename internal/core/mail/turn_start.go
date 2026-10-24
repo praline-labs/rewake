@@ -10,7 +10,7 @@ import (
 )
 
 // The latest turn start of a run, as the host heard it from the harness
-// (docs/v2/stage3-steps-adapters.md, S7): what a pending mark needs to know
+// (docs/delivery-turn-end.md#pending-marks): what a pending mark needs to know
 // that its turn ended when the end itself was lost. A start recorded after a
 // mark's time proves the mark's turn over; one recorded before it, or none,
 // proves nothing.

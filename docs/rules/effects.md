@@ -1,21 +1,14 @@
+---
+description: E1–E8, what may decide a mail operation's effect and the order of a turn end's steps, and the rules the receipts of send and pending keep; open before changing how mail is written, read or published.
+---
+
 # Rules: the effects of a mail operation, E1–E8
 
-The rules every mail operation keeps — what an effect may be decided by, and in what
-order a turn end makes its effects — the current wording of
-[design-rules.md](../v2/design-rules.md#effects-e1e8), from `mail-bridge-cli.md` rules 1–8
-without the 1.x migration.
-
-Decided by the owner, October 18, 2026: the mechanics frozen on October 17 — the operator
-decision D1–D8 and `rewake decide`, the stops of a mailbox, the turn-end journals with
-their plan and seam, the once-marks of reports and the barrier that completed unfinished
-journals — is removed, and E1, E3, E6 and E8 are simplified to what the simple turn end
-keeps ([delivery-turn-end.md](../delivery-turn-end.md#the-end-of-a-turn)). No live loss,
-duplicate, stopped mailbox or decision was ever seen in real work; the mechanics itself
-stopped a mailbox on a file it did not know, and cost two full mailbox walks, about seven
-atomic writes and fifteen flushes on every turn end. A report lost when a process is
-killed in the milliseconds between two steps is asked for again by main (the owner,
-October 17, 2026). The rules as they stood until then, with D1–D8, are in git history and
-in [stage3-decision-recovery.md](../archive/v2/stage3-decision-recovery.md#its-rules).
+The rules every mail operation keeps: what an effect may be decided by, and in what order a
+turn end makes its effects. The path through the code is
+[delivery-turn-end.md](../delivery-turn-end.md#the-end-of-a-turn). A report lost when a process
+is killed in the milliseconds between two steps is asked for again by main; no mechanism is
+built against it (`AGENTS.md`, "Build for failures that were seen").
 
 ## The rules
 
@@ -23,31 +16,28 @@ in [stage3-decision-recovery.md](../archive/v2/stage3-decision-recovery.md#its-r
   earlier attempt left.** A receipt goes only when its effect is proven absent or proven
   done; a step not recorded as done is no proof it was not done. A turn end that failed
   part way leaves its wait standing, and a retry of the same event runs its steps again
-  from the disk. (M1 rule 1.)
+  from the disk.
 - **E2. A lock is removed only by whoever holds it**, and a call that took a lock checks
-  the file at the path is still its own. (M1 rule 2.)
+  the file at the path is still its own.
 - **E3. Every check that decides an effect runs under the lock that orders it, right
   before the effect, and again on a retry**, which is a new call with its own deadline.
   A turn end holds its own mailbox's lock throughout; a report is written into the
   recipient's mailbox without that mailbox's lock, since a letter is written atomically
-  and the recipient's sweep keeps a report its writer's wait still names. (M1 rule 3.)
+  and the recipient's sweep keeps a report its writer's wait still names.
 - **E4. A read's completion is one durable fact every channel shares.** A letter leaves
   `unread/` only by being read, and never comes back; a late acknowledgment finds it read
-  and marks nothing. (M1 rule 4.)
-- **E5. The size bound holds on the final encoded bytes of every answer, in one place**;
-  every text part names its letter, part, count and byte range. (M1 rule 5.) Since
-  October 18, 2026 no answer is cut: the bound and its parts were the mail tool's, and the
-  shell prints a read whole.
+  and marks nothing.
+- **E5. An answer is printed whole.** A read prints every letter it takes in full, and a
+  letter counts as read only once its output got through.
 - **E6. A lookup that decides a write has three outcomes: found, proven absent, or an
   error.** Only "no such file" proves absence. An error is not taken for absence: the
   operation that met it fails, writes nothing on it, and is retried; a letter is not
   written when a stage of its mailbox cannot be searched, and a wait record that cannot be
   read is not written over. Nothing else stops: an unknown or unreadable file in a mailbox
   stops no other call. Readers that only inform fold an error into their most cautious
-  answer. (M1 rule 6.)
+  answer.
 - **E7. Every effect has an immutable identity and a proven scope, and a retry advances it
-  only from what is on disk under that identity.** (M1 rule 7, clauses identity, clock and
-  scope.)
+  only from what is on disk under that identity.**
   - A turn end is one operation — write its reports, clear the waits they answer, take the
     kept answer they carry, record whether the end was interim — named by its run and its
     event, never by an attempt; a report's id is fixed by the wait it answers (`ReportID`),
@@ -56,23 +46,21 @@ in [stage3-decision-recovery.md](../archive/v2/stage3-decision-recovery.md#its-r
     clock, which numbers every read and every hold; a hold reserves its position, keeps the
     answer, then commits the clock, and a position is never issued twice. A held end
     confirmed again after a crash before the commit raises the clock to the position its
-    kept answer records, allocating none, so its continuation's boundary takes the answer
-    (S5).
+    kept answer records, allocating none, so its continuation's boundary takes the answer.
   - The turn's window on the boot clock picks the pending marks that make it interim,
     opening after the turn's start or the latest earlier end a done journal records,
     whichever is later; no end removes a pending mark, which lives as long as its run.
-  - Every 2.0 TurnBoundary names its event (a turn id); an end that names an event and
+  - Every turn boundary names its event (a turn id); an end that names an event and
     carries no boundary takes no effect on any attempt, and its waits stay owed.
   - An adapter whose ends come over a protocol and are retried hands the core every copy of
     one end as its first capture: the event, the read boundary and both times fixed on its
     first arrival, kept when the core's attempt fails; a copy whose content differs from the
-    first is refused and hands the core nothing — Claude Code's mod from S4-6
+    first is refused and hands the core nothing — Claude Code's mod
     ([stage4-turns.md](../v2/stage4-turns.md#the-hosts-side)); pi's adapter captures an end
     once and retries that capture, refusing a second end of the same turn. The core answers
     a receipt only for an end it took: a run whose name is proven to have passed on gets no
     receipt and its end is not sent again.
-- **E8. A turn end writes before it clears, and records itself done last.** (M1 rule 8,
-  simplified.)
+- **E8. A turn end writes before it clears, and records itself done last.**
   - Under the sender's mailbox lock, each report is written unless a letter of its id is in
     the recipient's mailbox in any stage, or every task its wait names already has a
     finished or failed report of the name there; then the waits are cleared, the kept answer
@@ -83,12 +71,65 @@ in [stage3-decision-recovery.md](../archive/v2/stage3-decision-recovery.md#its-r
     none runs the steps again, and finds its report written by its id.
   - A report goes only to the run of its recipient that is still the live run of the name;
     one to a run that ended or was replaced reaches nobody, and what it answered is cleared.
-  - A run that resumes a conversation does not take over a task that already has a finished
-    or failed report of its name in the sender's mailbox (`AdoptWaits`): an earlier run died
-    between writing the report and clearing the wait.
   - The recipient's sweep keeps a report whose writer's wait still names what it answers,
     so a retry that comes after a day still finds the letter. A done journal is kept while
     its run lives.
   - What a crash in the milliseconds between two steps can cost, and nothing more: a task
     shown once more as owed until the next end, a lost report main asks for again, a kept
     answer after an interruption carried by the next turn's report.
+
+## Receipts, retries and once-marks
+
+`rewake send` and `rewake pending`, run from a session's shell, change the mailbox under a
+receipt (`internal/cli/journal.go`, `internal/core/receipt`). What the receipts keep:
+
+- **Journaled before the effect.** A call writes its receipt — its run, its normalized
+  words (`receipt.Digest`), its phase and the step it is about to take — before the first
+  effect, saves each step before taking it, and keeps the answer it gave. A step it could
+  not journal is not taken.
+- **A retry is the same operation.** `rewake retry <token>` finishes, or shows again, what
+  the call with that receipt began; it cannot start a second one. A token names a record
+  of this run only, so it cannot reach a replacement's. The shell names no native turn, so
+  two calls with the same words are two operations; a call whose words match an operation
+  still open in this run does not run beside it, and names the receipt that finishes it.
+- **A heads-up is published at most once.** A journaled `--notify` fixes its id, text and
+  the recipient's run before it publishes, and is written under the recipient's lock
+  (`mail.PublishOnce`). Since finished mail is swept after a day, the recipient's mailbox
+  keeps a mark per published id for that run: `intent` before the letter is written,
+  `published` after; the sweep turns an intent into published before it removes the letter
+  the mark names. So an intent without its letter proves the letter was never written. A
+  mark that cannot be read, or says neither, proves nothing (E6): nothing is written over
+  it, published on it, or removed by it.
+- **A pending mark speaks for one turn.** A `rewake pending` records its text and the
+  boot-clock time it started (`At`) before it marks. Only the attempt that created the
+  record marks (`AttemptScope.First`): a retry from the shell or a later turn cannot show
+  that the operation's turn is still open. Under the mailbox lock, just before the mark, it
+  looks for an end of its run on record at or after `At`, or a turn start recorded after
+  it (`mail.RecordTurnStart`): either proves the turn ended, and it marks nothing and says
+  so, exit 1. A recorded start is the harness's own time of the turn's start, never when
+  the report arrived; a missing one proves nothing. A mark or a journal that cannot be read
+  leaves the operation open for a retry. The mark and an end's choice of its mark share the
+  mailbox lock, so a mark written before the end's journal is that end's to take, and one
+  after it is never written (`mail.EndedSince`).
+
+## Publication once
+
+A letter published once — a turn end's report, a heads-up (`mail.PublishOnce`) — is proven
+by the letter itself and by its recipient run's once mark, and both are guarded by the
+recipient's mailbox lock:
+
+- **One section.** The publisher takes that lock with a bounded wait and, inside one
+  section, reads the name's live run, then the evidence — the letter in every stage and the
+  run's mark, each read as E6 says — then writes intent, letter, `published`. A run read
+  live before the lock decides nothing; a live run that is not the letter's writes nothing
+  (`ErrRecipientEnded`). Inside the mailbox lock the run is read without the name lock
+  (`registry.LookupReadOnly`), which the registry forbids to a holder of a mailbox lock.
+- **The proof is retired under the same lock, by the live run.** A letter's last copy
+  leaves the mailbox only under its lock, and a run's marks only by a sweep that has read,
+  inside that section, that its own run is the name's live run and the marked one is not
+  (`SweepFinishedLocked`, the delivery server's `sweepFinished`). A sweep that cannot take
+  the lock, or whose run has ended, retires nothing. Settling moves a copy only beside
+  another that stands, so a copy whose archive failed stays for the next pass.
+
+So a sweep never runs between a publisher's read of the evidence and its writes, and a
+server of an ended run cannot remove the live run's letters and marks.

@@ -49,7 +49,7 @@ func landUnread(t *testing.T, dir string, report Message) string {
 
 // A refused letter whose waiting copy is gone has its readable copy as the
 // last; an archive into done/ that fails leaves that copy where it is, and
-// the next settling archives it (docs/v2/stage3-publication.md#the-contract).
+// the next settling archives it (docs/rules/effects.md#publication-once).
 func TestAFailedArchiveKeepsTheLastCopy(t *testing.T) {
 	lab := newTwoSessionLab(t)
 	report := lab.report(Finished)

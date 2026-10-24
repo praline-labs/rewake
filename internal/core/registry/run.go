@@ -25,8 +25,7 @@ func isCurrentBoot(boot string) bool {
 // the session it was written for, so a later session that happens to take the
 // same name does not receive somebody else's mail. A run names the boot as
 // well, since a pid and its start recur after a restart of the machine; an
-// epoch without one was written by a build before the turn journal
-// (docs/archive-1.x/protocol-cutover.md).
+// epoch without one was written by a build before the turn journal.
 func (s Session) Epoch() string {
 	return RunEpoch(s.ServicePID, s.ServiceStart, s.Boot)
 }

@@ -61,7 +61,7 @@ func handlePending(ctx *Context, call Call) error {
 	}
 	if at <= 0 {
 		// A mark with no time would belong to no turn
-		// (docs/turn-end-recovery.md#pending-marks).
+		// (docs/delivery-turn-end.md#pending-marks).
 		return failf("the time this call started cannot be read, so a mark could not be tied to this turn; nothing was marked")
 	}
 	model := pendingModel{Session: self.Name, Text: text}

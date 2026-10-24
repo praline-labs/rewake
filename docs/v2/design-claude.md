@@ -200,8 +200,8 @@ Completed compactions have a load-local count; the host folds its increases into
 count and bounded notification events. A reload keeps the run's count and marks coverage
 partial. Native manual and automatic compactions are observed through the mod's event hook;
 remote ones through the native call's result, so re-entry cannot count one twice. A skipped
-or failed compaction clears the in-progress state and adds no completion. Managed-policy
-limits and the tests' scope are in [the parity record](../research-claude-parity.md).
+or failed compaction clears the in-progress state and adds no completion. On a managed
+installation a native compaction is not counted ([research](../research-claude-mod.md#compactions-counted)).
 
 ## The cache ttl
 

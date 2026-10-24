@@ -12,7 +12,7 @@ import (
 
 // A turn end is recorded done as its last step (publishTurnContext), at
 // journal/<op>.done, named by its operation — the run and the event
-// (docs/turn-end-recovery.md) — so a retry of the same event finds its own
+// (docs/delivery-turn-end.md) — so a retry of the same event finds its own
 // and answers from it rather than run again. The record is kept for as long
 // as the run that wrote it: however late a retry comes it learns its end was
 // completed, and the next end's window opens after this one
@@ -118,7 +118,7 @@ func HeldEndTaken(dir, name, epoch, op string) (bool, error) {
 }
 
 // TurnWindowStart is where the window of a turn end of run epoch opens
-// (docs/turn-end-recovery.md#pending-marks): the later of the turn's start the
+// (docs/delivery-turn-end.md#pending-marks): the later of the turn's start the
 // event carries and the latest Ended of this run that a journal records below
 // ended; with neither, zero, which is before the run's first mark. So a start
 // that failed to be recorded widens nothing: a mark an earlier end of the run

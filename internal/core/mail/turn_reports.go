@@ -16,7 +16,7 @@ import (
 )
 
 // turnOp names a turn end's operation from its run and its event
-// (docs/turn-end-recovery.md#the-operation), so a retry of the same event
+// (docs/delivery-turn-end.md#the-operation), so a retry of the same event
 // finds its own journal. An end that names no event — none a harness's turn
 // boundary hands over since the Stop hook left in S9, only the tests' — is
 // never retried: its name is drawn. The kind is part of the event: a stop
@@ -43,7 +43,7 @@ func turnOp(self registry.Session, event TurnEnd) string {
 // the disk says: the wait still names what is owed, a report's id is fixed
 // by its wait, and a report found written is not written again.
 //
-// The scope is the event's (docs/turn-end-recovery.md#the-operation): waits
+// The scope is the event's (docs/delivery-turn-end.md#the-operation): waits
 // and the kept answer at or below its read boundary, the pending mark in its
 // window. mark is that mark, nil when there is none.
 func publishTurnContext(ctx context.Context, dir string, self registry.Session, event TurnEnd, currentThread string, waiters []Waiter, op string, mark *Mark) error {

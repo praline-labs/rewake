@@ -33,7 +33,7 @@ func owes(t *testing.T, dir string, self registry.Session, id string) bool {
 // A pending end that died after its journal was on record is completed whole
 // by the next look: the interim end stays on record for the next unmarked end
 // to be asked about, and the mark it used stays too, since no end removes one
-// (docs/turn-end-recovery.md#pending-marks).
+// (docs/delivery-turn-end.md#pending-marks).
 func TestARecoveredPendingEndKeepsItsInterimOnRecord(t *testing.T) {
 	dir, self, web := peerSession(t)
 	task := readKind(t, dir, web, mail.Task)

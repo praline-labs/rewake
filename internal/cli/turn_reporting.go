@@ -9,13 +9,13 @@ import (
 	"github.com/praline-labs/rewake/internal/core/role"
 )
 
-// A harness whose contract reports no turn's end — since S4-6 no harness of a
-// release, only a test's — cannot carry what a turn's end owes: a
+// A harness whose contract reports no turn's end — no harness of a release,
+// only a test's — cannot carry what a turn's end owes: a
 // session of a reporting role there would owe reports nobody sends, and a task
 // or a question to any session there would wait for an answer that never
 // comes. So both are refused before anything is claimed or written, exit 1
-// (docs/v2/stage3-steps-adapters.md, S9). Once a session runs, a task or a
-// question to it is decided by its live TurnBoundary (S11).
+// (docs/rules/adapter-api.md#the-capabilities). Once a session runs, a task
+// or a question to it is decided by its live TurnBoundary.
 
 // reportsTurns says a harness reports every turn's end. A var, so the tests
 // whose sessions stand on a harness of no particular contract can take one

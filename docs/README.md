@@ -38,18 +38,14 @@ Mail and reports:
 - [delivery-owed.md](delivery-owed.md) — `rewake inbox --owed` and `--awaited`: what a session still owes and what a run still waits on.
 - [delivery-sent.md](delivery-sent.md) — `rewake withdraw`, `rewake edit` and `send --to`: what a sender can still do with a sent message.
 - [delivery-adapters.md](delivery-adapters.md) — how a notice reaches a harness: the Claude Code socket line and receipts, the pi extension, startup gates.
-- [inbox-groups.md](inbox-groups.md) — grouped incoming mail: the session table, `--peek`, `--message <id>`, the window that fixes a group.
 - [mailbox-records.md](mailbox-records.md) — every kind of file a mailbox holds, a reference kept by hand.
 - [turn-outcomes.md](turn-outcomes.md) — turn ends that are not an ordinary report: a failed turn, a keyboard stop, `rewake pending`.
-- [report-publication.md](report-publication.md) — capturing and publishing a finished turn's report, the sequence word, receipt keys.
-- [turn-end-recovery.md](turn-end-recovery.md) — how a turn end is recovered: the operation's identity, the read clock, pending marks, what a retry finds.
 
 Main and its workers:
 
 - [session-state.md](session-state.md) — the telemetry line main sees for its workers: context, model and effort, compactions, staleness.
 - [v2/worker-profile.md](v2/worker-profile.md) — rewake's own Claude Code worker profile by launch options and `rewake claude` as main's whole launch in the room of its directory, workers raised only by main (built).
 - [v2/shell.md](v2/shell.md) — the shell, which replaced the host mode on October 19, 2026: a TypeScript application on OpenTUI and Solid in `shell/`, the screen of every main started at a terminal, a terminal pane per program fed from its host's socket in the raw mode, the spike's findings, the steps.
-- [session-activity.md](session-activity.md) — activity labels, compaction notices, a worker's departure or replacement announced to main.
 - [remote-control.md](remote-control.md) — `rewake compact` and `rewake interrupt`: who may call them, refusals, the control directory.
 - [remote-control-letter.md](remote-control-letter.md) — the letter that ends a compaction main asked for and the record that owes it.
 - [remote-control-tests.md](remote-control-tests.md) — the tests of `compact` and `interrupt`, file by file.
@@ -71,7 +67,6 @@ The rules and the code:
 Each fact carries where it was verified; they age with harness versions.
 
 - [research.md](research.md) — what only a running Claude Code session shows: the socket line, waking an idle session, the inbound gate.
-- [research-claude-parity.md](research-claude-parity.md) — context, compaction and interrupt through the mod: checks on 2.1.302 and live acceptance still open.
 - [research-claude-mod.md](research-claude-mod.md) — the dated records of stage 4's live probe of the mod on Claude Code.
 - [research-pi.md](research-pi.md) — pi 1.2.0 launch and extension facts, mock probes, telemetry and control, the adapter protocol and its limits.
 - [research-launch.md](research-launch.md) — what an installed binary answers: model and effort catalogues, repeatable flags, npm packages.

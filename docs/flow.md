@@ -1,3 +1,7 @@
+---
+description: The whole path of one message, from a launch through send, notice and read to the report, with every process, file and status on the way, and how main starts a worker in a space.
+---
+
 # The whole flow, end to end
 
 What happens from the moment a person types `rewake claude` to the moment a
@@ -11,7 +15,7 @@ from the code.
 
 | who | what it is | lives |
 |---|---|---|
-| **wrapper** | the `rewake claude` process — next `rewake pi` — the harness's parent | as long as its harness |
+| **wrapper** | the `rewake claude` or `rewake pi` process, the harness's parent | as long as its harness |
 | **harness** | Claude Code, pi, the ordinary program in the terminal | the session |
 | **agent** | the model inside the harness, calling `rewake send`, `rewake inbox`, `rewake whoami` from its shell | a turn at a time |
 | **sender** | any `rewake send` process: an agent's shell, a person's shell | until the status arrives |
@@ -157,7 +161,7 @@ session's shell, or from a person's shell in the same room. A shell without
    time-sortable. Nothing else is touched: the sender does not deliver. A `--notify`
    is first journaled under a receipt in the sender's mailbox and then written once
    under the recipient's lock, so a repeat or `rewake retry` cannot publish it twice
-   ([mail-bridge-cli.md](archive/mail-bridge-cli.md#receipts)).
+   ([rules/effects.md](rules/effects.md#receipts-retries-and-once-marks)).
 5. **The wait.** The sender polls `<id>.status` for up to `--wait` seconds (5
    by default; a question's delivery 5 at most) and prints one line: `Rewake: delivered to write-claude via socket`,
    `Rewake: pending for write-claude: …` or `Rewake: held for write-claude: …` (exit 3),
@@ -172,19 +176,16 @@ session's shell, or from a person's shell in the same room. A shell without
    task, and one report settles both. A short tail of the id is enough
    ([delivery-sent.md](delivery-sent.md)).
 
-Grants — `--grant-git` and `--grant-dir` on a task from main — left the code by the owner's
-decision of October 18, 2026 ([grants.md](archive/grants.md) says what they did).
-
 ## Act 3. The wrapper announces it
 
-The recipient's wrapper announces fixed groups. Later mail waits for its own group
-as soon as delivery is ready. Native start-or-steer reaches active work or wakes idle
-work without a required peek or terminal event. Only new member IDs are delivered. The initial burst window is
-150 ms. Mail that asks for nothing — a notify, a report — then waits for company: three
-seconds after the latest such arrival, four at most from when the earliest was written, and all of it goes
-in one notice. A task or a question does not wait, and takes whatever is waiting with it
-([delivery.md](delivery.md#the-notice)). It checks expiry/leases and reserves destinations for the
-[grouped inbox](inbox-groups.md) before readability.
+The recipient's wrapper announces fixed groups. Later mail waits for its own group as soon
+as delivery is ready. The notice reaches active work where its harness allows, or wakes idle
+work, without a peek or a terminal event. Only new member ids are announced. The first
+collection is 150 ms. Mail that asks for nothing — a notify, a report — then waits for
+company: three seconds after the latest such arrival, four at most from when the earliest was
+written, and all of it goes in one notice. A task or a question does not wait, and takes
+whatever is waiting with it. Each member's expiry and reservation are checked again before
+it is made readable ([delivery.md](delivery.md#the-notice)).
 
 1. **Readable first.** With the shared destination reserved, rechecks each message under
    the mailbox lock, records its delivery thread, and hard-links the message into `unread/`. An agent told
@@ -207,7 +208,10 @@ in one notice. A task or a question does not wait, and takes whatever is waiting
      minute takes the delivery back. The first notice to a new
      session waits three seconds from the launch, since until the session
      has drawn its interface the gate holds everything
-     ([delivery-adapters.md](delivery-adapters.md#claude-code-adapter)).
+     ([delivery-adapters.md](delivery-adapters.md#claude-code)).
+   - pi: send its extension a `wake` frame with the notice and the conversation it is for;
+     the extension steers it into a running turn after the tool batch, or starts a turn
+     ([delivery-adapters.md](delivery-adapters.md#pi)).
 
 4. **The status.** `delivered` (the waiting copy is removed, `unread/` keeps
    the message), `pending` (retried every two seconds), `held` (both copies stay
@@ -222,9 +226,9 @@ in one notice. A task or a question does not wait, and takes whatever is waiting
 ## Act 4. The agent reads
 
 The notice wakes the agent, which runs `rewake inbox` in its shell. Main also gets
-[availability notifications](session-state.md#availability-notifications) when peers
+[availability notifications](session-state.md#availability-notices) when peers
 become ready; a later main learns which peers were already available. The same
-main observer queues [compaction-complete and known-departure notices](session-activity.md),
+main observer queues [compaction-complete and known-departure notices](session-state.md#compaction-notices),
 and the letter that ends a compaction main asked for with `rewake compact`: the command
 returns once the compaction has started, and the outcome — the tokens and the count, or
 why it was refused or failed — comes later as a notify from the worker
@@ -265,7 +269,7 @@ why it was refused or failed — comes later as a notify from the worker
 
 The harness itself says when a turn is over, through its adapter in the wrapper: the
 fixture's program with an end frame, Claude Code through the mod's `turn/end`
-([stage4-turns.md](v2/stage4-turns.md)). Every adapter's end goes through the same internal
+([stage4-turns.md](v2/stage4-turns.md)), pi through its extension's `agent_settled`. Every adapter's end goes through the same internal
 reporting function. A subagent's turn is not reported and changes none of the
 session's waits.
 
@@ -273,10 +277,8 @@ session's waits.
    `awaiting/<own epoch>/`. A silent role emits no successful reports;
    failure callbacks still route errors. An identified turn carries its read boundary,
    and only waits read at or below it are this end's
-   ([delivery-turn-end.md](delivery-turn-end.md#the-end-of-a-turn)). Since October 18,
-   2026, by the owner's decision, there is no barrier, no stopped mailbox and no
-   `rewake decide`: a step that fails returns an error, and a retry or the next end runs
-   the steps again.
+   ([delivery-turn-end.md](delivery-turn-end.md#the-end-of-a-turn)). A step that fails
+   returns an error, and a retry or the next end runs the steps again.
 2. **The report.** For each waiting run, a `finished` message into that
    sender's mailbox: text is the final reply, `inReplyTo` lists the messages
    read from that run since the last report, `toEpoch` is that run — not
@@ -317,8 +319,8 @@ turn: background work still running, the owner, a refusal to be cleared — runs
 `rewake pending "<what it waits for>"` first. That one turn end then reaches the
 waiters as a `pending` message with that text first and the turn's own answer after it,
 owing nothing and settling nothing, and the next turn end without a mark is the report
-([turn-outcomes.md](turn-outcomes.md#interim-turn-ends-rewake-pending)), after the core
-has held it once, through the adapter, to ask whether the work is done.
+([turn-outcomes.md](turn-outcomes.md#interim-turn-ends-rewake-pending)); an adapter that can
+hold an end lets the core ask once, before that report, whether the work is done.
 
 ## A space: main starts a worker
 

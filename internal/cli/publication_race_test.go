@@ -21,7 +21,7 @@ import (
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
-// The two lock-race schedules of docs/v2/stage3-publication.md#tests for a
+// Two lock-race schedules of the rule docs/rules/effects.md#publication-once for a
 // heads-up, through rewake retry of its receipt: the same race as a turn-end
 // report's (internal/core/mail/publication_race_test.go), on the other path to
 // the same section.

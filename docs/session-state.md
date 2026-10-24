@@ -1,246 +1,157 @@
-# Primary session state for the orchestrator
+---
+description: What main sees of its workers — the state header above every message, the session table of rewake list, activity labels, availability, compaction and departure notices, where Claude Code's and pi's telemetry comes from, and how fresh it is.
+---
 
-September 19, 2026. State collection runs for every managed role, including main.
-Only a caller whose current registry name, epoch and main role are verified sees
-telemetry. Write/general and plain-shell output retain their previous text and
-JSON shape. Visibility is a separate CLI policy; no cross-room discovery or
-messaging is added. Unsupported adapters and absent snapshots remain unknown.
+# What main sees of its sessions
 
-Owner decisions: collect main's state for future access by another orchestrator,
-but expose state only to the current orchestrator now. The final header format
-starts with the actual session name and a colon, without a service prefix:
+State is collected for every session through its adapter's telemetry; only a caller whose
+current registry name, epoch and main role are verified sees it. Workers and plain shells get
+none of it, in text or JSON, and no cross-room discovery or messaging is added. An adapter
+that reports nothing, and a snapshot that is absent, read as unknown.
+
+## The state header
+
+Every message main reads — tasks, notes, reports, and a waiting question's direct answer —
+comes under a header that starts with the sender's session name and a colon:
 
 ```text
-write-codex: working | context 42% used / 272K | compactions 2
+write-claude: working | context 42% used / 272K | compactions 2 | model "…" | effort "high"
 
-from write-codex ...
+from write-claude ...
 <original message>
 ```
 
-Every fetched inbox kind receives the header, including notifications and reports.
-Owner decision, September 23, 2026, when the rest of the feed was trimmed: the header
-stays above every message main reads — not once per read, not only when a value
-changed — so main always knows each session's state at the message in front of it.
-Whoever next trims the feed leaves it there.
-Direct question answers use the same rule. [Current activity and service notices](session-activity.md)
-add primary status, compaction-complete and known-departure notifications. The [aligned session table](inbox-groups.md#session-table) adds these values and the
-confirmed configured primary-thread model and reasoning effort. The header is tool output,
-not a native chat message. Agent text, receipt IDs and message storage are unchanged.
-JSON nests `telemetry` before each message's original fields; list entries and
-direct answers also carry it only for main. Exact token counts are preserved.
+It stays above every message, not once per read and not only when a value changed, so main
+always knows each session's state at the message in front of it. The header is tool output,
+not a chat message; agent text, receipt ids and message storage are unchanged. JSON nests
+`telemetry` before each message's own fields; list entries and direct answers also carry it,
+only for main. Exact token counts are kept. A value that is unknown says so; one that is
+stale is marked `(stale)`, a partial compaction count `(partial)`, and a snapshot that is
+missing or stale altogether ends the line with `state unavailable/stale`
+(`internal/cli/session_state.go`).
 
-## Availability notifications
+## The session table
 
-After the child and inbox service start successfully, the wrapper records initial
-messaging readiness. A backend must also have an accepted initial delivery target;
-a socket harness must have its messaging socket. This requires no model turn or
-token event. Failed initialization is not announced. The marker is not a claim of
-continuous connectivity; reconnect does not create a new launch.
+`rewake list` prints one aligned row per session. The room appears once; a working directory
+and a harness common to every row appear once in the header, and differing values add
+Directory and Harness columns. A verified main sees Session, Role, Status, Model, Effort,
+Context, Compactions and Age, a Type column when some worker was raised for a type of work,
+and a Cache column when some harness reports its prompt cache
+(`internal/cli/session_table.go`). Worker and plain-shell tables leave out every telemetry
+column. Addresses and values are never cropped; quoted paths and settings escape control
+characters, so a value cannot introduce another row. Machine-readable output keeps the full
+model, exact values, field visibility and the empty list's shape.
 
-Only the current room-main wrapper scans readiness records, once per second. It
-publishes ordinary `notify` messages with frozen registered identity: exact name,
-role, harness, room and working directory. At fetch, the common main-only header
-also includes model/effort and context/compactions from that exact epoch's latest
-snapshot, as in list. Unknown state does not delay useful identity. JSON includes
-`availability` identity and the usual `telemetry` object. No separate list call is
-needed. The note owes no reply and cannot create a successful-report loop.
+## Activity
 
-Owner decision, September 23, 2026, when the rest of the feed was trimmed: the notice
-keeps its full block — its first line, then name, role, harness, room and cwd, one
-per line — rather than one line saying the session is back, so the reader never has
-to ask for them again. The departure notice keeps the same block for the same reason.
-Whoever next trims the feed leaves both as they are.
+Each snapshot carries the session's activity, with its own observation time and freshness.
+The labels are `idle`, `working`, `working (waiting state unknown)`, `waiting for <what>`,
+`not loaded` and `system error`; a known compaction in progress adds `; compacting`, and a
+session whose snapshot says its interrupted turns go unheard adds `; interruptions unheard`
+(no adapter of this build sets it). A worker waiting at a dialog no request carries to main
+reads `waiting at a dialog` in place of its activity, and main is told once
+([permission-requests.md](permission-requests.md#a-dialog-nobody-is-asked-about)). Unknown
+activity is never taken for idle.
 
-A main started later labels prior ready workers as already available, rather than
-new launches. Deterministic IDs include both main and worker epochs. Publication
-retries use the existing durable PutOnce path under the main mailbox lock; live
-epoch receipts also prevent repeats after ordinary mailbox retention. Reused names
-and a replacement main have different identities. Old wrappers without a readiness
-marker are not guessed ready. There is no cross-room scan.
+Current activity is not last outcome. A failed or interrupted turn does not latch an error
+label: a later idle displays idle. A completed compaction does not force idle or working;
+the header shows the latest state at retrieval. Idle alone does not establish that an
+assignment was abandoned, and triggers no restart or resend.
 
-The main waits for its usable delivery target before queuing availability notices.
-Storage/publication failures retry without blocking startup. Once queued, normal
-notify delivery, failure and expiry semantics apply; uncertain transport failures
-are not blindly replayed with a new ID. A failed announcement cannot abort either
-wrapper or alter ordinary tasks/reports. Workers receive no announcement telemetry.
+## Availability notices
 
-## Context and settings
+After the harness and the inbox service start, the wrapper records the session's messaging
+readiness: an adapter must also have an accepted first delivery target, and a socket harness
+its messaging socket. This needs no model turn. A failed start is not announced. The marker
+is no claim of continuous connectivity, and a reconnect does not make a new launch.
 
-On the current Claude Code adapter, the mod reports the native context use, model window
-and percentage, plus the configured model. It samples after hello, measurement and turn
-or compaction events, and each heartbeat answer. No rate limits are copied; effort remains
-unknown. A fresh conversation or completed compaction may have a known window and unknown
-usage until another native response. A lapse withdraws freshness, and a mod reload makes
-compaction coverage partial ([mod design](v2/design-claude.md#telemetry)).
+Only the current room's main wrapper scans readiness records, once a second, and publishes an
+ordinary `notify` with the frozen registered identity: its first line, then name, role,
+harness, room and working directory, one per line, so main never has to ask for them. At
+fetch, the header adds model, effort, context and compactions from that exact epoch's latest
+snapshot. JSON includes `availability` identity and the usual `telemetry`. The note owes no
+reply.
 
-The following calculation and settings correlation describe the older gateway collector.
+A main started later labels workers already ready as already available, rather than new
+launches. Ids include both main's and the worker's epochs, and publication goes once through
+`PutOnce` under main's mailbox lock, so a retry or a reconnect never repeats it; a reused name
+and a replacement main have different identities. Main waits for its own delivery target
+before queuing availability notices; storage and publication failures retry without blocking
+the start, and a failed announcement cannot abort either wrapper or alter tasks and reports.
 
-Context occupancy is the last reported `last.totalTokens`, never the accumulated
-session total. For known usage U and usable window W above baseline B=12000:
+## Compaction notices
 
-```text
-remaining = round(100 * max((W-B) - max(U-B, 0), 0) / (W-B))
-filled = 100 - remaining
-```
+Each completed compaction of a session increments its observed count, once per completion
+(deduplicated by the wrapper for its run; a new wrapper starts at zero). Main receives a
+no-reply notify, `Rewake: context compacted (compaction <n>).`, whose header shows the
+session's current activity and count; the worker is not woken by it. A compaction main asked
+for itself with `rewake compact` is the exception: main's letter of that compaction's outcome
+carries the count instead ([remote-control-letter.md](remote-control-letter.md)).
 
-The native small-window branch W<=B yields filled=100 when usage is known.
-Missing, null, negative or malformed numeric values stay unknown. Decimal K is
-rounded from W/1000 for text only; no additional headroom reduction is applied.
-Local additions after the last native update may be absent. This is a timestamped
-reported context, not continuously measured prompt size or cumulative spending.
+The adapter keeps a bounded tail of 64 completion cues in memory, which the snapshot worker
+persists and the main observer turns into notices. Each cue has its observation time and the
+wrapper's sequence, and a notice's identity includes both epochs and the sequence, so retries
+and reconnects publish it once. A late main ignores completions observed before its own start
+and learns current totals through availability. The tail is a best-effort handoff, not an
+event log: if observation or persistence lags past its capacity, older cues are not replayed;
+the cumulative count is independent of it.
 
-Correlated accepted start/resume/fork replies and applied settings notifications
-provide configured model/effort. A proposed settings request or its empty ACK is
-not confirmation. An observed metadata-only read can refresh loaded primary
-settings; no new metadata RPC or history read is issued for telemetry. If the
-experimental notification is absent, values remain stale/unknown until another
-confirmed snapshot. Null effort never becomes an invented default. Lifecycle replies
-must match the current selection generation and its accepted primary or proved fork
-candidate. A lifecycle reply can seed settings when no newer confirmed snapshot
-exists: proposals and rejections alone are not confirmation. Seeding does not clear
-an unresolved proposal or manufacture an applied-model-change barrier. An already
-observed turn boundary and its context survive that initial seed; rejecting the
-proposal lets new usage from the same running turn become fresh without another
-turn start. Valid pre-ACK applied snapshots retain precedence, and an actual applied
-settings change still rejects old-turn usage until a newly observed turn begins.
+## Departure notices
 
-Metadata reads retain the request generation and a separate proposal/rejection/
-notification fence. Confirmed request serials order eligible read replies: a later
-concurrent read can update settings, while a late older reply cannot overwrite it.
-Accepting a read advances that serial, not the mutation fence. Unloaded/unknown
-metadata also advances the ordering watermark without blocking newer eligible reads.
-A lifecycle seed never rewinds the watermark of a newer read.
-
-Settings requests mark old measurements stale and keep bounded per-request proposal
-identities. A rejection resolves only its own proposal. Once all proposals reject,
-prior confirmed settings and valid usage recover; a newer pending proposal remains
-pending. This correlation also survives a side workflow preserving the same primary.
-At most 256 unconfirmed proposals are retained; overflow stays uncertain until a
-confirmed settings snapshot, without unbounded growth. An applied model change clears old
-usage/window. To avoid attributing delayed usage from an already running turn to
-the new configuration, context waits for a newly observed turn start and its token
-update. Initial lifecycle/replayed usage can populate an otherwise fresh selection.
-A new primary intent clears the small connection-local cache; resume without a
-usage replay remains unknown. Confirmed side opening/closing preserves primary
-state; side and nested-thread updates cannot replace it. Unclassified selection
-and reconnects invalidate freshness.
-
-## Completed compactions
-
-The counter means unique observed primary `contextCompaction` item completions
-since wrapper start. Manual and automatic paths share that canonical event; no
-subtype is guessed. Item start can show `in progress` but never increments. Generic
-turn completion, compact ACKs, deprecated events and historical items embedded in
-resume/fork/read replies do not count. A live completion can count without its start.
-An active item also retains its turn identity: the matching failed/interrupted or
-completed terminal turn clears progress without incrementing. A different retained
-turn cannot clear a newer compaction; this applies to pre-ACK staged events too.
-
-Deduplication is wrapper-scoped by thread and item ID, with turn ID retained for
-correlation. It survives new/resume/fork/reconnect; a new wrapper starts at zero.
-During a pending fork, the still-live accepted parent remains eligible. Child events
-wait in bounded staging until the workflow proves primary or side; side completions
-are excluded. Known connection/selection gaps make coverage `partial`; missed events
-are not reconstructed from history.
-
-At most 4096 completed identities are retained for a wrapper. Once that bound is
-reached, unseen completions stop incrementing and coverage becomes partial; old
-identities are never evicted and recounted. Each connection stages at most 64
-compaction events and eight candidate thread snapshots. Staging overflow marks
-coverage partial without refusing delivery. A positively accepted primary (or proved
-fork child) displaces obsolete candidates before allocation, so a full candidate
-cache cannot permanently suppress its snapshot. This marks coverage partial and
-does not evict the separate completed-compaction dedup history. The displayed count is an observed
-lower bound whenever coverage is partial, not an estimate of unseen work.
-
-## Persistence and freshness
-
-An optional generic backend snapshot interface feeds one wrapper-owned worker,
-independent of socket readers, completion publication and mailbox delivery.
-It samples at most four times per second and atomically replaces one snapshot
-(maximum 16 KiB) under `observations/<name-and-epoch-digest>.json` in that room.
-There is no event backlog or monitoring process; a storage failure loses telemetry
-and is retried on the next sample without failing delivery. Shutdown waits at most
-500 ms for this worker; a kernel filesystem stall cannot be preempted. Epoch files
-remain with the private room state, retaining only the latest snapshot for each run.
-
-Visibility, sender-state and availability identity checks are non-mutating registry
-reads. They do not acquire cleanup/name locks while main's mailbox is held; normal
-registry cleanup stays with its existing explicit callers. This avoids coupling
-optional statistics to another session's name lock. It is not a claim that arbitrary
-kernel filesystem stalls are preemptible. Empty shell/worker lists retain the
-preexisting JSON `sessions:null` representation.
-
-Inbox and direct-answer lookup use the message sender's exact epoch, never a
-reused name's new run. A missing epoch/snapshot stays unknown. A stopped sender,
-a mismatched live registry epoch or a publication heartbeat older than two seconds
-marks cached data stale. The heartbeat's age is read from the boot clock reading the
-wrapper publishes with it (`publishedBoot`, since September 26, 2026), and from
-`publishedAt` only for a snapshot without one: the wall clock can be stepped by seconds
-between the publisher and the reader, and a step made a live snapshot read stale. The
-reading is not shown to agents. The snapshot can lag native events by a sampling interval.
-JSON separates publication time, last observation, context/settings observation
-times, selection freshness, field freshness and compaction coverage. Stale values
-may be displayed with explicit labels; cached data is not a fresh measurement.
+The main observer remembers the available worker epochs and their last snapshots. Registry
+removal, a definite replacement of the name's epoch, or confirmed process death produces one
+no-reply departure notice with the same identity block as availability. A socket reconnect or
+missing telemetry proves nothing. An absent pid, a different recorded start time or a zombie
+confirms departure; unreadable process identity and an unjudgeable namespace stay unknown,
+and the notice waits for a later scan. Exit causes are never labelled as crashes. A new main
+does not announce workers it never observed. The departure keeps the old name, epoch, role,
+harness, room and working directory, and its saved state is marked stale and never borrows a
+replacement run's. Publication rechecks the evidence inside main's mailbox, never takes a
+sender's name lock or cleans up registry records, and goes once through `PutOnce`.
 
 ## Claude Code source
 
-Added back through the mod on October 18, 2026: context, configured model, activity and
-compaction state use the existing snapshot; its observations stay fresh only while the
-current mod's heartbeat holds. The native context window and percentage are copied without
-the older gateway formula above. Effort is the one the main loop's latest model request asked
-for, seen by the mod since October 19, 2026; until the first such request it is the launch's
-own `--effort`, shown as `"high" (launch)` and in JSON with `reasoningEffortSource: "launch"`,
-and unknown when the launch passed none. A change made in the session shows from its next
-request ([the probe](research-claude-mod.md#effort)). Rate limits are not copied.
-The source and test-kit check on 2.1.302, with live acceptance pending, is in
-[the parity record](research-claude-parity.md).
-
-The older collection from hooks, a status-line tap and the 1.x plugin left in S9,
-October 11, 2026. Its field sources remain in
-[claude-telemetry.md](archive/1.x/claude-telemetry.md) and
-[claude-plugin.md](archive/1.x/claude-plugin.md).
+The mod reports the native context use, the model's window and the percentage, the
+configured model, activity, compaction state and the prompt cache, sampled after its hello,
+measurements, turn and compaction events, and each heartbeat answer; its observations stay
+fresh only while the current mod's heartbeat holds ([design-claude.md](v2/design-claude.md#telemetry)).
+The window and percentage are copied as the harness reports them. A fresh conversation or a
+completed compaction may have a known window and unknown usage until another response. Effort
+is the one the main loop's latest model request asked for; until the first such request it is
+the launch's own `--effort`, shown as `"high" (launch)` and in JSON with
+`reasoningEffortSource: "launch"`, and unknown when the launch passed none
+([research-claude-mod.md](research-claude-mod.md#effort)). Rate limits are not copied. A
+reload of the mod makes compaction coverage partial. On an organization-managed installation
+the harness skips a local plugin's compaction observer, so a native compaction is not counted
+there; one main asked for is still counted from its result.
 
 ## pi source
 
-Added October 18, 2026, verified against pi 1.2.0 with a mock model
-([research-pi.md](research-pi.md#telemetry-and-remote-control)). The per-run extension
-reads native context usage, window and percent, model and thinking level; it pushes
-changes and answers a one-second poll. Percentage is rounded and bounded to 100 without
-the 1.x baseline. Missing usage after compaction stays unknown until the next native
-usage update. No limits are reported.
+The per-run extension reads native context usage, window and percentage, model and thinking
+level, pushes changes and answers a one-second poll
+([research-pi.md](research-pi.md#telemetry-and-remote-control)). The percentage is rounded and
+bounded to 100. Missing usage after a compaction stays unknown until the next usage update. No
+limits are reported. The wrapper keeps only the current connection's increasing sample
+sequence; a lost connection or three seconds without a sample makes its values stale. A model
+change or a replaced conversation takes the new snapshot whole, unknown fields included.
+Manual and automatic completions increment one count for the wrapper's life; a reconnect
+makes coverage partial. No transcript file is read.
 
-The wrapper caches only the current connection's increasing sample sequence. A lost
-connection or three seconds without a sample makes its values stale. Model changes and
-conversation replacement take the new native snapshot whole, including unknown fields.
-Manual and automatic completion events increment one observed wrapper-lifetime count;
-a duplicate event sequence does not. Reconnect makes coverage partial. The last 64
-completion cues and bounded remote outcomes feed the usual notices and compaction letters.
-The native runtime supplies these values; no transcript file is read.
+## Persistence and freshness
 
-## Evidence and acceptance
+One wrapper-owned worker, independent of the socket readers, report publication and mailbox
+delivery, samples the adapter's snapshot at most four times a second and replaces one file of
+at most 16 KiB, `observations/<name-and-epoch-digest>.json` in the room. There is no event
+backlog or monitoring process; a storage failure loses that sample and is retried on the next
+without failing delivery. Shutdown waits at most 500 ms for this worker.
 
-Protocol research used reference revision `44b9011611e1f4213ef34bd51b33476475803a94`,
-against native version 0.154.0, which was the adapter target then; the target moved to
-0.155.1 on September 21, 2026 without repeating this research. Exact reference
-source/binary equivalence is not asserted. Relevant paths: `tui/src/token_usage.rs`,
-`app-server-protocol/src/protocol/v2/thread.rs`, `v2/item.rs`,
-`app-server/src/bespoke_event_handling.rs`, `request_processors/token_usage_replay.rs`
-and `core/src/context_manager/history.rs`. The facts and formulas came from the research notes of that
-task, whose package was deleted on September 22, 2026 — the paths above are what
-they pointed at, and they are still readable in the reference tree. No private
-transcript or prompt/config body was inspected.
-
-Deterministic socket, wrapper, storage and CLI tests cover the formula/unknowns,
-applied settings and stale windows, pre-ACK staging, side exclusion, manual/live
-completion, replay/dedup/epoch reset, reconnect coverage, storage failure, sender
-identity, main-only text/JSON visibility, initial readiness, late-main discovery,
-room/epoch isolation and availability retry dedup. Revision 4 passed review and
-was installed by the owner. Observed state/model/effort, join notices, worker JSON
-privacy, finished-report headers and one manual compaction passed owner checks;
-[the scoped acceptance record](session-activity.md#evidence-and-acceptance) records them.
-The reviewed activity/compaction/departure extension was then installed and passed
-the main owner scenarios on September 19: working/idle, worker replacement with stale
-old state, automatic manual-compaction notice and worker JSON privacy. The linked
-acceptance record preserves unexercised settings/waiting/error/automatic-compaction
-cases and the separate open readiness incident.
+Visibility, sender-state and identity checks are registry reads that take no cleanup or name
+lock while main's mailbox is held. Inbox and direct-answer lookups use the message sender's
+exact epoch, never a reused name's new run. A stopped sender, a live registry epoch that no
+longer matches, or a publication heartbeat older than two seconds marks the cached data stale.
+The heartbeat's age is read from the boot-clock reading the wrapper publishes with it
+(`publishedBoot`), and from `publishedAt` only for a snapshot without one, since the wall
+clock can be stepped between the publisher and the reader. The snapshot can lag native events
+by a sampling interval. JSON separates publication time, last observation, the context and
+settings observation times, field freshness and compaction coverage; stale values may be
+shown with their labels, never as a fresh measurement.

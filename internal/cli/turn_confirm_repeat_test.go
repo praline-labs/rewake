@@ -16,7 +16,7 @@ import (
 // The repeated end: an adapter whose answer to a hold was lost confirms the
 // same end again. It is answered from the record — the same reason, nothing
 // published, nothing kept again — and never taken for its own continuation
-// (docs/turn-end-recovery.md#a-held-end-confirmed-again).
+// (docs/delivery-turn-end.md#a-held-end-confirmed-again).
 
 // heldEnd is the end the repeated cases hold, with the boundary it was
 // captured with, which a retry carries unchanged.

@@ -16,7 +16,7 @@ import (
 // SweepFinishedLocked removes what a mailbox kept of mail answered long enough
 // ago that nobody is coming back for it. The delivery server's sweep calls it
 // inside its mailbox section, once it has read there that the run epoch is the
-// live run of the name (docs/v2/stage3-publication.md#the-contract). It takes no
+// live run of the name (docs/rules/effects.md#publication-once). It takes no
 // lock of its own, since the mailbox lock is not reentrant, and proves neither
 // the lock nor the run itself: its caller has. Its callers are held by
 // internal/layout_callers_test.go.

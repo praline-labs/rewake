@@ -28,7 +28,7 @@ func within(t *testing.T, dir, epoch string, start, ended int64) (string, bool) 
 
 // A mark decides every end whose window holds it, as often as it is asked:
 // no turn end removes a mark, so a retry of an earlier end still finds the
-// mark a later end also saw (docs/turn-end-recovery.md#pending-marks).
+// mark a later end also saw (docs/delivery-turn-end.md#pending-marks).
 func TestAMarkIsNeverTakenAway(t *testing.T) {
 	dir := stateDir(t)
 	if _, ok := within(t, dir, "e1", 100, 200); ok {

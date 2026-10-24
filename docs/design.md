@@ -25,7 +25,7 @@ In scope: Claude Code, and next pi (the owner's decision of October 18, 2026); t
 
 Out of scope: Codex, which does not return soon (the same decision); opencode, grok;
 macOS (needs replacements for `/proc`); delivery receipts from the recipient (added
-later for Claude Code's inbound gate, September 23, 2026 — [delivery-adapters.md](delivery-adapters.md#claude-code-adapter));
+later for Claude Code's inbound gate, September 23, 2026 — [delivery-adapters.md](delivery-adapters.md#claude-code));
 message history. (A UI was out of scope here; the owner's decision of October 19, 2026 made
 it the terminal shell, which main runs in — [v2/shell.md](v2/shell.md).)
 
@@ -53,7 +53,7 @@ The Claude Code adapter delivers straight to the session's socket, reports its t
 its mod ([stage4-turns.md](v2/stage4-turns.md)), and its wrapper also listens on a reply socket of its own beside the session's: Claude
 Code reports there what its inbound gate did with a line, and only to the process that
 wrote the line, so the wrapper — the one writer of its session's notices — is the one
-listener ([delivery-adapters.md](delivery-adapters.md#claude-code-adapter)).
+listener ([delivery-adapters.md](delivery-adapters.md#claude-code)).
 
 **Sender** — any process that calls `rewake send`. It doesn't deliver anything
 itself: it drops a file into the recipient's inbox and waits for a status. This
@@ -266,7 +266,7 @@ belongs to the harness.
   message as `<id> · <kind> · <time> · <state>` above its first line; main's state line reads `<session>: <activity> | context … |
   compactions …`, above a letter from a session, never one from a person's shell; the availability and departure notices open with `Session
   available.` or `Session is no longer available…` and keep their identity block, by
-  owner decision ([session-state.md](session-state.md#availability-notifications)).
+  owner decision ([session-state.md](session-state.md#availability-notices)).
   Refusals keep their full form. Every such line is listed in
   [the feed record](roadmap/2026-09-23-quiet-feed.md), and the lines of a view added
   since in that view's own entry — `--awaited`'s in
@@ -357,4 +357,4 @@ acceptance documents.
 7. Whatever rewake passes to a harness adds to the user's settings and never replaces them. A replacement-only briefing key is passed only when it cannot overwrite
    the user's instructions.
 
-[Compact session tables and grouped inbox reading](inbox-groups.md) preserve message identities while sharing a bounded collection window and destination admission.
+[Compact session tables](session-state.md#the-session-table) and [grouped inbox reading](delivery.md#reading-rewake-inbox) preserve message identities while sharing a bounded collection window and destination admission.

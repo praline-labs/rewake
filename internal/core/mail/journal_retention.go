@@ -11,7 +11,7 @@ import (
 )
 
 // sweepTurnRecords keeps the done journals of the live run for as long as it
-// lives, and removes those of ended runs (docs/turn-end-recovery.md): a retry
+// lives, and removes those of ended runs (docs/delivery-turn-end.md): a retry
 // of a turn end comes only from the run that heard it, and however late it
 // comes it must find its end completed, and the next end's window must open
 // after it. A live run's journal is looked at again a day later, not every

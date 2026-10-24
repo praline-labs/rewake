@@ -5,7 +5,7 @@ package mail
 
 // AttemptScope says where an attempt of an operation runs relative to the
 // turn the operation was made in
-// (docs/archive/mail-bridge-turns.md#a-pending-mark-at-its-turns-end). A pending
+// (docs/rules/effects.md#receipts-retries-and-once-marks). A pending
 // mark speaks for that turn only, and only an attempt shown to run in it
 // writes one.
 type AttemptScope struct {

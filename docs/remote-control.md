@@ -31,7 +31,7 @@ focus. The wrapper carries a request on the heartbeat's answer; the mod refuses 
 during a turn, answers `requested`, then reports the native result for main's letter.
 Interrupt waits for the matching aborted turn and records its requester in the stopped report
 and native history. Capabilities follow the mod's admitted hello and heartbeat. Live acceptance
-is pending ([design](v2/design-claude.md#control), [checked scope](research-claude-parity.md)).
+is pending ([design](v2/design-claude.md#control), [compactions counted](research-claude-mod.md#compactions-counted)).
 The fixture also serves `control.Serve` and the shared command and letter workflow case
 (`fixture-steered`, [testing-cases.md](testing-cases.md#a-stop-and-steering-a-session)).
 The historical Claude Code observations below describe the 1.x module.

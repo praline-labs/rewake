@@ -111,7 +111,7 @@ read "nothing owed" and skipped a new unread task twice:
   ([turn-outcomes.md](turn-outcomes.md#interim-turn-ends-rewake-pending)). Until S9,
   October 11, 2026, a forgotten mark after an interim end was caught once on Claude Code
   by its Stop hook's question; the core still holds such an end once for an adapter that
-  can hold it ([turn-outcomes.md](turn-outcomes.md#the-confirmation-on-claude-code)), and
+  can hold it ([turn-outcomes.md](turn-outcomes.md#the-confirmation)), and
   only the fixture harness can in this build, so the rule is the net.
 - After a compaction the task is re-read with `rewake inbox --owed` and new mail with
   `rewake inbox`; `--owed` counts what waits unread in a last line

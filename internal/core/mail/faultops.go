@@ -12,9 +12,8 @@ import (
 
 // The operation of this file lets the delivery server's tests, in another
 // package, build the fault schedule that no exported operation, file or
-// state.Fault reaches: a waiting copy whose removal fails
-// (docs/v2/stage3-moves.md, the fault exception (c)). It exists only in a
-// build with the rewaketest tag.
+// state.Fault reaches: a waiting copy whose removal fails. It exists only in
+// a build with the rewaketest tag.
 
 // failingRemovals holds, by path, the attempt counter of each waiting copy
 // whose removal a test made fail.

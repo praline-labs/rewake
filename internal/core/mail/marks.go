@@ -13,7 +13,7 @@ import (
 )
 
 // A pending mark says the turn now running is not the end of the work
-// (docs/turn-end-recovery.md#pending-marks). Each `rewake pending` call makes
+// (docs/delivery-turn-end.md#pending-marks). Each `rewake pending` call makes
 // a mark of its own, named by its run, the boot-clock time At its process
 // started, and a random id, so a later mark never writes over an earlier one.
 // No turn end removes a mark: the evidence an earlier end's retry needs is

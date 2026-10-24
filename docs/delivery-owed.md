@@ -1,3 +1,7 @@
+---
+description: Who owes whom a report — rewake inbox --owed for what a session has read and not reported on, rewake inbox --awaited for what a run sent and still waits on, and when a wait counts as answered or lost.
+---
+
 # Owed reports
 
 What a session owes and what it is owed, read back from the records rewake already
@@ -5,8 +9,6 @@ keeps: `rewake inbox --owed` shows a session again the tasks it has read and not
 reported on, and `rewake inbox --awaited` shows a run what it sent and still waits on.
 Both only read. The records themselves — the `awaiting/` wait records, statuses and
 reports — are described in [delivery.md](delivery.md).
-
-[Back to the delivery document](delivery.md).
 
 ## Reading again what is owed (`rewake inbox --owed`)
 
@@ -42,15 +44,15 @@ not know, by kind alone (`mail.AsksForWork`), so a task from a plain shell count
 is counted after the list, `Rewake: <n> unread task(s) or question(s) — run rewake
 inbox.`, and nothing is said when there is none; `--json` carries the count as
 `unread`, 0 included. The count says work is waiting, not that a report is; it counts what plain
-`rewake inbox` reads, mail written for an earlier run of the name included (October 19, 2026), which
-owes no report. Unread mail
+`rewake inbox` reads, mail written for an earlier run of the name included, which owes no
+report. Unread mail
 is looked at before what is owed, and a message in both is counted once, as owed: a
 parallel `rewake inbox` writes the wait record before it moves the message out of
 `unread/`, so a message read between the two looks is found at least once — the other
-order could miss it in both and answer "nothing owed" with nothing unread. "Nothing owed" is not "no work": a Codex worker that asked
-`--owed` after a compaction read that line and skipped a new unread task twice, which
-is why the count is there and why the playbooks tell a session to read new mail with
-`rewake inbox` as well (both dated September 25, 2026).
+order could miss it in both and answer "nothing owed" with nothing unread. "Nothing owed" is not "no work": a worker that asked `--owed`
+after a compaction and read only that line would skip a new unread task, which is why the
+count is there and why the playbooks tell a session to read new mail with `rewake inbox` as
+well.
 
 `--owed` is used alone: `--peek` and `--message` look at unread mail, and a
 combination is refused. A main session is refused too, naming why: its reads record no
@@ -86,19 +88,14 @@ is then placed:
 wait carries the wait's time prefix, and what follows it is a hash.
 
 A `finished` or `error` report in this run's own mailbox that names the id in
-`inReplyTo` settles it — from any run of the recipient, since a run that resumed the
-conversation reports on what it took over — and so does a wait record that no longer
-names it; the record is cleared only once the report is written. A message whose wait a
-resumed run took over is followed in that run's records
-([delivery.md](archive/1.x/delivery-conversation.md#a-resumed-conversation)), and listed as that run's. Settled messages are not listed.
+`inReplyTo` settles it, and so does a wait record that no longer names it; the record is
+cleared only once the report is written. Settled messages are not listed.
 
 A message read by a run that then ended, or whose name a new run has taken, is lost,
 whatever stage it had reached: it is listed as `no report coming: <name> ended; check its
 saved work and give the task to a new worker` (`… was replaced by a new run; …`) and counted apart from the reports still
-expected. No restore operation reopens a worker's conversation under its name, so
-nothing is promised for a resume (main's decision, October 19, 2026,
-after the audit of the briefings). The adoption code (`AdoptWaits`, the resume window) was
-deleted the same day, and `--awaited` no longer lists a task as resumable.
+expected. No restore operation reopens a worker's conversation under its name, so nothing
+is promised for a resume: a new run of a name takes over none of an earlier run's waits.
 
 Whether a missing wait record can be trusted depends on who could have removed it. Only
 the report removes one, and only a new run of the name sweeps the old run's directory

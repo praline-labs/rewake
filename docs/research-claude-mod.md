@@ -479,6 +479,18 @@ two Claude Code workers on haiku opened from main's shell mode:
   of 100, 1000, 150 and 60 and none, asked through `$.ui.open` of the open pane, each answered
   `{ isPlaced: true }` and none moved it. Before it was kept, the same reopens moved the dock.
 
+## Compactions counted
+
+October 18, 2026, Claude Code 2.1.302, a source and test-kit check with the `mods` skill of that
+version:
+
+- A compaction the mod asked for (`$.session.compact`) is counted from the result the call
+  returns; a native one, manual or automatic, from the `session.compact` event. The kit
+  counts a remote completion once.
+- `claude plugin validate --strict` warns that an organization-managed installation skips a
+  locally installed plugin's `session.compact` observer: there a native compaction is not
+  counted, while one main asked for still is, from its result.
+
 ## Effort
 
 October 19, 2026, Claude Code 2.1.302, a probe mod under `claude -p --plugin-dir … --model haiku

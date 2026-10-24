@@ -61,7 +61,7 @@ func (s *Server) answerExpired(message mail.Message, reserved bool) (bool, error
 // is the live run of the name, read inside that section. A publisher reads the
 // run, the proof and writes in one section of the same lock, so a sweep never
 // runs between them; a server of a run that has ended would otherwise remove
-// the live run's marks and letters (docs/v2/stage3-publication.md#the-contract).
+// the live run's marks and letters (docs/rules/effects.md#publication-once).
 func (s *Server) sweepFinished() {
 	ctx := s.lockContext
 	if ctx == nil {

@@ -44,7 +44,7 @@ func EndTurn(parent context.Context, dir string, self registry.Session, event Tu
 	if event.ID != "" && event.Boundary == nil {
 		// Its scope could come only from a record written at its first
 		// attempt, and a retry after that write failed would fix the scope of
-		// its own moment instead (docs/turn-end-recovery.md#the-operation).
+		// its own moment instead (docs/delivery-turn-end.md#the-operation).
 		// Its waits stay owed for the next end.
 		return "", errors.New("a turn end named by an event id carries no read boundary, so its scope is unknown and it reports nothing; its waits stay owed for the next turn end")
 	}
@@ -101,7 +101,7 @@ func EndTurn(parent context.Context, dir string, self registry.Session, event Tu
 var ErrNameLost = errors.New("this run no longer owns its name, so its turn end has nowhere to go")
 
 // turnMark finds the pending mark that decides a turn end: this run's latest
-// in the end's window (docs/turn-end-recovery.md#pending-marks). Only a
+// in the end's window (docs/delivery-turn-end.md#pending-marks). Only a
 // finish is softened by one, and an end whose time is not known has no
 // window. A mark that cannot be read may be this turn's, and stops the end.
 func turnMark(dir string, self registry.Session, event TurnEnd) (*Mark, error) {

@@ -14,7 +14,7 @@ import (
 
 // gateLab is the race lab's setup built on mail's exported operations, for
 // the tests of the server's own gate around the sweep — the live-run read and
-// the lock (docs/v2/stage3-publication.md): a letter R of api's, published
+// the lock (docs/rules/effects.md#publication-once): a letter R of api's, published
 // once, has landed in lead's run r under its marks, r has read it, and its age
 // has passed the sweep's cutoff.
 type gateLab struct {

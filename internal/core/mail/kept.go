@@ -22,14 +22,14 @@ import (
 // what the model said after the hold.
 
 // keptRecord is a held answer. A hold takes its place on the run's read clock
-// as a read does (docs/turn-end-recovery.md#the-read-clock): Seq is that
+// as a read does (docs/delivery-turn-end.md#the-read-clock): Seq is that
 // position, so an end with a read boundary takes the answer only when it was
 // kept at or below the boundary, and Version tells one kept answer from the
 // next, so the end that published one removes that one and never a later one.
 // Held names the operation of the end that was held and Reason what it was
 // answered, so the same end confirmed again — its answer lost — is answered
 // the same and never taken for its own continuation
-// (docs/turn-end-recovery.md#a-held-end-confirmed-again).
+// (docs/delivery-turn-end.md#a-held-end-confirmed-again).
 type keptRecord struct {
 	Epoch   string `json:"epoch"`
 	Text    string `json:"text"`
@@ -125,7 +125,7 @@ func KeptAnswerThrough(dir, name, epoch string, through *uint64) (KeptTaken, boo
 // holds the mailbox lock. A hold whose clock commit was lost to a crash
 // leaves its position above the clock's word; it is raised here, before the
 // answer, so the continuation's boundary takes the kept answer
-// (docs/turn-end-recovery.md#the-read-clock).
+// (docs/delivery-turn-end.md#the-read-clock).
 func HeldEnd(dir, name, epoch, op string) (string, bool, error) {
 	record, ok, err := readKept(dir, name, epoch)
 	if err != nil || !ok || op == "" || record.Held != op {

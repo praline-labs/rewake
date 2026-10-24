@@ -38,8 +38,8 @@ report and no error. It looked like a turn boundary that never fired.
 
 The main's run ends with its one turn, before the worker's turn does, and a report to an
 ended run reaches nobody by rule: the worker's end skips a waiter whose run is no longer
-the one holding its name (`internal/core/mail/turn_reports.go`; step 2 of
-[reconciliation](turn-end-recovery.md#reconciliation)).
+the one holding its name (`internal/core/mail/turn_reports.go`,
+[the end of a turn](delivery-turn-end.md#the-end-of-a-turn)).
 
 From a main in print mode send a `--question` with `--wait` within the shell tool's bound,
 which keeps the run alive until the answer, or run main interactively. Before suspecting the
@@ -63,7 +63,7 @@ UserPromptSubmit, while nothing was owed; with a task owed it would settle it th
 way — inferred, not observed.
 
 Across a `/clear` the report now carries `threadChanged`, so the sender is warned it may
-not answer the task (HF-10, [delivery-adapters.md](delivery-adapters.md#claude-code-adapter)).
+not answer the task (HF-10, [delivery-adapters.md](delivery-adapters.md#claude-code)).
 
 Mitigated, not removed, since September 23, 2026: rewake's function-hooks plugin hears
 the interruption, and the sender reads `stopped` for the task at once and waits for the
@@ -359,7 +359,7 @@ and a session slower to start can still hold the first line. It is then reported
 any hold — `held` to the sender, delivered or failed as the receipts come. What stays: a
 hold is still a hold — the message waits for the person at the receiving session, and
 rewake does not release it.
-The mechanism is in [delivery-adapters.md](delivery-adapters.md#claude-code-adapter). Details: [research-launch.md](research-launch.md#claude-codes-cross-session-inbound-gate),
+The mechanism is in [delivery-adapters.md](delivery-adapters.md#claude-code). Details: [research-launch.md](research-launch.md#claude-codes-cross-session-inbound-gate),
 [research.md](research.md#the-inbound-gate-on-rewakes-line).
 
 *September 23, 2026.*

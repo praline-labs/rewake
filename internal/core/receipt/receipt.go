@@ -1,6 +1,6 @@
 /*
 Package receipt is the journal of the mail operations a run performed through
-a journaled shell command (docs/archive/mail-bridge.md#receipts-retries-and-deadlines).
+a journaled shell command (docs/rules/effects.md#receipts-retries-and-once-marks).
 
 An operation is journaled before it changes anything, and its record holds what
 it has done so far and what it answered. rewake retry finds the record by its

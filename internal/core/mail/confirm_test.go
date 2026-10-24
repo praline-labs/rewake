@@ -44,7 +44,7 @@ func TestAKeptAnswerBelongsToItsRun(t *testing.T) {
 
 // A hold takes its place on the read clock: an end with a boundary captured
 // before the hold does not take the answer, one captured after does, and an
-// end heard once takes it as it finds it (docs/turn-end-recovery.md#the-read-clock).
+// end heard once takes it as it finds it (docs/delivery-turn-end.md#the-read-clock).
 func TestAKeptAnswerIsTakenOnlyAtOrBelowTheBoundary(t *testing.T) {
 	dir := stateDir(t)
 	if err := KeepAnswer(dir, "api", "1.1", "held", "", ""); err != nil {
@@ -115,7 +115,7 @@ func interimNow(t *testing.T, dir string) *interimRecord {
 
 func line(text string) *string { return &text }
 
-// The interim table (docs/turn-end-recovery.md#the-interim-record): a record
+// The interim table (docs/delivery-turn-end.md#the-interim-record): a record
 // of this run is written over only by an end that ended later, a retry of the
 // same operation is done, and a tie is fixed whatever the order of retries.
 func TestTheInterimRecordKeepsTheLastWord(t *testing.T) {

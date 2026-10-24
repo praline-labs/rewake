@@ -90,7 +90,7 @@ func continueHeld() string {
 // eventEnds counts the turn ends a session acted on that were named by their
 // event: each leaves a journal named from its run and event, 32 hex digits,
 // kept while the run lives; one that named no event has a drawn name
-// (docs/turn-end-recovery.md#the-operation).
+// (docs/delivery-turn-end.md#the-operation).
 func eventEnds(iso *Isolation, name string) int {
 	found, _ := filepath.Glob(filepath.Join(iso.Room(iso.HomeRoom()), "inbox", name, "journal", "*"))
 	count := 0
