@@ -13,7 +13,8 @@ Read `docs/project.md`, then `docs/flow.md` — the whole path of a message in o
 `docs/roadmap/README.md`: what is open and the order of work, a step closed by its acceptance,
 not by code existing. Then by the work, through the map `docs/README.md`: `docs/rules/` before
 changing how mail or launches behave, `docs/traps.md` when something misbehaves, research for
-a harness's facts, re-checked before touching an adapter.
+a harness's facts, re-checked before touching an adapter. The project's own words are in
+`GLOSSARY.md`, where each kind of knowledge goes is in `SHIFT.md`.
 
 `archive/` and `docs/archive/` hold the 1.x code and the records of finished work, Codex's
 among them; they stay as they are. Do not read them unless a task needs a fact only they hold,
