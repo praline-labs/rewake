@@ -243,8 +243,10 @@ The caller decides whether to resend.
 
 ## Known limits
 
-- The answer of a held turn whose run ended is never published: if that run's end never
-  published it either, the tasks are still answered by the next run's end, without that text.
+- The answer of a held turn whose run ended is never published. A later turn of the same run
+  answers its tasks, without that text; a new run of the name does not, since it takes over
+  none of an earlier run's waits, and main sees those tasks as lost
+  ([delivery-owed.md](delivery-owed.md)).
 - An end with an id and no boundary reports nothing; its waits stay owed for the next end.
 - An end heard before an earlier end of its run is recorded done may share a mark with it:
   both are interim, once.

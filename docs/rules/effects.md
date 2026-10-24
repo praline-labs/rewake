@@ -114,9 +114,10 @@ receipt (`internal/cli/journal.go`, `internal/core/receipt`). What the receipts 
 
 ## Publication once
 
-A letter published once — a turn end's report, a heads-up (`mail.PublishOnce`) — is proven
-by the letter itself and by its recipient run's once mark, and both are guarded by the
-recipient's mailbox lock:
+A heads-up published once — a journaled `--notify` (`mail.PublishOnce`) — is proven by the
+letter itself and by its recipient run's once mark, and both are guarded by the recipient's
+mailbox lock. A turn end's report does not take this path: it is written under the sender's
+lock, without a once mark (E3, [delivery-turn-end.md](../delivery-turn-end.md#the-end-of-a-turn)).
 
 - **One section.** The publisher takes that lock with a bounded wait and, inside one
   section, reads the name's live run, then the evidence — the letter in every stage and the
