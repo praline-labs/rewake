@@ -13,6 +13,7 @@ import { Closing } from "./closing.tsx";
 import { askColors, seedOf } from "./colors.ts";
 import { endMain, tailText, watchTerminal } from "./ending.ts";
 import { type Command, isSuspend, prefixHandler } from "./keys.ts";
+import { closingLayer } from "./lifting.ts";
 import { type PaneTerminal, paneHooks } from "./pane.ts";
 import { pollRoom, type Space, spacesOver } from "./room.ts";
 import { Scanner } from "./scan.ts";
@@ -49,38 +50,7 @@ const [chosen, setChosen] = createSignal<string>();
 const [zoomed, setZoomed] = createSignal(false);
 // prefixWaits is a typed Ctrl+\ waiting for its command.
 const [prefixWaits, setPrefixWaits] = createSignal(false);
-// closing is set when main's end begins: from then until the shell exits the
-// screen is the closing layer alone, and once main's end is sure the keys
-// reach no program. "left" is a layer begun by main leaving its screen alone,
-// under which main keeps its focus and keys: a leave may be no end.
-const [closing, setClosing] = createSignal<"" | "left" | "sure">("");
-// closingAt is when the closing layer began, so it is shown at least
-// closingShown before the shell exits.
-let closingAt = 0;
-const closingShown = 600;
 const workersBound = 10_000;
-// closingSign is a closing begun by a sign of main's alone — main leaving its
-// screen, the earliest, or main's closing mark — lifted when main comes back
-// to its screen, or still runs closingLift after the last sign: a screen that
-// hid a main going on would leave the person no way to it.
-let closingSign = false;
-let liftTimer: ReturnType<typeof setTimeout> | undefined;
-const closingLift = 5000;
-function beginClosing(sign?: "left" | "mark") {
-  if (closing() === "sure" && !closingSign) return;
-  clearTimeout(liftTimer);
-  closingSign = sign !== undefined;
-  if (closingSign) liftTimer = setTimeout(liftClosing, closingLift);
-  if (!closing()) closingAt = Date.now();
-  if (sign !== "left") setClosing("sure");
-  else if (!closing()) setClosing("left");
-}
-function liftClosing() {
-  if (!closingSign || ending) return;
-  clearTimeout(liftTimer);
-  closingSign = false;
-  setClosing("");
-}
 // suspendSentAt is when the person's Ctrl+Z last went to main: a leave of the
 // screen within suspendWindow after it is the suspend, not an end. Claude
 // Code 2.1.302 leaves 4 ms after the key.
@@ -92,6 +62,12 @@ const paneOf = (id: string | undefined) => allPanes().find((p) => p.id === id);
 let main: MainRun | undefined;
 let mainTail = "";
 let ending = false;
+const {
+  closing,
+  begin: beginClosing,
+  lift: liftClosing,
+  remaining: closingRemaining,
+} = closingLayer(() => ending);
 let stopRoom = () => {};
 
 const renderer = await createCliRenderer({
@@ -388,9 +364,7 @@ async function finish(code?: number, lost = false) {
     await Promise.all([
       spacesOver(rewake, room, ids, workersBound),
       // Begun by a sign of main's, the layer may have shown long enough already.
-      new Promise((resolve) =>
-        setTimeout(resolve, Math.max(0, closingAt + closingShown - Date.now())),
-      ),
+      new Promise((resolve) => setTimeout(resolve, closingRemaining())),
     ]);
   }
   renderer.destroy();
