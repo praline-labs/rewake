@@ -9,7 +9,6 @@ pre-commit:
       glob: "*.{ts,tsx}"
       exclude:
         - "archive/**"
-        - "docs/archive/**"
       run: biome check --write --no-errors-on-unmatched {staged_files}
       stage_fixed: true
 
@@ -18,7 +17,6 @@ pre-commit:
       glob: "*.go"
       exclude:
         - "archive/**"
-        - "docs/archive/**"
       group:
         piped: true
         jobs:

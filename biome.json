@@ -16,7 +16,6 @@
       "!internal/adapter/claude/mod/protocol.gen.ts",
       "!**/node_modules",
       "!archive",
-      "!docs/archive",
       "!.scratch",
       "!.shift"
     ]

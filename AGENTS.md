@@ -16,10 +16,9 @@ changing how mail or launches behave, `docs/traps.md` when something misbehaves,
 a harness's facts, re-checked before touching an adapter. The project's own words are in
 `GLOSSARY.md`, where each kind of knowledge goes is in `SHIFT.md`.
 
-`archive/` and `docs/archive/` hold the 1.x code and the records of finished work, Codex's
-among them; they stay as they are. Do not read them unless a task needs a fact only they hold,
-and leave them out of every count, search, audit and clean-up: their lines are not rewake's code,
-tests or documents.
+`archive/` holds the 1.x code, Codex's among it; it stays as it is. Do not read it unless a
+task needs a fact only it holds, and leave it out of every count, search, audit and clean-up:
+its lines are not rewake's code or tests.
 
 ## Keeping the documentation true
 

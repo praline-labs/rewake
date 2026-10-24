@@ -4,8 +4,8 @@ New to the project: read [project.md](project.md) first; the order to start a se
 in `AGENTS.md`.
 
 One line per living document, grouped by what a reader wants from it. A subdirectory with an
-index of its own is linked here rather than repeated: [rules/](rules/README.md),
-[roadmap/](roadmap/README.md) and [archive/](archive/README.md). The map
+index of its own is linked here rather than repeated: [rules/](rules/README.md) and
+[roadmap/](roadmap/README.md). The map
 is kept by hand: a change that adds, removes or renames a document, or changes what one is
 for, updates this file in the same commit; no test checks it.
 
@@ -77,10 +77,6 @@ Each fact carries where it was verified; they age with harness versions.
 ## When something behaves unexpectedly
 
 - [traps.md](traps.md) — what behaves other than expected, by symptom, before assuming a new defect.
-
-## History
-
-- [archive/README.md](archive/README.md) — the records of 1.x, the closed stages of 2.0, old reviews and research; bytes kept as they were.
 
 ## Names in records and addresses
 
