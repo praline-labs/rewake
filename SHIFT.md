@@ -10,7 +10,8 @@ The owner's boundary (`knowledge = "split"` in `.shift/settings.toml`):
 - A fact about a harness or about rewake itself goes into the project: `docs/` — the research
   documents, `docs/traps.md`, the documents of how rewake works. A lesson about how we work and a
   trap of a tool go to `.shift/knowledge/`, kept by the agents outside git.
-- The order of work and the journal of what was done — `docs/roadmap/`; how the project is built
+- The open work and its order — `docs/roadmap/README.md`; a landed step leaves it, its commit's
+  subject is its record, and what it taught goes into the living documents. How the project is built
   and its conventions — `AGENTS.md`, which also says how the documents are kept true.
 - The project's own words — `GLOSSARY.md`; the owner's decisions in force — `.shift/OWNER.md`;
   open work — `.shift/TASKS.md` and its tasks.

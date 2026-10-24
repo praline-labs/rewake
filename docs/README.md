@@ -15,7 +15,7 @@ for, updates this file in the same commit; no test checks it.
 - [flow.md](flow.md) — the whole path of one message, Acts 1–5: start, send, announce, read, report back.
 - [flow-endings.md](flow-endings.md) — the rest of the flow: a blocking question, a notify, the session's end, where the flow can stall.
 - [design.md](design.md) — the specification: scope, process model, state directory, rooms, environment, CLI contract, dated decisions.
-- [roadmap/README.md](roadmap/README.md) — what is done and the order of work from here; the list of roadmap entries lives only there.
+- [roadmap/README.md](roadmap/README.md) — the open work and its order, and the ideas not scheduled.
 
 ## How it works
 
@@ -24,8 +24,8 @@ Sessions and launches:
 - [design.md](design.md#session-record) — the session record: every field, the boot, how a record is published, updated and pruned.
 - [roles.md](roles.md) — roles and names: the catalogue, what each role is told and reports, how a role and a name are chosen.
 - [launch.md](launch.md) — the wrapper's launch sequence, signals, main in the room of its directory, the harness flags, the intro.
-- [launch-defaults.md](launch-defaults.md) — model and effort defaults nobody typed; the worker aliases, main's catalogue for `space open --alias`, and which flags a typed one replaces ([the step](roadmap/2026-10-19-worker-catalogue.md)).
-- [worker-types.md](worker-types.md) — the kinds of work a worker is raised for: the built-in, user and project types, `[types] off`, `space open --type`, the briefing's section and the memory by type; a project's `.rewake/` ([the step](roadmap/2026-10-21-worker-types.md)).
+- [launch-defaults.md](launch-defaults.md) — model and effort defaults nobody typed; the worker aliases, main's catalogue for `space open --alias`, and which flags a typed one replaces.
+- [worker-types.md](worker-types.md) — the kinds of work a worker is raised for: the built-in, user and project types, `[types] off`, `space open --type`, the briefing's section and the memory by type; a project's `.rewake/`.
 - [worktree.md](worktree.md) — the checkout `--worktree` gives a launch, `.worktreeinclude`, and `rewake worktree land`, `finish`, `ls`, `rm`.
 - [worktree-tools.md](worktree-tools.md) — the worktree tools of both harnesses: a template's `worktree = true`, `rewake worktree status` and its close forecast, the `worktree_status` tool, main's `worktree_list` and `worktree_land`, and a Claude Code worker's entry: `enter_worktree = true`, `rewake worktree enter`, `worktree_enter` and its guard.
 - [install.md](install.md) — building and installing locally, the npm dry run, the upgrade from 1.x, the release gate.

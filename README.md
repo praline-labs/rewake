@@ -180,8 +180,7 @@ replacing an installed binary safely, and how a release is made.
   contract.
 - [docs/traps.md](docs/traps.md): behaviour that surprises, listed by symptom.
 - [docs/README.md](docs/README.md): the full map of the documentation.
-- [docs/roadmap/README.md](docs/roadmap/README.md): what works today and what comes
-  next.
+- [docs/roadmap/README.md](docs/roadmap/README.md): the open work and its order.
 
 ## License
 

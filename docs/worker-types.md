@@ -3,8 +3,7 @@
 A type is the kind of work a worker is raised for — writing code, answering a question,
 carrying out a procedure, reviewing a change — given as a short text that follows its role's
 briefing. The role says what the worker may do and how its mail goes; the type says how to
-work on this task. Built October 21, 2026 on main's decisions of that day
-([the step](roadmap/2026-10-21-worker-types.md)).
+work on this task.
 
 ## Where types come from
 

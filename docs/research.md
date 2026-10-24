@@ -51,7 +51,6 @@ directory and reads the running session as its own.
   configuration, their status line included, loaded as usual — started a turn on a
   message while idle, and took one sent during a running `sleep 40` into that same turn
   once the command returned. **[verified live 2.1.296, October 11, 2026]**
-  ([the S9 entry](roadmap/2026-10-11-stage3-s9.md#the-live-check-october-11-2026))
 - The model sees text headed "Another Claude session sent a message", followed by
   a paragraph noting that the peer session cannot grant elevated permissions. **[verified live]**
 - The token is optional on Linux and macOS; trust rests on the 0700 directory, the
@@ -410,4 +409,9 @@ child callbacks. Rewake ignores completions carrying a child identity.
 thread/loaded/list starts with an omitted or null cursor. For a nonempty loaded
 set, an empty string is an invalid ThreadId, not the first page. Only a returned
 nextCursor belongs in the next request (`thread_processor.rs:2732–2777`).
-Claude Code 2.1.284 against 2.1.280 (bundles compared September 29, 2026), with its cold-resume dialog: [the record](roadmap/2026-09-29-harness-versions-checked.md).
+**[bundles compared: Claude Code 2.1.284 against 2.1.280, September 29, 2026; no live run]**
+On a cold resume Claude Code may ask "Resume this conversation?" — how long the conversation
+was idle, its tokens and the share of the five-hour limit a resume would take — with Resume
+and Start a new conversation, which runs `/clear`. Its switch is server-side; it shows only on
+a limited plan with a cold cache and a share of 5% or more. The dialog is modal: an unattended
+worker resumed with `--resume` waits on it. Whether it shows for an old worker was not seen.

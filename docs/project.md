@@ -143,8 +143,7 @@ only one that steers other sessions. See [flow.md](flow.md) and
 **Different harnesses in one room, both ways.** Sessions on different harnesses work
 together in one room: a main session on Claude Code hands out work to sessions on pi and
 reads their reports, and the other way round, through the same mail and the same rules as
-between two sessions of one harness. See
-[README.md](roadmap/README.md).
+between two sessions of one harness.
 
 **Main starts its workers.** The main session opens a space: rewake starts a worker on the
 harness main names, with the model and effort main picks and in a checkout of its own if

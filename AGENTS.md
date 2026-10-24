@@ -30,8 +30,9 @@ stale text is fixed when met, never rewritten for tidiness.
   carries where it was verified — and one that adds, removes or renames a document updates
   the map `docs/README.md`. Before a commit, ask what the change taught that the documents do
   not yet say, and what they say that is no longer true.
-- Every step is recorded in `docs/roadmap/` as it lands — one file per entry, listed in its
-  `README.md`, at most ten lines: what was done and what stays open.
+- The roadmap, `docs/roadmap/README.md`, holds the open work and its order; a step that
+  lands leaves it. A commit's subject is the record of a step, and what the step taught goes
+  into the living documents.
 - An owner decision is written down where it applies, dated, as a plain statement; the
   substance of `docs/project.md` changes only by the owner's decision.
 - No model or provider name in code, configuration or explanatory text; a verbatim record
@@ -121,8 +122,7 @@ A brief to a writer or a reviewer states this criterion.
 ### Build for failures that were seen
 
 The owner's rule, taken when the mechanics of unknown outcomes — thousands of lines of code
-and tests, no live case — gave way to a simple order of steps
-([roadmap](docs/roadmap/2026-10-18-simple-turn-end.md)):
+and tests, no live case — gave way to a simple order of steps:
 
 - A protective mechanism is built for a failure seen in real work, or one that would lose or
   duplicate mail unseen. "What if the process is killed between two writes" is a known limit
