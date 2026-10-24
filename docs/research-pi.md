@@ -164,7 +164,7 @@ Read on the same installed 1.2.0 in `dist/core/extensions/types.d.ts`,
 The prompt cache's lifetime, read on the bundled 1.3.0 on October 23, 2026. No provider tells pi
 when its cache expires. A model's `promptCache` names the provider's best-effort lifetime in
 seconds per retention tier, `short` and `long`, "a missing tier means the lifetime is unknown"
-(`pi-ai/dist/providers/model-schema.js`; `docs/models.md`, "Describe model input and caching": a
+(`pi-ai/dist/providers/model-schema.js`; `pi-coding-agent/docs/models.md`, "Describe model input and caching": a
 `models.json` model or a `modelOverrides` entry can set it). In 1.3.0's own catalogue
 (`pi-ai/dist/providers/data/*.json`) only one provider's models name lifetimes, 300 s short and
 3600 s long; every other model gives the hit rate alone. pi's own session requests name no
