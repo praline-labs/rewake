@@ -20,11 +20,6 @@ Renaming a neighboring file avoids that: existing wrappers keep their old
 executable, while new launches use the replacement. Restart existing sessions
 separately when their ongoing wrappers need the new behavior.
 
-For the accepted native mailbox path, use the [owner check recipe](archive/native-mailbox-check.md)
-with an explicit permission selection for a fresh disposable workspace. The
-[September 20 acceptance](archive/native-mailbox-acceptance.md) includes installation and
-restart, but does not establish inbox support under deliberate read-only permissions.
-
 **To test how it will be installed.** `scripts/pack.sh [version]` builds the npm
 uploads into `dist/npm` — a build per platform plus the entry, all versions of the one
 package `@praline-labs/rewake` — and publishes nothing. It needs [Bun](https://bun.sh), which

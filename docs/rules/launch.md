@@ -23,8 +23,16 @@ What rewake adds to a harness's launch, in the full wording of
 
 - **L3. Nothing persists past the run**: what a launch writes lives in the run's
   directory and goes with it; after a kill, a later launch removes it once the run is
-  proven dead ([the qualified guarantee](../archive/v2/stage3-rundir.md#the-qualified-guarantee)).
-  (Rule 8.) Known limit, recorded on October 16, 2026, accepted with S4-6's design: on
+  proven dead. A run that ends — its harness exiting, a signal it handles, a failed launch —
+  removes its directory before the wrapper exits, unless a worker of the run is stalled past
+  the bounded wait of its stops; the run then ends as a killed one does. A wrapper killed by
+  `SIGKILL` leaves its directory, and its control directory, until a later launch in the
+  room proves the run dead by the epoch in the directory's name — the wrapper gone, its pid
+  another process's or a zombie's, or another boot — the judgment that prunes a dead record
+  (`registry.ObserveRun`). A run still running, one that cannot be told, and an entry that
+  names no run are kept; the proof assumes the wrappers' pid namespace, and a room with no
+  later launch keeps a killed run's directories.
+  (Rule 8.) Known limit, accepted with the design of the mod's turns: on
   Claude Code the mod keeps the ends its host has not acknowledged in the harness's own store,
   outside the run's directory, and removes those of a killed run only once a later load's
   hello has the host prove that run ended, so they outlive it until a later run on the same

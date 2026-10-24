@@ -86,7 +86,7 @@ The same on both harnesses unless said.
   settles them, marked `threadChanged` with the line "the reader's thread changed after
   delivery" (`internal/core/mail/thread.go`, `turn_reports.go`). On Codex seen live on
   0.155.1 ([record](roadmap/2026-09-26-live-checks.md)); on Claude Code it passes the
-  fixture case only (HF-10 in [harness-features.md](archive/harness-features.md)). The model in
+  fixture case only. The model in
   the new conversation does not know the task, so that report answers other work.
 - **`inbox --awaited`** shows neither the conversation a task went into nor the current
   one (`internal/cli/inbox_awaited.go`).

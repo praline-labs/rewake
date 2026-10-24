@@ -7,18 +7,8 @@ Tags: **[verified live]** — live on these versions; **[source]** — source;
 Two companions, split out on September 21, 2026 when this file passed 400 lines. The
 division is by how a fact is obtained, because that is how it ages: what a binary
 answers when you run it lives in [research-launch.md](research-launch.md) — models,
-efforts, argument forms; what the protocol schema and the reference tree state lives
-in [research-protocol.md](archive/research-protocol.md). What stays here is what only a
-running session shows: how a message reaches it, what it does with it, and how the
-processes behave. On September 23, 2026 the file passed 400 lines again and was split
-by subject: what a running Codex session shows moved to
-[research-codex.md](archive/research-codex.md), and this file keeps Claude Code, the other
-harnesses and the failed-turn observations. Later the same day, what reaches a running
-Claude Code session from outside besides a message moved to a document of its own, removed on
-October 19, 2026 with what it still taught kept
-[below](#interrupting-a-turn-commands-and-the-stop-hook). The mail tool on both harnesses had
-its own, archived with the tool on October 18, 2026:
-[research-mail-tool.md](archive/research-mail-tool.md).
+efforts, argument forms. What stays here is what only a running session shows: how a
+message reaches it, what it does with it, and how the processes behave.
 
 **[verified live; September 21, 2026]** A fact about our own checks rather than about a
 harness, kept here because it is dated and ages like the rest: `go test` inherits a
@@ -336,8 +326,7 @@ Code 2.1.280, against a stand-in API server; the evidence was kept outside the r
   `$.env.get("CLAUDE_CODE_AUTO_COMPACT_WINDOW")` returned what the harness used in every
   case, the value left behind by a removed key included; `$.settings.read()` returns the
   `autoCompactWindow` key; `$.config.list` has only the boolean `autoCompact`. The flag
-  is not visible to a plugin at all; until S9, October 11, 2026, rewake read it from the launch's arguments
-  ([claude-telemetry.md](archive/1.x/claude-telemetry.md)).
+  is not visible to a plugin at all.
 
 ### Interrupting a turn, commands and the Stop hook
 
@@ -421,8 +410,4 @@ child callbacks. Rewake ignores completions carrying a child identity.
 thread/loaded/list starts with an omitted or null cursor. For a nonempty loaded
 set, an empty string is an invalid ThreadId, not the first page. Only a returned
 nextCursor belongs in the next request (`thread_processor.rs:2732–2777`).
-[Gateway native evidence](archive/gateway-native-evidence.md) and [128 MiB transport limits](archive/1.x/startup-transport.md#confirmed-native-message-size-failure-and-repair) record
-the owner-accepted prototype and integration ordering; [ownership research](archive/thread-ownership-investigation.md) preserves the earlier investigation.
-The [native resume matrix](archive/thread-lock-probes.md) verifies conditional recreation on the fingerprinted 0.154.0 build; original live-event attribution remains open.
-[Primary state metadata](session-state.md) records the source-backed contract. [Native start-or-steer and outcome evidence](archive/native-terminal-progress.md) separates prompt dispatch from terminal reporting.
 Claude Code 2.1.284 against 2.1.280 (bundles compared September 29, 2026), with its cold-resume dialog: [the record](roadmap/2026-09-29-harness-versions-checked.md).

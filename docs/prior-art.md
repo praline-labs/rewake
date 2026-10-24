@@ -14,10 +14,8 @@
   its own session id in the environment, Claude Code with a pre-assigned
   `--session-id`, deriving the Codex thread id from the process's open files, and
   a machine-readable delivery status. **[source]** Read again for stage 4 on October 13,
-  2026, at v1.16.28: what it teaches for the terminal emulator, a terminal handed between
-  programs, checkouts, socket delivery and screen tests is in
-  [v2/agent-deck-ideas.md](archive/v2/agent-deck-ideas.md) and
-  [v2/agent-deck-ideas-delivery.md](archive/v2/agent-deck-ideas-delivery.md).
+  2026, at v1.16.28, for the terminal emulator: what was taken is in
+  [shell.md](shell.md#the-space-hosts-emulator).
 - grok's live-session registry: one JSON file under an exclusive flock, written
   via tmp-and-rename, idempotent by id. Weak points to avoid: liveness checked by
   pid alone with no start time, and a corrupt file wipes out other entries.

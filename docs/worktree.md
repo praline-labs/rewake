@@ -368,8 +368,7 @@ refuses. The checks and the removal hold the repository's lock together
   from another directory with `-C <checkout>`: the working directory it registers is
   the one its wrapper started in, not the target of `-C`. Its work is not lost —
   `git worktree remove` refuses a checkout with changes — but a clean checkout goes from
-  under it. Recording the directory a session actually works in is queued
-  ([work-queue.md](archive/work-queue.md#also-queued-not-scheduled));
+  under it. Recording the directory a session actually works in is not scheduled;
 - a directory gone while the repository still lists it: it may have been moved with its
   work, and `git worktree repair <new path>` run in the repository reconnects it. With
   `--force` its own entry is removed with `git worktree remove`, never `git worktree

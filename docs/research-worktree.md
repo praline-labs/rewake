@@ -5,8 +5,7 @@ Facts about Claude Code's own worktree that rewake's `--worktree`
 trust is kept, what `.worktreeinclude` copies. Split out of
 [research-launch.md](research-launch.md) on September 27, 2026 by subject; what a live
 `-w` session showed stays there
-([research-launch.md](research-launch.md#a-worktree-at-launch)). Codex's own worktree is
-in [research-codex.md](archive/research-codex.md#--worktree-with-a-remote-terminal). One fact
+([research-launch.md](research-launch.md#a-worktree-at-launch)). One fact
 about git itself, which every worktree rewake makes goes through, closes the file:
 [a `git worktree add` beside another](#git-worktree-add-beside-another).
 

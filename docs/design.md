@@ -100,7 +100,7 @@ verified main callers see them.
     inbox/<name>/threads/<id>  selected delivery thread, when an adapter follows one
     inbox/<name>/awaiting/<epoch>/<peer> reports owed by this run
     inbox/<name>/pending/      this run's `rewake pending` marks; its last word on the work and a held answer (turn-outcomes.md)
-    inbox/<name>/receipts/<epoch>/ the records of a notify's and `rewake pending`'s retries (rules/effects.md#receipts-and-once-marks)
+    inbox/<name>/receipts/<epoch>/ the records of a notify's and `rewake pending`'s retries (rules/effects.md#receipts-retries-and-once-marks)
     inbox/<name>/once/<epoch>/<id> a notify's heads-up, so a retry writes it once
     sock/<name>.<epoch>.sock   one inbound socket per run
     sock/<name>.<epoch>.reply.sock the wrapper's own: Claude Code's receipts for held lines

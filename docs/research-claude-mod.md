@@ -117,7 +117,7 @@ harness.
 prompt, can detach, outlive a module reload and end with the harness process, and its
 parent before detaching is the harness process. Not seen: `session.end` without an exit
 (clear, resume), a respawn of the hooks worker, the harness killed outright, and the
-authority obligations of the mod's join ([stage4-audit.md](archive/v2/stage4-audit.md#a-what-the-wrapper-does-today-and-whether-the-mod-can-take-it-over)).
+authority obligations of the mod's join.
 
 ## P12b: a subagent of main as the worktree's keeper
 
@@ -411,7 +411,7 @@ could not tell; it now asks for the Agent tool and checks the screen for its cal
 
 ## The workers' pane (October 18, 2026, 2.1.302)
 
-What building [the workers' pane](archive/v2/workers-panel.md) showed of the mod API:
+What building the workers' pane (since removed for the shell) showed of the mod API:
 
 - A `Client` drawn by a function in a file the hooks module imports (`hooks/pane.ts`) is found:
   `claude plugin validate` lists `hooks/keys.ts` among the surface modules, and it loads live.
