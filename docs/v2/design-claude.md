@@ -64,11 +64,11 @@ socket's path, sends `hello` with its load's id, the session's id and the harnes
 and keeps the answer; outside a rewake run it reports to nobody. `modhost` answers on the
 socket, checking each request by its peer (SP4), and writes the admitted hello to
 `<run dir>/hello.json`, what a person or a live check reads of the load while the run lives.
-Its handlers count among the run's workers ([design-api.md](design-api.md#handlers-that-write-the-room)):
+Its handlers count among the run's workers ([adapter-api.md](../rules/adapter-api.md#handlers-that-write-the-room)):
 a closed server begins no record; under one lock the peer is checked again, then the hello is
 bound, recorded and made live, so a harness replaced while the body was read gets no effect.
 The answer says whether the run hosts spaces — a main run does — and an admitted hello of such
-a run makes Spaces live ([design-api.md](design-api.md#spaces)).
+a run makes Spaces live ([adapter-api.md](../rules/adapter-api.md#spaces)).
 Three tests hold the files: the embedded copy equals the source and every file of the source
 is embedded or named as not shipped (its tests and the schema); the written mod passes
 `claude plugin validate --strict`; the module's own tests pass in `claude plugin test` with
@@ -102,7 +102,7 @@ ways:
    of the mod's held poll withdraws what it proved ([the live set](stage4-turns.md#the-live-set)).
 
 Until a hello arrives, TurnBoundary, Telemetry and Control are not live
-([design-api.md](design-api.md#two-levels-offered-and-live)), and a session running without
+([adapter-api.md](../rules/adapter-api.md#two-levels-offered-and-live)), and a session running without
 its mod takes no tasks ([answer 3](design.md#the-owners-answers)). P5 includes the losses.
 
 ## The mail tools
@@ -267,7 +267,7 @@ Three candidates (decision 6), decided by P1:
 | the documented messaging | the same inbound socket as documented: `CLAUDE_CODE_MESSAGING_SOCKET` and `CLAUDE_CODE_MESSAGING_TOKEN`; the mod sees `session.receive` and may consume it | documented, not tried by rewake; whether it differs from the 1.x line beyond the token is part of P1 |
 
 The notice could reach the mod by the same stream as control; the host keeps deciding
-what to send and when ([design-api.md](design-api.md#wake)). The fate of the 1.x lane,
+what to send and when ([adapter-api.md](../rules/adapter-api.md#wake)). The fate of the 1.x lane,
 `inbox/held.go` and its receipts follows P1 ([revision-core.md](../archive/v2/revision-core.md#the-delivery-server-and-heldgo)).
 
 ## /clear and resume

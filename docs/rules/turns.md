@@ -14,7 +14,7 @@ interrupted. The behaviour in full is [turn-outcomes.md](../turn-outcomes.md).
   end closes: the core keeps the answer and hands the session a reason to go on; the
   next end publishes that answer with its own, and every failure of the check falls to
   publishing, the behaviour without it (`core/mail/turn_hold.go`). The mechanism is the
-  adapter's turn boundary ([design-api.md](../v2/design-api.md#turnboundary)): an adapter
+  adapter's turn boundary ([adapter-api.md](adapter-api.md#turnboundary)): an adapter
   that can hold an end confirms it (`cli/completion.go`, `ConfirmCompletion`). An end held
   once is known by its event: confirmed again, it gets the same reason and nothing is
   published or kept again, and once its continuation took the kept answer it is answered as

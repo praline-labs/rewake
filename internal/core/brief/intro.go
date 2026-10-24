@@ -15,7 +15,7 @@ type Context struct {
 	Reason string
 	// Harness is what the session's own harness adds: the sentences the
 	// role texts need about it — how it commits, say — which the role texts, naming no harness, leave to its adapter
-	// (docs/v2/design-api.md#launch). Empty adds nothing.
+	// (docs/rules/adapter-api.md#launch). Empty adds nothing.
 	Harness role.Section
 	// Work is the kind of work the worker was raised for, its text after
 	// the role's sections (docs/worker-types.md). Empty Name adds nothing.

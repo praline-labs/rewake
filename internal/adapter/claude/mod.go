@@ -101,7 +101,7 @@ type modRun struct {
 // ReportLive: the inbox lane is live once it starts, as a run that reports
 // nothing would have it; the turn boundary joins it with an admitted hello,
 // and spaces with it on a run that hosts them
-// (docs/v2/design-api.md#spaces), and both go together when the mod's
+// (docs/rules/adapter-api.md#spaces), and both go together when the mod's
 // heartbeat lapses, until a hello opens a generation again
 // (docs/v2/stage4-turns.md#the-live-set). Each report is the whole set.
 func (r *modRun) ReportLive(live func([]adapter.Capability)) { r.live = live }

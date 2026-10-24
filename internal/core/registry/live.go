@@ -10,7 +10,7 @@ import (
 // HasLive says whether the run has proven a capability. Every decision another
 // session makes about this one — may a task be sent to it, may it be
 // compacted — asks this, never what its harness offers
-// (docs/v2/design-api.md#two-levels-offered-and-live).
+// (docs/rules/adapter-api.md#two-levels-offered-and-live).
 func (s Session) HasLive(capability string) bool { return slices.Contains(s.Live, capability) }
 
 // Modify changes the record of a session that still owns its name, under the

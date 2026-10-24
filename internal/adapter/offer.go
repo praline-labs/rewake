@@ -1,7 +1,7 @@
 package adapter
 
 // Capability names one of the things an adapter may offer
-// (docs/v2/design-api.md#the-capabilities). The names are what a run reports
+// (docs/rules/adapter-api.md#the-capabilities). The names are what a run reports
 // live and what the session record keeps.
 type Capability string
 
@@ -20,7 +20,7 @@ const (
 
 // Offer is what an adapter offers: static, known from the catalog before any
 // launch. Whether one run of it can do what is offered is that run's live set,
-// which only the run can prove (docs/v2/design-api.md#two-levels-offered-and-live).
+// which only the run can prove (docs/rules/adapter-api.md#two-levels-offered-and-live).
 // The zero value offers Launch alone, which every adapter has.
 type Offer struct {
 	// Wake says a notice can reach a running session.
@@ -34,7 +34,7 @@ type Offer struct {
 	PersonUI bool
 	// Spaces says a run of a role that opens spaces can host them once it
 	// proves it: the run reports SpacesCapability live, never its plan
-	// (docs/v2/design-api.md#spaces).
+	// (docs/rules/adapter-api.md#spaces).
 	Spaces bool
 	// Conversation says whether a launch can start its new conversation
 	// under an id rewake chose, which a space's record keeps to find the
@@ -45,7 +45,7 @@ type Offer struct {
 // ConversationOffer is an adapter's answer to "can rewake name the
 // conversation a launch starts". It is stated either way, a flag or the
 // reason there is none, because the zero value would otherwise read as both
-// "cannot" and "forgot to say" (docs/v2/design-api.md#conversation-names).
+// "cannot" and "forgot to say" (docs/rules/adapter-api.md#conversation-names).
 type ConversationOffer struct {
 	// Flag is the harness's flag that takes the id; the adapter's Launch
 	// adds it with LaunchRequest.Conversation.
@@ -66,7 +66,7 @@ type TurnBoundaryOffer struct {
 	// HoldsEnd says an end can be held open while the core decides, so the
 	// core can keep a task open across an interim end. An adapter that
 	// reports without it says so here rather than leave the limit to be
-	// discovered (docs/v2/design-api.md#turnboundary).
+	// discovered (docs/rules/adapter-api.md#turnboundary).
 	HoldsEnd bool
 	// AfterStart says the run proves its boundary only once its harness
 	// runs — the harness's own process says so — so a launch does not wait

@@ -63,7 +63,7 @@ func handleCompact(ctx *Context, call Call) error   { return steer(ctx, call, co
 func handleInterrupt(ctx *Context, call Call) error { return steer(ctx, call, control.Interrupt) }
 
 // offersVerb says the adapter offers the verb: one it does not is refused
-// before a request is written (docs/v2/design-api.md#control).
+// before a request is written (docs/rules/adapter-api.md#control).
 func offersVerb(verbs adapter.ControlOffer, action string) bool {
 	switch action {
 	case control.Compact:

@@ -39,7 +39,7 @@ type ProcessService interface {
 // checks each request by its peer: the host names the process it started,
 // with its start time, as soon as it is running. A request that comes before
 // is held until then or refused; a peer that is not that process is refused
-// (docs/v2/design-api.md#the-harness-process).
+// (docs/rules/adapter-api.md#the-harness-process).
 type HarnessWatcher interface {
 	HarnessStarted(RunProcess)
 }
@@ -62,7 +62,7 @@ type WorkerCounter interface {
 
 // Wake brings a notice to the running session and says what happened: it
 // delivers, or answers held with the harness's reason, or failed
-// (docs/v2/design-api.md#wake). The host's delivery loop decides what to send
+// (docs/rules/adapter-api.md#wake). The host's delivery loop decides what to send
 // and when; the adapter only carries it.
 type Wake interface {
 	Deliver(context.Context, mail.Message) mail.Result
@@ -90,7 +90,7 @@ type Telemetry interface {
 
 // LiveReporter is a run that says which of its adapter's capabilities it has
 // proven: the live set, which the host records in the session record and every
-// other session decides by (docs/v2/design-api.md#two-levels-offered-and-live).
+// other session decides by (docs/rules/adapter-api.md#two-levels-offered-and-live).
 // A run without one has live what its plan carries, from its start.
 type LiveReporter interface {
 	// ReportLive takes where the live set goes, before the service starts.

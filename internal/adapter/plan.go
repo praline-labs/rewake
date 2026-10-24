@@ -93,7 +93,7 @@ type LaunchRequest struct {
 
 // VersionGate is how a launch learns whether the installed harness is one the
 // adapter starts: the oldest version it starts, and the arguments that ask the
-// installed program for its version (docs/v2/design-api.md#minimum-versions).
+// installed program for its version (docs/rules/adapter-api.md#minimum-versions).
 // The host reads it before the claim and refuses below the minimum or when no
 // version can be read; a gate without a minimum reads nothing.
 type VersionGate struct {

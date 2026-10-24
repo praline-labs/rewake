@@ -47,7 +47,7 @@ its own session only.
 Since S10 the LaunchPlan carries one run's capabilities as separate interfaces — a
 Service for this lifecycle, Wake for delivery, TurnBoundary for its turn ends, Telemetry
 and the thread — and what an adapter offers before any launch is its `Offers()` value
-([code.md](code.md#the-adapter-api)). An optional transport-neutral reservation holds
+([adapter-api.md](rules/adapter-api.md#wake)). An optional transport-neutral reservation holds
 a destination across inbox readability and ACK; native RPC stays inside its adapter.
 The Claude Code adapter delivers straight to the session's socket, reports its turns through
 its mod ([stage4-turns.md](v2/stage4-turns.md)), and its wrapper also listens on a reply socket of its own beside the session's: Claude

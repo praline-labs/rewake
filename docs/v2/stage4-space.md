@@ -193,7 +193,7 @@ stays as SP9 ([the rules](../rules/space.md)).
 - **Its session id.** rewake picks a random UUID before the launch and writes it into the
   space record; the worker's adapter turns it into its harness's arguments. Every adapter's
   offer answers whether it can, a flag or the reason there is none (`ConversationOffer`,
-  [design-api.md](design-api.md#conversation-names), built in S4-5): Claude Code answers
+  [adapter-api.md](../rules/adapter-api.md#conversation-names), built in S4-5): Claude Code answers
   `--session-id <id>` (`claude --help`, 2.1.296), pi `--session-id <id>` later
   ([the pi reading](stage4-reading-pi.md)). A harness without it gets no id, and its record
   says so.
@@ -289,7 +289,7 @@ The smallest set is three commands in the command table:
 Main's model calls them from its shell, and the person with `! rewake space open` at main's
 prompt. A slash command or a button for the person comes after the first space works, and
 the person's UI is stage 6; tools for the model left with the mail tool on October 18, 2026
-([design-api.md](design-api.md#tooltransport)).
+([adapter-api.md](../rules/adapter-api.md#the-capabilities)).
 
 The owner floated pi's interface as the renderer and pseudo-terminal host, with another
 harness spawned inside it; it is recorded as an alternative under the open questions, not

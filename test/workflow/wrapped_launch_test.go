@@ -142,7 +142,7 @@ func sessionReady(c *Case, session *scenarioSession) bool {
 // sessionsUp waits for each recipient to say it is listening. Its harness
 // says so once the wrapper has started it, after the readiness exchange, so
 // its live set is recorded by then; a task to a run whose set is not recorded
-// yet is refused (docs/v2/design-api.md#two-levels-offered-and-live). A
+// yet is refused (docs/rules/adapter-api.md#two-levels-offered-and-live). A
 // scenario that sends to sessions it started waits for this first, as a
 // session's own sends do through readinessSwitch.
 func sessionsUp(c *Case, sessions ...*scenarioSession) error {

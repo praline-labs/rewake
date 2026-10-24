@@ -147,7 +147,7 @@ For rewake the same shape would be:
 Realistic today: a view with limited input. A faithful full interactive tab is weak on
 Escape, Ctrl combinations and text attributes.
 
-**Stage.** PersonUI and Launch in stage 6 ([design-api.md](design-api.md#personui)),
+**Stage.** PersonUI and Launch in stage 6 ([adapter-api.md](../rules/adapter-api.md#personui)),
 after the mod adapter of stage 4. A live feasibility probe can come earlier.
 
 **The probe that would settle it.** A `Client` that logs every key event it receives:

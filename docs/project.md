@@ -76,7 +76,7 @@ Each principle names where it comes from.
 - **The core knows no harness.** What rewake does with messages is written once, without
   naming any harness; each harness joins through an adapter that declares what it can
   do, and a new harness is added without touching the core. (The owner's decisions,
-  recorded in [v2/design-api.md](v2/design-api.md#why-capabilities) and
+  recorded in [adapter-api.md](rules/adapter-api.md#why-capabilities) and
   [v2/design.md](v2/design.md#the-import-rule).)
 - **Delivery only through what a harness offers itself.** rewake never types into anyone's
   screen; it reaches a session only through the ways that harness provides. Main runs in a
@@ -174,7 +174,7 @@ always on record. See
 waiting. An idle session wakes for it; a busy one is steered where its harness allows.
 Where no notice can reach a session, the message is still kept, and the session reads it
 when it next looks. See [delivery.md](delivery.md#the-notice) and
-[v2/design-api.md](v2/design-api.md#wake).
+[adapter-api.md](rules/adapter-api.md#wake).
 
 **Reading mail by command.** A session reads its mail with `rewake inbox`; a read counts
 only once the reader has received the text. See [delivery.md](delivery.md).
@@ -189,7 +189,7 @@ offers what that harness can do — start a session, wake it, report its turns, 
 context and limits, compact or interrupt it —
 and the core does without whatever is missing, saying so rather than pretending. What a
 run actually has is checked when it starts, not assumed from what the adapter offers.
-See [v2/design-api.md](v2/design-api.md#the-capabilities).
+See [adapter-api.md](rules/adapter-api.md#the-capabilities).
 
 **Main answers a worker's permission requests and questions.** When a worker on Claude Code
 asks for a permission or the model asks a question, the request comes to main as a letter with
@@ -232,7 +232,7 @@ By the kind of work. Every document is on [the map](README.md); the current plan
 - **Changing the core** — mail, reports, turn ends: [flow.md](flow.md), then
   [v2/design-rules.md](v2/design-rules.md), [delivery.md](delivery.md) and the
   documents it links to, [mailbox-records.md](mailbox-records.md).
-- **Changing an adapter or adding a harness**: [v2/design-api.md](v2/design-api.md),
+- **Changing an adapter or adding a harness**: [adapter-api.md](rules/adapter-api.md),
   the harness's own design ([v2/design-claude.md](v2/design-claude.md),
   [v2/stage4-reading-pi.md](v2/stage4-reading-pi.md)), [launch.md](launch.md), and its
   facts in research below.

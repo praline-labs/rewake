@@ -23,7 +23,7 @@ func ReportCompletion(ctx context.Context, dir string, self registry.Session, en
 
 // ConfirmCompletion runs an end the adapter can hold open: it publishes it and
 // answers "", or holds it, keeps its answer and answers the reason the adapter
-// continues the turn with (docs/v2/design-api.md#turnboundary). A held end
+// continues the turn with (docs/rules/adapter-api.md#turnboundary). A held end
 // confirmed again — its answer lost — is known by its event, and answered the
 // same.
 func ConfirmCompletion(ctx context.Context, dir string, self registry.Session, end adapter.TurnEnd) (string, error) {

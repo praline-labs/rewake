@@ -293,7 +293,7 @@ func TestHelloIsAcknowledgedBeforeWakeBecomesLive(t *testing.T) {
 }
 
 // A main's hello proves its spaces, a worker's does not, and a quit's closing
-// frame reaches the shell's hook (docs/v2/design-api.md#spaces).
+// frame reaches the shell's hook (docs/rules/adapter-api.md#spaces).
 func TestAMainsHelloHostsSpacesAndItsQuitTellsTheShell(t *testing.T) {
 	for _, main := range []bool{true, false} {
 		closings := make(chan struct{}, 1)

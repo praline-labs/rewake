@@ -123,7 +123,7 @@ rewake --command my-claude claude
   refused naming the value and the next action. rewake does not run the program to check it, and does not guess the harness from its name:
   wrappers are named anything. The version read before the claim does run it once, with
   the arguments the adapter's version gate names (`<wrapper> --version`,
-  [design-api.md](v2/design-api.md#minimum-versions)); a wrapper that does not answer it
+  [adapter-api.md](rules/adapter-api.md#minimum-versions)); a wrapper that does not answer it
   with a version refuses the launch, as an unreadable version always does.
 - **In a worker alias** it is the field `command = "<program>"`, which becomes the
   worker launch's `--command` — in the user alias file only
@@ -306,7 +306,7 @@ where `REWAKE_PI` names a package directory or entry script (a build npm did not
 and runs the entry with `node`. Before the claim it reads `node --version`, refusing below
 22.19.0 (pi's own `engines`, which pi does not check) or with no `node` on `PATH`, then
 the copy's version, refusing any but the pinned one: this build was checked with that one
-([design-api.md](v2/design-api.md#minimum-versions)). A pi named with `--command` is the
+([adapter-api.md](rules/adapter-api.md#minimum-versions)). A pi named with `--command` is the
 escape hatch: it is held to the minimum, 1.2.0, and starts with a note when it is not the
 pinned version. That wrapper must `exec` pi: the extension socket admits only the exact
 harness pid and process start time; node runs the shipped entry in its own process.

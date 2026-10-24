@@ -11,7 +11,7 @@ The design:
 - [design.md](design.md) — the overview: what does not change, the layout of 2.0 with its
   import rule and the test that holds it, the stage plan with each stage's acceptance, and the
   owner's answers. Open it first.
-- [design-api.md](design-api.md) — the adapter API: the capabilities, offered and live, what
+- [adapter-api.md](../rules/adapter-api.md) — the adapter API: the capabilities, offered and live, what
   the core does without each, the catalogue as a value, minimum versions and the legacy mark.
 - [design-rules.md](design-rules.md) — the core rules restated for 2.0: effects E1–E8, turn
   outcomes, what a launch adds L1–L3; the tool transport's T1–T11, the channel record's

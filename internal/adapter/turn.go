@@ -9,7 +9,7 @@ import (
 )
 
 // EndReason is why a turn ended, as the adapter's end event says
-// (docs/v2/design-api.md#turnboundary). The host decides from it what the end
+// (docs/rules/adapter-api.md#turnboundary). The host decides from it what the end
 // reports (docs/rules/turns.md, O2); the adapter does not.
 type EndReason string
 
@@ -95,7 +95,7 @@ type TurnHandler struct {
 	Capture func() *mail.ReadBoundary
 	Publish func(context.Context, TurnEnd) error
 	// Confirm runs an end that the adapter can hold open, in place of
-	// Publish (docs/v2/design-api.md#turnboundary): it answers "" when the
+	// Publish (docs/rules/adapter-api.md#turnboundary): it answers "" when the
 	// end was published, or the reason to continue the turn with when it was
 	// held and its answer kept. The adapter continues the turn with that
 	// reason and confirms its next end again. The same end confirmed again

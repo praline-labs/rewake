@@ -17,7 +17,7 @@ func (b *startBoundary) ReportTurns(handler adapter.TurnHandler) { b.handler = h
 // A TurnBoundary reports its starts: a launch with a boundary records each
 // timed start, the evidence `rewake pending` judges an
 // earlier turn's mark by when that turn's end was lost
-// (docs/v2/design-api.md#turnboundary). A start without a time records
+// (docs/rules/adapter-api.md#turnboundary). A start without a time records
 // nothing.
 func TestABoundaryRecordsItsStart(t *testing.T) {
 	dir := stateDir(t)

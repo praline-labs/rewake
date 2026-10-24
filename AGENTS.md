@@ -160,7 +160,7 @@ Meant to be one move:
    behind it is a capability the CLI admits and the run cannot serve. The offer answers
    `Conversation` either way — the flag that names a new conversation with rewake's id, or why
    there is none — and offers `Spaces` only where the run proves them through its live set; the
-   catalogue tests hold both (`docs/v2/design-api.md`).
+   catalogue tests hold both (`docs/rules/adapter-api.md`).
 2. One entry in `New` of `internal/adapter/catalog/catalog.go`.
 3. Its private subtree's rule in the `depguard` settings of `.golangci.yml`: copy one
    adapter's rule (`adapter-claude`) for the new package and exclude the subtree from

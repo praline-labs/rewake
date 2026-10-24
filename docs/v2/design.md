@@ -11,7 +11,7 @@ of October 13, 2026 follow them there.
 | Document | What it decides |
 |---|---|
 | this file | the layout of 2.0, the import rule and the test that holds it, the stage plan, the owner's answers |
-| [design-api.md](design-api.md) | the adapter API: the capabilities, what the core does without each, the catalogue, minimum versions |
+| [adapter-api.md](../rules/adapter-api.md) | the adapter API: the capabilities, what the core does without each, the catalogue, minimum versions |
 | [design-rules.md](design-rules.md) | the core rules, restated from 1.x without its migration |
 | [design-claude.md](design-claude.md) | the Claude Code adapter as one mod: tools, turns, telemetry, control, wake, loading, and the stage 4 probe |
 | [design-state.md](design-state.md) | the state directory of 2.0, clearing the state of 1.x, one build per room |
@@ -131,10 +131,10 @@ tools leave it.
 2. **The first tool set is `inbox`, `send`, `pending`, `whoami`, `retry`, `list`**
    (`cli/bridge_surface.go:21-27` plus the read-only `list`). `withdraw`, `edit`,
    `compact`, `interrupt`, `accept` and `worktree` stay shell-only until a review puts
-   each on the surface ([design-api.md](design-api.md#tooltransport)).
+   each on the surface ([adapter-api.md](../rules/adapter-api.md#the-capabilities)).
 3. **A session whose mod did not load has no live TurnBoundary**: a role that must
    report refuses to launch; a task or question to such a session exits 1, naming why;
-   no new word `report` is added ([design-api.md](design-api.md#turnboundary)).
+   no new word `report` is added ([adapter-api.md](../rules/adapter-api.md#turnboundary)).
 4. **A stop whose evidence cannot return is resolved by an operator decision**
    (decided October 5, 2026). The stop and its records stay until evidence returns, and
    nothing removes a record to lift it (E1, E8). Beside that, a command lets main — the
@@ -151,7 +151,7 @@ tools leave it.
    stages 3 and 4 launch Claude Code only ([design-codex.md](../archive/v2/design-codex.md#meanwhile)).
 6. **A harness version that cannot be read refuses the launch**, saying how it was
    asked; a mod against an unknown API fails silently, which is worse
-   ([design-api.md](design-api.md#minimum-versions)).
+   ([adapter-api.md](../rules/adapter-api.md#minimum-versions)).
 
 Three later decisions of the owner, October 13, 2026, after stage 4's audit and its first
 probe ([research-claude-mod.md](../research-claude-mod.md)):

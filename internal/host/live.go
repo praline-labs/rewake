@@ -19,7 +19,7 @@ import (
 // and read when the session runs rewake inbox.
 const noWake = "no notice can reach this session; it reads its mail when it runs rewake inbox"
 
-// liveSet is the run's live set (docs/v2/design-api.md#two-levels-offered-and-live):
+// liveSet is the run's live set (docs/rules/adapter-api.md#two-levels-offered-and-live):
 // what the run has proven of its adapter's capabilities, recorded in the
 // session record as it changes, so every decision another session makes about
 // this one reads it there. A run that reports its own (adapter.LiveReporter)
@@ -218,7 +218,7 @@ func (l *liveSet) await(ctx context.Context, capability adapter.Capability, boun
 
 // wakeIfLive delivers through the run's Wake while it is live. Otherwise the
 // letter stays readable and waits for a Wake that becomes live; the sender was
-// told already (docs/v2/design-api.md#the-capabilities).
+// told already (docs/rules/adapter-api.md#the-capabilities).
 func wakeIfLive(wake adapter.Wake, live *liveSet) func(context.Context, mail.Message) mail.Result {
 	return func(ctx context.Context, message mail.Message) mail.Result {
 		if wake == nil || !live.has(adapter.WakeCapability) {
@@ -290,7 +290,7 @@ func plannedLive(offer adapter.Offer, plan adapter.LaunchPlan, controlDir string
 // turn boundary is live, up to the readiness bound, and refuses it after:
 // without the boundary no turn's end reaches the sender, and the worker's
 // contract — end your turn, your final reply goes to the sender — would not
-// hold (docs/v2/design-api.md#turnboundary). Before the harness starts, so a
+// hold (docs/rules/adapter-api.md#turnboundary). Before the harness starts, so a
 // refusal starts nothing. A harness that offers no boundary has none to wait
 // for: its launch of such a role was refused at once, before the claim
 // (S9's rule, cli/turn_reporting.go). A boundary the run proves only once

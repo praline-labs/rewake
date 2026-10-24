@@ -76,7 +76,7 @@ message. A notify is not answered at all.
 
 A question needs a sender session and a recipient whose run and role both report turns. The
 run is asked first, by the live set its session record carries
-([design-api.md](v2/design-api.md#two-levels-offered-and-live)): a recipient whose turn
+([adapter-api.md](rules/adapter-api.md#two-levels-offered-and-live)): a recipient whose turn
 boundary is not live refuses a task and a question alike, exit 1, with nothing sent; a note
 still goes. This reads the live set, never the offer: a run that has not yet proven its
 boundary, or has lost it, refuses as one on a harness with none does, and the offer only

@@ -3,7 +3,7 @@ package claude
 import "github.com/praline-labs/rewake/internal/adapter"
 
 // MinimumVersion is the oldest Claude Code the adapter starts
-// (docs/v2/design-api.md#minimum-versions).
+// (docs/rules/adapter-api.md#minimum-versions).
 const MinimumVersion = "2.1.287"
 
 // Version: Claude Code answers --version with its version and its name,

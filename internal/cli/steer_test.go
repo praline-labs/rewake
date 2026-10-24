@@ -370,7 +370,7 @@ func TestAHarnessThatCannotTakeItIsAWrongCall(t *testing.T) {
 }
 
 // Each verb is offered on its own: a harness that offers one refuses the other
-// before a request is written (docs/v2/design-api.md#control).
+// before a request is written (docs/rules/adapter-api.md#control).
 func TestAVerbTheHarnessDoesNotOfferIsAWrongCall(t *testing.T) {
 	_, _, controlDir := steerWorld(t, "")
 	for verb, verbs := range map[string]adapter.ControlOffer{

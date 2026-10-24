@@ -128,7 +128,7 @@ func (fixtureHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan,
 //
 // Control: the fixture offers it while no product adapter does: Claude Code's
 // served side left with its plugin module in S9, and stage 4 gives a real
-// adapter Control again (docs/v2/design-api.md#control). The run serves its
+// adapter Control again (docs/rules/adapter-api.md#control). The run serves its
 // control directory itself (control.Serve) and carries each request to the
 // program while Control is live on the connection, so rewake compact and
 // rewake interrupt keep their workflow cases on the gate column. The program

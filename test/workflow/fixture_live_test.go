@@ -14,8 +14,8 @@ import (
 	"github.com/praline-labs/rewake/internal/core/registry"
 )
 
-// The live set on the fixture column (S11,
-// docs/v2/stage3-steps-adapters.md#s11-the-host-on-the-live-set-codex): each
+// The live set on the fixture column
+// (docs/rules/adapter-api.md#two-levels-offered-and-live): each
 // run's record carries what its readiness exchange proved, and the decisions
 // other sessions make about it read that, never the offer. Every absence goes
 // through the program's own switch:

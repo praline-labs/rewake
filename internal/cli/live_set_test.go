@@ -13,7 +13,7 @@ import (
 )
 
 // The decisions another session makes about a run read the live set its
-// session record carries (docs/v2/design-api.md, "Two levels: offered and
+// session record carries (docs/rules/adapter-api.md, "Two levels: offered and
 // live"); what the harness offers never stands in for it. Every session here
 // stands on a harness that offers every capability the decision asks about.
 

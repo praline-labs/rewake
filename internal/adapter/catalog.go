@@ -1,6 +1,6 @@
 /*
 Package adapter is the adapter API: what an adapter offers the core, as named
-capabilities, and the values they carry (docs/v2/design-api.md).
+capabilities, and the values they carry (docs/rules/adapter-api.md).
 
 Adding a harness is meant to be one move: write a package that returns a
 Harness, then add it to the constructor in adapter/catalog. Everything else —

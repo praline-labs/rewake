@@ -15,7 +15,7 @@ import (
 // to ask the installed program for its version (adapter.VersionGate), and a
 // launch reads the installed one before the run is claimed: a version below
 // the minimum, or one that cannot be read, refuses the launch, so a refusal
-// leaves nothing behind (docs/v2/design-api.md#minimum-versions). The read runs
+// leaves nothing behind (docs/rules/adapter-api.md#minimum-versions). The read runs
 // the program the launch will, as a probe: bounded, its output never shown.
 
 // versionBound bounds one read of a version: a cold start of a packaged harness

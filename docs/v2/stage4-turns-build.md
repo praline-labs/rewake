@@ -16,7 +16,7 @@ each into its rule's `Tests:` list with the test that holds it.
 - **E7** (`effects.md`): a retried end reuses its first capture; one with the same id and
   another digest is refused; a run proven gone answers no receipt, and an ownership that could
   not be read is retried.
-- **The live set** (`host.md`): a boundary proven after the start is not awaited before it;
+- **The live set** (`rules/adapter-api.md`): a boundary proven after the start is not awaited before it;
   availability waits for it within its bound; a lapse withdraws what the mod proved, a new hello
   restores it, a hello of a superseded or earlier load and a report of an earlier transition
   change nothing; an end after a lapse is taken.

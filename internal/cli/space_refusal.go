@@ -7,7 +7,7 @@ import (
 )
 
 // spacesRefusal says why session cannot open a space, nil when it can, by the
-// level that is missing (docs/v2/design-api.md#spaces): a role that opens
+// level that is missing (docs/rules/adapter-api.md#spaces): a role that opens
 // none and a harness that offers none are a wrong call; a run that has not
 // proven its spaces, or has lost them, is a refusal of the target, which a
 // later run may not repeat. `rewake space open` asks it before anything is

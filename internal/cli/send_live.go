@@ -6,7 +6,7 @@ import (
 
 // What a send does by the recipient's live set, the capabilities its run has
 // proven as its session record carries them
-// (docs/v2/design-api.md#two-levels-offered-and-live): never what its harness
+// (docs/rules/adapter-api.md#two-levels-offered-and-live): never what its harness
 // offers, which says only what a run of it could prove.
 
 // unwoken is the detail of a letter written to a run without a live Wake.

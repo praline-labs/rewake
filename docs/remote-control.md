@@ -31,14 +31,14 @@ refusals. The call is checked whole before anything is written:
   wrong call.
 - **The target** is a running session of the same room, not the caller itself; an unknown
   name gets the same refusal as `send`, with the live names.
-- **Its harness must offer the verb** (`Offer.Control`, [code.md](code.md#the-adapter-api)),
+- **Its harness must offer the verb** (`Offer.Control`, [adapter-api.md](rules/adapter-api.md#control)),
   and a focus only where the harness can pass one for a single compaction
   (`CompactFocus`); each verb is offered on its own. Claude Code, pi and the fixture take
   both requests and a focus.
 
 Every one of these is exit 2 and writes nothing. Then **its run must have Control live** —
 the record's live set, which the run's readiness exchange sets and a lost connection
-withdraws at once ([design-api.md](v2/design-api.md#two-levels-offered-and-live)): a target
+withdraws at once ([adapter-api.md](rules/adapter-api.md#two-levels-offered-and-live)): a target
 whose harness offers the verb but whose run has not proven Control, or has lost it, is
 refused exit 1, nothing asked. The offer says the harness can be steered; only the live set
 says this run can. Then the request is sent and the command waits for its answer, within
