@@ -177,6 +177,9 @@ a refusal names the one that is missing:
   lost them, which a later run may not repeat.
 
 On Claude Code the proof is the mod's hello: an admitted hello on a main run makes Spaces live.
+On pi it is the extension's hello, and its disconnect withdraws them; a `/new` or `/reload`
+reconnects, and the workers, whose hosts follow main's run rather than its live set, go on
+(October 24, 2026).
 The answer no longer says `hostsSpaces`: the mod served the workers' pane by it, and the pane went
 with the host mode on October 18, 2026, which the shell replaced ([shell.md](shell.md)). A mod
 that is lost takes them out of the live set when the host sees the loss — the lapse of its

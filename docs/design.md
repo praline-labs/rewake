@@ -264,7 +264,7 @@ belongs to the harness.
   `from <session> · <id> · text no longer kept` when `--owed` has lost the text — and
   is printed as written; `--awaited` names each recipient as `to <session>` and each
   message as `<id> · <kind> · <time> · <state>` above its first line; main's state line reads `<session>: <activity> | context … |
-  compactions …`; the availability and departure notices open with `Session
+  compactions …`, above a letter from a session, never one from a person's shell; the availability and departure notices open with `Session
   available.` or `Session is no longer available…` and keep their identity block, by
   owner decision ([session-state.md](session-state.md#availability-notifications)).
   Refusals keep their full form. Every such line is listed in

@@ -18,7 +18,7 @@ sessions.
 Where the work stands on October 19, 2026 (the order was set on October 18,
 [its entry](2026-10-18-decision.md)): the documents brought to that decision, the deletions
 (batches A and B) and the test diet have landed; the space on Claude Code is `rewake space open`
-from main, and there is no `attach`; pi ships built into rewake and is a main with no space; the
+from main, and there is no `attach`; pi ships built into rewake and its main runs in the shell and raises workers as Claude Code's does; the
 shell is shipped (steps 1–3, [shipping](2026-10-19-shell-ship.md)); a Claude Code worker runs with
 rewake's profile and a person starts only main ([the launch surface](2026-10-19-worker-profile-step3.md)).
 What each entry leaves open is in its last line; the live ones are the owner's file for
@@ -195,3 +195,4 @@ without a date. Local installation without publishing is in
 | October 23, 2026 | [Three small shell faults](2026-10-23-shell-polish.md) | `/logout` tells the closing mark like `/exit`; the strip's cache part is coloured; the bar sits inside main's padding; open: `/logout` live, the owner's look |
 | October 23, 2026 | [The prompt cache's remaining life for pi](2026-10-23-pi-cache-life.md) | the extension reckons `expiresAt` from the model's `promptCache` lifetime for the tier `PI_CACHE_RETENTION` picks; additive `ttl`/`expiresAt` in the pi `state` frame's `cache`, the existing `cacheLife` in the snapshot; live against a stand-in provider; open: a real model, `idle` cache warming unseen |
 | October 24, 2026 | [One look for the shell's rows](2026-10-24-shell-look.md) | the strip, the bar and the hints share the panes' inset, start from the left, one set of colours and faint ` · ` separators; a band behind them sets them apart from the programs without a row; a selection over them is a pane's one colour; live under a stand-in terminal; open: the owner's look |
+| October 24, 2026 | [A pi main in the shell, raising workers](2026-10-24-pi-main-space.md) | pi offers Spaces, proven by a main's hello; the extension's `closing` at a quit starts the shell's closing and the workers' close; no state line above a shell's letter; live under a stand-in terminal and provider; open: a Claude Code worker from a pi main, the owner's check |

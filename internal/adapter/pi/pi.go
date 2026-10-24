@@ -107,6 +107,8 @@ func (harness) Offers() adapter.Offer {
 		Wake: true, Telemetry: true,
 		Control:      adapter.ControlOffer{Compact: true, Interrupt: true, CompactFocus: true, InterruptTrace: "its next turn sees who interrupted it"},
 		TurnBoundary: adapter.TurnBoundaryOffer{Reports: true, AfterStart: true},
+		// A main run hosts spaces once its extension's hello is admitted.
+		Spaces:       true,
 		Conversation: adapter.ConversationOffer{Flag: sessionIDFlag},
 	}
 }

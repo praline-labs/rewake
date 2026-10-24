@@ -210,7 +210,8 @@ harness pid and rechecks its process start time before accepting the first frame
 
 | Direction | Operation | Fields and acknowledgment |
 |---|---|---|
-| Extension to host | `hello` | `protocol: 2`, `thread`, initial `state`; success makes Wake, TurnBoundary and Telemetry live, plus Control when its directory exists |
+| Extension to host | `hello` | `protocol: 2`, `thread`, initial `state`; success makes Wake, TurnBoundary and Telemetry live, plus Control when its directory exists and Spaces on a main's run |
+| Extension to host | `closing` | `thread`; sent at `session_shutdown` whose `reason` is `"quit"`, before the link closes, waited for at most one second; a main's run in rewake's shell calls `LaunchRequest.Closing` (October 24, 2026) |
 | Host to extension | `wake` | `thread`, `notice`; answer says `ok` and whether it was `steered`, or `pending` while compacting |
 | Extension to host | `turn-start` | `thread`, `turn`; acknowledgment precedes model work |
 | Extension to host | `turn-end` | `thread`, `turn`, `outcome`, `text` (the final text, or pi's error message when a failed turn has none); acknowledgment follows publication |
@@ -237,7 +238,16 @@ delivery, but this adapter does not reserve a conversation across inbox publicat
 
 The current offer is Wake, TurnBoundary with Reports and AfterStart, Telemetry, Control
 with compact, focus and interrupt, and Conversation through `--session-id`. HoldsEnd is
-false; Limits and a live Spaces offer are absent.
+false; Limits are absent. Spaces are offered: a main's run proves them with the hello
+(October 24, 2026).
+
+`SessionShutdownEvent.reason` is `"quit" | "reload" | "new" | "resume" | "fork"`
+(`dist/core/extensions/types.d.ts:637`), and `"quit"` is emitted only by
+`AgentSessionRuntime.dispose()` (`dist/core/agent-session-runtime.js`), so only the process's
+end sends `closing`. On an interactive quit — Ctrl+C, Ctrl+D, `/quit` — pi stops its TUI, leaving
+the alternate screen, before that dispose; on SIGTERM or SIGHUP it disposes first
+(`dist/modes/interactive/interactive-mode.js`, `shutdown`). Its Ctrl+Z (`app.suspend`) stops the
+TUI and sends `SIGTSTP` to its group, as Claude Code does. Read on 1.3.0, October 24, 2026.
 
 ## Live acceptance on a real model (October 18, 2026)
 

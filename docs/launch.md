@@ -360,8 +360,10 @@ session, resume, continue, fork or `--no-session` option is refused. `--worktree
 rewake's flag and starts a new conversation in its own checkout.
 
 The extension connects from `session_start`. Its accepted hello makes Wake,
-TurnBoundary and Telemetry live, plus Control when the run has its control directory;
-a disconnected connection withdraws them. The boundary reports only after the harness
+TurnBoundary and Telemetry live, plus Control when the run has its control directory and
+Spaces on a main's run; a disconnected connection withdraws them. At `session_shutdown`
+for a quit it tells the host `closing` first, which a main in the shell turns into the
+shell's closing mark. The boundary reports only after the harness
 starts, so tasks wait for that readiness. Native context, model and thinking level feed
 main's telemetry. Compact accepts a focus and refuses a running turn; interrupt waits
 for the turn to settle aborted and leaves its actor in native history. No limits are
@@ -371,8 +373,8 @@ reported. The exchange and its verified native behavior are in [research-pi.md](
 
 Main runs in rewake's shell ([shell.md](v2/shell.md)) whenever standard input and output are
 both terminals and its adapter offers spaces, with no flag to turn it off (the owner's
-decision, October 19, 2026). Otherwise main runs plain: under a script or a pipe, and pi, which
-offers no spaces and so has no shell and no workers. The launch reads no harness flag, so
+decision, October 19, 2026) — Claude Code's and pi's alike. Otherwise main runs plain: under a
+script or a pipe. The launch reads no harness flag, so
 `rewake claude -p` typed at a terminal runs inside the shell too (a known limit). The launch
 execs the shell — `REWAKE_SHELL`, or `rewake-shell` beside rewake, refused exit 1 when neither
 is there — as `<shell> --room <room> -- <rewake> <the same arguments>` with
@@ -382,8 +384,8 @@ adapter is told the run is drawn by rewake (`LaunchRequest.Shell`): Claude Code 
 `CLAUDE_CODE_NO_FLICKER=1` unless the person set the variable, so it scrolls its own history with
 the wheel. The shell sets `REWAKE_HOST_COLORS` in main's environment from the terminal's
 answer, so workers' hosts are seeded too. Main's wrapper writes on its terminal one thing of its
-own, the shell's closing mark, when main's mod says Claude Code's session has ended
-([shell.md](v2/shell.md#who-owns-which-pty)). It ends when main ends, with main's code, and when its
+own, the shell's closing mark, when main's mod says Claude Code's session has ended, or pi's
+extension says pi quits ([shell.md](v2/shell.md#who-owns-which-pty)). It ends when main ends, with main's code, and when its
 terminal goes: then it hangs main up and main's run's end ends every worker. A launch that failed
 inside the shell has its last lines printed once the shell leaves the screen.
 

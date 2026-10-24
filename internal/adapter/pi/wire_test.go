@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"slices"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -88,6 +89,9 @@ func (rig *rig) client(t *testing.T, thread string, handle func(*link, frame)) *
 	}
 	expected := 3
 	if rig.run.controlDir != "" {
+		expected++
+	}
+	if rig.run.hostsSpaces {
 		expected++
 	}
 	if caps := receive(t, rig.live); len(caps) != expected {
@@ -285,5 +289,29 @@ func TestHelloIsAcknowledgedBeforeWakeBecomesLive(t *testing.T) {
 	second, err := readFrame(reader)
 	if err != nil || second.Op != "wake" {
 		t.Fatalf("live wake: %+v %v", second, err)
+	}
+}
+
+// A main's hello proves its spaces, a worker's does not, and a quit's closing
+// frame reaches the shell's hook (docs/v2/design-api.md#spaces).
+func TestAMainsHelloHostsSpacesAndItsQuitTellsTheShell(t *testing.T) {
+	for _, main := range []bool{true, false} {
+		closings := make(chan struct{}, 1)
+		rig := newRig(t, func(r *run) {
+			r.hostsSpaces = main
+			if main {
+				r.onClosing = func() { closings <- struct{}{} }
+			}
+		})
+		live := make(chan []adapter.Capability, 1)
+		rig.run.ReportLive(func(caps []adapter.Capability) { live <- caps; rig.live <- caps })
+		l := rig.client(t, "conversation", nil)
+		if got := slices.Contains(receive(t, live), adapter.SpacesCapability); got != main {
+			t.Fatalf("main %v: spaces live %v", main, got)
+		}
+		askOK(t, l, frame{Op: "closing", Thread: "conversation"})
+		if main {
+			receive(t, closings)
+		}
 	}
 }

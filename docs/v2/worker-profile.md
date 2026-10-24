@@ -129,7 +129,7 @@ settings, whose `env` then beats `--autocompact`.
   `--room`.
 - **The shell by default** whenever standard input and output are both terminals and the
   adapter offers spaces, with no flag to turn it off; otherwise main runs plain — a script or a
-  pipe, and pi, which without spaces has no shell and no workers. `-p` does not decide it: what
+  pipe. `-p` does not decide it: what
   counts is whether both streams are terminals. This changes "the shell,
   chosen at launch" in `project.md`: the owner's decision, recorded there in step 3.
 - **The room is the launch directory** (the owner's decision, October 19, 2026). Its identity is
@@ -178,7 +178,9 @@ Main's, October 19, 2026, on the design's questions; the room's identity is the 
 5. The claude.ai connectors stay for workers: no `--strict-mcp-config` by default. Superseded the
    same day by the owner: they are off for workers, through `disableClaudeAiConnectors`, and the
    project's `.mcp.json` servers stay.
-6. `rewake pi` is main too; without spaces it runs without the shell and without workers.
+6. `rewake pi` is main too, in the shell at a terminal and raising workers, as `rewake claude` is
+   (main's decision, October 24, 2026, under the owner's rule that every feature is weighed for
+   both harnesses).
 7. One profile for every Claude Code worker; named profiles only when needed.
 8. The owner's, October 19, 2026: a worker is raised only from a template. `space open` requires
    `--alias`; `--harness` and `--role` are gone, the role is the alias's, and the `default`

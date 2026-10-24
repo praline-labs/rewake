@@ -64,7 +64,8 @@ func viewedMessages(dir string, messages []mail.Message) []messageView {
 				view.AddendumTo = current
 			}
 		}
-		if visible {
+		// A letter from a person's shell has no run behind it, so no state.
+		if visible && message.FromEpoch != "" {
 			view.Telemetry = sessionSnapshot(dir, message.From, message.FromEpoch)
 			if message.Departure != nil && message.SenderState != nil && message.SenderState.Epoch == message.FromEpoch {
 				frozen := *message.SenderState

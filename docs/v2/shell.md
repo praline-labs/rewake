@@ -57,7 +57,8 @@ terminal in a pty; the owner checked step 1 on their own terminal the same day.
   2.1.302 leaves 4 ms after the key. Text main writes after a leave is no sign of a pause: an exit
   prints "Resume this session with: claude --resume …" on the screen it went to. Then **main's closing mark** (the owner's idea, October 19,
   2026): main's mod tells its wrapper `session/closing` at `session.end`, for `/exit`, Ctrl+C, Ctrl+D and `/logout` alike ([the record](../research-claude-mod.md#the-end-of-the-process-as-the-mod-hears-it)),
-  and the wrapper of a main in the shell writes `ESC ] 6262 ; rewake-closing BEL` on its terminal,
+  a pi main's extension tells it `closing` at a quit's `session_shutdown`
+  ([research-pi.md](../research-pi.md#the-adapters-wire-contract)), and the wrapper of a main in the shell writes `ESC ] 6262 ; rewake-closing BEL` on its terminal,
   main's pane (`internal/host/start.go`), which the scanner reads (the widget ignores an OSC it
   does not know); it makes the layer an end, the keys held, where no leave began it, and restarts
   the 5 s, since the session has ended and only its process is left to exit. Until October 20 the mod also told it at
@@ -342,7 +343,7 @@ write-claude (code) · working · ⎇ wt-fd7596 · <model> low · 23% 230k/1M ·
 ## How rewake starts the shell, and how it ships
 
 - `rewake claude [args]` at a terminal (the owner's decision of October 19, 2026; `--shell` went
-  with it): when standard input and output are both terminals and the adapter offers spaces, the
+  with it), and `rewake pi [args]` the same way (main's decision, October 24, 2026): when standard input and output are both terminals and the adapter offers spaces, the
   Go launcher execs the shell as
   `<shell> --room <room> -- <rewake> <its own arguments>` with `REWAKE_SHELL_MAIN=1`, so no rewake
   process stays between the person's terminal and the shell. The shell runs that command line on

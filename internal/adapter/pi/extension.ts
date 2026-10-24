@@ -267,7 +267,13 @@ export default function (pi: ExtensionAPI) {
     await connect();
   });
 
-  pi.on("session_shutdown", async () => {
+  pi.on("session_shutdown", async (event) => {
+    // Only a quit ends the process; /new, /reload, /resume and /fork shut a
+    // conversation down too. Told before the link goes, so the shell's closing
+    // screen and the workers' close start now, not at the process's end.
+    if (event.reason === "quit" && current?.ready) {
+      await ask(current, { op: "closing", thread: current.thread }, 1000).catch(() => {});
+    }
     active = false;
     managed.reset();
     if (retry) clearTimeout(retry);

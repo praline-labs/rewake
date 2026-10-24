@@ -19,23 +19,29 @@ var extensions embed.FS
 type run struct {
 	file, socket      string
 	epoch, controlDir string
-	observed          observations
-	ctx               context.Context
-	cancel            context.CancelFunc
-	listener          *state.Listener
-	handler           adapter.TurnHandler
-	workers           adapter.Workers
-	live              func([]adapter.Capability)
-	liveMu            sync.Mutex
-	mu                sync.Mutex
-	closing           bool
-	links             map[*link]struct{}
-	current           *link
-	thread            string
-	process           adapter.RunProcess
-	ready             chan struct{}
-	processOnce       sync.Once
-	jobs              sync.WaitGroup
+	// hostsSpaces is the run's role opening spaces: an admitted hello then
+	// proves SpacesCapability.
+	hostsSpaces bool
+	// onClosing is LaunchRequest.Closing, nil outside rewake's shell: the
+	// extension's closing frame, at pi's quit, calls it.
+	onClosing   func()
+	observed    observations
+	ctx         context.Context
+	cancel      context.CancelFunc
+	listener    *state.Listener
+	handler     adapter.TurnHandler
+	workers     adapter.Workers
+	live        func([]adapter.Capability)
+	liveMu      sync.Mutex
+	mu          sync.Mutex
+	closing     bool
+	links       map[*link]struct{}
+	current     *link
+	thread      string
+	process     adapter.RunProcess
+	ready       chan struct{}
+	processOnce sync.Once
+	jobs        sync.WaitGroup
 }
 
 func newRun(file, socket string) *run {
@@ -157,6 +163,9 @@ func (r *run) change(l *link, hello frame) bool {
 			caps := []adapter.Capability{adapter.WakeCapability, adapter.TurnBoundaryCapability, adapter.TelemetryCapability}
 			if r.controlDir != "" {
 				caps = append(caps, adapter.ControlCapability)
+			}
+			if r.hostsSpaces {
+				caps = append(caps, adapter.SpacesCapability)
 			}
 			r.live(caps)
 		}

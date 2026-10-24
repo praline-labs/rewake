@@ -68,6 +68,14 @@ func (r *run) handle(l *link, request frame) {
 		// Capture belongs to the reader; publication must not block answers to a
 		// wake the host sends while it handles this end.
 		go func() { defer r.leave(); l.answer(request, r.publish(l, completion)) }()
+	case "closing":
+		// pi quits: the shell's closing screen and the workers' close start
+		// now rather than at the process's end (docs/v2/shell.md).
+		if r.onClosing != nil {
+			r.onClosing()
+		}
+		r.leave()
+		l.answer(request, frame{OK: true})
 	default:
 		r.leave()
 		l.answer(request, frame{Error: "unknown extension operation"})
