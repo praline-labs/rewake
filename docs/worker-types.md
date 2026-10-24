@@ -1,3 +1,7 @@
+---
+description: Worker types: the kinds of work a worker is launched for, their briefing sections, where a type is defined, and the memory by type.
+---
+
 # Worker types
 
 A type is the kind of work a worker is raised for — writing code, answering a question,
@@ -57,9 +61,9 @@ the answer of `space open`.
 
 `space open` resolves the type in main's directory and the space host passes its name and text
 to the worker's launch as `REWAKE_SPACE_TYPE` and `REWAKE_SPACE_TYPE_TEXT` beside
-`REWAKE_SPACE_TEMPLATE` ([launch.md](space.md)); the launch unsets them.
-The space's record keeps only the type's name, as the optional `worker.type` (October 21,
-2026; additive, absent from older records and from a worker without a type); the text is not
+`REWAKE_SPACE_TEMPLATE` ([space.md](space.md)); the launch unsets them.
+The space's record keeps only the type's name, as the optional `worker.type` (absent from
+older records and from a worker without a type); the text is not
 recorded, and a type still changes the worker's briefing, not the room's state. The briefing ends, after the role's sections, with
 `YOUR KIND OF WORK: <type>`, a line saying the text changes how the worker works and not what
 it may do — the role's rules stand and the project's own instructions win where they speak —

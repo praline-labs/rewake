@@ -1,5 +1,5 @@
 ---
-description: What main sees of its workers — the state header above every message, the session table of rewake list, activity labels, availability, compaction and departure notices, where Claude Code's and pi's telemetry comes from, and how fresh it is.
+description: What main sees of its workers: the state header, the session table, activity labels, availability, compaction and departure notices, and where telemetry comes from.
 ---
 
 # What main sees of its sessions

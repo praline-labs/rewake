@@ -1,3 +1,7 @@
+---
+description: Installing, updating and releasing rewake, and running a 2.0 build beside 1.0.3.
+---
+
 # Installing and releasing
 
 Locally, without publishing, there are two ways, and they answer different questions.
@@ -239,7 +243,7 @@ checks of [research-pi.md](research-pi.md#the-bundled-pi) run again on the new v
 Every release goes through the gate, `tools/release`:
 
 1. Set the version in the release commit and push it. `internal/cli/registry.go`
-   holds the version a build from source reports, `var Version = "1.0.0"`; the
+   holds the version a build from source reports, `var Version = "1.0.3"` today; the
    packages get theirs from `scripts/pack.sh`, and the gate refuses before the build
    when the line at HEAD names another version than the one released, so the tagged
    source and the npm binary cannot disagree (owner decision, September 28, 2026). It

@@ -1,3 +1,7 @@
+---
+description: Claude Code's own worktree: continuing a conversation, trust, `.worktreeinclude`, and `git worktree add` beside another.
+---
+
 # Research: Claude Code's worktree
 
 Facts about Claude Code's own worktree that rewake's `--worktree`

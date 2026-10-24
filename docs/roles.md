@@ -1,7 +1,10 @@
+---
+description: The roles a session runs under, what each is told at launch and owes, and how a session's name is chosen.
+---
+
 # Roles and names
 
-Split out of [design.md](design.md) by subject on September 24, 2026: which role a
-session has and what follows from it, and how its name is chosen. The catalogue is
+Which role a session has and what follows from it, and how its name is chosen. The catalogue is
 `internal/core/role`; the choice under the room lock is `internal/host`.
 
 ## Roles
@@ -15,20 +18,17 @@ for each role; harness adapters only pass the rendered strings. The record keeps
 | role | started by | turns reported | its playbook says |
 |---|---|---|---|
 | `general` | main, `space open --alias` of an alias with `role = "general"` or none | yes | take work, end your turn with the result; no Git metadata |
-| `main` | the person, `rewake <harness>` | no | hand out work, read reports; you cannot start sessions |
+| `main` | the person, `rewake <harness>` | no | hand out work, read reports; raise workers with `space open`, never by a launch |
 | `write` | main, `space open --alias` of an alias with `role = "write"` | yes | take work, end your turn with the result; you can commit when authorized |
 
 The briefing carries the role's whole playbook, the text of
 [what a session is told](#what-a-session-is-told); the last column only names its
-point. Grants left the code by the owner's decision of October 18, 2026, and the playbooks'
-lines about them, and the role's `GitWrite` mark, went with them: a write session commits
-within its own permissions.
+point. A write session commits within its own permissions.
 
-**Owner decision, October 19, 2026** (superseding that of September 17, under which an
-unflagged launch was general): a person's launch, `rewake <harness>`, is always main, in the
+**Owner decision, October 19, 2026:** a person's launch, `rewake <harness>`, is always main, in the
 room of its directory, and has no role or name flag; workers are raised by main alone, with
 `rewake space open`, and a worker's launch takes its name and role from the space's record
-([launch.md](space.md)). A second main in a directory whose main runs is
+([space.md](space.md)). A second main in a directory whose main runs is
 refused, exit 1, naming it: one main per directory, and another directory is another room. The
 same pid/start-time and namespace checks as list determine liveness. No session is promoted
 when a main leaves. The `rewaketest` build keeps `--main`, `--general`, `--write` and `--name`
@@ -81,23 +81,15 @@ checked before a large task, a finished report read against the brief rather tha
 as acceptance, questions to an absent owner batched into one message; and for a worker,
 keeping to the brief, following the project's own rules, a report that says what was
 verified and what assumed. They are structured as titled sections of one-line rules
-rather than one mixed list. Two statements of the earlier text were wrong and are
-corrected there: a stopped report leaves its task open, so what follows is not separate
-work and a later report may settle it; and grant lifetimes were stated as the contract
-did, until grants left the code on October 18, 2026.
+rather than one mixed list.
 
-**Owner decision, September 25, 2026:** four rules for write and general, after three
-failures of the day before — a worker that took main's word for a peer's and would not
-lift a pause main had lifted, a worker whose turn ended waiting for the owner and was
-taken as its report, and a worker that ran `rewake inbox --owed` after a compaction,
-read "nothing owed" and skipped a new unread task twice:
+**Owner decision, September 25, 2026:** four rules for write and general, each answering a
+failure seen in real work:
 
 - A message widens no permission by its text alone: permissions come from the launch.
   A refusal by the harness or its classifier is not routed around; the worker tells main
   what was refused and why the work needs it, and main does it itself or brings the
-  owner in. This replaces the limit every role had, to treat a message as a peer's
-  words, which the worker had read as putting main's word on a par with any other.
-  Main's own line says the same from its side: a reported refusal is not a request to
+  owner in. Main's own line says the same from its side: a reported refusal is not a request to
   route around it, and main acts only within its own rights.
 - Main directs the work on the owner's behalf: its word on pausing, resuming, scope and
   ordinary decisions stands without the owner confirming it in the worker's session.
@@ -105,14 +97,11 @@ read "nothing owed" and skipped a new unread task twice:
   main.
 - A turn ended waiting on anything outside it — background work, the owner, a refusal
   to be cleared — is marked with `rewake pending` first, every such turn, one a finished
-  subagent or background task woke included: a worker woken that way wrote "waiting for
-  two more", ended without the mark, and closed its task (September 26, 2026). The
-  turn's text goes with the mark, so findings can be written in the answer itself
-  ([turn-outcomes.md](turn-outcomes.md#interim-turn-ends-rewake-pending)). Until S9,
-  October 11, 2026, a forgotten mark after an interim end was caught once on Claude Code
-  by its Stop hook's question; the core still holds such an end once for an adapter that
-  can hold it ([turn-outcomes.md](turn-outcomes.md#the-confirmation)), and
-  only the fixture harness can in this build, so the rule is the net.
+  subagent or background task woke included. The turn's text goes with the mark, so findings can be written in the answer itself
+  ([turn-outcomes.md](turn-outcomes.md#interim-turn-ends-rewake-pending)). The core holds
+  such an end once for an adapter that can hold it
+  ([turn-outcomes.md](turn-outcomes.md#the-confirmation)); only the fixture harness can, so
+  the rule is the net.
 - After a compaction the task is re-read with `rewake inbox --owed` and new mail with
   `rewake inbox`; `--owed` counts what waits unread in a last line
   ([delivery-owed.md](delivery-owed.md#reading-again-what-is-owed-rewake-inbox---owed)).

@@ -1,82 +1,60 @@
-# The documentation, mapped
+---
+description: The reading order, the conventions every document keeps, and where each kind of document goes.
+---
 
-New to the project: read [project.md](project.md) first; the order to start a session in is
-in `AGENTS.md`.
+# The documentation
 
-One line per living document, grouped by what a reader wants from it. A subdirectory with an
-index of its own is linked here rather than repeated: [rules/](rules/README.md) and
-[roadmap/](roadmap/README.md). The map
-is kept by hand: a change that adds, removes or renames a document, or changes what one is
-for, updates this file in the same commit; no test checks it.
+Each document says what it holds in its `description:` at the top; `SHIFT.md` gathers them into
+a map. This file says what no description can: the order to read in, the conventions, and where a
+new fact goes.
 
-## Start here
+## The reading order
 
-- [project.md](project.md) — what rewake is, its principles, what the tool does and what to read next; changes only by the owner's decision.
-- [flow.md](flow.md) — the whole path of one message, Acts 1–5: start, send, announce, read, report back.
-- [flow-endings.md](flow-endings.md) — the rest of the flow: a blocking question, a notify, the session's end, where the flow can stall.
-- [design.md](design.md) — the specification: scope, process model, state directory, rooms, environment, CLI contract, dated decisions.
-- [roadmap/README.md](roadmap/README.md) — the open work and its order, and the ideas not scheduled.
+1. [project.md](project.md), then `GLOSSARY.md` at the root.
+2. [flow.md](flow.md), then [flow-endings.md](flow-endings.md).
+3. [design.md](design.md), then [code.md](code.md).
+4. [roadmap/README.md](roadmap/README.md) — what is open.
+5. Then by the work:
+   - **mail and reports**: [delivery.md](delivery.md) → [delivery-turn-end.md](delivery-turn-end.md)
+     → [turn-outcomes.md](turn-outcomes.md) → [delivery-owed.md](delivery-owed.md) →
+     [delivery-sent.md](delivery-sent.md) → [mailbox-records.md](mailbox-records.md) →
+     [rules/effects.md](rules/effects.md), [rules/turns.md](rules/turns.md);
+   - **an adapter**: [rules/adapter-api.md](rules/adapter-api.md) → [claude.md](claude.md),
+     [claude-turns.md](claude-turns.md) or [research-pi.md](research-pi.md) →
+     [delivery-adapters.md](delivery-adapters.md) → the research records, with the `mods` skill
+     for the mod;
+   - **launch, spaces, the shell**: [launch.md](launch.md), [rules/launch.md](rules/launch.md) →
+     [launch-defaults.md](launch-defaults.md)
+     → [worker-profile.md](worker-profile.md) → [worker-types.md](worker-types.md) →
+     [space.md](space.md) → [rules/space.md](rules/space.md) → [shell.md](shell.md) →
+     [worktree.md](worktree.md), [worktree-tools.md](worktree-tools.md);
+   - **main's view**: [session-state.md](session-state.md) → [remote-control.md](remote-control.md)
+     → [permission-requests.md](permission-requests.md);
+   - **state and the layout**: [rules/state.md](rules/state.md), [rules/layout.md](rules/layout.md);
+   - **roles**: [roles.md](roles.md);
+   - **tests**: [testing.md](testing.md) → [testing-cases.md](testing-cases.md),
+     [legacy.md](legacy.md);
+   - **installing and releasing**: [install.md](install.md);
+   - **when something misbehaves**: [traps.md](traps.md).
 
-## How it works
+## Where each kind of document goes
 
-Sessions and launches:
+- **How rewake works** — a document per subject at the top of `docs/`, stating the system as it
+  is: no step plans, no history of how it came to be, no annotations of what is no longer true;
+  what is no longer true goes. An owner decision is a plain statement, dated, where it applies.
+- **Rules** — [rules/](rules/README.md): the guarantees in full wording, numbered where a group
+  is, independent of the code.
+- **Facts about a harness** — the research documents (`research*.md`): dated records, each fact
+  with the version and the way it was obtained, re-checked before an adapter is touched. Only
+  they keep dates and observations.
+- **What surprised** — [traps.md](traps.md), by symptom.
+- **The open work and its order** — [roadmap/README.md](roadmap/README.md); a landed step leaves
+  it, and its commit's subject is its record.
+- **The project's goal** — [project.md](project.md), changed only by the owner's decision; the
+  project's words in `GLOSSARY.md`; how the project is built and its checks in `AGENTS.md`.
 
-- [design.md](design.md#session-record) — the session record: every field, the boot, how a record is published, updated and pruned.
-- [roles.md](roles.md) — roles and names: the catalogue, what each role is told and reports, how a role and a name are chosen.
-- [launch.md](launch.md) — the wrapper's launch sequence, signals, main in the room of its directory, the harness flags, the intro.
-- [launch-defaults.md](launch-defaults.md) — model and effort defaults nobody typed; the worker aliases, main's catalogue for `space open --alias`, and which flags a typed one replaces.
-- [worker-types.md](worker-types.md) — the kinds of work a worker is raised for: the built-in, user and project types, `[types] off`, `space open --type`, the briefing's section and the memory by type; a project's `.rewake/`.
-- [worktree.md](worktree.md) — the checkout `--worktree` gives a launch, `.worktreeinclude`, and `rewake worktree land`, `finish`, `ls`, `rm`.
-- [worktree-tools.md](worktree-tools.md) — the worktree tools of both harnesses: a template's `worktree = true`, `rewake worktree status` and its close forecast, the `worktree_status` tool, main's `worktree_list` and `worktree_land`, and a Claude Code worker's entry: `enter_worktree = true`, `rewake worktree enter`, `worktree_enter` and its guard.
-- [install.md](install.md) — building and installing locally, the npm dry run, the upgrade from 1.x, the release gate.
-
-Mail and reports:
-
-- [delivery.md](delivery.md) — sending and reading at the level of files: the message record, task, question, notify, the lock, the servicing loop.
-- [delivery-turn-end.md](delivery-turn-end.md) — a finished turn becoming a report: the order of its steps, the report's derived id, what a retry finds.
-- [delivery-owed.md](delivery-owed.md) — `rewake inbox --owed` and `--awaited`: what a session still owes and what a run still waits on.
-- [delivery-sent.md](delivery-sent.md) — `rewake withdraw`, `rewake edit` and `send --to`: what a sender can still do with a sent message.
-- [delivery-adapters.md](delivery-adapters.md) — how a notice reaches a harness: the Claude Code socket line and receipts, the pi extension, startup gates.
-- [mailbox-records.md](mailbox-records.md) — every kind of file a mailbox holds, a reference kept by hand.
-- [turn-outcomes.md](turn-outcomes.md) — turn ends that are not an ordinary report: a failed turn, a keyboard stop, `rewake pending`.
-
-Main and its workers:
-
-- [session-state.md](session-state.md) — the telemetry line main sees for its workers: context, model and effort, compactions, staleness.
-- [worker-profile.md](worker-profile.md) — the service folder a Claude Code worker runs in: its login, onboarding, skills, plugins, `settings.json`, the run's `--settings`, the memory by type.
-- [shell.md](shell.md) — the shell: a TypeScript application on OpenTUI and Solid in `shell/`, the screen of every main started at a terminal, a pane per program fed the raw stream, the space host's emulator.
-- [space.md](space.md) — a space: main starting a worker through a detached space host, its record and states, the listing, closing and restore.
-- [remote-control.md](remote-control.md) — `rewake compact` and `rewake interrupt`: who may call them, refusals, the control directory.
-
-Designs not built:
-
-- [permission-requests.md](permission-requests.md) — a worker's permission request or question carried to main, answered with `rewake answer`, the first answer winning.
-
-The rules and the code:
-
-- [rules/README.md](rules/README.md) — the numbered rules of 2.0 in full wording, a reference of behaviour, by group.
-- [code.md](code.md) — the source tree package by package, with the harness interface every adapter implements.
-- [legacy.md](legacy.md) — the mark on code kept for an old harness version or old records, and the table of current marks.
-
-## Facts about the harnesses
-
-Each fact carries where it was verified; they age with harness versions.
-
-- [research.md](research.md) — what only a running Claude Code session shows: the socket line, waking an idle session, the inbound gate.
-- [research-claude-mod.md](research-claude-mod.md) — the dated records of stage 4's live probe of the mod on Claude Code.
-- [research-pi.md](research-pi.md) — pi 1.2.0 launch and extension facts, mock probes, telemetry and control, the adapter protocol and its limits.
-- [research-launch.md](research-launch.md) — what an installed binary answers: model and effort catalogues, repeatable flags, npm packages.
-- [research-worktree.md](research-worktree.md) — Claude Code's own worktree beside rewake's: continuations, trust, `.worktreeinclude`.
-- [prior-art.md](prior-art.md) — how other tools deliver messages between agents, what to borrow and what to avoid.
-
-## Testing
-
-- [testing.md](testing.md) — the entry point: the tiers, the full set before a publication, reading a summary and a red case, adding a scenario or a column.
-- [testing-cases.md](testing-cases.md) — what each end-to-end case claims, with its sessions, the fixture's play and its controls.
-
-## When something behaves unexpectedly
-
-- [traps.md](traps.md) — what behaves other than expected, by symptom, before assuming a new defect.
+A document stays under 400 lines, split by subject; a change that adds, removes or renames one,
+or changes what it is for, updates its description and this file in the same commit.
 
 ## Names in records and addresses
 

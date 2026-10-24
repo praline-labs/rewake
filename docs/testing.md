@@ -1,5 +1,5 @@
 ---
-description: How rewake is tested — the tiers and what each proves, the fault build, the fixture column and its readiness exchange, running the suite side by side with its shortened waits, the checks before a publication, reading a result, extending the suite, and the traps it has paid for.
+description: How rewake is tested: the tiers, the fault build, the fixture column, running and reading the workflow suite, the checks before a publication, and the traps it has paid for.
 ---
 
 # Testing rewake

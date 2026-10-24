@@ -1,5 +1,5 @@
 ---
-description: The Claude Code workers' profile — the service folder as their configuration directory, login, onboarding and trust, rewake's defaults in settings.json and their upgrades, the run's own settings, memory.
+description: The Claude Code workers' profile: the service folder, login, onboarding and trust, rewake's defaults in settings.json and their upgrades, the run's own settings, memory.
 ---
 
 # The Claude Code workers' profile

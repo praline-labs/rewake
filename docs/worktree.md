@@ -1,20 +1,19 @@
+---
+description: Checkouts rewake makes for a launch: creation, records, land and finish, removal and what keeps one.
+---
+
 # Worktrees for a launch
 
-Split out of [launch.md](launch.md#a-worktree-for-a-launch) on September 27, 2026, when
-land, finish, Claude Code's launch and `.worktreeinclude` took it past the project's
-400-line limit. How they are used — the owner starts each writer in one, since a session
-cannot start another, and main lands and finishes it — is said there.
+The checkout a launch takes with `--worktree`: how it is made and recorded, how its work
+comes back, and how it is removed. A worker of a space gets one from its template
+([worktree-tools.md](worktree-tools.md)); main lands and finishes it.
 
 `rewake claude --worktree` and `rewake pi --worktree` give the session a checkout of
 its own, on a branch of its own, made with the public `git worktree add` and recorded by
-rewake. The launch command takes the flag for itself and never passes it on. Decided by the
-owner on September 26, 2026, for what was then Codex's launch, as the variant that keeps
-only the substance of Codex's worktree: Codex's terminal could not make one under rewake,
-and its private scheme — directory layout, a `--no-checkout` add, `config.worktree`, the
-thread binding in the git metadata — was not repeated, being no contract. On September 27,
-2026 the owner decided that the checkout is on a new branch rather than a detached HEAD,
-that `land` and `finish` bring the work back, and that Claude Code launches get the same
-checkout; pi launches take the flag the same way. Codex does not return soon (October 18, 2026).
+rewake. The launch command takes the flag for itself and never passes it on. The checkout
+is on a new branch rather than a detached HEAD, `land` and `finish` bring the work back, and
+Claude Code and pi launches take the flag the same way (the owner's decisions of September
+26 and 27, 2026).
 
 ## The launch
 
@@ -24,9 +23,7 @@ checkout; pi launches take the flag the same way. Codex does not return soon (Oc
   `--worktree=feat/super-feature` makes the branch `feat/super-feature` — written in
   ASCII letters, digits, `.`, `_`, `-` and `/`, at most 250 bytes, neither `HEAD` nor
   forty hex digits, which git would read as something other than a branch, and not
-  ending in `.json`. The owner decided on September 27, 2026 that a name may hold a
-  slash as a branch's does; before, it was a letter or digit and up to 39 letters,
-  digits, `-` or `_`. The characters are Claude Code's for its own worktree names
+  ending in `.json`; a name may hold a slash as a branch's does. The characters are Claude Code's for its own worktree names
   ([research-worktree.md](research-worktree.md#names-with-a-slash)): they leave out `+`,
   which stands for the slash in the directory's name, and everything a shell reads, so
   the name goes into the commands a refusal prints as it is. The length is the longest
@@ -96,8 +93,7 @@ checkout; pi launches take the flag the same way. Codex does not return soon (Oc
 - **A new conversation only.** A continuation is refused with `--worktree`: it continues
   a conversation in the directory it was started in. For pi that is `--session`, `--continue`/`-c`,
   `--resume`/`-r` and `--fork`; a `--session-id` is no continuation, since a space supplies a
-  fresh random id. Codex's launch refused its `resume` and `fork` as whole
-  arguments before `--` (probed on 0.155.1 and 0.157.1, September 26, 2026). For Claude Code it is
+  fresh random id. For Claude Code it is
   `--continue`/`-c`, `--resume`/`-r`, `--from-pr`, `--teleport` and `--fork-session`,
   a cluster of short flags in which `c` or `r` acts as a flag, and the subcommands
   `attach` and `respawn`, which open a background session where it was started: a
@@ -111,7 +107,7 @@ checkout; pi launches take the flag the same way. Codex does not return soon (Oc
   attached, and `--environment`, which makes a cloud session on that environment: a
   cloud session works in none of this machine's checkouts. A prompt or an
   option's value that is the bare word is refused too; the refusal says such a prompt
-  goes after `--`, where it is text (decided September 26, 2026). The refusal spells out
+  goes after `--`, where it is text. The refusal spells out
   both ways on: a new conversation with `--worktree`, or the continuation where the
   conversation was started — for one begun in a rewake worktree, `rewake worktree ls`
   names its path, and `rewake claude --continue` runs there
@@ -136,7 +132,7 @@ checkout; pi launches take the flag the same way. Codex does not return soon (Oc
 - **Refusals** exit 2 and nothing prompts. The session of its own keeps Ctrl-C from
   reaching git: a long `git worktree add` interrupted so
   runs to its end after rewake has gone, and its checkout is left with a record and no
-  owner, which `ls` shows and rm removes (kept on purpose, September 26, 2026). Most
+  owner, which `ls` shows and rm removes (kept on purpose). Most
   come before anything is made: the flag given twice or as `--worktree=`, a
   continuation, `-w`, `--tmux`, `--cloud` or `--environment` beside it, a launch directory that does not resolve, a name out of
   shape, a launch directory outside any working tree, a repository with no commit yet, a
@@ -159,8 +155,7 @@ checkout; pi launches take the flag the same way. Codex does not return soon (Oc
   the directory when it is empty and the record.
 - **After the session** the checkout and its branch stay, and a
   line on stderr says where, and how to land, finish or remove it. A worker's checkout,
-  made by `rewake space open --worktree`, is the exception: since October 20, 2026, by the
-  owner's decision, its space's close removes it and its branch when nothing would be lost —
+  made by `rewake space open --worktree`, is the exception: by the owner's decision, its space's close removes it and its branch when nothing would be lost —
   what rm would keep it for, and any commit no local branch but its own holds, keeps it
   ([SP7](rules/space.md)); the branch the worker switched the checkout to is dropped too, when
   another ref holds its tip; files git ignores do not, and go with it (the owner's decision of
@@ -181,7 +176,7 @@ and dies, leaving the launch to exit 1
 ([research-worktree.md](research-worktree.md#git-worktree-add-beside-another)). The
 workflow suite's three `--worktree` launches at once met it in one run of 48.
 
-Main decided on September 27, 2026 how: a lock per repository, held by the launch from
+Main's decision: a lock per repository, held by the launch from
 before its branch is made until the checkout, its copies and its record are in place.
 The lock is an `flock` on `<repository>-<hash>.lock` beside the repository's directory
 under the worktree root: not in the repository's Git directory, since rewake writes
@@ -192,14 +187,13 @@ lock for its checks and the removal together, and finish for its checks, its lan
 and the removal, and each reads the record again under it: `git worktree remove` reads
 the other entries too, and a look taken before the lock could see a name a launch had
 claimed and not yet checked out — missing, nothing to keep — and the removal after the
-wait would take the checkout that launch had just made (found September 28, 2026). A
+wait would take the checkout that launch had just made. A
 failed launch taking its checkout back looks and removes under the lock the same way.
 
 The wait is bounded: after a minute the launch is refused with exit 1, naming the lock
 and the process that took it last; nothing is made. A holder is that slow when it hangs,
 or when it copies large ignored directories `.worktreeinclude` names: the copies stay
-under the lock, so a parallel rm cannot take a checkout still being filled (main's
-decision of September 27, 2026). The refusal says both, and to wait and run the command
+under the lock, so a parallel rm cannot take a checkout still being filled. The refusal says both, and to wait and run the command
 again. A removal whose worktree root is gone takes no lock and does not make the root
 again: nothing is made there without a launch making the root first.
 
@@ -250,8 +244,7 @@ record rewake wrote and is not listed.
 The copy is full: listing a heavy directory such as `node_modules` copies every file in
 it, which is slow and costly in space. A copy that skips links does not reproduce the
 `node_modules` pnpm makes, which is links to its store; a Python virtual environment does
-not carry over at all, since its scripts hold absolute paths. Owner decision, September
-27, 2026: rewake neither carries heavy dependencies into a checkout nor installs them.
+not carry over at all, since its scripts hold absolute paths. The owner's decision: rewake neither carries heavy dependencies into a checkout nor installs them.
 The agent installs them, or the preparation the repository itself describes, best with
 a package manager that keeps a shared cache. rewake builds no preparation command, no
 link to the source's dependencies and no shared directory keyed by a lock file's hash.
@@ -271,8 +264,7 @@ ref is moved with `git update-ref` against the value it was read at. Checked out
 other checkout — the source compared with symbolic links resolved — it is refused with
 the merge to run there: that checkout may be a worker's, the worktree's own among them
 when its worker switched to the target, and a merge would change its files and HEAD
-under it (decided September 27, 2026, after an acceptance run saw exactly that on Codex
-0.155.1 and 0.157.1). A target a rebase or a bisect in any checkout is working on is
+under it. A target a rebase or a bisect in any checkout is working on is
 refused too, as git itself refuses moving such a branch: git lists that checkout as
 detached, and the rebase's last step would fail. So is a target a rebase with
 `--update-refs` (or `rebase.updateRefs`) will move at its end, which it lists in
@@ -287,7 +279,7 @@ switches branches while land runs would have that branch fast-forwarded instead.
 source is asked again right before the merge, and a source no longer on the target is
 refused with nothing merged; after the merge the target must hold the worktree's tip,
 and when it does not, land is refused naming the branch the source switched to, which
-git moved, and its reflog to see where it was (found September 28, 2026).
+git moved, and its reflog to see where it was.
 
 The hooks land runs are the repository's code, and land waits for a git call running
 them at most a minute — the time a launch waits for the lock finish holds through its
@@ -303,9 +295,7 @@ repository or source gone, a source on a detached HEAD or on the worktree's own 
 a target the repository lacks, another checkout holds or has moved on, a source that
 switched branches or a hook still running. A wrong call exits 2: a worktree name that
 names none, a branch name `git check-ref-format` refuses, `--into` the worktree's own
-branch, `--into=` with no branch, which would otherwise land into the default target
-(decided September 27, 2026; the source on the worktree's branch and `--into=` on
-September 28).
+branch, `--into=` with no branch, which would otherwise land into the default target.
 
 `rewake worktree finish <name>` lands once more, then removes the worktree and its
 branch. Everything that would stop it is asked first, under the repository's lock held
@@ -314,8 +304,7 @@ running in the worktree or a launch still starting one, changes, files git ignor
 other than unchanged copies, commits only a detached HEAD holds, a worktree no longer
 on its branch, a fast-forward that is not possible, and what `git worktree remove`
 itself refuses — a worktree locked with `git worktree lock`, or one holding a submodule
-checked out (until September 28, 2026 those two let finish land and then fail to
-remove). Each exits 1 with its reason. finish has no `--force`: removing without those
+checked out. Each exits 1 with its reason. finish has no `--force`: removing without those
 checks is `rm --force`.
 
 ## Listing and removing
@@ -352,7 +341,7 @@ refuses. The checks and the removal hold the repository's lock together
   copies `.worktreeinclude` made are not counted;
 - a tracked file marked `--assume-unchanged` or `--skip-worktree`, as `git ls-files -v` shows
   it: `git status` does not look at such a file, so an edit to it is work neither status nor
-  `git worktree remove` sees (found in review, October 20, 2026); a sparse checkout, which marks
+  `git worktree remove` sees; a sparse checkout, which marks
   files skip-worktree, is kept too;
 - a HEAD no branch, tag or remote-tracking ref holds, asked every time: the worktree's
   own branch holds its commits while HEAD is on it, but a checkout switched to a
@@ -384,6 +373,5 @@ rm passes it twice. Looking never stands in a session's way: git runs with
 the session is making. Nothing else is removed automatically: only a worker's checkout at its
 space's close, by rm's checks but the one on ignored files, and one more
 ([after the session](#the-launch)). rm's refusals exit 1, as
-finish's and land's over the same state do; a worktree name that names none exits 2.
-Until September 27, 2026 they exited 2, fixed before finish existed; the owner decided
-that day that a refusal over state exits 1 in every worktree command.
+finish's and land's over the same state do; a worktree name that names none exits 2. A
+refusal over state exits 1 in every worktree command (the owner's decision).

@@ -1,3 +1,7 @@
+---
+description: pi's adapter: how it launches, wakes and hears turns, its wire contract, the bundled copy, and the probes behind each fact.
+---
+
 # pi: the adapter
 
 Verified October 18, 2026 against installed `@earendil-works/pi-coding-agent` 1.2.0.
@@ -11,8 +15,9 @@ need that comparison and the probes below before acceptance.
 
 ## Launch and extension lifetime
 
-Read in the package's `docs/cli.md`, `docs/extensions.md`, `CHANGELOG.md` and
-`dist/core/extensions/types.d.ts` on that version:
+Read in pi's package, not this repository — `pi-coding-agent/docs/cli.md`,
+`pi-coding-agent/docs/extensions.md`, `pi-coding-agent/CHANGELOG.md` and
+`pi-coding-agent/dist/core/extensions/types.d.ts` — on that version:
 
 - `-ne` / `--no-extensions` disables discovered, configured and built-in extensions;
   explicitly passed `-e` / `--extension` entries still load. The adapter adds an embedded
@@ -40,8 +45,8 @@ Read in the package's `docs/cli.md`, `docs/extensions.md`, `CHANGELOG.md` and
 - `--session-id` opens or creates the named conversation. The native CLI rejects it with
   `--session`, `--continue` or `--resume`. The adapter also rejects a fork or
   `--no-session` when rewake names a new conversation. The id does not add a user message.
-  Rechecked October 18, 2026 on installed 1.2.0 in `docs/cli.md`, `docs/sessions.md` and
-  `dist/main.js` (`validateSessionIdFlags`, `createSessionManager`): an exact id searches
+  Rechecked October 18, 2026 on installed 1.2.0 in `pi-coding-agent/docs/cli.md`, `pi-coding-agent/docs/sessions.md` and
+  `pi-coding-agent/dist/main.js` (`validateSessionIdFlags`, `createSessionManager`): an exact id searches
   the current project's session directory and creates the session if absent. Thus a space's
   fresh random `--session-id` must not be classified as continuation beside `--worktree`;
   that mistaken classification caused the pi worker's exit 2. Continue, resume, session and
@@ -273,7 +278,8 @@ print-mode main has already ended by then — the same trap as a report to it (`
 
 Owner decision, October 19, 2026: pi is part of rewake, pinned, installed and updated with it,
 its login and settings apart from the person's global pi, every feature working there. Read on
-the 1.3.0 package (`docs/cli.md`, `docs/security.md`, `docs/settings.md`, `dist/bundle`):
+the 1.3.0 package (`pi-coding-agent/docs/cli.md`, `pi-coding-agent/docs/security.md`,
+`pi-coding-agent/docs/settings.md`, `pi-coding-agent/dist/bundle`):
 
 - `PI_CODING_AGENT_DIR` moves the whole agent directory: `auth.json` (written mode 0600 by
   `FileAuthStorageBackend`, `join(getAgentDir(), "auth.json")`), settings, models, extensions,

@@ -1,3 +1,7 @@
+---
+description: A worker entering a checkout mid-session, the worktree status tool and its close forecast, and main's list and land tools.
+---
+
 # Worktree tools of both harnesses
 
 The shared worktree system: rewake's own worktree core ([worktree.md](worktree.md)) behind the

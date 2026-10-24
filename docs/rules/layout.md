@@ -1,8 +1,12 @@
+---
+description: The import rule between layers, and where a harness may be named; open before adding a package or an import.
+---
+
 # Rules: the layout
 
 What each layer of the tree may import and where a harness may be named. The
 import rule is held by `depguard` in [.golangci.yml](../../.golangci.yml); the
-layout and its reasons are in [design.md](../code.md), and each
+layout and its reasons are in [code.md](../code.md), and each
 package's place in [code.md](../code.md).
 
 ## The import rule

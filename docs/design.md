@@ -348,11 +348,8 @@ on being actively maintained; the standard library is preferred where it does th
 
 ## Testing
 
-How to run, read and extend the tests is in [testing.md](testing.md); the commands and which tests
-to write are in `AGENTS.md`, "Checks". Three layers, cheapest first: unit tests beside the code;
-the workflow suite in `test/workflow`, switched on by `REWAKE_WORKFLOW=1`, a built rewake end to
-end against the fixture harness; and live runs with real harnesses in a separate state directory,
-done by hand.
+Unit tests beside the code; the workflow suite, a built rewake end to end against the fixture
+harness; live runs with real harnesses by hand ([testing.md](testing.md), `AGENTS.md`, "Checks").
 
 ## Distribution
 
@@ -400,5 +397,3 @@ done by hand.
    checkout, role and name, for a restore ([space.md](space.md#restore)).
 10. The CLI keeps its promises to a caller: one command table, no arguments prints the guide,
     `--json` on every command, an unknown flag is a refusal, exit codes 0/1/2/3.
-
-[Compact session tables](session-state.md#the-session-table) and [grouped inbox reading](delivery.md#reading-rewake-inbox) preserve message identities while sharing a bounded collection window and destination admission.

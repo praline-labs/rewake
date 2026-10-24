@@ -1,3 +1,7 @@
+---
+description: What a harness binary answers at launch: models, efforts, repeated flags, the settings order, the workers' configuration folder.
+---
+
 # Research: what a session is launched with
 
 Split out of [research.md](research.md) on September 21, 2026, when that file passed

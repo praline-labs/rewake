@@ -1,5 +1,5 @@
 ---
-description: Main steering a running worker — rewake compact and rewake interrupt, their checks and outcomes, the control directory they share with rewake answer, how each harness serves it, and the letter that brings a compaction's end to main.
+description: Main steering a running worker: rewake compact and interrupt, their checks and outcomes, the control directory, how each harness serves it, and the compaction letter.
 ---
 
 # Remote control: `rewake compact` and `rewake interrupt`

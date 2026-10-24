@@ -1,5 +1,5 @@
 ---
-description: A worker's permission requests and questions carried to main as a notify and answered with rewake answer — what is carried, the path through the mod, what main sees, a dialog nobody is asked about, and the command.
+description: A worker's permission requests and questions carried to main as a notify and answered with rewake answer: what is carried, the path through the mod, what main sees.
 ---
 
 # A worker's permission requests and questions answered by main

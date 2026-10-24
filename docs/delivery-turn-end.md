@@ -1,5 +1,5 @@
 ---
-description: The end of a turn — its steps under the sender's lock, the operation and its scope, the read clock, pending marks, the interim record, a held end confirmed again, what a retry finds for each record, and reports after a thread change.
+description: The end of a turn: its steps under the sender's lock, its scope and the read clock, pending marks, the interim record, a held end, and what a retry finds.
 ---
 
 # Delivery: turning a turn's end into a report

@@ -1,3 +1,7 @@
+---
+description: Other tools that pass messages between agent sessions, and what rewake takes from each or avoids.
+---
+
 # Prior-art notes
 
 [Back to research](research.md).

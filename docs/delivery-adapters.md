@@ -1,5 +1,5 @@
 ---
-description: How each harness carries a notice once the wrapper sends it — Claude Code's socket line, its inbound gate, reply socket and late receipts; pi's extension; the fixture — and where each adapter's turn ends come from.
+description: How each harness carries a notice: Claude Code's socket line, inbound gate and late receipts; pi's extension; the fixture; and where each adapter's turn ends come from.
 ---
 
 # Delivery adapters

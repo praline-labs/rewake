@@ -1,5 +1,5 @@
 ---
-description: How mail reaches a session — sending, the kinds of message, one lock per mailbox, the wrapper's servicing, held mail, the notice and its preview, the coalescing window, and reading with inbox, peek and message.
+description: How mail reaches a session: sending, the kinds of message, the mailbox lock, the wrapper's servicing, the notice and its preview, the coalescing window, and reading.
 ---
 
 # Message delivery
@@ -294,7 +294,7 @@ changes nothing about the mail: reports stay readable for their epoch and the re
 as for any undelivered message on shutdown. The mailbox server a test builds has no window
 unless it sets `Window`; the wrapper sets `delivery.Coalescing`. A build may shorten that
 window through `-ldflags -X` on `builtQuiet` and `builtCap`, and the workflow suite's does
-([testing-pool.md](testing.md#waits-the-suite-shortens)); a release build sets neither.
+([testing.md](testing.md#waits-the-suite-shortens)); a release build sets neither.
 
 **A group's notice** says `Rewake: <n> new messages`, followed by one indented first-line
 preview of its latest member with sender and kind. A correcting letter — a recall, or an

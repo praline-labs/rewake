@@ -1,3 +1,7 @@
+---
+description: Dated records of what probe mods and rewake's mod were seen to do inside Claude Code, by version.
+---
+
 # Research: what a probe mod observed inside a running Claude Code session
 
 The live records of stage 4's probe ([research-claude-mod.md](research-claude-mod.md)):

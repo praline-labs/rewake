@@ -8,13 +8,16 @@ contradict the goal and be refused or redone.
 
 ## Where to start a session
 
-Read `docs/project.md`, then `docs/flow.md` — the whole path of a message in one read — then
-`docs/design.md` with its parts `docs/launch.md` and `docs/delivery.md`, then
-`docs/roadmap/README.md`: what is open and the order of work, a step closed by its acceptance,
-not by code existing. Then by the work, through the map `docs/README.md`: `docs/rules/` before
-changing how mail or launches behave, `docs/traps.md` when something misbehaves, research for
-a harness's facts, re-checked before touching an adapter. The project's own words are in
-`GLOSSARY.md`, where each kind of knowledge goes is in `SHIFT.md`.
+1. `docs/project.md`, then `GLOSSARY.md`, the project's own words.
+2. `docs/flow.md` — the whole path of a message in one read — then `docs/flow-endings.md`.
+3. `docs/design.md`, the system as built, then `docs/code.md`.
+4. `docs/roadmap/README.md`: what is open and the order of work, a step closed by its
+   acceptance, not by code existing.
+5. Then by the work, the reading order of `docs/README.md`: `docs/rules/` before changing how
+   mail or launches behave, `docs/traps.md` when something misbehaves, research for a
+   harness's facts, re-checked before touching an adapter.
+
+Where each kind of knowledge goes is in `SHIFT.md`.
 
 `archive/` holds the 1.x code, Codex's among it; it stays as it is. Do not read it unless a
 task needs a fact only it holds, and leave it out of every count, search, audit and clean-up:
@@ -78,15 +81,15 @@ owner's live state directory or read the running session as its own. The others 
 carries (`REWAKE_ROLE`, `REWAKE_EXECUTABLE`, `REWAKE_WORKTREES`, `REWAKE_MOD_SOCKET`,
 `REWAKE_WORKTREE_ENTER`, …) stay, so the tests are hermetic themselves: a test that starts
 rewake's own code in a child — `bun test`, `claude plugin` — gives it the environment less every
-`REWAKE_*`, and one whose code reads such a variable sets it with `t.Setenv` (pi's tool test
-inherited `REWAKE_ROLE=main` from main's session, October 21, 2026). The import rule — the
+`REWAKE_*`, and one whose code reads such a variable sets it with `t.Setenv`, or it inherits
+`REWAKE_ROLE=main` from main's session. The import rule — the
 core knows no harness, each layer imports only what it may — is held by `depguard` in
 `.golangci.yml` ([docs/rules/layout.md](docs/rules/layout.md)).
 
 `test/workflow` runs a built rewake end to end in a private HOME, state directory and PATH.
 Its scenarios skip unless switched on, and with the switch set and none selected the run
 fails; `-run` selects those a change touches, and a change to `internal/adapter/fixture` or
-`test/workflow/fixtureshim*` runs the whole suite, about half a minute after the test diet of October 18, 2026. Keep `-v`, or the line
+`test/workflow/fixtureshim*` runs the whole suite, about half a minute. Keep `-v`, or the line
 naming what ran is invisible; the summarizer prints a few lines and writes the rest to a file:
 
 ```bash
@@ -114,8 +117,7 @@ Not written: a test that a rule has a test or that a document is on a map; a mut
 per observation; a generated matrix of crashes and races, or a fault scenario, for a new
 feature; a test repeating a workflow scenario. A new feature gets unit tests by this criterion
 and one workflow scenario on its main path when the path crosses processes. The workflow
-suite's mutants and controls are gone since the test diet of October 18, 2026; the fault
-seam's tests stay while they do not get in the way. A test clearly redundant, slow or flaky
+suite has no mutants or controls; the fault seam's tests stay while they do not get in the way. A test clearly redundant, slow or flaky
 may be removed when it gets in the way, one at a time — never a clean-up for its own sake.
 A brief to a writer or a reviewer states this criterion.
 
@@ -155,7 +157,7 @@ Meant to be one move:
    then reach a harness that may refuse to parse them. A test over the catalogue requires the
    list to be non-empty. `Offers` says what the adapter offers beyond Launch, and the plan
    `Launch` returns carries what one run serves — its service, wake, turn boundary, telemetry —
-   as the interfaces of `internal/adapter` (`docs/code.md`). An offer with nothing in the plan
+   as the interfaces of `internal/adapter` (`docs/rules/adapter-api.md`). An offer with nothing in the plan
    behind it is a capability the CLI admits and the run cannot serve. The offer answers
    `Conversation` either way — the flag that names a new conversation with rewake's id, or why
    there is none — and offers `Spaces` only where the run proves them through its live set; the

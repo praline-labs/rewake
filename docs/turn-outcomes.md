@@ -1,5 +1,5 @@
 ---
-description: What each turn end reports — finished, error, stopped or pending — who it goes to, and the hold that keeps an interim end from closing a task; open before changing how a failed, stopped or interim turn reaches its waiters.
+description: What each turn end reports — finished, error, stopped or pending — who it goes to, and the hold that keeps an interim end from closing a task.
 ---
 
 # Turn outcomes other than a report

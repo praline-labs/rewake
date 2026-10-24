@@ -1,3 +1,7 @@
+---
+description: L1–L3: what a launch adds to a harness, what it never changes, and that nothing it writes outlives the run.
+---
+
 # Rules: what a launch adds, L1–L3
 
 What rewake adds to a harness's launch.

@@ -1,3 +1,7 @@
+---
+description: What rewake is and why: its essence, its philosophy and what the tool does; changed only by the owner's decision.
+---
+
 # rewake: the project
 
 What rewake is, the principles it holds, and what the tool does, with a link to where
@@ -27,7 +31,8 @@ Codex does not return soon. A space is main starting its workers with the model 
 picks; their screens are shown by the shell of rewake, never inside Claude Code's own
 interface. Decided October 19, 2026: the shell is an application in TypeScript
 on OpenTUI with Solid, inside the person's terminal, so its layout can be customized; no web UI.
-`rewake claude` is always the main session, in the shell whenever it runs in a terminal; the room
+A person's launch — `rewake claude` or `rewake pi` — is always the main session, in the shell
+whenever it runs in a terminal; the room
 is the directory it is started in, with one main per directory; workers are raised only by main,
 later also from the shell; a Claude Code worker runs with rewake's own profile, which turns off
 by default what an unattended worker should not use, and reads a service folder of rewake's where
@@ -148,7 +153,7 @@ between two sessions of one harness.
 **Main starts its workers.** The main session opens a space: rewake starts a worker on the
 harness main names, with the model and effort main picks and in a checkout of its own if
 asked, outside main's process tree, in a pseudo-terminal rewake holds; the worker joins main's
-room as any session, and ends when main's run ends. In the shell, which `rewake claude` starts
+room as any session, and ends when main's run ends. In the shell, which a main's launch starts
 whenever it runs in a terminal, main runs in the shell's own terminal pane and each worker's pane is fed from the pseudo-terminal
 rewake holds for it: main shows on the left and the chosen worker's live screen on the right, a
 tab bar at the bottom chooses the worker, and the focus moves between them by a click or the
@@ -222,26 +227,7 @@ stand-in harness, and live checks run against the real harnesses. See [testing.m
 
 ## What to read next
 
-By the kind of work. Every document is on [the map](README.md).
-
-- **Picking up the current work**: [roadmap/README.md](roadmap/README.md) — the open work
-  and its order.
-- **Changing the core** — mail, reports, turn ends: [flow.md](flow.md), then
-  [rules/](rules/README.md), [delivery.md](delivery.md) and the
-  documents it links to, [mailbox-records.md](mailbox-records.md).
-- **Changing an adapter or adding a harness**: [adapter-api.md](rules/adapter-api.md),
-  the harness's own design ([claude.md](claude.md),
-  [research-pi.md](research-pi.md)), [launch.md](launch.md), and its
-  facts in research below.
-- **Changing the command line**: [design.md](design.md#interface),
-  [roles.md](roles.md), and `AGENTS.md`, "How the CLI is organised".
-- **Changing the layout or the state directory**: [design.md](design.md),
-  [rules/state.md](rules/state.md), [code.md](code.md).
-- **Changing the tests**: [testing.md](testing.md), `AGENTS.md`, "Checks".
-- **Changing the documents**: [README.md](README.md) and `AGENTS.md`, "Keeping the
-  documentation true".
-- **Looking up a fact about a harness**: [research.md](research.md) and its companions
-  [research-launch.md](research-launch.md) and
-  [research-claude-mod.md](research-claude-mod.md); each fact says where and on which
-  version it was verified.
-- **Something behaves unexpectedly**: [traps.md](traps.md).
+Then `GLOSSARY.md` at the root, [flow.md](flow.md) and [design.md](design.md);
+[roadmap/README.md](roadmap/README.md) for the open work and its order; and, by the kind of work —
+the core, an adapter, a launch, main's view, the tests — the reading order of
+[the map](README.md#the-reading-order).

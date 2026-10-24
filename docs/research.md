@@ -1,14 +1,17 @@
+---
+description: Claude Code facts a running session shows: the inbound socket and its gate, how a notice is drawn, the status line's input, interrupts.
+---
+
 # Research: how to deliver a message to a live harness session
 
-Gathered September 15-16, 2026. Versions: Claude Code 2.1.270, Codex CLI 0.154.0.
-Tags: **[verified live]** — live on these versions; **[source]** — source;
+First gathered September 15-16, 2026 on Claude Code 2.1.270; each later record carries its
+own version. Tags: **[verified live]** — live on these versions; **[source]** — source;
 **[docs]** — official pages. Recheck facts before changing the adapter.
 
-Two companions, split out on September 21, 2026 when this file passed 400 lines. The
-division is by how a fact is obtained, because that is how it ages: what a binary
-answers when you run it lives in [research-launch.md](research-launch.md) — models,
-efforts, argument forms. What stays here is what only a running session shows: how a
-message reaches it, what it does with it, and how the processes behave.
+What a binary answers when you run it — models, efforts, argument forms — is in
+[research-launch.md](research-launch.md); what probe mods saw is in
+[research-claude-mod.md](research-claude-mod.md). What stays here is what only a running
+session shows: how a message reaches it, what it does with it, and how the processes behave.
 
 **[verified live; September 21, 2026]** A fact about our own checks rather than about a
 harness, kept here because it is dated and ages like the rest: `go test` inherits a
@@ -150,28 +153,6 @@ which the gate does not consult when it decides:
 - The Stop hook receives `last_assistant_message` on stdin. **[source; verified
   live]** What a hook that blocks the stop does to the turn — the second call, its
   payload, the limit — is [below](#interrupting-a-turn-commands-and-the-stop-hook).
-- What rewake read from that payload until S9, October 11, 2026, when the hook left
-  (`internal/cli/turn_payload.go`, removed then): `agent_id`,
-  which decides whether the end counts at all — a child's inherited hook carries one
-  and is ignored — then `type`, `hook_event_name`, `turn-id` or `turn_id`,
-  `thread-id`, the last message under `last_assistant_message`,
-  `last-assistant-message` or `last_agent_message`, `error` with
-  `error_details` for a failure, and, from a hook's payload only, `session_id` — the
-  conversation the turn ended in, compared with the one its messages were delivered to
-  (September 23, 2026). Of what the workflow suite's Claude Code fixture
-  sends, `last_assistant_message` on Stop is verified live, and so, since the
-  telemetry probes of September 23, 2026, are `hook_event_name` — the collector tells
-  events apart by it, live — and `session_id`, `cwd` and `transcript_path` on every
-  hook ([below](#telemetry-sources-the-status-line-and-hooks)); the StopFailure fields are
-  **[assumed]**, shaped from the hook reference rather than from a running session.
-  For StopFailure the fixture puts the error text in `last_assistant_message` with
-  `error_details` and `error` beside it, following the reference cited below.
-  September 22, 2026.
-- Whether the real harness refuses an envelope carrying a field it does not serve is
-  **[assumed]** too, and assumed the other way: the fixture refuses one. A fixture
-  looser than the harness lets a scenario pass while the envelope is mangled on the
-  way; stricter only costs a fixture change the day the envelope grows a field.
-  September 22, 2026.
 - A hook runs while its session is awake; it cannot wake anything from deep idle.
   Waking goes through the socket. **[owner]**
 
@@ -355,11 +336,8 @@ September 23–26, 2026), removed on October 19, 2026; one line per fact still r
 
 ## Other harnesses (for later)
 
-- **pi** — no native entry point. A custom extension, loaded with the `-e` flag,
-  listens on a socket and calls `pi.sendUserMessage(text, {deliverAs})`: it starts
-  a turn from idle, crashes mid-turn without `deliverAs`, and refuses during a
-  manual `/compact`. `--session-id` is set up front, `PI_SESSION_ID` is visible in
-  the agent's bash, and the end of a turn is the `agent_settled` event. **[source]**
+pi's facts are in [research-pi.md](research-pi.md).
+
 - **opencode** — `POST /session/<id>/prompt_async` with
   `{"parts":[{"type":"text","text":"..."}]}` wakes it from idle, and queues
   mid-turn. The TUI only listens on the network with `--port`; a session can be
@@ -370,45 +348,16 @@ September 23–26, 2026), removed on October 19, 2026; one line per fact still r
 
 See [prior-art notes](prior-art.md) for other messaging designs.
 
-## Failed-turn observation
-
-In snapshot `44b9011`, `hooks/src/legacy_notify.rs:15–39` emits only thread/turn
-ids, cwd, input messages and last-assistant-message. It carries no error field.
-`core/src/session/turn.rs:638–702` dispatches it on normal completion; the error
-branches at `:742–783` bypass it. `core/src/tasks/mod.rs:798–810` puts the error
-on TurnComplete instead. Therefore a rollout task_complete error is not evidence
-that legacy notify received that reason. Rewake accepts that event if supplied,
-and emits a textless error for a received empty completion after read work, but
-legacy notify alone cannot observe a callback that the harness never invokes.
-The server transport replaces that dependency for the server-backed harness. It does not
-read transcripts or invent a cause.
-
-The [official hook reference](https://code.claude.com/docs/en/hooks#stopfailure)
-specifies StopFailure instead of Stop for API failures. Its rendered
-last_assistant_message is the error text, with error_details and error as
-fallbacks. Rewake installs StopFailure for every role, including main. This is
-schema/documentation verification; no live model turn was used for this change.
+## Other Claude Code records
 
 **[owner socket probe: 2.1.270, September 17, 2026]** A newline inside the
 task-notification summary renders an indented second line. Extra sibling fields
 are discarded by the interface, so the authored first-line preview belongs in
-summary itself. The server transport uses a second line in the same message.
+summary itself.
 
-**[hook schema checked September 17, 2026; installed version 2.1.270; no live run]**
-[Common hook fields](https://code.claude.com/docs/en/hooks#common-input-fields)
-distinguish inherited hooks inside a subagent by `agent_id`. `agent_type` also
-appears on a root session launched with an agent profile, so it cannot filter
-child callbacks. Rewake ignores completions carrying a child identity.
+**[CLI declarations: 2.1.270 source `main.tsx:988`]** `--allowedTools <tools...>` is
+variadic; a trailing `--` separates a caller prompt from its values.
 
-**[CLI declarations: 2.1.270 source `main.tsx:988`; snapshot `44b9011`]**
-`--allowedTools <tools...>` is variadic. The TUI CLI also has a variadic
-`--image` (`utils/cli/src/shared_options.rs:11–19`, `num_args = 1..`). A trailing
-`--` separates a caller prompt from either option's values.
-
-**[snapshot 44b9011; CLI 0.154.0; September 17, 2026]**
-thread/loaded/list starts with an omitted or null cursor. For a nonempty loaded
-set, an empty string is an invalid ThreadId, not the first page. Only a returned
-nextCursor belongs in the next request (`thread_processor.rs:2732–2777`).
 **[bundles compared: Claude Code 2.1.284 against 2.1.280, September 29, 2026; no live run]**
 On a cold resume Claude Code may ask "Resume this conversation?" — how long the conversation
 was idle, its tokens and the share of the five-hour limit a resume would take — with Resume
