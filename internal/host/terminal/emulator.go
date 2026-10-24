@@ -6,7 +6,7 @@ import (
 )
 
 // emulator is the one seam the terminal library sits behind
-// (docs/v2/shell.md): bytes in, a resize, the screen out as a preamble, and
+// (docs/shell.md): bytes in, a resize, the screen out as a preamble, and
 // what it answers the program. Swapping the library touches
 // this package alone. Every method but replies runs under the terminal's
 // lock; replies is read by its own goroutine, which never blocks the writer.

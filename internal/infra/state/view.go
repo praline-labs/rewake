@@ -8,7 +8,7 @@ import (
 	"sync"
 )
 
-// View mode (docs/v2/stage3-state.md#what-is-a-writer): a view form answers
+// View mode (docs/rules/state.md#what-is-a-writer): a view form answers
 // from what is there, and every write primitive of this package refuses while
 // the process is in it. The refusal alone would not hold the rule — a view
 // that swallows an error would go on as if it had written — so the mode keeps

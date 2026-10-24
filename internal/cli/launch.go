@@ -50,7 +50,7 @@ func handleLaunch(h adapter.Harness) func(*Context, Call) error {
 		}
 		// The build lease before anything of the room is made or locked, and
 		// before the worktree; held until the wrapper and its cleanup are done
-		// (docs/v2/stage3-state.md#one-build-per-room).
+		// (docs/rules/state.md#the-rooms-lease).
 		lease, err := leaseError(call.Command, func() (*build.Lease, error) { return build.Launch(base, id.room) })
 		if err != nil {
 			return err

@@ -1,4 +1,4 @@
-// The strip, the last row of a worker's pane (docs/v2/shell.md, "The
+// The strip, the last row of a worker's pane (docs/shell.md, "The
 // strip"): who the worker is, what it does, where it works, its model and how
 // full its context is, from rewake's own records, the same for every harness.
 import { RGBA } from "@opentui/core";

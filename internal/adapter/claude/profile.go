@@ -11,7 +11,7 @@ import (
 	"github.com/praline-labs/rewake/internal/core/role"
 )
 
-// The worker profile (docs/v2/worker-profile.md): what a worker of Claude Code
+// The worker profile (docs/worker-profile.md): what a worker of Claude Code
 // gets in place of the person's own global layer. Since October 23, 2026 (the
 // owner's decision) it is a configuration directory of its own, the service
 // folder, whose settings.json, CLAUDE.md and skills/ Claude Code reads as the

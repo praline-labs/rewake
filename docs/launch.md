@@ -1,3 +1,7 @@
+---
+description: What a launch does on each harness — the wrapper, the arguments and environment it adds, the workers' profile and service folder, pi's bundled copy, starting the shell, and signals.
+---
+
 # Session launch and signals
 
 [Back to the design](design.md).
@@ -30,8 +34,7 @@ The common part of the wrapper:
    suspend by waiting for `SIGCONT` and sending `SIGTSTP` to their group, which
    on the shell's pane is orphaned — the wrapper leads the pty's session, its
    parent the shell outside it — so the kernel drops the stop; the wrapper
-   catches that `SIGTSTP` and sends the harness the `SIGCONT` it waits for
-   (October 21, 2026).
+   catches that `SIGTSTP` and sends the harness the `SIGCONT` it waits for.
 5. Service the inbox (below) until the harness exits.
 6. Remove the record, close the inbox (pending messages get the status `failed:
    session ended`), exit with the harness's code.
@@ -43,11 +46,11 @@ aliases main opens workers from, are in [launch-defaults.md](launch-defaults.md)
 
 ### Main, in the room of its directory
 
-By the owner's decision of October 19, 2026 a person's launch is `rewake [--command
+A person's launch is `rewake [--command
 <program>] [--no-intro] <harness> [the harness's flags]` and nothing else: it always starts
 **main**, `main-<harness>`, and the person never starts a worker from a terminal. There is no
 role, name, room or shell flag. Workers are raised by main alone, with `rewake space open`
-([A space for a worker](#a-space-for-a-worker)).
+([space.md](space.md)).
 
 - **The room is the launch directory**, resolved with symlinks followed. Its name on disk is
   `v2/rooms/<slug>-<hash>`: the directory's last element in lower case, every run of
@@ -64,10 +67,10 @@ role, name, room or shell flag. Workers are raised by main alone, with `rewake s
   commands take `REWAKE_ROOM`, as before. A launch reads no `REWAKE_ROOM`.
 - **Workers are in main's room whatever their checkout**: the space names the room, not the
   worker's directory.
-- **The room `default`** that earlier builds used is left as it is: no launch names it again,
-  and nothing migrates it. A room holding only finished mail can be deleted by hand.
+- **The room `default`** of older builds is left as it is: no launch names it, and nothing
+  migrates it. A room holding only finished mail can be deleted by hand.
 - **The `rewaketest` build**, which the workflow suite runs, keeps `--name`, `--room`,
-  `--main`, `--general` and `--write` on the launch (main's decision 3): the suite starts its
+  `--main`, `--general` and `--write` on the launch: the suite starts its
   workers directly, without a main to open their spaces. No flag there means main too.
 
 What a room isolates, what each role may do and see, and how the address is formed are
@@ -78,8 +81,7 @@ specified once, in design.md and roles.md: [Rooms](design.md#rooms), [Roles](rol
 ### No session inside a session
 
 A launch — `rewake claude` — from a
-shell inside a rewake session is refused with exit 2, before anything else is checked
-(main's decision of September 27, 2026). A Claude Code worker runs a plain `rewake`
+shell inside a rewake session is refused with exit 2, before anything else is checked. A Claude Code worker runs a plain `rewake`
 command unasked, and a launch among them would start an agent with none of the
 worker's limits: `rewake claude --dangerously-skip-permissions -p x` from its shell.
 The sign is the environment alone: `REWAKE_SESSION` or `REWAKE_EPOCH` set, even to
@@ -90,7 +92,7 @@ own — so a shell left over from a session that has ended is refused too, and a
 shell is the way out. `--help` on a launch word still prints the help page. Main starts a
 worker with its own command, `rewake space open`, not this path: a detached space host,
 outside main's run, runs the worker's launch with the session's variables stripped
-([A space for a worker](#a-space-for-a-worker)). The
+([space.md](space.md)). The
 rule is on every launch page's notes and in main's playbook, so a main learns it before
 it tries.
 
@@ -128,8 +130,6 @@ rewake --command my-claude claude
 - **In a worker alias** it is the field `command = "<program>"`, which becomes the
   worker launch's `--command` — in the user alias file only
   ([launch-defaults.md](launch-defaults.md#the-worker-catalogue)).
-- Owner decision, September 23, 2026: the harness is named, the program is given; no
-  guessing from names and no probing.
 
 ### Claude Code
 
@@ -142,148 +142,24 @@ rewake --command my-claude claude
 - Add one `--append-system-prompt`: rewake's briefing (turned off by `--no-intro`), which ends,
   for a worker raised for a type, with the type's text ([worker-types.md](worker-types.md)), then
   the caller's own `--append-system-prompt`,
-  joined by blank lines. Claude Code keeps only the last `--append-system-prompt` (probed on
-  2.1.302: of two, the first is lost; `--append-system-prompt-file` applies beside it), so the
+  joined by blank lines. Claude Code keeps only the last `--append-system-prompt` (2.1.302:
+  of two, the first is lost; `--append-system-prompt-file` applies beside it), so the
   caller's is taken out of the arguments and kept in rewake's rather than added beside it; of
   several, the last is kept, as Claude Code would. The whole is one argument, which Linux holds
-  to 131071 bytes (probed October 21, 2026: one more fails exec with "argument list too long"):
+  to 131071 bytes (one more fails exec with "argument list too long"):
   a longer prompt refuses the launch, naming each part's size and the type's, rather than be cut
   — each part can be within its own bound and the sum not, a type over a large prompt of the
-  caller's. Until October 19, 2026 a caller's flag replaced the briefing and the worker's
-  instructions silently (the briefings audit, F2); from then until October 23 the service
-  folder's `CLAUDE.md` was a part too, before Claude Code read it itself.
+  caller's.
 - Allow the tool's own commands without confirmation:
   `--allowedTools "Bash(rewake:*)"`, only when the caller passed no allow list of their
   own under either spelling, `--allowedTools` or `--allowed-tools`. This adds a rule for
-  the run without touching the user's settings. **Verify live** that the flag adds to
-  the user's permissions rather than replacing them; if it replaces them, drop the flag
-  and have the overview say which rule to add to settings once.
+  the run without touching the user's settings.
 - A caller's `--settings` reaches main's harness as given: rewake neither reads nor merges
   it. A worker's is refused, since the worker profile owns that flag.
-- **The worker profile.** Every launch but main's, unless `--command` names a wrapper, which
-  then decides the configuration (a launch note says so), sets `CLAUDE_CONFIG_DIR` to the
-  service folder and adds one `--settings` with what the run alone gets (below). The design
-  and the probes are in [worker-profile.md](v2/worker-profile.md).
-  - **The service folder**, `~/.config/rewake/claude/worker/`, is the workers' Claude Code
-    configuration directory (the owner's decision, October 23, 2026): Claude Code reads its
-    `settings.json` as the user's settings, its `CLAUDE.md` as the user's memory file, its
-    `skills/` and `agents/` as the user's, keeps there the workers' login, folder trust,
-    transcripts and history, and installs plugins into its `plugins/`. What of it is missing a
-    worker's launch makes (October 19) — the folder itself (0700), an empty `CLAUDE.md` and an
-    empty `skills/`. A file or directory already there is the person's or Claude Code's and is
-    never changed, but for `settings.json` (below) and two keys of `.claude.json`.
-  - **The login is the person's, once, in a worker's pane** (the owner's decision, October 23,
-    2026). `space open` of a Claude Code template without `--command` first runs `claude auth
-    status --json` under that variable; when it answers `loggedIn: false` (exit 1) the worker is
-    opened all the same, and the answer adds a line — `notice` under `--json` — telling main the
-    workers' Claude Code is not logged in and the person is to type `/login` once in this
-    worker's pane; main passes it on. A status that cannot be read, or does not answer within ten seconds — two
-    more for its output, should a wrapper's child hold it open —, adds nothing. Not logged in,
-    Claude Code shows no login screen of its own: the worker starts to its prompt, the footer
-    saying "Not logged in · Run /login", its mod live. A task sent before the login is delivered,
-    its turn stops at once on "Not logged in · Please run /login", and the task stays unread —
-    `rewake inbox --awaited` lists it as `unread`, nothing reports it failed — until the worker
-    runs `rewake inbox` on a later notice (probed on 2.1.302). The account is the person's,
-    logged in a second time.
-  - **Onboarding and trust.** Before each launch rewake makes sure the folder's `.claude.json`
-    holds `hasCompletedOnboarding: true` and `projects[<root>].hasTrustDialogAccepted: true` for
-    the worker's project — the main repository's root, as for its memory, under its path as
-    given and resolved, or the launch directory outside Git — adding what is missing and
-    keeping every other key (main's decision on the owner's behalf, October 23, 2026: the
-    person's own sessions there already trust it). A fresh directory otherwise stops on the
-    theme picker, then on the trust dialog, with nobody at the worker's screen; a trusted root
-    covers its worktrees and subfolders, a trusted parent of a repository does not
-    ([research-launch.md](research-launch.md#a-configuration-directory-of-the-workers)). The file
-    is replaced in one step, 0600; Claude Code reads it again before its own saves. Known limit:
-    a save between rewake's read and its rename drops the entry, and the worker shows the dialog
-    in its pane until the next launch adds it again. A `.claude.json` rewake cannot read refuses
-    the launch, naming it, and stays as it is.
-  - **A skill is attached** by placing its folder, or a symlink to it, in `skills/`: Claude
-    Code loads it as a user skill named as the folder (until October 23 the folder was passed as
-    the plugin `worker` and the skill was `worker:<skill>`). A plugin is installed with the
-    variable set (`claude plugin install`, or `/plugin` in a worker's pane); `plugins/` is Claude
-    Code's own directory now, no longer read by rewake child by child. `mcp.json` becomes
-    `--mcp-config`.
-  - **`settings.json` is the workers' user settings** (the owner's decisions, October 19 and
-    23, 2026), read by Claude Code itself; precedence is user < project < local < flag <
-    policy, so a project's settings can override one of rewake's defaults that is a single
-    value, while deny lists merge. rewake writes its defaults there on the first launch,
-    with `"rewake": {"defaults": <n>}`, the version of rewake's defaults the file is at;
-    Claude Code ignores that key. The defaults of version 3: `claudeMdExcludes` naming
-    `~/.claude/CLAUDE.md` as an absolute path; the owner's off-list —
-    `permissions.deny` of `Agent` (every subagent, the built-in `Explore` and `Plan` among
-    them), `ScheduleWakeup`, `SendMessage`, `ListAgents`, `ExitWorktree`,
-    `EnterPlanMode`, `PushNotification`, `RemoteTrigger` and `Artifact`; `disableWorkflows:
-    true`, `remoteControlAtStartup`, `promptSuggestionEnabled`, `awaySummaryEnabled`,
-    `idleCompaction` and `spinnerTipsEnabled` false; `disableClaudeAiConnectors: true`, which
-    drops only the person's claude.ai connectors — the project's `.mcp.json` servers and the
-    folder's `mcp.json` still load; `env` with `DISABLE_AUTOUPDATER=1`,
-    `DISABLE_FEEDBACK_COMMAND=1`, `CLAUDE_CODE_DISABLE_FEEDBACK_SURVEY=1`,
-    `CLAUDE_CODE_AUTO_CONNECT_IDE=false` and `CLAUDE_CODE_DISABLE_CRON=1`. Kept: web fetch and
-    search, `AskUserQuestion`, `ExitPlanMode`, the terminal title, auto-compact, background
-    tasks and Claude Code's own messaging socket, which carries rewake's wake.
-  - **Version 1 had `autoMemoryEnabled: false`**; version 2 retires it, so a file written
-    by the build before loses it where it still holds rewake's `false`. Version 3 takes
-    `EnterWorktree` out of `permissions.deny`: a deny in the user's settings is not lifted by a
-    run's allow, so each run's `--settings` denies it unless its template enters (below).
-  - **The run's `--settings`** is a JSON object of what this run alone gets, merged by Claude
-    Code over the folder's settings: the worker's memory and `EnterWorktree`, allowed for a
-    template with `enter_worktree = true`, denied for every other run. Until October 23 it was
-    the folder's whole file, or a copy of it in the run's directory, `worker-settings.json`.
-  - **Main's checkout is readable** (main's decision, October 23, 2026): the run's
-    `permissions.allow` holds `Read(//<root>/**)`, `<root>` the main repository's root as the
-    memory names it below, where main keeps the briefs and reviews a worker reads. A worker in a
-    checkout of its own stopped on auto mode's one-time prompt for a read outside its working
-    directories, with nobody at its screen; under the rule the read passes and no prompt shows
-    ([research-launch.md](research-launch.md#a-read-outside-the-working-directories)). A `Read`
-    rule covers Read, Grep and Glob and grants no edit. `--add-dir` is not used: it makes main's
-    checkout a working directory, where edits pass as in the worker's own and its `.claude/`
-    loads.
-  - **The worker's memory** (the owner's decision, October 19, 2026) is Claude Code's own
-    auto-memory, `MEMORY.md` loaded into the context and kept by the model as main's is, but
-    one per worker template and project:
-    `~/.config/rewake/claude/worker/memory/<project>/<template>/`, made 0700 before the launch.
-    `<project>` is the main repository's root, named as a room is named for its directory —
-    the last element as a readable slug and 12 hex digits of the SHA-256 of the resolved path
-    — so every worktree of one repository, and any directory in it, shares it, as Claude Code
-    keys its own; outside Git it is the launch directory. `<template>` is the alias the space
-    was opened with, which every space has; an alias that cannot name a
-    directory (only letters, digits, dot, dash and underscore, not starting with a dot)
-    refuses the launch. Parallel workers of one template share the directory; the last write
-    of a fact wins. The run's `--settings` carries `autoMemoryEnabled: true` and
-    `autoMemoryDirectory: <that absolute path>`; Claude Code ignores a relative
-    `autoMemoryDirectory` (research-launch.md). A person's own `"autoMemoryEnabled": false` in
-    `settings.json` is respected: the run's settings then carry no memory.
-  - **A template with `enter_worktree = true`** (October 20, 2026) gets `EnterWorktree` in the
-    run's `permissions.allow`, and the run gets `REWAKE_WORKTREE_ENTER=1`. A run with no
-    directory for rewake's mod, or whose folder settings deny `EnterWorktree` (the person put
-    it back), gets no entry, noted
-    ([worktree-tools.md](worktree-tools.md#a-workers-entry-enter_worktree--true-and-worktree_enter)).
-  - **The person edits the file**: a default is turned back on by changing or removing it —
-    `"Agent"` taken out of `permissions.deny` gives workers their subagents back,
-    `"idleCompaction": true` its idle compaction — and anything else of Claude Code's settings
-    is added beside them. rewake does not write the file again while it is at this build's
-    version, or a newer one.
-  - **An upgrade adds only the newer defaults.** A launch of a build whose defaults are newer
-    than the file's version runs only the steps after it: a default brought since is added
-    where the file has no value for it, into a list when absent from it; one retired since is
-    taken out only where the file still holds rewake's value; then the version is raised. What
-    the person took out of an older version stays out. A file with no `rewake` key is at
-    version 0 and gets every default, the person's values kept: the `{}` the folder held
-    before is such a file. A write replaces the file in one step, through a temporary file in
-    its directory, the target of a symlink when it is one; the keys come back in order and
-    indented, the values as they were. The launch notes that it wrote.
-  - **A file rewake cannot read** — not JSON, not one object, a `rewake` key other than
-    `{"defaults": <whole number>}` — refuses the launch, naming the file and the line, and is
-    never replaced. So does, at any version and naming the key, a key one of rewake's defaults
-    owns holding another kind than the default's: a string for `autoMemoryEnabled`, an object
-    in `permissions.deny`, a list for an `env` value, `env` or `permissions` not an object.
-    Claude Code drops a whole settings file over one such value ("These settings files did not
-    load", 2.1.302), every default with it. Keys no default owns are the person's, unchecked.
-    A `settings.json` that is a symlink to nothing is refused, naming its target, and the link
-    left as it is. `rewake.keep` of the build before is refused, naming `permissions.deny` as
-    the way. An entry of the wrong kind in the folder refuses the launch naming the path.
-- Every role launches here since S4-6: the run's mod reports each turn's end once its
+- **The workers' profile.** Every launch but main's, unless `--command` names a wrapper, sets
+  `CLAUDE_CONFIG_DIR` to the workers' service folder and adds one `--settings` with what the run
+  alone gets: [worker-profile.md](worker-profile.md).
+- Every role launches here: the run's mod reports each turn's end once its
   hello is admitted, after the harness starts, and a task to the run fails until then
   ([claude-turns.md](claude-turns.md#readiness-and-admission)). A cause the adapter knows
   will keep the mod from loading refuses a role that owes reports before anything is
@@ -298,7 +174,7 @@ activity, the configured model, the reasoning effort the main loop asks for (the
 
 ### pi
 
-pi is part of rewake (owner decision, October 19, 2026): a pinned pi, 1.3.0 today, is a
+pi is part of rewake: a pinned pi, 1.3.0 today, is a
 dependency of rewake's npm package, installed and updated with it ([install.md](install.md)).
 Without `--command`, `rewake pi` starts that copy and no `pi` on `PATH`: it finds the
 package in a `node_modules` above its own executable, as node resolves a dependency, or
@@ -315,42 +191,40 @@ Every pi rewake starts keeps its state in rewake's own directory: the launch set
 `PI_CODING_AGENT_DIR` to `~/.config/rewake/pi/agent`, made private (0700) by the launch,
 and `PI_SKIP_VERSION_CHECK=1`, since rewake updates the copy. The version reads before the
 claim get both too, through the gate's `Env`: pi 1.3.0 reads its settings before it answers
-`--version`, and a setting of the person's own pi stopped the launch (review of October 19,
-2026). They name the directory without making it; the launch makes it after the claim. Login (`/login`, kept in its
+`--version`, and a setting of the person's own pi would stop the launch. They name the directory without making it; the launch makes it after the claim. Login (`/login`, kept in its
 `auth.json`), settings, extensions, skills, prompts, themes, models, `pi install` packages,
 trust decisions and sessions live there, apart from the person's own pi, whose `~/.pi` is
 neither read nor changed. Beside the alias file, not in the state directory: it is the
 person's, not a room's, and outlives a cleared temporary directory. A variable of the same
 name in the person's environment does not reach the run.
 
-A worker's sessions are kept apart from main's (the owner's decision, October 23, 2026): every
+A worker's sessions are kept apart from main's: every
 launch but main's sets `PI_CODING_AGENT_SESSION_DIR` to `worker-sessions/` of the agent
 directory, made 0700 with the folders below, over any of the person's environment; pi 1.3.0
 stores and looks up sessions there, below `--session-dir` and above the `sessionDir` setting
 (its `environment-variables.md`, `cli.md`; not run, since a session file needs a turn). So a
 person's `--continue` or picker in a checkout a worker shared no longer lands in the worker's.
-A worker's own `--session-dir` is refused, naming the folder. Main keeps the person's variable: it is not among the names a launch drops before the adapter, which replaces it for a worker alone. Sessions of workers from before
-stay in `sessions/`.
+A worker's own `--session-dir` is refused, naming the folder. Main keeps the person's variable: it is not among the names a launch drops before the adapter, which replaces it for a worker alone.
 
 The launch also makes `extensions/` and `skills/` in that directory (0700) when they are
 missing, so it is visible where a person's additions go, and leaves what is in them alone
 (a skills installer may already link into `skills/`). An extension is a file in `extensions/`,
 or `PI_CODING_AGENT_DIR=~/.config/rewake/pi/agent pi install npm:<package>`; a skill is a
-folder with a `SKILL.md` in `skills/` (owner decision, October 19, 2026).
+folder with a `SKILL.md` in `skills/`.
 
 The adapter embeds `extension.ts`, its management module and its `worktree_status` tool
 ([worktree-tools.md](worktree-tools.md)), writing them in the run directory. It adds `-e <extension.ts>` and, unless `--no-intro`, its briefing through the
 repeatable `--append-system-prompt`, the type's text at its end for a worker raised for one
 ([worker-types.md](worker-types.md)). That flag turns off pi's own discovery of
-`APPEND_SYSTEM.md`, so since October 21, 2026 the adapter adds, after the briefing, the file pi
+`APPEND_SYSTEM.md`, so the adapter adds, after the briefing, the file pi
 would have read: the project's `.pi/APPEND_SYSTEM.md` in the working directory when the project
 is trusted — the last of the launch's `--approve`, `-a`, `--no-approve` and `-na` decides, as pi
 parses them, and with none rewake adds `--approve` — else the agent directory's; none when the caller's own
 `--append-system-prompt` had turned discovery off already, as pi does. `-e` adds rewake's extension to those pi finds: the
 person's, packages and built-ins load as without rewake, and so do a project's resources:
 in a project with `.pi` resources or `.agents/skills` pi would otherwise ask whether to trust
-it before any extension loads, rewake's included, and the run would wait for a person. By the
-owner's decision of October 19, 2026 the adapter adds `--approve`, pi's trust for that one
+it before any extension loads, rewake's included, and the run would wait for a person. The
+adapter adds `--approve`, pi's trust for that one
 process, which saves nothing to `trust.json`; a launch whose own arguments carry `-a`,
 `--approve`, `-na` or `--no-approve` keeps its choice. The socket path is passed in `REWAKE_PI_SOCKET`; nothing is injected as a first
 user message.
@@ -371,9 +245,9 @@ reported. The exchange and its verified native behavior are in [research-pi.md](
 
 ### The shell
 
-Main runs in rewake's shell ([shell.md](v2/shell.md)) whenever standard input and output are
-both terminals and its adapter offers spaces, with no flag to turn it off (the owner's
-decision, October 19, 2026) — Claude Code's and pi's alike. Otherwise main runs plain: under a
+Main runs in rewake's shell ([shell.md](shell.md)) whenever standard input and output are
+both terminals and its adapter offers spaces, with no flag to turn it off — Claude Code's and
+pi's alike. Otherwise main runs plain: under a
 script or a pipe. The launch reads no harness flag, so
 `rewake claude -p` typed at a terminal runs inside the shell too (a known limit). The launch
 execs the shell — `REWAKE_SHELL`, or `rewake-shell` beside rewake, refused exit 1 when neither
@@ -385,7 +259,7 @@ adapter is told the run is drawn by rewake (`LaunchRequest.Shell`): Claude Code 
 the wheel. The shell sets `REWAKE_HOST_COLORS` in main's environment from the terminal's
 answer, so workers' hosts are seeded too. Main's wrapper writes on its terminal one thing of its
 own, the shell's closing mark, when main's mod says Claude Code's session has ended, or pi's
-extension says pi quits ([shell.md](v2/shell.md#who-owns-which-pty)). It ends when main ends, with main's code, and when its
+extension says pi quits ([shell.md](shell.md#who-owns-which-pty)). It ends when main ends, with main's code, and when its
 terminal goes: then it hangs main up and main's run's end ends every worker. A launch that failed
 inside the shell has its last lines printed once the shell leaves the screen.
 
@@ -403,7 +277,7 @@ Main raises each writer in a checkout of its own with `rewake space open <name> 
 <alias> --worktree=<topic>`; a session cannot start another by a launch
 ([no session inside a session](#no-session-inside-a-session)). Main then takes the accepted work with
 `rewake worktree land <topic>` — or fast-forwards its own branch to the writer's — rather than
-making a checkout by hand with `git worktree add`. Since October 20, 2026 the space's close
+making a checkout by hand with `git worktree add`. The space's close
 removes the checkout and its branch when nothing in them would be lost, every commit already on
 another local branch among it ([SP7](rules/space.md)); one that stays is cleared with
 `rewake worktree finish <topic>` or `rm`. A template may say `worktree = true` instead of the
@@ -417,81 +291,16 @@ the main checkout at the same time.
 
 ### A space for a worker
 
-`rewake space open <name> --alias <alias> [--worktree[=<name>] | --no-worktree] [--type <type> | --no-type] -- <harness args>` is main's way
-to start a worker, built October 18, 2026 (S4-7,
-[the steps](v2/stage4-space-steps.md#the-build-steps)). A worker is raised only from a template
-(the owner's decision, October 19, 2026): `--alias` is required, `rewake workers` lists the
-person's worker aliases, and the alias supplies the harness, role, command wrapper, args and
-applied settings; `--harness` and `--role` are gone, a call with either refused as an unknown
-flag. The space owns the name and room. The fields and precedence are in
-[launch-defaults.md](launch-defaults.md#the-worker-catalogue).
-Opening is a change, refused unless main's run has `Spaces` live, and refused for a name whose session is
-already alive. It writes the space's record and re-executes rewake as a launcher with
-`Setsid`; the launcher starts the space host and exits. The space host takes the room's build
-lease as any writer, records its own run, and refuses the open — the record closed, the worker
-never started — unless its whole chain of parents reads up to the root without meeting main's
-wrapper ([SP9](rules/space.md)). Then it opens a pseudo-terminal of 120 by 40 with
-`host/terminal`'s pair and starts its own executable there as
-`rewake [--command <wrapper>] <harness> [--worktree…] <harness args>`, in
-main's working directory, with `REWAKE_SESSION`, `REWAKE_EPOCH`, `REWAKE_ROOM`, every
-`REWAKE_BRIDGE_` variable and every catalogue harness's `EnvNotInherited` stripped,
-`REWAKE_DIR` set to main's base, `TERM` set and `REWAKE_SPACE=<room>/<space id>`, with
-`REWAKE_SPACE_TEMPLATE=<alias>` beside it for a space opened with `--alias`, and
-`REWAKE_SPACE_TYPE=<type>` with `REWAKE_SPACE_TYPE_TEXT=<its text>` for a worker raised for a
-type, which `space open` resolved in main's directory ([worker-types.md](worker-types.md)). The launch
-is that worker, not main, only when the variable names a space of an existing room that is
-`opening`, or already `open` on the launch's own run (the host records it as soon as it
-started the worker), and whose recorded host run — pid and start time — is the launch's parent; it then
-takes the name, role and room from the record, the template and the type from their companions,
-and unsets them; the type, else the template, names the worker's memory on Claude Code. Anything else is
-refused, exit 1, pointing to `rewake space open`: a person who set the variable would start a
-worker past main. Where the harness takes a conversation id
-(`ConversationOffer`), a fresh one is inserted before any prompt terminator and recorded.
-For pi, `--session-id` names or creates that conversation; it is not by itself a continuation
-and no longer refuses a new worktree. Resume, continue, session and fork flags still do. The worker's session is
-`<name>-<harness>`. The command waits until the record is open and that session is registered
-with the worker's run, at most 30 s, and fails with the record's reason otherwise.
-
-What a harness needs to start unattended beyond what its adapter sets — a Claude Code worker's
-onboarding and folder trust are set by the profile (above) — main passes after `--`, a
-permission mode among it; rewake types nothing into the worker on its own, only the person's keys from
-main's shell. The space host serves `sock/space.<id>.sock` to the shell as a raw stream: a
-preamble from the emulator that keeps the worker's screen, then the worker's bytes, and the keys
-and sizes the shell sends back; the last size set is the worker's ([shell.md](v2/shell.md)).
-
-The space host reads main's run once a second (`ObserveRun` through `space.MainRuns`). Once
-it reads ended it sends SIGHUP to the worker's process group, SIGTERM after 1 s, SIGKILL after
-5 s more, waits up to 2 s for the group to be gone, records the end it observed and exits; a
-run read as unknown ends nothing. The group is gone once only zombies are left in it: an
-orphan of the worker waits there for whoever adopted it to reap it, and counting it left the
-record closing with nothing of the worker running (seen October 19, 2026 under the workflow
-suite's subreaper, about one run in ten). A process whose leader thread is a zombie is not
-one while another of its threads runs, as after `pthread_exit` of its first thread: taking it
-for one closed a space after the hangup with such a worker running (seen in review the same
-day). A group not seen gone, or a checkout that could not
-be looked for, leaves the record closing rather than record an end nobody saw.
-
-Main closes a worker it raised with `rewake space close <name>`, built October 19, 2026: a
-worker is never switched or restarted in place, and when another one is needed main closes it
-and raises a new one from a template (the owner's decision that day); there is no restart verb.
-Close is a change, refused as a wrong call from any role but main and for a name no open space
-holds, and refused, exit 1, for a space another run of main opened or one still opening. It
-moves the record to closing with the reason "main closed it with rewake space close" and signals
-nothing itself: the space host re-reads the record at each tick of its watch, and one it finds
-closing ends the worker by the same sequence as at main's end, recording that reason with the
-signal that took. Close answers once the record is closed or kept, at most 20 s, and says so
-otherwise; the worker's checkout is removed when nothing would be lost, and a kept one, its
-reason on the answer's second line, follows SP7. A task the worker still owed reads as lost in main's
-`rewake inbox --awaited`, as any ended worker's does. The view socket is
-listened on before the worker starts; an open that cannot serve it is refused. Its standard streams are `/dev/null`: what goes wrong shows in
-the record's end or as the open's timeout.
+Main starts a worker with `rewake space open <name> --alias <alias> … -- <harness args>`: a
+detached space host runs the worker's launch in a pseudo-terminal it owns, with the session's
+variables stripped and `REWAKE_SPACE` naming the space, and ends it when main's run ends. The
+launch, the record, the closing and the listing are in [space.md](space.md).
 
 ### The intro
 
 The system layer uses an independent briefing for general, write or main from
 `internal/core/brief/roles.go`: the whole playbook of the role, with sections on the work, the
-reports, the limits and the mail — on October 19, 2026 a captured main's ran 51 lines and a
-worker's 33. Each names its identity and selection reason, explains the commands that role
+reports, the limits and the mail. Each names its identity and selection reason, explains the commands that role
 needs, and points to guide for the full contract.
 Write may commit; main delegates and reads results. All ask for the point of a message in its first line. Per-role
 snapshots make wording changes reviewable. A worker raised for a type gets, after its role's
@@ -503,8 +312,8 @@ Launch supplies only the system briefing; the first task prompts the agent to
 read rewake guide. Caller prompts, continuations and their `--` delimiter stay
 intact, with injected transport flags placed before the delimiter.
 
-**Owner decision, September 17, 2026:** startup must not create an empty dialogue
-or add automatic messages to resumed conversations.
+Startup creates no empty dialogue and adds no automatic message to a resumed
+conversation.
 
 ## Signals, and what the wrapper does not do
 
@@ -524,7 +333,7 @@ say whether it went to the group or to one process. So the answer comes from the
 harness. A termination request is repeated to it only if it is still running a
 moment later, which after a group signal it usually is not.
 
-**Decision, September 16, 2026:** forwarding stays. It exists to avoid leaving a
+Forwarding stays: it exists to avoid leaving a
 session unreachable, not to interfere. The residual case is a harness that
 deliberately takes longer than the grace period to shut down — it receives a
 second signal. Tools of this kind (`tini`, `dumb-init`) forward unconditionally;

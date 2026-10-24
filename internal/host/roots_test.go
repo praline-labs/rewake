@@ -12,7 +12,7 @@ import (
 )
 
 // TestChildBaseRoundTripAndAuthority holds the round trip of the base
-// (docs/v2/stage3-state.md#the-roots): the wrapper exports the base, not its
+// (docs/rules/state.md#the-roots): the wrapper exports the base, not its
 // root, and a shell of the session and the harness's launch values, each
 // resolving the room from what they were given, find the wrapper's room byte for byte,
 // with one v2 in it — so the run's authority, whose address hashes the room,

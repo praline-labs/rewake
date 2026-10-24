@@ -94,7 +94,7 @@ profile is refused outright before any of this, as are `--oss` and
 
 ## The worker catalogue
 
-**Owner decision, October 19, 2026** ([worker-profile.md](v2/worker-profile.md)): aliases are
+**Owner decision, October 19, 2026** ([worker-profile.md](worker-profile.md)): aliases are
 only main's catalogue of workers. `rewake workers` lists them and `rewake space open <space>
 --alias <name>` starts one; `rewake <alias>` is no launch — the word is refused, naming the
 `space open` that opens it. Since October 18 the aliases had been launches and the catalogue at
@@ -167,7 +167,7 @@ space names the worker, and its room is main's whatever the checkout. Applied
 settings replace older copies in `args`, and flags after `--` replace those in turn; environment
 defaults fill what neither supplied. Under a `command` wrapper whose settings set
 `CLAUDE_CODE_AUTO_COMPACT_WINDOW`, that value wins over `--autocompact`; without one a worker's
-user settings no longer reach the run ([worker-profile.md](v2/worker-profile.md)). A worktree
+user settings no longer reach the run ([worker-profile.md](worker-profile.md)). A worktree
 named in the alias is recorded as the space's checkout; an explicit space `--worktree` replaces
 it. rewake neither reads nor edits the person's wrapper or harness settings.
 

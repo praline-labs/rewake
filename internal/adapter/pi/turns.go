@@ -70,7 +70,7 @@ func (r *run) handle(l *link, request frame) {
 		go func() { defer r.leave(); l.answer(request, r.publish(l, completion)) }()
 	case "closing":
 		// pi quits: the shell's closing screen and the workers' close start
-		// now rather than at the process's end (docs/v2/shell.md).
+		// now rather than at the process's end (docs/shell.md).
 		if r.onClosing != nil {
 			r.onClosing()
 		}

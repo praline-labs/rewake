@@ -43,7 +43,7 @@ type LaunchRequest struct {
 	// RunDir is this run's own directory, made by the wrapper after the
 	// claim and removed — with everything in it — once the run's services,
 	// children and sockets have stopped, or by a later launch once the run
-	// is proven dead (docs/v2/stage3-rundir.md). What the
+	// is proven dead (docs/rules/launch.md). What the
 	// adapter writes for this run alone goes here; mail, receipts and
 	// journals do not. No socket goes here: its path could pass the limit a
 	// unix socket allows, so Socket keeps its short form.
@@ -65,7 +65,7 @@ type LaunchRequest struct {
 	// Template is the worker catalogue's alias a space was opened with, empty
 	// for main and for a test build's direct worker launch: an adapter may
 	// keep what one template's workers share, its memory on Claude Code
-	// (docs/v2/worker-profile.md).
+	// (docs/worker-profile.md).
 	Template string
 	// WorktreeEntry says the template lets this worker enter a checkout
 	// rewake makes for it mid-session (enter_worktree = true); only an
@@ -76,13 +76,13 @@ type LaunchRequest struct {
 	WorkType worktype.Type
 	// Shell says the run is main's in rewake's shell, drawn on a pane whose
 	// terminal keeps no scrollback before a pane attached: an adapter whose
-	// harness can scroll its own history turns that on (docs/v2/shell.md).
+	// harness can scroll its own history turns that on (docs/shell.md).
 	Shell bool
 	// Closing, set by the host for a run in rewake's shell and nil
 	// otherwise, tells the shell that the harness has begun to end its
 	// process, so the shell's closing screen is up before the harness's own
 	// screen goes. An adapter calls it when its harness says so, as often as
-	// it says (docs/v2/shell.md).
+	// it says (docs/shell.md).
 	Closing func()
 	// Env is the run's whole environment, built by the host: the current
 	// one less what the adapter's runs must not inherit (EnvNotInherited),

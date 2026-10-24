@@ -1,5 +1,5 @@
 // The shell's own colours, from the person's palette where their terminal
-// gave it (docs/v2/shell.md, "The bar"), with fallbacks that read on a dark
+// gave it (docs/shell.md, "The bar"), with fallbacks that read on a dark
 // and a light background alike: a terminal that answers nothing must not get
 // black on black.
 import type { TerminalColors } from "@opentui/core";

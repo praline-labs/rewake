@@ -1,4 +1,4 @@
-// The navigation's two lines (docs/v2/shell.md, "The bar"): a button for
+// The navigation's two lines (docs/shell.md, "The bar"): a button for
 // main and for each worker, the focused one filled in its colour and main's
 // colour apart from the workers'; and the hints for the current focus. Both,
 // and the strip, are the shell's own rows, drawn alike by ShellRow.

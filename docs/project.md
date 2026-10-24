@@ -58,7 +58,7 @@ Each principle names where it comes from.
   without a machine-readable form cannot exist. ([design.md](design.md#output).)
 - **An unknown flag or a stray argument is always a refusal.** A silently ignored flag
   returns an unfiltered answer with success, and the caller believes it.
-  ([v2/design.md](v2/design.md#what-does-not-change).)
+  ([design.md](design.md#decisions-in-force).)
 - **A refusal teaches.** It carries the reason, the syntax, the examples, the flags and
   where the full help is. ([design.md](design.md#failures-and-exit-codes).)
 - **Examples are real invocations**: they are copied verbatim, so each one is checked to
@@ -68,21 +68,21 @@ Each principle names where it comes from.
 - **Exit codes are a contract**, printed in the guide: 0 done; 1 the target refused or
   could not be reached; 2 the call was wrong; 3 the message was accepted but is not
   delivered yet. ([design.md](design.md#failures-and-exit-codes),
-  [v2/design.md](v2/design.md#what-does-not-change).)
+  [design.md](design.md#decisions-in-force).)
 - **The command line is the interface**: every mail operation is a command, and a session
   works fully through its shell and the guide. Since October 18, 2026, by the owner's
   decision, there are no mail tools beside it. (The owner's decision, recorded in
-  [v2/design.md](v2/design.md#what-does-not-change).)
+  [design.md](design.md#decisions-in-force).)
 - **The core knows no harness.** What rewake does with messages is written once, without
   naming any harness; each harness joins through an adapter that declares what it can
   do, and a new harness is added without touching the core. (The owner's decisions,
   recorded in [adapter-api.md](rules/adapter-api.md#why-capabilities) and
-  [v2/design.md](v2/design.md#the-import-rule).)
+  [layout.md](rules/layout.md#the-import-rule).)
 - **Delivery only through what a harness offers itself.** rewake never types into anyone's
   screen; it reaches a session only through the ways that harness provides. Main runs in a
   pane of rewake's shell and a worker in a pseudo-terminal rewake holds; the shell shows them
-  and passes the person's keys to them, nothing else. ([design.md](design.md#scope-of-the-first-version),
-  [v2/design.md](v2/design.md#what-does-not-change).)
+  and passes the person's keys to them, nothing else. ([design.md](design.md#scope),
+  [design.md](design.md#decisions-in-force).)
 - **The person's configuration is never edited.** Whatever a session needs is passed as
   options of that one launch; what rewake keeps for itself — the worker's service folder, the
   bundled pi's directory — lives under rewake's own directory, which it creates and never
@@ -90,14 +90,14 @@ Each principle names where it comes from.
   only newer ones (the owner's decision, October 19, 2026). Besides that file, rewake adds to
   the workers' own `.claude.json` in the service folder, the workers' Claude Code configuration
   directory, only the onboarding-done mark and trust for the repository main runs in (the
-  owner's decision, October 23, 2026). ([v2/design.md](v2/design.md#what-does-not-change),
+  owner's decision, October 23, 2026). ([design.md](design.md#decisions-in-force),
   [v2/design-rules.md](v2/design-rules.md#what-a-launch-adds-l1l3).)
-- **Transcript contents are not read.** ([design.md](design.md#scope-of-the-first-version),
-  [v2/design.md](v2/design.md#what-does-not-change).)
+- **Transcript contents are not read.** ([design.md](design.md#scope),
+  [design.md](design.md#decisions-in-force).)
 - **No service runs beside the sessions.** What serves a session lives exactly as long
   as that session and serves only it: there is nothing to start, stop or
   recover, and no state where the sessions exist but a service has died.
-  ([design.md](design.md#processes), [v2/design.md](v2/design.md#what-does-not-change).)
+  ([design.md](design.md#processes), [design.md](design.md#decisions-in-force).)
 - **Simple steps, retried from the disk.** A turn's end writes its reports, then clears the
   waits they answer, then records itself done, all under the sender's mailbox lock; a retry runs
   the same steps from what is on disk. A record that cannot be read fails the operation that met
@@ -144,7 +144,7 @@ only one that steers other sessions. See [flow.md](flow.md) and
 together in one room: a main session on Claude Code hands out work to sessions on pi and
 reads their reports, and the other way round, through the same mail and the same rules as
 between two sessions of one harness. See
-[v2/design.md](v2/design.md#the-stage-plan-from-here).
+[README.md](roadmap/README.md).
 
 **Main starts its workers.** The main session opens a space: rewake starts a worker on the
 harness main names, with the model and effort main picks and in a checkout of its own if
@@ -210,7 +210,7 @@ sessions working on one repository do not step on each other. See
 [worktree.md](worktree.md).
 
 **One build per room.** Every session of a room, and every rewake process acting for
-them, is one build of rewake; another build is refused, not mixed in. See [v2/design-state.md](v2/design-state.md#one-build-per-room).
+them, is one build of rewake; another build is refused, not mixed in. See [rules/state.md](rules/state.md#the-builds-identity).
 
 **What it never does.** It never types into anyone's screen; main and the workers it starts
 show only in rewake's shell. It does not edit the person's harness configuration; it
@@ -238,8 +238,8 @@ By the kind of work. Every document is on [the map](README.md); the current plan
   facts in research below.
 - **Changing the command line**: [design.md](design.md#interface),
   [roles.md](roles.md), and `AGENTS.md`, "How the CLI is organised".
-- **Changing the layout or the state directory**: [v2/design.md](v2/design.md),
-  [v2/design-state.md](v2/design-state.md), [code.md](code.md).
+- **Changing the layout or the state directory**: [design.md](design.md),
+  [rules/state.md](rules/state.md), [code.md](code.md).
 - **Changing the tests**: [testing.md](testing.md), `AGENTS.md`, "Checks".
 - **Changing the documents**: [README.md](README.md) and `AGENTS.md`, "Keeping the
   documentation true".

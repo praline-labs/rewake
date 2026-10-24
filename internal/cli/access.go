@@ -10,7 +10,7 @@ import (
 )
 
 // What a parsed form does to the room's state
-// (docs/v2/stage3-state.md#what-is-a-writer). Forms, not commands, are
+// (docs/rules/state.md#what-is-a-writer). Forms, not commands, are
 // classified: inbox and inbox --owed are two forms, and only one of them
 // writes. The class is read from the parsed call before the handler and
 // before anything that can prune, so a view never reaches a write by a path
@@ -84,7 +84,7 @@ func worktreeAccess(call Call) access {
 // the handler, the shell's observation and the printing of the answer, or
 // through a tool call's bounded output. Nothing of the invocation that can
 // write runs outside it. A change holds the build lease of its room for the
-// whole scope (docs/v2/stage3-state.md#one-build-per-room), taken before any
+// whole scope (docs/rules/state.md#the-rooms-lease), taken before any
 // other lock; a launch takes its own, for the room of its directory or its space, and
 // holds it for the wrapper's life. A lease refused ends the scope before the
 // handler, which then has had no effect, and is answered by refused the way

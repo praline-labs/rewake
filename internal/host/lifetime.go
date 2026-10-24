@@ -6,7 +6,7 @@ import (
 )
 
 // lifetime keeps the room's build lease through the run's last effect
-// (docs/v2/stage3-state.md#one-build-per-room). Every goroutine the run starts
+// (docs/rules/state.md#the-rooms-lease). Every goroutine the run starts
 // beside its harness that may write the room counts among its workers, and
 // the run's hold on the lease goes only once the last of them has stopped.
 // The stops that end them wait only so long, so a write stalled in the

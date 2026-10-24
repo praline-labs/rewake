@@ -10,7 +10,7 @@ import (
 )
 
 // TestEveryChangeFormHoldsLeaseThroughItsLastEffect holds the scope of a
-// change (docs/v2/stage3-state.md#what-is-a-writer): every documented change
+// change (docs/rules/state.md#what-is-a-writer): every documented change
 // form but a launch, which holds its own lease for the wrapper's life, run on
 // a populated room by a session of it while the test itself holds no lease,
 // is refused no write for want of one — not by its handler, not by the

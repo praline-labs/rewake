@@ -8,7 +8,7 @@ import (
 )
 
 // Listener is a socket of the state, a guarded resource
-// (docs/v2/stage3-state.md#what-is-a-writer): binding it makes a file in the
+// (docs/rules/state.md#what-is-a-writer): binding it makes a file in the
 // room, and closing it removes that file. Go's own listener unlinks its path
 // on close by itself, past any check; this one turns that off and removes the
 // path itself, behind the same guard as every other write, so the close-time

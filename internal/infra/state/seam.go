@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// The write seam's plain primitives (docs/v2/stage3-state.md#what-is-a-writer):
+// The write seam's plain primitives (docs/rules/state.md#what-is-a-writer):
 // writes of the room that are neither a replacement by rename nor an exclusive
 // publication — a direct write, an open that may create or truncate, a hard
 // link, a mode, a touch, a removal that is cleanup — each the os call it

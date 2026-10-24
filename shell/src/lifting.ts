@@ -1,6 +1,6 @@
 import { createSignal } from "solid-js";
 
-// The closing layer's state (docs/v2/shell.md). closing is set when main's end
+// The closing layer's state (docs/shell.md). closing is set when main's end
 // begins: from then until the shell exits the screen is the closing layer
 // alone, and once main's end is sure the keys reach no program. "left" is a
 // layer begun by main leaving its screen alone, under which main keeps its

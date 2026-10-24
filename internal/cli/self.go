@@ -32,7 +32,7 @@ func ownRun(dir string) (registry.Session, string, error) { return ownRunBy(dir,
 
 // ownRunIn is ownRun for a form of this class: a view looks the caller up
 // without pruning a dead record, which is a write
-// (docs/v2/stage3-state.md#what-is-a-writer).
+// (docs/rules/state.md#what-is-a-writer).
 func ownRunIn(class access, dir string) (registry.Session, string, error) {
 	if class == accessView {
 		return ownRunBy(dir, registry.LookupReadOnly)

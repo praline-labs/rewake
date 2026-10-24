@@ -4,7 +4,7 @@ The numbered rules 2.0 carries, restated without the 1.x migration (decision 3) 
 without a harness. Which 1.x rule each comes from, and why the others went, is in
 [revision-rules.md](../archive/v2/revision-rules.md). The full wording of each rule moves into the
 2.0 rules documents in stage 3 with its tests; this file fixes what each says. The
-overview is in [design.md](design.md).
+overview is in [design.md](../design.md).
 
 Groups, each with its own letter so a rule is cited without its document: **E** the
 effects of a mail operation (from `mail-bridge-cli.md` 1–8) and **L** what a launch adds
@@ -60,7 +60,7 @@ One build per room, which T10 restated for a tool call, holds for every writer
   never edited; what a run needs is passed for that one launch. (`mail-bridge-launch.md`
   rule 1; on Claude Code, one `--plugin-dir`.) A worker of Claude Code also gets rewake's
   worker profile, launch options and the settings file of rewake's service folder, by the
-  owner's decisions of October 19, 2026 ([worker-profile.md](worker-profile.md)).
+  owner's decisions of October 19, 2026 ([worker-profile.md](../worker-profile.md)).
 - **L2. Diagnostics say where, never what**: no configuration content or argument value
   is printed. (Rule 7.)
 - **L3. Nothing persists past the run**: what a launch writes lives in the run's

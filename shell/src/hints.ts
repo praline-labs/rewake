@@ -1,5 +1,5 @@
 // The key hints under the bar: what the keys do now, for the focus and the
-// moment (docs/v2/shell.md, "The bar"). A hint is an entry of the table below,
+// moment (docs/shell.md, "The bar"). A hint is an entry of the table below,
 // kept or left out by its when; a new one is a line here, not a string in the
 // layout.
 

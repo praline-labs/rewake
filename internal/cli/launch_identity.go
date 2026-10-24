@@ -17,7 +17,7 @@ import (
 
 // launchIdentity is who a launch is and where: what the person's launch
 // never names (the owner's decision, October 19, 2026 —
-// docs/v2/worker-profile.md).
+// docs/worker-profile.md).
 type launchIdentity struct {
 	// name is the address prefix; empty takes the role's.
 	name string

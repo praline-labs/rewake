@@ -15,7 +15,7 @@ import (
 )
 
 // viewForms are the invocations a view must answer without a write
-// (docs/v2/stage3-state.md#what-is-a-writer): every documented view form,
+// (docs/rules/state.md#what-is-a-writer): every documented view form,
 // every command's help page in both forms, and calls refused before they
 // parse — an unknown command, an unknown flag, a stray argument — which have
 // no form at all.

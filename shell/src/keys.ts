@@ -1,4 +1,4 @@
-// The prefix, Ctrl+\, and the command after it (docs/v2/shell.md, "The
+// The prefix, Ctrl+\, and the command after it (docs/shell.md, "The
 // prefix and the room"). Read in the renderer's prependInputHandlers, on raw
 // sequences before OpenTUI parses them: the terminal sends Ctrl+\ as the byte
 // 0x1c, in the kitty protocol's CSI u form (with event types and lock bits),

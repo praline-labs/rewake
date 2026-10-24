@@ -9,7 +9,7 @@ import (
 
 // DefaultsEnv carries the person's terminal's default colors from the shell
 // to the space hosts its main opens, so a worker's emulator answers them from
-// its start (docs/v2/shell.md): the foreground and the background as the
+// its start (docs/shell.md): the foreground and the background as the
 // terminal named them, joined by ";".
 const DefaultsEnv = "REWAKE_HOST_COLORS"
 

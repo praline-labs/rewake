@@ -20,7 +20,7 @@ type Role struct {
 	// that forgets the role must not switch reports off.
 	Silent bool
 	// Spaces says a session of the role opens spaces and its run hosts them
-	// (docs/v2/stage4-space.md): main alone, which hands the work out.
+	// (docs/space.md): main alone, which hands the work out.
 	Spaces bool
 	// Play is what this role does, in order: the text of the briefing and of
 	// the guide's own section. Required — a role without one would launch a

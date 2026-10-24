@@ -208,7 +208,7 @@ func (iso *Isolation) inEveryRoomByType(sub string, matches func(os.FileInfo) bo
 }
 
 // rooms is the directory of the rooms rewake keeps in the case's state: the
-// root v2 of the base (docs/v2/stage3-state.md#the-roots).
+// root v2 of the base (docs/rules/state.md#the-roots).
 func (iso *Isolation) rooms() string { return filepath.Join(iso.StateDir, "v2", "rooms") }
 
 // Room is one room's directory in the case's state.

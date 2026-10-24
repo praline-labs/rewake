@@ -1,5 +1,5 @@
 /*
-Package build holds one build per room (docs/v2/design-state.md#one-build-per-room):
+Package build holds one build per room (docs/rules/state.md#the-builds-identity):
 the build id, which is the SHA-256 of the running executable's content, and the
 room's lease, which every writer of the room holds shared and a launch that
 changes the room's build takes exclusive.

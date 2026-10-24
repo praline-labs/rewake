@@ -72,7 +72,7 @@ same steps, with its name, role and room from the space's record.
    executable whose sessions write there, a launch of another build switches it only
    while nothing holds the room, and every change form of a shell or a tool call holds the
    lease too, refused in a room of another build
-   ([stage3-state.md](v2/stage3-state.md#one-build-per-room)). A view form takes no
+   ([state.md](rules/state.md#the-rooms-lease)). A view form takes no
    lease, writes nothing and fails if it tries; in a room of another build it says so
    once on stderr. The state rewake 1.x left beside the root is never read
    and is left as it is.
@@ -135,7 +135,7 @@ same steps, with its name, role and room from the space's record.
 for every session. It reads the records and checks that both pids are alive with
 matching start times; a view, it writes nothing, so a dead session's record is left
 for a change form or a later launch to prune
-([stage3-state.md](v2/stage3-state.md#what-is-a-writer)). A record it cannot read is
+([state.md](rules/state.md#what-is-a-writer)). A record it cannot read is
 shown as a session whose state is unknown.
 
 ## Act 2. A task is sent
@@ -348,7 +348,7 @@ main the person is to type `/login` once in that pane ([launch.md](launch.md#cla
 Main sends `api-claude` a task, and its report comes back as in Acts 2 to 5. When main was
 started in the shell — at a terminal, always — main runs on the shell's own pty and each worker's pane is
 fed the raw bytes from its space host's socket; Ctrl+\\ then a key chooses the worker shown
-beside main, and everything else typed goes to the focused program ([shell.md](v2/shell.md)).
+beside main, and everything else typed goes to the focused program ([shell.md](shell.md)).
 Without the shell the worker runs unseen.
 
 The space host reads main's run once a second. When it reads ended — main exited, crashed or

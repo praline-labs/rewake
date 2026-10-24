@@ -10,7 +10,7 @@ import (
 
 // The test build keeps a direct launch of any role in any room: the workflow
 // suite starts its workers that way, without a main to open their spaces
-// (main's decision 3, October 19, 2026 — docs/v2/worker-profile.md).
+// (main's decision 3, October 19, 2026 — docs/worker-profile.md).
 
 var nameOption = Option{
 	Flag:    "--name",

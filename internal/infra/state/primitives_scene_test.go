@@ -19,7 +19,7 @@ type scene struct {
 }
 
 // leaseFree are the writes that need no lease: the bootstrap's, which only
-// view mode refuses (docs/v2/stage3-state.md#the-bootstrap).
+// view mode refuses (docs/rules/state.md#the-bootstrap).
 var leaseFree = map[string]bool{"Bootstrap": true, "OpenLeaseLock": true, "CreateLeaseLock": true}
 
 // writePrimitives sets up a scene in the room at dir, which the caller holds

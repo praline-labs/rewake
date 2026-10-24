@@ -9,7 +9,7 @@ import (
 )
 
 // WorkerSpaceEnv names, as <room>/<space id>, the space whose worker a launch
-// is. A person's launch is always main (docs/v2/worker-profile.md); a launch
+// is. A person's launch is always main (docs/worker-profile.md); a launch
 // takes a worker's name, role and room only from the record of an opening
 // space whose host is its parent.
 const WorkerSpaceEnv = "REWAKE_SPACE"

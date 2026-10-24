@@ -1,4 +1,4 @@
-// Where a pane's bytes come from (docs/v2/shell.md, "Who owns which pty"):
+// Where a pane's bytes come from (docs/shell.md, "Who owns which pty"):
 // main runs on a pty of the shell's own; a worker's pty is its space host's,
 // read over the host's socket in the raw mode.
 import type { Subprocess } from "bun";

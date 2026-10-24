@@ -9,7 +9,7 @@ import (
 )
 
 // Foreign is the line a view of a room adds when the room's build is not
-// this one (docs/v2/stage3-state.md#one-build-per-room), or "" when the room
+// this one (docs/rules/state.md#the-rooms-lease), or "" when the room
 // has no build yet or it is this build. A view takes no lease and refuses
 // nothing: another build's state is shown as this build reads it, and said
 // to be another's. A build that cannot be read, the room's or this

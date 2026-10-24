@@ -6,7 +6,7 @@ October 13, 2026: pi's documentation, source and examples at 0.85.1 (a reference
 commit `05c622981`), and the documentation, changelog and package manifest of the npm
 package 1.2.0, the version installed since that day. No pi was run, no model called. The
 audit cites its probe items as PI1–PI14, the numbered list under "What a live probe must
-confirm". Stage 4b builds pi's adapter ([the stage plan](design.md#the-stage-plan-from-here)).
+confirm". Stage 4b builds pi's adapter ([the stage plan](../roadmap/README.md)).
 
 ---
 

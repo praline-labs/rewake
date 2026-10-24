@@ -10,7 +10,7 @@ import (
 // The emulator ends every glyph cluster at the end of each write: a mark, a
 // variation selector or a joiner that arrives in the next read becomes a
 // cell of its own, and "e" then U+0301 split across two reads is two cells
-// where it is one (both library versions probed, docs/archive/v2/agent-deck-ideas.md).
+// where it is one (both library versions probed, docs/shell.md#the-space-hosts-emulator).
 // So the last cluster of a read is held back and written with the next read,
 // or alone once holdFor passes with nothing after it.
 

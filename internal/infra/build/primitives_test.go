@@ -13,7 +13,7 @@ import (
 )
 
 // primitives are the writes of infra/state that work without a lease
-// (docs/v2/stage3-state.md#the-bootstrap).
+// (docs/rules/state.md#the-bootstrap).
 var primitives = map[string]bool{"Bootstrap": true, "OpenLeaseLock": true, "CreateLeaseLock": true, "WriteBuildRecord": true}
 
 // acquirer is the one file allowed to refer to them.

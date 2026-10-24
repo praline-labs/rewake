@@ -46,7 +46,7 @@ type HarnessWatcher interface {
 
 // Workers counts work a service does on a request of its own among the run's
 // workers, so the room's lease and the run's directory outlast its last
-// write (docs/v2/stage3-rundir.md). Admit says whether the run still takes
+// write (docs/rules/launch.md). Admit says whether the run still takes
 // work; each admitted piece ends with one Dismiss.
 type Workers interface {
 	Admit() bool

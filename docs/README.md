@@ -22,9 +22,9 @@ for, updates this file in the same commit; no test checks it.
 
 Sessions and launches:
 
-- [session-record.md](session-record.md) — the session record: every field, the boot, how a record is published, updated and pruned.
+- [design.md](design.md#session-record) — the session record: every field, the boot, how a record is published, updated and pruned.
 - [roles.md](roles.md) — roles and names: the catalogue, what each role is told and reports, how a role and a name are chosen.
-- [launch.md](launch.md) — the wrapper's launch sequence, signals, main in the room of its directory, the worker profile, the harness flags, the intro.
+- [launch.md](launch.md) — the wrapper's launch sequence, signals, main in the room of its directory, the harness flags, the intro.
 - [launch-defaults.md](launch-defaults.md) — model and effort defaults nobody typed; the worker aliases, main's catalogue for `space open --alias`, and which flags a typed one replaces ([the step](roadmap/2026-10-19-worker-catalogue.md)).
 - [worker-types.md](worker-types.md) — the kinds of work a worker is raised for: the built-in, user and project types, `[types] off`, `space open --type`, the briefing's section and the memory by type; a project's `.rewake/` ([the step](roadmap/2026-10-21-worker-types.md)).
 - [worktree.md](worktree.md) — the checkout `--worktree` gives a launch, `.worktreeinclude`, and `rewake worktree land`, `finish`, `ls`, `rm`.
@@ -44,8 +44,9 @@ Mail and reports:
 Main and its workers:
 
 - [session-state.md](session-state.md) — the telemetry line main sees for its workers: context, model and effort, compactions, staleness.
-- [v2/worker-profile.md](v2/worker-profile.md) — rewake's own Claude Code worker profile by launch options and `rewake claude` as main's whole launch in the room of its directory, workers raised only by main (built).
-- [v2/shell.md](v2/shell.md) — the shell, which replaced the host mode on October 19, 2026: a TypeScript application on OpenTUI and Solid in `shell/`, the screen of every main started at a terminal, a terminal pane per program fed from its host's socket in the raw mode, the spike's findings, the steps.
+- [worker-profile.md](worker-profile.md) — the service folder a Claude Code worker runs in: its login, onboarding, skills, plugins, `settings.json`, the run's `--settings`, the memory by type.
+- [shell.md](shell.md) — the shell: a TypeScript application on OpenTUI and Solid in `shell/`, the screen of every main started at a terminal, a pane per program fed the raw stream, the space host's emulator.
+- [space.md](space.md) — a space: main starting a worker through a detached space host, its record and states, the listing, closing and restore.
 - [remote-control.md](remote-control.md) — `rewake compact` and `rewake interrupt`: who may call them, refusals, the control directory.
 
 Designs not built:

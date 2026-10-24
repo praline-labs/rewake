@@ -69,7 +69,7 @@ func ControlPath(dir, name, run string) string {
 // ControlsPath is the directory holding every run's control directory.
 func ControlsPath(dir string) string { return filepath.Join(dir, controlDir) }
 
-// RunPath is the directory of one run (docs/v2/stage3-rundir.md):
+// RunPath is the directory of one run (docs/rules/launch.md):
 // what an adapter writes for that run alone, handed to it at launch and
 // removed with the run. It is no socket, so its length does not matter.
 func RunPath(dir, name, run string) string {
@@ -80,7 +80,7 @@ func RunPath(dir, name, run string) string {
 func RunsPath(dir string) string { return filepath.Join(dir, runDir) }
 
 // SpacesPath is the directory holding every space record of the room
-// (docs/v2/stage4-space.md#1-the-pieces-and-where-they-live).
+// (docs/space.md#the-record).
 func SpacesPath(dir string) string { return filepath.Join(dir, spacesDir) }
 
 // SpacePath is the record of one space, by its id: a name is reused once its

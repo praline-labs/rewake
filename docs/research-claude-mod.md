@@ -531,7 +531,7 @@ the mod's posts to a socket of the driver's:
 - rewake uses `session.end` alone since October 20, 2026: main's mod sends `session/closing` for
   `prompt_input_exit`, `other` and, since October 23, 2026, `logout` (`/logout` lagged the closing
   screen; the reason is read from 2.1.302's reason list, not seen live), and the shell starts its closing screen at the screen's leave,
-  which precedes it (docs/v2/shell.md, "The closing screen"). From October 19 the mod sent it at
+  which precedes it (docs/shell.md, "The closing screen"). From October 19 the mod sent it at
   `/exit`'s `command.run` too, and the closing screen hid the dialog above for five seconds.
 
 ## Entering a checkout mid-session (October 20, 2026, 2.1.302)

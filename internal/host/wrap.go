@@ -46,7 +46,7 @@ type Request struct {
 	// Command is the program to start in place of the harness's own.
 	Command string
 	// Shell says the harness runs in rewake's shell, on the shell's
-	// terminal (docs/v2/shell.md): an ordinary run here, drawn by the shell,
+	// terminal (docs/shell.md): an ordinary run here, drawn by the shell,
 	// its stops continued at once.
 	Shell bool
 
@@ -152,7 +152,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 	}()
 	// The run's directory comes before anything is prepared and goes at the
 	// run's end, once every worker of the run has stopped and before its hold
-	// on the lease goes (docs/v2/stage3-rundir.md), on every path out.
+	// on the lease goes (docs/rules/launch.md), on every path out.
 	reclaimRuns(request.Dir)
 	runDir, err := makeRunDir(request.Dir, name, epoch)
 	if err != nil {
@@ -208,7 +208,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 	launchRequest.Env = launch.SessionEnv(launchRequest, request.Harness.EnvNotInherited())
 	if request.Shell {
 		// The shell's pane draws main as a space host's draws a worker, so
-		// main gets the same locale (docs/v2/shell.md); its workers inherit it.
+		// main gets the same locale (docs/shell.md); its workers inherit it.
 		launchRequest.Env = terminal.UTF8Locale(launchRequest.Env)
 		// The workers' close starts here too, not at the main's run gone:
 		// the process takes about half a second more to exit.

@@ -11,7 +11,7 @@ import (
 )
 
 // formCase is one parsed form and the class
-// docs/v2/stage3-state.md#what-is-a-writer gives it.
+// docs/rules/state.md#what-is-a-writer gives it.
 type formCase struct {
 	argv []string
 	want access

@@ -10,7 +10,7 @@ import (
 )
 
 // Counter is a guarded resource of the state
-// (docs/v2/stage3-state.md#what-is-a-writer): one word of eight bytes in a
+// (docs/rules/state.md#what-is-a-writer): one word of eight bytes in a
 // file, mapped shared, so a reader in another goroutine — or another process
 // mapping the same file — takes its value without a lock and without the
 // filesystem. Its writes are the mapping's: making the file, the stores

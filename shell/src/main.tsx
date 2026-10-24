@@ -1,4 +1,4 @@
-// rewake's shell (docs/v2/shell.md): main on the left, from 120 columns the
+// rewake's shell (docs/shell.md): main on the left, from 120 columns the
 // chosen worker on the right, under main's pane a bar choosing the worker,
 // and a line of key hints across the whole width at the bottom; below 120
 // columns the bar takes the whole width too and switches the whole window.
@@ -118,7 +118,7 @@ function startMainPane(term: PaneTerminal) {
   };
   delete env.REWAKE_SHELL_CWD;
   // The person's colours reach every space host through main's environment,
-  // so a worker's program hears them from its host (docs/v2/shell.md).
+  // so a worker's program hears them from its host (docs/shell.md).
   if (seed.host) env.REWAKE_HOST_COLORS = seed.host;
   // pi copies through the machine's clipboard where it finds one, which never
   // reaches the person's terminal from inside the shell (on WSL without

@@ -7,7 +7,7 @@ import (
 )
 
 // SocketClaim is a run's authority over one socket path it owns outside the
-// state (docs/v2/stage3-state.md#what-is-a-writer): the reply socket a
+// state (docs/rules/state.md#what-is-a-writer): the reply socket a
 // harness's receipt protocol puts beside a socket the caller named, wherever
 // that is. It covers that one path and three acts on it — clearing a dead
 // run's socket, binding, and the close-time unlink — and only while this

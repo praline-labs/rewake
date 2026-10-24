@@ -1,8 +1,8 @@
 // Package buildtest makes the rooms tests write in the way a launch makes
 // them. From the root of 2.0 on, no resolver creates a room
-// (docs/v2/stage3-state.md#the-roots): only a launch's bootstrap does, under
+// (docs/rules/state.md#the-roots): only a launch's bootstrap does, under
 // the build lease, and no write of a room passes without its lease
-// (docs/v2/stage3-state.md#what-is-a-writer). A test that writes a room has it
+// (docs/rules/state.md#what-is-a-writer). A test that writes a room has it
 // made by the same acquisition — the real lease, taken for a launch of the
 // running test binary — and holds that lease, shared, until the test ends,
 // as a session of the room would: never a switch that lets tests past it.

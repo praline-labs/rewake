@@ -70,7 +70,7 @@ func TestRoomDirectoriesRefuseSymlinks(t *testing.T) {
 	}
 }
 
-// No resolver makes anything (docs/v2/stage3-state.md#the-roots): on an empty
+// No resolver makes anything (docs/rules/state.md#the-roots): on an empty
 // parent, on a base alone, and on a base whose root has no rooms, each names
 // the path and leaves the tree as it found it. Only the bootstrap creates.
 func TestResolversNeverCreate(t *testing.T) {

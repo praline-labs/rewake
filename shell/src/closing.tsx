@@ -1,4 +1,4 @@
-// The closing screen (docs/v2/shell.md, "Who owns which pty"): from the moment main's
+// The closing screen (docs/shell.md, "Who owns which pty"): from the moment main's
 // end begins until the shell exits, the whole screen is a spinner and one
 // line, a layer over the work as the modal will be, and nothing of the work
 // shows under it.

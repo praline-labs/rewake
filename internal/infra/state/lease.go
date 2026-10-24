@@ -13,7 +13,7 @@ import (
 )
 
 // The room's build lease as this package keeps it
-// (docs/v2/stage3-state.md#one-build-per-room): build.lock, held with flock,
+// (docs/rules/state.md#the-rooms-lease): build.lock, held with flock,
 // and build, the id of the room's writers. infra/build decides what an id is
 // and when a lease is taken; this package opens and locks the file, keeps the
 // record, and keeps which rooms this process holds a lease for — the
@@ -279,7 +279,7 @@ func WriteBuildRecord(l *LeaseLock, id string) error {
 }
 
 // The rooms this process holds a lease for. A write of a room asks here
-// (docs/v2/stage3-state.md#what-is-a-writer); the entry goes when the lock
+// (docs/rules/state.md#what-is-a-writer); the entry goes when the lock
 // is closed.
 var leases struct {
 	mu   sync.Mutex

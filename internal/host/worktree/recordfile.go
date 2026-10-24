@@ -7,7 +7,7 @@ import (
 )
 
 // A record lives beside the worktrees, outside the state directory
-// (docs/v2/stage3-state.md#what-is-a-writer): no room's lease covers it, so it
+// (docs/rules/state.md#what-is-a-writer): no room's lease covers it, so it
 // is written here rather than through the state's write seam, with the same
 // two forms the seam gives the state — a replacement by rename and a
 // publication that fails when the name is taken.

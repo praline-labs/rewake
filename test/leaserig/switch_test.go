@@ -9,7 +9,7 @@ import (
 )
 
 // TestConcurrentLaunchesOfOneBuildAllTakeTheRoom holds D4a
-// (docs/v2/stage3-state.md#one-build-per-room): launches of one build that
+// (docs/rules/state.md#the-rooms-lease): launches of one build that
 // all read a record not their own — missing, or another build's with nothing
 // holding the room — and then ask for the lock exclusive at once all take the
 // room. One switches it; the others find their build there and are granted,

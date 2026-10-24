@@ -60,7 +60,7 @@ func Base() (string, error) {
 }
 
 // rootName is the level of the base that holds 2.0's state
-// (docs/v2/stage3-state.md#the-roots): 1.x keeps its rooms beside it, in the
+// (docs/rules/state.md#the-roots): 1.x keeps its rooms beside it, in the
 // base itself, and neither reads the other's.
 const rootName = "v2"
 

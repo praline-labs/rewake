@@ -1,5 +1,5 @@
 // Compiles the shell into one executable for a platform package
-// (scripts/pack.sh, docs/v2/shell.md): the Bun runtime, the Solid transform
+// (scripts/pack.sh, docs/shell.md): the Bun runtime, the Solid transform
 // and OpenTUI's native library inside, so the person needs no Bun.
 //   bun build.ts <bun-linux-x64|bun-linux-arm64> <outfile>
 // The native library of a target that is not this machine's is installed by

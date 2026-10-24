@@ -1,5 +1,5 @@
 // The room, from rewake's own commands polled once a second
-// (docs/v2/shell.md, "The prefix and the room"): the spaces of the room's
+// (docs/shell.md, "The prefix and the room"): the spaces of the room's
 // running main, each with the socket its host serves the worker's screen on.
 
 export type Space = {
@@ -123,7 +123,7 @@ export async function spacesOver(rewake: string, room: string, ids: string[], bo
 }
 
 // The room's sessions as main sees them, for the strip under each worker pane
-// (docs/v2/shell.md, "The strip"): rewake list shows a session's telemetry
+// (docs/shell.md, "The strip"): rewake list shows a session's telemetry
 // only to a verified main, and the shell is main's terminal, so it asks as
 // main's run, the one whose wrapper is its own child.
 export type Session = {

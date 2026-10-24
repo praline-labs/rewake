@@ -31,8 +31,7 @@ const (
 	// PathSessionClosing says the harness has begun to end its process, from main's mod at /exit
 	// and at session.end with an exit reason, before the harness's screen goes or as soon after as
 	// the harness tells; a main in rewake's shell has its closing screen started by it
-	// (docs/v2/shell.md), and nothing else changes on the host. Asked ClosingRequest, answered
-	// Done.
+	// (docs/shell.md), and nothing else changes on the host. Asked ClosingRequest, answered Done.
 	PathSessionClosing = "/v1/session/closing"
 	// PathStatusLine reports the prompt cache's life from the status line of a worker's run, which
 	// Claude Code starts as a child of the harness and rewake's `rewake statusline` fills; unlike

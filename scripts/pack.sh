@@ -31,7 +31,7 @@ rm -rf "$out"
 mkdir -p "$out"
 
 # The shell is compiled by Bun into one executable per platform, beside the
-# binary that starts it (docs/v2/shell.md); the person needs no Bun. Bun
+# binary that starts it (docs/shell.md); the person needs no Bun. Bun
 # installs OpenTUI's native library only for this machine by default, and a
 # platform without its own has nothing to put inside, so every Linux one is
 # installed first, at the versions of the lockfile.

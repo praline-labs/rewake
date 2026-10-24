@@ -2,7 +2,7 @@
 
 What each layer of the tree may import and where a harness may be named. The
 import rule is held by `depguard` in [.golangci.yml](../../.golangci.yml); the
-layout and its reasons are in [design.md](../v2/design.md#the-layout), and each
+layout and its reasons are in [design.md](../code.md), and each
 package's place in [code.md](../code.md).
 
 ## The import rule
@@ -25,9 +25,9 @@ Every layer may import the standard library. Every layer but `infra` may also
 import another module's package, each dependency its own decision (`AGENTS.md`,
 "Code"). `github.com/charmbracelet/` stays confined to
 `internal/host/terminal`, the package it was taken for
-([stage4-space.md](../v2/stage4-space.md#the-terminal-library)), restored there on
+([shell.md](../shell.md#the-space-hosts-emulator)), restored there on
 October 18, 2026 for the workers' panel, and kept for the space host's emulator, from which the
-preamble of the shell's panes is built ([shell.md](../v2/shell.md)).
+preamble of the shell's panes is built ([shell.md](../shell.md)).
 The confinement includes tests and excludes child packages of `terminal`.
 
 The lint run checks the files selected by its build tags, including tests. The

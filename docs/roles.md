@@ -28,7 +28,7 @@ within its own permissions.
 unflagged launch was general): a person's launch, `rewake <harness>`, is always main, in the
 room of its directory, and has no role or name flag; workers are raised by main alone, with
 `rewake space open`, and a worker's launch takes its name and role from the space's record
-([launch.md](launch.md#a-space-for-a-worker)). A second main in a directory whose main runs is
+([launch.md](space.md)). A second main in a directory whose main runs is
 refused, exit 1, naming it: one main per directory, and another directory is another room. The
 same pid/start-time and namespace checks as list determine liveness. No session is promoted
 when a main leaves. The `rewaketest` build keeps `--main`, `--general`, `--write` and `--name`

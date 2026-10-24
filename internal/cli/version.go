@@ -31,7 +31,7 @@ type Build struct {
 	// the binary is not that revision alone.
 	Modified bool `json:"modified,omitempty"`
 	// ID is the SHA-256 of the executable, the identity a room's build lease
-	// compares (docs/v2/stage3-state.md#one-build-per-room); empty when the
+	// compares (docs/rules/state.md#the-rooms-lease); empty when the
 	// executable could not be read. The line leaves it out.
 	ID string `json:"build,omitempty"`
 }

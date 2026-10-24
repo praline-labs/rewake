@@ -58,7 +58,7 @@ the answer of `space open`.
 
 `space open` resolves the type in main's directory and the space host passes its name and text
 to the worker's launch as `REWAKE_SPACE_TYPE` and `REWAKE_SPACE_TYPE_TEXT` beside
-`REWAKE_SPACE_TEMPLATE` ([launch.md](launch.md#a-space-for-a-worker)); the launch unsets them.
+`REWAKE_SPACE_TEMPLATE` ([launch.md](space.md)); the launch unsets them.
 The space's record keeps only the type's name, as the optional `worker.type` (October 21,
 2026; additive, absent from older records and from a worker without a type); the text is not
 recorded, and a type still changes the worker's briefing, not the room's state. The briefing ends, after the role's sections, with
@@ -74,7 +74,7 @@ launch may carry, beside a large `--append-system-prompt` of the launch's own: t
 Main's decision, October 21, 2026: a Claude Code worker raised for a type keeps the memory of
 that type in that project, `~/.config/rewake/claude/worker/memory/<project>/<type>/`, whatever
 template opened it; one with no type keeps its template's, as before
-([v2/worker-profile.md](v2/worker-profile.md)). Nothing is moved. A template named like a type
+([worker-profile.md](worker-profile.md)). Nothing is moved. A template named like a type
 shares that type's memory directory — a known limit, left until it bites.
 
 ## The project's `.rewake/`

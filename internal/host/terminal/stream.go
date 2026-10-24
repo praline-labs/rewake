@@ -1,6 +1,6 @@
 package terminal
 
-// The raw stream (docs/v2/shell.md#how-a-pane-is-fed-the-raw-stream): a
+// The raw stream (docs/shell.md#how-a-pane-is-fed-the-raw-stream): a
 // client that draws the program in an emulator of its own gets a preamble
 // built from this grid's emulator and then every byte the emulator takes
 // after it. The cut is made in commit, under the grid's lock, between two

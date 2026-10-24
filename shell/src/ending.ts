@@ -1,4 +1,4 @@
-// Closing ends everything (docs/v2/shell.md, "Who owns which pty"): the
+// Closing ends everything (docs/shell.md, "Who owns which pty"): the
 // shell ends when main ends and when its own terminal goes, and ending it
 // hangs up main, whose run's end ends every worker its space hosts keep.
 //

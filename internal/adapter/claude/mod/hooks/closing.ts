@@ -1,6 +1,6 @@
 // The end of the harness's process, told to its run's wrapper at session.end,
 // so rewake's shell knows its closing screen is an end and not a pause
-// (docs/v2/shell.md). Measured on 2.1.302: /exit, Ctrl+C and Ctrl+D twice reach
+// (docs/shell.md). Measured on 2.1.302: /exit, Ctrl+C and Ctrl+D twice reach
 // session.end after the harness has left its screen, 60–120 ms after the key.
 // /exit's command.run comes earlier but tells nothing: with background work
 // running it opens a dialog that may keep the session.

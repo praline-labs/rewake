@@ -1,5 +1,5 @@
 // The person's colours, asked of their terminal once at start
-// (docs/v2/shell.md): a theme changed while the shell runs is not followed.
+// (docs/shell.md): a theme changed while the shell runs is not followed.
 import type { CliRenderer, OptimizedBuffer, TerminalColors } from "@opentui/core";
 
 export type Seed = {
@@ -44,7 +44,7 @@ export const standInForeground = "#c0c1bf";
 
 // keepDefaultForeground gives the cells the widget drew in the stand-in
 // colour the default foreground's intent, so the renderer writes SGR 39 and
-// the terminal draws them in its own colour (docs/v2/shell.md). A colour is
+// the terminal draws them in its own colour (docs/shell.md). A colour is
 // four u16 words, the low byte red, green, blue, alpha and the high bytes
 // its meta: the intent (2, default) in the second word's.
 export function keepDefaultForeground(buffer: OptimizedBuffer, rgb: [number, number, number]) {

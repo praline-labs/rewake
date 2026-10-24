@@ -13,7 +13,7 @@ import (
 
 // vtEmulator is the emulator of github.com/charmbracelet/x/vt, pinned at
 // v0.1.0: the pseudo-version agent-deck pins loses a combining mark after an
-// ASCII base within one write (docs/archive/v2/agent-deck-ideas.md).
+// ASCII base within one write (docs/shell.md#the-space-hosts-emulator).
 type vtEmulator struct {
 	emu *vt.Emulator
 	// pipe is the write end of the library's reply pipe, closed to end the
@@ -143,7 +143,7 @@ func (v *vtEmulator) look() look {
 
 // row is one row as runs, walking the cells rather than parsing Render: the
 // walk is the only way to the runs, and it is cheaper
-// (docs/archive/v2/agent-deck-ideas.md, measured). A new run starts where the
+// (docs/shell.md#the-space-hosts-emulator, measured). A new run starts where the
 // style changes; a wide glyph is a run of its own counted as its width, the
 // cell after it, which only holds its place, skipped, so the preamble places
 // the next run by the emulator's width, not a client's guess. A wide glyph

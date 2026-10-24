@@ -16,7 +16,7 @@ import (
 // terminal of its own, in main's room, living no longer than main's run, and
 // the record that stays after it. list is the view; open and close are
 // main's changes.
-// The person sees a worker's terminal in the shell (docs/v2/shell.md).
+// The person sees a worker's terminal in the shell (docs/shell.md).
 
 func spaceGroup() Group {
 	return Group{
@@ -86,7 +86,7 @@ type spaceView struct {
 	MainRun string `json:"mainRun,omitempty"`
 	// Socket is where the space's host serves its worker's screen, for a
 	// space not over: the shell connects there and builds no path itself
-	// (docs/v2/shell.md).
+	// (docs/shell.md).
 	Socket string `json:"socket,omitempty"`
 }
 

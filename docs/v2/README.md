@@ -2,13 +2,13 @@
 
 The documents of the 2.0 rebuild on the `v2` branch. The plan from here follows the owner's
 decision of October 18, 2026 — pi after Claude Code, Codex not soon, a space as main starting
-its workers without showing them inside Claude Code ([the stage plan](design.md#the-stage-plan-from-here),
+its workers without showing them inside Claude Code ([the stage plan](../roadmap/README.md),
 [its entry](../roadmap/2026-10-18-decision.md)). The closed stages — the revision of 1.x, stage
 3's plans and evidence, stage 4's audit — are in [the archive](../archive/README.md).
 
 The design:
 
-- [design.md](design.md) — the overview: what does not change, the layout of 2.0 with its
+- [design.md](../design.md) — the overview: what does not change, the layout of 2.0 with its
   import rule and the test that holds it, the stage plan with each stage's acceptance, and the
   owner's answers. Open it first.
 - [adapter-api.md](../rules/adapter-api.md) — the adapter API: the capabilities, offered and live, what
@@ -19,12 +19,12 @@ The design:
 - [claude.md](../claude.md) — the Claude Code adapter as one mod: loading, what
   happens when it does not load, the turn boundary, telemetry, control, wake, and the stage 4
   probe P1–P16 with what it answered.
-- [design-state.md](design-state.md) — the state root of 2.0, clearing the state of 1.x, one
+- [design-state.md](../rules/state.md) — the state root of 2.0, clearing the state of 1.x, one
   build per room.
 
 Stage 3's document that the living ones cite:
 
-- [stage3-state.md](stage3-state.md) — the state root `v2/` and its inverse, what is a writer,
+- [stage3-state.md](../rules/state.md) — the state root `v2/` and its inverse, what is a writer,
   the build id and the room's lease with its bootstrap writes.
 
 Stage 4, Claude Code's adapter as one mod, then the space:
@@ -35,13 +35,13 @@ Stage 4, Claude Code's adapter as one mod, then the space:
   of a Claude Code session reaches the core.
 - [claude-turns.md](../claude-turns.md) — S4-6's second half: its clauses in
   `docs/rules/`, its build in three parts and the live acceptance.
-- [stage4-space.md](stage4-space.md) — the space's design of October 13, 2026; its keeper,
+- [stage4-space.md](../space.md) — the space's design of October 13, 2026; its keeper,
   screen and keys superseded on October 18, 2026. Open it for the hosted launch and the record.
 - [stage4-space-steps.md](stage4-space-steps.md) — its second half: tests, the rules SP1–SP9,
   the build steps S4-1 to S4-6 and the one space step S4-7, the open questions.
-- [stage4-space-record.md](stage4-space-record.md) — the space record and `rewake space list`
+- [stage4-space-record.md](../space.md#the-record) — the space record and `rewake space list`
   as S4-3 built them. Open it before writing a space's record from the host.
-- [stage4-space-terminal.md](stage4-space-terminal.md) — `internal/host/terminal` as S4-4
+- [stage4-space-terminal.md](../shell.md#the-space-hosts-emulator) — `internal/host/terminal` as S4-4
   built it; its emulator left the code on October 18, 2026 and came back the same day for the
   workers' panel, which the host mode replaced that evening; the shell replaced the host mode on
   October 19, 2026.

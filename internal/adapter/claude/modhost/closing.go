@@ -4,7 +4,7 @@ import "net/http"
 
 // sessionClosing hears the mod say the harness's session has ended and its
 // process is ending, at session.end, and tells the run's Closing
-// (docs/v2/shell.md). A second word changes nothing.
+// (docs/shell.md). A second word changes nothing.
 func (s *Server) sessionClosing(w http.ResponseWriter, r *http.Request) {
 	var said ClosingRequest
 	if status, err := decode(w, r, &said, MaxBodyBytes); err != nil {

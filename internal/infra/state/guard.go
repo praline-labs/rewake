@@ -8,7 +8,7 @@ import (
 	"sync/atomic"
 )
 
-// The guard of the write seam (docs/v2/stage3-state.md#what-is-a-writer):
+// The guard of the write seam (docs/rules/state.md#what-is-a-writer):
 // one check every write primitive of a room makes before its first effect.
 // A view refuses first, whatever it holds (D3); then a write of a room this
 // process holds no lease for refuses. The lease is what Authorize recorded and

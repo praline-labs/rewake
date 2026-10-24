@@ -310,7 +310,7 @@ neither spelling of the allow list is given.
 **[`claude -p --no-session-persistence "/context"`, installed 2.1.302, no model call; October
 19, 2026]** `/context` lists the memory files, skills, MCP tools and the window without a model
 call, in a private HOME as well as the person's. What the worker profile
-([worker-profile.md](v2/worker-profile.md)) takes from it:
+([worker-profile.md](worker-profile.md)) takes from it:
 
 - `--setting-sources project,local` leaves out the user settings, user skills, the user MCP
   servers of `~/.claude.json` and the user `CLAUDE.md`. The claude.ai connectors stay; only
@@ -345,7 +345,7 @@ call, in a private HOME as well as the person's. What the worker profile
 HOMEs with `env -i` — no `CLAUDE_CONFIG_DIR`, `HOME` or `REWAKE_*` of the calling session —
 through `claude -p "/context"`, a `SessionStart` hook, or an interactive start in a
 pseudo-terminal killed after a few seconds. What the workers' own directory
-([worker-profile.md](v2/worker-profile.md#a-configuration-directory-of-its-own)) rests on:
+([worker-profile.md](worker-profile.md#the-service-folder)) rests on:
 
 - `claude auth status` with a fresh `CLAUDE_CONFIG_DIR` prints JSON with `loggedIn: false`,
   `configDirectory` and `projectsDirectory`, and **exits 1**, in about 0.16 s with no network;

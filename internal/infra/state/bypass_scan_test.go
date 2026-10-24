@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-// The writes the seam stands for (docs/v2/stage3-state.md#what-is-a-writer):
+// The writes the seam stands for (docs/rules/state.md#what-is-a-writer):
 // a call outside this package that makes one of these effects on the
 // filesystem passes no guard. A reference counts, not only a call written
 // where it is named — a value kept and called later is the same write — and

@@ -1,7 +1,7 @@
 // An alias names a worker main can open: one name, one recorded launch.
 //
 // Since October 19, 2026 an alias is only main's catalog of workers
-// (docs/v2/worker-profile.md): `rewake space open <space> --alias <name>`
+// (docs/worker-profile.md): `rewake space open <space> --alias <name>`
 // starts one, `rewake workers` lists them, and none is a launch of its own.
 // The space owns the worker's name and room; the alias says which harness,
 // which role, which program and which arguments.

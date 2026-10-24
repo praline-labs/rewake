@@ -13,7 +13,7 @@ import (
 
 const (
 	// shellEnv names the shell to run in place of the one beside rewake:
-	// the person's own copy, run from its sources (docs/v2/shell.md).
+	// the person's own copy, run from its sources (docs/shell.md).
 	shellEnv = "REWAKE_SHELL"
 	// shellProgram is the shell's executable beside rewake's.
 	shellProgram = "rewake-shell"

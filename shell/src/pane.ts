@@ -1,5 +1,5 @@
 // The pane's terminal widget, registered for Solid as pane_terminal
-// (docs/v2/shell.md, "Solid: registering the widget").
+// (docs/shell.md, "Solid: registering the widget").
 
 import {
   type EmbeddedTerminalOptions,

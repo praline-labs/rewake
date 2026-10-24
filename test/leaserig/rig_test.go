@@ -1,5 +1,5 @@
 // Package leaserig races the room's build lease between real processes
-// (docs/v2/stage3-state.md#one-build-per-room): two builds of rewake with the
+// (docs/rules/state.md#the-rooms-lease): two builds of rewake with the
 // same version, a byte-identical copy, each paused at a named step by the
 // fault seam, so a test orders one process's step against another's without
 // sharing a process-global lease between goroutines.

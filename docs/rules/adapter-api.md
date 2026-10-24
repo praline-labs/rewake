@@ -213,7 +213,7 @@ The session's mail state shown to the person, a pane or a status. Offered by no 
 ### Spaces
 
 A main run that hosts spaces: it opens a worker in a pseudo-terminal the space host holds,
-which rewake's shell shows beside main ([space.md](space.md), [shell.md](../v2/shell.md)).
+which rewake's shell shows beside main ([space.md](space.md), [shell.md](../shell.md)).
 Three levels decide it, and a refusal names the one that is missing:
 
 - **The role.** `Role.Spaces` says a session of the role opens spaces: main alone. Opening one

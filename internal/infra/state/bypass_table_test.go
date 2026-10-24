@@ -1,7 +1,7 @@
 package state
 
 // The writes outside the seam that are allowed, by file and effect, each
-// with why (docs/v2/stage3-state.md#what-is-a-writer). Classified by effect
+// with why (docs/rules/state.md#what-is-a-writer). Classified by effect
 // and scope, never a whole package: what writes beside a checkout or makes no
 // file at all, and the test helpers that are not _test.go files.
 const (

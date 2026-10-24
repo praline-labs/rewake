@@ -64,7 +64,7 @@ func entries(t *testing.T, dir string) []string {
 	return names
 }
 
-// TestTwoRoomsUseOnlyV2 holds the root (docs/v2/stage3-state.md#the-roots):
+// TestTwoRoomsUseOnlyV2 holds the root (docs/rules/state.md#the-roots):
 // two rooms launched and written in leave one level in the base, v2, its
 // rooms beside each other below it, and each room's mail in its own tree.
 func TestTwoRoomsUseOnlyV2(t *testing.T) {

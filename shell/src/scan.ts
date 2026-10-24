@@ -1,8 +1,8 @@
 // What the widget swallows of a program's output and the shell passes on
-// (docs/v2/shell.md, "What the widget lacks"): a copy (OSC 52), the title
+// (docs/shell.md, "What the widget lacks"): a copy (OSC 52), the title
 // (OSC 0 and 2), and whether the program tracks the mouse, which decides
 // whether a drag selects text or goes to the program. Besides, for main's end
-// (docs/v2/shell.md, "Who owns which pty"): the program leaving the alternate
+// (docs/shell.md, "Who owns which pty"): the program leaving the alternate
 // screen and coming back to it, and the closing mark main's wrapper writes, a
 // private OSC the widget ignores. A read may end inside a sequence, so the unfinished tail of
 // one read is carried into the next.

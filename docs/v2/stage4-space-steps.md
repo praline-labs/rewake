@@ -5,7 +5,7 @@ workers, not shown inside Claude Code; the liveness pipe and the gate below are 
 one step replaces S4-7 to S4-10 ([the build steps](#the-build-steps)). What concerned the keeper
 subagent, the screen drawn in main's session and its keys was removed on October 19, 2026.
 
-The second half of [stage4-space.md](stage4-space.md), written October 13, 2026: what the
+The second half of [stage4-space.md](../space.md), written October 13, 2026: what the
 tests can hold and what only a live check shows, the rules each new behaviour needs before
 code, the build steps in order with their acceptance, and the questions a step would
 otherwise guess. Every step goes through the chain of `AGENTS.md`: the writer writes, a
@@ -117,15 +117,15 @@ Each small enough for one review; each closed by its acceptance check, not by it
 |---|---|---|
 | S4-1 | P4, live, from the probe's kit: the peer of `$.http.fetch` on every request and after a reload, and a shell child's request refused; a worker's `turn.complete` and its `answer` | the records in [research-claude-mod.md](../research-claude-mod.md); P4 positive, or the stage stops for a channel design ([claude.md](../claude.md#the-peer)) |
 | S4-2 | the rules test's SP group with SP3, SP4 and SP9; the protocol schema, `tools/protogen` and the drift test | the drift test green; review of the rules |
-| S4-3 | `internal/core/space` and `rewake space list`; built October 13, 2026 ([the record](stage4-space-record.md)) | the record tests under the lease; the listing on a hand-written record, closed and kept |
-| S4-4 | `internal/host/terminal`, with `charmbracelet/x/vt` (the owner's exception, [section 1](stage4-space.md#the-terminal-library)); built October 13, 2026 ([the terminal](stage4-space-terminal.md)) | the pseudo-terminal tests above, with `-race`; the layout test with the library only in `host/terminal`; `go list -deps` of the binary before and after, recorded with the exception |
+| S4-3 | `internal/core/space` and `rewake space list`; built October 13, 2026 ([the record](../space.md#the-record)) | the record tests under the lease; the listing on a hand-written record, closed and kept |
+| S4-4 | `internal/host/terminal`, with `charmbracelet/x/vt` (the owner's exception, [section 1](../shell.md#the-space-hosts-emulator)); built October 13, 2026 ([the terminal](../shell.md#the-space-hosts-emulator)) | the pseudo-terminal tests above, with `-race`; the layout test with the library only in `host/terminal`; `go list -deps` of the binary before and after, recorded with the exception |
 | S4-5 | the embedded mod's skeleton and `modhost`: written per run, `--plugin-dir`, the mod socket, `hello` with the peer check — part A, built October 13, 2026, its handlers counted among the run's workers after review ([loading the mod](../claude.md#loading-the-mod-for-one-run)); `SpacesCapability` live on main; the spaces offer, its live and refused states and the conversation's name written into the API contract and the catalogue's completeness test, not as scattered optional assertions — part B, built October 13, 2026 ([spaces](../rules/adapter-api.md#spaces), [conversation names](../rules/adapter-api.md#conversation-names)) | live: the hello on the installed Claude Code, a shell child's request refused; the validator test |
 | S4-6 A | built and accepted October 16, 2026 ([the record](../roadmap/2026-10-16-stage4-s4-6.md)): the worker's turns ([claude-turns.md](../claude-turns.md)): `turn/start` and `turn/end` in `modhost`, each end's first capture reused by every retry, the dispatch split out of `server.go`; the mod's `turn.start` and `turn.complete`, its outbox in `$.store`, its retry chain and the cut of a long answer; the offer `TurnBoundary{Reports: true, HoldsEnd: false, AfterStart: true}`; the known causes refusing a reporting role; availability waiting for a boundary proven after the start | the tests of [part A](../claude-turns.md): the reasons mapped, a failed end, a lost receipt and a retry answering only its first capture, one end at once captured once, another digest refused, a request across `Close`, a run proven gone answered 410 with no receipt and an unreadable record retried, a reporting role refused on a known cause, a task refused before the hello; the mod's tests in `claude plugin test`, its outbox kept until a receipt or a run proven ended |
 | S4-6 B | built and accepted October 16, 2026: the heartbeat: `mod/alive`, generations, the lapse and the withdrawal of TurnBoundary and main's Spaces, the restore by a new hello | the tests of [part B](../claude-turns.md): a lapse withdraws and a hello restores, a hello of an earlier or superseded load refused, an older generation or transition changes nothing, an end after a lapse is taken |
 | S4-6 C | passed October 16, 2026 on Claude Code 2.1.296 ([the records](../research-claude-mod.md#s4-6-a-workers-turns-through-the-mod)): live, by main ([part C](../claude-turns.md)) | main sends a task to a worker started by hand with `rewake claude --write` and reads its report; the same through `--command` with and without `exec`; a mod that stops polling withdrawn within 30 s and restored; an interrupt reported as stopped; a subagent's turn not reported; the hooks' order at a turn's end and the heartbeat between turns and through a reload |
-| S4-7 | built October 18, 2026 on branch `space`, waiting for the review and main's live acceptance ([the entry](../roadmap/2026-10-18-space.md); [launch.md](../launch.md#a-space-for-a-worker), [the rules](../rules/space.md)); the record lost `keeper` and gained `host`, the session is `<name>-<harness>`, `Ctrl-\` detaches. The space, by the owner's decision of October 18, 2026 in place of S4-7 to S4-10: `rewake space open <name> --harness claude\|pi [--role …] [--worktree[=…]] -- <harness args>`, a change for main only while its run has `Spaces` live; a short launcher re-executes rewake with `Setsid` and exits, so the space host is not main's descendant (SP9); the space host opens a pseudo-terminal (`host/terminal/pty.go` only), strips `REWAKE_SESSION`, `REWAKE_EPOCH` and the harness's own session markers, and runs an ordinary `rewake <harness> …` in it under main's base and room; it watches main's run once a second (`registry.ObserveRun`) and, when that run has ended, by SIGKILL too, sends SIGHUP, then SIGTERM to the worker's group and SIGKILL after about 5 s, closes the record from the observed end and exits; the record without the keeper's fields; `rewake attach <name>`, a raw relay of the master over a unix socket with raw termios on the client and SIGWINCH forwarded | the workflow scenario with the fixture worker under a private base, the default base untouched; live: from a Claude Code main a Claude Code worker with `--worktree`, and a pi worker once its adapter exists, a task and its report each, `attach` answering a prompt the worker waits on, main closed — `kill -9` included — and the workers gone within seconds |
+| S4-7 | built October 18, 2026 on branch `space`, waiting for the review and main's live acceptance ([the entry](../roadmap/2026-10-18-space.md); [launch.md](../space.md), [the rules](../rules/space.md)); the record lost `keeper` and gained `host`, the session is `<name>-<harness>`, `Ctrl-\` detaches. The space, by the owner's decision of October 18, 2026 in place of S4-7 to S4-10: `rewake space open <name> --harness claude\|pi [--role …] [--worktree[=…]] -- <harness args>`, a change for main only while its run has `Spaces` live; a short launcher re-executes rewake with `Setsid` and exits, so the space host is not main's descendant (SP9); the space host opens a pseudo-terminal (`host/terminal/pty.go` only), strips `REWAKE_SESSION`, `REWAKE_EPOCH` and the harness's own session markers, and runs an ordinary `rewake <harness> …` in it under main's base and room; it watches main's run once a second (`registry.ObserveRun`) and, when that run has ended, by SIGKILL too, sends SIGHUP, then SIGTERM to the worker's group and SIGKILL after about 5 s, closes the record from the observed end and exits; the record without the keeper's fields; `rewake attach <name>`, a raw relay of the master over a unix socket with raw termios on the client and SIGWINCH forwarded | the workflow scenario with the fixture worker under a private base, the default base untouched; live: from a Claude Code main a Claude Code worker with `--worktree`, and a pi worker once its adapter exists, a task and its report each, `attach` answering a prompt the worker waits on, main closed — `kill -9` included — and the workers gone within seconds |
 
-The restore by session id is the step after S4-7 ([section 8](stage4-space.md#8-restore)).
+The restore by session id is the step after S4-7 ([section 8](../space.md#restore)).
 
 **What the handlers owe the schema's choices** (the review of S4-2, October 13, 2026). The
 generated types say which fields may be absent, not which combinations are valid, so each
@@ -142,14 +142,14 @@ Each one a step would otherwise guess; the step named decides it or brings it to
 
 - **Q1. The terminal library** — decided by the owner, October 13, 2026: `charmbracelet/x/vt`,
   an exception to the dependency rule; its dependencies, measured at S4-4, are in
-  [stage4-space-terminal.md](stage4-space-terminal.md#what-it-brings-in)
-  ([the comparison](stage4-space.md#the-terminal-library)).
+  [stage4-space-terminal.md](../shell.md#the-space-hosts-emulator)
+  ([the comparison](../shell.md#the-space-hosts-emulator)).
 - **Q2. P4** (S4-1). If `$.http.fetch` does not connect from the harness process, no request
   of the mod can be trusted, and the space waits for another trusted channel. Answered
   positive on October 13, 2026, 2.1.296
   ([the record](../research-claude-mod.md#p4-the-peer-of-the-mods-requests)).
 - **Q11. The default room** (the owner's direction, October 13, 2026; [answer
-  8](design.md#the-owners-answers)). The worker joins main's room by `--room`; making the
+  8](../design.md#decisions-in-force)). The worker joins main's room by `--room`; making the
   default room follow main's name without a flag is its own small step, outside this list.
 - **Q12. pi's interface as the renderer** (the owner's idea, October 13, 2026): pi's terminal
   interface hosting the pseudo-terminal, with another harness spawned inside it. Recorded as an
@@ -157,5 +157,5 @@ Each one a step would otherwise guess; the step named decides it or brings it to
   depend on it.
 - **Q14. The whole window** — decided by the owner, October 13, 2026: `rewake attach` in a
   second window now, a host mode later as a stage of its own; the external-editor hand-off P15d
-  probed is not taken ([design.md](design.md#the-owners-answers), answer 11). The shell replaced
-  both on October 19, 2026 ([shell.md](shell.md)).
+  probed is not taken ([design.md](../design.md#decisions-in-force), answer 11). The shell replaced
+  both on October 19, 2026 ([shell.md](../shell.md)).

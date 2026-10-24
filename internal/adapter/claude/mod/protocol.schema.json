@@ -69,7 +69,7 @@
     },
     {
       "path": "session/closing",
-      "description": "says the harness has begun to end its process, from main's mod at /exit and at session.end with an exit reason, before the harness's screen goes or as soon after as the harness tells; a main in rewake's shell has its closing screen started by it (docs/v2/shell.md), and nothing else changes on the host.",
+      "description": "says the harness has begun to end its process, from main's mod at /exit and at session.end with an exit reason, before the harness's screen goes or as soon after as the harness tells; a main in rewake's shell has its closing screen started by it (docs/shell.md), and nothing else changes on the host.",
       "request": {"$ref": "#/$defs/ClosingRequest"},
       "answer": {"$ref": "#/$defs/Done"}
     },

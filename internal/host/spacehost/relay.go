@@ -13,7 +13,7 @@ import (
 )
 
 // The space's unix socket. A client writes one byte first, the mode: the raw
-// bytes (bytes.go) for the shell (docs/v2/shell.md), the one mode there is.
+// bytes (bytes.go) for the shell (docs/shell.md), the one mode there is.
 // The space host answers it with one byte and then writes the screen; the
 // client writes frames — a kind, a big-endian length of two bytes, the
 // payload: keys to type, or a resize of four bytes, columns then rows.

@@ -181,7 +181,7 @@ First recorded as a later direction from the owner; since October 13, 2026 it is
 direction stage 4 builds toward: Claude Code workers are launched from inside a running
 main, in its spaces, not standalone, and each worker is bound to its main from the start.
 The questions it raised, as the owner answered them that day
-([the owner's answers](design.md#the-owners-answers)):
+([the owner's answers](../design.md#decisions-in-force)):
 
 - a worker's lifetime when its main ends: it closes with its main, and its session id is
   recorded so that main can restore it later (answer 7);
@@ -223,7 +223,7 @@ harness.
 appears only on a wide terminal *(docs)*, so the panel opens on the person's action.
 
 **Stage.** PersonUI, stage 6. The person's own status line stays untouched
-([design.md](design.md#the-stage-plan-from-here)).
+([design.md](../roadmap/README.md)).
 
 **The probe.** None needed before stage 6 beyond the stage 4 mod.
 
@@ -250,7 +250,7 @@ input open.
 
 **Status.** The owner prefers full sessions. This stays only as a fallback, should full
 sessions prove unworkable for some use. No stage holds it. Workers close with their main by
-the owner's decision of October 13, 2026 ([answer 7](design.md#the-owners-answers)), so a
+the owner's decision of October 13, 2026 ([answer 7](../design.md#decisions-in-force)), so a
 headless worker would too; background workers under Claude Code's supervisor are dropped
 ([row 18](../archive/v2/stage4-audit-rows-space.md#18-headless-and-background-workers--dropped)).
 

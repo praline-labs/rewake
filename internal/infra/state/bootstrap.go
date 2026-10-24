@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 )
 
-// The bootstrap of a room (docs/v2/stage3-state.md#the-bootstrap): the room's
+// The bootstrap of a room (docs/rules/state.md#the-bootstrap): the room's
 // lease lives in the room, so making the room is a write no lease can cover.
 // Bootstrap, CreateLeaseLock, OpenLeaseLock and WriteBuildRecord are the only
 // writes that work without one, and build.Acquire is their one caller: a test
