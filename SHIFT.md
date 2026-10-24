@@ -14,7 +14,8 @@ The owner's boundary (`knowledge = "split"` in `.shift/settings.toml`):
   subject is its record, and what it taught goes into the living documents. How the project is built
   and its conventions — `AGENTS.md`, which also says how the documents are kept true.
 - The project's own words — `GLOSSARY.md`; the owner's decisions in force — `.shift/OWNER.md`;
-  open work — `.shift/TASKS.md` and its tasks.
+  main's tasks in progress and their trackers — `.shift/TASKS.md` and its tasks; the open work
+  of the project and its order stay in `docs/roadmap/README.md`.
 - Not a harness's memory: only one harness reads it, while any agent opening the project reads
   these files. No second list of the order of work beside the roadmap: it drifts.
 
