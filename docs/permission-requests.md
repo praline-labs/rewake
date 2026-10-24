@@ -1,40 +1,40 @@
+---
+description: A worker's permission requests and questions carried to main as a notify and answered with rewake answer — what is carried, the path through the mod, what main sees, a dialog nobody is asked about, and the command.
+---
+
 # A worker's permission requests and questions answered by main
 
 A worker that asks for a permission, or whose model asks a question, at a screen nobody watches
-stops its task, and main is not told. Since October 18, 2026 such a request of a Claude Code
-worker goes to main as an ordinary notify, main answers with `rewake answer`, and the worker goes
-on; a person at the worker's screen — its pane in main's shell — may answer first.
-The facts the build rests on, and where they were seen, are in
-[permission-requests-sources.md](permission-requests-sources.md).
+stops its task, and main is not told. So such a request of a Claude Code worker goes to main as
+an ordinary notify, main answers with `rewake answer`, and the worker goes on; a person at the
+worker's screen — its pane in main's shell — may answer first. The facts the build rests on,
+and where they were seen, are in
+[research-claude-mod.md](research-claude-mod.md#permission-requests-and-questions-through-the-mod).
 
-## What was decided
+## What is carried
 
-The owner, September 28, 2026, and still standing: only a worker's requests go to main — a
-session of the roles `general` and `write`, never main's own; what the session's rules and mode
-already allow or refuse passes as it would; a request waits within rewake's own limit, and past
-it the worker is refused with the next step, `rewake pending "needs <what>"`; a person at the
-worker's screen may answer first. Main allows only what it may do itself, and a call it would
-not run itself — deleting, a force push, another tool's settings — it refuses and takes to the
-owner; rewake marks nothing as the owner's in code.
-
-Main's decisions of October 18, 2026, which replaced the September design's `permission` kind,
-grants and journal: the choices are **Allow once**, **Allow for this session** — this exact call,
-the tool and its whole input in the same directory, kept in the mod's memory for its load — and
-**Refuse** with an optional reason the model reads; the model's own `AskUserQuestion` keeps its
-real choices. Main hears of a request through an ordinary `notify` letter, answers with
-`rewake answer <worker> <request> <choice…>`, and only a session of role main in the room
-answers, checked as `rewake compact` checks it: a process that takes on main's name and run in
-its environment could answer too, a limit accepted. No authority server, no journal, nothing on
-disk: a request lives in the worker's wrapper's memory, and one lost to a restart is asked
-again. Main's own permission dialogs are not caught. pi has no permission gate or question tool
-of its own (`question.ts` and `permission-gate.ts` are examples, not defaults), so its adapter
-carries nothing.
-
-Main's decision of October 23, 2026, after a worker stood on a dialog in its pane with main told
-nothing: Claude Code 2.1.302 runs a launch with no mode in auto mode, its default, so workers run in
-it, and there the check carries nothing; any permission dialog the engine draws itself is carried to
-main as well (step 2 below), and main is told of any other dialog a worker waits at
-([below](#a-dialog-nobody-is-asked-about)).
+- Only a worker's requests go to main — a session of the roles `general` and `write`, never
+  main's own; main's own permission dialogs are not caught. What the session's rules and mode
+  already allow or refuse passes as it would. A request waits within rewake's own limit, and
+  past it the worker is refused with the next step, `rewake pending "needs <what>"`. Main allows
+  only what it may do itself, and a call it would not run itself — deleting, a force push,
+  another tool's settings — it refuses and takes to the owner; rewake marks nothing as the
+  owner's in code (owner, September 28, 2026).
+- The choices are **Allow once**, **Allow for this session** — this exact call, the tool and
+  its whole input in the same directory, kept in the mod's memory for its load — and
+  **Refuse** with an optional reason the model reads; the model's own `AskUserQuestion` keeps
+  its real choices. Main hears of a request through an ordinary `notify` letter and answers
+  with `rewake answer <worker> <request> <choice…>`; only a session of role main in the room
+  answers, checked as `rewake compact` checks it — a process that takes on main's name and run
+  in its environment could answer too, a limit accepted (October 18, 2026).
+- No authority server, no journal, nothing on disk: a request lives in the worker's wrapper's
+  memory, and one lost to a restart is asked again (October 18, 2026).
+- Workers run in auto mode, Claude Code's default for a launch with no mode, where the check
+  carries nothing: any permission dialog the engine draws itself is carried to main as well
+  (step 2 below), and main is told of any other dialog a worker waits at
+  ([below](#a-dialog-nobody-is-asked-about)) (October 23, 2026).
+- pi has no permission gate or question tool of its own, so its adapter carries nothing
+  ([research-pi.md](research-pi.md#telemetry-and-remote-control)).
 
 ## The path
 
@@ -101,7 +101,7 @@ with one answer per question. The input shown is cut at 2,000 characters, the mo
 
 ## A dialog nobody is asked about
 
-Main's decision of October 23, 2026: a worker waiting at a dialog rewake does not carry — one main
+A worker waiting at a dialog rewake does not carry — one main
 cannot answer through the mod, or one whose request could not be opened — must not look like work.
 Claude Code sends `classic.Notification` while a session waits at a dialog — `permission_prompt`
 for most, an elicitation type for an MCP server's input, about six seconds after it is drawn — and
@@ -127,7 +127,7 @@ draws trust, onboarding and login before the mod, and they have no such event.
 
 Not covered: a dialog of the engine that sends no notification, one drawn while a carried
 request is held, which by the screen's order is the carried one, and the few dialogs that name
-`agent_needs_input`, a type a background agent's need shares (October 23, 2026).
+`agent_needs_input`, a type a background agent's need shares.
 
 ## The command
 
@@ -146,7 +146,7 @@ command table's.
 
 - A request lives in the wrapper's memory: a wrapper or mod restart loses it, and the dialog
   stays the person's at the screen; the model asks again on its next call.
-- Session allowances live in the mod's memory and go with a reload of the mod. The request bridge is Claude Code's; pi has none built in (October 19, 2026).
+- Session allowances live in the mod's memory and go with a reload of the mod.
 - The mode comes from the harness's classic events; a mode never reported carries nothing at
   the check, and the engine's own dialog is then carried as in step 2.
 - A person who refuses an engine-drawn dialog is seen only at the next step or the turn's end;

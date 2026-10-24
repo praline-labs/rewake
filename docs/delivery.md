@@ -64,7 +64,7 @@ Each kind is a file of its own in `internal/cli` (`send_task.go`, `send_question
 |---|---|---|---|
 | `task` | plain `send` | a report at the end of its turn | once delivered |
 | `question` | `--question` | the same | with the answer, up to `--wait` (600 s by default) |
-| `notify` | `--notify`; also main's wrapper for availability, departure and compaction notices and for the letter that ends a compaction main asked for ([remote-control-letter.md](remote-control-letter.md)), and a worker's wrapper for a permission request or question main may answer with `rewake answer` ([permission-requests.md](permission-requests.md#what-main-sees)) and for a dialog it waits at that nobody is asked about ([the same](permission-requests.md#a-dialog-nobody-is-asked-about)) | nothing | once delivered, after waiting up to four seconds for company ([the notice](#the-notice)) |
+| `notify` | `--notify`; also main's wrapper for availability, departure and compaction notices and for the letter that ends a compaction main asked for ([remote-control.md](remote-control.md#the-letter)), and a worker's wrapper for a permission request or question main may answer with `rewake answer` ([permission-requests.md](permission-requests.md#what-main-sees)) and for a dialog it waits at that nobody is asked about ([the same](permission-requests.md#a-dialog-nobody-is-asked-about)) | nothing | once delivered, after waiting up to four seconds for company ([the notice](#the-notice)) |
 | `finished` | successful turn end | nothing | — |
 | `error` | a failed turn end only | nothing | failure, exit 1 for a waiting question |
 | `stopped` | a turn stopped at the keyboard, or by a main's `rewake interrupt` | nothing | exit 1 for a waiting question |

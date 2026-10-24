@@ -86,7 +86,7 @@ Each completed compaction of a session increments its observed count, once per c
 no-reply notify, `Rewake: context compacted (compaction <n>).`, whose header shows the
 session's current activity and count; the worker is not woken by it. A compaction main asked
 for itself with `rewake compact` is the exception: main's letter of that compaction's outcome
-carries the count instead ([remote-control-letter.md](remote-control-letter.md)).
+carries the count instead ([remote-control.md](remote-control.md#the-letter)).
 
 The adapter keeps a bounded tail of 64 completion cues in memory, which the snapshot worker
 persists and the main observer turns into notices. Each cue has its observation time and the

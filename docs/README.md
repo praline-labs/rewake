@@ -47,13 +47,10 @@ Main and its workers:
 - [v2/worker-profile.md](v2/worker-profile.md) — rewake's own Claude Code worker profile by launch options and `rewake claude` as main's whole launch in the room of its directory, workers raised only by main (built).
 - [v2/shell.md](v2/shell.md) — the shell, which replaced the host mode on October 19, 2026: a TypeScript application on OpenTUI and Solid in `shell/`, the screen of every main started at a terminal, a terminal pane per program fed from its host's socket in the raw mode, the spike's findings, the steps.
 - [remote-control.md](remote-control.md) — `rewake compact` and `rewake interrupt`: who may call them, refusals, the control directory.
-- [remote-control-letter.md](remote-control-letter.md) — the letter that ends a compaction main asked for and the record that owes it.
-- [remote-control-tests.md](remote-control-tests.md) — the tests of `compact` and `interrupt`, file by file.
 
 Designs not built:
 
 - [permission-requests.md](permission-requests.md) — a worker's permission request or question carried to main, answered with `rewake answer`, the first answer winning.
-- [permission-requests-sources.md](permission-requests-sources.md) — the live probe on Claude Code 2.1.302 and the pi facts behind it.
 - [conversation-reset.md](conversation-reset.md) — `rewake clear` from main and a conversation marker in `list` and notices.
 
 The rules and the code:

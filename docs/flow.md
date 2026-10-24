@@ -232,7 +232,7 @@ main observer queues [compaction-complete and known-departure notices](session-s
 and the letter that ends a compaction main asked for with `rewake compact`: the command
 returns once the compaction has started, and the outcome — the tokens and the count, or
 why it was refused or failed — comes later as a notify from the worker
-([remote-control.md](remote-control-letter.md)).
+([remote-control.md](remote-control.md#the-letter)).
 
 1. **Whose mailbox.** `REWAKE_SESSION` names it, `REWAKE_EPOCH` proves the run:
    a stale run, or a process with a name and no epoch, is refused. Mail an

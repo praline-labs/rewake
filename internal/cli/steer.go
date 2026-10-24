@@ -142,7 +142,7 @@ func steer(ctx *Context, call Call, action string) error {
 	// main's own wrapper owns a compaction's letter: the record is left
 	// before the request is written, so a command killed once the request is
 	// taken leaves it too, and the wrapper closes it with the outcome, the
-	// worker's departure or its bound (docs/remote-control-letter.md).
+	// worker's departure or its bound (docs/remote-control.md#the-letter).
 	noted, noLetter := false, ""
 	if action == control.Compact {
 		pending := control.Pending{ID: request.ID, Worker: session, AskerEpoch: self.Epoch(), AskedAt: time.Now()}

@@ -20,7 +20,7 @@ import (
 // once. One request at a time: act runs on this goroutine, and the asker's lock
 // lets no second request in meanwhile. withdrawn is given the answer Serve
 // gives in act's place, once it is written — a final answer, which the served
-// side records as the outcome as it does act's own (docs/remote-control-letter.md).
+// side records as the outcome as it does act's own (docs/remote-control.md#the-letter).
 func Serve(ctx context.Context, dir string, poll time.Duration, act func(context.Context, Request) Answer, withdrawn func(Request, Answer)) {
 	tick := time.NewTicker(poll)
 	defer tick.Stop()

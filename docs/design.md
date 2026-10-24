@@ -103,7 +103,7 @@ only looks leaves no state behind. [Optional primary observations](session-state
     sock/space.<id>.sock       a space host's: the worker's screen for views and raw streams (launch.md)
     control/<name>.<epoch>/    a main's compact or interrupt request and its answer (remote-control.md)
     run/<name>.<epoch>/        what an adapter writes for one run, removed with the run or, after a kill, by a later launch once the run is proven dead (v2/stage3-state.md)
-    letters/<name>/<id>.json   a compaction this main asked for, held by the command while it asks, kept on an answer that leaves the outcome open until its letter goes (remote-control-letter.md)
+    letters/<name>/<id>.json   a compaction this main asked for, held by the command while it asks, kept on an answer that leaves the outcome open until its letter goes (remote-control.md#the-letter)
     spaces/<id>.json           a space a main opened: its worker, checkout, space host, state and observed end, kept after it closes (v2/stage4-space-record.md)
 ```
 

@@ -201,6 +201,12 @@ A third mock probe loaded both shipped modules and verified on 1.2.0:
 The mock used synthetic usage, so the result proves the native counts were transported,
 not that its summaries reduced context. Main owns interactive and real-room acceptance.
 
+pi 1.2.0 has no built-in tool-permission gate and no model question tool: the extension
+examples `question.ts` and `permission-gate.ts` are not loaded by default, and
+`ui_prompt_start/end` carry a kind and a title, neither the choices nor a way to answer. So
+its adapter carries no permission request to main
+([permission-requests.md](permission-requests.md)).
+
 ## The adapter's wire contract
 
 One JSON object per line, at most 4 MiB, over a private unix socket listened on by the
