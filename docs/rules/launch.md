@@ -1,14 +1,11 @@
 # Rules: what a launch adds, L1–L3
 
-What rewake adds to a harness's launch, in the full wording of
-[design-rules.md](../v2/design-rules.md#what-a-launch-adds-l1l3), from
-`mail-bridge-launch.md`.
+What rewake adds to a harness's launch.
 
 ## The rules
 
 - **L1. The mail is added and nothing else changes.** The person's configuration is
-  never edited; what a run needs is passed for that one launch. (`mail-bridge-launch.md`
-  rule 1; until S9, on Claude Code, one `--plugin-dir`.)
+  never edited; what a run needs is passed for that one launch.
   Tests:
   - `internal/adapter/claude/claude_test.go` `TestAddedFlagsStayBeforeTheTerminator`
   - `internal/adapter/defaults_test.go` `TestAnExplicitFlagIsNotReplaced`
@@ -16,7 +13,7 @@ What rewake adds to a harness's launch, in the full wording of
   - `internal/adapter/fixture/launch_test.go` `TestACallerCannotPassTheFixturesOwnFlags`
 
 - **L2. Diagnostics say where, never what**: no configuration content or argument value
-  is printed. (Rule 7.)
+  is printed.
   Tests:
   - `internal/adapter/fixture/launch_test.go` `TestALaunchsDiagnosticsNeverCarryWhatTheyPointAt`
   - `internal/host/launch/version_test.go` `TestAVersionRefusalNeverCarriesWhatTheProgramPrinted`
@@ -32,7 +29,7 @@ What rewake adds to a harness's launch, in the full wording of
   (`registry.ObserveRun`). A run still running, one that cannot be told, and an entry that
   names no run are kept; the proof assumes the wrappers' pid namespace, and a room with no
   later launch keeps a killed run's directories.
-  (Rule 8.) Known limit, accepted with the design of the mod's turns: on
+  Known limit, accepted with the design of the mod's turns: on
   Claude Code the mod keeps the ends its host has not acknowledged in the harness's own store,
   outside the run's directory, and removes those of a killed run only once a later load's
   hello has the host prove that run ended, so they outlive it until a later run on the same
@@ -58,8 +55,3 @@ What rewake adds to a harness's launch, in the full wording of
   - `internal/host/harness_watcher_test.go` `TestTheWrapperCountsAServicesHandlersAmongTheRunsWorkers`
   - `internal/adapter/claude/modhost/lifetime_test.go` `TestAWriteStalledAtCloseKeepsTheLeaseUntilItEnds`
   - `internal/adapter/claude/modhost/lifetime_test.go` `TestAHandlerPastTheCloseWritesNothing`
-
-## What returns with the Codex adapter
-
-`mail-bridge-launch.md` rules 2, 4, 5 and 6 are about injecting an MCP server and checking
-its name; they return, redesigned, with the Codex adapter (stage 5).

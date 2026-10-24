@@ -5,7 +5,7 @@ in `AGENTS.md`.
 
 One line per living document, grouped by what a reader wants from it. A subdirectory with an
 index of its own is linked here rather than repeated: [rules/](rules/README.md),
-[v2/](v2/README.md), [roadmap/](roadmap/README.md) and [archive/](archive/README.md). The map
+[roadmap/](roadmap/README.md) and [archive/](archive/README.md). The map
 is kept by hand: a change that adds, removes or renames a document, or changes what one is
 for, updates this file in the same commit; no test checks it.
 
@@ -16,7 +16,6 @@ for, updates this file in the same commit; no test checks it.
 - [flow-endings.md](flow-endings.md) — the rest of the flow: a blocking question, a notify, the session's end, where the flow can stall.
 - [design.md](design.md) — the specification: scope, process model, state directory, rooms, environment, CLI contract, dated decisions.
 - [roadmap/README.md](roadmap/README.md) — what is done and the order of work from here; the list of roadmap entries lives only there.
-- [v2/README.md](v2/README.md) — rewake 2.0: the design, the stage plan, the living documents of stages 3 and 4.
 
 ## How it works
 
@@ -52,7 +51,6 @@ Main and its workers:
 Designs not built:
 
 - [permission-requests.md](permission-requests.md) — a worker's permission request or question carried to main, answered with `rewake answer`, the first answer winning.
-- [conversation-reset.md](conversation-reset.md) — `rewake clear` from main and a conversation marker in `list` and notices.
 
 The rules and the code:
 

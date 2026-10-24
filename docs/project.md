@@ -91,7 +91,7 @@ Each principle names where it comes from.
   the workers' own `.claude.json` in the service folder, the workers' Claude Code configuration
   directory, only the onboarding-done mark and trust for the repository main runs in (the
   owner's decision, October 23, 2026). ([design.md](design.md#decisions-in-force),
-  [v2/design-rules.md](v2/design-rules.md#what-a-launch-adds-l1l3).)
+  [rules/launch.md](rules/launch.md).)
 - **Transcript contents are not read.** ([design.md](design.md#scope),
   [design.md](design.md#decisions-in-force).)
 - **No service runs beside the sessions.** What serves a session lives exactly as long
@@ -223,18 +223,16 @@ stand-in harness, and live checks run against the real harnesses. See [testing.m
 
 ## What to read next
 
-By the kind of work. Every document is on [the map](README.md); the current plan is
-[v2/README.md](v2/README.md).
+By the kind of work. Every document is on [the map](README.md).
 
-- **Picking up the current work**: [v2/README.md](v2/README.md), then
-  [roadmap/README.md](roadmap/README.md) — what is done, what comes next, the open
-  reviews.
+- **Picking up the current work**: [roadmap/README.md](roadmap/README.md) — the open work
+  and its order.
 - **Changing the core** — mail, reports, turn ends: [flow.md](flow.md), then
-  [v2/design-rules.md](v2/design-rules.md), [delivery.md](delivery.md) and the
+  [rules/](rules/README.md), [delivery.md](delivery.md) and the
   documents it links to, [mailbox-records.md](mailbox-records.md).
 - **Changing an adapter or adding a harness**: [adapter-api.md](rules/adapter-api.md),
   the harness's own design ([claude.md](claude.md),
-  [v2/stage4-reading-pi.md](v2/stage4-reading-pi.md)), [launch.md](launch.md), and its
+  [research-pi.md](research-pi.md)), [launch.md](launch.md), and its
   facts in research below.
 - **Changing the command line**: [design.md](design.md#interface),
   [roles.md](roles.md), and `AGENTS.md`, "How the CLI is organised".
