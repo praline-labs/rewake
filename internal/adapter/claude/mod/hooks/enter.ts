@@ -131,12 +131,18 @@ export function serveWorktreeEnter(on: Parameters<Register>[0]) {
   // 2.1.302); nobody may be at a worker's screen. rewake made this one for
   // this worker a moment ago, so that ask of the engine's own is answered
   // for rewake's call. Every other verdict stands: a deny, and an ask a
-  // PreToolUse hook, a rule or a setting made, are the person's policy; the
+  // PreToolUse hook, a rule, a setting or another plugin made (2.1.304 marks
+  // that with `plugin`), are the person's policy; the
   // model's call, and every call elsewhere, keep the engine's verdict whole.
   on("tool.check", { tool: "EnterWorktree" }, async ($, e, next) => {
     const verdict = await next(e);
+    // `plugin` is not in 2.1.302's verdict type, so it is read through a widened one.
+    const { plugin } = verdict as { plugin?: string };
     const own =
-      verdict.hook === undefined && verdict.rule === undefined && verdict.setting === undefined;
+      verdict.hook === undefined &&
+      verdict.rule === undefined &&
+      verdict.setting === undefined &&
+      plugin === undefined;
     if (verdict.decision !== "ask" || !own || next.origin.plugin !== "rewake") return verdict;
     if ((await $.env.get("REWAKE_WORKTREE_ENTER")) !== "1") return verdict;
     return { decision: "allow", reason: entryAllowed };
