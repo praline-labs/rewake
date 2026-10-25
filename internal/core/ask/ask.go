@@ -31,6 +31,10 @@ type Offer struct {
 	// Tool, Input and Cwd are a permission's call: the tool, its arguments
 	// as text, and the directory the worker runs in.
 	Tool, Input, Cwd string
+	// ReadOnly says the harness's check called the call read-only. It is
+	// the tool's word, not proof: a read outside the project can still
+	// expose keys and logins, so main still answers.
+	ReadOnly bool
 	// Questions are what the harness's question dialog shows; a permission
 	// has one, whose options are the permission's choices.
 	Questions []Prompt

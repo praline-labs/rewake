@@ -106,6 +106,10 @@ type AskOpenRequest struct {
 	// Cwd is the directory the worker runs in.
 	Cwd *string `json:"cwd,omitempty"`
 
+	// ReadOnly says the engine's check called a permission's call read-only (Claude Code
+	// 2.1.304+), absent when it did not say; the call is still main's to answer.
+	ReadOnly *bool `json:"readOnly,omitempty"`
+
 	// Questions are the dialog's questions; a permission's one question has its three choices.
 	Questions []AskQuestion `json:"questions"`
 }

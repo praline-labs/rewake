@@ -95,6 +95,15 @@ Answer: rewake answer api 3f9a once
 A person at the worker's screen may answer first; the first answer counts, and with none by the deadline the worker is refused.
 ```
 
+A call the engine's check calls read-only (`tool.check`'s `isReadOnly`, Claude Code 2.1.304 and
+later; absent on older engines, and then no mark) adds a line under the input:
+`Read-only: the tool says this call only reads; a read outside the project can still expose keys
+or logins.` The mod records the mark at the check and carries it in the request
+(`AskOpenRequest.readOnly`, optional), the engine-drawn dialog of step 2 included. It is only a
+mark: such a call is asked like any other and never allowed in silence, since a worker reading
+keys and logins outside its project is what main is asked to stop (October 25, 2026). pi carries
+no requests, so it has no mark.
+
 A question lists its options numbered, says when several may be chosen, and names the command
 with one answer per question. The input shown is cut at 2,000 characters, the mod's copy at
 16,000. No report is owed for the letter, and none comes for the answer.

@@ -60,6 +60,9 @@ func Letter(worker, id string, offer Offer, deadline time.Time) string {
 		lines = append(lines,
 			fmt.Sprintf("Rewake: %s asks permission for %s (request %s); answer by %s.", worker, offer.Tool, id, by),
 			"Input: "+shown(offer.Input))
+		if offer.ReadOnly {
+			lines = append(lines, "Read-only: the tool says this call only reads; a read outside the project can still expose keys or logins.")
+		}
 		if offer.Cwd != "" {
 			lines = append(lines, "In: "+offer.Cwd)
 		}

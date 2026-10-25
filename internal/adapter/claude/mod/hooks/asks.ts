@@ -18,6 +18,8 @@ import type {
   AskWinner,
 } from "../protocol.gen.ts";
 import { paths } from "../protocol.gen.ts";
+import type { CheckEvent, DialogDecision, DialogEvent, QuestionEvent } from "./calls.ts";
+import { callKey, canonical, summary } from "./calls.ts";
 import type { Host } from "./outbox.ts";
 
 // The choices of a permission, in the order the wrapper reads main's once,
@@ -45,74 +47,19 @@ export const unanswered =
   "No answer came from main or the person at the screen within the deadline, so this was refused. " +
   'Do not retry it blindly: if the work needs it, end the turn with rewake pending "needs <what>".';
 
-export interface CheckEvent {
-  tool: string;
-  input: unknown;
-  tool_use_id?: string;
-  ceiling?: unknown;
-}
-
-export interface QuestionEvent {
-  tool_use_id?: string;
-  questions: ReadonlyArray<{
-    question: string;
-    header?: string;
-    multiSelect?: boolean;
-    options: ReadonlyArray<{ label: string; description?: string } | string>;
-  }>;
-}
-
-// DialogEvent is the engine's own permission dialog, as
-// classic.PermissionRequest tells it when the dialog is drawn: no call id.
-export interface DialogEvent {
-  tool_name: string;
-  tool_input: unknown;
-}
-
-// DialogDecision answers such a dialog, as PermissionRequest's decision.
-export type DialogDecision = { behavior: "allow" } | { behavior: "deny"; message: string };
-
 // atScreen is the result of a dialog the person answered at the screen.
 const atScreen = Symbol("answered at the screen");
-
-// callKey names a call by its tool and input, as both the check and the
-// dialog that follows it see them.
-const callKey = (tool: string, input: unknown) => tool + "\u0000" + canonical(input);
 
 interface Permission {
   tool: string;
   input: string;
   cwd: string;
   key: string;
+  // readOnly says the check called the call read-only.
+  readOnly: boolean;
   // reason is main's reason for a refusal; expired says the deadline passed.
   reason?: string;
   expired?: boolean;
-}
-
-// canonical is JSON with every object's keys in order, so one call's input
-// gives one key however its fields were written.
-export function canonical(value: unknown): string {
-  if (Array.isArray(value)) return "[" + value.map(canonical).join(",") + "]";
-  if (value !== null && typeof value === "object") {
-    const object = value as Record<string, unknown>;
-    return (
-      "{" +
-      Object.keys(object)
-        .sort()
-        .map((key) => JSON.stringify(key) + ":" + canonical(object[key]))
-        .join(",") +
-      "}"
-    );
-  }
-  return JSON.stringify(value) ?? "null";
-}
-
-// summary is what the permission question names of the call.
-function summary(tool: string, input: unknown): string {
-  const fields = (input ?? {}) as Record<string, unknown>;
-  const named = fields.command ?? fields.file_path ?? fields.path ?? fields.url ?? fields.pattern;
-  const text = typeof named === "string" ? named : canonical(input);
-  return text.length > 120 ? text.slice(0, 117) + "..." : text;
 }
 
 export class Asks {
@@ -126,8 +73,9 @@ export class Asks {
   private permissions = new Map<string, Permission>();
   private serial = 0;
   // checks are the asks the check left to the engine, by callKey: the call's
-  // id, and whether an administrator's ceiling made it the person's.
-  private checks = new Map<string, { id: string; ceiling: boolean }>();
+  // id, whether an administrator's ceiling made it the person's, and whether
+  // the check called it read-only.
+  private checks = new Map<string, { id: string; ceiling: boolean; readOnly: boolean }>();
   // waiting are the dialogs carried to main, each ended when its call is over.
   private waiting: { id?: string; end: () => void }[] = [];
 
@@ -169,7 +117,13 @@ export class Asks {
     let input = canonical(e.input);
     if (input.length > maxInput)
       input = input.slice(0, maxInput) + ` ... (${input.length - maxInput} characters more)`;
-    this.permissions.set(question, { tool: e.tool, input, cwd, key });
+    this.permissions.set(question, {
+      tool: e.tool,
+      input,
+      cwd,
+      key,
+      readOnly: e.isReadOnly === true,
+    });
     return question;
   }
 
@@ -219,6 +173,7 @@ export class Asks {
     this.checks.set(callKey(e.tool, e.input), {
       id: e.tool_use_id,
       ceiling: e.ceiling !== undefined,
+      readOnly: e.isReadOnly === true,
     });
   }
 
@@ -247,7 +202,11 @@ export class Asks {
     const call = this.checks.get(callKey(e.tool_name, e.tool_input));
     this.checks.delete(callKey(e.tool_name, e.tool_input));
     if (call?.ceiling) return undefined;
-    const check: CheckEvent = { tool: e.tool_name, input: e.tool_input };
+    const check: CheckEvent = {
+      tool: e.tool_name,
+      input: e.tool_input,
+      ...(call?.readOnly ? { isReadOnly: true as const } : {}),
+    };
     const key = this.key(cwd, check);
     if (this.allows(key)) return { behavior: "allow" };
     const question = this.permission(cwd, check, key);
@@ -330,6 +289,7 @@ export class Asks {
       open.tool = permission.tool;
       open.input = permission.input;
       open.cwd = permission.cwd;
+      if (permission.readOnly) open.readOnly = true;
     }
     try {
       const opened = await this.host.post(paths.askOpen, open);

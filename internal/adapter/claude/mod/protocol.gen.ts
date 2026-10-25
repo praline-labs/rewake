@@ -108,6 +108,9 @@ export interface AskOpenRequest {
   input?: string
   // cwd is the directory the worker runs in.
   cwd?: string
+  // readOnly says the engine's check called a permission's call read-only (Claude Code
+  // 2.1.304+), absent when it did not say; the call is still main's to answer.
+  readOnly?: boolean
   // questions are the dialog's questions; a permission's one question has its three choices.
   questions: AskQuestion[]
 }

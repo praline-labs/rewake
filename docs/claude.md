@@ -40,7 +40,7 @@ the inbound lane's and does not depend on the mod.
 The mod's files are embedded from `internal/adapter/claude/mod/`, each named in the `embed` line
 of `mod.go`, since a pattern skips the manifest's dot directory: the manifest `rewake`
 (`.claude-plugin/plugin.json`), `hooks/hooks.json`, the one module `hooks/rewake.ts` and the
-files it imports — `outbox.ts`, `heartbeat.ts`, `management.ts`, `asks.ts`, `dialogs.ts`,
+files it imports — `outbox.ts`, `heartbeat.ts`, `management.ts`, `asks.ts`, `calls.ts`, `dialogs.ts`,
 `closing.ts`, `worktree.ts`, `enter.ts` — and the generated `protocol.gen.ts`. The run's service
 writes them into `<run dir>/mod` before the harness starts, and the launch passes
 `--plugin-dir <run dir>/mod` to that launch only. Nothing in the person's settings changes (L1);

@@ -23,7 +23,7 @@ import (
 // dot, and the manifest's directory is one, while the tests and the schema
 // are no part of what a run loads.
 //
-//go:embed mod/.claude-plugin/plugin.json mod/hooks/hooks.json mod/hooks/rewake.ts mod/hooks/outbox.ts mod/hooks/heartbeat.ts mod/hooks/management.ts mod/hooks/asks.ts mod/hooks/dialogs.ts mod/hooks/closing.ts mod/hooks/worktree.ts mod/hooks/enter.ts mod/protocol.gen.ts
+//go:embed mod/.claude-plugin/plugin.json mod/hooks/hooks.json mod/hooks/rewake.ts mod/hooks/outbox.ts mod/hooks/heartbeat.ts mod/hooks/management.ts mod/hooks/asks.ts mod/hooks/calls.ts mod/hooks/dialogs.ts mod/hooks/closing.ts mod/hooks/worktree.ts mod/hooks/enter.ts mod/protocol.gen.ts
 var modFiles embed.FS
 
 // pluginDirFlag loads a plugin from a directory for one launch.

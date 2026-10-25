@@ -114,6 +114,7 @@
         "tool": {"type": "string", "description": "is a permission's tool, as the model names it."},
         "input": {"type": "string", "description": "is a permission's call arguments as JSON text, cut by the mod to what a body takes."},
         "cwd": {"type": "string", "description": "is the directory the worker runs in."},
+        "readOnly": {"type": "boolean", "description": "says the engine's check called a permission's call read-only (Claude Code 2.1.304+), absent when it did not say; the call is still main's to answer."},
         "questions": {"type": "array", "items": {"$ref": "#/$defs/AskQuestion"}, "description": "are the dialog's questions; a permission's one question has its three choices."}
       },
       "required": ["loadId", "call", "kind", "questions"],

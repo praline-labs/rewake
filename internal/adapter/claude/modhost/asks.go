@@ -65,7 +65,7 @@ func (s *Server) askOpen(w http.ResponseWriter, r *http.Request) {
 }
 
 func offerOf(asked AskOpenRequest) asking.Offer {
-	offer := asking.Offer{Kind: string(asked.Kind), Tool: text(asked.Tool), Input: text(asked.Input), Cwd: text(asked.Cwd)}
+	offer := asking.Offer{Kind: string(asked.Kind), Tool: text(asked.Tool), Input: text(asked.Input), Cwd: text(asked.Cwd), ReadOnly: asked.ReadOnly != nil && *asked.ReadOnly}
 	for _, question := range asked.Questions {
 		prompt := asking.Prompt{Text: question.Question, Header: text(question.Header), Multi: question.MultiSelect != nil && *question.MultiSelect}
 		for _, option := range question.Options {

@@ -163,6 +163,15 @@ func TestTheLetterNamesTheRequestAndTheCommand(t *testing.T) {
 	if !strings.Contains(first, "api asks permission for Bash (request 3f9a)") || !strings.Contains(text, "rewake answer api 3f9a once") || !strings.Contains(text, `{"command":"make"}`) {
 		t.Fatalf("the permission letter:\n%s", text)
 	}
+	// Only a call its tool calls read-only is marked so; it is still asked.
+	if strings.Contains(text, "Read-only") {
+		t.Fatalf("an unmarked call reads as read-only:\n%s", text)
+	}
+	reading := permission
+	reading.ReadOnly = true
+	if text := Letter("api", "3f9a", reading, time.Now()); !strings.Contains(text, "Read-only: the tool says this call only reads") || !strings.Contains(text, "rewake answer api 3f9a once") {
+		t.Fatalf("the read-only letter:\n%s", text)
+	}
 	text = Letter("api", "3f9a", question, time.Now())
 	if !strings.Contains(text, "Which?") || !strings.Contains(text, "  2 Beta") || !strings.Contains(text, "1,3") {
 		t.Fatalf("the question letter:\n%s", text)

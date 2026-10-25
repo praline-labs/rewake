@@ -334,3 +334,33 @@ test("a dialog a request carries names what it asks in the state while it is hel
   await run.clock.settle();
   expect(waited(run).at(-1)).toBeUndefined();
 });
+
+test("a call the check calls read-only is asked of main all the same, marked so", async ($, on) => {
+  const replies: Record<string, Reply[]> = { "/v1/ask/open": [opened] };
+  const run = await worker($, on, replies);
+  replies["/v1/ask/poll"] = [keyed(run, answered("Allow once"))];
+  const call = {
+    tool: "Read",
+    input: { file_path: "/home/me/.ssh/id_ed25519" },
+    tool_use_id: "t1",
+  };
+  await $.tool.check({ ...call, isReadOnly: true } as any);
+  await $.tool.check({ ...call, input: { file_path: "/work/a.go" }, tool_use_id: "t2" } as any);
+  const opens = run.sent.filter((one) => one.path === "/v1/ask/open").map((one) => one.body);
+  expect(opens.map((one) => one.readOnly)).toEqual([true, undefined]);
+});
+
+test("an engine-drawn dialog keeps the read-only mark its check gave the call", async ($, on) => {
+  const replies: Record<string, Reply[]> = { "/v1/ask/open": [opened] };
+  const run = await worker($, on, replies, undefined, undefined, "auto");
+  expect(await $.tool.check({ ...read, tool_use_id: "t1", isReadOnly: true } as any)).toEqual({
+    decision: "ask",
+  });
+  replies["/v1/ask/poll"] = [keyed(run, answered("Allow once"))];
+  await $.classic.PermissionRequest(drawn as any);
+  expect(run.sent.find((one) => one.path === "/v1/ask/open")!.body).toMatchObject({
+    kind: "permission",
+    call: "t1",
+    readOnly: true,
+  });
+});
