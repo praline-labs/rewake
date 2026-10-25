@@ -189,40 +189,67 @@ twelve variables:
 
 ### Telemetry sources: the status line and hooks
 
-Gathered September 23, 2026, Claude Code 2.1.280. **[verified live]** here is one
+Gathered September 23, 2026, Claude Code 2.1.280, but for the status line's input, which is
+the 2.1.310 record below. **[verified live]** here is one
 session of the installed binary under the owner's login, cheapest model, one turn
 delivered through the inbox socket and one `/compact`. **[container]** is the cached
 binary in the disposable container with no network and a placeholder API key: the
 status line runs there, because it renders before any request. **[source]** is the
 JavaScript bundled in the 2.1.280 binary.
 
-What the `statusLine` command receives on stdin, one JSON object:
-**[container; verified live]**
+What the `statusLine` command receives on stdin, one JSON object — the 2.1.310 record, October
+25, 2026. **[live]** is a pty run of the installed 2.1.310 in a private config directory, no
+login and no request (`--model haiku --effort high`, then `/effort`, its picker and `/rename`,
+in a linked git worktree with a GitHub `origin`); **[source]** is the builder of the input in
+that binary, for what needs a login, a request or a feature. "Used" names what rewake reads
+(`internal/adapter/claude/statusline.go`); everything else is unused.
 
-- `session_id`, `transcript_path`, `cwd`, `scratchpad_dir`; `version`; `workspace`
-  (`current_dir`, `project_dir`, `added_dirs`); `output_style.name`.
-- `model.id` and `model.display_name`.
-- `effort.level` for a model that takes an effort — `medium` on Opus 5.5, then `high`
-  after `/effort high`. For Haiku 4.5 the key is absent altogether.
-- `context_window`: `total_input_tokens` is input plus cache creation plus cache read
-  of the **last** response — the current fill, not a running total — beside
-  `total_output_tokens`, `context_window_size`, `current_usage` (the four raw counts),
-  and `used_percentage`/`remaining_percentage`, rounded and clamped to 0–100. Before
-  the first response, and again after a compaction until the next one, the counts are
-  0 and `current_usage` and both percentages are `null`. Live: 34727 of 200000, 17%,
-  after one turn on Haiku 4.5; the window read 1000000 for both Opus 5.5 `[1m]` and
-  Sonnet 5 in the container.
-- `cost` (`total_cost_usd`, `total_duration_ms`, `total_api_duration_ms`, lines added
-  and removed), `exceeds_200k_tokens`, `fast_mode`, `thinking.enabled`.
-- `rate_limits` (`five_hour`, `seven_day`, each `used_percentage` and `resets_at`)
-  only under a subscription login, from about three seconds after start.
-- Conditionally, per the source: `session_name`, `prompt_cache`, `vim`, `agent`,
-  `remote`, `pr`, `worktree`.
+- `session_id`, `transcript_path`, `cwd` — the session and its directory **[live]**; unused.
+- `prompt_id` — the id of the latest user input, absent until the first (a typed command
+  counts) **[live]**; unused.
+- `scratchpad_dir` — the session's scratchpad, only where the scratchpad is on **[source]**;
+  absent in the probe; unused. (2.1.280 listed it unconditionally.)
+- `session_name` — the name `/rename` gave, absent before **[live]**; unused.
+- `model.id`, `model.display_name` — `claude-haiku-5-5`, `Haiku 5.5` **[live]**; unused (the
+  mod reads the id; nothing fills the display name for Claude Code).
+- `workspace.current_dir`, `project_dir`, `added_dirs` **[live]**; `workspace.git_worktree` —
+  the linked worktree's directory name (`work2`), absent outside one **[live]**;
+  `workspace.repo` — `{host, owner, name}` of `origin` **[live]**; unused.
+- `version` — `2.1.310` **[live]**; unused (the mod's hello carries it).
+- `output_style.name` — `default` **[live]**; unused.
+- `cost.total_cost_usd`, `total_duration_ms`, `total_api_duration_ms`, `total_lines_added`,
+  `total_lines_removed` — the session's running totals, 0 before a request but the duration
+  **[live]**; unused.
+- `context_window.total_input_tokens` (input plus cache creation plus cache read of the last
+  response), `total_output_tokens`, `context_window_size` (1000000 for Haiku 5.5),
+  `current_usage` (the four raw counts), `used_percentage`, `remaining_percentage` — before
+  the first response the counts are 0 and the rest `null` **[live]**; unused (the mod reads
+  `$.session.usage()`).
+- `exceeds_200k_tokens`, `fast_mode`, `thinking.enabled` — `false`, `false`, `true` **[live]**;
+  unused.
+- `effort.level` — the session's effort setting: `high` from `--effort high`, `max` right after
+  `/effort max`, the picker's choice right after it, all before any request **[live]**; absent
+  for a model without effort **[source]**. **Used**: the live effort of `rewake list`
+  ([claude.md](claude.md#telemetry)).
+- `prompt_cache` — absent until the first request **[live]**, then **[source]** `warm`,
+  `caching_observed`, `ttl`, `expires_at` (seconds), `requests`, `misses`, `expected_rebuilds`,
+  `hit_ratio`, `cache_write_tokens`, `miss_recache_tokens`, `last_miss_at`, `last_miss_cause`
+  (`causes`, `tools_added`, `tools_removed`, `system_char_delta`), `miss_causes`,
+  `recache_tokens_if_cold`. **Used**: `warm`, `ttl`, `expires_at`, the cache's life; the rest
+  unused.
+- `rate_limits` — `five_hour` and `seven_day`, each `used_percentage` and `resets_at`, under a
+  subscription login; behind a gateway also `spend_limit` (`used_percentage`, `resets_at`,
+  `used_usd`, `limit_usd`, `period`) **[source]**; absent without a login **[live]**; unused.
+- `vim.mode` with vim mode on; `agent.name` for a session run as an agent; `remote.session_id`
+  under remote control; `pr` (`number`, `url`, `review_state`, `kind`) for the branch's pull
+  request; `worktree` (`name`, `path`, `branch`, `original_cwd`, `original_branch`) for Claude
+  Code's own `--worktree` session **[source]**; all unused.
+- Not in it: `permission_mode`, which only hooks carry, and anything of the session's activity.
 
-Nothing in it says whether the session is working, idle or waiting, and nothing
-about compaction beyond the context counts falling to `null`.
+Nothing in it says whether the session is working, idle or waiting, and nothing about
+compaction beyond the context counts falling to `null`.
 
-When it runs **[source; the cadence confirmed in container and live]**: once when the
+When it runs **[source, the same in 2.1.310; the cadence confirmed in container and live]**: once when the
 footer mounts; 300 ms after any change of token usage, permission mode, model, effort,
 fast mode, thinking, vim mode or PR status, or after a new assistant message; on
 `/clear`; at a rate-limit reset and a prompt-cache expiry; and, only when
