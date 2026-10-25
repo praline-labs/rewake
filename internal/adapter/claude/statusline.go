@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -20,9 +21,11 @@ import (
 // The status line of a worker (docs/claude.md#the-cache-ttl): Claude
 // Code runs `rewake statusline` after each response and on a timer, with its
 // own JSON on stdin. Its prompt_cache is the only place the cache's lifetime is
-// told — the mod cannot read it — so the command forwards it to the run's
-// host over the mod socket and prints the person's own status line, if the
-// workers' settings.json names one, in its place.
+// told — the mod cannot read it — and its effort.level the only place an
+// /effort shows before the next request (docs/research.md, the status line),
+// so the command forwards both to the run's host over the mod socket and
+// prints the person's own status line, if the workers' settings.json names
+// one, in its place.
 
 // statusLineRefresh is how often Claude Code runs the command beside its own
 // events; the expiry it reports is absolute, so a slow timer loses nothing.
@@ -49,22 +52,29 @@ type promptCache struct {
 	ExpiresAt *int64  `json:"expires_at"`
 }
 
-// StatusLine posts the input's prompt_cache to the run's host and prints the
-// person's own line. Either failing leaves the other alone.
+// StatusLine posts the input's prompt_cache and effort to the run's host and
+// prints the person's own line. Either failing leaves the other alone.
 func (claudeHarness) StatusLine(ctx context.Context, input []byte, out io.Writer) {
 	if os.Getenv(statusLineGuardEnv) != "" {
 		return
 	}
 	var seen struct {
 		PromptCache *promptCache `json:"prompt_cache"`
+		Effort      struct {
+			Level any `json:"level"`
+		} `json:"effort"`
 	}
 	posted := make(chan struct{})
 	go func() {
 		defer close(posted)
-		if json.Unmarshal(input, &seen) == nil && seen.PromptCache != nil {
+		if json.Unmarshal(input, &seen) != nil {
+			return
+		}
+		effort := effortText(seen.Effort.Level)
+		if seen.PromptCache != nil || effort != "" {
 			post, cancel := context.WithTimeout(ctx, postTimeout)
 			defer cancel()
-			postCache(post, os.Getenv(modSocketEnv), *seen.PromptCache)
+			postLine(post, os.Getenv(modSocketEnv), seen.PromptCache, effort)
 		}
 	}()
 	line, cancel := context.WithTimeout(ctx, statusLineTimeout)
@@ -73,14 +83,32 @@ func (claudeHarness) StatusLine(ctx context.Context, input []byte, out io.Writer
 	<-posted
 }
 
-func postCache(ctx context.Context, socket string, cache promptCache) {
+// effortText is an effort level as the mod sends a request's: a level's
+// name, or an integer budget as its decimal text; empty for none.
+func effortText(level any) string {
+	switch level := level.(type) {
+	case string:
+		return level
+	case float64:
+		return strconv.FormatFloat(level, 'f', -1, 64)
+	}
+	return ""
+}
+
+func postLine(ctx context.Context, socket string, cache *promptCache, effort string) {
 	if socket == "" {
 		return
 	}
-	body := modhost.StatusLineRequest{Warm: cache.Warm, Ttl: cache.TTL}
-	if cache.ExpiresAt != nil {
-		at := int(*cache.ExpiresAt)
-		body.ExpiresAt = &at
+	var body modhost.StatusLineRequest
+	if cache != nil {
+		body.Warm, body.Ttl = &cache.Warm, cache.TTL
+		if cache.ExpiresAt != nil {
+			at := int(*cache.ExpiresAt)
+			body.ExpiresAt = &at
+		}
+	}
+	if effort != "" {
+		body.Effort = &effort
 	}
 	data, err := json.Marshal(body)
 	if err != nil {

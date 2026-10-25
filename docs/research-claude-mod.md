@@ -511,6 +511,23 @@ October 19, 2026, Claude Code 2.1.302, a probe mod under `claude -p --plugin-dir
   its terminal still `"medium"` until its next turn, then `"max"`. Nothing the mod hears
   marks the change itself, so between them `list` lags by a turn.
 
+October 25, 2026, Claude Code 2.1.310, a probe mod under `claude --plugin-dir … --model haiku
+--effort high` in a pty, a private config directory, no login and no request:
+
+- `$.settings.read({ key: "effortLevel" })` stays `undefined` before and after `/effort max`
+  ("Set effort level to max (this session only)"); the engine's own `settings.read` does not
+  fire on it, and no settings file is written. The bare `/effort` picker confirmed with Enter
+  saves `modelSettings.<model id>.effortLevel` to the user layer ("saved as your default for new
+  sessions") and fires the engine's read; its `s` (this session only) leaves no trace. A
+  worker's user layer is the service folder, so a picker's Enter there sets the effort of every
+  later worker on that model.
+- `command.run` fires `{ command: "effort", args: "max" }` for a typed level, `args: ""` for the
+  picker, whose choice it does not carry.
+- The status line's input carries `effort.level`: `"high"` from the flag at start, `"max"` at the
+  next run after `/effort max`, with no request between, and the picker's choice at once, its `s`
+  and its Enter alike. rewake takes this source
+  ([claude.md](claude.md#telemetry)).
+
 ## The end of the process, as the mod hears it
 
 October 19, 2026, Claude Code 2.1.302, fullscreen (the alternate screen), a probe mod under

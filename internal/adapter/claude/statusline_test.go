@@ -12,7 +12,7 @@ import (
 	"testing"
 )
 
-// The command forwards the input's prompt_cache to the run's host and prints
+// The command forwards the input's prompt_cache and effort to the run's host and prints
 // the person's own status line, run with the same input; a host that is not
 // there and a line that is not set each leave the other alone.
 func TestStatusLineForwardsTheCacheAndPrintsThePersonsLine(t *testing.T) {
@@ -47,10 +47,17 @@ func TestStatusLineForwardsTheCacheAndPrintsThePersonsLine(t *testing.T) {
 		t.Fatalf("the person's line: %q", out.String())
 	}
 
-	// No cache in the input (before any request) posts nothing; no socket and
-	// no line print nothing and fail nothing.
+	// Before any request the input has an effort and no cache: the effort
+	// alone goes.
 	t.Setenv("CLAUDE_CONFIG_DIR", t.TempDir())
 	out.Reset()
+	claudeHarness{}.StatusLine(context.Background(), []byte(`{"model":{"id":"m1"},"effort":{"level":"max"}}`), &out)
+	if line := <-got; line != `/v1/status/line {"effort":"max"}` {
+		t.Fatalf("the effort's post: %s", line)
+	}
+
+	// Neither cache nor effort (a model without effort, before any request)
+	// posts nothing; no socket and no line print nothing and fail nothing.
 	claudeHarness{}.StatusLine(context.Background(), []byte(`{"model":{"id":"m1"}}`), &out)
 	t.Setenv(modSocketEnv, "")
 	claudeHarness{}.StatusLine(context.Background(), input, &out)

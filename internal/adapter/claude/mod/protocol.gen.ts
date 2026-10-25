@@ -199,15 +199,19 @@ export interface Refusal {
   loadSeq?: number
 }
 
-// StatusLineRequest is the status line's prompt_cache as Claude Code gave it, without
-// transcript content.
+// StatusLineRequest is what the status line's input tells of the session as Claude Code gave it
+// — its prompt_cache and its effort — without transcript content.
 export interface StatusLineRequest {
   // ttl is the cache's lifetime of the last request, 5m or 1h, absent when unknown.
   ttl?: string
   // expiresAt is when the cache expires, in seconds since the epoch, absent when unknown.
   expiresAt?: number
-  // warm says Claude Code takes the cache for warm.
-  warm: boolean
+  // warm says Claude Code takes the cache for warm; absent when the input has no prompt_cache,
+  // before the first request, and then no cache field is sent.
+  warm?: boolean
+  // effort is the input's effort.level, the session's effort setting, which follows /effort
+  // before any request; absent for a model without effort.
+  effort?: string
 }
 
 // ClosingRequest says the harness's process has begun to end.

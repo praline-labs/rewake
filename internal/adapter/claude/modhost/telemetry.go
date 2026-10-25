@@ -14,9 +14,12 @@ type observations struct {
 	localCount int
 	count      uint64
 	partial    bool
-	// effort is the latest a mod saw the main loop ask for, kept across
-	// loads: a reload forgets it until the next request.
-	effort string
+	// effort is the session's effort as last seen to change: what the main
+	// loop's latest request asked for, or the status line's effort.level,
+	// which follows /effort before the next request. Each source counts only
+	// when its value changes, so whichever changed last is shown; both are
+	// kept across loads, as a reload forgets a request's until the next.
+	effort, requestEffort, lineEffort string
 	// told says main was told of the dialog the snapshot names.
 	told     bool
 	snapshot session.Snapshot
@@ -103,16 +106,8 @@ func (s *Server) observeLocked(sample StateRequest) {
 	snapshot.Fresh, snapshot.ActivityFresh, snapshot.SettingsFresh, snapshot.ContextFresh = true, true, true, true
 	snapshot.Activity, snapshot.Model = &sample.Activity, sample.Model
 	snapshot.Compacting = &sample.Compacting
-	if sample.Effort != nil && *sample.Effort != "" {
-		observed.effort = *sample.Effort
-	}
-	switch {
-	case observed.effort != "":
-		effort := observed.effort
-		snapshot.Effort = &effort
-	case s.cfg.Effort != "":
-		effort := s.cfg.Effort
-		snapshot.Effort, snapshot.EffortSource = &effort, session.EffortFromLaunch
+	if sample.Effort != nil {
+		observed.effortFrom(&observed.requestEffort, *sample.Effort)
 	}
 	snapshot.Interruptions = session.InterruptionsObserved
 	if sample.CacheRead != nil && sample.CacheWrite != nil && sample.CacheInput != nil {
@@ -153,6 +148,16 @@ func (s *Server) observeLocked(sample StateRequest) {
 	observed.snapshot, observed.sequence, observed.generation = snapshot, sample.Sequence, sample.Generation
 }
 
+// effortFrom takes a source's effort, shown only when it changed: a sample
+// repeats the last request's on every heartbeat, and the status line its
+// setting on every run. Called under mu.
+func (o *observations) effortFrom(last *string, effort string) {
+	if effort == "" || effort == *last {
+		return
+	}
+	*last, o.effort = effort, effort
+}
+
 func tokenCount(value *int) *int64 {
 	if value == nil || *value < 0 {
 		return nil
@@ -185,6 +190,17 @@ func (s *Server) SessionState() session.Snapshot {
 	if observed.life != nil {
 		life := *observed.life
 		snapshot.CacheLife = &life
+	}
+	// The effort is set here, not at the sample: the status line changes it
+	// between samples.
+	snapshot.Effort, snapshot.EffortSource = nil, ""
+	switch {
+	case observed.effort != "":
+		effort := observed.effort
+		snapshot.Effort = &effort
+	case s.cfg.Effort != "":
+		effort := s.cfg.Effort
+		snapshot.Effort, snapshot.EffortSource = &effort, session.EffortFromLaunch
 	}
 	snapshot.CompactionEvents = append([]session.CompactionEvent{}, observed.events...)
 	snapshot.CompactionOutcomes = append([]session.CompactionOutcome{}, observed.outcomes...)

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter"
+	"github.com/praline-labs/rewake/internal/core/session"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 )
 
@@ -51,5 +52,46 @@ func TestTheStatusLineIsServedToTheHarnessesDescendantsOnly(t *testing.T) {
 	server.HarnessStarted(adapter.RunProcess{PID: beside.Process.Pid, Start: start})
 	if status, _, err := post(socket, PathStatusLine, []byte(body)); err == nil {
 		t.Fatalf("a process beside the harness was answered: %d", status)
+	}
+}
+
+// The effort shown is the one whose source changed last: the status line's
+// setting follows /effort before a request, and a request's own effort wins
+// once it differs from the last one, while a sample repeating it does not.
+func TestTheEffortShownIsTheSourceThatChangedLast(t *testing.T) {
+	server, socket := servingWith(t, func(s *Server) { s.cfg.Effort = "high" })
+	if got := server.SessionState(); got.Effort == nil || *got.Effort != "high" || got.EffortSource != session.EffortFromLaunch {
+		t.Fatalf("before anything: %+v", got.Effort)
+	}
+	postValue(t, socket, PathHello, HelloRequest{LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
+	sample := testState()
+	for step, round := range []struct {
+		line, request, want string
+	}{
+		{request: "medium", want: "medium"},
+		{line: "medium", want: "medium"},
+		{line: "max", want: "max"},
+		{request: "medium", want: "max"},
+		{request: "max", want: "max"},
+		{request: "low", want: "low"},
+		{line: "max", want: "low"},
+		{line: "high", want: "high"},
+	} {
+		if round.request != "" {
+			sample.Sequence++
+			sample.Effort = &round.request
+			postValue(t, socket, PathModState, sample)
+		}
+		if round.line != "" {
+			if status, _, err := post(socket, PathStatusLine, []byte(`{"effort":"`+round.line+`"}`)); err != nil || status != 200 {
+				t.Fatalf("step %d: the status line: %d %v", step, status, err)
+			}
+		}
+		if got := server.SessionState(); got.Effort == nil || *got.Effort != round.want || got.EffortSource != "" {
+			t.Fatalf("step %d: effort %v (%q), want %q", step, got.Effort, got.EffortSource, round.want)
+		}
+	}
+	if server.SessionState().CacheLife != nil {
+		t.Fatal("an effort alone set the cache's life")
 	}
 }

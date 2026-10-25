@@ -129,10 +129,13 @@ measurements, turn and compaction events, and each heartbeat answer; its observa
 fresh only while the current mod's heartbeat holds ([claude.md](claude.md#telemetry)).
 The window and percentage are copied as the harness reports them. A fresh conversation or a
 completed compaction may have a known window and unknown usage until another response. Effort
-is the one the main loop's latest model request asked for; until the first such request it is
-the launch's own `--effort`, shown as `"high" (launch)` and in JSON with
-`reasoningEffortSource: "launch"`, and unknown when the launch passed none
-([research-claude-mod.md](research-claude-mod.md#effort)). Rate limits are not copied. A
+is live: the status line's `effort.level` follows `/effort` — typed with a level or chosen in its
+picker — at once, before any request, and the main loop's latest model request gives its own;
+whichever source last changed its value is shown. Before either reports, it is the launch's own
+`--effort`, shown as `"high" (launch)` and in JSON with `reasoningEffortSource: "launch"`, and
+unknown when the launch passed none. Not live: a session whose status line does not run — a
+launch with no run directory, an untrusted workspace — shows the request's effort only, a turn
+late ([research-claude-mod.md](research-claude-mod.md#effort)). Rate limits are not copied. A
 reload of the mod makes compaction coverage partial. On an organization-managed installation
 the harness skips a local plugin's compaction observer, so a native compaction is not counted
 there; one main asked for is still counted from its result.
@@ -141,7 +144,8 @@ there; one main asked for is still counted from its result.
 
 The per-run extension reads native context usage, window and percentage, model and thinking
 level, pushes changes and answers a one-second poll
-([research-pi.md](research-pi.md#telemetry-and-remote-control)). The percentage is rounded and
+([research-pi.md](research-pi.md#telemetry-and-remote-control)). The thinking level is live: the
+extension pushes a change on `thinking_level_select`, before the next request. The percentage is rounded and
 bounded to 100. Missing usage after a compaction stays unknown until the next usage update. No
 limits are reported. The wrapper keeps only the current connection's increasing sample
 sequence; a lost connection or three seconds without a sample makes its values stale. A model

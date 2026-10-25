@@ -226,8 +226,8 @@ type Refusal struct {
 	LoadSeq *int `json:"loadSeq,omitempty"`
 }
 
-// StatusLineRequest is the status line's prompt_cache as Claude Code gave it, without
-// transcript content.
+// StatusLineRequest is what the status line's input tells of the session as Claude Code gave it
+// — its prompt_cache and its effort — without transcript content.
 type StatusLineRequest struct {
 	// Ttl is the cache's lifetime of the last request, 5m or 1h, absent when unknown.
 	Ttl *string `json:"ttl,omitempty"`
@@ -235,8 +235,13 @@ type StatusLineRequest struct {
 	// ExpiresAt is when the cache expires, in seconds since the epoch, absent when unknown.
 	ExpiresAt *int `json:"expiresAt,omitempty"`
 
-	// Warm says Claude Code takes the cache for warm.
-	Warm bool `json:"warm"`
+	// Warm says Claude Code takes the cache for warm; absent when the input has no prompt_cache,
+	// before the first request, and then no cache field is sent.
+	Warm *bool `json:"warm,omitempty"`
+
+	// Effort is the input's effort.level, the session's effort setting, which follows /effort
+	// before any request; absent for a model without effort.
+	Effort *string `json:"effort,omitempty"`
 }
 
 // ClosingRequest says the harness's process has begun to end.

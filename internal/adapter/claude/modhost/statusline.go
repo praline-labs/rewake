@@ -47,13 +47,16 @@ func (s *Server) statusLine(w http.ResponseWriter, r *http.Request) {
 		s.refuseEffect(w, http.StatusForbidden, err)
 		return
 	}
-	life := session.CacheLife{Warm: line.Warm}
-	if line.Ttl != nil && (*line.Ttl == "5m" || *line.Ttl == "1h") {
-		life.TTL = *line.Ttl
-	}
-	if line.ExpiresAt != nil && *line.ExpiresAt > 0 {
-		at := time.Unix(int64(*line.ExpiresAt), 0)
-		life.ExpiresAt = &at
+	var life *session.CacheLife
+	if line.Warm != nil {
+		life = &session.CacheLife{Warm: *line.Warm}
+		if line.Ttl != nil && (*line.Ttl == "5m" || *line.Ttl == "1h") {
+			life.TTL = *line.Ttl
+		}
+		if line.ExpiresAt != nil && *line.ExpiresAt > 0 {
+			at := time.Unix(int64(*line.ExpiresAt), 0)
+			life.ExpiresAt = &at
+		}
 	}
 	s.mu.Lock()
 	if s.closed {
@@ -61,7 +64,12 @@ func (s *Server) statusLine(w http.ResponseWriter, r *http.Request) {
 		s.refuseEffect(w, http.StatusServiceUnavailable, errClosing)
 		return
 	}
-	s.management.observed.life = &life
+	if life != nil {
+		s.management.observed.life = life
+	}
+	if line.Effort != nil {
+		s.management.observed.effortFrom(&s.management.observed.lineEffort, *line.Effort)
+	}
 	s.mu.Unlock()
 	reply(w, http.StatusOK, Done{})
 }

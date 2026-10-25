@@ -203,8 +203,12 @@ person's status line or measuring a full context breakdown. The native model win
 percentage are used as given; a launch's `--autocompact` sets the window the conversation is kept
 to, and the host recomputes the percent against it.
 
-Effort is what the latest main-loop `turn.step` asked for, kept by the host across loads; before
-one, the launch's `--effort`, marked as the launch's (`reasoningEffortSource`), or unknown
+Effort comes from two sources, and the host shows the one whose value changed last: what the
+latest main-loop `turn.step` asked for, and the status line's `effort.level`, which `rewake
+statusline` posts beside the cache (`StatusLineRequest.effort`) and which follows `/effort` before
+the next request. A sample repeats the last request's effort and the status line its setting on
+every run, so a repeat changes nothing. Both are kept by the host across loads; before either,
+the launch's `--effort`, marked as the launch's (`reasoningEffortSource`), or unknown
 ([research](research-claude-mod.md#effort)). A worker's sample names what a dialog it holds for main asks
 (`waiting`: `permission` or `question`), and a dialog it waits at that nobody is asked about,
 which the host tells main of once
