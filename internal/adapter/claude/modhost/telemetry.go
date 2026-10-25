@@ -147,6 +147,9 @@ func (s *Server) observeLocked(sample StateRequest) {
 	} else {
 		observed.told = false
 	}
+	if sample.Waiting != nil && (*sample.Waiting == AskKindPermission || *sample.Waiting == AskKindQuestion) {
+		snapshot.Waiting = string(*sample.Waiting)
+	}
 	observed.snapshot, observed.sequence, observed.generation = snapshot, sample.Sequence, sample.Generation
 }
 

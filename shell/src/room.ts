@@ -132,10 +132,12 @@ export type Session = {
   cwd: string;
   // branch is what is checked out where the session started.
   branch?: string;
-  // activity is idle, working, not_loaded or system_error; fresh is false
-  // when the run stopped publishing, and every value is then its last.
+  // activity is idle or working; fresh is false when the run stopped
+  // publishing, and every value is then its last.
   activity?: string;
-  waitingFor?: string[];
+  // waiting is what a dialog a request carries to main asks: permission or
+  // question.
+  waiting?: string;
   // dialog is set while the session waits at a dialog on its screen that no
   // request carries to main.
   dialog?: string;
@@ -153,7 +155,7 @@ export type Session = {
 
 type Telemetry = {
   activity?: string | null;
-  waitingFor?: string[] | null;
+  waiting?: string | null;
   dialog?: string | null;
   fresh?: boolean;
   compactionInProgress?: boolean | null;
@@ -200,7 +202,7 @@ function sessionsOf(listing: SessionListing): Map<string, Session> {
       type: s.type,
       cwd: s.cwd,
       activity: t?.activity ?? undefined,
-      waitingFor: t?.waitingFor ?? undefined,
+      waiting: t?.waiting ?? undefined,
       dialog: t?.dialog ?? undefined,
       compacting: t?.compactionInProgress ?? undefined,
       fresh: t?.fresh ?? false,

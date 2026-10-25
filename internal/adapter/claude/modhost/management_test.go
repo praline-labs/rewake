@@ -257,3 +257,22 @@ func TestADialogIsToldToMainOncePerDialog(t *testing.T) {
 		t.Fatalf("told %q", told)
 	}
 }
+
+// What a held dialog asks is the snapshot's while samples name it, and is
+// gone with the first sample that does not.
+func TestAHeldDialogsKindLastsWhileSamplesNameIt(t *testing.T) {
+	server, socket := serving(t)
+	postValue(t, socket, PathHello, HelloRequest{LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
+	sample := testState()
+	permission, question := AskKindPermission, AskKindQuestion
+	for sequence, round := range []struct {
+		waiting *AskKind
+		want    string
+	}{{&permission, session.WaitingPermission}, {&question, session.WaitingQuestion}, {nil, ""}} {
+		sample.Sequence, sample.Waiting = sequence+1, round.waiting
+		postValue(t, socket, PathModState, sample)
+		if got := server.SessionState().Waiting; got != round.want {
+			t.Fatalf("sample %d: waiting %q", sequence+1, got)
+		}
+	}
+}

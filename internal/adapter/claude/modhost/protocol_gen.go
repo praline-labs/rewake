@@ -444,6 +444,10 @@ type StateRequest struct {
 	// Dialog is what the harness said of a dialog the session waits at on its screen that the mod
 	// carries to nobody, absent when none; the host tells main once per dialog.
 	Dialog *string `json:"dialog,omitempty"`
+
+	// Waiting is what a dialog the session waits at on its screen asks while the mod holds it —
+	// a permission, or the model's own question — absent when none.
+	Waiting *AskKind `json:"waiting,omitempty"`
 }
 
 // ControlReply is an initial or final result for a dispatched command.

@@ -21,7 +21,7 @@ func TestAWorstCaseSnapshotStillSaves(t *testing.T) {
 	text := strings.Repeat("x", 128)
 	used, window, percent, count, compacting := int64(1<<40), int64(1<<40), 100, uint64(1<<40), true
 	snapshot := Snapshot{
-		Activity: &text, WaitingFor: []string{"approval", "input"}, ActivityAt: &now, ActivityFresh: true,
+		Activity: &text, Waiting: WaitingPermission, ActivityAt: &now, ActivityFresh: true,
 		Thread: strings.Repeat("t", 64), Selection: "ready", PublishedAt: &now, ObservedAt: &now, Fresh: true, ContextFresh: true, SettingsFresh: true,
 		ContextUsed: &used, ContextWindow: &window, FilledPercent: &percent, ContextAt: &now, Model: &text, Effort: &text, SettingsAt: &now,
 		Compactions: &count, Compacting: &compacting, Coverage: "observed", Interruptions: InterruptionsUnobserved,

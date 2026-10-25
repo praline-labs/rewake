@@ -41,7 +41,7 @@ func saveState(t *testing.T, dir, name, epoch string, count uint64) {
 	filled := 42
 	model, effort := "fixture-model", "high"
 	activity := "working"
-	snapshot := session.Snapshot{Activity: &activity, ActivityAt: &now, ActivityFresh: true, WaitingFor: []string{}, Selection: "ready", Fresh: true, ContextFresh: true, SettingsFresh: true, PublishedAt: &now, ObservedAt: &now, ContextAt: &now, SettingsAt: &now, ContextUsed: &used, ContextWindow: &window, FilledPercent: &filled, Compactions: &count, Coverage: "observed", Model: &model, Effort: &effort}
+	snapshot := session.Snapshot{Activity: &activity, ActivityAt: &now, ActivityFresh: true, Selection: "ready", Fresh: true, ContextFresh: true, SettingsFresh: true, PublishedAt: &now, ObservedAt: &now, ContextAt: &now, SettingsAt: &now, ContextUsed: &used, ContextWindow: &window, FilledPercent: &filled, Compactions: &count, Coverage: "observed", Model: &model, Effort: &effort}
 	if err := session.Save(dir, name, epoch, snapshot); err != nil {
 		t.Fatal(err)
 	}

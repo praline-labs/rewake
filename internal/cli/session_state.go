@@ -5,7 +5,6 @@ import (
 	"math"
 	"os"
 	"strconv"
-	"strings"
 
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/registry"
@@ -126,31 +125,23 @@ const sessionStateHelp = "A verified main also sees each launch's state: activit
 
 func activityText(snapshot *session.Snapshot) string {
 	label := "unknown"
-	if snapshot.Activity != nil {
-		switch *snapshot.Activity {
-		case "idle":
-			label = "idle"
-		case "working":
-			label = "working"
-			switch {
-			case snapshot.WaitingFor == nil:
-				label += " (waiting state unknown)"
-			case len(snapshot.WaitingFor) > 0:
-				label = "waiting for " + strings.Join(snapshot.WaitingFor, " and ")
-			}
-		case "not_loaded":
-			label = "not loaded"
-		case "system_error":
-			label = "system error"
+	if snapshot.Activity != nil && (*snapshot.Activity == "idle" || *snapshot.Activity == "working") {
+		label = *snapshot.Activity
+		// A compaction is what the session does while it lasts.
+		if snapshot.Compacting != nil && *snapshot.Compacting {
+			label = "compacting"
 		}
-		// A dialog nobody else is asked about stops the session whatever its
-		// turn is doing; main was told of it.
-		if snapshot.Dialog != nil && (label == "idle" || strings.HasPrefix(label, "working") || strings.HasPrefix(label, "waiting for")) {
+		// A dialog stops the session whatever its turn is doing: one a
+		// request carries to main says what it asks, any other main was
+		// told of.
+		switch {
+		case snapshot.Waiting == session.WaitingPermission:
+			label = "waiting for a permission"
+		case snapshot.Waiting == session.WaitingQuestion:
+			label = "waiting for an answer"
+		case snapshot.Dialog != nil:
 			label = "waiting at a dialog"
 		}
-	}
-	if snapshot.Compacting != nil && *snapshot.Compacting {
-		label += "; compacting"
 	}
 	// Only the gap is named. A session that hears interruptions behaves as
 	// expected and needs no word in a narrow cell, and a harness that always

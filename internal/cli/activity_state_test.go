@@ -18,22 +18,35 @@ func TestActivityLabelsAndUnknownAreExplicit(t *testing.T) {
 	if got := activityText(&snapshot); got != "unknown" {
 		t.Fatal(got)
 	}
+	compacting := true
 	for _, row := range []struct {
-		activity string
-		waiting  []string
-		want     string
+		activity   string
+		waiting    string
+		dialog     bool
+		compacting bool
+		want       string
 	}{
-		{"idle", []string{}, "idle"},
-		{"working", []string{}, "working"},
-		{"working", []string{"approval"}, "waiting for approval"},
-		{"working", []string{"input"}, "waiting for input"},
-		{"working", []string{"approval", "input"}, "waiting for approval and input"},
-		{"working", nil, "working (waiting state unknown)"},
-		{"system_error", []string{}, "system error"},
-		{"not_loaded", []string{}, "not loaded"},
+		{activity: "idle", want: "idle"},
+		{activity: "working", want: "working"},
+		{activity: "working", waiting: session.WaitingPermission, want: "waiting for a permission"},
+		{activity: "working", waiting: session.WaitingQuestion, want: "waiting for an answer"},
+		{activity: "working", dialog: true, want: "waiting at a dialog"},
+		{activity: "idle", dialog: true, want: "waiting at a dialog"},
+		{activity: "idle", compacting: true, want: "compacting"},
+		{activity: "working", compacting: true, waiting: session.WaitingQuestion, want: "waiting for an answer"},
+		{activity: "not_loaded", want: "unknown"},
 	} {
 		snapshot.Activity = &row.activity
-		snapshot.WaitingFor = row.waiting
+		snapshot.Waiting = row.waiting
+		snapshot.Dialog = nil
+		if row.dialog {
+			message := "Claude needs your permission"
+			snapshot.Dialog = &message
+		}
+		snapshot.Compacting = nil
+		if row.compacting {
+			snapshot.Compacting = &compacting
+		}
 		snapshot.ActivityAt = &now
 		snapshot.ActivityFresh = true
 		if got := activityText(&snapshot); got != row.want {
@@ -42,12 +55,8 @@ func TestActivityLabelsAndUnknownAreExplicit(t *testing.T) {
 	}
 	activity := "working"
 	snapshot.Activity = &activity
-	snapshot.WaitingFor = []string{}
-	progress := true
-	snapshot.Compacting = &progress
-	if got := activityText(&snapshot); got != "working; compacting" {
-		t.Fatal(got)
-	}
+	snapshot.Waiting = ""
+	snapshot.Compacting = nil
 	// A session whose interruptions go unheard says so; one that hears them
 	// adds nothing.
 	snapshot.Compacting = nil

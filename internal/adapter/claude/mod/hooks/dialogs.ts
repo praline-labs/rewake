@@ -5,12 +5,13 @@
 // nothing — auto mode, Claude Code's default — and any other dialog the
 // session waits at, which main is told of.
 import type { Register } from "claude-code";
+import type { AskKind } from "../protocol.gen.ts";
 import { type Asks, allowOnce, allowSession, refuseCall } from "./asks.ts";
 
 // Dialogs is what the hooks read of the current load.
 interface Dialogs {
   asks: Asks;
-  management: { waits(message?: string): void };
+  management: { waits(message?: string): void; holds(kind: AskKind): () => void };
   // run is set once the wrapper admitted the load.
   run?: unknown;
 }
@@ -28,7 +29,8 @@ const maxDialog = 300;
 
 export function serveDialogs(on: Parameters<Register>[0], current: () => Dialogs | undefined) {
   // held counts the dialogs a request carries to main now: the engine's
-  // notification of such a dialog is not another dialog.
+  // notification of such a dialog is not another dialog. The state names
+  // what each asks while it is held (management.holds).
   let held = 0;
   // The permission mode the harness reports with its classic events, which an
   // ask is carried to main in at the check only where the person would be
@@ -103,10 +105,12 @@ export function serveDialogs(on: Parameters<Register>[0], current: () => Dialogs
     const load = current();
     if (!load?.run || !load.asks.worker()) return next(e);
     held++;
+    const release = load.management.holds(load.asks.kindOf(e));
     try {
       return await load.asks.bridge(e, () => next(e), next.signal);
     } finally {
       held--;
+      release();
     }
   }).catch(($, e, next) =>
     next.called
@@ -122,11 +126,13 @@ export function serveDialogs(on: Parameters<Register>[0], current: () => Dialogs
     const load = current();
     if (!load?.run) return next(e);
     held++;
+    const release = load.asks.worker() ? load.management.holds("permission") : () => {};
     try {
       const decision = await load.asks.dialog(await $.session.cwd(), e, next.signal);
       return decision ? { decision } : next(e);
     } finally {
       held--;
+      release();
     }
   }).catch(($, e, next) => next(e));
 

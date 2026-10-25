@@ -45,13 +45,25 @@ model, exact values, field visibility and the empty list's shape.
 ## Activity
 
 Each snapshot carries the session's activity, with its own observation time and freshness.
-The labels are `idle`, `working`, `working (waiting state unknown)`, `waiting for <what>`,
-`not loaded` and `system error`; a known compaction in progress adds `; compacting`, and a
-session whose snapshot says its interrupted turns go unheard adds `; interruptions unheard`
-(no adapter of this build sets it). A worker waiting at a dialog no request carries to main
-reads `waiting at a dialog` in place of its activity, and main is told once
-([permission-requests.md](permission-requests.md#a-dialog-nobody-is-asked-about)). Unknown
-activity is never taken for idle.
+The Status labels say what the session does (`activityText`, `internal/cli/session_state.go`;
+the shell's strip reads the same fields the same way, `shell/src/strip.tsx`):
+
+- `idle` — no turn running; `working` — a turn running, with nothing it is known to wait on.
+- `compacting` — a known compaction in progress, in place of either.
+- `waiting for a permission` — a worker's permission request is held for main to answer, and
+  `waiting for an answer` — the model's own question is
+  ([permission-requests.md](permission-requests.md)); the snapshot's `waiting` names which
+  (`permission`, `question`) from the mod's state, and the label clears when the request ends.
+- `waiting at a dialog` — a dialog no request carries to main, which main is told of once
+  ([permission-requests.md](permission-requests.md#a-dialog-nobody-is-asked-about)).
+- `unknown` — no activity reported yet, or an adapter that reports none.
+
+A waiting label wins over the others. A snapshot saying its interrupted turns go unheard adds
+`; interruptions unheard` (no adapter of this build sets it), and an old one adds `(stale)`.
+pi's extension sees no dialog — pi 1.2.0 loads no permission gate or question tool — so a pi
+session reads `idle`, `working` or `compacting`. Unknown activity is never taken for idle.
+Since October 25, 2026 the labels `working (waiting state unknown)`, `not loaded` and
+`system error` are gone: no adapter of 2.0 reported them.
 
 Current activity is not last outcome. A failed or interrupted turn does not latch an error
 label: a later idle displays idle. A completed compaction does not force idle or working;

@@ -23,7 +23,7 @@ func noticeState(t *testing.T, dir string, peer registry.Session, activity strin
 	now := time.Now()
 	model := "stub-model"
 	effort := "high"
-	snapshot := session.Snapshot{Fresh: true, Selection: "ready", PublishedAt: &now, Activity: &activity, ActivityAt: &now, ActivityFresh: true, WaitingFor: []string{}, Compactions: &count, Coverage: "observed", CompactionEvents: events, Model: &model, Effort: &effort, SettingsFresh: true, SettingsAt: &now}
+	snapshot := session.Snapshot{Fresh: true, Selection: "ready", PublishedAt: &now, Activity: &activity, ActivityAt: &now, ActivityFresh: true, Compactions: &count, Coverage: "observed", CompactionEvents: events, Model: &model, Effort: &effort, SettingsFresh: true, SettingsAt: &now}
 	if err := session.Save(dir, peer.Name, peer.Epoch(), snapshot); err != nil {
 		t.Fatal(err)
 	}

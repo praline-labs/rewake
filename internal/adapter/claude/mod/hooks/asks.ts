@@ -10,6 +10,7 @@
 // is drawn and answered with main's decision. Nothing is kept past this load.
 
 import type {
+  AskKind,
   AskOpenAnswer,
   AskOpenRequest,
   AskPollAnswer,
@@ -172,6 +173,12 @@ export class Asks {
     return question;
   }
 
+  // kindOf says what a question dialog asks: a permission this load turned
+  // into a question, or the model's own question.
+  kindOf(e: QuestionEvent): AskKind {
+    return this.permissions.has(e.questions[0]?.question ?? "") ? "permission" : "question";
+  }
+
   // decide is the verdict an answer to a permission's question gives.
   decide(question: string, answer: string): { decision: "allow" | "deny"; reason?: string } {
     const permission = this.permissions.get(question);
@@ -316,7 +323,7 @@ export class Asks {
     const open: AskOpenRequest = {
       loadId: this.loadId,
       call: e.tool_use_id ?? e.questions[0]?.question ?? "",
-      kind: permission ? "permission" : "question",
+      kind: this.kindOf(e),
       questions,
     };
     if (permission) {

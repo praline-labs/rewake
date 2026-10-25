@@ -44,16 +44,14 @@ export function tokens(n: number): string {
   return String(n);
 }
 
+// activityOf reads as rewake list's Status does (docs/session-state.md#activity).
 function activityOf(s: Session): string | undefined {
-  let text: string | undefined;
-  if (s.activity === "working")
-    text = s.waitingFor?.length ? `waiting for ${s.waitingFor.join(" and ")}` : "working";
-  else if (s.activity === "not_loaded") text = "not loaded";
-  else if (s.activity === "system_error") text = "system error";
-  else text = s.activity;
-  if (s.dialog && (s.activity === "working" || s.activity === "idle")) text = "waiting at a dialog";
-  if (s.compacting) text = text ? `${text}, compacting` : "compacting";
-  if (text && !s.fresh) text += " (stale)";
+  if (s.activity !== "idle" && s.activity !== "working") return undefined;
+  let text = s.compacting ? "compacting" : s.activity;
+  if (s.waiting === "permission") text = "waiting for a permission";
+  else if (s.waiting === "question") text = "waiting for an answer";
+  else if (s.dialog) text = "waiting at a dialog";
+  if (!s.fresh) text += " (stale)";
   return text;
 }
 

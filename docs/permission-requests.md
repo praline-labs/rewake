@@ -113,7 +113,7 @@ draws trust, onboarding and login before the mod, and they have no such event.
   dialog — `permission_prompt`, `elicitation_dialog`, `elicitation_url_dialog` — while no request
   of steps 2 and 3 is held — the notification of a carried dialog is not another dialog — and puts
   its message, cut at 300 characters, in the
-  state it samples (`StateRequest.dialog`, optional, the protocol's one addition). The next tool
+  state it samples (`StateRequest.dialog`, optional). The next tool
   result (`PostToolUse`, `PostToolUseFailure`, `PermissionDenied`), main-loop step or turn end
   clears it.
 - **The wrapper** keeps it in the snapshot (`session.Snapshot.dialog`, optional) and, the first
@@ -123,7 +123,10 @@ draws trust, onboarding and login before the mod, and they have no such event.
   left is tried with the next sample, which the heartbeat brings; a dialog cleared and another
   drawn is told again.
 - **`rewake list` and the shell's strip** read `waiting at a dialog` for it, in place of `idle`,
-  `working` or `waiting for`.
+  `working` or `compacting`. A dialog a request of steps 2 and 3 holds reads
+  `waiting for a permission` or `waiting for an answer` instead: the mod names what it asks in
+  its state (`StateRequest.waiting`, `permission` or `question`) while it holds it
+  ([session-state.md](session-state.md#activity)).
 
 Not covered: a dialog of the engine that sends no notification, one drawn while a carried
 request is held, which by the screen's order is the carried one, and the few dialogs that name

@@ -301,3 +301,36 @@ test("only a notification of a drawn dialog names one", async ($, on) => {
   await run.clock.settle();
   expect(dialogsWaited(run).at(-1)).toBe("An MCP server needs input");
 });
+
+const waited = (run: ReturnType<typeof world>) =>
+  run.sent.filter((one) => one.path === "/v1/mod/state").map((one) => one.body.waiting);
+
+// held answers a poll after a second with main's answer.
+const held =
+  (run: ReturnType<typeof world>, answer: string): Reply =>
+  async () => {
+    await run.clock.sleep(1000);
+    return keyed(run, answered(answer))({});
+  };
+
+test("a dialog a request carries names what it asks in the state while it is held", async ($, on) => {
+  const replies: Record<string, Reply[]> = { "/v1/ask/open": [opened] };
+  const run = await dialogs($, on, replies);
+  replies["/v1/ask/poll"] = [held(run, "Allow once")];
+  const asking = $.classic.PermissionRequest(drawn as any);
+  await run.clock.advance(500);
+  expect(waited(run).at(-1)).toBe("permission");
+  await run.clock.advance(1000);
+  expect(await asking).toMatchObject({ decision: { behavior: "allow" } });
+  await run.clock.settle();
+  expect(waited(run).at(-1)).toBeUndefined();
+  replies["/v1/ask/poll"] = [held(run, "Beta")];
+  const questions = [{ question: "Which?", options: [{ label: "Alpha" }, { label: "Beta" }] }];
+  const asked = $.tool.call({ tool: "AskUserQuestion", questions } as any);
+  await run.clock.advance(500);
+  expect(waited(run).at(-1)).toBe("question");
+  await run.clock.advance(1000);
+  await asked;
+  await run.clock.settle();
+  expect(waited(run).at(-1)).toBeUndefined();
+});

@@ -11,7 +11,6 @@ import (
 // the model executing an already captured inference step. Nil means unknown.
 type Snapshot struct {
 	Activity         *string           `json:"activity"`
-	WaitingFor       []string          `json:"waitingFor"`
 	ActivityAt       *time.Time        `json:"activityObservedAt"`
 	ActivityFresh    bool              `json:"activityFresh"`
 	CompactionEvents []CompactionEvent `json:"compactionEvents,omitempty"`
@@ -58,6 +57,10 @@ type Snapshot struct {
 	// screen that nobody else is asked about, nil when none: main is told of
 	// it once, and it is cleared by the next tool result or step.
 	Dialog *string `json:"dialog,omitempty"`
+	// Waiting is what a dialog the session waits at on its screen asks while
+	// a request carries it to main: WaitingPermission or WaitingQuestion,
+	// empty when none.
+	Waiting string `json:"waiting,omitempty"`
 	// PublishedBoot is the boot clock's reading at PublishedAt (package
 	// boottime), 0 from a build that did not write it. Freshness is judged by
 	// it: the publisher and the reader are different processes, and the wall
@@ -108,6 +111,12 @@ func NewCache(read, write, input int64) *Cache {
 // EffortFromLaunch marks an effort taken from the launch's flag: the person
 // may have changed it since, and nothing observed says so yet.
 const EffortFromLaunch = "launch"
+
+// Values of Snapshot.Waiting.
+const (
+	WaitingPermission = "permission"
+	WaitingQuestion   = "question"
+)
 
 // Values of Snapshot.Interruptions.
 const (

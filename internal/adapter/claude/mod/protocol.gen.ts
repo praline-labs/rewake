@@ -372,6 +372,9 @@ export interface StateRequest {
   // dialog is what the harness said of a dialog the session waits at on its screen that the mod
   // carries to nobody, absent when none; the host tells main once per dialog.
   dialog?: string
+  // waiting is what a dialog the session waits at on its screen asks while the mod holds it —
+  // a permission, or the model's own question — absent when none.
+  waiting?: AskKind
 }
 
 // ControlReply is an initial or final result for a dispatched command.

@@ -1,7 +1,7 @@
 // Native state and control stay outside the heartbeat's awaited chain: a
 // compaction may take minutes while the load must keep renewing its lease.
 
-import type { ControlCommand, ControlReply, StateRequest } from "../protocol.gen.ts";
+import type { AskKind, ControlCommand, ControlReply, StateRequest } from "../protocol.gen.ts";
 import { paths } from "../protocol.gen.ts";
 import type { Host } from "./outbox.ts";
 
@@ -30,6 +30,9 @@ export class Management {
   // dialog is what the engine said of a dialog the session waits at that no
   // request carries to main (dialogs.ts), until the next tool result or step.
   private dialog?: string;
+  // held are what the dialogs a request carries to main ask, while it holds
+  // them (dialogs.ts).
+  private held: AskKind[] = [];
   private remote?: ControlCommand;
   private interrupt?: { command: ControlCommand; turn: string; generation: number };
   private sending = Promise.resolve();
@@ -65,6 +68,20 @@ export class Management {
     if (message === this.dialog) return;
     this.dialog = message;
     this.changed();
+  }
+
+  // holds says the session waits at a dialog asking kind while a request
+  // carries it, until the returned release.
+  holds(kind: AskKind): () => void {
+    this.held.push(kind);
+    this.changed();
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      this.held.splice(this.held.indexOf(kind), 1);
+      this.changed();
+    };
   }
 
   // The usage the API reported for a main-loop response is the cache's only
@@ -128,6 +145,8 @@ export class Management {
       compactions: this.compactions,
       effort: this.effort,
       dialog: this.dialog,
+      // A permission stops the call whatever else is asked beside it.
+      waiting: this.held.includes("permission") ? ("permission" as const) : this.held[0],
       ...this.cache,
       ...this.last,
     };
