@@ -1,5 +1,5 @@
 ---
-description: The open work and its order — the owner's looks and logins, the acceptance of additive fields — and the ideas not scheduled.
+description: The open work and its order — the owner's looks and logins, the acceptance of additive fields, briefs — and the ideas not scheduled.
 ---
 
 # Roadmap
@@ -28,6 +28,9 @@ what it taught goes into the living documents.
    `StatusLineRequest`'s, October 26, 2026) changed the protocol or the state
    by adding fields; only the dialog fields' acceptance is on record. Whether the others need
    it is main's call (`AGENTS.md`, "Delegation and review").
+3. **Briefs** — a markdown brief per task, bound to workers by `send --brief`, ticked and
+   commented by them, read in the shell (the owner's decision, October 26, 2026); the design,
+   waiting for the reviewer's acceptance before code, is [briefs.md](briefs.md).
 
 ## Not scheduled
 
