@@ -242,10 +242,10 @@ func TestAWorkerThatTakesNothingIsNotAnswering(t *testing.T) {
 	if err := os.RemoveAll(controlDir); err != nil {
 		t.Fatal(err)
 	}
-	// A session with no directory serves requests, only an older one: the
-	// next step is a restart, not a question about --bare.
+	// A session with no directory takes no requests: the next step is a new
+	// worker, not a question about --bare.
 	if code, _, errOut := steerRun("compact", "worker"); code != ExitFailed || !strings.Contains(errOut, "refused the compaction: no control directory") ||
-		!strings.Contains(errOut, "restart that session with the current rewake") || strings.Contains(errOut, "--bare") {
+		!strings.Contains(errOut, "open a new worker") || strings.Contains(errOut, "--bare") {
 		t.Fatalf("without a control directory: exit %d, %q", code, errOut)
 	}
 }
@@ -350,7 +350,7 @@ func TestAHarnessThatCannotTakeItIsAWrongCall(t *testing.T) {
 	_, _, controlDir := steerWorld(t, "")
 	refusing := remap(testCatalog(), func(found adapter.Harness) adapter.Harness { return unsteerable{found} })
 	code, _, errOut := runOn(refusing, "compact", "worker")
-	if code != ExitUsage || !strings.Contains(errOut, "worker is a Stub harness session, which does not take rewake compact yet") {
+	if code != ExitUsage || !strings.Contains(errOut, "worker is a Stub harness session, which does not take rewake compact") {
 		t.Fatalf("exit %d, %q", code, errOut)
 	}
 	unfocused := remap(testCatalog(), func(found adapter.Harness) adapter.Harness {
@@ -379,7 +379,7 @@ func TestAVerbTheHarnessDoesNotOfferIsAWrongCall(t *testing.T) {
 	} {
 		only := remap(testCatalog(), func(found adapter.Harness) adapter.Harness { return steerStub{Harness: found, verbs: verbs} })
 		code, _, errOut := runOn(only, verb, "worker")
-		if code != ExitUsage || !strings.Contains(errOut, "worker is a Stub harness session, which does not take rewake "+verb+" yet") {
+		if code != ExitUsage || !strings.Contains(errOut, "worker is a Stub harness session, which does not take rewake "+verb) {
 			t.Fatalf("%s: exit %d, %q", verb, code, errOut)
 		}
 	}

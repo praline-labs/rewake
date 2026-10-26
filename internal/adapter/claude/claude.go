@@ -220,7 +220,7 @@ func (claudeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, 
 		socket = flagValue(args, socketFlag)
 	} else {
 		if len(socket) > maxSocketPath {
-			return adapter.LaunchPlan{}, fmt.Errorf("the socket path %s is longer than the %d bytes a unix socket allows; use a shorter session name or REWAKE_DIR", socket, maxSocketPath)
+			return adapter.LaunchPlan{}, fmt.Errorf("the socket path %s is longer than the %d bytes a unix socket allows; use a shorter session name, or point REWAKE_DIR, the state directory, at a shorter path", socket, maxSocketPath)
 		}
 		// A leftover file from a session that died keeps Claude Code from
 		// binding the same path.
@@ -297,7 +297,7 @@ func (claudeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, 
 	modSocket := modSocketPath(request)
 	switch {
 	case len(modSocket) > maxSocketPath:
-		service = modless{lane: wake, cause: "its socket path " + modSocket + " is longer than a unix socket allows; start it with a shorter session name or REWAKE_DIR"}
+		service = modless{lane: wake, cause: "its socket path " + modSocket + " is longer than a unix socket allows; start it with a shorter session name, or point REWAKE_DIR, the state directory, at a shorter path"}
 	case request.RunDir == "" || request.Socket == "":
 		service = modless{lane: wake, cause: "the launch has no run directory or inbox socket of rewake's to load it from"}
 	default:

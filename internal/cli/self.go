@@ -14,9 +14,9 @@ import (
 // errNotASession means this process was not started by a rewake wrapper.
 var errNotASession = errors.New("this shell is not part of a rewake session")
 
-// errNoRun means the process has a session name but no run: its wrapper came
-// from a version that did not pass one down.
-var errNoRun = errors.New("this shell was started by an older rewake that did not record which run it belongs to; restart the session")
+// errNoRun means the process has a session name but no run, so which run of
+// that name it belongs to cannot be told.
+var errNoRun = errors.New("this shell names a session in " + state.SessionEnv + " but no run in " + state.EpochEnv + "; run the command from the session's own shell, which carries both")
 
 // errEarlierRun means the name now belongs to a later run than this process.
 var errEarlierRun = errors.New("this shell belongs to a session that has ended; its name is used by another one now")

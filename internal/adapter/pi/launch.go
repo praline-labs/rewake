@@ -16,7 +16,7 @@ func (harness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, error)
 		return adapter.LaunchPlan{}, fmt.Errorf("pi needs a run directory and socket for its extension")
 	}
 	if len(request.Socket) > 107 {
-		return adapter.LaunchPlan{}, fmt.Errorf("pi's socket path exceeds 107 bytes; use a shorter session name or REWAKE_DIR")
+		return adapter.LaunchPlan{}, fmt.Errorf("pi's socket path exceeds 107 bytes; use a shorter session name, or point REWAKE_DIR, the state directory, at a shorter path")
 	}
 	args := append([]string{}, request.Args...)
 	if adapter.HasFlag(args, worktreeFlag) {

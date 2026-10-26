@@ -56,9 +56,10 @@ bounds — for a compaction, the answer to the request, not the compaction's end
 | `refused`, `remote conversation` | 1 | the session is a thin client, whose conversation lives on a remote session: compact that one |
 | `refused`, `not answering` | 1 | nothing took the request within 5 seconds: the served side is not running, or the session is stalled — stopped, or its process frozen |
 | `refused`, `cut short` | 1 | the command itself was interrupted before anything took the request; the request is withdrawn and nothing was done |
-| `refused`, `no control directory` | 1 | the session's wrapper could not make one: restart it |
+| `refused`, `no control directory` | 1 | the session's launch or wrapper did not make one, so it takes no requests: close its space and open a new worker |
 | `refused`, `withdrawn before it was taken` | 1 | the session took the request in the instant the command gave up, and did nothing |
 | `refused`, `another request in flight` | 1 | another `compact` or `interrupt` is waiting on the same session |
+| `refused`, `not the selected conversation` | 1 | the session's selected conversation changed before the request was carried out; nothing was done: check the session and ask again |
 | `failed` | 1 | the harness raised something else: final, like a refusal, and no letter follows; or, marked `open`, the request went out and no outcome came — the command's wait ran out or was cut short once the request was taken, or the served side lost the request on its way — and for a compaction, which may still run, its letter comes |
 
 A refusal carries the host's own error text as its detail and names the next action. Under

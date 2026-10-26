@@ -120,7 +120,7 @@ func steer(ctx *Context, call Call, action string) error {
 	found, _ := ctx.table.catalog.Find(session.Harness)
 	verbs := ctx.table.catalog.Offers(session.Harness).Control
 	if !offersVerb(verbs, action) {
-		return usage("%s is a %s session, which does not take rewake %s yet.", session.Name, harnessTitle(found, session.Harness), action)
+		return usage("%s is a %s session, which does not take rewake %s.", session.Name, harnessTitle(found, session.Harness), action)
 	}
 	if focus != "" && !verbs.CompactFocus {
 		return usage("focus not supported by %s: it has no way to pass a focus for one compaction. Run rewake compact %s without it.", harnessTitle(found, session.Harness), session.Name)
@@ -234,9 +234,10 @@ var steerNext = map[string]string{
 	control.RemoteConversation: "The session is a thin client whose conversation lives on a remote session: compact that one.",
 	control.NotAnswering:       "Nothing in that session serves rewake's requests: what serves them did not load, was switched off or has stopped, or the session itself is stalled.",
 	control.CutShort:           "This call was interrupted before the session took the request, which is withdrawn; nothing was done: ask again.",
-	control.NoControl:          "It was started by an earlier rewake, which takes no requests, or its wrapper could not make the directory: restart that session with the current rewake.",
+	control.NoControl:          "The session has no control directory, which its launch or wrapper did not make, so it takes no requests: close its space and open a new worker if it must take them.",
 	control.Withdrawn:          "The session took it in the instant this command gave up waiting, and did nothing: ask again.",
 	control.Busy:               "Wait for that request to end, then ask again.",
+	control.NotSelected:        "The session's selected conversation changed, so nothing was done: check the session in rewake list and ask again if it is still wanted.",
 }
 
 func harnessTitle(found adapter.Harness, id string) string {
