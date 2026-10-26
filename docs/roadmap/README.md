@@ -1,5 +1,5 @@
 ---
-description: The open work and its order — releasing 2.0, the owner's looks and logins, the receipts debt — and the ideas not scheduled.
+description: The open work and its order — the owner's looks and logins, the receipts debt, the acceptance of additive fields — and the ideas not scheduled.
 ---
 
 # Roadmap
@@ -10,10 +10,7 @@ what it taught goes into the living documents.
 
 ## Open, in order
 
-1. **Release 2.0** — postponed by the owner. Open: the full set of
-   [testing.md](../testing.md#before-a-publication-to-npm) before a publication, the version,
-   the npm publication ([install.md](../install.md)).
-2. **The owner's looks and logins** — built and checked under a stand-in terminal, waiting for
+1. **The owner's looks and logins** — built and checked under a stand-in terminal, waiting for
    the owner on a real one:
    - the shell's rows and band, and the bar under main's pane ([shell.md](../shell.md#the-bar));
      a terminal that reports no background gets no band;
@@ -25,12 +22,12 @@ what it taught goes into the living documents.
      a first start, the plan and usage, and the `/resume` picker
      ([worker-profile.md](../worker-profile.md#the-login));
    - a Claude Code worker raised from a pi main, which needs the same login.
-3. **The receipts of `send` and `pending`** and the once-marks they use
+2. **The receipts of `send` and `pending`** and the once-marks they use
    (`internal/cli/journal*.go`, `internal/core/receipt`, `mail.PublishOnce`): still in the
    tree since the simple turn end replaced the rest of that mechanism; their removal is a step
    of its own. Until then their rules are
    [rules/effects.md](../rules/effects.md#receipts-retries-and-once-marks).
-4. **Acceptance of additive fields** — the cache telemetry, the `status/line` endpoint,
+3. **Acceptance of additive fields** — the cache telemetry, the `status/line` endpoint,
    `worker.type`, `configuredModelName` and `worker.label` changed the protocol or the state
    by adding fields; only the dialog fields' acceptance is on record. Whether the others need
    it is main's call (`AGENTS.md`, "Delegation and review").
