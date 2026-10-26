@@ -55,12 +55,12 @@ type profile struct {
 	enter bool
 }
 
-// workerProfile builds the profile for a launch: none for main, and none
-// under --command, whose wrapper decides the configuration it starts with —
-// the entry into a checkout among it.
+// workerProfile builds the profile for a launch: for main only its status
+// line (mainSettings), and none under --command, whose wrapper decides the
+// configuration it starts with — the entry into a checkout among it.
 func workerProfile(request adapter.LaunchRequest, args []string) (profile, error) {
 	if request.Role.ID == role.Main.ID {
-		return profile{}, nil
+		return mainSettings(request, args), nil
 	}
 	if request.Command != "" {
 		return profile{notes: []string{"the worker profile is not applied: the program named with --command decides the configuration Claude Code starts with"}, enter: request.WorktreeEntry}, nil

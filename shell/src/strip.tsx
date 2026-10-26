@@ -102,8 +102,13 @@ export function stripParts(state: StripState, width: number, now = Date.now()): 
     { text: name, kind: "name" },
     activity ? { text: activity, kind: "plain" } : undefined,
     state.branch ? { text: `⎇ ${state.branch}`, kind: "plain", optional: 3 } : undefined,
+    // Thinking is named only while it is on: off and unknown say nothing.
     s?.model
-      ? { text: [s.model, s.effort].filter(Boolean).join(" "), kind: "plain", optional: 1 }
+      ? {
+          text: [s.model, s.effort, s.thinking ? "thinking" : undefined].filter(Boolean).join(" "),
+          kind: "plain",
+          optional: 1,
+        }
       : undefined,
     s ? contextOf(s) : undefined,
     cache ? { ...cache, optional: 2 } : undefined,

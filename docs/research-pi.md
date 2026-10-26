@@ -132,7 +132,10 @@ Read on the same installed 1.2.0 in `dist/core/extensions/types.d.ts`,
 `dist/core/extensions/runner.js`, `dist/core/agent-session.js` and
 `dist/modes/interactive/interactive-mode.js`:
 
-- `ctx.model` and `ctx.thinkingLevel` are live getters. `ctx.getContextUsage()` returns
+- `ctx.model` and `ctx.thinkingLevel` are live getters. `ctx.model.reasoning` says whether the
+  model thinks at all (`supportsThinking()`), and a level of `off` is thinking off (read on the
+  shipped 1.3.0, `pi-ai`'s `Model` and `agent-session.js`, October 26, 2026); the extension sends
+  `thinking` from the two, none for a model without reasoning. `ctx.getContextUsage()` returns
   native token usage, context window and percent; model context window remains available
   before usage is known. Immediately after compaction, usage and percent are null until a
   later assistant usage observation. The adapter preserves those unknowns; it does not

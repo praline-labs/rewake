@@ -147,6 +147,8 @@ export type Session = {
   fresh: boolean;
   model?: string;
   effort?: string;
+  // thinking is whether the model thinks, where the harness tells it.
+  thinking?: boolean;
   used?: number;
   window?: number;
   percent?: number;
@@ -164,6 +166,7 @@ type Telemetry = {
   configuredModel?: string | null;
   configuredModelName?: string | null;
   configuredReasoningEffort?: string | null;
+  thinking?: boolean | null;
   contextUsedTokens?: number | null;
   contextWindowTokens?: number | null;
   contextFilledPercent?: number | null;
@@ -210,6 +213,7 @@ function sessionsOf(listing: SessionListing): Map<string, Session> {
       fresh: t?.fresh ?? false,
       model: t?.configuredModelName ?? t?.configuredModel ?? undefined,
       effort: t?.configuredReasoningEffort ?? undefined,
+      thinking: t?.thinking ?? undefined,
       used: t?.contextUsedTokens ?? undefined,
       window: t?.contextWindowTokens ?? undefined,
       percent: t?.contextFilledPercent ?? undefined,

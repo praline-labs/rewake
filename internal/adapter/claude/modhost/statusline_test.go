@@ -3,6 +3,7 @@ package modhost
 import (
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -96,23 +97,27 @@ func TestTheEffortShownIsTheSourceThatChangedLast(t *testing.T) {
 	}
 }
 
-// The model's name is the status line's display_name: kept once told, changed
-// by a later one (/model), and not blanked by a line without it.
+// The model's name is the status line's display_name, and its thinking the
+// line's thinking.enabled: kept once told, changed by a later one (/model, the
+// toggle), and not blanked by a line without it.
 func TestTheModelNameIsTheStatusLinesOwn(t *testing.T) {
 	server, socket := serving(t)
 	if got := server.SessionState().ModelName; got != nil {
 		t.Fatalf("before anything: %q", *got)
 	}
-	for _, round := range []struct{ body, want string }{
-		{`{"modelName":"Haiku 5.5"}`, "Haiku 5.5"},
-		{`{"effort":"low"}`, "Haiku 5.5"},
-		{`{"modelName":"Opus 5.5"}`, "Opus 5.5"},
+	for _, round := range []struct{ body, want, thinking string }{
+		{`{"modelName":"Haiku 5.5","thinking":true}`, "Haiku 5.5", "true"},
+		{`{"effort":"low"}`, "Haiku 5.5", "true"},
+		{`{"modelName":"Opus 5.5","thinking":false}`, "Opus 5.5", "false"},
 	} {
 		if status, _, err := post(socket, PathStatusLine, []byte(round.body)); err != nil || status != 200 {
 			t.Fatalf("%s: %d %v", round.body, status, err)
 		}
 		if got := server.SessionState().ModelName; got == nil || *got != round.want {
 			t.Fatalf("%s: name %v, want %q", round.body, got, round.want)
+		}
+		if got := server.SessionState().Thinking; got == nil || strconv.FormatBool(*got) != round.thinking {
+			t.Fatalf("%s: thinking %v, want %s", round.body, got, round.thinking)
 		}
 	}
 }

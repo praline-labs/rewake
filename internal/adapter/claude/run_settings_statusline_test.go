@@ -3,7 +3,12 @@ package claude
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
+
+	"github.com/praline-labs/rewake/internal/adapter"
+	"github.com/praline-labs/rewake/internal/core/role"
 )
 
 // A run with a directory for the mod gets rewake's status line in its
@@ -29,5 +34,36 @@ func TestRunSettingsSetTheStatusLineOfARunWithAMod(t *testing.T) {
 	}
 	if got := line(map[string]any{}, ""); got != nil {
 		t.Fatalf("without a run directory: %v", got)
+	}
+}
+
+// Main's launch gets the status line alone in its --settings, carrying the
+// person's own interval from their settings.json; a launch with
+// its own --settings keeps it and is told why main's row lacks the name, and
+// one with no run directory or under --command gets nothing.
+func TestMainsLaunchGetsTheStatusLineAlone(t *testing.T) {
+	folder := t.TempDir()
+	t.Setenv(configDirEnv, folder)
+	own := `{"model":"x","statusLine":{"type":"command","command":"mine","refreshInterval":7,"padding":2}}`
+	if err := os.WriteFile(filepath.Join(folder, "settings.json"), []byte(own), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	request := adapter.LaunchRequest{Role: role.Main, RunDir: "/run"}
+	got := mainSettings(request, nil)
+	if len(got.args) != 2 || got.args[0] != settingsFlag {
+		t.Fatalf("the args: %q", got.args)
+	}
+	overlay := overlayOf(t, got.args[1])
+	line, _ := overlay["statusLine"].(map[string]any)
+	if len(overlay) != 1 || fmt.Sprint(line["refreshInterval"]) != "7" || line["command"] == "mine" {
+		t.Fatalf("the overlay: %v", overlay)
+	}
+	if got := mainSettings(request, []string{settingsFlag, "{}"}); got.args != nil || len(got.notes) != 1 {
+		t.Fatalf("with the person's own --settings: %+v", got)
+	}
+	for _, request := range []adapter.LaunchRequest{{Role: role.Main}, {Role: role.Main, RunDir: "/run", Command: "wrapper"}} {
+		if got := mainSettings(request, nil); got.args != nil || got.notes != nil {
+			t.Fatalf("%+v: %+v", request, got)
+		}
 	}
 }

@@ -23,6 +23,9 @@ type observations struct {
 	// modelName is the status line's model.display_name: the harness's own
 	// name of the model, kept across loads like the effort.
 	modelName string
+	// thinking is the status line's thinking.enabled, nil until it told one,
+	// kept across loads like the name.
+	thinking *bool
 	// told says main was told of the dialog the snapshot names.
 	told     bool
 	snapshot session.Snapshot
@@ -208,6 +211,10 @@ func (s *Server) SessionState() session.Snapshot {
 	if observed.modelName != "" {
 		name := observed.modelName
 		snapshot.ModelName = &name
+	}
+	if observed.thinking != nil {
+		on := *observed.thinking
+		snapshot.Thinking = &on
 	}
 	snapshot.CompactionEvents = append([]session.CompactionEvent{}, observed.events...)
 	snapshot.CompactionOutcomes = append([]session.CompactionOutcome{}, observed.outcomes...)

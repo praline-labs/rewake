@@ -34,10 +34,11 @@ export const paths = {
   // the harness tells; a main in rewake's shell has its closing screen started by it
   // (docs/shell.md), and nothing else changes on the host.
   sessionClosing: "/v1/session/closing",
-  // statusLine reports the prompt cache's life from the status line of a worker's run, which
-  // Claude Code starts as a child of the harness and rewake's `rewake statusline` fills; unlike
-  // every other endpoint its peer may be any descendant of the harness's process, since its
-  // payload is telemetry and nothing it says is acted on. Not an endpoint of the mod.
+  // statusLine reports what the status line of a run with a mod is told — the prompt cache's
+  // life, effort, the model's name and thinking — which Claude Code starts as a child of the
+  // harness and rewake's `rewake statusline` fills; unlike every other endpoint its peer may be
+  // any descendant of the harness's process, since its payload is telemetry and nothing it says
+  // is acted on. Not an endpoint of the mod.
   statusLine: "/v1/status/line",
   // askOpen opens a permission request or a question of a worker's run for main to answer
   // (docs/permission-requests.md): the host leaves main a notify naming it and answers its id;
@@ -196,7 +197,7 @@ export interface Refusal {
 }
 
 // StatusLineRequest is what the status line's input tells of the session as Claude Code gave it
-// — its prompt_cache, effort and model name — without transcript content.
+// — its prompt_cache, effort, model name and thinking — without transcript content.
 export interface StatusLineRequest {
   // ttl is the cache's lifetime of the last request, 5m or 1h, absent when unknown.
   ttl?: string
@@ -211,6 +212,9 @@ export interface StatusLineRequest {
   // modelName is the input's model.display_name, the harness's own name of the session's model,
   // which follows /model; absent when the input has none.
   modelName?: string
+  // thinking is the input's thinking.enabled, whether the session's thinking is on, which
+  // follows its toggle; absent when the input has none.
+  thinking?: boolean
 }
 
 // ClosingRequest says the harness's process has begun to end.

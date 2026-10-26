@@ -18,14 +18,15 @@ import (
 	"github.com/praline-labs/rewake/internal/adapter/claude/modhost"
 )
 
-// The status line of a worker (docs/claude.md#the-cache-ttl): Claude
-// Code runs `rewake statusline` after each response and on a timer, with its
-// own JSON on stdin. Its prompt_cache is the only place the cache's lifetime is
-// told — the mod cannot read it — and its effort.level the only place an
-// /effort shows before the next request (docs/research.md, the status line),
-// so the command forwards both, and the model's own name (model.display_name, which follows /model), to the run's host over the mod socket and
-// prints the person's own status line, if the workers' settings.json names
-// one, in its place.
+// The status line of every run with a mod (docs/claude.md#the-cache-ttl):
+// Claude Code runs `rewake statusline` after each response and on a timer,
+// with its own JSON on stdin. Its prompt_cache is the only place the cache's
+// lifetime is told, its effort.level the only place an /effort shows before
+// the next request, and its model.display_name and thinking.enabled the only
+// place the model's own name and whether it thinks are told — the mod has
+// the model's id alone (docs/research-claude-mod.md#the-models-name-and-thinking) — so the
+// command forwards them to the run's host over the mod socket and prints the
+// person's own status line, if their settings.json names one, in its place.
 
 // statusLineRefresh is how often Claude Code runs the command beside its own
 // events; the expiry it reports is absolute, so a slow timer loses nothing.
@@ -52,7 +53,7 @@ type promptCache struct {
 	ExpiresAt *int64  `json:"expires_at"`
 }
 
-// StatusLine posts the input's prompt_cache, effort and model.display_name to the run's host and
+// StatusLine posts what the input tells of the session to the run's host and
 // prints the person's own line. Either failing leaves the other alone.
 func (claudeHarness) StatusLine(ctx context.Context, input []byte, out io.Writer) {
 	if os.Getenv(statusLineGuardEnv) != "" {
@@ -66,6 +67,9 @@ func (claudeHarness) StatusLine(ctx context.Context, input []byte, out io.Writer
 		Model struct {
 			DisplayName string `json:"display_name"`
 		} `json:"model"`
+		Thinking struct {
+			Enabled *bool `json:"enabled"`
+		} `json:"thinking"`
 	}
 	posted := make(chan struct{})
 	go func() {
@@ -73,11 +77,11 @@ func (claudeHarness) StatusLine(ctx context.Context, input []byte, out io.Writer
 		if json.Unmarshal(input, &seen) != nil {
 			return
 		}
-		effort := effortText(seen.Effort.Level)
-		if seen.PromptCache != nil || effort != "" || seen.Model.DisplayName != "" {
+		body := lineBody(seen.PromptCache, effortText(seen.Effort.Level), seen.Model.DisplayName, seen.Thinking.Enabled)
+		if body != (modhost.StatusLineRequest{}) {
 			post, cancel := context.WithTimeout(ctx, postTimeout)
 			defer cancel()
-			postLine(post, os.Getenv(modSocketEnv), seen.PromptCache, effort, seen.Model.DisplayName)
+			postLine(post, os.Getenv(modSocketEnv), body)
 		}
 	}()
 	line, cancel := context.WithTimeout(ctx, statusLineTimeout)
@@ -98,10 +102,8 @@ func effortText(level any) string {
 	return ""
 }
 
-func postLine(ctx context.Context, socket string, cache *promptCache, effort, modelName string) {
-	if socket == "" {
-		return
-	}
+// lineBody is what the host is told; empty when the input told nothing.
+func lineBody(cache *promptCache, effort, modelName string, thinking *bool) modhost.StatusLineRequest {
 	var body modhost.StatusLineRequest
 	if cache != nil {
 		body.Warm, body.Ttl = &cache.Warm, cache.TTL
@@ -115,6 +117,14 @@ func postLine(ctx context.Context, socket string, cache *promptCache, effort, mo
 	}
 	if modelName != "" {
 		body.ModelName = &modelName
+	}
+	body.Thinking = thinking
+	return body
+}
+
+func postLine(ctx context.Context, socket string, body modhost.StatusLineRequest) {
+	if socket == "" {
+		return
 	}
 	data, err := json.Marshal(body)
 	if err != nil {
@@ -136,39 +146,66 @@ func postLine(ctx context.Context, socket string, cache *promptCache, effort, mo
 	}
 }
 
-// personal runs the status line the workers' settings.json names, with the
-// same input, and copies its output: the overlay's own statusLine shadows it,
-// and the person's line should not be lost to the cache's.
+// personal runs the status line the user's settings.json names — the
+// workers' folder for a worker, the person's own for main — with the same
+// input, and copies its output: the overlay's own statusLine shadows it, and
+// the person's line should not be lost to the cache's.
 func personal(ctx context.Context, input []byte, out io.Writer) {
-	folder := os.Getenv("CLAUDE_CONFIG_DIR")
-	if folder == "" {
-		return
-	}
-	data, err := os.ReadFile(filepath.Join(folder, "settings.json"))
-	if err != nil {
-		return
-	}
-	var settings struct {
-		StatusLine struct {
-			Type    string `json:"type"`
-			Command string `json:"command"`
-		} `json:"statusLine"`
-	}
-	if json.Unmarshal(data, &settings) != nil || settings.StatusLine.Type != "command" || settings.StatusLine.Command == "" {
+	line, _ := ownStatusLine()
+	if line.Type != "command" || line.Command == "" {
 		return
 	}
 	// The command runs in a process group of its own with its output in a
 	// pipe this process reads: at the deadline the whole group is killed and
 	// the pipe closed, so nothing a child still holds keeps the harness's
 	// output open, and only what came in time is printed.
-	var line bytes.Buffer
-	command := exec.CommandContext(ctx, "sh", "-c", settings.StatusLine.Command)
+	var printed bytes.Buffer
+	command := exec.CommandContext(ctx, "sh", "-c", line.Command)
 	command.Stdin = bytes.NewReader(input)
-	command.Stdout = &line
+	command.Stdout = &printed
 	command.Env = append(os.Environ(), statusLineGuardEnv+"=1")
 	command.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	command.Cancel = func() error { return syscall.Kill(-command.Process.Pid, syscall.SIGKILL) }
 	command.WaitDelay = 500 * time.Millisecond
 	_ = command.Run()
-	_, _ = out.Write(line.Bytes())
+	_, _ = out.Write(printed.Bytes())
+}
+
+// personalLine is the statusLine of the user's settings.json, as far as
+// rewake reads it: the command it runs, and the interval the overlay carries
+// over.
+type personalLine struct {
+	Type    string `json:"type"`
+	Command string `json:"command"`
+	// Kept as read, json.Number for a number: a value of another type is
+	// Claude Code's to judge, and must not lose the person the command.
+	RefreshInterval any `json:"refreshInterval"`
+}
+
+// ownStatusLine reads the statusLine of the user's settings.json, nothing
+// else of it: the folder Claude Code reads as the user's, CLAUDE_CONFIG_DIR —
+// the workers' folder in a worker — else ~/.claude. A file that is missing or
+// unreadable has none.
+func ownStatusLine() (personalLine, error) {
+	folder := os.Getenv(configDirEnv)
+	if folder == "" {
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return personalLine{}, err
+		}
+		folder = filepath.Join(home, ".claude")
+	}
+	data, err := os.ReadFile(filepath.Join(folder, "settings.json"))
+	if err != nil {
+		return personalLine{}, err
+	}
+	var settings struct {
+		StatusLine personalLine `json:"statusLine"`
+	}
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.UseNumber()
+	if err := decoder.Decode(&settings); err != nil {
+		return personalLine{}, err
+	}
+	return settings.StatusLine, nil
 }

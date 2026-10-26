@@ -154,8 +154,12 @@ rewake --command my-claude claude
   `--allowedTools "Bash(rewake:*)"`, only when the caller passed no allow list of their
   own under either spelling, `--allowedTools` or `--allowed-tools`. This adds a rule for
   the run without touching the user's settings.
-- A caller's `--settings` reaches main's harness as given: rewake neither reads nor merges
-  it. A worker's is refused, since the worker profile owns that flag.
+- Main's status line: a launch of main with a run directory, not under `--command`, adds one
+  `--settings` holding only `statusLine`, rewake's command, which runs the person's own and
+  tells the host the model's name, thinking, effort and the cache's life
+  ([claude.md](claude.md#the-cache-ttl)). A caller's own `--settings` reaches main's harness as
+  given in its place: rewake neither reads nor merges it, and the launch notes that main's row
+  then lacks those. A worker's is refused, since the worker profile owns that flag.
 - **The workers' profile.** Every launch but main's, unless `--command` names a wrapper, sets
   `CLAUDE_CONFIG_DIR` to the workers' service folder and adds one `--settings` with what the run
   alone gets: [worker-profile.md](worker-profile.md).

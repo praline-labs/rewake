@@ -33,11 +33,11 @@ const (
 	// the harness tells; a main in rewake's shell has its closing screen started by it
 	// (docs/shell.md), and nothing else changes on the host. Asked ClosingRequest, answered Done.
 	PathSessionClosing = "/v1/session/closing"
-	// PathStatusLine reports the prompt cache's life from the status line of a worker's run, which
-	// Claude Code starts as a child of the harness and rewake's `rewake statusline` fills; unlike
-	// every other endpoint its peer may be any descendant of the harness's process, since its
-	// payload is telemetry and nothing it says is acted on. Not an endpoint of the mod. Asked
-	// StatusLineRequest, answered Done.
+	// PathStatusLine reports what the status line of a run with a mod is told — the prompt
+	// cache's life, effort, the model's name and thinking — which Claude Code starts as a child
+	// of the harness and rewake's `rewake statusline` fills; unlike every other endpoint its peer
+	// may be any descendant of the harness's process, since its payload is telemetry and nothing
+	// it says is acted on. Not an endpoint of the mod. Asked StatusLineRequest, answered Done.
 	PathStatusLine = "/v1/status/line"
 	// PathAskOpen opens a permission request or a question of a worker's run for main to answer
 	// (docs/permission-requests.md): the host leaves main a notify naming it and answers its id;
@@ -221,7 +221,7 @@ type Refusal struct {
 }
 
 // StatusLineRequest is what the status line's input tells of the session as Claude Code gave it
-// — its prompt_cache, effort and model name — without transcript content.
+// — its prompt_cache, effort, model name and thinking — without transcript content.
 type StatusLineRequest struct {
 	// Ttl is the cache's lifetime of the last request, 5m or 1h, absent when unknown.
 	Ttl *string `json:"ttl,omitempty"`
@@ -240,6 +240,10 @@ type StatusLineRequest struct {
 	// ModelName is the input's model.display_name, the harness's own name of the session's model,
 	// which follows /model; absent when the input has none.
 	ModelName *string `json:"modelName,omitempty"`
+
+	// Thinking is the input's thinking.enabled, whether the session's thinking is on, which
+	// follows its toggle; absent when the input has none.
+	Thinking *bool `json:"thinking,omitempty"`
 }
 
 // ClosingRequest says the harness's process has begun to end.

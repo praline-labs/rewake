@@ -295,15 +295,17 @@ asked for by the owner on October 26, 2026, reads main's own row of the same lis
 type, so its name stands alone.
 
 ```
-write-claude (code) · working · ⎇ wt-fd7596 · <model> low · 23% 230k/1M · 90% 42m
+write-claude (code) · working · ⎇ wt-fd7596 · <model> low thinking · 23% 230k/1M · 90% 42m
 ```
 
 - **What it says**: the session and its type, the activity (`working`, `waiting for <name>`,
   `waiting at a dialog` ([a dialog nobody is asked about](permission-requests.md#a-dialog-nobody-is-asked-about)),
   `idle`, `, compacting`, ` (stale)` once the run stopped publishing), the branch, the model and
-  effort, the context as filled percent, used and window, and the prompt cache. A value rewake does
+  effort, with `thinking` after them while the harness says the model's thinking is on (nothing
+  when it is off or not told), the context as filled percent, used and window, and the prompt cache. A value rewake does
   not know is left out; a window without a measure reads `–/<window>`. The model reads as the
-  harness's display name (`configuredModelName` of the telemetry), else the template's
+  harness's display name (`configuredModelName` of the telemetry, less a trailing parenthesis),
+  else the template's
   `launch.label`, else the id. The window is the limit the conversation is kept to: Claude Code's
   launch `--autocompact`, which the host applies over the mod's model window, the percent
   recomputed against it. The cache is `rewake list`'s Cache cell (`cache` and `cacheLife`): the hit
