@@ -4,10 +4,11 @@
 // in the layout.
 
 export type Context = {
-  // focus is the program the keys go to; prefix is a Ctrl+\ waiting for
-  // its command.
-  focus: "main" | "worker";
+  // focus is the program the keys go to, or the briefs; prefix is a Ctrl+\
+  // waiting for its command; brief is one brief open in the briefs.
+  focus: "main" | "worker" | "briefs";
   name: string;
+  brief?: boolean;
   prefix: boolean;
   zoomed: boolean;
   workers: number;
@@ -22,18 +23,23 @@ type Entry = {
 };
 
 const hasWorkers = (c: Context) => c.workers > 0;
+const notMain = (c: Context) => c.focus !== "main";
 
-const table: Record<"prefix" | "main" | "worker", Entry[]> = {
+const table: Record<Context["focus"] | "prefix", Entry[]> = {
   // After Ctrl+\: the commands themselves.
   prefix: [
     { keys: "n/p", does: "next/previous" },
-    { keys: "←", does: "main", when: (c) => c.focus === "worker" },
+    { keys: "←", does: "main", when: notMain },
     { keys: "→", does: "worker", when: (c) => c.focus === "main" && hasWorkers(c) },
     { keys: "1-9", does: "a worker by place", when: hasWorkers },
-    { keys: "0/m", does: "main", when: (c) => c.focus === "worker" },
+    { keys: "0/m", does: "main", when: notMain },
     { keys: "z", does: (c) => (c.zoomed ? "end the zoom" : "zoom") },
-    { keys: "b", does: "briefs", when: hasWorkers },
-    { keys: "Ctrl+\\ again", does: (c) => `pass Ctrl+\\ to ${c.name}` },
+    { keys: "b", does: (c) => (c.focus === "briefs" ? "back" : "briefs"), when: hasWorkers },
+    {
+      keys: "Ctrl+\\ again",
+      does: (c) => `pass Ctrl+\\ to ${c.name}`,
+      when: (c) => c.focus !== "briefs",
+    },
   ],
   main: [
     { keys: "keys", does: "go to main" },
@@ -51,6 +57,15 @@ const table: Record<"prefix" | "main" | "worker", Entry[]> = {
     { keys: "Ctrl+\\ z", does: (c) => (c.zoomed ? "end the zoom" : "zoom") },
     { keys: "Ctrl+\\ b", does: "briefs" },
     { keys: "Ctrl+\\ twice", does: (c) => `sends Ctrl+\\ to ${c.name}` },
+  ],
+  // The briefs read only: their own keys, then the way out.
+  briefs: [
+    { keys: "↑↓ Enter", does: "open a brief", when: (c) => !c.brief },
+    { keys: "↑↓ PgUp PgDn", does: "scroll", when: (c) => c.brief === true },
+    { keys: "Esc", does: "the list", when: (c) => c.brief === true },
+    { keys: "Ctrl+\\ ←/m", does: "main" },
+    { keys: "Ctrl+\\ n/p", does: "next/previous", when: hasWorkers },
+    { keys: "Ctrl+\\ z", does: (c) => (c.zoomed ? "end the zoom" : "zoom") },
   ],
 };
 

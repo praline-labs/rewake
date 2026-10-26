@@ -1,5 +1,5 @@
 // rewake's shell (docs/shell.md): main on the left, from 120 columns the
-// chosen worker on the right, each pane with its status line under it; the
+// chosen worker, or the briefs, on the right, each pane with its status line under it; the
 // key hints under main's, the bar choosing the worker under the worker's.
 // Below 120 columns the shown pane takes the whole width, the hints and the
 // bar under its status, and the bar switches the whole window.
@@ -10,7 +10,7 @@ import { createCliRenderer } from "@opentui/core";
 import { render, useTerminalDimensions } from "@opentui/solid";
 import { createEffect, createSignal, For, Show } from "solid-js";
 import { Bar, Hints } from "./bar.tsx";
-import { BriefsModal } from "./briefs.tsx";
+import { BriefsStrip, BriefsView, briefOpen } from "./briefs.tsx";
 import { Closing } from "./closing.tsx";
 import { askColors, seedOf } from "./colors.ts";
 import { endMain, tailText, watchTerminal } from "./ending.ts";
@@ -20,19 +20,20 @@ import { closingLayer } from "./lifting.ts";
 import { type PaneTerminal, paneHooks } from "./pane.ts";
 import {
   allPanes,
-  briefsOpen,
+  briefs,
   chosen,
+  cycle,
   focused,
   mainPane,
   type Pane,
   paneOf,
-  setBriefsOpen,
   setChosen,
   setFocused,
   setWorkers,
   setZoomed,
   show,
   takeSpaces,
+  toggleBriefs,
   workers,
   zoomed,
 } from "./panes.ts";
@@ -160,7 +161,9 @@ function startWorkerPane(pane: Pane, term: PaneTerminal) {
 }
 
 createEffect(() => {
-  const id = closing() === "sure" || briefsOpen() ? undefined : focused();
+  // The briefs have no terminal: while they have the focus every pane is
+  // blurred and their view takes the keys.
+  const id = closing() === "sure" ? undefined : focused();
   for (const pane of allPanes()) if (pane.id !== id) pane.term?.blur();
   if (id === undefined) return;
   const pane = paneOf(id);
@@ -171,18 +174,14 @@ createEffect(() => {
 
 function run(c: Command) {
   if (closing() === "sure") return;
-  // Under the modal the prefix has the one command, its own key.
-  if (briefsOpen()) return c.kind === "briefs" ? setBriefsOpen(false) : undefined;
   const panes = allPanes();
-  const at = Math.max(
-    0,
-    panes.findIndex((p) => p.id === focused()),
-  );
+  const ring = cycle();
+  const at = Math.max(0, ring.indexOf(focused()));
   switch (c.kind) {
     case "next":
-      return show(panes[(at + 1) % panes.length]?.id);
+      return show(ring[(at + 1) % ring.length]);
     case "prev":
-      return show(panes[(at + panes.length - 1) % panes.length]?.id);
+      return show(ring[(at + ring.length - 1) % ring.length]);
     case "main":
     case "left":
       return show("main");
@@ -193,7 +192,7 @@ function run(c: Command) {
     case "zoom":
       return setZoomed(!zoomed());
     case "briefs":
-      return setBriefsOpen(true);
+      return toggleBriefs();
     // The prefix twice types it.
     case "prefix":
       return (focused() === "main" ? main : paneOf(focused())?.source)?.write(
@@ -203,7 +202,7 @@ function run(c: Command) {
 }
 
 paneHooks.pressed = (id) => {
-  if (id !== focused() && closing() !== "sure" && !briefsOpen()) show(id);
+  if (id !== focused() && closing() !== "sure") show(id);
 };
 
 function App() {
@@ -216,22 +215,25 @@ function App() {
     });
   const wide = () => lay().wide;
   const shown = (p: Pane) => (wide() ? p === mainPane || p.id === chosen() : p.id === focused());
+  // The briefs show in the worker's place, chosen and focused as a worker is.
+  const briefsShown = () => (wide() ? chosen() : focused()) === briefs;
   const widthOf = (p: Pane) => (p === mainPane ? lay().main : lay().worker);
   const rowHeight = () => lay().rowHeight;
   const height = () => lay().height;
   // A pane sits in a box with a column of padding on each side, so the text
   // does not touch the edge; the widget's size, and so the program's, is the
   // inside. A press on the padding chooses the pane like one on its text.
-  const padded = (p: Pane) => ({
-    width: widthOf(p),
+  const padded = (id: string, width: number) => ({
+    width,
     height: height(),
     paddingLeft: 1,
     paddingRight: 1,
     backgroundColor: seed.transparent ? undefined : theme.background,
-    onMouseDown: () => paneHooks.pressed(p.id),
+    onMouseDown: () => paneHooks.pressed(id),
   });
   const inner = (p: Pane) => Math.max(widthOf(p) - 2, 1);
   const focusedPane = () => paneOf(focused()) ?? mainPane;
+  const onBriefs = () => focused() === briefs;
   const bar = () => (
     <Bar
       tabs={workers().map((p) => ({ id: p.id, label: p.label }))}
@@ -239,26 +241,23 @@ function App() {
       chosen={wide() && focused() === "main" ? chosen() : undefined}
       zoomed={zoomed()}
       theme={theme}
-      pick={(id) => {
-        setBriefsOpen(false);
-        show(id);
-      }}
-      briefs={() => setBriefsOpen(!briefsOpen())}
-      open={briefsOpen()}
+      pick={show}
+      briefs={briefs}
     />
   );
   const hints = () => (
     <Hints
       context={{
-        focus: focusedPane() === mainPane ? "main" : "worker",
-        name: focusedPane().label,
+        focus: onBriefs() ? "briefs" : focusedPane() === mainPane ? "main" : "worker",
+        name: onBriefs() ? "briefs" : focusedPane().label,
+        brief: briefOpen(),
         prefix: prefixWaits(),
         zoomed: zoomed(),
         workers: workers().length,
       }}
       width={wide() ? lay().main : dims().width}
       theme={theme}
-      accent={focusedPane() === mainPane ? theme.main : theme.worker}
+      accent={onBriefs() ? theme.text : focusedPane() === mainPane ? theme.main : theme.worker}
     />
   );
   // The work is hidden as a whole under the closing layer, so a terminal
@@ -268,7 +267,7 @@ function App() {
       <box flexDirection="column" width="100%" height="100%" visible={!closing()}>
         <box flexDirection="row" height={rowHeight()}>
           <box flexDirection="column" visible={shown(mainPane)} width={widthOf(mainPane)}>
-            <box {...padded(mainPane)}>
+            <box {...padded(mainPane.id, widthOf(mainPane))}>
               <pane_terminal
                 id="main"
                 ref={(t: PaneTerminal) => startMainPane(t)}
@@ -291,14 +290,14 @@ function App() {
           </Show>
           <box
             flexDirection="column"
-            visible={workers().some(shown)}
+            visible={workers().some(shown) || briefsShown()}
             width={lay().worker}
             height={rowHeight()}
           >
             <For each={workers()}>
               {(pane) => (
                 <box visible={shown(pane)} flexDirection="column" width={widthOf(pane)}>
-                  <box {...padded(pane)}>
+                  <box {...padded(pane.id, widthOf(pane))}>
                     <pane_terminal
                       id={pane.id}
                       ref={(t: PaneTerminal) => startWorkerPane(pane, t)}
@@ -317,7 +316,26 @@ function App() {
                 </box>
               )}
             </For>
-            <Show when={wide()}>{bar()}</Show>
+            <Show when={briefsShown() && !closing()}>
+              <box flexDirection="column" width={lay().worker}>
+                <box {...padded(briefs, lay().worker)}>
+                  <BriefsView
+                    rewake={rewake}
+                    room={room}
+                    theme={theme}
+                    width={Math.max(lay().worker - 2, 1)}
+                    height={height()}
+                    active={onBriefs}
+                  />
+                </box>
+                <BriefsStrip
+                  width={lay().worker}
+                  theme={theme}
+                  pick={() => paneHooks.pressed(briefs)}
+                />
+              </box>
+            </Show>
+            <Show when={wide() && workers().length > 0}>{bar()}</Show>
           </box>
         </box>
         <Show when={!wide()}>
@@ -325,18 +343,6 @@ function App() {
           <Show when={workers().length > 0}>{bar()}</Show>
         </Show>
       </box>
-      <Show when={briefsOpen() && !closing()}>
-        <BriefsModal
-          rewake={rewake}
-          room={room}
-          theme={theme}
-          left={wide() ? 4 : 0}
-          top={0}
-          width={wide() ? dims().width - 8 : dims().width}
-          height={rowHeight()}
-          close={() => setBriefsOpen(false)}
-        />
-      </Show>
       <Show when={closing()}>
         <Closing theme={theme} />
       </Show>

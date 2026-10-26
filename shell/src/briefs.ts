@@ -1,6 +1,7 @@
-// The briefs the modal shows (docs/shell.md, "The briefs"): the JSON of
-// rewake brief list and show, read as main's run once a second while the
-// modal shows one of them, and the pure parts of drawing them.
+// The briefs the shell shows in the worker's place (docs/shell.md, "The
+// briefs"): the JSON of rewake brief list and show, read as main's run once a
+// second while the view shows one of them, and the pure parts of drawing them.
+import { separator } from "./hints.ts";
 import { mainAs, readRewake } from "./room.ts";
 
 export type Bound = { name: string; epoch?: string; since?: string; run: string };
@@ -41,6 +42,39 @@ export function rowOf(brief: Summary): Piece[] {
     pieces.push({ text: gone && !brief.closed ? `${b.name} (ended)` : b.name, faint: gone });
   });
   return pieces;
+}
+
+// stripOfBriefs is the strip's parts under the briefs, the first its name,
+// fitted to a width: `briefs · 3 open · 1 closed` under the list, `brief 3 ·
+// 2/5 · 4 comments` under one; what does not fit is cut with `…`.
+export function stripOfBriefs(
+  shown: { list: Summary[] } | { id: number; detail?: Summary },
+  width: number,
+): string[] {
+  let parts: string[];
+  if ("list" in shown) {
+    const closed = shown.list.filter((b) => b.closed).length;
+    parts = ["briefs", `${shown.list.length - closed} open`];
+    if (closed > 0) parts.push(`${closed} closed`);
+  } else {
+    parts = [`brief ${shown.id}`];
+    const d = shown.detail?.id === shown.id ? shown.detail : undefined;
+    if (d) {
+      parts.push(`${d.done}/${d.total}`);
+      parts.push(`${d.commentCount} comment${d.commentCount === 1 ? "" : "s"}`);
+      if (d.closed) parts.push("closed");
+    }
+  }
+  const out: string[] = [];
+  let room = width;
+  for (const [i, part] of parts.entries()) {
+    const sep = i > 0 ? separator.length : 0;
+    if (room - sep <= 0) break;
+    const text = part.length > room - sep ? `${part.slice(0, room - sep - 1)}…` : part;
+    out.push(text);
+    room -= sep + text.length;
+  }
+  return out;
 }
 
 // timeOf is an RFC 3339 time as the person's clock reads it, `2026-10-26

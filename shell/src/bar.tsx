@@ -45,10 +45,9 @@ export function Bar(props: {
   chosen?: string;
   zoomed: boolean;
   theme: Theme;
+  // pick chooses a worker by its id, or the briefs by theirs.
   pick: (id: string) => void;
-  // briefs opens the briefs modal; open marks it showing.
-  briefs: () => void;
-  open: boolean;
+  briefs: string;
 }) {
   const style = (t: Tab) => {
     if (t.id === props.focused) {
@@ -58,6 +57,16 @@ export function Bar(props: {
     const bg = props.theme.idle;
     const marked = t.id === props.chosen ? TextAttributes.UNDERLINE : 0;
     return { bg, fg: inkOr(props.theme.worker, bg), attributes: marked };
+  };
+  // The briefs name no program: filled in the terminal's own foreground
+  // while they have the keys, underlined while shown beside main.
+  const briefsStyle = () => {
+    if (props.focused === props.briefs) {
+      const bg = props.theme.text;
+      return { bg, fg: ink(bg), attributes: TextAttributes.BOLD };
+    }
+    const marked = props.chosen === props.briefs ? TextAttributes.UNDERLINE : 0;
+    return { bg: props.theme.idle, fg: RGBA.defaultForeground(), attributes: marked };
   };
   return (
     <ShellRow theme={props.theme}>
@@ -78,12 +87,10 @@ export function Bar(props: {
         height={1}
         marginLeft={1}
         flexShrink={0}
-        bg={props.theme.idle}
-        fg={RGBA.defaultForeground()}
-        attributes={props.open ? TextAttributes.BOLD : 0}
+        {...briefsStyle()}
         {...selecting(props.theme)}
         content=" briefs "
-        onMouseDown={props.briefs}
+        onMouseDown={() => props.pick(props.briefs)}
       />
       <box flexGrow={1} />
       <Show when={props.zoomed}>

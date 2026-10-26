@@ -7,7 +7,7 @@ description: Briefs — a markdown brief per task that main writes, bound to wor
 Decided by the owner, October 26, 2026: a **brief** is a markdown document for one task — a
 title, a description, checkbox items, anything markdown holds — kept in the room, many per room.
 Main alone writes and edits its text; a worker it was given to ticks items and writes comments of
-at most 1000 characters; the person reads briefs in the shell and edits nothing there. A brief
+at most 1000 characters; the person reads briefs in the shell, in the worker's pane, and edits nothing there. A brief
 outlives compactions of main and workers; a closed one goes to an archive. Main gives one with
 `rewake send <worker> "..." --brief <id>`, and the worker gets its text with that task, and only
 then. The finish report stays mail and is not copied into the brief. The word is not the

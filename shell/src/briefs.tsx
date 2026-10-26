@@ -1,7 +1,7 @@
-// The briefs modal (docs/shell.md, "The briefs"): a list of the room's
-// briefs, and one opened as its markdown with the comments under it. The
-// person only reads; the panes keep drawing under it.
-import { type CliRenderer, type ScrollBoxRenderable, SyntaxStyle } from "@opentui/core";
+// The briefs view (docs/shell.md, "The briefs"): a list of the room's
+// briefs, and one opened as its markdown with the comments under it, shown in
+// the worker's place, and its strip. The person only reads.
+import { type CliRenderer, RGBA, type ScrollBoxRenderable, SyntaxStyle } from "@opentui/core";
 import { useKeyboard, useRenderer } from "@opentui/solid";
 import {
   type Accessor,
@@ -12,6 +12,7 @@ import {
   onCleanup,
   Show,
 } from "solid-js";
+import { ShellRow, selecting, separator } from "./bar.tsx";
 import {
   type Answer,
   type Detail,
@@ -21,13 +22,24 @@ import {
   readList,
   rowOf,
   type Summary,
+  stripOfBriefs,
   timeOf,
   type Unreadable,
   unreadableLine,
 } from "./briefs.ts";
 import type { Theme } from "./theme.ts";
 
-const fallbackBackground = "#1c1c1c";
+// What the view shows outlives its mounting, as a worker's screen outlives
+// its pane being hidden: the brief opened, the row chosen, the last answers,
+// which the strip reads too.
+const [opened, setOpened] = createSignal<number>();
+const [list, setList] = createSignal<Summary[]>([]);
+const [lost, setLost] = createSignal<Unreadable[]>([]);
+const [detail, setDetail] = createSignal<Detail>();
+const [at, setAt] = createSignal<number>();
+
+// briefOpen is one brief showing, not the list, for the hints.
+export const briefOpen = () => opened() !== undefined;
 
 // markdownStyle is the markdown's look in the shell's own colours.
 function markdownStyle(renderer: CliRenderer, theme: Theme) {
@@ -53,26 +65,21 @@ function markdownStyle(renderer: CliRenderer, theme: Theme) {
   );
 }
 
-export function BriefsModal(props: {
+// BriefsView is the briefs in a pane width by height; the keys reach it only
+// while active, as a worker's reach its terminal only while it has the focus.
+export function BriefsView(props: {
   rewake: string;
   room: string;
   theme: Theme;
-  left: number;
-  top: number;
   width: number;
   height: number;
-  close: () => void;
+  active: () => boolean;
 }) {
   const renderer = useRenderer();
   const theme = props.theme;
   const style = markdownStyle(renderer, theme);
   onCleanup(() => style.destroy());
-  const [opened, setOpened] = createSignal<number>();
-  const [list, setList] = createSignal<Summary[]>([]);
-  const [lost, setLost] = createSignal<Unreadable[]>([]);
-  const [detail, setDetail] = createSignal<Detail>();
   const [problem, setProblem] = createSignal<string>();
-  const [at, setAt] = createSignal<number>();
   let scroll: ScrollBoxRenderable | undefined;
   let rows: ScrollBoxRenderable | undefined;
 
@@ -109,8 +116,9 @@ export function BriefsModal(props: {
   });
 
   const open = (id: number) => {
-    setDetail(undefined);
+    if (detail()?.id !== id) setDetail(undefined);
     setProblem(undefined);
+    setAt(id);
     setOpened(id);
   };
   const back = () => {
@@ -126,9 +134,9 @@ export function BriefsModal(props: {
   };
 
   useKeyboard((key) => {
+    if (!props.active()) return;
     if (opened() === undefined) {
-      if (key.name === "escape") props.close();
-      else if (key.name === "up") move(-1);
+      if (key.name === "up") move(-1);
       else if (key.name === "down") move(1);
       else if (key.name === "return") {
         const brief = list()[selected()];
@@ -146,122 +154,116 @@ export function BriefsModal(props: {
   });
 
   const faint = theme.faint;
-  const inner = () => Math.max(props.width - 4, 1);
-  // The catcher is the layer's: a press beside the box closes it, so it never
-  // reaches the pane under it, which would take the focus and the keys.
   return (
-    <box
-      position="absolute"
-      left={0}
-      top={0}
-      zIndex={50}
-      width="100%"
-      height={props.top + props.height}
-      {...{ onMouseDown: props.close }}
-    >
-      <box
-        position="absolute"
-        left={props.left}
-        top={props.top}
-        width={props.width}
-        height={props.height}
-        flexDirection="column"
-        border
-        borderStyle="single"
-        borderColor={faint}
-        title=" briefs "
-        titleAlignment="left"
-        paddingLeft={1}
-        paddingRight={1}
-        backgroundColor={theme.background ?? fallbackBackground}
-        {...{ onMouseDown: (e: { stopPropagation: () => void }) => e.stopPropagation() }}
-      >
-        <Show
-          when={opened() === undefined}
-          fallback={
-            <Show when={detail()} fallback={<text fg={faint} content="reading the brief…" />}>
-              {(d: Accessor<Detail>) => (
-                <>
-                  <text fg={theme.text} height={1} wrapMode="none" attributes={1}>
-                    {`${d().id} · ${d().title}`}
-                    <span style={{ fg: faint }}>
-                      {` · ${d().done}/${d().total}${d().closed ? " · closed" : ""}${d()
-                        .bound.map(
-                          (b) => ` · ${b.name}${ended(d(), b) && !d().closed ? " (ended)" : ""}`,
-                        )
-                        .join("")}`}
-                    </span>
-                  </text>
-                  <scrollbox ref={(s: ScrollBoxRenderable) => (scroll = s)} flexGrow={1}>
-                    <markdown content={d().text} syntaxStyle={style} fg={theme.text} />
-                    <text fg={faint} content={"─".repeat(inner())} height={1} />
-                    <Show
-                      when={d().comments.length > 0}
-                      fallback={<text fg={faint} content="no comments" />}
-                    >
-                      <For each={d().comments}>
-                        {(c) => (
-                          <box flexDirection="column" marginBottom={1}>
-                            <text fg={theme.text} attributes={1} wrapMode="none">
-                              {c.from}
-                              <span style={{ fg: faint }}>{` · ${timeOf(c.at)}`}</span>
-                            </text>
-                            <text fg={theme.text} wrapMode="word" content={c.text} />
-                          </box>
-                        )}
-                      </For>
-                    </Show>
-                  </scrollbox>
-                </>
-              )}
-            </Show>
-          }
-        >
-          <scrollbox ref={(s: ScrollBoxRenderable) => (rows = s)} flexGrow={1}>
-            <Show
-              when={list().length > 0 || lost().length > 0}
-              fallback={
-                <text fg={faint} content="no briefs; main makes them with rewake brief new" />
-              }
-            >
-              <For each={list()}>
-                {(brief, i) => (
-                  <text
-                    id={`brief-${brief.id}`}
-                    height={1}
-                    wrapMode="none"
-                    fg={i() === selected() ? theme.selection.fg : theme.text}
-                    bg={i() === selected() ? theme.selection.bg : undefined}
-                    {...{ onMouseDown: () => open(brief.id) }}
+    <box width={props.width} height={props.height} flexDirection="column">
+      <Show
+        when={opened() === undefined}
+        fallback={
+          <Show when={detail()} fallback={<text fg={faint} content="reading the brief…" />}>
+            {(d: Accessor<Detail>) => (
+              <>
+                <text fg={theme.text} height={1} wrapMode="none" attributes={1}>
+                  {d().title}
+                  <span style={{ fg: faint }}>
+                    {`${d().closed ? " · closed" : ""}${d()
+                      .bound.map(
+                        (b) => ` · ${b.name}${ended(d(), b) && !d().closed ? " (ended)" : ""}`,
+                      )
+                      .join("")}`}
+                  </span>
+                </text>
+                <scrollbox ref={(s: ScrollBoxRenderable) => (scroll = s)} flexGrow={1}>
+                  <markdown content={d().text} syntaxStyle={style} fg={theme.text} />
+                  <text fg={faint} content={"─".repeat(props.width)} height={1} />
+                  <Show
+                    when={d().comments.length > 0}
+                    fallback={<text fg={faint} content="no comments" />}
                   >
-                    <For each={rowOf(brief)}>
-                      {(p) => (
-                        <span style={{ fg: p.faint && i() !== selected() ? faint : undefined }}>
-                          {p.text}
-                        </span>
+                    <For each={d().comments}>
+                      {(c) => (
+                        <box flexDirection="column" marginBottom={1}>
+                          <text fg={theme.text} attributes={1} wrapMode="none">
+                            {c.from}
+                            <span style={{ fg: faint }}>{` · ${timeOf(c.at)}`}</span>
+                          </text>
+                          <text fg={theme.text} wrapMode="word" content={c.text} />
+                        </box>
                       )}
                     </For>
-                  </text>
-                )}
-              </For>
-              <For each={lost()}>
-                {(u) => <text height={1} wrapMode="none" fg={faint} content={unreadableLine(u)} />}
-              </For>
-            </Show>
-          </scrollbox>
-        </Show>
-        <text
-          height={1}
-          wrapMode="none"
-          fg={problem() ? theme.main : faint}
-          content={
-            problem() ??
-            (opened() === undefined
-              ? "↑↓ choose · Enter open · Esc close"
-              : "↑↓ PgUp PgDn Home End scroll · Esc back")
-          }
-        />
-      </box>
+                  </Show>
+                </scrollbox>
+              </>
+            )}
+          </Show>
+        }
+      >
+        <scrollbox ref={(s: ScrollBoxRenderable) => (rows = s)} flexGrow={1}>
+          <Show
+            when={list().length > 0 || lost().length > 0}
+            fallback={
+              <text fg={faint} content="no briefs; main makes them with rewake brief new" />
+            }
+          >
+            <For each={list()}>
+              {(brief, i) => (
+                <text
+                  id={`brief-${brief.id}`}
+                  height={1}
+                  wrapMode="none"
+                  fg={i() === selected() ? theme.selection.fg : theme.text}
+                  bg={i() === selected() ? theme.selection.bg : undefined}
+                  {...{ onMouseDown: () => open(brief.id) }}
+                >
+                  <For each={rowOf(brief)}>
+                    {(p) => (
+                      <span style={{ fg: p.faint && i() !== selected() ? faint : undefined }}>
+                        {p.text}
+                      </span>
+                    )}
+                  </For>
+                </text>
+              )}
+            </For>
+            <For each={lost()}>
+              {(u) => <text height={1} wrapMode="none" fg={faint} content={unreadableLine(u)} />}
+            </For>
+          </Show>
+        </scrollbox>
+      </Show>
+      <Show when={problem()}>
+        {(line: Accessor<string>) => (
+          <text height={1} wrapMode="none" fg={theme.main} content={line()} />
+        )}
+      </Show>
     </box>
+  );
+}
+
+// BriefsStrip is the strip under the briefs, a shell's row as a worker's
+// strip is: what shows, the list or one brief, in place of a session.
+export function BriefsStrip(props: { width: number; theme: Theme; pick: () => void }) {
+  const plain = RGBA.defaultForeground();
+  const parts = () => {
+    const id = opened();
+    const width = Math.max(props.width - 2, 1);
+    return stripOfBriefs(id === undefined ? { list: list() } : { id, detail: detail() }, width);
+  };
+  return (
+    <ShellRow theme={props.theme} onMouseDown={props.pick}>
+      <text height={1} wrapMode="none" flexGrow={1} fg={plain} {...selecting(props.theme)}>
+        <For each={parts()}>
+          {(part, i) =>
+            i() === 0 ? (
+              <b>{part}</b>
+            ) : (
+              <>
+                <span style={{ fg: props.theme.faint }}>{separator}</span>
+                {part}
+              </>
+            )
+          }
+        </For>
+      </text>
+    </ShellRow>
   );
 }

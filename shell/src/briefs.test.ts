@@ -5,6 +5,7 @@ import {
   poll,
   rowOf,
   type Summary,
+  stripOfBriefs,
   timeOf,
   unreadableLine,
 } from "./briefs.ts";
@@ -93,4 +94,14 @@ test("a read that throws is a line, not a crash", async () => {
   stop();
   expect(shown).toHaveLength(1);
   expect(shown[0]?.ok).toBe(false);
+});
+
+test("the strip under the briefs says what shows, cut at the width", () => {
+  const closed = { ...brief, id: 1, closed: true };
+  expect(stripOfBriefs({ list: [brief, closed] }, 80)).toEqual(["briefs", "1 open", "1 closed"]);
+  expect(stripOfBriefs({ list: [brief] }, 80)).toEqual(["briefs", "1 open"]);
+  expect(stripOfBriefs({ id: 3, detail: brief }, 80)).toEqual(["brief 3", "2/5", "4 comments"]);
+  // A detail of the brief shown before is not this one's.
+  expect(stripOfBriefs({ id: 4, detail: brief }, 80)).toEqual(["brief 4"]);
+  expect(stripOfBriefs({ id: 3, detail: brief }, 12)).toEqual(["brief 3", "2…"]);
 });
