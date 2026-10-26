@@ -85,7 +85,7 @@ const Help = "Main opens workers by alias: [alias.<name>] in ~/.config/" + userD
 	" or in " + projectDir + "/" + userFile + " in the working directory, with harness = \"<id>\", role = \"write\" or \"general\", " +
 	"args = [arguments for the harness], description, worktree = true for a worker in a new worktree of its own or, on Claude Code, enter_worktree = true for one that may enter one mid-session, [alias.<name>.launch] model, effort and context, and, " +
 	"in the user file only, role and command = \"<program>\" for a wrapper script. " +
-	"An alias's type = \"<type>\" is its worker's kind of work by default, one of the types: texts in ~/.config/" + userDir + "/" + typesDir + "/<type>.md and " + projectDir + "/" + typesDir + "/<type>.md beside rewake's own; [types] off = [...] in either alias file hides built-in ones. " +
+	"An alias's type = \"<type>\" is its worker's kind of work by default, one of the types: texts in ~/.config/" + userDir + "/" + typesDir + "/<type>.md and " + projectDir + "/" + typesDir + "/<type>.md beside rewake's own; [types] off = [...] in either alias file hides built-in ones, and [aliases] off = [...] in the project file hides templates of the catalog for that project. " +
 	"rewake workers lists them; rewake space open <space> --alias <name> [--type <type>] opens one. An alias is not a launch of its own."
 
 // Set is what this process read.
@@ -105,6 +105,11 @@ type Set struct {
 	// the same name; off names the built-in types turned off, with where.
 	types map[string]worktype.Type
 	off   map[string]string
+	// aliasOff names the aliases a project file turned off, with where; they
+	// are gone from aliases, and Template refuses them by name.
+	aliasOff map[string]string
+	// pendingOff is what the project file asked, applied once every file is read.
+	pendingOff []offRequest
 }
 
 // Names are the aliases this process knows, in order, for a refusal that says
@@ -148,6 +153,9 @@ type Template struct {
 // Template resolves one alias, refusing one that would start something other
 // than what it says.
 func (s *Set) Template(name string, catalog adapter.Catalog) (Template, error) {
+	if where, off := s.aliasOff[name]; off {
+		return Template{}, fmt.Errorf("the alias %q is turned off in %s ([aliases] off); available: %s", name, where, strings.Join(s.Names(), ", "))
+	}
 	value, source, ok := s.Lookup(name)
 	if !ok {
 		return Template{}, fmt.Errorf("no alias %q; available: %s", name, strings.Join(s.Names(), ", "))

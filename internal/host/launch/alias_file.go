@@ -30,13 +30,14 @@ func Load() *Set {
 		set.read(filepath.Join(dir, userFile), "the project alias file", false)
 		set.readTypes(filepath.Join(dir, typesDir), worktype.Project)
 	}
+	set.applyAliasesOff()
 	return set
 }
 
 func newSet() *Set {
 	return &Set{
 		aliases: map[string]Alias{}, sources: map[string]string{}, fromProject: map[string]bool{},
-		types: map[string]worktype.Type{}, off: map[string]string{},
+		types: map[string]worktype.Type{}, off: map[string]string{}, aliasOff: map[string]string{},
 	}
 }
 
@@ -76,6 +77,10 @@ func (s *Set) read(path, description string, user bool) {
 		Types struct {
 			Off []string `toml:"off"`
 		} `toml:"types"`
+		// Aliases turns templates of the merged catalog off for a project.
+		Aliases struct {
+			Off []string `toml:"off"`
+		} `toml:"aliases"`
 	}
 	decoder := toml.NewDecoder(bytes.NewReader(raw))
 	// A field rewake does not know is refused, not skipped: a silently
@@ -99,6 +104,10 @@ func (s *Set) read(path, description string, user bool) {
 		return
 	}
 	if err := s.turnOff(file.Types.Off, description, path); err != nil {
+		s.unreadable(err.Error())
+		return
+	}
+	if err := s.noteAliasesOff(file.Aliases.Off, file.Alias, description, path, user); err != nil {
 		s.unreadable(err.Error())
 		return
 	}

@@ -150,6 +150,17 @@ silently or skipped, either would open workers other than the project says. Noth
 for the person. Either alias file may also hold `[types] off = [...]`, the built-in types it
 turns off ([worker-types.md](worker-types.md)).
 
+**A project turns templates off** (the owner's, October 26, 2026): `[aliases] off = ["opus-high-write"]`
+in `.rewake/aliases.toml` hides those templates of the merged catalogue, the user's included, for
+that project only. A template off is gone from `rewake workers` (lines and `--json`) and from
+main's catalogue, and `space open --alias <it>` refuses: `the alias "x" is turned off in the project
+alias file ([aliases] off); available: ...`. Three refusals of the whole catalogue, as an unknown
+field is: a name that is no alias of the merged catalogue (`turns off "x" in [aliases] off, which is
+no alias of the catalog; available: ...`, a typo would leave on what was meant off); a name the
+same file defines (`defines [alias.x] and turns it off in [aliases] off; keep one`, a contradiction,
+not hidden); and `[aliases] off` in the user's file (`belongs in a project's .rewake/aliases.toml,
+and to drop a template everywhere delete it from this file`).
+
 **A project file may not choose a role, or the program.** `role` and `command` belong in the
 user's own file; an alias in `.rewake/aliases.toml` that carries one is refused by name. The program is
 whatever runs with the person's credentials, and a file sitting in whatever directory somebody
@@ -158,7 +169,7 @@ happens to be in should not decide that or what a worker may do. The user file i
 
 `rewake workers` is a view available to any role, even outside a session. It reads the user
 file and the current directory's `.rewake/aliases.toml`, a project alias replacing the user's of
-the same name, and shows name, harness, role, command (the harness when none), description, type
+the same name and the project's `[aliases] off` removing templates, and shows name, harness, role, command (the harness when none), description, type
 and each setting's value marked applied or shown only, then the types `space open --type` takes;
 `--json` returns `workers`, whose `model`, `effort` and `context` each have `value` and
 `applied`, and `types`. A file that cannot be read refuses the
