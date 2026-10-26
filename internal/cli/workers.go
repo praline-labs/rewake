@@ -129,7 +129,7 @@ func workerView(template launch.Template) workerTemplate {
 
 func (l workersListing) lines() []string {
 	lines := l.workerLines()
-	if l.NoWriter && len(l.Workers) > 0 {
+	if l.NoWriter {
 		lines = append(lines, "", "No template writes code here: main writes it itself.")
 	}
 	lines = append(lines, "", "Types (space open --type <type>):")

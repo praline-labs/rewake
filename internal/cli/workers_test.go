@@ -112,6 +112,11 @@ func TestWorkersSaysWhenNoTemplateWrites(t *testing.T) {
 	if code != ExitOK || strings.Count(out, "No template writes code here") != 1 {
 		t.Fatalf("no writer: %d %s %s", code, out, errOut)
 	}
+	workerAliases(t, "")
+	code, out, errOut = run("workers")
+	if code != ExitOK || strings.Count(out, "No template writes code here") != 1 || !strings.Contains(out, "No worker aliases") {
+		t.Fatalf("an empty catalog: %d %s %s", code, out, errOut)
+	}
 	workerAliases(t, workerAliasesExample)
 	code, out, errOut = run("workers")
 	if code != ExitOK || strings.Contains(out, "No template writes code") {
