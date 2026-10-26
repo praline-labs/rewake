@@ -98,8 +98,6 @@ export type AskKind = "permission" | "question"
 export interface AskOpenRequest {
   // loadId is the admitted load asking.
   loadId: string
-  // call is the question tool call the dialog belongs to.
-  call: string
   // kind is what the request asks.
   kind: AskKind
   // tool is a permission's tool, as the model names it.
@@ -139,8 +137,6 @@ export interface AskOption {
 export interface AskOpenAnswer {
   // id is the request's id, which main's answer names.
   id: string
-  // lifetimeMs is how long the request waits for an answer from now, in milliseconds.
-  lifetimeMs: number
 }
 
 // AskPollRequest asks what became of an open request.

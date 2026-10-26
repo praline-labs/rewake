@@ -109,7 +109,6 @@
       "description": "is a request to open: what the harness's question dialog shows, and for a permission the call it is about.",
       "properties": {
         "loadId": {"type": "string", "description": "is the admitted load asking."},
-        "call": {"type": "string", "description": "is the question tool call the dialog belongs to."},
         "kind": {"$ref": "#/$defs/AskKind", "description": "is what the request asks."},
         "tool": {"type": "string", "description": "is a permission's tool, as the model names it."},
         "input": {"type": "string", "description": "is a permission's call arguments as JSON text, cut by the mod to what a body takes."},
@@ -117,7 +116,7 @@
         "readOnly": {"type": "boolean", "description": "says the engine's check called a permission's call read-only (Claude Code 2.1.304+), absent when it did not say; the call is still main's to answer."},
         "questions": {"type": "array", "items": {"$ref": "#/$defs/AskQuestion"}, "description": "are the dialog's questions; a permission's one question has its three choices."}
       },
-      "required": ["loadId", "call", "kind", "questions"],
+      "required": ["loadId", "kind", "questions"],
       "additionalProperties": false
     },
     "AskQuestion": {
@@ -146,10 +145,9 @@
       "type": "object",
       "description": "is an opened request.",
       "properties": {
-        "id": {"type": "string", "description": "is the request's id, which main's answer names."},
-        "lifetimeMs": {"type": "integer", "description": "is how long the request waits for an answer from now, in milliseconds."}
+        "id": {"type": "string", "description": "is the request's id, which main's answer names."}
       },
-      "required": ["id", "lifetimeMs"],
+      "required": ["id"],
       "additionalProperties": false
     },
     "AskPollRequest": {

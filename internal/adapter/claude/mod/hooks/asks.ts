@@ -281,7 +281,6 @@ export class Asks {
     const permission = this.permissions.get(e.questions[0]?.question ?? "");
     const open: AskOpenRequest = {
       loadId: this.loadId,
-      call: e.tool_use_id ?? e.questions[0]?.question ?? "",
       kind: this.kindOf(e),
       questions,
     };

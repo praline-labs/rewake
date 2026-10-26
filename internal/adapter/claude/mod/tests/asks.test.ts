@@ -3,7 +3,7 @@ import { unanswered } from "../hooks/asks.ts";
 import type { Reply } from "./world.ts";
 import { start, world } from "./world.ts";
 
-const opened: Reply = { status: 200, text: '{"id":"ab12","lifetimeMs":120000}' };
+const opened: Reply = { status: 200, text: '{"id":"ab12"}' };
 const pending: Reply = { status: 200, text: '{"state":"pending"}' };
 
 // answered is main's answer to the dialog's one question, read from what the
@@ -222,7 +222,6 @@ test("in auto mode the engine's own permission dialog is carried to main, and ma
   });
   expect(run.sent.find((one) => one.path === "/v1/ask/open")!.body).toMatchObject({
     kind: "permission",
-    call: "t1",
     tool: "Read",
     input: '{"file_path":"/main/brief.md"}',
     cwd: "/work",
@@ -360,7 +359,6 @@ test("an engine-drawn dialog keeps the read-only mark its check gave the call", 
   await $.classic.PermissionRequest(drawn as any);
   expect(run.sent.find((one) => one.path === "/v1/ask/open")!.body).toMatchObject({
     kind: "permission",
-    call: "t1",
     readOnly: true,
   });
 });

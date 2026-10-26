@@ -91,9 +91,6 @@ type AskOpenRequest struct {
 	// LoadID is the admitted load asking.
 	LoadID string `json:"loadId"`
 
-	// Call is the question tool call the dialog belongs to.
-	Call string `json:"call"`
-
 	// Kind is what the request asks.
 	Kind AskKind `json:"kind"`
 
@@ -142,9 +139,6 @@ type AskOption struct {
 type AskOpenAnswer struct {
 	// ID is the request's id, which main's answer names.
 	ID string `json:"id"`
-
-	// LifetimeMs is how long the request waits for an answer from now, in milliseconds.
-	LifetimeMs int `json:"lifetimeMs"`
 }
 
 // AskPollRequest asks what became of an open request.

@@ -36,11 +36,11 @@ func askServing(t *testing.T) (*Server, string, *[]asking.Offer) {
 func openPermission(t *testing.T, socket string) string {
 	t.Helper()
 	tool, input := "Bash", `{"command":"make"}`
-	text := postValue(t, socket, PathAskOpen, AskOpenRequest{LoadID: "load", Call: "toolu_1", Kind: AskKindPermission, Tool: &tool, Input: &input, Questions: []AskQuestion{{
+	text := postValue(t, socket, PathAskOpen, AskOpenRequest{LoadID: "load", Kind: AskKindPermission, Tool: &tool, Input: &input, Questions: []AskQuestion{{
 		Question: "Allow Bash?", Options: []AskOption{{Label: "Allow once"}, {Label: "Allow for this session"}, {Label: "Refuse"}},
 	}}})
 	var opened AskOpenAnswer
-	if err := json.Unmarshal([]byte(text), &opened); err != nil || opened.ID == "" || opened.LifetimeMs <= 0 {
+	if err := json.Unmarshal([]byte(text), &opened); err != nil || opened.ID == "" {
 		t.Fatalf("open: %s %v", text, err)
 	}
 	return opened.ID
@@ -119,7 +119,7 @@ func TestMainHearsWhoAnsweredFirst(t *testing.T) {
 func TestARequestOpensOnlyForAWorkersAdmittedLoad(t *testing.T) {
 	_, socket := serving(t)
 	postValue(t, socket, PathHello, HelloRequest{LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
-	open := AskOpenRequest{LoadID: "load", Call: "c", Kind: AskKindQuestion, Questions: []AskQuestion{{Question: "Which?", Options: []AskOption{{Label: "A"}}}}}
+	open := AskOpenRequest{LoadID: "load", Kind: AskKindQuestion, Questions: []AskQuestion{{Question: "Which?", Options: []AskOption{{Label: "A"}}}}}
 	if status, _, _ := post(socket, PathAskOpen, mustJSON(open)); status != http.StatusConflict {
 		t.Fatalf("main's own run opened a request: %d", status)
 	}

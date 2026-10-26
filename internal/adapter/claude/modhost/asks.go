@@ -61,7 +61,7 @@ func (s *Server) askOpen(w http.ResponseWriter, r *http.Request) {
 		refuse(w, http.StatusConflict, "main could not be told: "+err.Error())
 		return
 	}
-	s.answer(w, r, AskOpenAnswer{ID: id, LifetimeMs: int(time.Until(deadline).Milliseconds())})
+	s.answer(w, r, AskOpenAnswer{ID: id})
 }
 
 func offerOf(asked AskOpenRequest) asking.Offer {
