@@ -46,6 +46,9 @@ export function Bar(props: {
   zoomed: boolean;
   theme: Theme;
   pick: (id: string) => void;
+  // briefs opens the briefs modal; open marks it showing.
+  briefs: () => void;
+  open: boolean;
 }) {
   const style = (t: Tab) => {
     if (t.id === props.focused) {
@@ -71,6 +74,17 @@ export function Bar(props: {
           />
         )}
       </For>
+      <text
+        height={1}
+        marginLeft={1}
+        flexShrink={0}
+        bg={props.theme.idle}
+        fg={RGBA.defaultForeground()}
+        attributes={props.open ? TextAttributes.BOLD : 0}
+        {...selecting(props.theme)}
+        content=" briefs "
+        onMouseDown={props.briefs}
+      />
       <box flexGrow={1} />
       <Show when={props.zoomed}>
         <text

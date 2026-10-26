@@ -10,12 +10,32 @@ import { createCliRenderer } from "@opentui/core";
 import { render, useTerminalDimensions } from "@opentui/solid";
 import { createEffect, createSignal, For, Show } from "solid-js";
 import { Bar, Hints } from "./bar.tsx";
+import { BriefsModal } from "./briefs.tsx";
 import { Closing } from "./closing.tsx";
 import { askColors, seedOf } from "./colors.ts";
 import { endMain, tailText, watchTerminal } from "./ending.ts";
 import { type Command, isSuspend, prefixHandler } from "./keys.ts";
+import { layoutOf } from "./layout.ts";
 import { closingLayer } from "./lifting.ts";
 import { type PaneTerminal, paneHooks } from "./pane.ts";
+import {
+  allPanes,
+  briefsOpen,
+  chosen,
+  focused,
+  mainPane,
+  type Pane,
+  paneOf,
+  setBriefsOpen,
+  setChosen,
+  setFocused,
+  setWorkers,
+  setZoomed,
+  show,
+  takeSpaces,
+  workers,
+  zoomed,
+} from "./panes.ts";
 import { pollRoom, type Space, spacesOver } from "./room.ts";
 import { Scanner } from "./scan.ts";
 import { connectWorker, type MainRun, mainEnv, type Source, startMain } from "./sources.ts";
@@ -33,22 +53,6 @@ if (split < 0 || command.length === 0) {
 const rewake = command[0]!;
 const cwd = process.env.REWAKE_SHELL_CWD || process.cwd();
 
-// A pane is a program on the screen: main, or a space's worker.
-type Pane = {
-  id: string;
-  label: string;
-  term?: PaneTerminal;
-  source?: Source;
-  scanner: Scanner;
-  title: string;
-  space?: Space;
-};
-
-const mainPane: Pane = { id: "main", label: "main", scanner: new Scanner(), title: "" };
-const [workers, setWorkers] = createSignal<Pane[]>([]);
-const [focused, setFocused] = createSignal("main");
-const [chosen, setChosen] = createSignal<string>();
-const [zoomed, setZoomed] = createSignal(false);
 // prefixWaits is a typed Ctrl+\ waiting for its command.
 const [prefixWaits, setPrefixWaits] = createSignal(false);
 const workersBound = 10_000;
@@ -57,8 +61,6 @@ const workersBound = 10_000;
 // Code 2.1.302 leaves 4 ms after the key.
 let suspendSentAt = 0;
 const suspendWindow = 1000;
-const allPanes = () => [mainPane, ...workers()];
-const paneOf = (id: string | undefined) => allPanes().find((p) => p.id === id);
 
 let main: MainRun | undefined;
 let mainTail = "";
@@ -157,39 +159,8 @@ function startWorkerPane(pane: Pane, term: PaneTerminal) {
   attach(pane);
 }
 
-// The room's spaces become the worker panes, in the order they opened. A
-// space shown here whose main's run reads ended is main's end begun.
-function takeSpaces(spaces: Space[], ended: string[]) {
-  if (closing()) return;
-  showSpaces(spaces);
-  const was = workers();
-  if (was.some((p) => ended.includes(p.id))) return beginClosing();
-  const next = spaces.map(
-    (space) =>
-      was.find((p) => p.id === space.id) ?? {
-        id: space.id,
-        label: space.name,
-        scanner: new Scanner(),
-        title: "",
-        space,
-      },
-  );
-  for (const pane of was) if (!next.includes(pane)) pane.source?.close();
-  if (next.length === was.length && next.every((p, i) => p === was[i])) return;
-  setWorkers(next);
-  if (!paneOf(chosen()) || chosen() === "main") setChosen(next[0]?.id);
-  if (!paneOf(focused())) show("main");
-}
-
-function show(id: string | undefined) {
-  const pane = paneOf(id);
-  if (!pane) return;
-  if (pane !== mainPane) setChosen(pane.id);
-  setFocused(pane.id);
-}
-
 createEffect(() => {
-  const id = closing() === "sure" ? undefined : focused();
+  const id = closing() === "sure" || briefsOpen() ? undefined : focused();
   for (const pane of allPanes()) if (pane.id !== id) pane.term?.blur();
   if (id === undefined) return;
   const pane = paneOf(id);
@@ -200,6 +171,8 @@ createEffect(() => {
 
 function run(c: Command) {
   if (closing() === "sure") return;
+  // Under the modal the prefix has the one command, its own key.
+  if (briefsOpen()) return c.kind === "briefs" ? setBriefsOpen(false) : undefined;
   const panes = allPanes();
   const at = Math.max(
     0,
@@ -219,6 +192,8 @@ function run(c: Command) {
       return show(panes[c.index]?.id);
     case "zoom":
       return setZoomed(!zoomed());
+    case "briefs":
+      return setBriefsOpen(true);
     // The prefix twice types it.
     case "prefix":
       return (focused() === "main" ? main : paneOf(focused())?.source)?.write(
@@ -228,24 +203,22 @@ function run(c: Command) {
 }
 
 paneHooks.pressed = (id) => {
-  if (id !== focused() && closing() !== "sure") show(id);
+  if (id !== focused() && closing() !== "sure" && !briefsOpen()) show(id);
 };
 
 function App() {
   const dims = useTerminalDimensions();
-  const wide = () => dims().width >= 120 && chosen() !== undefined && !zoomed();
-  const right = () => Math.floor((dims().width - 1) / 2);
+  const lay = () =>
+    layoutOf(dims().width, dims().height, {
+      chosen: chosen() !== undefined,
+      zoomed: zoomed(),
+      workers: workers().length,
+    });
+  const wide = () => lay().wide;
   const shown = (p: Pane) => (wide() ? p === mainPane || p.id === chosen() : p.id === focused());
-  const widthOf = (p: Pane) =>
-    !wide() ? dims().width : p === mainPane ? dims().width - 1 - right() : right();
-  // Each pane has its status line under it. Wide, main's column ends with
-  // the hints and the worker's with the bar, so both columns end on the
-  // bottom row; narrow, the shown pane's column ends with its status, and the
-  // hints and, while workers exist, the bar take the bottom lines across the
-  // whole width.
-  const below = () => (wide() ? 0 : workers().length > 0 ? 2 : 1);
-  const rowHeight = () => Math.max(dims().height - below(), 2);
-  const height = () => Math.max(rowHeight() - (wide() ? 2 : 1), 1);
+  const widthOf = (p: Pane) => (p === mainPane ? lay().main : lay().worker);
+  const rowHeight = () => lay().rowHeight;
+  const height = () => lay().height;
   // A pane sits in a box with a column of padding on each side, so the text
   // does not touch the edge; the widget's size, and so the program's, is the
   // inside. A press on the padding chooses the pane like one on its text.
@@ -259,7 +232,6 @@ function App() {
   });
   const inner = (p: Pane) => Math.max(widthOf(p) - 2, 1);
   const focusedPane = () => paneOf(focused()) ?? mainPane;
-  const workerWidth = () => (wide() ? right() : dims().width);
   const bar = () => (
     <Bar
       tabs={workers().map((p) => ({ id: p.id, label: p.label }))}
@@ -267,7 +239,12 @@ function App() {
       chosen={wide() && focused() === "main" ? chosen() : undefined}
       zoomed={zoomed()}
       theme={theme}
-      pick={show}
+      pick={(id) => {
+        setBriefsOpen(false);
+        show(id);
+      }}
+      briefs={() => setBriefsOpen(!briefsOpen())}
+      open={briefsOpen()}
     />
   );
   const hints = () => (
@@ -279,7 +256,7 @@ function App() {
         zoomed: zoomed(),
         workers: workers().length,
       }}
-      width={wide() ? widthOf(mainPane) : dims().width}
+      width={wide() ? lay().main : dims().width}
       theme={theme}
       accent={focusedPane() === mainPane ? theme.main : theme.worker}
     />
@@ -315,7 +292,7 @@ function App() {
           <box
             flexDirection="column"
             visible={workers().some(shown)}
-            width={workerWidth()}
+            width={lay().worker}
             height={rowHeight()}
           >
             <For each={workers()}>
@@ -348,6 +325,18 @@ function App() {
           <Show when={workers().length > 0}>{bar()}</Show>
         </Show>
       </box>
+      <Show when={briefsOpen() && !closing()}>
+        <BriefsModal
+          rewake={rewake}
+          room={room}
+          theme={theme}
+          left={wide() ? 4 : 0}
+          top={0}
+          width={wide() ? dims().width - 8 : dims().width}
+          height={rowHeight()}
+          close={() => setBriefsOpen(false)}
+        />
+      </Show>
       <Show when={closing()}>
         <Closing theme={theme} />
       </Show>
@@ -392,4 +381,10 @@ renderer.on("selection", (selection: { getSelectedText?: () => string } | null) 
   if (text) renderer.copyToClipboardOSC52(text);
 });
 await render(() => <App />, renderer);
-stopRoom = pollRoom(rewake, room, takeSpaces, () => main?.child.pid, showSessions);
+stopRoom = pollRoom(
+  rewake,
+  room,
+  (spaces, ended) => takeSpaces(spaces, ended, closing, beginClosing),
+  () => main?.child.pid,
+  showSessions,
+);

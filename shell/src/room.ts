@@ -122,6 +122,11 @@ export async function spacesOver(rewake: string, room: string, ids: string[], bo
   }
 }
 
+// askedAs names main's run once the listing found it: the identity a view
+// only main may read (the strip's telemetry, the briefs) is asked as.
+let askedAs: { REWAKE_SESSION: string; REWAKE_EPOCH: string } | undefined;
+export const mainAs = () => askedAs;
+
 // The room's sessions as main sees them, for the strip under each pane
 // (docs/shell.md, "The strip"): rewake list shows a session's telemetry
 // only to a verified main, and the shell is main's terminal, so it asks as
@@ -227,17 +232,16 @@ function sessionsOf(listing: SessionListing): Map<string, Session> {
 // wrapper once it runs: its record, found by that pid, names the run the
 // listing is asked as; until then the listing has no telemetry.
 export function sessionReader(rewake: string, room: string, mainPid: () => number | undefined) {
-  let as: { REWAKE_SESSION: string; REWAKE_EPOCH: string } | undefined;
   const read = async (again = true): Promise<Map<string, Session> | undefined> => {
-    const listing = await readRewake<SessionListing>(rewake, room, ["list", "--json"], as);
+    const listing = await readRewake<SessionListing>(rewake, room, ["list", "--json"], askedAs);
     if (!listing) return undefined;
     const pid = mainPid();
     const own = listing.sessions?.find((s) => s.role === "main" && s.servicePid === pid);
-    const was = as?.REWAKE_EPOCH;
-    as = own ? { REWAKE_SESSION: own.name, REWAKE_EPOCH: epochOf(own) } : undefined;
+    const was = askedAs?.REWAKE_EPOCH;
+    askedAs = own ? { REWAKE_SESSION: own.name, REWAKE_EPOCH: epochOf(own) } : undefined;
     // A listing asked as no run, or another, has no telemetry: asked again
     // at once as main's.
-    if (as && as.REWAKE_EPOCH !== was && again) return read(false);
+    if (askedAs && askedAs.REWAKE_EPOCH !== was && again) return read(false);
     const sessions = sessionsOf(listing);
     const mine = own && sessions.get(own.name);
     if (mine) mine.own = true;

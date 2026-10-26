@@ -32,6 +32,7 @@ const table: Record<"prefix" | "main" | "worker", Entry[]> = {
     { keys: "1-9", does: "a worker by place", when: hasWorkers },
     { keys: "0/m", does: "main", when: (c) => c.focus === "worker" },
     { keys: "z", does: (c) => (c.zoomed ? "end the zoom" : "zoom") },
+    { keys: "b", does: "briefs", when: hasWorkers },
     { keys: "Ctrl+\\ again", does: (c) => `pass Ctrl+\\ to ${c.name}` },
   ],
   main: [
@@ -39,6 +40,7 @@ const table: Record<"prefix" | "main" | "worker", Entry[]> = {
     { keys: "Ctrl+\\ →", does: "worker", when: hasWorkers },
     { keys: "Ctrl+\\ n/p", does: "next/previous", when: hasWorkers },
     { keys: "Ctrl+\\ z", does: (c) => (c.zoomed ? "end the zoom" : "zoom"), when: hasWorkers },
+    { keys: "Ctrl+\\ b", does: "briefs", when: hasWorkers },
     { keys: "Ctrl+\\", does: "the shell's commands", when: (c) => !hasWorkers(c) },
   ],
   worker: [
@@ -47,6 +49,7 @@ const table: Record<"prefix" | "main" | "worker", Entry[]> = {
     { keys: "Ctrl+\\ ←/m", does: "main" },
     { keys: "Ctrl+\\ n/p", does: "next/previous" },
     { keys: "Ctrl+\\ z", does: (c) => (c.zoomed ? "end the zoom" : "zoom") },
+    { keys: "Ctrl+\\ b", does: "briefs" },
     { keys: "Ctrl+\\ twice", does: (c) => `sends Ctrl+\\ to ${c.name}` },
   ],
 };

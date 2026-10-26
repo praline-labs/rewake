@@ -5,7 +5,7 @@
 // or in xterm's modifyOtherKeys form.
 
 export type Command =
-  | { kind: "next" | "prev" | "main" | "left" | "right" | "zoom" | "prefix" }
+  | { kind: "next" | "prev" | "main" | "left" | "right" | "zoom" | "prefix" | "briefs" }
   | { kind: "index"; index: number };
 
 // A press of the prefix: 92 is the backslash, 5 is Ctrl; lock bits (Caps
@@ -31,6 +31,7 @@ function commandOf(seq: string): Command | undefined {
   if (key === "p") return { kind: "prev" };
   if (key === "m" || key === "0") return { kind: "main" };
   if (key === "z") return { kind: "zoom" };
+  if (key === "b") return { kind: "briefs" };
   if (/^[1-9]$/.test(key)) return { kind: "index", index: Number(key) };
   return undefined;
 }

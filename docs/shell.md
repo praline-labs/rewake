@@ -1,5 +1,5 @@
 ---
-description: rewake's shell — its layout and panes, who owns each pseudo-terminal, closing, the raw stream a worker's pane is fed, the space host's emulator, keys, colours, the bar, the strip, and how it ships.
+description: rewake's shell — its layout and panes, who owns each pseudo-terminal, closing, the raw stream a worker's pane is fed, the space host's emulator, keys, colours, the bar, the strip, the briefs view, and how it ships.
 ---
 
 # The rewake shell
@@ -227,7 +227,7 @@ wrapper in the shell does the same for main (`terminal.UTF8Locale`), whose worke
   seconds for its command, and the releases of the prefix and of the key taken are swallowed. The
   commands: `n`/`p` the next or previous tab; `1`–`9` a worker, `0` or `m` main, each focused;
   ← → the focus to main or to the chosen worker; `z` zooms the focused program or ends the zoom;
-  the prefix again sends Ctrl+\\ to the focused program; any other key cancels.
+  `b` opens the briefs ([below](#the-briefs)), and closes them while they show; the prefix again sends Ctrl+\\ to the focused program; any other key cancels.
 - **The room** comes from rewake's own commands, polled once a second (`shell/src/room.ts`):
   `rewake space list --json` for the spaces, which carries each open space's socket path so the
   shell never builds a path itself, and whose `mainRun` reading `ended` begins the closing screen;
@@ -260,7 +260,9 @@ and the bar under the worker's.
   person's palette entry 2, and 8 for the grey, each with a fallback of its own
   (`shell/src/theme.ts`). In the wide layout, while main has the focus, the worker shown beside it
   is underlined: filled is where the keys go, underlined is shown beside it without them. A zoom
-  shows `zoomed` at the right end.
+  shows `zoomed` at the right end. The bar ends with a `briefs` button after the workers', two
+  columns apart, in the same grey with the terminal's foreground, since it names no program, bold
+  while the briefs show; a click on it opens or closes them.
 - **The hints** (`shell/src/hints.ts`): what the keys do now — where typing goes, the prefix
   commands that apply, and after a Ctrl+\\ the commands themselves until one is taken or the two
   seconds pass. A hint is a row of one table keyed by the context (main focused, a worker focused,
@@ -330,6 +332,39 @@ write-claude (code) · working · ⎇ wt-fd7596 · <model> low thinking · 23% 2
 - **How fresh**: a Claude Code worker's mod samples after each main-loop step's response, at a
   turn's end and with each heartbeat ([claude.md](claude.md#telemetry)), so the context grows
   through a long turn; pi publishes on its own events. The poll adds up to a second.
+
+## The briefs
+
+A brief is a markdown document main keeps in the room for one task ([roadmap/briefs.md](roadmap/briefs.md));
+the person reads them here and edits nothing. The prefix and `b`, or a click on the bar's `briefs`
+button, opens a modal (`shell/src/briefs.tsx`), the layer of the section on Solid above: wide, a box
+over the row of panes with four columns of the screen left on each side; narrow, the whole width.
+The panes are blurred under it and keep drawing; the keys are the modal's own, the prefix has one
+command left, `b`, which closes it, and a click on the bar's worker button closes it and chooses
+that worker. Closing gives the focus back to the pane on the next tick. The key works with no
+worker, though the button and its hint show only while one is up.
+
+- **The list**: one row per brief, `3 · Auth refactor · 2/5 · 4 comments · write-claude, review-claude`
+  (`rowOf`, `shell/src/briefs.ts`), open ones first, then the closed ones in the faint colour with
+  `closed`, each group as the CLI sorts it, newest first. A binding that has ended — its run
+  `ended`, or the brief closed — is faint, and marked `(ended)` in an open brief. ↑ ↓ and Enter, or
+  a click on a row, open one, Esc closes the modal; an empty list says main makes briefs with
+  `rewake brief new`. The selected row is drawn in a pane's selection colours, and stays on its
+  brief when a poll changes the order.
+- **One brief**: a line with its number, title, done of total and who is bound, then a scrolling
+  box holding the text, rendered by OpenTUI's `<markdown>` (headings, emphasis, fenced code and
+  lists in the shell's colours; a task-list line shows as its `- [ ]` or `- [x]`), a rule, and the
+  comments, each its author and time (the person's clock) over its text. ↑ ↓, PgUp PgDn, Home End
+  and the wheel scroll; Esc or Backspace goes back to the list. The compiled shell draws it: the
+  default tree-sitter client `<markdown>` starts works inside `bun build --compile`, checked on
+  October 26, 2026 on Linux x64.
+- **How it reads.** By rewake's commands, as main's run, as the strip does (the identity found
+  for the strip, `mainAs` in `shell/src/room.ts`): `rewake brief list --closed --json` once a second
+  while the list shows and `rewake brief show <id> --json` once a second while a brief shows, nothing
+  while the modal is closed (`poll`, `shell/src/briefs.ts`). An answer is drawn only when it differs
+  from the last, and the scroll position stays. A read that fails, does not parse, or comes before
+  main's run is known shows one line on the modal's bottom row in place of its keys and is
+  replaced by the next good answer; it never ends the shell.
 
 ## How rewake starts the shell, and how it ships
 
