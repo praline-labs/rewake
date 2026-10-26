@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strconv"
 	"syscall"
 	"time"
@@ -146,12 +145,18 @@ func postLine(ctx context.Context, socket string, body modhost.StatusLineRequest
 	}
 }
 
-// personal runs the status line the user's settings.json names — the
-// workers' folder for a worker, the person's own for main — with the same
-// input, and copies its output: the overlay's own statusLine shadows it, and
-// the person's line should not be lost to the cache's.
+// personal runs the person's own status line — the one their settings name
+// for the session's project (ownStatusLine) — with the same input, and
+// copies its output: the run's own statusLine shadows it, and the person's
+// line should not be lost to the cache's.
 func personal(ctx context.Context, input []byte, out io.Writer) {
-	line, _ := ownStatusLine()
+	var seen struct {
+		Workspace struct {
+			ProjectDir string `json:"project_dir"`
+		} `json:"workspace"`
+	}
+	_ = json.Unmarshal(input, &seen)
+	line := ownStatusLine(os.Getenv(configDirEnv), projectDir(seen.Workspace.ProjectDir))
 	if line.Type != "command" || line.Command == "" {
 		return
 	}
@@ -169,43 +174,4 @@ func personal(ctx context.Context, input []byte, out io.Writer) {
 	command.WaitDelay = 500 * time.Millisecond
 	_ = command.Run()
 	_, _ = out.Write(printed.Bytes())
-}
-
-// personalLine is the statusLine of the user's settings.json, as far as
-// rewake reads it: the command it runs, and the interval the overlay carries
-// over.
-type personalLine struct {
-	Type    string `json:"type"`
-	Command string `json:"command"`
-	// Kept as read, json.Number for a number: a value of another type is
-	// Claude Code's to judge, and must not lose the person the command.
-	RefreshInterval any `json:"refreshInterval"`
-}
-
-// ownStatusLine reads the statusLine of the user's settings.json, nothing
-// else of it: the folder Claude Code reads as the user's, CLAUDE_CONFIG_DIR —
-// the workers' folder in a worker — else ~/.claude. A file that is missing or
-// unreadable has none.
-func ownStatusLine() (personalLine, error) {
-	folder := os.Getenv(configDirEnv)
-	if folder == "" {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return personalLine{}, err
-		}
-		folder = filepath.Join(home, ".claude")
-	}
-	data, err := os.ReadFile(filepath.Join(folder, "settings.json"))
-	if err != nil {
-		return personalLine{}, err
-	}
-	var settings struct {
-		StatusLine personalLine `json:"statusLine"`
-	}
-	decoder := json.NewDecoder(bytes.NewReader(data))
-	decoder.UseNumber()
-	if err := decoder.Decode(&settings); err != nil {
-		return personalLine{}, err
-	}
-	return settings.StatusLine, nil
 }

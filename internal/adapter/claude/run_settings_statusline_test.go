@@ -44,6 +44,8 @@ func TestRunSettingsSetTheStatusLineOfARunWithAMod(t *testing.T) {
 func TestMainsLaunchGetsTheStatusLineAlone(t *testing.T) {
 	folder := t.TempDir()
 	t.Setenv(configDirEnv, folder)
+	// Main's project is the directory it starts in, here one with no layers.
+	t.Chdir(t.TempDir())
 	own := `{"model":"x","statusLine":{"type":"command","command":"mine","refreshInterval":7,"padding":2}}`
 	if err := os.WriteFile(filepath.Join(folder, "settings.json"), []byte(own), 0o600); err != nil {
 		t.Fatal(err)

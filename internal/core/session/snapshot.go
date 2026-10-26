@@ -42,8 +42,9 @@ type Snapshot struct {
 	// EffortSource is EffortFromLaunch when Effort is what the launch passed,
 	// not what the harness was seen to run at; empty when observed.
 	EffortSource string `json:"reasoningEffortSource,omitempty"`
-	// Thinking says whether the model's thinking is on, as the harness tells
-	// it; nil where it does not, or where the model has no thinking.
+	// Thinking says whether thinking is on, as the harness tells it: Claude
+	// Code's session setting, pi's level for a model with reasoning; nil
+	// where the harness does not tell.
 	Thinking    *bool      `json:"thinking,omitempty"`
 	SettingsAt  *time.Time `json:"settingsObservedAt"`
 	Compactions *uint64    `json:"completedCompactions"`

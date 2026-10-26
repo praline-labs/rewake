@@ -693,6 +693,15 @@ strings of the installed binary:
   turned off, and on for a model that rejects disabled thinking whatever the setting. A model
   without thinking reads `true` as well, so `enabled` alone does not say a model thinks.
 - `$.config.list()` has a `thinking` row (2.1.302, above), the setting rather than the session.
+- Nothing of the mod says what a request asked of thinking: `turn.step` carries `agentId`,
+  `effort`, `index`, `messageCount`, `model` and `turnId`, and its response streams thinking
+  chunks, which say thinking happened, not that it is on. A review's probe on an old model saw
+  `thinking.enabled` `true`.
+- Project and local settings: `<project>/.claude/settings.json`, and `settings.local.json` at the
+  repository's canonical root — the main checkout for a linked worktree — when the session starts
+  below it and the root, its `.git` and `.claude` are the user's, else in the session's own
+  directory. A project-only `statusLine` was drawn before rewake's overlay and gone after it, until
+  `rewake statusline` read the project's layers (review, October 26, 2026).
 
 So main's launch passes rewake's status line as a worker's does, and the host takes the name and
 `thinking.enabled` from it ([claude.md](claude.md#telemetry)). Live the same day, a main of a dev

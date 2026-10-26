@@ -134,7 +134,8 @@ picker — at once, before any request, and the main loop's latest model request
 whichever source last changed its value is shown. Before either reports, it is the launch's own
 `--effort`, shown as `"high" (launch)` and in JSON with `reasoningEffortSource: "launch"`, and
 unknown when the launch passed none. The model's display name (`configuredModelName`) and
-whether its thinking is on (`thinking`) come from the same status line, main's as a worker's;
+the session's thinking setting (`thinking`, on for a model without thinking as well) come from
+the same status line, main's as a worker's;
 `rewake list` drops a trailing parenthesis from the name. Not live: a session whose status line
 does not run — a launch with no run directory, an untrusted workspace, a main launched with a
 `--settings` of its own — shows the request's effort only, a turn late, the model's id and no

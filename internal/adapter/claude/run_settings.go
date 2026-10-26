@@ -129,7 +129,8 @@ func statusLineSetting(executable string, every any) map[string]any {
 // mainSettings is the one --settings main's launch passes: the status line
 // alone, so the host hears the model's name, its thinking, the cache's life
 // and a changed effort as a worker's does (docs/claude.md#the-cache-ttl). It
-// reads only the statusLine of the person's own settings. None where the
+// reads only the statusLine of the person's own settings (ownStatusLine), for
+// its interval. None where the
 // launch has no run directory for the mod, under --command, whose wrapper
 // decides the configuration, or where the person passes a --settings of
 // their own, which a second would replace.
@@ -144,7 +145,8 @@ func mainSettings(request adapter.LaunchRequest, args []string) profile {
 	if err != nil {
 		return profile{}
 	}
-	own, _ := ownStatusLine()
+	cwd, _ := os.Getwd()
+	own := ownStatusLine(os.Getenv(configDirEnv), cwd)
 	data, err := json.Marshal(map[string]any{"statusLine": statusLineSetting(executable, own.RefreshInterval)})
 	if err != nil {
 		return profile{}

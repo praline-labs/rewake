@@ -228,9 +228,9 @@ that binary, for what needs a login, a request or a feature. "Used" names what r
   the first response the counts are 0 and the rest `null` **[live]**; unused (the mod reads
   `$.session.usage()`).
 - `exceeds_200k_tokens`, `fast_mode` — `false`, `false` **[live]**; unused.
-- `thinking.enabled` — `true` **[live]**: on unless the session's thinking is off, and on for a
-  model that cannot turn it off; present for every model, one without thinking included
-  **[source, 2.1.310]**. **Used**: whether the session thinks, `rewake list`'s Thinking and the
+- `thinking.enabled` — `true` **[live]**: the session's thinking setting, on unless turned off, and
+  on for a model that cannot turn it off; present for every model, one without thinking included
+  **[source, 2.1.310]**. **Used**: the session's thinking setting, `rewake list`'s Thinking and the
   strip ([research-claude-mod.md](research-claude-mod.md#the-models-name-and-thinking)).
 - `effort.level` — the session's effort setting: `high` from `--effort high`, `max` right after
   `/effort max`, the picker's choice right after it, all before any request **[live]**; absent

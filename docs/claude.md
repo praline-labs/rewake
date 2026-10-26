@@ -208,9 +208,10 @@ The model's name is the status line's `model.display_name`, posted the same way
 ([research](research-claude-mod.md#the-models-name-and-thinking)); it follows `/model`, and
 `rewake list` shows it, less a trailing parenthesis such as ` (1M context)` — the native window,
 which the Context column shows as the run is held to it — over the template's `launch.label` and
-the id. Whether the model thinks is the status line's `thinking.enabled`
-(`StatusLineRequest.thinking`, `thinking` of the telemetry), kept the same way; Claude Code tells
-it for every model, so a model without thinking reads as on.
+the id. The session's thinking setting is the status line's `thinking.enabled`
+(`StatusLineRequest.thinking`, `thinking` of the telemetry), kept the same way. It is the setting,
+not what a request asked: no event of the mod carries a request's thinking. Known limit: Claude
+Code tells it for every model, so a model without thinking reads as on.
 
 Effort comes from two sources, and the host shows the one whose value changed last: what the
 latest main-loop `turn.step` asked for, and the status line's `effort.level`, which `rewake
@@ -249,16 +250,20 @@ The mod cannot read how long the prompt cache lives; Claude Code's status-line i
 as `prompt_cache` (`warm`, `ttl` of `5m` or `1h`, `expires_at` in epoch seconds, …) once a
 request was made (read from the strings of 2.1.302). Every run with a mod therefore sets
 `statusLine` in its `--settings` — `'<rewake>' statusline`, `refreshInterval` 30 or the person's
-own — which beats the user's `settings.json`: a worker's in its overlay over the folder's, main's
-in a `--settings` of that key alone over the person's own `~/.claude/settings.json` (or
-`$CLAUDE_CONFIG_DIR`'s), of which rewake reads only `statusLine`. Main has none where its launch
+own — which beats every settings file but a managed one: a worker's in its overlay, main's in a
+`--settings` of that key alone. Main has none where its launch
 passes a `--settings` of its own, which a second would replace — the launch says so in a note —
 and none under `--command`. Claude Code merges the key field by field, so the person's `padding`
 stands. The hidden `rewake statusline` reads that input, posts `ttl`, `expiresAt` and `warm`, the
-effort, the model's name and `thinking.enabled` to the run's host at `status/line`, and prints the
-person's own `statusLine` command from the user's `settings.json` (run with the same input) or
-nothing, always exiting 0; a status line in the project's or local settings is not run in its
-place. The expiry is absolute, so a slow timer loses nothing; the command runs after
+effort, the model's name and `thinking.enabled` to the run's host at `status/line`, and prints
+what the person's own `statusLine` command prints, run with the same input, or nothing, always
+exiting 0. The person's line is the one Claude Code would draw without rewake's, reading only
+`statusLine` of each file: the user's `settings.json` (`$CLAUDE_CONFIG_DIR`'s — the workers'
+folder for a worker — else `~/.claude`'s), then the project's `.claude/settings.json`, then its
+`.claude/settings.local.json` — at the repository's root, the main checkout's for a linked
+worktree, as Claude Code keeps it since 2.1.310 — each later file's keys over the earlier's; the
+project is the input's `workspace.project_dir`. A managed `statusLine` outranks rewake's, which then
+does not run. The expiry is absolute, so a slow timer loses nothing; the command runs after
 each response too.
 
 The post (2 s) and the person's command (5 s) run side by side with deadlines of their own; the

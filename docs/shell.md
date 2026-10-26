@@ -301,8 +301,8 @@ write-claude (code) · working · ⎇ wt-fd7596 · <model> low thinking · 23% 2
 - **What it says**: the session and its type, the activity (`working`, `waiting for <name>`,
   `waiting at a dialog` ([a dialog nobody is asked about](permission-requests.md#a-dialog-nobody-is-asked-about)),
   `idle`, `, compacting`, ` (stale)` once the run stopped publishing), the branch, the model and
-  effort, with `thinking` after them while the harness says the model's thinking is on (nothing
-  when it is off or not told), the context as filled percent, used and window, and the prompt cache. A value rewake does
+  effort, with `thinking` after them while the harness says thinking is on — Claude Code's
+  session setting, pi's level for a model with reasoning — and nothing when it is off or not told, the context as filled percent, used and window, and the prompt cache. A value rewake does
   not know is left out; a window without a measure reads `–/<window>`. The model reads as the
   harness's display name (`configuredModelName` of the telemetry, less a trailing parenthesis),
   else the template's
