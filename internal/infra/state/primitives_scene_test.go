@@ -67,6 +67,7 @@ func writePrimitives(t *testing.T, base, dir string) (map[string]func() error, s
 		"WithNameLock":     func() error { return WithNameLock(dir, "api", nothing) },
 		"WithRoomLock":     func() error { return WithRoomLock(dir, nothing) },
 		"WithSpaceLock":    func() error { return WithSpaceLock(dir, nothing) },
+		"WithBriefLock":    func() error { return WithBriefLock(dir, nothing) },
 		"TryWithNameLock":  func() error { _, err := TryWithNameLock(dir, "api", nothing); return err },
 		"WithMailboxLock": func() error {
 			return WithMailboxLock(context.Background(), dir, "api", nothing)

@@ -125,9 +125,10 @@ has the writers' own bound (`shareWait`, ten seconds), which a switch that stall
 holding the lock exclusive uses up: then the launch is refused as busy.
 
 **Lock order.** The build lease comes before every other lock of the room — launch, name,
-mailbox, control — and before a worktree is created; no path takes it while
+mailbox, control, space, brief — and before a worktree is created; no path takes it while
 holding any of them, and there is no upgrade under a mailbox lock. No pruning and no name
-lock inside a mailbox section.
+lock inside a mailbox section. The brief lock is taken with no other lock of the room held,
+and nothing is taken inside it ([roadmap/briefs.md](../roadmap/briefs.md)).
 
 **Who owns what.** `infra/state` owns an opaque authorization scoped to one room;
 `infra/build` owns the identity and the acquisition and calls `state`, which never imports
@@ -199,9 +200,9 @@ expand — has no form, takes no lease and writes nothing.
 
 | Class | Forms | Why |
 |---|---|---|
-| change | a launch; `send` in every kind; `withdraw`; `edit`; `inbox`, `inbox --message`; `pending`; `compact`, `interrupt`; `answer`; `space open`, `space close`; `worktree enter`, `rm`, `land`, `finish` | they write the room |
+| change | a launch; `send` in every kind; `withdraw`; `edit`; `inbox`, `inbox --message`; `pending`; `compact`, `interrupt`; `answer`; `space open`, `space close`; `brief new`, `edit`, `close`, `tick`, `comment`; `worktree enter`, `rm`, `land`, `finish` | they write the room |
 | change | `inbox --peek` | it takes the mailbox lock, which orders it against a read in progress; taking a lock is a write |
-| view | bare `rewake`, `guide`, `--help`, `--version`, each with `--json`; `list`; `whoami`; `workers`; `statusline`; `inbox --owed`, `inbox --awaited`; `worktree ls`, and a `worktree` or `space` call with no change verb; `space list` | they answer from what is there |
+| view | bare `rewake`, `guide`, `--help`, `--version`, each with `--json`; `list`; `whoami`; `workers`; `statusline`; `inbox --owed`, `inbox --awaited`; `worktree ls`, and a `worktree`, `space` or `brief` call with no change verb; `space list`; `brief list`, `brief show` | they answer from what is there |
 
 Each command's entry in the command table (`internal/cli/registry.go`, `access.go`) is the
 source; a test fails on a form without a class.
@@ -224,8 +225,8 @@ any state: a path in a state directory, as written or where its links lead, is g
 the lease of the room it lies in, and a spelling that only cleans to the claimed path is
 refused, since the kernel follows a link before a `..`. The write primitives are
 `WriteAtomic`, `WriteAtomicHeld`, `PublishExclusive`, `Remove`, `Rename`, `EnsureSubdir`,
-the locks (`WithRoomLock`, `WithNameLock`, `TryWithNameLock`, `WithMailboxLock`,
-`WithMailboxLockAt`, `TryHold`), and the os calls they name behind the same guard
+the locks (`WithRoomLock`, `WithNameLock`, `TryWithNameLock`, `WithSpaceLock`, `WithBriefLock`,
+`WithMailboxLock`, `WithMailboxLockAt`, `TryHold`), and the os calls they name behind the same guard
 (`OpenFile` with a write flag, `WriteFile`, `Link`, `Move`, `Touch`, `Discard`,
 `RemoveAll`, `Flock`); the read clock goes through `state.Counter`, the sockets through
 `state.Listen`, whose close removes the path once. A static test over `internal/`, in both

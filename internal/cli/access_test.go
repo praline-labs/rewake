@@ -53,7 +53,13 @@ func documentedForms(launch string) []formCase {
 		// Refused by the handler before any read.
 		{[]string{"space"}, view},
 		{[]string{"space", "open"}, view},
+		{[]string{"brief", "list"}, view},
+		{[]string{"brief", "list", "--closed", "--json"}, view},
+		{[]string{"brief", "show", "3"}, view},
+		{[]string{"brief", "show", "3", "--markdown"}, view},
 		// Refused by the handler before any read.
+		{[]string{"brief"}, view},
+		{[]string{"brief", "drop", "3"}, view},
 
 		{[]string{launch}, change},
 		{[]string{launch}, change},
@@ -73,6 +79,11 @@ func documentedForms(launch string) []formCase {
 		{[]string{"worktree", "land", "fix-login", "--into", "release"}, change},
 		{[]string{"worktree", "finish", "fix-login"}, change},
 		{[]string{"space", "open", "api", "--alias", "worker"}, change},
+		{[]string{"brief", "new", "# Plan"}, change},
+		{[]string{"brief", "edit", "3", "--rev", "7", "--file", "plan.md"}, change},
+		{[]string{"brief", "close", "3"}, change},
+		{[]string{"brief", "tick", "3", "2", "--edition", "1", "--undo"}, change},
+		{[]string{"brief", "comment", "3", "--", "-- a dash first"}, change},
 	}
 	for _, kind := range sendKinds {
 		if kind.flag.Flag != "" {

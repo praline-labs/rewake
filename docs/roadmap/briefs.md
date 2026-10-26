@@ -79,7 +79,7 @@ The `brief` group of the command table, with `--json` on each, examples parsed a
 | `brief edit <id> --rev <n> <text>` or `--file <path>` | main | change | replaces the text whole, refused unless `n` is still the brief's revision; the ticks since the last edit end there |
 | `brief close <id>` | main | change | moves it to `closed/`; every binding ends |
 | `brief list [--closed]` | main | view | open briefs, or closed ones too: id, title, done of items, comments, who is bound and whether that run lives |
-| `brief show <id> [--markdown]` | main, a bound run | view | a header with the edition and the revision, the text with ticks applied and each item's number, the items, the comments, the bound runs; `--markdown` prints only the text with ticks applied, no numbers, for main to edit |
+| `brief show <id> [--markdown]` | main, a bound run | view | a header with the edition and the revision, the bound runs, the text with ticks applied and each item's number, the comments; `--markdown` prints only the text with ticks applied, no numbers, for main to edit |
 | `brief tick <id> <n> --edition <e> [--undo]` | a bound run | change | ticks or unticks item `n` of edition `e`, refused once main edited since; answers the item's text |
 | `brief comment <id> -- <text>` | a bound run | change | at most 1000 characters (code points), not empty |
 | `send <worker> <text> --brief <id>` | main | change | a task or `--question` that binds the brief to the recipient's run and carries the brief; refused beside `--notify` |
@@ -105,6 +105,24 @@ The `brief` group of the command table, with `--json` on each, examples parsed a
   text sends a letter, with `--brief` again.
 - `rewake edit` of a task with a brief keeps the brief in its replacement; `withdraw` leaves the
   binding.
+
+**The JSON the shell reads**, a field added, never renamed or retyped (held by
+`internal/cli/brief_test.go`); times are RFC 3339:
+
+```
+brief list [--closed] --json  {room, briefs: [summary], unreadable: [{path, why}]}
+                              open briefs, then closed ones, each newest first
+summary                       {id, title, closed, created, closedAt?, edition, revision,
+                               done, total, commentCount,
+                               bound: [{name, epoch, since, run: running|ended|unknown}]}
+brief show <id> --json        summary and {text, items: [{n, text, done}],
+                               comments: [{n, from, at, edition, text}]}
+```
+
+`text` is the current text with the ticks applied and no numbers, what `<markdown>` renders; a
+binding has ended when the brief is closed or its `run` is `ended`. Main may show a closed
+brief; `--markdown` changes nothing under `--json`. The changes answer: `new` and `edit` a
+summary, `tick` `{id, edition, item}`, `comment` `{id, n}`, `close` `{id, already}`.
 
 ## The tools
 

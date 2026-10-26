@@ -21,6 +21,8 @@ const (
 	awaitingDir  = "awaiting"
 	answeringDir = "answering"
 	spacesDir    = "spaces"
+	briefsDir    = "briefs"
+	closedDir    = "closed"
 )
 
 // SessionPath is the record of one session.
@@ -86,6 +88,13 @@ func SpacesPath(dir string) string { return filepath.Join(dir, spacesDir) }
 // SpacePath is the record of one space, by its id: a name is reused once its
 // space is closed, while the closed record stays for what a restore reads.
 func SpacePath(dir, id string) string { return filepath.Join(dir, spacesDir, id+".json") }
+
+// BriefsPath is the directory of the room's open briefs (docs/roadmap/briefs.md).
+func BriefsPath(dir string) string { return filepath.Join(dir, briefsDir) }
+
+// ClosedBriefsPath is the archive of the room's closed briefs, inside
+// BriefsPath, so the brief lock covers a close's move.
+func ClosedBriefsPath(dir string) string { return filepath.Join(dir, briefsDir, closedDir) }
 
 // SpaceSocketPath is where a space host serves its worker's screen to the
 // shell's panes, by the space's id. A space id has no dot, so it never meets

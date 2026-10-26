@@ -174,6 +174,23 @@ func WithSpaceLock(dir string, fn func() error) error {
 	return withLock(filepath.Join(SpacesPath(dir), ".lock"), "the room's spaces", fn)
 }
 
+// WithBriefLock runs fn while holding the lock of the room's briefs. An id is
+// the highest plus one, a log entry's number too, and a tick checks the
+// brief's edition and bindings before it adds its entry: two writers between
+// those steps would take one number or act on what the other was changing.
+// It is taken after the lease with no other lock of the room held, and
+// nothing is taken inside it. The directory is made when missing, under the
+// same guard as the lock.
+func WithBriefLock(dir string, fn func() error) error {
+	if err := guard(opLock, BriefsPath(dir)); err != nil {
+		return err
+	}
+	if err := ensureDir(BriefsPath(dir)); err != nil {
+		return err
+	}
+	return withLock(filepath.Join(BriefsPath(dir), ".lock"), "the room's briefs", fn)
+}
+
 // ErrMailboxBusy means the mailbox lock was held by somebody else for longer
 // than the caller was willing to wait.
 var ErrMailboxBusy = errors.New("the mailbox is busy")
