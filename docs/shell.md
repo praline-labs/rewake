@@ -349,8 +349,11 @@ worker back, and `b` while the briefs have the keys goes back to what was chosen
 before them. Main's pane stays as it is: the keys reach the briefs only while their pane has the
 focus, as a worker's reach its terminal, and a click on main's pane or strip gives main the keys
 with the briefs still beside it. The prefix's commands all apply but the prefix twice, since the
-briefs have no program to pass Ctrl+\\ to. The key works with no worker, though the button and its hint
-show only while one is up. The view's state — the brief opened, the row chosen, the last answers —
+briefs have no program to pass Ctrl+\\ to. With no worker up the briefs do not open, by the key or
+otherwise, and they leave when the last worker goes: they are the navigation's, which shows only
+while a worker is up (main's decision, October 26, 2026). A press on a row gives the briefs the focus
+before it opens the brief, since the row then unmounts and the press bubbles no further; their
+scrollboxes take no focus, so the keys reach the view once. The view's state — the brief opened, the row chosen, the last answers —
 outlives a worker being chosen over it, as a worker's screen does.
 
 - **The list**: one row per brief, `3 · Auth refactor · 2/5 · 4 comments · write-claude, review-claude`

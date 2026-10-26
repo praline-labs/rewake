@@ -58,8 +58,10 @@ export function takeSpaces(
   for (const pane of was) if (!next.includes(pane)) pane.source?.close();
   if (next.length === was.length && next.every((p, i) => p === was[i])) return;
   setWorkers(next);
-  if (chosen() !== briefs && (!paneOf(chosen()) || chosen() === "main")) setChosen(next[0]?.id);
-  if (focused() !== briefs && !paneOf(focused())) show("main");
+  // The briefs are the navigation's, which shows only while a worker is up.
+  const keep = (id: string | undefined) => id === briefs && next.length > 0;
+  if (!keep(chosen()) && (!paneOf(chosen()) || chosen() === "main")) setChosen(next[0]?.id);
+  if (!keep(focused()) && !paneOf(focused())) show("main");
 }
 
 // cycle is what the prefix's n and p go through: main, the workers and,
@@ -72,6 +74,7 @@ export const cycle = () => [
 
 export function show(id: string | undefined) {
   if (id === briefs) {
+    if (workers().length === 0) return;
     if (focused() !== briefs) before = { chosen: chosen(), focused: focused() };
     setChosen(briefs);
     setFocused(briefs);

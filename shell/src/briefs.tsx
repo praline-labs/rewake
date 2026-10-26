@@ -67,6 +67,9 @@ function markdownStyle(renderer: CliRenderer, theme: Theme) {
 
 // BriefsView is the briefs in a pane width by height; the keys reach it only
 // while active, as a worker's reach its terminal only while it has the focus.
+// choose gives it the focus: a press on a row calls it before the row opens,
+// since the opened brief unmounts the row and the press bubbles no further.
+// Its scrollboxes take no focus, so a press never gives them the keys too.
 export function BriefsView(props: {
   rewake: string;
   room: string;
@@ -74,6 +77,7 @@ export function BriefsView(props: {
   width: number;
   height: number;
   active: () => boolean;
+  choose: () => void;
 }) {
   const renderer = useRenderer();
   const theme = props.theme;
@@ -172,7 +176,11 @@ export function BriefsView(props: {
                       .join("")}`}
                   </span>
                 </text>
-                <scrollbox ref={(s: ScrollBoxRenderable) => (scroll = s)} flexGrow={1}>
+                <scrollbox
+                  ref={(s: ScrollBoxRenderable) => (scroll = s)}
+                  flexGrow={1}
+                  focusable={false}
+                >
                   <markdown content={d().text} syntaxStyle={style} fg={theme.text} />
                   <text fg={faint} content={"─".repeat(props.width)} height={1} />
                   <Show
@@ -197,7 +205,7 @@ export function BriefsView(props: {
           </Show>
         }
       >
-        <scrollbox ref={(s: ScrollBoxRenderable) => (rows = s)} flexGrow={1}>
+        <scrollbox ref={(s: ScrollBoxRenderable) => (rows = s)} flexGrow={1} focusable={false}>
           <Show
             when={list().length > 0 || lost().length > 0}
             fallback={
@@ -212,7 +220,12 @@ export function BriefsView(props: {
                   wrapMode="none"
                   fg={i() === selected() ? theme.selection.fg : theme.text}
                   bg={i() === selected() ? theme.selection.bg : undefined}
-                  {...{ onMouseDown: () => open(brief.id) }}
+                  {...{
+                    onMouseDown: () => {
+                      props.choose();
+                      open(brief.id);
+                    },
+                  }}
                 >
                   <For each={rowOf(brief)}>
                     {(p) => (

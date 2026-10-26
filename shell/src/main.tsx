@@ -326,6 +326,7 @@ function App() {
                     width={Math.max(lay().worker - 2, 1)}
                     height={height()}
                     active={onBriefs}
+                    choose={() => paneHooks.pressed(briefs)}
                   />
                 </box>
                 <BriefsStrip
