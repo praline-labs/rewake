@@ -12,7 +12,6 @@ const (
 	TurnBoundaryCapability Capability = "turn-boundary"
 	TelemetryCapability    Capability = "telemetry"
 	ControlCapability      Capability = "control"
-	PersonUICapability     Capability = "person-ui"
 	// SpacesCapability is a main run that hosts spaces: it is never planned,
 	// only proven by the run (LiveReporter) and withdrawn when lost.
 	SpacesCapability Capability = "spaces"
@@ -29,9 +28,6 @@ type Offer struct {
 	// Telemetry says the run reports its state.
 	Telemetry bool
 	Control   ControlOffer
-	// PersonUI says the session's mail state is shown to the person
-	// (stage 6).
-	PersonUI bool
 	// Spaces says a run of a role that opens spaces can host them once it
 	// proves it: the run reports SpacesCapability live, never its plan
 	// (docs/rules/adapter-api.md#spaces).
@@ -79,7 +75,7 @@ type TurnBoundaryOffer struct {
 // its own; one not offered is refused before a request is written
 // (docs/remote-control.md).
 type ControlOffer struct {
-	Compact, Interrupt, Clear bool
+	Compact, Interrupt bool
 	// CompactFocus says a compaction may carry a focus: text the summary is
 	// to keep. Where the harness cannot pass one for a single compaction, a
 	// focus is a wrong call, refused before sending.
@@ -92,4 +88,4 @@ type ControlOffer struct {
 
 // Any says at least one verb is offered: the run then has a control
 // directory for the requests to arrive in.
-func (c ControlOffer) Any() bool { return c.Compact || c.Interrupt || c.Clear }
+func (c ControlOffer) Any() bool { return c.Compact || c.Interrupt }

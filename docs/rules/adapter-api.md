@@ -21,7 +21,7 @@ its types at a call site.
 ## The capabilities
 
 An adapter offers named capabilities: Launch, which is required — an adapter without it is no
-adapter — and Wake, TurnBoundary, Telemetry, Control, PersonUI and Spaces, each optional. What
+adapter — and Wake, TurnBoundary, Telemetry, Control and Spaces, each optional. What
 an adapter offers is static, read from the catalogue before a launch (`Offers`,
 `internal/adapter/offer.go`); what one run serves is the plan its `Launch` returns, and a
 capability is live for the run only where the offer and the plan both carry it, so an offer
@@ -34,7 +34,6 @@ with nothing in the plan behind it is never taken for served.
 | TurnBoundary | reports a turn's start and end, with the end's answer, and may confirm an end before it closes | publishes no report; a role that owes reports does not launch on it ([below](#turnboundary)) |
 | Telemetry | reports context, limits and cost | `list` and main see the state as unknown |
 | Control | compacts (with a focus where offered) and interrupts | `rewake compact` or `interrupt` to that session is a wrong call, exit 2, naming the missing verb |
-| PersonUI | shows the person the session's mail state | nothing beyond the notices; no adapter offers it |
 | Spaces | hosts spaces from a main run | `rewake space open` refuses, naming the missing level ([below](#spaces)) |
 
 The core does without what is missing and says so rather than pretending. Every turn end a
@@ -48,9 +47,6 @@ What each adapter offers today:
 | Claude Code | yes | reports, after the start, holds none | yes | compact with focus, interrupt | yes | `--session-id` |
 | pi | yes | reports, after the start, holds none | yes | compact with focus, interrupt | yes | `--session-id` |
 | fixture | yes | reports and holds | yes | compact with focus, interrupt | yes | none |
-
-`ControlOffer.Clear` exists and no adapter sets it: clearing a conversation is not built, and
-no command asks for it.
 
 Tests:
 - `internal/host/live_test.go` `TestARunThatReportsNoneHasItsPlanLive`
@@ -205,10 +201,6 @@ one for a single compaction, and interrupt the running turn. Requests travel as 
 run's control directory (`core/control`); the adapter decides how it hears them. A verb the
 adapter does not offer is refused by the CLI before a file is written
 ([remote-control.md](../remote-control.md)).
-
-### PersonUI
-
-The session's mail state shown to the person, a pane or a status. Offered by no adapter.
 
 ### Spaces
 

@@ -30,8 +30,8 @@ is in [research-claude-mod.md](research-claude-mod.md), each record with its ver
 | Spaces | a main run, once its hello is admitted | [rules/adapter-api.md](rules/adapter-api.md#spaces) |
 | Conversation | `--session-id <uuid>` | [rules/adapter-api.md](rules/adapter-api.md#conversation-names) |
 
-PersonUI is not offered: the person sees the workers in rewake's shell ([shell.md](shell.md)),
-never inside Claude Code. TurnBoundary, Telemetry, Control and Spaces are live only while the
+The person sees the workers in rewake's shell ([shell.md](shell.md)), never inside Claude
+Code. TurnBoundary, Telemetry, Control and Spaces are live only while the
 run's admitted hello keeps its heartbeat ([the live set](claude-turns.md#the-live-set)); Wake is
 the inbound lane's and does not depend on the mod.
 

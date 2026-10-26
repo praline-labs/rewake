@@ -32,7 +32,7 @@ what it taught goes into the living documents.
 - A headless worker as a fallback where no terminal is at hand.
 - A room panel, and panels that are not terminals, with the modal.
 - Conversation reset — `rewake clear` from main — and a conversation marker in `list` and in
-  notices (`ControlOffer.Clear` exists and nothing sets it).
+  notices.
 - A `rewake models` command listing the models and efforts a harness offers.
 - A slot in the room for heavy test runs: an agent takes it before a heavy run and waits for
   it, woken when it is its turn; it would replace the manual rule of `AGENTS.md`, "Checks".
