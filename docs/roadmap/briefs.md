@@ -21,33 +21,44 @@ Under the room, beside `inbox/` and `spaces/`:
 
 ```
 briefs/.lock                 one flock for every write under briefs/
-briefs/<id>/brief.md         main's text, as main wrote it
-briefs/<id>/brief.json       {id, created, edited, textRev, bound: [{name, epoch, since}]}
-briefs/<id>/log/<n>.json     {n, at, from, epoch, kind: comment|tick|untick, text | item, itemText, occurrence}
-briefs/closed/<id>/          a closed brief, moved whole; its brief.json gains closed
+briefs/<id>/brief.json       {id, created, bound: [{name, epoch, since}]}, closed once closed
+briefs/<id>/log/<n>.json     {n, at, from, epoch, kind: edit|tick|untick|comment, item, itemText | text}
+briefs/<id>/text/<n>.md      the text of edit n, as main wrote it
+briefs/closed/<id>/          a closed brief, moved whole
 ```
 
 - **A brief's id** is a positive integer, the highest in `briefs/` and `briefs/closed/` plus one,
   taken under the lock: short to type in `--brief 3`, and nothing for main to invent. A new brief
-  is written into `briefs/.tmp-<random>/` and renamed to `briefs/<id>`, so a brief is whole or
-  absent; a crash leaves a `.tmp-*` directory, which is never a record.
-- **The title** is the text's first `# ` heading, else its first line, cut to 60 characters.
+  — `brief.json`, its first text and edit 1 — is written into `briefs/.tmp-<random>/` and renamed
+  to `briefs/<id>`, so a brief is whole or absent; a crash leaves a `.tmp-*` directory, which is
+  never a record.
+- **The log** numbers every event of the brief from one counter: entry `n` is the highest plus one,
+  published with `state.PublishExclusive` under the lock, never edited or removed. An edit writes
+  `text/<n>.md` first and its entry `edit` last, so the entry is the commit point: a crash between
+  leaves a text no entry names, and nothing changed. The **current text** is the latest edit's;
+  the brief's **revision** is the number of its latest edit, tick or untick — comments leave it.
+- **The title** is the current text's first `# ` heading, else its first line, cut to 60
+  characters.
 - **An item** is a task-list line — `- [ ]`, `* [x]`, `1. [ ]`, nested or not, outside a fenced
-  block — numbered from 1 in the order of the text. A worker names it by that number; the answer
-  echoes the item's text. A tick is recorded by the item's text, whitespace collapsed, and its
-  occurrence among items of the same text, never by its number: an item main inserts above
-  another moves no tick. An item is done when the latest tick or untick of its text and
-  occurrence says so, else as main's own `[x]` in the text says; an item main rewords loses its
-  tick. The scan is a line scanner of rewake's own, no markdown dependency in Go.
-- **The log** is append only: entry `n` is the highest plus one, published with
-  `state.PublishExclusive` under the lock. Nothing in it is edited or removed.
+  block — numbered from 1 in the order of the current text; the scan is a line scanner of rewake's
+  own, no markdown dependency in Go. A worker names an item by that number, and the answer echoes
+  its text. A tick or untick is recorded against the edit it follows and the item's number, and
+  applies only until the next edit: an item is done when the latest tick or untick since the
+  latest edit says so, else as main's own `[x]` in the text says. Nothing is matched by text.
+- **An edit keeps the ticks by folding them into main's text.** Main edits the current text with
+  the ticks applied as `[x]` (`brief show <id> --markdown`), and `brief edit` names the revision it
+  started from: refused, exit 1, unless that is still the brief's revision, so a tick made since is
+  never written over; the refusal names the revision now and says to read it again. After the edit
+  the ticks live in main's text, where an item deleted, moved or reworded takes its own mark with
+  it. Rejected: ticks keyed by an item's text and its occurrence — two items "Run tests", the
+  first ticked and then deleted by main, and the second read done.
 - **Who writes what.** Every write is a change form holding the room's build lease, then
   `briefs/.lock` (`state.WithBriefLock`, a new lock primitive beside `WithRoomLock`, in the
-  seam's list of `rules/state.md`). Main writes `brief.md` and `brief.json` (`WriteAtomic`) and
-  moves a brief to `closed/` (`Rename`); a bound worker only adds to `log/`, after checking under
-  the same lock that the brief is open and its run is bound. A view takes no lock: each file is
-  whole by the atomic write, the set of them is no snapshot. The lock is taken after the lease
-  and with no other lock of the room held, and nothing is taken inside it.
+  seam's list of `rules/state.md`). Main writes `brief.json` (`WriteAtomic`), the texts and their
+  edits, and moves a brief to `closed/` (`Rename`); a bound worker only adds ticks and comments to
+  `log/`, after checking under the same lock that the brief is open and its run is bound. A view
+  takes no lock: each file is whole by the atomic write, the set of them is no snapshot. The lock
+  is taken after the lease and with no other lock of the room held, and nothing is taken inside it.
 - **The letter.** A task or question sent with `--brief` carries `brief: "<id>"`, an additive
   field of the message record (`mailbox-records.md`); the brief's text is not copied into it.
 
@@ -58,10 +69,10 @@ The `brief` group of the command table, with `--json` on each, examples parsed a
 | Form | Who | Class | What |
 |---|---|---|---|
 | `brief new <text>` or `--file <path>` | main | change | a new brief; answers its id and title. Text at most 64 KiB, not empty |
-| `brief edit <id> <text>` or `--file <path>` | main | change | replaces the text whole, `textRev` + 1; ticks follow their items' text |
+| `brief edit <id> --rev <n> <text>` or `--file <path>` | main | change | replaces the text whole, refused unless `n` is still the brief's revision; the ticks since the last edit end there |
 | `brief close <id>` | main | change | moves it to `closed/`; every binding ends |
 | `brief list [--closed]` | main | view | open briefs, or closed ones too: id, title, done of items, comments, who is bound and whether that run lives |
-| `brief show <id>` | main, a bound run | view | the text with ticks applied and each item's number, the items, the comments, the bound runs |
+| `brief show <id> [--markdown]` | main, a bound run | view | a header with the revision, the text with ticks applied and each item's number, the items, the comments, the bound runs; `--markdown` prints only the text with ticks applied, no numbers, for main to edit |
 | `brief tick <id> <n> [--undo]` | a bound run | change | ticks or unticks item `n`; answers the item's text |
 | `brief comment <id> -- <text>` | a bound run | change | at most 1000 characters (code points), not empty |
 | `send <worker> <text> --brief <id>` | main | change | a task or `--question` that binds the brief to the recipient's run and carries the brief; refused beside `--notify` |
@@ -131,11 +142,12 @@ is the CLI's check, so the tool and a command the model types from its shell ans
 - **One brief**: a `<scrollbox>` holding the text, rendered by OpenTUI's `<markdown>` (0.6.6, on
   `marked`, already in the shell's tree), then a rule and the comments, each
   `<name> · <time>` over its text. The wheel, ↑ ↓, PgUp PgDn, Home End scroll; Esc or Backspace goes
-  back to the list. No tree-sitter client is given, so fenced code shows unhighlighted. Rejected:
-  plain text — a table or nested list main writes would read badly, and rendering adds no
-  dependency. If `<markdown>` does not run in the compiled shell, the text is shown plain.
+  back to the list. Given no `treeSitterClient`, `<markdown>` starts OpenTUI's default one; a
+  probe of a compiled shell (review, October 26, 2026) drew headings, a checkbox and fenced code.
+  Rejected: plain text — a table or nested list main writes would read badly, and rendering adds
+  no dependency.
 - **How it reads and learns of a change**: by rewake's commands, as main's run, like the strip —
-  `rewake brief list --json` once a second while the list shows, `rewake brief show <id> --json`
+  `rewake brief list --closed --json` once a second while the list shows, `rewake brief show <id> --json`
   once a second while a brief shows, nothing while the modal is closed. A new answer that differs
   from the last is drawn, the scroll position kept. Rejected: watching `briefs/` from the shell — it
   would build state paths itself and read records past the CLI's checks.
@@ -154,14 +166,14 @@ reads it with its task, ticks and comments, main's `show` sees both.
 
 ## Known limits
 
-- A tick names an item by the number last read; after main's edit in between it may tick another,
-  and the answer's text shows which, to untick.
+- A tick names an item by the number the worker last read; after main's edit in between it may
+  tick another, and the answer's text shows which, to untick.
 - The line scanner and `marked` may disagree on an odd checkbox (inside HTML, a lazy continuation):
   one may not be tickable, or drawn as text.
 - The right to a brief is the run's identity from its environment, as a letter's sender is: a guard
   against mistakes, not against a session forging another's variables.
-- A send that fails after binding leaves the worker bound to a brief it never got; it can only
-  comment.
+- A send that fails after binding leaves the worker bound to a brief it never got; it may read,
+  tick and comment there, as any bound run.
 - Briefs live in the state directory: a reboot that clears the temporary directory takes them, as
   it takes mail. Closed ones are not swept.
 - The shell shows a change within a second and the command's time.
