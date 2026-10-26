@@ -335,7 +335,7 @@ write-claude (code) · working · ⎇ wt-fd7596 · <model> low thinking · 23% 2
 
 ## The briefs
 
-A brief is a markdown document main keeps in the room for one task ([roadmap/briefs.md](roadmap/briefs.md));
+A brief is a markdown document main keeps in the room for one task ([briefs.md](briefs.md));
 the person reads them here and edits nothing. The prefix and `b`, or a click on the bar's `briefs`
 button, opens a modal (`shell/src/briefs.tsx`), the layer of the section on Solid above: wide, a box
 over the row of panes with four columns of the screen left on each side; narrow, the whole width.
@@ -366,6 +366,10 @@ worker, though the button and its hint show only while one is up.
   from the last, and the scroll position stays. A read that fails, does not parse, or comes before
   main's run is known shows one line on the modal's bottom row in place of its keys and is
   replaced by the next good answer; it never ends the shell.
+- **Rejected**: plain text for the brief — a table or nested list main writes would read badly, and
+  `<markdown>` (on `marked`, already in the shell's tree) adds no dependency; and watching `briefs/`
+  from the shell, which would build state paths itself and read records past the CLI's checks.
+  The shell shows a change within a second and the command's time.
 
 ## How rewake starts the shell, and how it ships
 

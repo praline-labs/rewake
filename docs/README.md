@@ -55,7 +55,7 @@ A person using rewake reads [user-guide.md](user-guide.md) alone. An agent worki
 - **A design page** — for a step that changes the protocol or the state (`AGENTS.md`, "Delegation
   and review"), `roadmap/<step>.md`, named by the step's entry: what will be built, not yet true.
   When the step lands, what it settled goes into the living documents and the page leaves the
-  roadmap. Open now: [roadmap/briefs.md](roadmap/briefs.md).
+  roadmap. None is open now.
 - **The project's goal** — [project.md](project.md), changed only by the owner's decision; the
   project's words in `GLOSSARY.md`; how the project is built and its checks in `AGENTS.md`.
 

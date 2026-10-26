@@ -14,7 +14,7 @@ then. The finish report stays mail and is not copied into the brief. The word is
 briefing, the launch text of `internal/core/brief`; the code lives in `internal/core/taskbrief`
 (the records), `internal/cli/brief*.go` and `send_brief.go` (the commands), and the tools in
 `internal/adapter/claude/mod/hooks/briefs.ts` and `internal/adapter/pi/briefs.ts`. The shell's
-view is still the roadmap's ([roadmap/briefs.md](roadmap/briefs.md)).
+view is in [shell.md](shell.md#the-briefs).
 
 ## The records
 
