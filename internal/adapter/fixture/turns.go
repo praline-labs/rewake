@@ -94,13 +94,6 @@ func (b *backend) turnStarted(l *link, frame Frame) Frame {
 	return Frame{OK: true}
 }
 
-// turnEnded is an end's whole handling on one goroutine: its capture, then the
-// core's decision.
-func (b *backend) turnEnded(l *link, frame Frame) Frame {
-	completion, err := b.endOf(l, frame)
-	return b.decide(l, completion, frame.Hold, err)
-}
-
 // decide hands an end to the core and answers with its decision: "" when it
 // was published, the reason to continue with when it was held.
 func (b *backend) decide(l *link, completion adapter.TurnEnd, holdable bool, err error) Frame {

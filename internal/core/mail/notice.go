@@ -41,15 +41,8 @@ func Notice(message Message) string {
 	if count == 1 {
 		noun = "message"
 	}
-	shown := message
-	if message.Latest != nil {
-		shown = *message.Latest
-	}
-	line := fmt.Sprintf("Rewake: %s %s, %d new %s", shown.From, KindOf(shown), count, noun)
-	if correcting(message) && shown.ID != message.ID {
-		line += correctionLines([]Message{message})
-	}
-	if first := shownPreview(firstLine(shown), KindOf(shown)); first != "" {
+	line := fmt.Sprintf("Rewake: %s %s, %d new %s", message.From, KindOf(message), count, noun)
+	if first := shownPreview(firstLine(message), KindOf(message)); first != "" {
 		line += "\n  ↳ " + first
 	}
 	return line
@@ -115,13 +108,11 @@ func firstLine(message Message) string {
 // not a rewake session.
 const ShellSender = "shell"
 
-// NoticeKind follows the displayed latest letter, including its failure color.
+// NoticeKind is the kind of the letter a notice shows, including its failure
+// color; a group's is a note.
 func NoticeKind(message Message) Kind {
 	if len(message.Batch) > 1 {
 		return Note
-	}
-	if message.Latest != nil {
-		return KindOf(*message.Latest)
 	}
 	return KindOf(message)
 }

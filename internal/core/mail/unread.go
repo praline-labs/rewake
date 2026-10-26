@@ -41,25 +41,6 @@ func dropUnread(dir, to, id string) {
 	_ = state.Remove(filepath.Join(state.UnreadPath(dir, to), id+".json"))
 }
 
-// noticeContext chooses the newest available letter; active reservations stay
-// invisible to ordinary notifications just as they do to inbox reads. What it
-// adds is the notice's count and preview, never whether the notice goes, so a
-// mailbox it cannot read leaves the notice about this one message.
-func noticeContext(dir, name, epoch string, message Message) Message {
-	messages, err := AvailableUnread(dir, name, epoch)
-	if err != nil {
-		return message
-	}
-	message.Unread = len(messages)
-	for _, candidate := range messages {
-		if message.Latest == nil || candidate.CreatedAt.After(message.Latest.CreatedAt) || candidate.CreatedAt.Equal(message.Latest.CreatedAt) && candidate.ID > message.Latest.ID {
-			latest := candidate
-			message.Latest = &latest
-		}
-	}
-	return message
-}
-
 // PeekUnread returns the unread messages of one run of a session, oldest first,
 // without marking anything. The caller shows them, then marks each one read: a
 // message marked before its text reached anybody would be lost. An error says

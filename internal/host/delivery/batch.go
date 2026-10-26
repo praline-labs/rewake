@@ -19,7 +19,7 @@ func (borrowedReservation) Close() {}
 
 func announcement(messages []mail.Message) mail.Message {
 	message := messages[0]
-	message.Unread, message.Latest = len(messages), nil
+	message.Unread = len(messages)
 	if len(messages) > 1 {
 		hash := sha256.New()
 		for _, member := range messages {

@@ -114,24 +114,10 @@ func TestCorrectionsAreAllShownOldestFirst(t *testing.T) {
 	}
 }
 
-// A single delivery whose notice shows a newer unread letter still shows the
-// correction it carries, on a line of its own before that letter's preview.
-func TestASingleCorrectionIsShownBesideTheNewestUnread(t *testing.T) {
-	at := time.Date(2026, 9, 26, 12, 0, 0, 0, time.UTC)
-	newer := mail.Message{ID: "n", From: "peer", Kind: mail.Note, CreatedAt: at.Add(time.Second), Text: "build finished"}
-	recall := recallOf(t, "100-5ca1ab1e0001", "main", at)
-	recall.Unread, recall.Latest = 2, &newer
-	want := "Rewake: peer notify, 2 new messages\n  ↳ " + recall.Text + "\n  ↳ build finished"
-	if got := mail.Notice(recall); got != want {
-		t.Fatalf("recall: notice = %q, want %q", got, want)
-	}
-	replacement := mail.Message{ID: "r", From: "main", Kind: mail.Task, CreatedAt: at, Replaces: "100-5ca1ab1e0002", Text: "use the replica", Unread: 2, Latest: &newer}
-	want = "Rewake: peer notify, 2 new messages\n  ↳ main task: Replaces 5ca1ab1e0002 (withdrawn): use the replica (a preview only: run rewake inbox)\n  ↳ build finished"
-	if got := mail.Notice(replacement); got != want {
-		t.Fatalf("replacement: notice = %q, want %q", got, want)
-	}
-	// Shown as the newest letter itself, a correction takes no second line.
-	recall.Latest = nil
+// A single correcting letter is the letter its notice shows, so it takes no
+// second line.
+func TestASingleCorrectionIsShownOnce(t *testing.T) {
+	recall := recallOf(t, "100-5ca1ab1e0001", "main", time.Date(2026, 9, 26, 12, 0, 0, 0, time.UTC))
 	if got := mail.Notice(recall); strings.Count(got, "Do not act on") != 1 {
 		t.Fatalf("recall shown as itself: notice = %q", got)
 	}

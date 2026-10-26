@@ -13,9 +13,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"time"
 
@@ -86,8 +84,6 @@ type Message struct {
 	// Unread is how many messages the receiver will hold once this one lands. It is
 	// computed by the serving process right before delivery and never stored.
 	Unread int `json:"-"`
-	// Latest is the newest available letter shown by an aggregate notification.
-	Latest *Message `json:"-"`
 	// Batch is transport-only membership; each stored message keeps its own identity.
 	Batch []Message `json:"-"`
 }
@@ -272,16 +268,6 @@ func (w world) putOnce(message Message) error {
 // delivery server serves.
 func List(dir, to string) ([]Message, error) {
 	return ListIn(state.InboxPath(dir, to))
-}
-
-// archive moves a finished message out of the waiting set, keeping it for
-// diagnosis rather than deleting it.
-func archive(dir, to, id string) error {
-	err := move(id, state.InboxPath(dir, to), state.DonePath(dir, to))
-	if errors.Is(err, os.ErrNotExist) {
-		return nil
-	}
-	return err
 }
 
 // IsReport includes every turn outcome — successful, failed, stopped and

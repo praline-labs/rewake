@@ -34,7 +34,7 @@ func TestAvailabilityScanDoesNotCleanDeadPeerUnderNameLock(t *testing.T) {
 			done <- err
 			return
 		}
-		err := putAvailability(context.Background(), dir, main, peer, availabilityMessage(main, peer))
+		err := putAvailabilityPass(context.Background(), dir, main, []registry.Session{peer}, map[string]registry.Session{})
 		if errors.Is(err, registry.ErrNotFound) {
 			err = nil
 		}

@@ -157,7 +157,7 @@ func TestAnEndSentAgainOnceDoneDoesNothing(t *testing.T) {
 // it answers whether the letter is still kept.
 func (lab endLab) readLongAgo(t *testing.T, report Message) bool {
 	t.Helper()
-	if err := archive(lab.dir, "web", report.ID); err != nil {
+	if err := move(report.ID, state.InboxPath(lab.dir, "web"), state.DonePath(lab.dir, "web")); err != nil {
 		t.Fatal(err)
 	}
 	done := filepath.Join(state.DonePath(lab.dir, "web"), report.ID+".json")

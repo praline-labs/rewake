@@ -147,7 +147,7 @@ func withheldStops(t *testing.T, b *backend, capability string) {
 			t.Fatal("a turn start taken without a turn boundary")
 		}
 		for _, hold := range []bool{false, true} {
-			if answer := b.turnEnded(l, Frame{Turn: "t1", End: "t1/1", Outcome: OutcomeCompleted, Hold: hold}); answer.OK || taken != 0 {
+			if answer := endTurn(b, l, Frame{Turn: "t1", End: "t1/1", Outcome: OutcomeCompleted, Hold: hold}); answer.OK || taken != 0 {
 				t.Fatalf("an end taken without a turn boundary: %+v, %d handed on", answer, taken)
 			}
 		}

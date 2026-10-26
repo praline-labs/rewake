@@ -45,8 +45,8 @@ func TestArchivingRefreshesTheAge(t *testing.T) {
 		t.Fatalf("chtimes: %v", err)
 	}
 
-	if err := archive(dir, "api", old.ID); err != nil {
-		t.Fatalf("archive: %v", err)
+	if err := move(old.ID, state.InboxPath(dir, "api"), state.DonePath(dir, "api")); err != nil {
+		t.Fatalf("move: %v", err)
 	}
 	info, err := os.Stat(filepath.Join(state.DonePath(dir, "api"), old.ID+".json"))
 	if err != nil {

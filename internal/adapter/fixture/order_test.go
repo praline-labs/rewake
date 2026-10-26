@@ -152,7 +152,7 @@ func TestNothingReachesTheHandlerOnceClosed(t *testing.T) {
 	if answer := b.turnStarted(l, Frame{Turn: "t1"}); answer.OK {
 		t.Fatal("a turn start was taken after Close")
 	}
-	if answer := b.turnEnded(l, Frame{Turn: "t1", End: "t1/e1", Outcome: OutcomeCompleted}); answer.OK || calls.Load() != 0 {
+	if answer := endTurn(b, l, Frame{Turn: "t1", End: "t1/e1", Outcome: OutcomeCompleted}); answer.OK || calls.Load() != 0 {
 		t.Fatalf("an end was taken after Close: %+v, %d calls", answer, calls.Load())
 	}
 }
@@ -172,7 +172,7 @@ func TestNothingReachesTheHandlerWhileClosing(t *testing.T) {
 	if answer := b.turnStarted(l, Frame{Turn: "t1"}); answer.OK {
 		t.Fatal("a turn start was taken while closing")
 	}
-	if answer := b.turnEnded(l, Frame{Turn: "t1", End: "t1/e1", Outcome: OutcomeCompleted}); answer.OK || calls.Load() != 0 {
+	if answer := endTurn(b, l, Frame{Turn: "t1", End: "t1/e1", Outcome: OutcomeCompleted}); answer.OK || calls.Load() != 0 {
 		t.Fatalf("an end was taken while closing: %+v, %d calls", answer, calls.Load())
 	}
 }
@@ -203,7 +203,7 @@ func TestAWithdrawalStopsAnEndsAttempts(t *testing.T) {
 			}
 			finished := make(chan Frame, 1)
 			go func() {
-				finished <- b.turnEnded(l, Frame{Turn: "t1", End: "t1/e1", Outcome: OutcomeCompleted, Hold: true})
+				finished <- endTurn(b, l, Frame{Turn: "t1", End: "t1/e1", Outcome: OutcomeCompleted, Hold: true})
 			}()
 			<-first
 			switch cut {
@@ -244,7 +244,7 @@ func TestAClosedConnectionTakesNoTurn(t *testing.T) {
 	if answer := b.turnStarted(l, Frame{Turn: "t1"}); answer.OK {
 		t.Fatalf("a closed connection started a turn: %+v", answer)
 	}
-	if answer := b.turnEnded(l, Frame{Turn: "t1", End: "t1/e1", Outcome: OutcomeCompleted, Hold: true}); answer.OK {
+	if answer := endTurn(b, l, Frame{Turn: "t1", End: "t1/e1", Outcome: OutcomeCompleted, Hold: true}); answer.OK {
 		t.Fatalf("a closed connection's end was taken: %+v", answer)
 	}
 	if calls.Load() != 0 {
@@ -316,4 +316,12 @@ func TestActivityFromAWithdrawnConnectionIsDropped(t *testing.T) {
 	if state := b.SessionState(); state.Activity != nil {
 		t.Fatalf("a sample from the old connection became the state: %+v", state)
 	}
+}
+
+// endTurn is an end's whole handling on the caller's goroutine — its capture,
+// then the core's decision — the two steps handle splits across the reader and
+// the dispatch.
+func endTurn(b *backend, l *link, frame Frame) Frame {
+	completion, err := b.endOf(l, frame)
+	return b.decide(l, completion, frame.Hold, err)
 }

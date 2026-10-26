@@ -145,8 +145,7 @@ and an agent reading "withdrawn" could end its turn without reading the replacem
 replacement's own preview carries it instead: it begins `Replaces <short id> (withdrawn): `
 and goes on with the replacement's first line (`mail.Notice`), so one line both sets the old
 work aside and shows the new. Like a recall, it gets a line of its own, first, in a group:
-`<sender> <kind>: Replaces <short id> (withdrawn): <first line>`, and so does a single
-delivery whose notice shows a newer unread letter. The answer is a send's, with the new id on
+`<sender> <kind>: Replaces <short id> (withdrawn): <first line>`. The answer is a send's, with the new id on
 its own line and the same exit codes; a question edit waits for its answer as `send
 --question` does, and the old blocked send exits 1. `-` reads the text from stdin. What
 refuses a withdrawal refuses an edit, and so does a message withdrawn already or a recipient

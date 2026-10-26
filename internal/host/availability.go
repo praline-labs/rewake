@@ -142,17 +142,6 @@ func announceAvailable(ctx context.Context, dir string, self registry.Session, s
 	return nil
 }
 
-// Revalidation inside the receiver mailbox must never take a sender name lock.
-func putAvailability(ctx context.Context, dir string, current, peer registry.Session, message mail.Message) error {
-	return putMainNotice(ctx, dir, current, message, func() error {
-		subject, err := registry.LookupReadOnly(dir, peer.Name)
-		if err != nil || subject.Epoch() != peer.Epoch() || subject.MessagingReadyAt == nil {
-			return registry.ErrNotFound
-		}
-		return nil
-	})
-}
-
 func putMainNotice(ctx context.Context, dir string, current registry.Session, message mail.Message, validate func() error) error {
 	return withMainMailbox(ctx, dir, current, func() error {
 		if err := validate(); err != nil {
@@ -176,6 +165,7 @@ func withMainMailbox(ctx context.Context, dir string, current registry.Session, 
 
 // One discovery pass is published under one mailbox lock, so the first notice
 // cannot make a partial startup snapshot readable before its peers are queued.
+// Revalidation inside the receiver mailbox must never take a sender name lock.
 func putAvailabilityPass(ctx context.Context, dir string, current registry.Session, peers []registry.Session, seen map[string]registry.Session) error {
 	if len(peers) == 0 {
 		return nil
