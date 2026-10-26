@@ -98,7 +98,7 @@ type RefusedError struct {
 }
 
 // way is how past a refusal: the room's build stays while anything holds it.
-const way = "end the room's sessions, or launch into another room with --room"
+const way = "end the room's sessions — main's end ends its workers — and launch again, or launch from another directory, which is another room"
 
 func (e *RefusedError) Error() string {
 	room := filepath.Base(e.Room)
