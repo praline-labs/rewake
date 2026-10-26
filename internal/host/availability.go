@@ -101,7 +101,7 @@ func availabilityMessage(self, peer registry.Session) mail.Message {
 		label = "Session already available in this room."
 	}
 	identity := &mail.Availability{Name: peer.Name, Role: role.Of(peer.Role).ID, Harness: peer.Harness, Room: peer.Room, CWD: peer.CWD, Existing: existing}
-	body := fmt.Sprintf("%s\nname: %s\nrole: %s\nharness: %s\nroom: %s\ncwd: %q", label, identity.Name, identity.Role, identity.Harness, identity.Room, identity.CWD)
+	body := fmt.Sprintf("%s\nname: %s\nrole: %s\nharness: %s\nroom: %s\nlaunch cwd: %q (a checkout the worker enters later is in rewake worktree ls)", label, identity.Name, identity.Role, identity.Harness, identity.Room, identity.CWD)
 	return mail.Message{ID: id, From: peer.Name, FromEpoch: peer.Epoch(), To: self.Name, ToEpoch: self.Epoch(), Kind: mail.Note, Text: body, CreatedAt: time.Now(), Availability: identity}
 }
 

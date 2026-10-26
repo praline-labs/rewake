@@ -26,10 +26,10 @@ func TellMain(dir, worker, epoch, id string, offer Offer, deadline time.Time) er
 
 // TellMainDialog leaves main an ordinary notify that the worker waits at a
 // dialog on its screen that no request carries, with what the harness said
-// of it: main answers it at the worker's pane or asks the person.
+// of it: main asks the person to answer it at the worker's pane, or lets it expire.
 func TellMainDialog(dir, worker, epoch, message string) error {
 	return tell(dir, worker, epoch, fmt.Sprintf(
-		"Rewake: %s waits at a dialog in its pane: %s\nrewake cannot answer this dialog for it: answer it in %s's pane, or ask the person.",
+		"Rewake: %s waits at a dialog in its pane: %s\nrewake cannot answer this dialog for it: ask the person to answer it in %s's pane, or let it expire.",
 		worker, message, worker))
 }
 

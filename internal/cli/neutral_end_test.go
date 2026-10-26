@@ -193,7 +193,7 @@ func TestNeutralAnEmptyEndAfterWorkReportsAnError(t *testing.T) {
 	readFrom(t, dir, peer)
 	confirm(t, dir, self, adapter.TurnEnd{Event: "run/A/1", Thread: "A", Reason: adapter.Answered, Boundary: boundaryNow(t, dir, self)})
 	report := reportObject(t, dir, peer.Name)
-	if report["kind"] != "error" || report["text"] != "" {
+	if report["kind"] != "error" || report["text"] == "" {
 		t.Fatalf("report=%v", report)
 	}
 }

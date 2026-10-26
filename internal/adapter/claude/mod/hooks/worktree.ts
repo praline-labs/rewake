@@ -19,7 +19,7 @@ export const worktreeTool = {
 export const worktreeListTool = {
   name: "worktree_list",
   description:
-    "List the git worktrees rewake made for the sessions of this room, each with its path, branch, the commit it was made at, the session it was made for and whether one still runs there, and what a removal would lose (changes, ignored files, commits on no other branch). A look, not a promise. Takes no input.",
+    "List the git worktrees rewake made for the sessions of this room, each with its path, branch, the commit it was made at, the session it was made for and whether one still runs there, and what a removal would lose (changes, ignored files, commits that no branch, tag or remote-tracking ref holds, the worktree's own branch included). A listing, not a close forecast: worktree_status says what this worker's close would do. A look, not a promise. Takes no input.",
   inputSchema: { type: "object", properties: {}, additionalProperties: false },
 };
 export const worktreeLandTool = {
