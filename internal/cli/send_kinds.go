@@ -80,5 +80,5 @@ func kindSummary() string {
 	for _, kind := range sendKinds {
 		descriptions = append(descriptions, string(kind.kind)+": "+kind.summary)
 	}
-	return strings.Join(descriptions, " ") + " finished: a successful report. Answer a task or a question by ending the turn with the result, never with rewake send; answer no other kind."
+	return strings.Join(descriptions, " ") + " finished: a successful report. Answer a task or a question by ending the turn with the result, never with rewake send. Nothing else owes a report, but a notify that asks for a decision, and a worker's permission request or question (rewake answer), still need that decision, never a mere acknowledgment."
 }

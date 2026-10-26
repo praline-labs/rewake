@@ -121,7 +121,7 @@ func stateLine(name string, snapshot *session.Snapshot, settings bool) string {
 	return line
 }
 
-const sessionStateHelp = "A verified main also sees each launch's state: activity, configured model and effort, last reported context fill, usable window (in decimal K) and completed compactions, with unknown or stale values marked. Workers and plain shells get none of it, in JSON either."
+const sessionStateHelp = "A verified main also sees each launch's state: activity, model and effort as the session last reported them — an effort marked (launch) is the launch's own until the session reports one, and unknown when the launch passed none —, last reported context fill, usable window (in decimal K) and completed compactions, with unknown or stale values marked. Workers and plain shells get none of it, in JSON either."
 
 func activityText(snapshot *session.Snapshot) string {
 	label := "unknown"
