@@ -1,6 +1,6 @@
 // Package taskbrief keeps the room's briefs: a markdown text per task that
 // main writes, bound to the workers it was sent to, ticked and commented by
-// them (docs/roadmap/briefs.md). The word is not the briefing of package brief, the
+// them (docs/briefs.md). The word is not the briefing of package brief, the
 // launch text; this package is named apart so neither is renamed.
 package taskbrief
 

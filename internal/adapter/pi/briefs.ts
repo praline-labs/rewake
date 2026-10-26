@@ -3,7 +3,7 @@
 // (brief_read, brief_tick, brief_comment). Each runs a `rewake brief …`
 // command by argv through the rewake that started the run, as the worktree
 // tools do; the child inherits the run's REWAKE_DIR, room, session and epoch,
-// and the right to a brief is the command's check (docs/roadmap/briefs.md).
+// and the right to a brief is the command's check (docs/briefs.md).
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { answer } from "./worktree.ts";
 

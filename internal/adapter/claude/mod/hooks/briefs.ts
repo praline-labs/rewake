@@ -4,7 +4,7 @@
 // through the rewake that started the run, the run's variables set, bound,
 // and every failure an error result. The right to a brief is the command's
 // check, so a tool and a command the model types answer alike
-// (docs/roadmap/briefs.md). rewake's pi extension serves the same tools with
+// (docs/briefs.md). rewake's pi extension serves the same tools with
 // the same contracts.
 import type { Register } from "claude-code";
 import { serveCommand } from "./worktree.ts";

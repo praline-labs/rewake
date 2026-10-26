@@ -29,7 +29,7 @@ func briefFlagFits(call Call, kind messageKind) error {
 // bindBrief gives the brief --brief names to the recipient's run, after
 // every other check of send and before the letter is written, and answers
 // the id the letter carries. Only main gives a brief. A send that fails
-// after this leaves the run bound, a known limit (docs/roadmap/briefs.md).
+// after this leaves the run bound, a known limit (docs/briefs.md).
 func bindBrief(call Call, dir string, self registry.Session, selfErr error, recipient registry.Session) (string, error) {
 	value, given := call.Flags["brief"]
 	if !given {

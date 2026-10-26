@@ -30,6 +30,11 @@ Variants: tasks
 Means: a letter sent with `rewake send` without a flag; it binds the recipient to a report.
 Where: the owner says «задача».
 
+## Brief
+Variants: briefs, `rewake brief`, `--brief`
+Means: a markdown document for one task that main keeps in the room — its goal, its checkbox items, anything markdown holds; main alone writes it, a worker it was given to with `send --brief` ticks its items and comments, the person reads it in the shell. Not the briefing, the text a session gets at its launch; a brief in `.scratch/` is a file a task names, which may hold the same.
+Where: [docs/briefs.md](docs/briefs.md); the records under `briefs/` of the room.
+
 ## Notify
 Variants: `--notify`
 Means: a letter that points to something or informs; it owes no report.

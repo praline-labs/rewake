@@ -10,7 +10,7 @@ import (
 // The items of a text: task-list lines outside a fenced block, found by a
 // line scanner of rewake's own, so Go takes no markdown dependency. The
 // shell renders the same text with a full parser; an odd checkbox the two
-// read apart is a known limit (docs/roadmap/briefs.md).
+// read apart is a known limit (docs/briefs.md).
 
 var (
 	// taskLine is a list item whose content starts with a checkbox and a

@@ -12,7 +12,7 @@ import (
 )
 
 // The views of briefs. Their --json is what rewake's shell reads, polling as
-// main's run (docs/roadmap/briefs.md): a field is added, never renamed or retyped.
+// main's run (docs/briefs.md): a field is added, never renamed or retyped.
 
 // briefSummary is one brief as list shows it, and the head of show.
 type briefSummary struct {

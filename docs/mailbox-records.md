@@ -14,7 +14,7 @@ mailbox, kept by hand.
 | Path | Kind | Read as |
 |---|---|---|
 | `.lock` | the mailbox lock | nothing: it says nothing |
-| `<id>.json`, `unread/<id>.json`, `done/<id>.json` | a letter | a message; a task's or a question's `brief` names the brief it gives by its id, the text staying the brief's ([roadmap/briefs.md](roadmap/briefs.md)) |
+| `<id>.json`, `unread/<id>.json`, `done/<id>.json` | a letter | a message; a task's or a question's `brief` names the brief it gives by its id, the text staying the brief's ([briefs.md](briefs.md)) |
 | `<id>.status` | a letter's delivery status | a status |
 | `awaiting/<run>/.read-clock`, `.read-high` | a run's read clock and its highest place | one word, or none yet; a number |
 | `awaiting/<run>/.turn-starts/<time>` | a turn start the host heard, one file per reading, the latest the largest | empty, its name a number |

@@ -89,7 +89,7 @@ func SpacesPath(dir string) string { return filepath.Join(dir, spacesDir) }
 // space is closed, while the closed record stays for what a restore reads.
 func SpacePath(dir, id string) string { return filepath.Join(dir, spacesDir, id+".json") }
 
-// BriefsPath is the directory of the room's open briefs (docs/roadmap/briefs.md).
+// BriefsPath is the directory of the room's open briefs (docs/briefs.md).
 func BriefsPath(dir string) string { return filepath.Join(dir, briefsDir) }
 
 // ClosedBriefsPath is the archive of the room's closed briefs, inside
