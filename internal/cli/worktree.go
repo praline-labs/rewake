@@ -46,7 +46,8 @@ func worktreeCommand(catalog adapter.Catalog) *Command {
 		Notes: []string{
 			"They live under " + worktreeRootHelp + ", one directory per repository, each worktree with a record beside it: the session it was made for, the repository, the commit. Each is on a branch of its own name; a slash in a name, feat/login, is + in its directory.",
 			"A worktree is named by its name, or by <repository>/<name> as ls prints it when two repositories share one; a word that could be either is taken as <repository>/<name> when both parts match.",
-			"ls lists every worktree under the root, of every repository and room; --this-room keeps those whose record names a session of the current room, which is what a main's worktree_list tool asks for.",
+			"ls lists every worktree under the root, of every repository and room; --this-room keeps those whose record names a session of the current room, which is what a main's worktree_list tool asks for. What it says a removal would lose is changes, ignored files, and a HEAD that no branch, tag or remote-tracking ref holds — the worktree's own branch counts, so its new commits read as held; status, not ls, forecasts a space's close.",
+			"A .worktreeinclude at the repository's top, in .gitignore syntax, names the ignored files — a .env, a local configuration — each new checkout rewake makes gets a copy of, by a launch's --worktree, space open --worktree or enter. A file that cannot be copied is named, and the checkout stands without it.",
 			"status answers for the session it runs in, by its room, name and run: the checkout that run claimed (path, branch, the commit it was made at) or none, and what its space's close would do with it if the space closed now — remove (nothing would be lost; files git ignores go too), keep with the reasons, or unknown. The close removes only a space worker's own checkout, so for main or a session that is no worker the answer is none: its checkout stays until finish or rm. A look that writes nothing, not a promise: later edits, commits and sessions change it.",
 			"enter makes the one checkout of a worker whose template says enter_worktree = true, from the commit its session is at, and claims it for its run, which its worktree_enter tool then moves the session into; its space's close releases it as a launch's own. Called again it answers the same checkout: reused, or already when the run was started in it. Refused without that template, and for another name once the run has one: one checkout per worker.",
 			"land fast-forwards the target to the worktree's branch and does nothing else: hashes are kept, the worktree and its session untouched, and it can be repeated. The target is --into or the branch checked out where the worktree was made from; checked out there, it moves by git merge --ff-only, so git refuses to overwrite changes; checked out nowhere, its ref moves. Refused: a target checked out in another checkout, the worktree's own included, or one a rebase or bisect is on; and one that moved on — rebase the branch onto it in the worktree, then land again.",
@@ -311,12 +312,13 @@ func stateLabel(view worktreeView) string {
 	return strings.Join(parts, ", ")
 }
 
-// worktreeLaunch is the launch that makes a worktree, on the first harness of
-// the catalog that gives one to a launch; none offers nothing to run next.
+// worktreeLaunch is how main gets a worker a worktree, when a harness of the
+// catalog makes one; none offers nothing to run next. Not a launch: main reads
+// this page from inside its session, where a launch is refused.
 func worktreeLaunch(catalog adapter.Catalog) []string {
 	for _, h := range catalog.All() {
 		if _, ok := h.(adapter.WorktreeHarness); ok {
-			return []string{"rewake " + h.ID() + " --worktree"}
+			return []string{"rewake space open <name> --alias <alias> --worktree"}
 		}
 	}
 	return nil

@@ -29,7 +29,7 @@ func spaceGroup() Group {
 			Summary:        "List this room's spaces, or, from main, open one — start a worker that lives no longer than main's run — or close one.",
 			Options: []Option{
 				{Flag: "--alias", Value: "<alias>", Summary: "open, required: the worker's template from rewake workers; supplies its harness, role, wrapper and arguments."},
-				{Flag: "--worktree", Summary: "open: start the worker in a new worktree, as the harness's own --worktree launch does; --worktree=<name> names it. Wins over the template's worktree = true."},
+				{Flag: "--worktree", Summary: "open: start the worker in a new worktree, as the harness's own --worktree launch does; --worktree=<name> names it. Wins over the template's worktree = true. A .worktreeinclude at the repository's top names the ignored files, a .env or a local configuration, copied into the new checkout (rewake worktree --help)."},
 				{Flag: "--no-worktree", Summary: "open: start the worker without a worktree although its template has worktree = true."},
 				{Flag: "--type", Value: "<type>", Summary: "open: the kind of work the worker is raised for, a type of rewake workers, whose text follows its role's briefing. Wins over the template's type."},
 				{Flag: "--no-type", Summary: "open: raise the worker with no type although its template names one."},
