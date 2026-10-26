@@ -9,7 +9,7 @@ MIT), running inside the person's terminal with a terminal pane per program; Sol
 framework. There is no web UI. From 120 columns, once a worker exists, main is on the left and
 the chosen worker on the right, half of the width less a divider column, the narrower part when
 the width is odd; below 120 columns, with no worker, or zoomed, the focused program takes the
-whole width and the bar switches the window between main and the workers. Each pane keeps a
+whole width and the bar switches the window between the workers. Each pane keeps a
 column of padding on both sides; the program's size is the width less two. A click on a button
 or in a pane focuses it. The prefix is Ctrl+\\, which no harness binds. The sources live in
 `shell/` at the repository's root, outside the Go module. The mod knows nothing of who draws the
@@ -235,18 +235,29 @@ wrapper in the shell does the same for main (`terminal.UTF8Locale`), whose worke
 
 ## The bar
 
-The bar and the hints are the shell's two lines of navigation. The hints are the bottom row across
-the whole width in every layout. While both panes show, the bar sits under main's pane, in main's
-column, the way the strip sits under a worker's pane: main's pane ends two rows above the bottom,
-and the worker's column ends one row above it with its strip on the bar's row, so both columns end
-together. While one pane shows (narrow, or a zoom), the bar and the hints take the two bottom lines
-across the whole width, and the pane the rest.
+The bar and the hints are the shell's two lines of navigation, laid out as the owner drew it on
+October 26, 2026: every pane has its status line, the strip, under it; the hints sit under main's,
+and the bar under the worker's.
 
-- **The buttons** (`shell/src/bar.tsx`): ` main `, then each worker by its name, in the order the
-  spaces opened, with no number — the prefix's digits still choose by place. The focused one is
-  filled in its colour, bold, with near-black or near-white text, whichever reads; the others sit
-  on a grey with their colour as the text. Main's colour is apart from the workers': the person's
-  palette entry 4 for main and 2 for the workers, 8 for the grey, each with a fallback of its own
+```
+   main's pane    |   worker's pane
+   main's strip   |   worker's strip
+   the hints      |   the bar
+```
+
+- **Both panes** (from 120 columns, once a worker exists, no zoom): main's column is its pane, its
+  strip and the hints; the worker's column is its pane, its strip and the bar. Both panes end two
+  rows above the bottom, so the columns end together.
+- **One pane** (narrow, a zoom, or no worker): the shown pane, its strip under it, then the hints
+  and, while a worker exists, the bar, both across the whole width. The pane is three rows short of
+  the screen, two with no worker.
+- **The buttons** (`shell/src/bar.tsx`): each worker by its name, in the order the spaces opened,
+  with no number — the prefix's digits still choose by place. Main has no button, by the owner's
+  decision: the prefix's `m` (or `0`, or ←) reaches it in every layout, a click on its pane or its
+  strip while both show, and the hints say so while a worker has the keys. With no worker the bar
+  is not drawn. The focused button is filled in the workers' colour, bold, with near-black or
+  near-white text, whichever reads; the others sit on a grey with that colour as the text: the
+  person's palette entry 2, and 8 for the grey, each with a fallback of its own
   (`shell/src/theme.ts`). In the wide layout, while main has the focus, the worker shown beside it
   is underlined: filled is where the keys go, underlined is shown beside it without them. A zoom
   shows `zoomed` at the right end.
@@ -255,7 +266,8 @@ across the whole width, and the pane the rest.
   seconds pass. A hint is a row of one table keyed by the context (main focused, a worker focused,
   the prefix waiting), kept by a `when` over the focus, the zoom and the number of workers; a new
   hint or a new context is a row there. "keys go to <name>" comes first, the rest after it in the
-  table's order. A line longer than the width is cut at its end.
+  table's order. In main's column the line has half the width, so a hint that does not fit is left
+  out whole, with those after it; only the first is cut at the width.
 
 **One look for the shell's own rows**: the strip, the bar and the hints are each a `ShellRow`
 (`shell/src/bar.tsx`), and they share these rules.
@@ -264,12 +276,12 @@ across the whole width, and the pane the rest.
   starts at the left of what is inside, in the column of the programs' own text. Nothing is
   centred; only `zoomed` keeps the right end.
 - **Air.** A row is drawn on a band, the terminal's background moved 6% towards the ink that reads
-  on it (`#282828` gives `#343434`), across its whole width, padding included: wide, the bar's and
-  the strip's row and the hints' row read as one band of two rows; narrow, the strip, the bar and
-  the hints as one of three. A terminal that does not say its background gets no band.
+  on it (`#282828` gives `#343434`), across its whole width, padding included: wide, each column's
+  strip and the row under it read as one band of two rows; narrow, the strip, the hints and the bar
+  as one of three. A terminal that does not say its background gets no band.
 - **Colours and weights.** Words are in the terminal's own foreground; what names a program is bold
   in its colour — the focused button filled, the strip's name, the hints' keys in the focused
-  program's colour. Parts are separated by ` · ` in a faint colour, halfway from the foreground to
+  program's colour; main's colour, the palette's entry 4, is apart from the workers'. Parts are separated by ` · ` in a faint colour, halfway from the foreground to
   the background (palette 8 where the terminal did not say both): OpenTUI 0.6.6 writes no dim over
   the terminal's own foreground.
 - **Selection.** A selection over these rows is one colour, a pane's (`selectionBg`/`selectionFg`,
@@ -277,9 +289,10 @@ across the whole width, and the pane the rest.
 
 ## The strip
 
-Each worker pane's last row, a shell's row, is one line drawn by the shell (`shell/src/strip.tsx`),
-the same for every harness; the worker's program has one row less. Main gets none: its own status
-line shows the same.
+The row under each pane, main's and every worker's, a shell's row, is one line drawn by the shell
+(`shell/src/strip.tsx`), the same for every harness; the program has one row less. Main's strip,
+asked for by the owner on October 26, 2026, reads main's own row of the same listing; main has no
+type, so its name stands alone.
 
 ```
 write-claude (code) · working · ⎇ wt-fd7596 · <model> low · 23% 230k/1M · 90% 42m
@@ -302,14 +315,14 @@ write-claude (code) · working · ⎇ wt-fd7596 · <model> low · 23% 230k/1M ·
   (`internal/cli/session_state.go`), and the shell is main's terminal, so it asks as main's run.
   That run's record is the main whose `servicePid` is the shell's own child, main's wrapper; its
   name and epoch go to `REWAKE_SESSION` and `REWAKE_EPOCH` of the poll, and a new epoch is read
-  again at once.
+  again at once. The same record is main's strip; until it is found the strip reads `main` alone.
 - **The branch** is the space record's `checkout.branch` for a worker in a checkout of its own
   (made by its launch, or entered); otherwise the branch checked out where the session started,
   read from `git` at most every five seconds, a detached head as its short commit.
 - **Narrow**: the line fits the pane. Too long, it leaves out the model and effort, then the cache,
   then the branch; what still does not fit is cut with `…`. The name, the activity and the context
   stay.
-- **Colours**: the name bold in the workers' colour of the bar; the rest in the terminal's own
+- **Colours**: the name bold in its program's colour, main's or the workers'; the rest in the terminal's own
   foreground with faint separators; the context in the palette's green, yellow or red from 50% and
   80%; the cache in the palette's cyan while it is warm, faint once it expired.
 - **How fresh**: a Claude Code worker's mod samples after each main-loop step's response, at a

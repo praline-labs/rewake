@@ -1,7 +1,7 @@
-// The key hints under the bar: what the keys do now, for the focus and the
-// moment (docs/shell.md, "The bar"). A hint is an entry of the table below,
-// kept or left out by its when; a new one is a line here, not a string in the
-// layout.
+// The key hints under main's status: what the keys do now, for the focus
+// and the moment (docs/shell.md, "The bar"). A hint is an entry of the table
+// below, kept or left out by its when; a new one is a line here, not a string
+// in the layout.
 
 export type Context = {
   // focus is the program the keys go to; prefix is a Ctrl+\ waiting for
@@ -43,15 +43,32 @@ const table: Record<"prefix" | "main" | "worker", Entry[]> = {
   ],
   worker: [
     { keys: "keys", does: (c) => `go to ${c.name}` },
-    { keys: "Ctrl+\\ ←", does: "main" },
+    // Main has no button on the bar: m reaches it in every layout.
+    { keys: "Ctrl+\\ ←/m", does: "main" },
     { keys: "Ctrl+\\ n/p", does: "next/previous" },
     { keys: "Ctrl+\\ z", does: (c) => (c.zoomed ? "end the zoom" : "zoom") },
     { keys: "Ctrl+\\ twice", does: (c) => `sends Ctrl+\\ to ${c.name}` },
   ],
 };
 
+// separator parts the hints as it parts the strip.
+export const separator = " · ";
+
 export function hintsFor(c: Context): Hint[] {
   return (c.prefix ? table.prefix : table[c.focus])
     .filter((e) => !e.when || e.when(c))
     .map((e) => ({ keys: e.keys, does: typeof e.does === "string" ? e.does : e.does(c) }));
+}
+
+// fitHints is the hints that fit a width whole, in the table's order; the
+// first stays even when it does not, and is cut at the width.
+export function fitHints(hints: Hint[], width: number): Hint[] {
+  let used = -separator.length;
+  const out: Hint[] = [];
+  for (const h of hints) {
+    used += separator.length + h.keys.length + 1 + h.does.length;
+    if (used > width && out.length > 0) break;
+    out.push(h);
+  }
+  return out;
 }

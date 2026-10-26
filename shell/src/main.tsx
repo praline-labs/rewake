@@ -1,7 +1,8 @@
 // rewake's shell (docs/shell.md): main on the left, from 120 columns the
-// chosen worker on the right, under main's pane a bar choosing the worker,
-// and a line of key hints across the whole width at the bottom; below 120
-// columns the bar takes the whole width too and switches the whole window.
+// chosen worker on the right, each pane with its status line under it; the
+// key hints under main's, the bar choosing the worker under the worker's.
+// Below 120 columns the shown pane takes the whole width, the hints and the
+// bar under its status, and the bar switches the whole window.
 // Started by rewake --shell as
 //   rewake-shell --room <room> -- <main's command line>
 
@@ -17,8 +18,8 @@ import { closingLayer } from "./lifting.ts";
 import { type PaneTerminal, paneHooks } from "./pane.ts";
 import { pollRoom, type Space, spacesOver } from "./room.ts";
 import { Scanner } from "./scan.ts";
-import { connectWorker, type MainRun, type Source, startMain } from "./sources.ts";
-import { Strip, showSessions, showSpaces } from "./strip.tsx";
+import { connectWorker, type MainRun, mainEnv, type Source, startMain } from "./sources.ts";
+import { mainStrip, Strip, showSessions, showSpaces, stripOf } from "./strip.tsx";
 import { themeOf } from "./theme.ts";
 
 const args = process.argv.slice(2);
@@ -111,23 +112,9 @@ function startMainPane(term: PaneTerminal) {
     main?.write(data);
   };
   term.onTerminalResize = (cols, rows) => main?.resize(cols, rows);
-  const env: Record<string, string> = {
-    ...(process.env as Record<string, string>),
-    TERM: "xterm-256color",
-    COLORTERM: "truecolor",
-  };
-  delete env.REWAKE_SHELL_CWD;
-  // The person's colours reach every space host through main's environment,
-  // so a worker's program hears them from its host (docs/shell.md).
-  if (seed.host) env.REWAKE_HOST_COLORS = seed.host;
-  // pi copies through the machine's clipboard where it finds one, which never
-  // reaches the person's terminal from inside the shell (on WSL without
-  // WT_SESSION, PowerShell); this makes it send OSC 52 as well, which the
-  // scanner carries out. Main's workers inherit it like the colours.
-  env.PI_CLIPBOARD_OSC52 ??= "1";
   main = startMain(
     command,
-    env,
+    mainEnv(seed.host),
     cwd,
     { cols: Math.max(term.width, 20), rows: Math.max(term.height, 5) },
     (data) => {
@@ -251,20 +238,20 @@ function App() {
   const shown = (p: Pane) => (wide() ? p === mainPane || p.id === chosen() : p.id === focused());
   const widthOf = (p: Pane) =>
     !wide() ? dims().width : p === mainPane ? dims().width - 1 - right() : right();
-  // The hints take the bottom line across the whole width; the bar sits
-  // under main's pane in the wide layout and above the hints in the narrow
-  // one, so main's pane is two lines short of the screen in both. A worker's
-  // column takes the rest of the height in the wide layout, its strip last,
-  // so both columns end on the bar's row.
-  const rowHeight = () => Math.max(dims().height - (wide() ? 1 : 2), 1);
-  const height = (p: Pane) => (p === mainPane ? Math.max(dims().height - 2, 1) : rowHeight());
+  // Each pane has its status line under it. Wide, main's column ends with
+  // the hints and the worker's with the bar, so both columns end on the
+  // bottom row; narrow, the shown pane's column ends with its status, and the
+  // hints and, while workers exist, the bar take the bottom lines across the
+  // whole width.
+  const below = () => (wide() ? 0 : workers().length > 0 ? 2 : 1);
+  const rowHeight = () => Math.max(dims().height - below(), 2);
+  const height = () => Math.max(rowHeight() - (wide() ? 2 : 1), 1);
   // A pane sits in a box with a column of padding on each side, so the text
   // does not touch the edge; the widget's size, and so the program's, is the
-  // inside. A worker's box leaves its last row to the strip, a shell's row of
-  // the full width. A press on the padding chooses the pane like one on its text.
-  const padded = (p: Pane, rows: number) => ({
+  // inside. A press on the padding chooses the pane like one on its text.
+  const padded = (p: Pane) => ({
     width: widthOf(p),
-    height: rows,
+    height: height(),
     paddingLeft: 1,
     paddingRight: 1,
     backgroundColor: seed.transparent ? undefined : theme.background,
@@ -272,14 +259,29 @@ function App() {
   });
   const inner = (p: Pane) => Math.max(widthOf(p) - 2, 1);
   const focusedPane = () => paneOf(focused()) ?? mainPane;
+  const workerWidth = () => (wide() ? right() : dims().width);
   const bar = () => (
     <Bar
-      tabs={allPanes().map((p) => ({ id: p.id, label: p.label, main: p === mainPane }))}
+      tabs={workers().map((p) => ({ id: p.id, label: p.label }))}
       focused={focused()}
       chosen={wide() && focused() === "main" ? chosen() : undefined}
       zoomed={zoomed()}
       theme={theme}
       pick={show}
+    />
+  );
+  const hints = () => (
+    <Hints
+      context={{
+        focus: focusedPane() === mainPane ? "main" : "worker",
+        name: focusedPane().label,
+        prefix: prefixWaits(),
+        zoomed: zoomed(),
+        workers: workers().length,
+      }}
+      width={wide() ? widthOf(mainPane) : dims().width}
+      theme={theme}
+      accent={focusedPane() === mainPane ? theme.main : theme.worker}
     />
   );
   // The work is hidden as a whole under the closing layer, so a terminal
@@ -289,54 +291,62 @@ function App() {
       <box flexDirection="column" width="100%" height="100%" visible={!closing()}>
         <box flexDirection="row" height={rowHeight()}>
           <box flexDirection="column" visible={shown(mainPane)} width={widthOf(mainPane)}>
-            <box {...padded(mainPane, height(mainPane))}>
+            <box {...padded(mainPane)}>
               <pane_terminal
                 id="main"
                 ref={(t: PaneTerminal) => startMainPane(t)}
                 transparentBackground={seed.transparent}
                 width={inner(mainPane)}
-                height={height(mainPane)}
+                height={height()}
               />
             </box>
-            <Show when={wide()}>{bar()}</Show>
+            <Strip
+              state={mainStrip}
+              width={widthOf(mainPane)}
+              colour={theme.main}
+              theme={theme}
+              pick={() => paneHooks.pressed("main")}
+            />
+            <Show when={wide()}>{hints()}</Show>
           </box>
           <Show when={wide()}>
             <box width={1} height={rowHeight()} backgroundColor="#444444" />
           </Show>
-          <For each={workers()}>
-            {(pane) => (
-              <box visible={shown(pane)} flexDirection="column" width={widthOf(pane)}>
-                <box {...padded(pane, Math.max(height(pane) - 1, 1))}>
-                  <pane_terminal
-                    id={pane.id}
-                    ref={(t: PaneTerminal) => startWorkerPane(pane, t)}
-                    transparentBackground={seed.transparent}
-                    width={inner(pane)}
-                    height={Math.max(height(pane) - 1, 1)}
+          <box
+            flexDirection="column"
+            visible={workers().some(shown)}
+            width={workerWidth()}
+            height={rowHeight()}
+          >
+            <For each={workers()}>
+              {(pane) => (
+                <box visible={shown(pane)} flexDirection="column" width={widthOf(pane)}>
+                  <box {...padded(pane)}>
+                    <pane_terminal
+                      id={pane.id}
+                      ref={(t: PaneTerminal) => startWorkerPane(pane, t)}
+                      transparentBackground={seed.transparent}
+                      width={inner(pane)}
+                      height={height()}
+                    />
+                  </box>
+                  <Strip
+                    state={() => stripOf(pane.id)}
+                    width={widthOf(pane)}
+                    colour={theme.worker}
+                    theme={theme}
+                    pick={() => paneHooks.pressed(pane.id)}
                   />
                 </box>
-                <Strip
-                  id={pane.id}
-                  width={widthOf(pane)}
-                  theme={theme}
-                  pick={() => paneHooks.pressed(pane.id)}
-                />
-              </box>
-            )}
-          </For>
+              )}
+            </For>
+            <Show when={wide()}>{bar()}</Show>
+          </box>
         </box>
-        <Show when={!wide()}>{bar()}</Show>
-        <Hints
-          context={{
-            focus: focusedPane() === mainPane ? "main" : "worker",
-            name: focusedPane().label,
-            prefix: prefixWaits(),
-            zoomed: zoomed(),
-            workers: workers().length,
-          }}
-          theme={theme}
-          accent={focusedPane() === mainPane ? theme.main : theme.worker}
-        />
+        <Show when={!wide()}>
+          {hints()}
+          <Show when={workers().length > 0}>{bar()}</Show>
+        </Show>
       </box>
       <Show when={closing()}>
         <Closing theme={theme} />

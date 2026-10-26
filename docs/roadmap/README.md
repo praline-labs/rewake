@@ -12,7 +12,8 @@ what it taught goes into the living documents.
 
 1. **The owner's looks and logins** — built and checked under a stand-in terminal, waiting for
    the owner on a real one:
-   - the shell's rows and band, and the bar under main's pane ([shell.md](../shell.md#the-bar));
+   - the shell's rows and band, main's strip with the hints under it and the bar of workers under
+     the worker's pane ([shell.md](../shell.md#the-bar));
      a terminal that reports no background gets no band;
    - the strip: its cache part in the owner's room, its type part, a real model for pi's cache
      life ([shell.md](../shell.md#the-strip));

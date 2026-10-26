@@ -21,7 +21,7 @@ Means: a named recipe for a worker — harness, model, effort and role — raise
 Where: the owner says «шаблон воркера».
 
 ## Shell
-Means: the terminal screen of a main started at a terminal: main's pane and a worker's side by side, the workers' strip, the bar and the hints.
+Means: the terminal screen of a main started at a terminal: main's pane and a worker's side by side, the strip under each, the bar and the hints.
 Avoid: host mode
 Where: `shell/`, on OpenTUI and Solid.
 

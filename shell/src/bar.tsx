@@ -1,16 +1,15 @@
 // The navigation's two lines (docs/shell.md, "The bar"): a button for
-// main and for each worker, the focused one filled in its colour and main's
-// colour apart from the workers'; and the hints for the current focus. Both,
-// and the strip, are the shell's own rows, drawn alike by ShellRow.
+// each worker, the focused one filled in the workers' colour — main has none,
+// the prefix reaches it; and the hints for the current focus. Both, and the
+// strips, are the shell's own rows, drawn alike by ShellRow.
 import { RGBA, TextAttributes } from "@opentui/core";
 import { For, type JSX, Show } from "solid-js";
-import { type Context, hintsFor } from "./hints.ts";
+import { type Context, fitHints, hintsFor, separator } from "./hints.ts";
 import { ink, inkOr, type Theme } from "./theme.ts";
 
-export type Tab = { id: string; label: string; main: boolean };
+export { separator };
 
-// separator parts the hints as it parts the strip.
-export const separator = " · ";
+export type Tab = { id: string; label: string };
 
 // ShellRow is one of the shell's own rows: the band behind it, the panes'
 // column of padding on each side, its content from the left.
@@ -48,15 +47,14 @@ export function Bar(props: {
   theme: Theme;
   pick: (id: string) => void;
 }) {
-  const colour = (t: Tab) => (t.main ? props.theme.main : props.theme.worker);
   const style = (t: Tab) => {
     if (t.id === props.focused) {
-      const bg = colour(t);
+      const bg = props.theme.worker;
       return { bg, fg: ink(bg), attributes: TextAttributes.BOLD };
     }
     const bg = props.theme.idle;
     const marked = t.id === props.chosen ? TextAttributes.UNDERLINE : 0;
-    return { bg, fg: inkOr(colour(t), bg), attributes: marked };
+    return { bg, fg: inkOr(props.theme.worker, bg), attributes: marked };
   };
   return (
     <ShellRow theme={props.theme}>
@@ -87,8 +85,9 @@ export function Bar(props: {
   );
 }
 
-export function Hints(props: { context: Context; theme: Theme; accent: string }) {
-  const hints = () => hintsFor(props.context);
+// Hints is the hints row for a column width wide.
+export function Hints(props: { context: Context; width: number; theme: Theme; accent: string }) {
+  const hints = () => fitHints(hintsFor(props.context), Math.max(props.width - 2, 1));
   const plain = RGBA.defaultForeground();
   return (
     <ShellRow theme={props.theme}>

@@ -122,12 +122,14 @@ export async function spacesOver(rewake: string, room: string, ids: string[], bo
   }
 }
 
-// The room's sessions as main sees them, for the strip under each worker pane
+// The room's sessions as main sees them, for the strip under each pane
 // (docs/shell.md, "The strip"): rewake list shows a session's telemetry
 // only to a verified main, and the shell is main's terminal, so it asks as
 // main's run, the one whose wrapper is its own child.
 export type Session = {
   name: string;
+  // own marks the shell's main, the run the listing was asked as.
+  own?: boolean;
   type?: string;
   cwd: string;
   // branch is what is checked out where the session started.
@@ -233,6 +235,8 @@ export function sessionReader(rewake: string, room: string, mainPid: () => numbe
     // at once as main's.
     if (as && as.REWAKE_EPOCH !== was && again) return read(false);
     const sessions = sessionsOf(listing);
+    const mine = own && sessions.get(own.name);
+    if (mine) mine.own = true;
     for (const s of sessions.values()) s.branch = await branchOf(s.cwd);
     return sessions;
   };

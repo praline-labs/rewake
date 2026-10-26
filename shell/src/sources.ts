@@ -36,6 +36,26 @@ class Queue {
 
 export type MainRun = Source & { child: Subprocess };
 
+// mainEnv is main's environment: the shell's own, for a terminal like the
+// person's, and hostColors, the person's default colours for the hosts.
+export function mainEnv(hostColors: string | undefined): Record<string, string> {
+  const env: Record<string, string> = {
+    ...(process.env as Record<string, string>),
+    TERM: "xterm-256color",
+    COLORTERM: "truecolor",
+  };
+  delete env.REWAKE_SHELL_CWD;
+  // The person's colours reach every space host through main's environment,
+  // so a worker's program hears them from its host (docs/shell.md).
+  if (hostColors) env.REWAKE_HOST_COLORS = hostColors;
+  // pi copies through the machine's clipboard where it finds one, which never
+  // reaches the person's terminal from inside the shell (on WSL without
+  // WT_SESSION, PowerShell); this makes it send OSC 52 as well, which the
+  // scanner carries out. Main's workers inherit it like the colours.
+  env.PI_CLIPBOARD_OSC52 ??= "1";
+  return env;
+}
+
 // startMain runs main's command line on a pty of its own: a session and a
 // process group of its own, the pty its controlling terminal, so closing the
 // pty is a hangup main hears.

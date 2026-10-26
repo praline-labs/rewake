@@ -1,6 +1,7 @@
-// The strip, the last row of a worker's pane (docs/shell.md, "The
-// strip"): who the worker is, what it does, where it works, its model and how
-// full its context is, from rewake's own records, the same for every harness.
+// The strip, the row under a pane, main's and each worker's (docs/shell.md,
+// "The strip"): who the session is, what it does, where it works, its model
+// and how full its context is, from rewake's own records, the same for every
+// harness.
 import { RGBA } from "@opentui/core";
 import { createSignal, For, onCleanup } from "solid-js";
 import { ShellRow, selecting, separator } from "./bar.tsx";
@@ -18,11 +19,18 @@ export { showSessions, showSpaces };
 
 // stripOf is a worker pane's state: its space's session, as main sees it,
 // and the branch of the space's own checkout, else of where it started.
-function stripOf(id: string): StripState {
+export function stripOf(id: string): StripState {
   const space = spaces().find((s) => s.id === id);
   const session = space?.worker ?? id;
   const status = sessions().get(session);
   return { session, status, branch: space?.checkout?.branch ?? status?.branch };
+}
+
+// mainStrip is main's own: its row of the listing, once the run the listing
+// is asked as is known, and the branch where it started.
+export function mainStrip(): StripState {
+  const status = [...sessions().values()].find((s) => s.own);
+  return { session: status?.name ?? "main", status, branch: status?.branch };
 }
 
 type Part = {
@@ -126,14 +134,21 @@ function fillColour(fill: number | undefined): RGBA {
   return RGBA.fromIndex(fill >= 80 ? 1 : fill >= 50 ? 3 : 2);
 }
 
-// Strip is the strip of the space id's worker, for a pane width wide: a
-// shell's row like the bar, its line fitted to the width less the padding.
-export function Strip(props: { id: string; width: number; theme: Theme; pick: () => void }) {
+// Strip is the strip of a pane width wide, its name in the colour of the
+// pane's program: a shell's row like the bar, its line fitted to the width
+// less the padding.
+export function Strip(props: {
+  state: () => StripState;
+  width: number;
+  colour: string;
+  theme: Theme;
+  pick: () => void;
+}) {
   const plain = RGBA.defaultForeground();
   const [now, setNow] = createSignal(Date.now());
   const timer = setInterval(() => setNow(Date.now()), tick);
   onCleanup(() => clearInterval(timer));
-  const parts = () => stripParts(stripOf(props.id), Math.max(props.width - 2, 1), now());
+  const parts = () => stripParts(props.state(), Math.max(props.width - 2, 1), now());
   return (
     <ShellRow theme={props.theme} onMouseDown={props.pick}>
       <text height={1} wrapMode="none" flexGrow={1} fg={plain} {...selecting(props.theme)}>
@@ -142,7 +157,7 @@ export function Strip(props: { id: string; width: number; theme: Theme; pick: ()
             <>
               {i() > 0 ? <span style={{ fg: props.theme.faint }}>{separator}</span> : ""}
               {part.kind === "name" ? (
-                <b style={{ fg: props.theme.worker }}>{part.text}</b>
+                <b style={{ fg: props.colour }}>{part.text}</b>
               ) : part.kind === "context" ? (
                 <span style={{ fg: fillColour(part.fill) }}>{part.text}</span>
               ) : part.kind === "cache" ? (
