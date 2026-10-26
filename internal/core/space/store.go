@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
@@ -152,23 +151,6 @@ func Close(dir, id string, end End) (Record, error) {
 		if end.Checkout.Presence != Gone {
 			r.State = Kept
 		}
-		return nil
-	})
-}
-
-// Cleared records that a kept checkout is gone, observed here and now: the
-// space is then closed and no longer reminded (SP7). A checkout still there,
-// or one whose presence cannot be told, leaves the record kept.
-func Cleared(dir, id string) (Record, error) {
-	return change(dir, id, "clearing the kept checkout", func(r *Record) error {
-		if r.State != Kept {
-			return errStep
-		}
-		if present := CheckoutPresence(*r); present != Gone {
-			return fmt.Errorf("the checkout of space %s at %s is %s, not gone", r.Name, r.Checkout.Path, present)
-		}
-		now := time.Now().UTC()
-		r.State, r.End.Cleared = Closed, &now
 		return nil
 	})
 }

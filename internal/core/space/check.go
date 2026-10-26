@@ -71,10 +71,8 @@ func (e End) check(r Record) error {
 		return errors.New("a checkout found there or unknown that the record never named")
 	case e.Checkout.Presence != There && (e.Checkout.Changes || e.Checkout.Commits || e.Checkout.Locked):
 		return errors.New("what was found in a checkout not seen there")
-	case e.Cleared != nil && e.Checkout.Presence == Gone:
-		return errors.New("a checkout cleared that was gone at the close")
-	case (r.State == Kept) != (e.Checkout.Presence != Gone && e.Cleared == nil):
-		return errors.New("kept exactly while a checkout not seen gone at the close is not seen gone since")
+	case (r.State == Kept) != (e.Checkout.Presence != Gone):
+		return errors.New("kept exactly while the checkout was not seen gone at the close")
 	}
 	return nil
 }

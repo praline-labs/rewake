@@ -95,7 +95,7 @@ between two steps leaves the earlier one whole.
 | `checkout` | path and branch of the worktree the worker's launch made, once its session is seen there; absent for a worker started without one |
 | `host` | the space host's run, as an epoch, recorded before it checks anything |
 | `openedAt`, `closing` | when it opened; why it began to close |
-| `end` | what closing observed: when, why, the worker's end, the checkout as found — there, gone or unknown, never left out — and when a checkout not seen gone was seen gone |
+| `end` | what closing observed: when, why, the worker's end, the checkout as found — there, gone or unknown, never left out |
 
 A field a later build adds is read past, since a record outlives the build that wrote it.
 
@@ -118,12 +118,13 @@ the state, and every step is written before the act it names is answered (SP2).
   nothing of its harness ran), and the checkout's presence, always stated — `gone` (or never
   made), `there` with what was in it (changes, commits beyond its base, a Git lock), or
   `unknown`. An end that says nothing of either, or contradicts the record, is refused.
-- **Cleared**: `kept` to `closed`, when the checkout is seen gone at that moment; one still
-  there, or one that cannot be looked at, keeps the record kept.
+
+`kept` is final: nothing records a kept checkout cleared, and the listing stops reminding of
+one once it is gone.
 
 Every record holds its own invariants, and one read that breaks them is unreadable rather than
 half believed: an end exactly when the state is final, `open` with its space host's run and its
-worker's run, `kept` exactly while a checkout not seen gone at the close is not seen gone since.
+worker's run, `kept` exactly while the checkout was not seen gone at the close.
 
 ## The listing
 
@@ -134,7 +135,7 @@ one's. A kept checkout is listed while it is there or cannot be looked at, with 
 it and the Git commands that clear it once what is wanted is merged — `git worktree unlock` for
 a locked one, `git worktree remove`, `git branch -d` — each of which refuses rather than lose
 work; rewake runs none of them. A kept checkout removed by hand is no longer listed as kept work,
-though its record reads `kept` until a change records it cleared: a view writes nothing.
+though its record still reads `kept`.
 
 ## Closing
 

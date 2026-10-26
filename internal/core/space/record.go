@@ -137,9 +137,6 @@ type End struct {
 	Worker WorkerEnd `json:"worker"`
 	// Checkout is how the checkout was found once the worker was gone.
 	Checkout Seen `json:"checkout"`
-	// Cleared is when a checkout left at the close was seen gone, which
-	// ends its reminder.
-	Cleared *time.Time `json:"cleared,omitempty"`
 }
 
 // staysMark joins to an end's reason why the worker's checkout was not

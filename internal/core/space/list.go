@@ -99,9 +99,9 @@ type Reminder struct {
 }
 
 // Reminders are the kept checkouts among records that are not seen gone,
-// in the records' order. A kept record whose checkout is gone is left out
-// even before a change records it cleared: a view cannot write that, and
-// nothing remains to remind.
+// in the records' order. A kept record whose checkout is gone is left out:
+// nothing remains to remind, though the record stays kept, since nothing
+// records a kept checkout cleared.
 func Reminders(records []Record) []Reminder {
 	var out []Reminder
 	for _, r := range records {

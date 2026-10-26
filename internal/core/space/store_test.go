@@ -156,18 +156,6 @@ func TestTheStatesMoveInTheirOrder(t *testing.T) {
 	if _, err := Close(dir, record.ID, observed(WorkerEnded, Seen{Presence: Gone})); !errors.As(err, &step) || step.State != Kept {
 		t.Fatalf("closed twice: %v", err)
 	}
-	if _, err := Cleared(dir, record.ID); err == nil || !strings.Contains(err.Error(), "is there, not gone") {
-		t.Fatalf("cleared while the checkout is there: %v", err)
-	}
-	if err := os.Remove(checkout); err != nil {
-		t.Fatal(err)
-	}
-	if got, err := Cleared(dir, record.ID); err != nil || got.State != Closed || got.End.Cleared == nil || got.End.Checkout.Presence != There {
-		t.Fatalf("cleared once gone: %+v, %v", got, err)
-	}
-	if _, err := Cleared(dir, record.ID); !errors.As(err, &step) || step.State != Closed {
-		t.Fatalf("cleared twice: %v", err)
-	}
 
 	// An open that fails before the worker starts closes from opening, its
 	// worker never started and no checkout left; a worker that ran without a
@@ -208,7 +196,6 @@ func TestARecordClosesOnlyFromAnObservation(t *testing.T) {
 		"a run that never started":    {open.ID, observed(WorkerNeverStarted, Seen{Presence: Gone})},
 		"a checkout never named":      {unseated.ID, observed(WorkerNeverStarted, Seen{Presence: There})},
 		"findings in no checkout":     {open.ID, observed(WorkerEnded, Seen{Presence: Gone, Commits: true})},
-		"cleared at the close":        {open.ID, End{At: time.Now(), Why: "x", Worker: WorkerEnded, Checkout: Seen{Presence: There}, Cleared: new(time.Time)}},
 	} {
 		t.Run(name, func(t *testing.T) {
 			before := onDisk(t, dir, c.id)
