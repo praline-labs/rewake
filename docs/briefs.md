@@ -34,7 +34,11 @@ briefs/closed/<id>/          a closed brief, moved whole
   and renamed to `briefs/<id>`, so a brief is whole or absent; a crash leaves a `.tmp-*` directory,
   which is never a record.
 - **The log** numbers every event of the brief from one counter: entry `n` is the highest plus one,
-  published with `state.PublishExclusive` under the lock, never edited or removed. Two numbers
+  published with `state.PublishExclusive` under the lock, never edited or removed. A tick's
+  `itemText` is the item's text cut to 200 code points, a cut one ending in `…`: whole, a long
+  item made an entry past the 64 KiB a reader takes. Every write of `brief.json` or an entry is
+  refused, nothing written, when the record would pass that bound, so no accepted write leaves a
+  brief its readers refuse. Two numbers
   stay apart. The **edition** counts main's edits, 1 for a new brief, and only an edit raises it:
   the edit writes `text/<e>.md` first and its log entry, naming the edition, last, so the entry is
   the commit point — a crash between leaves a text no entry names, and nothing changed. The
@@ -100,8 +104,11 @@ The `brief` group of the command table, with `--json` on each, examples parsed a
   item's number (`- [ ] #3 run the tests`); under `--json` the message gains a `brief` object.
   `inbox --owed` prints it again with the task, the current text, so a compacted worker re-reads
   it. A brief closed meanwhile prints as closed; one that cannot be read prints the letter whole
-  and says the brief could not be read and how to read it again (E5, E6). A notice never carries
-  it.
+  and says the brief could not be read and how to read it again (E5, E6). A letter an earlier run
+  of the name left unread prints its brief only to a run the brief was given to, as `show` would:
+  to any other the letter is shown and the brief is one line, that it was given to an earlier run
+  and main can give it again with `--brief` (`"earlierRun": true` under `--json`). A notice never
+  carries it.
 - **An edit tells nobody.** "Only then" is the owner's: main that wants a worker to see a new
   text sends a letter, with `--brief` again.
 - `rewake edit` of a task with a brief keeps the brief in its replacement; `withdraw` leaves the

@@ -16,17 +16,23 @@ type letterBrief struct {
 	// Error says why the brief could not be read; the letter is shown whole
 	// all the same (E5, E6).
 	Error string `json:"error,omitempty"`
+	// EarlierRun says the brief was given to an earlier run of the name, not
+	// to the reader, which gets no right to it and is not shown it.
+	EarlierRun bool `json:"earlierRun,omitempty"`
 }
 
-// withBriefs reads the brief of each letter that gives one.
-func withBriefs(dir string, views []messageView) []messageView {
+// withBriefs reads the brief of each letter that gives one, for the run
+// reading them: a letter left unread by an earlier run of the name shows its
+// brief only to a run it was given to, as brief show would.
+func withBriefs(dir string, views []messageView, name, epoch string) []messageView {
+	reader := taskbrief.Author{Name: name, Epoch: epoch}
 	for index := range views {
-		views[index].BriefView = letterBriefOf(dir, views[index].Brief)
+		views[index].BriefView = letterBriefOf(dir, views[index].Brief, reader)
 	}
 	return views
 }
 
-func letterBriefOf(dir, named string) *letterBrief {
+func letterBriefOf(dir, named string, reader taskbrief.Author) *letterBrief {
 	if named == "" {
 		return nil
 	}
@@ -38,6 +44,9 @@ func letterBriefOf(dir, named string) *letterBrief {
 	if err != nil {
 		return &letterBrief{ID: id, Error: err.Error()}
 	}
+	if !brief.Has(reader) {
+		return &letterBrief{ID: id, EarlierRun: true}
+	}
 	view := briefDetailOf(brief)
 	return &letterBrief{ID: id, briefDetail: &view}
 }
@@ -47,6 +56,9 @@ func letterBriefOf(dir, named string) *letterBrief {
 func briefLetterLines(brief *letterBrief) []string {
 	if brief == nil {
 		return nil
+	}
+	if brief.EarlierRun {
+		return []string{"", fmt.Sprintf("Rewake: this letter gave brief %d to an earlier run of this session, not to this one; main can give it again with rewake send <name> \"...\" --brief %d.", brief.ID, brief.ID)}
 	}
 	if brief.briefDetail == nil {
 		return []string{"", fmt.Sprintf("Rewake: this letter gives brief %d, which could not be read: %s. Read it with rewake brief show %d.", brief.ID, brief.Error, brief.ID)}

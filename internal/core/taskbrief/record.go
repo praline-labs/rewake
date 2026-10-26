@@ -34,7 +34,10 @@ const (
 	MaxComment = 1000
 	// maxTitle cuts a title, in code points.
 	maxTitle = 60
-	// maxRecordBytes bounds brief.json and a log entry when read.
+	// maxItemEcho cuts the item's text a tick records, in code points.
+	maxItemEcho = 200
+	// maxRecordBytes bounds brief.json and a log entry, read and written
+	// alike: a write refuses what a reader would.
 	maxRecordBytes = 64 << 10
 )
 
@@ -79,7 +82,7 @@ type Entry struct {
 	Kind    Kind      `json:"kind"`
 	Edition int       `json:"edition"`
 	// Item and ItemText are a tick's: the number in its edition and the text
-	// it had there, for the reader of the log.
+	// it had there, cut to maxItemEcho code points, for the reader of the log.
 	Item     int    `json:"item,omitempty"`
 	ItemText string `json:"itemText,omitempty"`
 	// Text is a comment's.
@@ -111,6 +114,10 @@ var ErrNotFound = errors.New("no such brief")
 
 // ErrBadText is a text main may not write.
 var ErrBadText = errors.New("not a brief's text")
+
+// ErrTooLarge is a write refused, nothing written, because a reader would
+// refuse the record it makes.
+var ErrTooLarge = errors.New("the brief would not read back")
 
 // ClosedError is a change of a closed brief.
 type ClosedError struct{ ID int }

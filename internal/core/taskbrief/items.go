@@ -97,6 +97,17 @@ func cut(text string) string {
 	return string(runes[:maxTitle])
 }
 
+// echo is an item's text as a tick records it: at most maxItemEcho code
+// points, a cut one ending in "…". A tick that stored a long item whole
+// would write an entry past what a reader takes.
+func echo(text string) string {
+	runes := []rune(text)
+	if len(runes) <= maxItemEcho {
+		return text
+	}
+	return string(runes[:maxItemEcho-1]) + "…"
+}
+
 // render writes the text with each item's box set as done says and, when
 // numbered, its number after the box: "- [x] #3 run the tests".
 func render(text string, items []Item, numbered bool) string {

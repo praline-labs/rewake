@@ -92,7 +92,7 @@ func handleInbox(ctx *Context, call Call) error {
 			}
 			return nil
 		}
-		if err := writeInbox(ctx, inboxModel{Session: session.Name, Messages: withBriefs(dir, views)}); err != nil {
+		if err := writeInbox(ctx, inboxModel{Session: session.Name, Messages: withBriefs(dir, views, session.Name, epoch)}); err != nil {
 			failure = failf("could not print the messages, so none were marked read: %v", err)
 			return nil
 		}

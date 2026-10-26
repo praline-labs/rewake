@@ -117,12 +117,43 @@ func TestTheInboxPrintsTheBriefWithTheLetter(t *testing.T) {
 // it again; a closed one prints as closed.
 func TestALettersBriefThatDoesNotReadLeavesTheLetter(t *testing.T) {
 	dir, web, api := briefSender(t)
+	// Bound as send --brief binds before it writes the letter.
+	if err := taskbrief.Bind(dir, 1, taskbrief.Author{Name: api.Name, Epoch: api.Epoch()}); err != nil {
+		t.Fatal(err)
+	}
 	run("brief", "close", "1")
 	leaveUnread(t, dir, mail.Message{From: "web", FromEpoch: web.Epoch(), To: "api", ToEpoch: api.Epoch(), Kind: mail.Task, Text: "first", Brief: "1"})
 	leaveUnread(t, dir, mail.Message{From: "web", FromEpoch: web.Epoch(), To: "api", ToEpoch: api.Epoch(), Kind: mail.Task, Text: "second", Brief: "7"})
 	as(t, api)
 	code, out, errOut := run("inbox")
 	if code != ExitOK || !strings.Contains(out, "first\n\nbrief 1 · Login · edition 1 · 0 of 2 done · 0 comments · closed\nRewake: this brief is closed") || !strings.Contains(out, "second\n\nRewake: this letter gives brief 7, which could not be read: no such brief. Read it with rewake brief show 7.") {
+		t.Fatalf("inbox: %d %q %q", code, out, errOut)
+	}
+}
+
+// It broke (review of the briefs step): a letter an earlier run of the name
+// left unread printed its brief to the run after it, which brief show
+// refuses. The letter stays; the brief is one line saying whose it was.
+func TestALaterRunIsNotShownAnEarlierRunsBrief(t *testing.T) {
+	dir, web, api := briefSender(t)
+	earlier := "123.456.old-boot"
+	if err := taskbrief.Bind(dir, 1, taskbrief.Author{Name: api.Name, Epoch: earlier}); err != nil {
+		t.Fatal(err)
+	}
+	leaveUnread(t, dir, mail.Message{From: web.Name, FromEpoch: web.Epoch(), To: api.Name, ToEpoch: earlier, Kind: mail.Task, Text: "old task", Brief: "1"})
+	as(t, api)
+	if code, _, _ := run("brief", "show", "1"); code != ExitFailed {
+		t.Fatalf("brief show by the later run: %d", code)
+	}
+	code, out, errOut := run("inbox", "--json")
+	if code != ExitOK || strings.Contains(out, "move it") || !strings.Contains(out, `"earlierRun": true`) {
+		t.Fatalf("inbox --json: %d %q %q", code, out, errOut)
+	}
+	leaveUnread(t, dir, mail.Message{From: web.Name, FromEpoch: web.Epoch(), To: api.Name, ToEpoch: earlier, Kind: mail.Task, Text: "old task again", Brief: "1"})
+	code, out, errOut = run("inbox")
+	if code != ExitOK || strings.Contains(out, "move it") ||
+		!strings.Contains(out, "old task again\n") ||
+		!strings.Contains(out, "Rewake: this letter gave brief 1 to an earlier run of this session, not to this one; main can give it again with rewake send <name> \"...\" --brief 1.") {
 		t.Fatalf("inbox: %d %q %q", code, out, errOut)
 	}
 }
