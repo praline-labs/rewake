@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/praline-labs/rewake/internal/core/worktype"
 	"github.com/praline-labs/rewake/internal/host/launch"
@@ -30,6 +31,8 @@ type workerTemplate struct {
 	Model       workerSetting `json:"model"`
 	Effort      workerSetting `json:"effort"`
 	Context     workerSetting `json:"context"`
+	// Label names the model where the harness gives it no name of its own.
+	Label string `json:"label,omitempty"`
 }
 
 type workersListing struct {
@@ -46,10 +49,9 @@ func workersCommand() *Command {
 		Examples: []string{"rewake workers", "rewake workers --json"},
 		Next:     []string{"rewake space open <name> --alias <alias>"},
 		Notes: []string{
-			"Any role may read this catalog. Aliases come from the user alias file, ~/.config/rewake/aliases.toml, then the current directory's .rewake/aliases.toml, which may not set role or command. A .rewake.toml, where a project's aliases once lived, is refused, naming the new place. A project's .rewake/aliases.toml may hold [aliases] off = [\"<alias>\", ...] to hide templates for that project; the user file may not. An unreadable file refuses the listing rather than silently omit workers.",
-			"Types are the kinds of work a worker is raised for, each a text that follows its role's briefing: rewake's built-in code, analysis, process and review; the person's ~/.config/rewake/types/<type>.md; the project's .rewake/types/<type>.md. The nearest of one name wins. A type file is Markdown opening with a TOML front matter between two +++ lines that holds description = \"<one line>\", at most 32 KiB. [types] off = [\"<built-in type>\", ...] in either alias file hides those built-in ones; a file of the same name still stands. An alias's type = \"<type>\" is its default, shown with why space open would refuse it when it is not there or turned off.",
-			"An alias: [alias.<name>] with harness = \"<id>\"; role = \"write\" or \"general\" (general when absent); args = [the harness's arguments]; command = \"<program>\", a wrapper that runs the harness; description; worktree = true, a worker started in a new worktree of its own, which --worktree=<name> on space open names and --no-worktree leaves out; enter_worktree = true, on Claude Code, a worker started without one that may enter one mid-session through its worktree_enter tool, refused beside worktree = true; and [alias.<name>.launch] with model, effort and context. Model and effort become the harness's flags; context does on a harness with a flag for it and is only shown elsewhere. Typed harness flags after -- in space open replace applied ones.",
-			"An alias's old rewake list, main = true and launch.apply are gone: a file with them is refused, naming each field and what replaced it.",
+			"Any role may read this catalog. rewake ships no templates: each is an [alias.<name>] in the user alias file, ~/.config/rewake/aliases.toml, or in .rewake/aliases.toml of the directory the command runs in — not the room's, so run workers and space open from the project's top, where its file, its types and its [aliases] off are read. A project alias with the user's name replaces the user's whole, role and command included. The project file may not set role or command. It may hold [aliases] off = [\"<alias>\", ...], which hides those templates of the merged catalog, the user's included; a name that is no template, or one the same file defines, refuses the catalog, and so does [aliases] off in the user file. A .rewake.toml in the directory is refused: the project file is .rewake/aliases.toml. An unreadable file refuses the listing rather than silently omit workers.",
+			"Types are the kinds of work a worker is raised for, each a text that follows its role's briefing: rewake's built-in " + builtInTypes() + "; the person's ~/.config/rewake/types/<type>.md; the project's .rewake/types/<type>.md. The nearest of one name wins. A type file is Markdown opening with a TOML front matter between two +++ lines that holds description = \"<one line>\", at most 32 KiB. [types] off = [\"<built-in type>\", ...] in either alias file hides those built-in ones; a file of the same name still stands. An alias's type = \"<type>\" is its default, shown with why space open would refuse it when it is not there or turned off.",
+			"An alias: [alias.<name>] with harness = \"<id>\"; role = \"write\" or \"general\" (general when absent); args = [the harness's arguments]; command = \"<program>\", a wrapper that runs the harness; description; type = \"<type>\"; worktree = true, a worker started in a new worktree of its own, which --worktree=<name> on space open names and --no-worktree leaves out; enter_worktree = true, on Claude Code, a worker started without one that may enter one mid-session through its worktree_enter tool, refused beside worktree = true. And [alias.<name>.launch] with model and effort, which become the harness's flags; context, the window auto-compaction keeps to — Claude Code's --autocompact, auto or 100k to 1M such as 300k —, applied where the harness has a flag for it and only shown elsewhere; and label, how the strip and rewake list name the model where the harness gives it no name. A template with no model or effort takes the launch defaults rewake <harness> --help names. space open --help says how harness flags after -- meet the template's.",
 		},
 		Access: viewForm, Handler: handleWorkers,
 	}
@@ -79,6 +81,11 @@ func handleWorkers(ctx *Context, call Call) error {
 	return printValue(ctx, out, out.lines)
 }
 
+// builtInTypes names the types rewake ships, for the help pages.
+func builtInTypes() string {
+	return strings.Join(worktype.Names(worktype.BuiltIns()), ", ")
+}
+
 // launchAliases reads the catalog once per process, saying what is wrong
 // with it where it is read.
 func (ctx *Context) launchAliases() *launch.Set {
@@ -106,6 +113,7 @@ func workerView(template launch.Template) workerTemplate {
 		Model:   workerSetting{Value: settings.Model, Applied: template.Applied.Model},
 		Effort:  workerSetting{Value: settings.Effort, Applied: template.Applied.Effort},
 		Context: workerSetting{Value: settings.Context, Applied: template.Applied.Context},
+		Label:   settings.Label,
 	}
 }
 
@@ -127,7 +135,7 @@ func (l workersListing) lines() []string {
 
 func (l workersListing) workerLines() []string {
 	if len(l.Workers) == 0 {
-		return []string{"No worker aliases."}
+		return []string{"No worker aliases: define [alias.<name>] in ~/.config/rewake/aliases.toml or .rewake/aliases.toml; rewake workers --help lists the fields."}
 	}
 	var lines []string
 	for _, w := range l.Workers {
@@ -156,6 +164,9 @@ func (l workersListing) workerLines() []string {
 				mode = "applied"
 			}
 			line += fmt.Sprintf(" %s=%s (%s)", setting.name, strconv.Quote(setting.value.Value), mode)
+		}
+		if w.Label != "" {
+			line += " label=" + strconv.Quote(w.Label)
 		}
 		if w.Description != "" {
 			line += " — " + w.Description

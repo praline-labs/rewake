@@ -79,14 +79,9 @@ type AliasSettings struct {
 const CommandFlag = "command"
 
 // Help is the one line that tells a person aliases exist, printed with every
-// launch command's help. Somebody who has to read the documentation to learn
-// that a feature exists will not find it.
-const Help = "Main opens workers by alias: [alias.<name>] in ~/.config/" + userDir + "/" + userFile +
-	" or in " + projectDir + "/" + userFile + " in the working directory, with harness = \"<id>\", role = \"write\" or \"general\", " +
-	"args = [arguments for the harness], description, worktree = true for a worker in a new worktree of its own or, on Claude Code, enter_worktree = true for one that may enter one mid-session, [alias.<name>.launch] model, effort and context, and, " +
-	"in the user file only, role and command = \"<program>\" for a wrapper script. " +
-	"An alias's type = \"<type>\" is its worker's kind of work by default, one of the types: texts in ~/.config/" + userDir + "/" + typesDir + "/<type>.md and " + projectDir + "/" + typesDir + "/<type>.md beside rewake's own; [types] off = [...] in either alias file hides built-in ones, and [aliases] off = [...] in the project file hides templates of the catalog for that project. " +
-	"rewake workers lists them; rewake space open <space> --alias <name> [--type <type>] opens one. An alias is not a launch of its own."
+// launch command's help. The fields are on rewake workers --help alone, so the
+// two pages cannot drift apart.
+const Help = "Main opens workers from templates, rewake ships none: rewake workers --help says where they are defined and with which fields; rewake workers lists them and rewake space open <space> --alias <name> opens one."
 
 // Set is what this process read.
 type Set struct {
@@ -123,6 +118,15 @@ func (s *Set) Names() []string {
 	return names
 }
 
+// available is what a refusal says exists: the templates, or where to define
+// one when there are none.
+func (s *Set) available() string {
+	if len(s.aliases) == 0 {
+		return "no templates are defined; rewake workers --help says where"
+	}
+	return "available: " + strings.Join(s.Names(), ", ")
+}
+
 // Lookup returns one alias and where it was read from.
 func (s *Set) Lookup(name string) (Alias, string, bool) {
 	value, ok := s.aliases[name]
@@ -154,11 +158,11 @@ type Template struct {
 // than what it says.
 func (s *Set) Template(name string, catalog adapter.Catalog) (Template, error) {
 	if where, off := s.aliasOff[name]; off {
-		return Template{}, fmt.Errorf("the alias %q is turned off in %s ([aliases] off); available: %s", name, where, strings.Join(s.Names(), ", "))
+		return Template{}, fmt.Errorf("the alias %q is turned off in %s ([aliases] off); %s", name, where, s.available())
 	}
 	value, source, ok := s.Lookup(name)
 	if !ok {
-		return Template{}, fmt.Errorf("no alias %q; available: %s", name, strings.Join(s.Names(), ", "))
+		return Template{}, fmt.Errorf("no alias %q; %s", name, s.available())
 	}
 	if err := value.check(name, source, catalog.IDs(), s.fromProject[name]); err != nil {
 		return Template{}, err

@@ -148,7 +148,7 @@ func unknownFields(description, path string, strict *toml.StrictMissingError) st
 	}
 	var parts []string
 	if len(removed) > 0 {
-		parts = append(parts, "fields removed when aliases became main's catalog of workers (October 19, 2026): "+strings.Join(removed, "; "))
+		parts = append(parts, "fields whose place is elsewhere: "+strings.Join(removed, "; "))
 	}
 	if len(unknown) > 0 {
 		parts = append(parts, "fields an alias does not have: "+strings.Join(unknown, ", "))

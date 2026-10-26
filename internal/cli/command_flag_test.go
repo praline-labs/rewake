@@ -65,8 +65,13 @@ func TestTheCommandOptionIsALaunchFlag(t *testing.T) {
 		t.Fatal("--command is not a launch flag taking a value")
 	}
 	code, out, _ := run(agentID, "--help")
-	if code != ExitOK || !strings.Contains(out, "--command <program>") || !strings.Contains(out, "command = \"<program>\"") {
-		t.Errorf("help does not show --command and the alias field:\n%s", out)
+	if code != ExitOK || !strings.Contains(out, "--command <program>") {
+		t.Errorf("help does not show --command:\n%s", out)
+	}
+	// The alias field is on the workers page, the one place the fields live.
+	code, out, _ = run("workers", "--help")
+	if code != ExitOK || !strings.Contains(out, "command = \"<program>\"") {
+		t.Errorf("workers help does not show the alias field:\n%s", out)
 	}
 }
 

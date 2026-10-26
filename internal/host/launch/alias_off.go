@@ -1,9 +1,6 @@
 package launch
 
-import (
-	"fmt"
-	"strings"
-)
+import "fmt"
 
 // offRequest is one name a project file turned off, with the file's words.
 type offRequest struct{ name, description, path string }
@@ -34,8 +31,8 @@ func (s *Set) noteAliasesOff(names []string, own map[string]Alias, description, 
 func (s *Set) applyAliasesOff() {
 	for _, request := range s.pendingOff {
 		if _, ok := s.aliases[request.name]; !ok {
-			s.unreadable(fmt.Sprintf("%s at %s turns off %q in [aliases] off, which is no alias of the catalog; available: %s",
-				request.description, request.path, request.name, strings.Join(s.Names(), ", ")))
+			s.unreadable(fmt.Sprintf("%s at %s turns off %q in [aliases] off, which is no alias of the catalog; %s",
+				request.description, request.path, request.name, s.available()))
 			continue
 		}
 		s.aliasOff[request.name] = request.description

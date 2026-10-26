@@ -140,8 +140,8 @@ strings**: a string would have to be split into words, and splitting words means
 rules. A field rewake does not know is refused, not skipped, and the removed ones are named
 with what replaced them — `rewake` (the role is `role`; the space names the worker and its
 room), `main` (main is started with `rewake <harness>`), `launch.apply` (settings always
-apply; flags that should not go in `args`). The whole file is refused then, so it is
-rewritten once.
+apply; flags that should not go in `args`), under "fields whose place is elsewhere". The whole
+file is refused then, so it is rewritten once.
 
 **The project file's place, since October 21, 2026** (the owner's decision): a project's aliases
 live in `.rewake/aliases.toml`, beside its types in `.rewake/types/`. A `.rewake.toml` in the
@@ -170,9 +170,14 @@ happens to be in should not decide that or what a worker may do. The user file i
 `rewake workers` is a view available to any role, even outside a session. It reads the user
 file and the current directory's `.rewake/aliases.toml`, a project alias replacing the user's of
 the same name and the project's `[aliases] off` removing templates, and shows name, harness, role, command (the harness when none), description, type
-and each setting's value marked applied or shown only, then the types `space open --type` takes;
+and each setting's value marked applied or shown only, and the label, then the types `space open --type` takes;
 `--json` returns `workers`, whose `model`, `effort` and `context` each have `value` and
-`applied`, and `types`. A file that cannot be read refuses the
+`applied`, with `label` when one is set, and `types`. rewake ships no templates: an empty
+catalogue answers `No worker aliases: define [alias.<name>] in ...`, and `space open --alias`
+with none defined refuses with `no templates are defined; rewake workers --help says where` in
+place of the empty `available:` list. The fields are listed once, on `rewake workers --help`; a
+launch page only points there. Both files are read from the directory the command runs in, not
+the room's, so the help tells main to run `workers` and `space open` from the project's top. A file that cannot be read refuses the
 catalogue rather than silently omit workers; TOML errors include the source path, line and
 column. An alias that makes no sense — no harness or an unknown one, a role that is not a
 worker's, settings on a harness with no flags for them — refuses it too, naming the alias.
