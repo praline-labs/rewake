@@ -23,9 +23,6 @@ func reportSent(ctx *Context, after sent, message mail.Message, kind messageKind
 	}
 	status, known := awaitStatus(dir, session.Name, message.ID, delivery, recipientRunning(dir, session))
 	model := sendModel{ID: message.ID, To: session.Name, From: message.From, Addenda: after.addenda, Replaces: message.Replaces, Named: after.named}
-	if ctx.op != nil {
-		model.Receipt = ctx.op.record.Token
-	}
 	// What cannot be read says neither delivered nor lost: the answer is
 	// pending, which sends nobody to do it twice. Await takes a status it
 	// cannot read for none yet, so one more look tells the two apart.

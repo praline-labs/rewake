@@ -24,9 +24,7 @@ mailbox, kept by hand.
 | `journal/<op>.done` | a turn end recorded done: its run, operation, end time and the held end it took ([delivery-turn-end.md](delivery-turn-end.md#the-end-of-a-turn)) | a journal, by the fields it still needs |
 | `pending/kept.json`, `pending/interim.json` | a held answer; a run's last word on the work | their records |
 | `pending/marks/<run>/<time>` | a pending mark | a mark that says what its name says |
-| `once/<run>/<id>` | the publication mark of a heads-up published once (`mail.PublishOnce`, [rules/effects.md](rules/effects.md#receipts-retries-and-once-marks)) | `intent` or `published` |
 | `threads/<id>` | a delivery thread | readable |
-| `receipts/<run>/.<token>.lock`, `<token>.json` | a call's receipt lock and receipt ([rules/effects.md](rules/effects.md#receipts-retries-and-once-marks)) | nothing; a receipt that says what its place says |
 
 A file named `.tmp-*`, in any directory, is a write that never finished
 (`state.WriteAtomic`), never a record. An unfinished `journal/<op>` file is still looked at by
@@ -36,3 +34,7 @@ room belongs to one build ([rules/state.md](rules/state.md#the-rooms-lease)). A 
 earlier build made may still hold `stops/`, `decisions/`, `claims/`, `journal/resend-*`, or
 `receipts/<run>/key-*` and `receipts/<run>/calls/`: no code reads them now, and they stop
 nothing.
+
+A known limit: a mailbox a build up to 2.0.0 made may keep the `receipts/` and `once/`
+directories its `send --notify` and `pending` wrote; nothing reads or sweeps them now, and they
+go when the room or the system's temporary directory is cleared.

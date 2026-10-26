@@ -65,7 +65,6 @@ func documentedForms(launch string) []formCase {
 		{[]string{"inbox", "--message", "8d4ddd85"}, change},
 		{[]string{"inbox", "--peek"}, change},
 		{[]string{"pending", "the review"}, change},
-		{[]string{"retry", "0123456789abcdef01234567"}, change},
 		{[]string{"compact", "api"}, change},
 		{[]string{"interrupt", "api"}, change},
 		{[]string{"answer", "api", "3f9a", "once"}, change},

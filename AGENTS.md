@@ -243,8 +243,8 @@ owner. A change goes through one chain: the writer writes; one review; the write
 blockers; the commit. A blocker is only one of: it does not work; it loses or duplicates a
 letter in an ordinary scenario; it corrupts state; it breaks what worked. Everything else is a
 note the writer decides on; a second review looks only at the blockers' fixes, at most once.
-Acceptance on the Codex side is spent only on a change of the on-disk state format or of the
-mod↔host protocol. A design document, at most a page, is written only for a step that changes
+A change of the on-disk state format or of the mod↔host protocol gets the reviewer's
+acceptance. A design document, at most a page, is written only for a step that changes
 the protocol or the state, otherwise the brief is the design; a live probe runs when code
 cannot be written without its answer.
 

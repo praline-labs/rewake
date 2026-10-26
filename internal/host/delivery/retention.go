@@ -55,13 +55,12 @@ func (s *Server) answerExpired(message mail.Message, reserved bool) (bool, error
 // sweepFinished removes the messages and statuses that have been answered long
 // enough ago that nobody is coming back for them.
 //
-// It retires the proof of what was published to the mailbox — a letter, the
-// marks of a run — so it removes only under the mailbox lock, never in the
-// unlocked fallback the server's other work takes, and only while its own run
-// is the live run of the name, read inside that section. A publisher reads the
-// run, the proof and writes in one section of the same lock, so a sweep never
-// runs between them; a server of a run that has ended would otherwise remove
-// the live run's marks and letters (docs/rules/effects.md#publication-once).
+// It retires the letters published to the mailbox, the proof that they
+// landed, so it removes only under the mailbox lock, never in the unlocked
+// fallback the server's other work takes, and only while its own run is the
+// live run of the name, read inside that section; a server of a run that has
+// ended would otherwise remove the live run's letters
+// (docs/rules/effects.md#retiring-a-letter).
 func (s *Server) sweepFinished() {
 	ctx := s.lockContext
 	if ctx == nil {

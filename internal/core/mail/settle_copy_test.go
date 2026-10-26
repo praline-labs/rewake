@@ -49,7 +49,7 @@ func landUnread(t *testing.T, dir string, report Message) string {
 
 // A refused letter whose waiting copy is gone has its readable copy as the
 // last; an archive into done/ that fails leaves that copy where it is, and
-// the next settling archives it (docs/rules/effects.md#publication-once).
+// the next settling archives it (docs/rules/effects.md#retiring-a-letter).
 func TestAFailedArchiveKeepsTheLastCopy(t *testing.T) {
 	lab := newTwoSessionLab(t)
 	report := lab.report(Finished)
@@ -129,41 +129,5 @@ func TestADirectoryAtTheArchiveIsNoCopy(t *testing.T) {
 	settleLocked()
 	if info, err := os.Lstat(target); err != nil || !info.Mode().IsRegular() {
 		t.Fatalf("the next settling did not archive the copy: %v", err)
-	}
-}
-
-// A symbolic link at unread/ is no copy, even of a letter whose mark says
-// only intent: settling a delivered letter beside it keeps the waiting copy,
-// which is the proof the publication landed, and the same id is not written
-// a second time.
-func TestASymbolicLinkIsNoLandingProof(t *testing.T) {
-	lab := newTwoSessionLab(t)
-	report := lab.report(Finished)
-	if err := live(lab.dir).put(report); err != nil {
-		t.Fatal(err)
-	}
-	mark, _ := oncePath(lab.dir, report.To, report.ToEpoch, report.ID)
-	writeRaw(t, mark, onceIntent)
-	if err := state.EnsureSubdir(state.UnreadPath(lab.dir, report.To)); err != nil {
-		t.Fatal(err)
-	}
-	unread := filepath.Join(state.UnreadPath(lab.dir, report.To), report.ID+".json")
-	if err := os.Symlink(filepath.Join(lab.dir, "missing"), unread); err != nil {
-		t.Fatal(err)
-	}
-	if err := withLock(lab.dir, report.To, func() error {
-		SettleLocked(lab.dir, report.To, report.ID, Delivered)
-		return nil
-	}); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := os.Stat(filepath.Join(state.InboxPath(lab.dir, report.To), report.ID+".json")); err != nil {
-		t.Fatalf("the waiting copy went beside a symbolic link: %v", err)
-	}
-	if got, err := PublicationOf(t.Context(), lab.dir, report.To, report.ToEpoch, report.ID); err != nil || got == PublicationAbsent {
-		t.Fatalf("settling erased the landing proof: PublicationOf=%v, err=%v", got, err)
-	}
-	if wrote, err := PublishOnce(t.Context(), lab.dir, report, nil); err == nil && wrote {
-		t.Fatal("the landed id was published a second time")
 	}
 }

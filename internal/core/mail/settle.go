@@ -21,12 +21,11 @@ var removeWaiting = state.Discard
 // takes no lock of its own, since the mailbox lock is not reentrant. Its
 // callers are held by internal/layout_callers_test.go.
 //
-// Settling never removes a letter's last copy. The letter is the proof that a
-// publication landed while its mark may still say only intent, and retiring
-// that proof is the sweep's alone, under the lock and by the live run
-// (docs/rules/effects.md#publication-once), which settling is not. So a
-// copy goes only beside another that stands, and a copy whose archive failed
-// stays where it is for the next pass.
+// Settling never removes a letter's last copy. The letter is the proof that it
+// landed, and retiring that proof is the sweep's alone, under the lock and by
+// the live run (docs/rules/effects.md#retiring-a-letter), which settling is
+// not. So a copy goes only beside another that stands, and a copy whose
+// archive failed stays where it is for the next pass.
 //
 // It answers whether the letter now stands where its outcome puts it. A
 // letter it left — named by a stop, or its archive or removal failed — is

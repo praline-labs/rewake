@@ -40,7 +40,6 @@ inbox/<name>/received/<id>       id of the report printed for this question
 inbox/<name>/retention/<id>      fixed release time for a reserved report
 inbox/<name>/journal/<op>.done   a turn end recorded done, written last, named by the end; kept while its run lives
 inbox/<name>/pending/            this run's pending marks, its last word on the work, a held answer
-inbox/<name>/once/<epoch>/<id>   a heads-up's publication mark: intent, then published
 inbox/<name>/threads/<id>        selected delivery thread, when supported
 inbox/<name>/.lock               the mailbox lock, one flock for every state change
                                  (every kind a mailbox holds: docs/mailbox-records.md)
@@ -158,10 +157,7 @@ session's shell, or from a person's shell in the same room. A shell without
    whose Wake is not live is written and reported accepted, exit 3, at once: no notice
    can reach it until its Wake is live, and it reads the letter with `rewake inbox`.
 4. **The file.** `inbox/write-claude/<id>.json.tmp`, renamed to `.json`. The id is
-   time-sortable. Nothing else is touched: the sender does not deliver. A `--notify`
-   is first journaled under a receipt in the sender's mailbox and then written once
-   under the recipient's lock, so a repeat or `rewake retry` cannot publish it twice
-   ([rules/effects.md](rules/effects.md#receipts-retries-and-once-marks)).
+   time-sortable. Nothing else is touched: the sender does not deliver.
 5. **The wait.** The sender polls `<id>.status` for up to `--wait` seconds (5
    by default; a question's delivery 5 at most) and prints one line: `Rewake: delivered to write-claude via socket`,
    `Rewake: pending for write-claude: …` or `Rewake: held for write-claude: …` (exit 3),

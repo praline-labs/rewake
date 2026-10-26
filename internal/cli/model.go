@@ -125,10 +125,6 @@ type Context struct {
 	JSON bool
 	// access is the class of the form this invocation runs (access.go).
 	access access
-	// op is the receipt a journaled command runs under, and journaling says
-	// the command already went through the journal or was found to need none.
-	op         *operation
-	journaling bool
 	// table is the command table of this invocation, built from the catalog
 	// the binary handed to Run.
 	table   *table

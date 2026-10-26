@@ -9,14 +9,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/core/receipt"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // SweepFinishedLocked removes what a mailbox kept of mail answered long enough
 // ago that nobody is coming back for it. The delivery server's sweep calls it
 // inside its mailbox section, once it has read there that the run epoch is the
-// live run of the name (docs/rules/effects.md#publication-once). It takes no
+// live run of the name (docs/rules/effects.md#retiring-a-letter). It takes no
 // lock of its own, since the mailbox lock is not reentrant, and proves neither
 // the lock nor the run itself: its caller has. Its callers are held by
 // internal/layout_callers_test.go.
@@ -75,12 +74,6 @@ func SweepFinishedLocked(dir, name, epoch string) {
 				// would write it again.
 				continue
 			}
-			if (directory == state.DonePath(dir, name) || directory == state.UnreadPath(dir, name)) &&
-				!settleOnce(dir, name, epoch, strings.TrimSuffix(entry.Name(), ".json")) {
-				// The letter is the only proof an intent was carried out; a
-				// retry finding neither would write it again.
-				continue
-			}
 			if directory == RetentionPath(dir, name) {
 				if _, err := os.Stat(filepath.Join(state.InboxPath(dir, name), entry.Name()+".json")); !errors.Is(err, os.ErrNotExist) {
 					continue
@@ -89,11 +82,8 @@ func SweepFinishedLocked(dir, name, epoch string) {
 			_ = state.Remove(filepath.Join(directory, entry.Name()))
 		}
 	}
-	sweepOnce(dir, name, epoch)
 	sweepTurnRecords(dir, name, epoch, cutoff)
 	sweepMarks(dir, name, epoch)
-	// The receipts sweep their own records under their own locks.
-	receipt.Sweep(dir, name, epoch, cutoff)
 }
 
 // reportStillAwaited says whether the letter at path is a report whose writer's

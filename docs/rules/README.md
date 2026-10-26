@@ -9,8 +9,8 @@ stated independently of the code: what the system guarantees, not how one file d
 
 - [effects.md](effects.md) — **E1–E8**, the effects of a mail operation: effects undone
   only on evidence, locks, checks under the lock, one durable read, the size bound, three
-  outcomes of a lookup, identity and scope, and the order of a turn end's steps; the rules
-  the receipts of `send` and `pending` keep. Open it before changing how mail is written,
+  outcomes of a lookup, identity and scope, and the order of a turn end's steps; the rule a
+  pending mark keeps and how a letter is retired. Open it before changing how mail is written,
   read or published.
 - [turns.md](turns.md) — **O1–O2**, turn outcomes: an interim wake that must not close a
   task early, failed and interrupted turns.

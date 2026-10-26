@@ -150,7 +150,6 @@ func buildGroups(catalog adapter.Catalog) []Group {
 				Access:         viewForm,
 				Handler:        handleWhoami,
 			},
-			retryCommand(),
 		},
 	}
 

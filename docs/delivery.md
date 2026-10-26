@@ -38,9 +38,7 @@ person watching the session should see a short notice and preview rather than th
    run in `REWAKE_EPOCH` still holds the name. `kind` is `task` by default, `question` with
    `--question`, `notify` with `--notify` (see "Kinds"). Sending settles nothing the sender
    owes the recipient: a message sent mid-turn is not the end of the turn.
-4. Write `inbox/<name>/<id>.json.tmp`, rename it to `.json`. A `notify` from a session is
-   journaled first and written once under the recipient's lock, so a repeat or a retry cannot
-   publish it twice ([rules/effects.md](rules/effects.md#receipts-retries-and-once-marks)).
+4. Write `inbox/<name>/<id>.json.tmp`, rename it to `.json`.
 5. Wait for `.status` up to `--wait` (5 seconds by default; a question gives its delivery 5
    seconds of its `--wait` at most, the rest being its answer's) and print the result. The
    wait ends early once the recipient run is proven ended or its name taken by another run,

@@ -43,7 +43,6 @@ func TestChangeFormsOnAnEmptyBaseCreateNothing(t *testing.T) {
 		{"inbox"},
 		{"inbox", "--peek"},
 		{"pending", "the review"},
-		{"retry", "0123456789abcdef01234567"},
 		{"withdraw", "1789590000000000000-aabbccddeeff"},
 		{"worktree", "rm", "nothing"},
 	} {
@@ -75,7 +74,7 @@ func TestAChangeRefusesAnotherBuildsRoom(t *testing.T) {
 }
 
 // A change whose lease could not be taken is refused before its scope and
-// tries no write in the room it could not acquire, though the receipts are
+// tries no write in the room it could not acquire, though the mailbox is
 // writable — the lock that refused it is unreadable, in a room of this build
 // or another's.
 func TestAFailedLeaseWritesNothing(t *testing.T) {

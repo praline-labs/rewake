@@ -22,8 +22,5 @@ func reportUnwoken(ctx *Context, after sent, message mail.Message) error {
 		Addenda: after.addenda, Replaces: message.Replaces, Named: after.named,
 		State: string(mail.Pending), Detail: unwoken,
 	}
-	if ctx.op != nil {
-		model.Receipt = ctx.op.record.Token
-	}
 	return printDelivery(ctx, after.target, model)
 }

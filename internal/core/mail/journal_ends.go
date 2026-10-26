@@ -6,11 +6,10 @@ import (
 	"path/filepath"
 )
 
-// The ends of a run on record, as the mail tool's commits meet them
-// (docs/rules/effects.md#receipts-retries-and-once-marks): a pending mark
-// and a read's acknowledgment look, under the mailbox lock, for an end of the
-// run whose journal records it ended at or after their own time. A journal is kept while its run lives, and one that cannot be
-// read may be this run's: it is an error, never an absence.
+// The ends of a run on record: a pending mark looks, under the mailbox lock,
+// for an end of the run whose journal records it ended at or after its own
+// time. A journal is kept while its run lives, and one that cannot be read may
+// be this run's: it is an error, never an absence.
 
 // EndedSince says whether a journal of run epoch records an end at or after
 // at.
@@ -58,17 +57,4 @@ func latestEnd(dir, name, epoch string) (int64, bool, error) {
 		}
 	}
 	return latest, false, nil
-}
-
-// MarkExists says whether the mark file of run epoch was written.
-func MarkExists(dir, name, epoch, file string) (bool, error) {
-	path, ok := marksPath(dir, name, epoch)
-	if !ok {
-		return false, errors.New("a pending mark needs its run")
-	}
-	_, err := os.Stat(filepath.Join(path, file))
-	if errors.Is(err, os.ErrNotExist) {
-		return false, nil
-	}
-	return err == nil, err
 }

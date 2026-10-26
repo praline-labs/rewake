@@ -125,7 +125,7 @@ has the writers' own bound (`shareWait`, ten seconds), which a switch that stall
 holding the lock exclusive uses up: then the launch is refused as busy.
 
 **Lock order.** The build lease comes before every other lock of the room — launch, name,
-mailbox, receipt, control — and before a worktree is created; no path takes it while
+mailbox, control — and before a worktree is created; no path takes it while
 holding any of them, and there is no upgrade under a mailbox lock. No pruning and no name
 lock inside a mailbox section.
 
@@ -199,7 +199,7 @@ expand — has no form, takes no lease and writes nothing.
 
 | Class | Forms | Why |
 |---|---|---|
-| change | a launch; `send` in every kind; `withdraw`; `edit`; `inbox`, `inbox --message`; `pending`; `retry`; `compact`, `interrupt`; `answer`; `space open`, `space close`; `worktree enter`, `rm`, `land`, `finish` | they write the room |
+| change | a launch; `send` in every kind; `withdraw`; `edit`; `inbox`, `inbox --message`; `pending`; `compact`, `interrupt`; `answer`; `space open`, `space close`; `worktree enter`, `rm`, `land`, `finish` | they write the room |
 | change | `inbox --peek` | it takes the mailbox lock, which orders it against a read in progress; taking a lock is a write |
 | view | bare `rewake`, `guide`, `--help`, `--version`, each with `--json`; `list`; `whoami`; `workers`; `statusline`; `inbox --owed`, `inbox --awaited`; `worktree ls`, and a `worktree` or `space` call with no change verb; `space list` | they answer from what is there |
 

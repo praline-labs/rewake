@@ -24,7 +24,6 @@ internal/infra/proc/                          /proc: identity, liveness, job-con
 internal/infra/boottime/                      the boot clock, comparable across processes and never set back
 internal/core/mail/                           message, status, sender-side write, the locked sweep and settlement, turn ends
 internal/core/mail/mailtest/                  for tests outside mail: the paths and bytes of its records, each checked against mail
-internal/core/receipt/                        the journal of the mail operations a journaled shell command runs: keys, records, frozen reads
 internal/core/control/                        a main's control request to a run and its answer, as files
 internal/core/ask/                            a worker's permission requests and questions, held in its wrapper while main answers them
 internal/core/role/                           the role catalogue: flag, briefing line, reporting duty

@@ -13,7 +13,9 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -262,6 +264,29 @@ func (w world) putOnce(message Message) error {
 		return err
 	}
 	return w.put(message)
+}
+
+// present says whether a mailbox holds a letter in any of its stages. An
+// error means it could not tell: only "no such file" in every stage is
+// absence, and something other than a file where the letter belongs hides
+// whether it is there.
+func present(dir, to, id string) (bool, error) { return live(dir).present(to, id) }
+
+func (w world) present(to, id string) (bool, error) {
+	var unknown error
+	for _, directory := range []string{state.InboxPath(w.dir, to), state.UnreadPath(w.dir, to), state.DonePath(w.dir, to)} {
+		path := filepath.Join(directory, id+".json")
+		info, err := w.stat(path)
+		switch {
+		case err == nil && info.Mode().IsRegular():
+			return true, nil
+		case err == nil:
+			unknown = fmt.Errorf("%s, where a letter belongs, is not a regular file", path)
+		case !errors.Is(err, os.ErrNotExist):
+			unknown = err
+		}
+	}
+	return false, unknown
 }
 
 // List returns the waiting messages of a mailbox, oldest first: what the

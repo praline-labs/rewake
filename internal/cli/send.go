@@ -43,8 +43,6 @@ type sendModel struct {
 	// given when that letter is the replacement of an earlier edit.
 	Replaces string `json:"replaces,omitempty"`
 	Named    string `json:"named,omitempty"`
-	// Receipt names the journal record of a heads-up, for rewake retry.
-	Receipt string `json:"receipt,omitempty"`
 }
 
 func handleSend(ctx *Context, call Call) error {
@@ -71,21 +69,6 @@ func handleSend(ctx *Context, call Call) error {
 	if err != nil {
 		return err
 	}
-	if kind.kind == mail.Note && !ctx.journaling {
-		// A heads-up's receipt makes a retry publish it once.
-		return journaled(ctx, call, handleSend)
-	}
-	// A resumed heads-up is the one its first call fixed: the same run, the
-	// same text, stdin not read again.
-	pinned := false
-	if ctx.op != nil {
-		if err := ctx.op.resolveEndedRun(); err != nil {
-			return err
-		}
-		if step := ctx.op.pinnedNotify(); step != nil {
-			text, pinned = step.Text, true
-		}
-	}
 
 	session, err := registry.Lookup(dir, target)
 	if errors.Is(err, registry.ErrNotFound) {
@@ -95,7 +78,7 @@ func handleSend(ctx *Context, call Call) error {
 		return &FailedError{Message: err.Error()}
 	}
 
-	if text == "-" && !pinned {
+	if text == "-" {
 		read, err := io.ReadAll(os.Stdin)
 		if err != nil {
 			return failf("could not read the message from stdin: %v", err)
@@ -177,12 +160,6 @@ func handleSend(ctx *Context, call Call) error {
 	if selfErr == nil {
 		message.From, message.FromEpoch = self.Name, epoch
 	}
-	journaledSend := ctx.op != nil && message.AddendumTo == ""
-	if journaledSend {
-		if err := ctx.op.pinNotify(&message); err != nil {
-			return err
-		}
-	}
 	if kind.kind == mail.Question {
 		release, err := mail.ReserveAnswer(dir, self.Name, message.ID)
 		if err != nil {
@@ -190,12 +167,7 @@ func handleSend(ctx *Context, call Call) error {
 		}
 		defer release()
 	}
-	if journaledSend {
-		err = ctx.op.publish(message)
-	} else {
-		err = writeSent(dir, self, epoch, message, session)
-	}
-	if err != nil {
+	if err := writeSent(dir, self, epoch, message, session); err != nil {
 		return err
 	}
 	after := sent{dir: dir, self: self, epoch: epoch, target: session, deadline: started.Add(wait)}
@@ -221,14 +193,12 @@ func printDelivery(ctx *Context, session registry.Session, model sendModel) erro
 			_ = printValue(ctx, model, func() []string { return nil })
 			return &PendingError{Message: ""}
 		}
-		_, _ = keepModel(ctx, model)
 		return &PendingError{Message: line}
 	default:
 		if ctx.JSON {
 			_ = printValue(ctx, model, func() []string { return nil })
 			return &FailedError{Message: ""}
 		}
-		_, _ = keepModel(ctx, model)
 		return &FailedError{Message: line}
 	}
 }

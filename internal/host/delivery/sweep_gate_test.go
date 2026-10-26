@@ -14,9 +14,8 @@ import (
 
 // gateLab is the race lab's setup built on mail's exported operations, for
 // the tests of the server's own gate around the sweep — the live-run read and
-// the lock (docs/rules/effects.md#publication-once): a letter R of api's, published
-// once, has landed in lead's run r under its marks, r has read it, and its age
-// has passed the sweep's cutoff.
+// the lock: a letter R of api's has landed in lead's run r, r has read it, and
+// its age has passed the sweep's cutoff.
 type gateLab struct {
 	twoSessionLab
 	lead   *endableRun
@@ -37,11 +36,11 @@ func newGateLab(t *testing.T) gateLab {
 	return lab
 }
 
-// landRead publishes report once and has its recipient read it long enough
-// ago for the sweep to retire it.
+// landRead publishes report and has its recipient read it long enough ago for
+// the sweep to retire it.
 func (l gateLab) landRead(t *testing.T, report mail.Message) {
 	t.Helper()
-	if _, err := mail.PublishOnce(t.Context(), l.dir, report, nil); err != nil {
+	if err := mail.Put(l.dir, report); err != nil {
 		t.Fatal(err)
 	}
 	read := filepath.Join(state.DonePath(l.dir, report.To), report.ID+".json")
@@ -57,17 +56,15 @@ func (l gateLab) landRead(t *testing.T, report mail.Message) {
 	}
 }
 
-// proofGone says the sweep retired the letter and r's marks.
+// proofGone says the sweep retired the letter.
 func (l gateLab) proofGone(t *testing.T) bool {
 	t.Helper()
 	_, letter := os.Stat(filepath.Join(state.DonePath(l.dir, "lead"), l.report.ID+".json"))
-	_, marks := os.Stat(filepath.Join(state.InboxPath(l.dir, "lead"), "once", l.lead.epoch()))
-	return os.IsNotExist(letter) && os.IsNotExist(marks)
+	return os.IsNotExist(letter)
 }
 
 // A stale sweeper: the server of r, which has ended, sweeps after the next
-// run is live. It retires nothing at all, and the live run's marks and
-// letters stay.
+// run is live. It retires nothing at all, and the live run's letters stay.
 func TestAStaleSweeperRetiresNothing(t *testing.T) {
 	lab := newGateLab(t)
 	lab.lead.end()
@@ -77,9 +74,7 @@ func TestAStaleSweeperRetiresNothing(t *testing.T) {
 	(&Server{Dir: lab.dir, Name: "lead", Epoch: lab.lead.epoch()}).sweepFinished()
 	for _, path := range []string{
 		filepath.Join(state.DonePath(lab.dir, "lead"), second.ID+".json"),
-		filepath.Join(state.InboxPath(lab.dir, "lead"), "once", next.epoch()),
 		filepath.Join(state.DonePath(lab.dir, "lead"), lab.report.ID+".json"),
-		filepath.Join(state.InboxPath(lab.dir, "lead"), "once", lab.lead.epoch()),
 	} {
 		if _, err := os.Stat(path); err != nil {
 			t.Errorf("the stale sweeper retired %s: %v", path, err)
@@ -88,13 +83,14 @@ func TestAStaleSweeperRetiresNothing(t *testing.T) {
 }
 
 // An unusable lock: a sweep that cannot take the mailbox lock retires no
-// letter and no mark. Once the lock is usable again, the same sweep does.
+// letter. Once the lock is usable again, the same sweep does.
 func TestASweepWithoutTheLockRetiresNothing(t *testing.T) {
 	lab := newGateLab(t)
 	lab.lead.end()
 	next := startRun(t, lab.dir, "lead")
+	// A directory where the lock file belongs: nobody can take the lock.
 	lock := filepath.Join(state.InboxPath(lab.dir, "lead"), ".lock")
-	if err := os.Remove(lock); err != nil {
+	if err := os.Remove(lock); err != nil && !os.IsNotExist(err) {
 		t.Fatal(err)
 	}
 	if err := os.Mkdir(lock, 0o700); err != nil {
@@ -104,14 +100,6 @@ func TestASweepWithoutTheLockRetiresNothing(t *testing.T) {
 	sweeper.sweepFinished()
 	if lab.proofGone(t) {
 		t.Fatal("the sweep retired the proof without the lock")
-	}
-	for _, path := range []string{
-		filepath.Join(state.DonePath(lab.dir, "lead"), lab.report.ID+".json"),
-		filepath.Join(state.InboxPath(lab.dir, "lead"), "once", lab.lead.epoch()),
-	} {
-		if _, err := os.Stat(path); err != nil {
-			t.Errorf("the sweep without the lock retired %s: %v", path, err)
-		}
 	}
 	if err := os.Remove(lock); err != nil {
 		t.Fatal(err)

@@ -1,5 +1,5 @@
 ---
-description: E1–E8, what may decide a mail operation's effect and the order of a turn end's steps, and the rules the receipts of send and pending keep; open before changing how mail is written, read or published.
+description: E1–E8, what may decide a mail operation's effect and the order of a turn end's steps, the rule a pending mark keeps and how a letter is retired; open before changing how mail is written, read or published.
 ---
 
 # Rules: the effects of a mail operation, E1–E8
@@ -13,8 +13,8 @@ built against it (`AGENTS.md`, "Build for failures that were seen").
 ## The rules
 
 - **E1. An effect is undone or skipped only on evidence, and a retry finds what an
-  earlier attempt left.** A receipt goes only when its effect is proven absent or proven
-  done; a step not recorded as done is no proof it was not done. A turn end that failed
+  earlier attempt left.** A step not recorded as done is no proof it was not done. A turn
+  end that failed
   part way leaves its wait standing, and a retry of the same event runs its steps again
   from the disk.
 - **E2. A lock is removed only by whoever holds it**, and a call that took a lock checks
@@ -78,59 +78,23 @@ built against it (`AGENTS.md`, "Build for failures that were seen").
     shown once more as owed until the next end, a lost report main asks for again, a kept
     answer after an interruption carried by the next turn's report.
 
-## Receipts, retries and once-marks
+## A pending mark
 
-`rewake send` and `rewake pending`, run from a session's shell, change the mailbox under a
-receipt (`internal/cli/journal.go`, `internal/core/receipt`). What the receipts keep:
+`rewake pending` marks the running turn (`internal/cli/pending.go`), and the mark speaks for
+that turn only. The call takes the boot-clock time it started (`At`); under the mailbox lock,
+just before the mark, it looks for an end of its run on record at or after `At`, or a turn
+start recorded after it (`mail.RecordTurnStart`): either proves the turn ended, and it marks
+nothing and says so, exit 1. A recorded start is the harness's own time of the turn's start,
+never when the report arrived; a missing one proves nothing. A journal that cannot be read
+writes no mark, and the call fails, to be run again. The mark and an end's choice of its mark
+share the mailbox lock, so a mark written before the end's journal is that end's to take, and
+one after it is never written (`mail.EndedSince`).
 
-- **Journaled before the effect.** A call writes its receipt — its run, its normalized
-  words (`receipt.Digest`), its phase and the step it is about to take — before the first
-  effect, saves each step before taking it, and keeps the answer it gave. A step it could
-  not journal is not taken.
-- **A retry is the same operation.** `rewake retry <token>` finishes, or shows again, what
-  the call with that receipt began; it cannot start a second one. A token names a record
-  of this run only, so it cannot reach a replacement's. The shell names no native turn, so
-  two calls with the same words are two operations; a call whose words match an operation
-  still open in this run does not run beside it, and names the receipt that finishes it.
-- **A heads-up is published at most once.** A journaled `--notify` fixes its id, text and
-  the recipient's run before it publishes, and is written under the recipient's lock
-  (`mail.PublishOnce`). Since finished mail is swept after a day, the recipient's mailbox
-  keeps a mark per published id for that run: `intent` before the letter is written,
-  `published` after; the sweep turns an intent into published before it removes the letter
-  the mark names. So an intent without its letter proves the letter was never written. A
-  mark that cannot be read, or says neither, proves nothing (E6): nothing is written over
-  it, published on it, or removed by it.
-- **A pending mark speaks for one turn.** A `rewake pending` records its text and the
-  boot-clock time it started (`At`) before it marks. Only the attempt that created the
-  record marks (`AttemptScope.First`): a retry from the shell or a later turn cannot show
-  that the operation's turn is still open. Under the mailbox lock, just before the mark, it
-  looks for an end of its run on record at or after `At`, or a turn start recorded after
-  it (`mail.RecordTurnStart`): either proves the turn ended, and it marks nothing and says
-  so, exit 1. A recorded start is the harness's own time of the turn's start, never when
-  the report arrived; a missing one proves nothing. A mark or a journal that cannot be read
-  leaves the operation open for a retry. The mark and an end's choice of its mark share the
-  mailbox lock, so a mark written before the end's journal is that end's to take, and one
-  after it is never written (`mail.EndedSince`).
+## Retiring a letter
 
-## Publication once
-
-A heads-up published once — a journaled `--notify` (`mail.PublishOnce`) — is proven by the
-letter itself and by its recipient run's once mark, and both are guarded by the recipient's
-mailbox lock. A turn end's report does not take this path: it is written under the sender's
-lock, without a once mark (E3, [delivery-turn-end.md](../delivery-turn-end.md#the-end-of-a-turn)).
-
-- **One section.** The publisher takes that lock with a bounded wait and, inside one
-  section, reads the name's live run, then the evidence — the letter in every stage and the
-  run's mark, each read as E6 says — then writes intent, letter, `published`. A run read
-  live before the lock decides nothing; a live run that is not the letter's writes nothing
-  (`ErrRecipientEnded`). Inside the mailbox lock the run is read without the name lock
-  (`registry.LookupReadOnly`), which the registry forbids to a holder of a mailbox lock.
-- **The proof is retired under the same lock, by the live run.** A letter's last copy
-  leaves the mailbox only under its lock, and a run's marks only by a sweep that has read,
-  inside that section, that its own run is the name's live run and the marked one is not
-  (`SweepFinishedLocked`, the delivery server's `sweepFinished`). A sweep that cannot take
-  the lock, or whose run has ended, retires nothing. Settling moves a copy only beside
-  another that stands, so a copy whose archive failed stays for the next pass.
-
-So a sweep never runs between a publisher's read of the evidence and its writes, and a
-server of an ended run cannot remove the live run's letters and marks.
+A letter is the proof that it landed, and it is guarded by its recipient's mailbox lock. Its
+last copy leaves the mailbox only under that lock, by a sweep that has read, inside that
+section, that its own run is the name's live run (`SweepFinishedLocked`, the delivery
+server's `sweepFinished`). A sweep that cannot take the lock, or whose run has ended, retires
+nothing, so a server of an ended run cannot remove the live run's letters. Settling moves a
+copy only beside another that stands, so a copy whose archive failed stays for the next pass.
