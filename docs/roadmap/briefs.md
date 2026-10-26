@@ -136,9 +136,9 @@ is an error result.
 
 | Tool (Claude Code / pi) | Input | Runs | Answers |
 |---|---|---|---|
-| `mcp__rewake__brief_read` / `rewake_brief_read` | `id` | `brief show <id>` | the line form, its header naming the edition a tick takes: markdown reads as written, not escaped in JSON |
-| `mcp__rewake__brief_tick` / `rewake_brief_tick` | `id`, `item`, `edition`, `undo?` | `brief tick <id> <item> --edition=<edition> [--undo]` | the item's number, text and state |
-| `mcp__rewake__brief_comment` / `rewake_brief_comment` | `id`, `text` | `brief comment <id> -- <text>` | the comment's number |
+| `mcp__rewake__brief_read` / `brief_read` | `id` | `brief show <id>` | the line form, its header naming the edition a tick takes: markdown reads as written, not escaped in JSON |
+| `mcp__rewake__brief_tick` / `brief_tick` | `id`, `item`, `edition`, `undo?` | `brief tick <id> <item> --edition=<edition> [--undo]` | the item's number, text and state |
+| `mcp__rewake__brief_comment` / `brief_comment` | `id`, `text` | `brief comment <id> -- <text>` | the comment's number |
 
 The tool refuses before any process starts an `id`, `item` or `edition` that is not a positive
 integer and an empty `text`; the `--` keeps a comment that begins with a dash from being read as a

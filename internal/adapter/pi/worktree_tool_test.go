@@ -11,8 +11,8 @@ import (
 	"time"
 )
 
-// The worktree_status tool's contract with pi: argv, directory, bound, and
-// every failure shown as an error (worktree.test.ts).
+// The worktree and brief tools' contract with pi: argv, directory, bound,
+// and every failure shown as an error (worktree.test.ts, briefs.test.ts).
 func TestTheWorktreeToolKeepsItsContract(t *testing.T) {
 	bun, err := exec.LookPath("bun")
 	if err != nil {
@@ -20,7 +20,7 @@ func TestTheWorktreeToolKeepsItsContract(t *testing.T) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
-	command := exec.CommandContext(ctx, bun, "test", "./worktree.test.ts", "./management.test.ts")
+	command := exec.CommandContext(ctx, bun, "test", "./worktree.test.ts", "./management.test.ts", "./briefs.test.ts")
 	command.Env = withoutRewakeEnv()
 	out, err := command.CombinedOutput()
 	if err != nil || !strings.Contains(string(out), " 0 fail") {

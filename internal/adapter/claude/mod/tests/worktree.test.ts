@@ -36,13 +36,18 @@ function stage(on: any, ran: () => any, given: Record<string, string> = env) {
   return { registered, runs };
 }
 
+// worktreeTools are the worktree tools among those registered; the brief
+// tools are briefs.test.ts's.
+const worktreeTools = (registered: any[]) =>
+  registered.map((one) => one.name).filter((name) => name.startsWith("worktree_"));
+
 const call = ($: any, tool = worktreeToolName, input: object = {}) =>
   $.tool.call({ tool, ...input } as any);
 
 test("the tool runs rewake's status by argv with the run's variables, and answers its JSON", async ($, on) => {
   const seen = stage(on, () => ({ value: { exitCode: 0, stdout: status + "\n", stderr: "" } }));
   await start($);
-  expect(seen.registered.map((one) => one.name)).toEqual(["worktree_status"]);
+  expect(worktreeTools(seen.registered)).toEqual(["worktree_status"]);
   const answer: any = await call($);
   expect(answer.isError).toBeUndefined();
   expect(answer.result).toBe(status);
@@ -111,7 +116,7 @@ test("a write session is offered status alone", async ($, on) => {
     REWAKE_ROLE: "write",
   });
   await start($);
-  expect(seen.registered.map((one) => one.name)).toEqual(["worktree_status"]);
+  expect(worktreeTools(seen.registered)).toEqual(["worktree_status"]);
 });
 
 test("list asks for this room's checkouts, land runs once with the name and the branch as single arguments", async ($, on) => {
