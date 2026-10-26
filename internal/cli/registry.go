@@ -154,6 +154,7 @@ func buildGroups(catalog adapter.Catalog) []Group {
 		},
 	}
 
+	worker := exampleAddress(catalog)
 	steer := Group{
 		Title:   "STEER A SESSION",
 		Summary: "Main only, on a running session of its room.",
@@ -164,7 +165,7 @@ func buildGroups(catalog adapter.Catalog) []Group {
 				MaxPositionals: 2,
 				Summary:        "Compact an idle session's conversation now, optionally telling the summary what to keep.",
 				Options:        []Option{jsonOption},
-				Examples:       []string{"rewake compact worker", "rewake compact worker \"keep the review findings and the open questions\"", "rewake compact worker --json"},
+				Examples:       []string{"rewake compact " + worker, "rewake compact " + worker + " \"keep the review findings and the open questions\"", "rewake compact " + worker + " --json"},
 				Next:           []string{"rewake list"},
 				Notes: []string{
 					"Refused at once while the session is in a turn; nothing waits for the turn to end. Interrupt it first, or ask again once rewake list shows it idle.",
@@ -181,7 +182,7 @@ func buildGroups(catalog adapter.Catalog) []Group {
 				MaxPositionals: 1,
 				Summary:        "Stop the turn a session is working on, as Esc would.",
 				Options:        []Option{jsonOption},
-				Examples:       []string{"rewake interrupt worker", "rewake interrupt worker --json"},
+				Examples:       []string{"rewake interrupt " + worker, "rewake interrupt " + worker + " --json"},
 				Next:           []string{"rewake inbox --awaited"},
 				Notes: []string{
 					"A session waiting on that turn reads stopped, naming who interrupted it. The answer to this command says what the session's model is shown.",
@@ -197,7 +198,7 @@ func buildGroups(catalog adapter.Catalog) []Group {
 				MaxPositionals: Variadic,
 				Summary:        "Answer a worker's permission request or question, as its notify names them.",
 				Options:        []Option{jsonOption},
-				Examples:       []string{"rewake answer worker 3f9a once", "rewake answer worker 3f9a session", "rewake answer worker 3f9a refuse \"not on this branch\"", "rewake answer worker 3f9a 2", "rewake answer worker 3f9a 1,3", "rewake answer worker 3f9a \"use the staging database\""},
+				Examples:       []string{"rewake answer " + worker + " 3f9a once", "rewake answer " + worker + " 3f9a session", "rewake answer " + worker + " 3f9a refuse \"not on this branch\"", "rewake answer " + worker + " 3f9a 2", "rewake answer " + worker + " 3f9a 1,3", "rewake answer " + worker + " 3f9a \"use the staging database\""},
 				Next:           []string{"rewake inbox"},
 				Notes: []string{
 					"A worker that asks for a permission or asks a question at its screen leaves main a notify: the tool and its input or the question, the choices, the deadline and this command. The request waits two minutes; a person at the worker's screen may answer first, and with no answer by the deadline the worker is refused and told to end with rewake pending. The request bridge is Claude Code's; pi has none built in.",
@@ -274,8 +275,11 @@ func flow(catalog adapter.Catalog) []FlowStep {
 			continue
 		}
 		steps = append(steps, FlowStep{
+			Command: "rewake workers",
+			Summary: "From main, see the templates workers are raised from; rewake ships none, and rewake workers --help says where they are defined.",
+		}, FlowStep{
 			Command: fmt.Sprintf("rewake space open helper --alias %s-%s", h.ID(), role.General.ID),
-			Summary: fmt.Sprintf("From main, raise the worker helper-%s in main's room from the template %s-%s of rewake workers, which names its harness and role; only main starts workers.", h.ID(), h.ID(), role.General.ID),
+			Summary: fmt.Sprintf("Raise the worker helper-%s in main's room from a template of rewake workers, which names its harness and role; %s-%s is an example name. Only main starts workers.", h.ID(), h.ID(), role.General.ID),
 		}, FlowStep{
 			Command: fmt.Sprintf("rewake send helper-%s \"rerun the smoke\"", h.ID()),
 			Summary: "Give that exact address a task; its report comes back when the turn ends.",
@@ -308,7 +312,7 @@ func notes() []Note {
 		},
 		{
 			Title: "Exit codes are distinguishable",
-			Body:  "0 done; a session may still say within a minute that its harness held the message, and a task or question taken back that way returns to its sender as a note. 1 the target refused or could not be reached. 2 the call was wrong: unknown command or flag, missing argument, no such session. 3 accepted, not delivered yet: pending lands once the session can take it; held waits for the person at the receiving session to release it or let it expire, and an expired task or question returns to its sender as a note. Branch on the code, not on the text.",
+			Body:  "0 done; a session may still say within a minute that its harness held the message, and a task or question taken back that way returns to its sender as a note. 1 the target refused or could not be reached. 2 the call was wrong: unknown command or flag, missing argument, no such session. 3 accepted, not delivered yet: pending lands once the session can take it; held waits for the person at the receiving session to release it or let it expire, and an expired task or question returns to its sender as a note; and a --question with no answer within --wait, whose answer comes later as its report. Branch on the code, not on the text.",
 		},
 		{
 			Title: "Only sessions started through rewake take part",
