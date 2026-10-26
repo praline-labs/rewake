@@ -1,5 +1,13 @@
 import { expect, test } from "bun:test";
-import { type Answer, poll, rowOf, type Summary, timeOf } from "./briefs.ts";
+import {
+  type Answer,
+  listOf,
+  poll,
+  rowOf,
+  type Summary,
+  timeOf,
+  unreadableLine,
+} from "./briefs.ts";
 
 const brief: Summary = {
   id: 3,
@@ -36,6 +44,13 @@ test("a closed brief is faint whole and its bindings are not marked one by one",
     "3 · Auth refactor · 2/5 · 4 comments · closed · write-claude, review-claude",
   );
   expect(rowOf(closed).every((p) => p.faint)).toBe(true);
+});
+
+test("a list keeps the records that did not read, to show them", () => {
+  const listed = listOf({ briefs: [brief], unreadable: [{ path: "briefs/9", why: "bad json" }] });
+  expect(listed.briefs).toEqual([brief]);
+  expect(listed.unreadable.map(unreadableLine)).toEqual(["unreadable: briefs/9 — bad json"]);
+  expect(listOf({})).toEqual({ briefs: [], unreadable: [] });
 });
 
 test("a time that does not parse is shown as it came", () => {

@@ -22,6 +22,8 @@ import {
   rowOf,
   type Summary,
   timeOf,
+  type Unreadable,
+  unreadableLine,
 } from "./briefs.ts";
 import type { Theme } from "./theme.ts";
 
@@ -67,6 +69,7 @@ export function BriefsModal(props: {
   onCleanup(() => style.destroy());
   const [opened, setOpened] = createSignal<number>();
   const [list, setList] = createSignal<Summary[]>([]);
+  const [lost, setLost] = createSignal<Unreadable[]>([]);
   const [detail, setDetail] = createSignal<Detail>();
   const [problem, setProblem] = createSignal<string>();
   const [at, setAt] = createSignal<number>();
@@ -92,7 +95,11 @@ export function BriefsModal(props: {
       id === undefined
         ? poll(
             () => readList(props.rewake, props.room),
-            (a) => keep(a, setList),
+            (a) =>
+              keep(a, (v) => {
+                setList(v.briefs);
+                setLost(v.unreadable);
+              }),
           )
         : poll(
             () => readBrief(props.rewake, props.room, id),
@@ -140,106 +147,121 @@ export function BriefsModal(props: {
 
   const faint = theme.faint;
   const inner = () => Math.max(props.width - 4, 1);
+  // The catcher is the layer's: a press beside the box closes it, so it never
+  // reaches the pane under it, which would take the focus and the keys.
   return (
     <box
       position="absolute"
-      left={props.left}
-      top={props.top}
+      left={0}
+      top={0}
       zIndex={50}
-      width={props.width}
-      height={props.height}
-      flexDirection="column"
-      border
-      borderStyle="single"
-      borderColor={faint}
-      title=" briefs "
-      titleAlignment="left"
-      paddingLeft={1}
-      paddingRight={1}
-      backgroundColor={theme.background ?? fallbackBackground}
+      width="100%"
+      height={props.top + props.height}
+      {...{ onMouseDown: props.close }}
     >
-      <Show
-        when={opened() === undefined}
-        fallback={
-          <Show when={detail()} fallback={<text fg={faint} content="reading the brief…" />}>
-            {(d: Accessor<Detail>) => (
-              <>
-                <text fg={theme.text} height={1} wrapMode="none" attributes={1}>
-                  {`${d().id} · ${d().title}`}
-                  <span style={{ fg: faint }}>
-                    {` · ${d().done}/${d().total}${d().closed ? " · closed" : ""}${d()
-                      .bound.map(
-                        (b) => ` · ${b.name}${ended(d(), b) && !d().closed ? " (ended)" : ""}`,
-                      )
-                      .join("")}`}
-                  </span>
-                </text>
-                <scrollbox ref={(s: ScrollBoxRenderable) => (scroll = s)} flexGrow={1}>
-                  <markdown content={d().text} syntaxStyle={style} fg={theme.text} />
-                  <text fg={faint} content={"─".repeat(inner())} height={1} />
-                  <Show
-                    when={d().comments.length > 0}
-                    fallback={<text fg={faint} content="no comments" />}
+      <box
+        position="absolute"
+        left={props.left}
+        top={props.top}
+        width={props.width}
+        height={props.height}
+        flexDirection="column"
+        border
+        borderStyle="single"
+        borderColor={faint}
+        title=" briefs "
+        titleAlignment="left"
+        paddingLeft={1}
+        paddingRight={1}
+        backgroundColor={theme.background ?? fallbackBackground}
+        {...{ onMouseDown: (e: { stopPropagation: () => void }) => e.stopPropagation() }}
+      >
+        <Show
+          when={opened() === undefined}
+          fallback={
+            <Show when={detail()} fallback={<text fg={faint} content="reading the brief…" />}>
+              {(d: Accessor<Detail>) => (
+                <>
+                  <text fg={theme.text} height={1} wrapMode="none" attributes={1}>
+                    {`${d().id} · ${d().title}`}
+                    <span style={{ fg: faint }}>
+                      {` · ${d().done}/${d().total}${d().closed ? " · closed" : ""}${d()
+                        .bound.map(
+                          (b) => ` · ${b.name}${ended(d(), b) && !d().closed ? " (ended)" : ""}`,
+                        )
+                        .join("")}`}
+                    </span>
+                  </text>
+                  <scrollbox ref={(s: ScrollBoxRenderable) => (scroll = s)} flexGrow={1}>
+                    <markdown content={d().text} syntaxStyle={style} fg={theme.text} />
+                    <text fg={faint} content={"─".repeat(inner())} height={1} />
+                    <Show
+                      when={d().comments.length > 0}
+                      fallback={<text fg={faint} content="no comments" />}
+                    >
+                      <For each={d().comments}>
+                        {(c) => (
+                          <box flexDirection="column" marginBottom={1}>
+                            <text fg={theme.text} attributes={1} wrapMode="none">
+                              {c.from}
+                              <span style={{ fg: faint }}>{` · ${timeOf(c.at)}`}</span>
+                            </text>
+                            <text fg={theme.text} wrapMode="word" content={c.text} />
+                          </box>
+                        )}
+                      </For>
+                    </Show>
+                  </scrollbox>
+                </>
+              )}
+            </Show>
+          }
+        >
+          <scrollbox ref={(s: ScrollBoxRenderable) => (rows = s)} flexGrow={1}>
+            <Show
+              when={list().length > 0 || lost().length > 0}
+              fallback={
+                <text fg={faint} content="no briefs; main makes them with rewake brief new" />
+              }
+            >
+              <For each={list()}>
+                {(brief, i) => (
+                  <text
+                    id={`brief-${brief.id}`}
+                    height={1}
+                    wrapMode="none"
+                    fg={i() === selected() ? theme.selection.fg : theme.text}
+                    bg={i() === selected() ? theme.selection.bg : undefined}
+                    {...{ onMouseDown: () => open(brief.id) }}
                   >
-                    <For each={d().comments}>
-                      {(c) => (
-                        <box flexDirection="column" marginBottom={1}>
-                          <text fg={theme.text} attributes={1} wrapMode="none">
-                            {c.from}
-                            <span style={{ fg: faint }}>{` · ${timeOf(c.at)}`}</span>
-                          </text>
-                          <text fg={theme.text} wrapMode="word" content={c.text} />
-                        </box>
+                    <For each={rowOf(brief)}>
+                      {(p) => (
+                        <span style={{ fg: p.faint && i() !== selected() ? faint : undefined }}>
+                          {p.text}
+                        </span>
                       )}
                     </For>
-                  </Show>
-                </scrollbox>
-              </>
-            )}
-          </Show>
-        }
-      >
-        <scrollbox ref={(s: ScrollBoxRenderable) => (rows = s)} flexGrow={1}>
-          <Show
-            when={list().length > 0}
-            fallback={
-              <text fg={faint} content="no briefs; main makes them with rewake brief new" />
-            }
-          >
-            <For each={list()}>
-              {(brief, i) => (
-                <text
-                  id={`brief-${brief.id}`}
-                  height={1}
-                  wrapMode="none"
-                  fg={i() === selected() ? theme.selection.fg : theme.text}
-                  bg={i() === selected() ? theme.selection.bg : undefined}
-                  {...{ onMouseDown: () => open(brief.id) }}
-                >
-                  <For each={rowOf(brief)}>
-                    {(p) => (
-                      <span style={{ fg: p.faint && i() !== selected() ? faint : undefined }}>
-                        {p.text}
-                      </span>
-                    )}
-                  </For>
-                </text>
-              )}
-            </For>
-          </Show>
-        </scrollbox>
-      </Show>
-      <text
-        height={1}
-        wrapMode="none"
-        fg={problem() ? theme.main : faint}
-        content={
-          problem() ??
-          (opened() === undefined
-            ? "↑↓ choose · Enter open · Esc close"
-            : "↑↓ PgUp PgDn Home End scroll · Esc back")
-        }
-      />
+                  </text>
+                )}
+              </For>
+              <For each={lost()}>
+                {(u) => <text height={1} wrapMode="none" fg={faint} content={unreadableLine(u)} />}
+              </For>
+            </Show>
+          </scrollbox>
+        </Show>
+        <text
+          height={1}
+          wrapMode="none"
+          fg={problem() ? theme.main : faint}
+          content={
+            problem() ??
+            (opened() === undefined
+              ? "↑↓ choose · Enter open · Esc close"
+              : "↑↓ PgUp PgDn Home End scroll · Esc back")
+          }
+        />
+      </box>
     </box>
   );
 }

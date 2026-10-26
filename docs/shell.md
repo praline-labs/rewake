@@ -341,14 +341,15 @@ button, opens a modal (`shell/src/briefs.tsx`), the layer of the section on Soli
 over the row of panes with four columns of the screen left on each side; narrow, the whole width.
 The panes are blurred under it and keep drawing; the keys are the modal's own, the prefix has one
 command left, `b`, which closes it, and a click on the bar's worker button closes it and chooses
-that worker. Closing gives the focus back to the pane on the next tick. The key works with no
+that worker. A press on the panes beside the box closes it too: a transparent layer over the row of
+panes takes the press, so a pane never takes the focus or the keys under the modal. Closing gives the focus back to the pane on the next tick. The key works with no
 worker, though the button and its hint show only while one is up.
 
 - **The list**: one row per brief, `3 · Auth refactor · 2/5 · 4 comments · write-claude, review-claude`
   (`rowOf`, `shell/src/briefs.ts`), open ones first, then the closed ones in the faint colour with
   `closed`, each group as the CLI sorts it, newest first. A binding that has ended — its run
   `ended`, or the brief closed — is faint, and marked `(ended)` in an open brief. ↑ ↓ and Enter, or
-  a click on a row, open one, Esc closes the modal; an empty list says main makes briefs with
+  a click on a row, open one, Esc closes the modal; a record the list could not read (`unreadable` in its JSON) is a faint row with its path and why, not an absent brief; an empty list says main makes briefs with
   `rewake brief new`. The selected row is drawn in a pane's selection colours, and stays on its
   brief when a poll changes the order.
 - **One brief**: a line with its number, title, done of total and who is bound, then a scrolling

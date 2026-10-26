@@ -55,7 +55,20 @@ export function timeOf(at: string): string {
 // What a poll's result says: the data, or the line shown instead.
 export type Answer<T> = { ok: true; value: T } | { ok: false; line: string };
 
-type Listing = { briefs?: Summary[] };
+export type Unreadable = { path: string; why: string };
+
+type Listing = { briefs?: Summary[]; unreadable?: Unreadable[] };
+
+// Listed is what brief list answers: the briefs, and the records it could not
+// read, which the list shows rather than count as absent.
+export type Listed = { briefs: Summary[]; unreadable: Unreadable[] };
+
+export const listOf = (l: Listing): Listed => ({
+  briefs: l.briefs ?? [],
+  unreadable: l.unreadable ?? [],
+});
+
+export const unreadableLine = (u: Unreadable) => `unreadable: ${u.path} — ${u.why}`;
 
 // asMain reads a rewake view as main's run, or says why it cannot.
 async function asMain<T>(rewake: string, room: string, args: string[]): Promise<Answer<T>> {
@@ -69,7 +82,7 @@ async function asMain<T>(rewake: string, room: string, args: string[]): Promise<
 
 export const readList = (rewake: string, room: string) =>
   asMain<Listing>(rewake, room, ["brief", "list", "--closed", "--json"]).then(
-    (a): Answer<Summary[]> => (a.ok ? { ok: true, value: a.value.briefs ?? [] } : a),
+    (a): Answer<Listed> => (a.ok ? { ok: true, value: listOf(a.value) } : a),
   );
 
 export const readBrief = (rewake: string, room: string, id: number) =>
