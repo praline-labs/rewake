@@ -113,7 +113,7 @@ export class Asks {
   // permission names the question a permission is asked as, unique to it.
   permission(cwd: string, e: CheckEvent, key: string): string {
     this.serial++;
-    const question = `Allow ${e.tool}: ${summary(e.tool, e.input)} [${this.serial}]?`;
+    const question = `Allow ${e.tool}: ${summary(e.input)} [${this.serial}]?`;
     let input = canonical(e.input);
     if (input.length > maxInput)
       input = input.slice(0, maxInput) + ` ... (${input.length - maxInput} characters more)`;

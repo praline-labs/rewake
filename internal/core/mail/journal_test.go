@@ -82,14 +82,3 @@ func TestAnAbandonedJournalWriteIsNotAJournal(t *testing.T) {
 		t.Fatal(err)
 	}
 }
-
-// A journal an earlier build wrote, with fields this one no longer knows, is
-// read by the fields it still needs.
-func TestAJournalOfAnEarlierBuildIsReadByWhatItNeeds(t *testing.T) {
-	dir, epoch, _ := journalLab(t)
-	raw := `{"Epoch":"` + epoch + `","Op":"old","Ended":150,"Reports":[{"id":"r"}],"Published":["r"],"Decided":[{"Report":"r","Decision":"d"}],"Done":true}`
-	writeRaw(t, filepath.Join(JournalPath(dir, "api"), "old"+doneSuffix), raw)
-	if start, err := TurnWindowStart(dir, "api", epoch, 0, 200); err != nil || start != 150 {
-		t.Fatalf("the window opens at %d: %v", start, err)
-	}
-}

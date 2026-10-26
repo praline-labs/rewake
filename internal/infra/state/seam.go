@@ -59,14 +59,6 @@ func Move(from, to string) error {
 	return os.Rename(from, to)
 }
 
-// Chmod sets the mode of a file or directory of the state directory.
-func Chmod(path string, mode os.FileMode) error {
-	if err := guard(OpWrite, path); err != nil {
-		return err
-	}
-	return os.Chmod(path, mode)
-}
-
 // Touch sets a file's access and modification times, which some of the state
 // reads as a heartbeat or a release time.
 func Touch(path string, at time.Time) error {

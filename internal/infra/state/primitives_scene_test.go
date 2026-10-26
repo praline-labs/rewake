@@ -83,7 +83,6 @@ func writePrimitives(t *testing.T, base, dir string) (map[string]func() error, s
 		"WriteFile": func() error { return WriteFile(filepath.Join(dir, "plain"), nil, 0o600) },
 		"Link":      func() error { return Link(file, filepath.Join(dir, "linked")) },
 		"Move":      func() error { return Move(file, filepath.Join(dir, "moved")) },
-		"Chmod":     func() error { return Chmod(file, 0o644) },
 		"Touch":     func() error { return Touch(file, time.Unix(0, 0)) },
 		"Discard":   func() error { return Discard(file) },
 		"RemoveAll": func() error { return RemoveAll(filepath.Join(dir, "sessions")) },

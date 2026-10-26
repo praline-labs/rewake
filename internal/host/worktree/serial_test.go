@@ -185,7 +185,7 @@ func TestABusyRepositoryIsRefusedInTime(t *testing.T) {
 	if out, _ := gitOutput(source, "branch", "--list", "second"); out != "" {
 		t.Errorf("branch made: %q", out)
 	}
-	if err := Remove(made, false); !errors.As(err, &busy) {
+	if err := removeLocked(made, false); !errors.As(err, &busy) {
 		t.Errorf("removal while locked: %v", err)
 	}
 	if !isDir(made.Path) {
@@ -208,7 +208,7 @@ func TestTheLockStaysOutOfTheRepository(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := Remove(record, false); err != nil {
+	if err := removeLocked(record, false); err != nil {
 		t.Fatal(err)
 	}
 	if after := fmt.Sprint(entries(t, filepath.Join(source, ".git"))); after != before {
@@ -245,7 +245,7 @@ func TestARemovalDoesNotMakeAGoneRootAgain(t *testing.T) {
 	if err := os.RemoveAll(root); err != nil {
 		t.Fatal(err)
 	}
-	if err := Remove(record, true); err != nil {
+	if err := removeLocked(record, true); err != nil {
 		t.Fatalf("removal: %v", err)
 	}
 	if _, err := os.Stat(root); !os.IsNotExist(err) {

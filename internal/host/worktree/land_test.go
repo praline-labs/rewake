@@ -194,7 +194,7 @@ func TestDropBranchKeepsWorkOnlyItHolds(t *testing.T) {
 	if dropping, err := DropBranch(record); err != nil || dropping.Dropped || !samePlace(dropping.CheckedOut, record.Path) {
 		t.Errorf("checked out: %+v, %v", dropping, err)
 	}
-	if err := Remove(record, false); err != nil {
+	if err := removeLocked(record, false); err != nil {
 		t.Fatal(err)
 	}
 	if dropping, err := DropBranch(record); err != nil || dropping != (Dropping{}) {

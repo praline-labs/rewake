@@ -1,6 +1,8 @@
 package worktree
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -56,7 +58,7 @@ func TestRemoveTakesTheCheckoutAndItsRecord(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := Remove(record, false); err != nil {
+	if err := removeLocked(record, false); err != nil {
 		t.Fatal(err)
 	}
 	if listed := must(t, source, "worktree", "list", "--porcelain"); strings.Contains(listed, record.Path) {
@@ -81,13 +83,13 @@ func TestRemoveKeepsChangesUnlessForced(t *testing.T) {
 		t.Fatal(err)
 	}
 	write(t, filepath.Join(record.Path, "src", "nested", "file"), "changed\n")
-	if err := Remove(record, false); err == nil {
+	if err := removeLocked(record, false); err == nil {
 		t.Fatal("a checkout with changes was removed without force")
 	}
 	if records, _ := List(root); len(records) != 2 {
 		t.Fatalf("a refused removal lost its record: %+v", records)
 	}
-	if err := Remove(record, true); err != nil {
+	if err := removeLocked(record, true); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(record.Path); !os.IsNotExist(err) {
@@ -111,7 +113,7 @@ func TestRemoveOfAMissingCheckoutPrunes(t *testing.T) {
 	if err := os.RemoveAll(record.Path); err != nil {
 		t.Fatal(err)
 	}
-	if err := Remove(record, false); err != nil {
+	if err := removeLocked(record, false); err != nil {
 		t.Fatal(err)
 	}
 	if listed := must(t, source, "worktree", "list", "--porcelain"); strings.Contains(listed, record.Path) {
@@ -120,4 +122,14 @@ func TestRemoveOfAMissingCheckoutPrunes(t *testing.T) {
 	if records, _ := List(root); len(records) != 0 {
 		t.Errorf("records left: %+v", records)
 	}
+}
+
+// removeLocked removes a checkout by the record the test holds, under the
+// repository's lock as underLock takes it, without reading the record again.
+func removeLocked(record Record, force bool) error {
+	directory := filepath.Dir(record.Path)
+	if _, err := os.Stat(filepath.Dir(directory)); errors.Is(err, fs.ErrNotExist) {
+		return remove(record, force)
+	}
+	return withRepositoryLock(directory, func() error { return remove(record, force) })
 }

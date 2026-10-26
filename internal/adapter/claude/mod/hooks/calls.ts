@@ -54,7 +54,7 @@ export function canonical(value: unknown): string {
 }
 
 // summary is what the permission question names of the call.
-export function summary(tool: string, input: unknown): string {
+export function summary(input: unknown): string {
   const fields = (input ?? {}) as Record<string, unknown>;
   const named = fields.command ?? fields.file_path ?? fields.path ?? fields.url ?? fields.pattern;
   const text = typeof named === "string" ? named : canonical(input);

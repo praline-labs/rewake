@@ -86,7 +86,7 @@ func TestAMissingCheckoutIsRemovedAlone(t *testing.T) {
 	if err != nil || !check.Missing || check.Forgotten || check.Head != gone.Commit || check.Unreachable {
 		t.Fatalf("a missing checkout: %+v, %v", check, err)
 	}
-	if err := Remove(gone, true); err != nil {
+	if err := removeLocked(gone, true); err != nil {
 		t.Fatal(err)
 	}
 	listed := must(t, source, "worktree", "list", "--porcelain")
@@ -102,7 +102,7 @@ func TestAMissingCheckoutIsRemovedAlone(t *testing.T) {
 	if err != nil || !check.Missing || !check.Forgotten || check.Dirty() {
 		t.Fatalf("a forgotten checkout: %+v, %v", check, err)
 	}
-	if err := Remove(moved, false); err != nil {
+	if err := removeLocked(moved, false); err != nil {
 		t.Fatal(err)
 	}
 	if records, _ := List(root); len(records) != 0 {
@@ -209,19 +209,19 @@ func TestARecordWhoseRepositoryIsGone(t *testing.T) {
 	if check, err := Inspect(gone); err != nil || !check.Missing || !check.Forgotten {
 		t.Fatalf("gone with its repository: %+v, %v", check, err)
 	}
-	if err := Remove(gone, false); err != nil {
+	if err := removeLocked(gone, false); err != nil {
 		t.Fatal(err)
 	}
 	if check, err := Inspect(kept); err != nil || check.Missing || !check.Forgotten {
 		t.Fatalf("left without its repository: %+v, %v", check, err)
 	}
-	if err := Remove(kept, false); err == nil {
+	if err := removeLocked(kept, false); err == nil {
 		t.Fatal("removed without force")
 	}
 	if _, err := os.Stat(kept.Path); err != nil {
 		t.Fatalf("a refused removal touched the directory: %v", err)
 	}
-	if err := Remove(kept, true); err != nil {
+	if err := removeLocked(kept, true); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(kept.Path); !os.IsNotExist(err) {

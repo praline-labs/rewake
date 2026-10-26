@@ -11,6 +11,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/registry"
+	"github.com/praline-labs/rewake/internal/core/registry/registrytest"
 	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/core/session"
 	"github.com/praline-labs/rewake/internal/infra/build/buildtest"
@@ -147,7 +148,7 @@ func TestKnownDepartureRetainsOldStateAndDeduplicates(t *testing.T) {
 					t.Fatal(err)
 				}
 			default:
-				if err := registry.Remove(dir, peer.Name); err != nil {
+				if err := registrytest.Remove(dir, peer.Name); err != nil {
 					t.Fatal(err)
 				}
 				if mode == "replaced" {
@@ -232,7 +233,7 @@ func TestDepartureIgnoresUnknownLivenessStaleStateAndOldAbsence(t *testing.T) {
 	if len(departed) != 0 {
 		t.Fatal("unknown process namespace or stale telemetry implied departure")
 	}
-	if err := registry.Remove(dir, peer.Name); err != nil {
+	if err := registrytest.Remove(dir, peer.Name); err != nil {
 		t.Fatal(err)
 	}
 	// A new observer/main with no known worker must not announce historical absence.
@@ -255,7 +256,7 @@ func TestDeparturePublicationRetriesWithoutDuplicate(t *testing.T) {
 	if err := observer.scan(context.Background(), dir, main); err != nil {
 		t.Fatal(err)
 	}
-	if err := registry.Remove(dir, peer.Name); err != nil {
+	if err := registrytest.Remove(dir, peer.Name); err != nil {
 		t.Fatal(err)
 	}
 	held, release, done := make(chan struct{}), make(chan struct{}), make(chan struct{})
@@ -303,7 +304,7 @@ func TestObservedCompactionSurvivesDepartureBeforeNextScan(t *testing.T) {
 		t.Fatal(err)
 	}
 	noticeState(t, dir, peer, "idle", 1, []session.CompactionEvent{{Sequence: 1, ObservedAt: time.Now()}})
-	if err := registry.Remove(dir, peer.Name); err != nil {
+	if err := registrytest.Remove(dir, peer.Name); err != nil {
 		t.Fatal(err)
 	}
 	for range 2 {
@@ -332,7 +333,7 @@ func TestStateNoticeObserverStaysInRoomAndDoesNotNotifyItself(t *testing.T) {
 	if err := observer.scan(context.Background(), dir, main); err != nil {
 		t.Fatal(err)
 	}
-	if err := registry.Remove(other, foreign.Name); err != nil {
+	if err := registrytest.Remove(other, foreign.Name); err != nil {
 		t.Fatal(err)
 	}
 	if err := observer.scan(context.Background(), dir, main); err != nil {
@@ -341,7 +342,7 @@ func TestStateNoticeObserverStaysInRoomAndDoesNotNotifyItself(t *testing.T) {
 	if len(availabilityFiles(t, dir, main.Name)) != 0 {
 		t.Fatal("cross-room or self notice appeared")
 	}
-	if err := registry.Remove(dir, main.Name); err != nil {
+	if err := registrytest.Remove(dir, main.Name); err != nil {
 		t.Fatal(err)
 	}
 	if err := observer.scan(context.Background(), dir, main); err == nil {

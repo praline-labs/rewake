@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/core/registry"
+	"github.com/praline-labs/rewake/internal/core/registry/registrytest"
 	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/core/session"
 	"github.com/praline-labs/rewake/internal/infra/proc"
@@ -103,7 +104,7 @@ func TestCompactionRetryTailGapAndDeparture(t *testing.T) {
 	if len(completed) != 0 {
 		t.Fatal("failed publication incorrectly queued a notice")
 	}
-	if err := registry.Remove(dir, peer.Name); err != nil {
+	if err := registrytest.Remove(dir, peer.Name); err != nil {
 		t.Fatal(err)
 	}
 	for range 3 {

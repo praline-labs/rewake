@@ -8,7 +8,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/mail/mailtest"
-	"github.com/praline-labs/rewake/internal/core/registry"
+	"github.com/praline-labs/rewake/internal/core/registry/registrytest"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -27,7 +27,7 @@ func newGateLab(t *testing.T) gateLab {
 	lab := gateLab{twoSessionLab: newTwoSessionLab(t)}
 	// The lab's lead is served by this process, which never ends: r is a run
 	// of its own here.
-	if err := registry.Remove(lab.dir, "lead"); err != nil {
+	if err := registrytest.Remove(lab.dir, "lead"); err != nil {
 		t.Fatal(err)
 	}
 	lab.lead = startRun(t, lab.dir, "lead")

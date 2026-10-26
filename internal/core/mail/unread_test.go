@@ -168,3 +168,9 @@ func TestClearingAnOldWaitKeepsANewOneOfTheSameRun(t *testing.T) {
 		t.Error("two waits of one run share a report id, so the second report would be skipped")
 	}
 }
+
+// markAwaiting is markAwaitingSequence at sequence 0, a wait recorded with no
+// read clock behind it.
+func markAwaiting(dir, name, epoch, from, fromEpoch, messageID string) error {
+	return markAwaitingSequence(dir, name, epoch, from, fromEpoch, messageID, 0)
+}

@@ -248,10 +248,10 @@ func TestInspectSeesWhatGitWorktreeRemoveRefuses(t *testing.T) {
 	if check, err := Inspect(locked); err != nil || !check.Locked || check.LockReason != "on a stick" {
 		t.Errorf("locked: %+v, %v", check, err)
 	}
-	if err := Remove(locked, false); err == nil {
+	if err := removeLocked(locked, false); err == nil {
 		t.Error("git removed a locked checkout without force")
 	}
-	if err := Remove(locked, true); err != nil || isDir(locked.Path) {
+	if err := removeLocked(locked, true); err != nil || isDir(locked.Path) {
 		t.Errorf("forced removal of a locked checkout: %v", err)
 	}
 
@@ -271,7 +271,7 @@ func TestInspectSeesWhatGitWorktreeRemoveRefuses(t *testing.T) {
 	if check, err := Inspect(record); err != nil || !check.Submodules {
 		t.Errorf("a submodule checked out by hand: %+v, %v", check, err)
 	}
-	if err := Remove(record, false); err == nil || !strings.Contains(err.Error(), "submodules") {
+	if err := removeLocked(record, false); err == nil || !strings.Contains(err.Error(), "submodules") {
 		t.Errorf("git removed it: %v", err)
 	}
 	other, err := Create(t.TempDir(), source, "other")

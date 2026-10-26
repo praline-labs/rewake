@@ -3,11 +3,13 @@ package registrytest
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/core/registry"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // Boot is the id of the boot the test runs in. A session a test publishes
@@ -39,4 +41,20 @@ func Legacy(t testing.TB, dir string, session registry.Session) {
 	if err := os.WriteFile(filepath.Join(sessions, session.Name+".json"), append(encoded, '\n'), 0o600); err != nil {
 		t.Fatal(err)
 	}
+}
+
+// Remove deletes the record of a name, whoever owns it: a test's way to make a
+// run read as ended. Production removes only its own record
+// (registry.RemoveOwned).
+func Remove(dir, name string) error {
+	if !state.ValidName(name) {
+		return nil
+	}
+	return state.WithNameLock(dir, name, func() error {
+		err := state.Discard(state.SessionPath(dir, name))
+		if errors.Is(err, os.ErrNotExist) {
+			return nil
+		}
+		return err
+	})
 }

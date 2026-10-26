@@ -8,12 +8,13 @@ import (
 	"github.com/praline-labs/rewake/internal/core/role"
 )
 
-func TestGeneralIsTheReportingRoleAndReadsLegacyWorkers(t *testing.T) {
+// A role this build does not know reads as general, the reporting role.
+func TestGeneralIsTheReportingRoleAndAnUnknownRoleReadsAsIt(t *testing.T) {
 	if part, found := role.Find("general"); !found || part.Silent {
 		t.Fatalf("role=%+v", part)
 	}
 	if role.Of("worker").ID != "general" {
-		t.Fatal("legacy worker was not normalized")
+		t.Fatal("an unknown role did not read as general")
 	}
 	dir := liveSession(t, "old")
 	record, err := registry.Load(dir, "old")
@@ -26,9 +27,6 @@ func TestGeneralIsTheReportingRoleAndReadsLegacyWorkers(t *testing.T) {
 	}
 	code, out, errOut := run("list", "--json")
 	if code != 0 || !strings.Contains(out, `"role": "general"`) {
-		t.Fatalf("legacy record=%d %s %s", code, out, errOut)
-	}
-	if _, err := testTable().parse([]string{"--worker", aHarness(t)}); err == nil {
-		t.Fatal("legacy flag should not create new worker records")
+		t.Fatalf("a record of an unknown role=%d %s %s", code, out, errOut)
 	}
 }

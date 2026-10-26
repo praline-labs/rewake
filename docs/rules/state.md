@@ -226,7 +226,7 @@ refused, since the kernel follows a link before a `..`. The write primitives are
 `WriteAtomic`, `WriteAtomicHeld`, `PublishExclusive`, `Remove`, `Rename`, `EnsureSubdir`,
 the locks (`WithRoomLock`, `WithNameLock`, `TryWithNameLock`, `WithMailboxLock`,
 `WithMailboxLockAt`, `TryHold`), and the os calls they name behind the same guard
-(`OpenFile` with a write flag, `WriteFile`, `Link`, `Move`, `Chmod`, `Touch`, `Discard`,
+(`OpenFile` with a write flag, `WriteFile`, `Link`, `Move`, `Touch`, `Discard`,
 `RemoveAll`, `Flock`); the read clock goes through `state.Counter`, the sockets through
 `state.Listen`, whose close removes the path once. A static test over `internal/`, in both
 build variants, fails on a write outside the state package, except in its own table of

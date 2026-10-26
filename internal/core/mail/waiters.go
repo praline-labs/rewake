@@ -64,14 +64,10 @@ func awaitingPath(dir, name, epoch string) (string, bool) {
 	return filepath.Join(state.AwaitingPath(dir, name), epoch), true
 }
 
-// markAwaiting records that a run of another session waits for this turn, and
-// for which message. A run that already waits gets the message added to its
-// wait; a different run of that name replaces it.
-func markAwaiting(dir, name, epoch, from, fromEpoch, messageID string) error {
-	return markAwaitingSequence(dir, name, epoch, from, fromEpoch, messageID, 0)
-}
-
-// markAwaitingSequence is markAwaiting with the message's read sequence. A record there that cannot be read is an error: written over, it would drop
+// markAwaitingSequence records that a run of another session waits for this
+// turn, for which message and at which read sequence. A run that already waits
+// gets the message added to its wait; a different run of that name replaces it.
+// A record there that cannot be read is an error: written over, it would drop
 // what the run owes for the messages it names.
 func markAwaitingSequence(dir, name, epoch, from, fromEpoch, messageID string, sequence uint64) error {
 	path, ok := awaitingPath(dir, name, epoch)

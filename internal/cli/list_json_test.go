@@ -4,13 +4,13 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/core/registry"
+	"github.com/praline-labs/rewake/internal/core/registry/registrytest"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 func TestEmptyShellListRetainsBaselineJSON(t *testing.T) {
 	dir := liveSession(t, "temporary")
-	if err := registry.Remove(dir, "temporary"); err != nil {
+	if err := registrytest.Remove(dir, "temporary"); err != nil {
 		t.Fatal(err)
 	}
 	t.Setenv(state.SessionEnv, "")

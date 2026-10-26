@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/core/control"
-	"github.com/praline-labs/rewake/internal/core/registry"
+	"github.com/praline-labs/rewake/internal/core/registry/registrytest"
 	"github.com/praline-labs/rewake/internal/infra/build/buildtest"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
@@ -30,7 +30,7 @@ func TestARecordItsCommandHoldsIsLeftAlone(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := registry.Remove(dir, peer.Name); err != nil {
+	if err := registrytest.Remove(dir, peer.Name); err != nil {
 		t.Fatal(err)
 	}
 	scanTimes(t, observer, dir, main, 1)
@@ -75,7 +75,7 @@ func TestAKilledCommandsRecordIsClosed(t *testing.T) {
 	if line, err := bufio.NewReader(out).ReadString('\n'); err != nil || line != "held\n" {
 		t.Fatalf("the helper said %q, %v", line, err)
 	}
-	if err := registry.Remove(dir, peer.Name); err != nil {
+	if err := registrytest.Remove(dir, peer.Name); err != nil {
 		t.Fatal(err)
 	}
 	scanTimes(t, observer, dir, main, 1)

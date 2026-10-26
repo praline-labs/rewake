@@ -9,6 +9,7 @@ import (
 	"github.com/praline-labs/rewake/internal/core/control"
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/registry"
+	"github.com/praline-labs/rewake/internal/core/registry/registrytest"
 	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/core/session"
 )
@@ -152,7 +153,7 @@ func TestALetterWaitsForItsOtherHalfOnlyAMoment(t *testing.T) {
 	letterWait = time.Hour
 	letterState(t, dir, peer, []session.CompactionEvent{{Sequence: 1, ObservedAt: now, RequestedBy: main.Name, Request: letterB}}, nil)
 	scanTimes(t, observer, dir, main, 1)
-	if err := registry.Remove(dir, peer.Name); err != nil {
+	if err := registrytest.Remove(dir, peer.Name); err != nil {
 		t.Fatal(err)
 	}
 	scanTimes(t, observer, dir, main, 1)
@@ -182,7 +183,7 @@ func TestALetterComesWhenTheWorkerLeavesWithoutAWord(t *testing.T) {
 	if got := letters(t, dir, main.Name); len(got) != 0 {
 		t.Fatalf("a letter before any word: %+v", got)
 	}
-	if err := registry.Remove(dir, peer.Name); err != nil {
+	if err := registrytest.Remove(dir, peer.Name); err != nil {
 		t.Fatal(err)
 	}
 	scanTimes(t, observer, dir, main, 1)

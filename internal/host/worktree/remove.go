@@ -8,26 +8,7 @@ import (
 	"path/filepath"
 )
 
-// Remove takes a checkout away with the public `git worktree remove`, and its
-// record after it. force removes one with changes as well. A checkout whose
-// directory is gone is removed the same way, which on a missing directory
-// touches only its own entry — never `git worktree prune`, which would take
-// every other missing checkout of the repository along; one the repository
-// has forgotten leaves only the record to remove. A directory whose repository
-// is gone has no git left to remove it, and only force deletes it. It holds
-// the repository's lock, as Create does: git worktree remove reads the
-// entries of the others as well. A root that is gone takes no lock, and is not
-// made again for one: no checkout is made in it without Create making it
-// first, and a root the person removed should stay removed.
-func Remove(record Record, force bool) error {
-	directory := filepath.Dir(record.Path)
-	if _, err := os.Stat(filepath.Dir(directory)); errors.Is(err, fs.ErrNotExist) {
-		return remove(record, force)
-	}
-	return withRepositoryLock(directory, func() error { return remove(record, force) })
-}
-
-// RemoveChecked is Remove with keep asked first under the same lock, of the
+// RemoveChecked removes a checkout, with keep asked first under the same lock, of the
 // record as it stands then; an error from keep refuses the removal and is
 // returned as it is. The look and the removal have to be one step: a look
 // taken before the lock could see a checkout a launch had claimed and not yet
@@ -81,7 +62,11 @@ func Finish(record Record, into string, keep func(Record) error) (Landing, error
 
 // underLock runs fn holding the lock of the record's repository, with the
 // record read again under it: a launch that made the checkout since the
-// record was listed has written its owner into it.
+// record was listed has written its owner into it. The lock is the one Create
+// holds: git worktree remove reads the entries of the others as well. A root
+// that is gone takes no lock, and is not made again for one: no checkout is
+// made in it without Create making it first, and a root the person removed
+// should stay removed.
 func underLock(record Record, fn func(Record) error) error {
 	current := func() error {
 		now, err := read(recordPath(record))
@@ -100,6 +85,14 @@ func underLock(record Record, fn func(Record) error) error {
 	return withRepositoryLock(directory, current)
 }
 
+// remove takes a checkout away with the public `git worktree remove`, and its
+// record after it. force removes one with changes as well. A checkout whose
+// directory is gone is removed the same way, which on a missing directory
+// touches only its own entry — never `git worktree prune`, which would take
+// every other missing checkout of the repository along; one the repository
+// has forgotten leaves only the record to remove. A directory whose repository
+// is gone has no git left to remove it, and only force deletes it. The caller
+// holds the repository's lock (underLock).
 func remove(record Record, force bool) error {
 	present := isDir(record.Path)
 	forgotten := repositoryGone(record)

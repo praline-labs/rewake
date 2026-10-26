@@ -161,21 +161,6 @@ func Update(dir string, session Session) error {
 	})
 }
 
-// Remove deletes the record of a name, whoever owns it. Use RemoveOwned unless
-// the caller really means "this name, whatever is behind it".
-func Remove(dir, name string) error {
-	if !state.ValidName(name) {
-		return nil
-	}
-	return state.WithNameLock(dir, name, func() error {
-		err := state.Discard(state.SessionPath(dir, name))
-		if errors.Is(err, os.ErrNotExist) {
-			return nil
-		}
-		return err
-	})
-}
-
 // OwnsName reports whether the record of this name still describes the session
 // with this epoch. A record that could not be read answers no, as one that
 // names another run does; Ownership tells the two apart.

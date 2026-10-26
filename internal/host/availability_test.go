@@ -11,6 +11,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/registry"
+	"github.com/praline-labs/rewake/internal/core/registry/registrytest"
 	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/infra/build/buildtest"
 	"github.com/praline-labs/rewake/internal/infra/state"
@@ -103,7 +104,7 @@ func TestAvailabilityMainOnlyReadinessEpochAndRetryDedup(t *testing.T) {
 	if len(availabilityFiles(t, dir, peer.Name)) != 0 {
 		t.Fatal("worker got announcement")
 	}
-	if err := registry.Remove(dir, peer.Name); err != nil {
+	if err := registrytest.Remove(dir, peer.Name); err != nil {
 		t.Fatal(err)
 	}
 	replacement := availabilityPeer(t, dir, peer.Name, role.Write.ID, 3, true)
@@ -138,7 +139,7 @@ func TestLateMainDiscoversExistingWorkersInItsRoomOnly(t *testing.T) {
 		t.Fatal("late main missed existing worker or crossed room")
 	}
 	// The next main epoch has its own discovery, even for the same worker epoch.
-	if err := registry.Remove(dir, main.Name); err != nil {
+	if err := registrytest.Remove(dir, main.Name); err != nil {
 		t.Fatal(err)
 	}
 	next := availabilityPeer(t, dir, main.Name, role.Main.ID, 4, true)
