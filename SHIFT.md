@@ -48,8 +48,8 @@ Open a document for numbers, commands and names: the map only points.
   sections: Act 6. A question, when the sender wants to block · Act 7. A notify, when nothing is owed · Act 8. The session ends · One exchange, as files · Where the flow can stall, and what it says
 - `docs/flow.md` — The whole path of one message, from a launch through send, notice and read to the report, with every process, file and status on the way, and how main starts a worker in a space.
   sections: Cast · Act 1. A session starts · Act 2. A task is sent · Act 3. The wrapper announces it · Act 4. The agent reads · Act 5. The turn ends and the report goes back · A space: main starts a worker
-- `docs/install.md` — Installing, updating and releasing rewake, and running a 2.0 build beside 1.0.3.
-  sections: Trying 2.0 beside 1.0.3 · Upgrading from 1.x · Releasing to npm
+- `docs/install.md` — Installing rewake with npm or from source, updating it, a second build beside an installed one, testing how a release installs, upgrading from 1.x, and releasing to npm.
+  sections: Installing with npm · Building from source · Testing how a release installs · Upgrading from 1.x · Releasing to npm
 - `docs/launch-defaults.md` — Where a launch's model, effort and arguments come from: worker aliases, environment variables, the settings files and their precedence.
   sections: Launch defaults from the environment · The worker catalogue
 - `docs/launch.md` — What a launch does on each harness — the wrapper, the arguments and environment it adds, the workers' profile and service folder, pi's bundled copy, starting the shell, and signals.
@@ -94,6 +94,8 @@ Open a document for numbers, commands and names: the map only points.
   sections: Roles and reports · Tests next to a live session · Arguments and continuing a conversation · Delivery and its proofs
 - `docs/turn-outcomes.md` — What each turn end reports — finished, error, stopped or pending — who it goes to, and the hold that keeps an interim end from closing a task.
   sections: Failed turns · Interim turn ends (`rewake pending`) · The confirmation · Stops
+- `docs/user-guide.md` — The person's guide — the few things only the person does: install, logins, starting main, the worker templates, a project's .rewake/, the shell's keys, stopping and restarting, where things live, upgrading.
+  sections: Install · Log in · Start main · Worker templates · A project's `.rewake/` · The workers' own settings · The shell · Stop and restart · Where things live · Upgrading
 - `docs/worker-profile.md` — The Claude Code workers' profile: the service folder, login, onboarding and trust, rewake's defaults in settings.json and their upgrades, the run's own settings, memory.
   sections: The service folder · The login · Onboarding and trust · Skills, plugins and MCP servers · settings.json: the workers' user settings · Retired defaults · The run's --settings · Main's checkout is readable · The worker's memory · A template that enters a checkout · The person edits the file · An upgrade adds only the newer defaults · A file rewake cannot read
 - `docs/worker-types.md` — Worker types: the kinds of work a worker is launched for, their briefing sections, where a type is defined, and the memory by type.
@@ -105,15 +107,15 @@ Open a document for numbers, commands and names: the map only points.
 
 ### docs/roadmap/
 
-- `docs/roadmap/README.md` — The open work and its order — releasing 2.0, the owner's looks and logins, the receipts debt — and the ideas not scheduled.
+- `docs/roadmap/README.md` — The open work and its order — the owner's looks and logins, the acceptance of additive fields — and the ideas not scheduled.
   sections: Open, in order · Not scheduled
 
 ### docs/rules/
 
 - `docs/rules/adapter-api.md` — The adapter API — capabilities offered and live, what the core does without each, the interfaces in internal/adapter, the catalogue, minimum and pinned versions, and adding a harness.
   sections: Why capabilities · The capabilities · Two levels: offered and live · The catalogue · Minimum versions
-- `docs/rules/effects.md` — E1–E8, what may decide a mail operation's effect and the order of a turn end's steps, and the rules the receipts of send and pending keep; open before changing how mail is written, read or published.
-  sections: The rules · Receipts, retries and once-marks · Publication once
+- `docs/rules/effects.md` — E1–E8, what may decide a mail operation's effect and the order of a turn end's steps, the rule a pending mark keeps and how a letter is retired; open before changing how mail is written, read or published.
+  sections: The rules · A pending mark · Retiring a letter
 - `docs/rules/launch.md` — L1–L3: what a launch adds to a harness, what it never changes, and that nothing it writes outlives the run.
   sections: The rules
 - `docs/rules/layout.md` — The import rule between layers, and where a harness may be named; open before adding a package or an import.
