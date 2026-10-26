@@ -44,17 +44,21 @@ const (
 // directory and the room are spelled with the same prefix, so a file found in
 // whatever directory somebody is in could end up steering another session's
 // state. What a file may decide is listed here, not inferred from a name.
+// Each harness's pair is here, and its launch page names its own keys.
 var readable = map[string]bool{
 	"REWAKE_CLAUDE_MODEL":  true,
 	"REWAKE_CLAUDE_EFFORT": true,
+	"REWAKE_PI_MODEL":      true,
+	"REWAKE_PI_EFFORT":     true,
 }
 
 // SettingsHelp is the one line that tells a person these files exist, printed
-// with every launch command's help. Somebody who has to read the documentation
-// to learn where a setting lives will not find it.
-const SettingsHelp = "Launch defaults come as KEY=VALUE lines from ~/.config/" + userSettingsDir + "/" + userSettingsFile +
-	" and " + projectSettingsFile + " in the working directory: REWAKE_CLAUDE_MODEL, " +
-	"REWAKE_CLAUDE_EFFORT. The environment beats both files, an empty variable turns a " +
+// with every launch command's help beside the harness's own note naming its
+// keys. Somebody who has to read the documentation to learn where a setting
+// lives will not find it.
+const SettingsHelp = "The launch defaults this page names come from the environment, or as KEY=VALUE lines from " +
+	projectSettingsFile + " in the working directory and ~/.config/" + userSettingsDir + "/" + userSettingsFile +
+	". The environment beats both files and the project file the user's, an empty variable turns a " +
 	"default off for the launch, and a typed flag beats everything."
 
 // Settings are the launch defaults available to this process.

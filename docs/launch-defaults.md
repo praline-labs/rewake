@@ -28,8 +28,7 @@ models the same way nor take the reasoning effort the same way:
 No model names appear in this repository. Which model is cheap, and what it is
 called, belongs to whoever runs the sessions.
 
-Claude Code's two can be set in three places, pi's only in the environment, and rewake
-reads the files itself — a setting that
+Each harness's two can be set in three places, and rewake reads the files itself — a setting that
 has to be loaded by hand before every launch is not a setting but a ritual, and the
 one time it is forgotten a session comes up on something else without saying so:
 
@@ -44,8 +43,9 @@ around the name and the value are trimmed, and one matching pair of quotes is re
 Nothing more — no `$VAR` expansion, no commands, no line continuation. A file that can
 run things is a different and much larger promise, and this is a settings file.
 
-**A file may set `REWAKE_CLAUDE_MODEL` and `REWAKE_CLAUDE_EFFORT` and nothing else**
-(`readable` in `internal/adapter/settings.go`). Not a prefix — a list. That is
+**A file may set these four, `REWAKE_CLAUDE_MODEL`, `REWAKE_CLAUDE_EFFORT`, `REWAKE_PI_MODEL`
+and `REWAKE_PI_EFFORT`, and nothing else** (`readable` in `internal/adapter/settings.go`); each
+launch page names its own harness's two, beside the one line on where the files are. Not a prefix — a list. That is
 a boundary rather than tidiness: a file sitting in whatever directory somebody happens
 to be in must not become a way to set arbitrary variables for the harness launching
 there, and names like the state directory or the room are spelled with the same prefix.

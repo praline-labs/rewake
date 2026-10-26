@@ -45,7 +45,7 @@ func (harness) Notes() []string {
 		"Tasks and questions are accepted after the extension connects from the harness process. A --command wrapper must exec pi, not start it as a child.",
 		"A turn ends at agent_settled, after automatic retries and queued work. Its end is not held open; use rewake pending before an interim end.",
 		"Context, model and thinking level come from the native session. Compact accepts an optional focus and refuses a running turn; interrupt stops a running turn. Limits are not reported.",
-		"REWAKE_PI_MODEL and REWAKE_PI_EFFORT supply --model and --thinking when the launch does not name them.",
+		"REWAKE_PI_MODEL and REWAKE_PI_EFFORT supply --model and --thinking when the launch does not name them, a worker's included when its template sets neither.",
 		"--worktree[=<name>] starts a new conversation in a checkout rewake makes. Continue or resume a conversation from its existing checkout, without --worktree.",
 	}
 }
