@@ -42,6 +42,9 @@ type Message struct {
 	// AddendumTo names the task this one adds to: an addendum is a task of
 	// its own, read into the same wait, so one report settles both.
 	AddendumTo string `json:"addendumTo,omitempty"`
+	// Brief names the brief a task or a question gives its recipient, by its
+	// id; the text stays the brief's, read when the letter is.
+	Brief string `json:"brief,omitempty"`
 	// Resends names the report this one sends again, and Decision the
 	// decision that did: a reader holding both can tell a duplicate. Neither
 	// says the first did not arrive; a decision proves nothing.

@@ -17,6 +17,7 @@ func sendCommand(catalog adapter.Catalog) *Command {
 		Options: append(kindOptions(),
 			Option{Flag: "--wait", Value: "<seconds>", Summary: "How long to wait for the delivery, default 5, or for a question's answer, default 600, of which the delivery takes 5 at most."},
 			Option{Flag: "--to", Value: "<id>", Summary: "Add to an unreported task or question this run sent: a task of its own, announced at once, shown with it by rewake inbox --owed and settled by the same report. Takes a unique prefix of the id; an id rewake edit replaced adds to the replacement."},
+			Option{Flag: "--brief", Value: "<id>", Summary: "Main only, with a task or a --question: give this brief of rewake brief list with it. The recipient's run may then read, tick and comment it, and reads its text with the letter."},
 			jsonOption,
 		),
 		Examples: sendExamples(catalog),

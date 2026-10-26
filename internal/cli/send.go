@@ -69,6 +69,9 @@ func handleSend(ctx *Context, call Call) error {
 	if err != nil {
 		return err
 	}
+	if err := briefFlagFits(call, kind); err != nil {
+		return err
+	}
 
 	session, err := registry.Lookup(dir, target)
 	if errors.Is(err, registry.ErrNotFound) {
@@ -142,9 +145,14 @@ func handleSend(ctx *Context, call Call) error {
 	if err != nil {
 		return err
 	}
+	brief, err := bindBrief(call, dir, self, selfErr, session)
+	if err != nil {
+		return err
+	}
 
 	message := mail.Message{
 		AddendumTo: addendumTo,
+		Brief:      brief,
 		ID:         mail.NewID(),
 		From:       mail.ShellSender,
 		To:         session.Name,

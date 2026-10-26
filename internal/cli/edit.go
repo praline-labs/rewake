@@ -91,6 +91,7 @@ func handleEdit(ctx *Context, call Call) error {
 	replacement := mail.Message{
 		ID: mail.NewID(), From: self.Name, FromEpoch: epoch, To: old.To, ToEpoch: old.ToEpoch,
 		Kind: old.Kind, Text: text, CreatedAt: time.Now(), Replaces: old.ID, AddendumTo: old.AddendumTo,
+		Brief: old.Brief,
 	}
 	if kind.kind == mail.Question {
 		release, err := mail.ReserveAnswer(dir, self.Name, replacement.ID)

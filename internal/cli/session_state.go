@@ -45,6 +45,9 @@ type messageView struct {
 	// EarlierRun says the letter was written for an earlier run of the
 	// reader's name, which ended without reading it.
 	EarlierRun bool `json:"earlierRun,omitempty"`
+	// BriefView is the brief the letter gives, as it reads now; under --json
+	// it stands where the letter's record has the brief's id.
+	BriefView *letterBrief `json:"brief,omitempty"`
 	mail.Message
 }
 

@@ -56,7 +56,7 @@ func showOwed(ctx *Context, call Call, dir string, session registry.Session, epo
 		messages = append(messages, message.Message)
 	}
 	model := owedModel{Session: session.Name, Messages: make([]owedView, 0, len(owed))}
-	for index, view := range viewedMessages(dir, messages) {
+	for index, view := range withBriefs(dir, viewedMessages(dir, messages)) {
 		model.Messages = append(model.Messages, owedView{messageView: view, Kept: owed[index].Kept})
 	}
 	listed := make(map[string]bool, len(owed))
@@ -110,6 +110,7 @@ func owedLines(messages []owedView) []string {
 		if message.ThreadChanged {
 			lines = append(lines, mail.ThreadChangedWarning)
 		}
+		lines = append(lines, briefLetterLines(message.BriefView)...)
 	}
 	return lines
 }
