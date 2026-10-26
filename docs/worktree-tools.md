@@ -97,7 +97,7 @@ CLI was. The same names and contracts in both harnesses (`mcp__rewake__worktree_
   worktree under the root, of every repository and room, because the root is the owner's;
   `--this-room` keeps those whose record names a session of the current room, the one it was made
   for, ended or not. Per checkout, what `ls` has: the session and whether any runs there
-  (`runningSessions`), and `check` — changes, ignored files, commits on no other branch. It does
+  (`runningSessions`), and `check` — changes, ignored files, commits that no branch, tag or remote-tracking ref holds, the worktree's own branch included. It does
   not forecast a close: that needs a space and a worker, which `worktree_status` answers for the
   session itself. A view: no lease, no lock file.
 - **`worktree_land`**, `name` and optional `into`: `rewake worktree land <name> [--into=<branch>]
