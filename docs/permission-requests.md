@@ -128,7 +128,7 @@ draws trust, onboarding and login before the mod, and they have no such event.
 - **The wrapper** keeps it in the snapshot (`session.Snapshot.dialog`, optional) and, the first
   time a sample names a dialog, leaves main one notify through `Config.Dialog`
   (`ask.TellMainDialog`): `Rewake: api waits at a dialog in its pane: <message>`, then that rewake
-  cannot answer it, so main answers it in the pane or asks the person. A letter that could not be
+  cannot answer it, so main asks the person to answer or cancel it in the pane. A letter that could not be
   left is tried with the next sample, which the heartbeat brings; a dialog cleared and another
   drawn is told again.
 - **`rewake list` and the shell's strip** read `waiting at a dialog` for it, in place of `idle`,
