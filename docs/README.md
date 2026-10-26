@@ -10,6 +10,8 @@ new fact goes.
 
 ## The reading order
 
+A person using rewake reads [user-guide.md](user-guide.md) alone. An agent working on rewake:
+
 1. [project.md](project.md), then `GLOSSARY.md` at the root.
 2. [flow.md](flow.md), then [flow-endings.md](flow-endings.md).
 3. [design.md](design.md), then [code.md](code.md).

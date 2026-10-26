@@ -1,158 +1,15 @@
 # rewake
 
-Let the coding agents running on your machine message each other.
+Let one coding agent run a team of others on your machine.
 
-You have several Claude Code sessions open, each in its own terminal, and none of them
-knows the others exist. With rewake, one session hands out work, the
-others take it, and their reports come back by themselves. A session that sits idle
-wakes up when mail arrives.
+You start one session, **main**, in your project. Main raises its own workers — a writer, a
+reviewer, a helper — each in its own terminal pane, hands them tasks, and reads their reports
+as they come back. A worker that sits idle wakes when mail arrives; every task gets its
+report, and who owes whom one is always on record. You watch it all in rewake's shell: main on
+the left, the worker you choose on the right.
 
-This branch is rewake 2.0 in the making. Codex sessions took part in 1.x; their adapter
-left the product while the core is rebuilt and returns, designed afresh, in a later
-stage. Until then Claude Code is the one harness rewake launches.
-
-```bash
-npm install -g @praline-labs/rewake
-rewake guide
-```
-
-## Quick start
-
-Install and log in to Claude Code as usual. Then start each session through
-rewake, from its own terminal:
-
-```bash
-rewake --main --name lead claude   # terminal 1: lead-claude hands out work
-rewake --write claude              # terminal 2: write-claude takes it
-```
-
-Each agent is briefed at launch and told to run `rewake guide` on its first task, so
-you talk to it in plain words. In lead-claude, type:
-
-> Ask write-claude to run the test suite and tell me what fails.
-
-Here is what happens:
-
-1. lead-claude runs `rewake send write-claude "run the test suite and report what fails"`.
-2. write-claude is idle. It wakes with a line like `Rewake: lead-claude task, 1 new message`,
-   and reads the task with `rewake inbox`.
-3. write-claude does the work and ends its turn. Its final message goes back to
-   lead-claude as `Rewake: write-claude finished`, with the report.
-
-Nobody copies text between windows or reminds a worker to reply. Run `rewake list` in
-any terminal to see who is up.
-
-## What it can do
-
-**Messages**
-
-- **Tasks.** `rewake send <name> "..."`: the recipient works on it, and its final message
-  comes back as the report.
-- **Questions.** Add `--question` and the sender blocks until the answer arrives, then
-  prints it.
-- **Heads-ups.** `--notify` informs the recipient; no report comes back.
-- **Waking and steering.** An idle recipient wakes up. A busy one gets the notice
-  without waiting for its turn to end.
-- **Interim reports.** `rewake pending "suite still running"` marks a turn that ends
-  before the work does: the sender hears the work is still going, and a later turn
-  reports.
-- **Additions and corrections.** `--to <id>` adds to a task you already sent. While a
-  message is unread, `rewake withdraw <id>` takes it back and `rewake edit <id> "..."`
-  replaces it.
-- **Delivery status you can trust.** `send` exits 0 when the message is delivered, 3 when
-  it is accepted and lands on its own later, 1 when the target refused or could not be
-  reached, and 2 when the call was wrong. `rewake inbox --awaited` lists what you handed
-  out and where each item stands. `rewake inbox --owed` shows again what you still owe,
-  for example after a context compaction.
-
-**Roles and rooms**
-
-- **Roles.** Pick one with `--main`, `--write` or `--general` (the default). Each room
-  has one main: it hands out work and receives reports, and only main can compact a
-  worker or interrupt one.
-- **Rooms.** `--room <name>` keeps separate groups of sessions apart. Sessions see and
-  address only their own room.
-- **Addresses.** A session's address is `<prefix>-<harness>`, for example `lead-claude`
-  or `write-claude`. The prefix is the role, or `--name`.
-
-**Control from main**
-
-- **Telemetry.** In main, `rewake list` shows each session's activity, model and
-  effort, context fill, usable window and compaction count. Main is also told when a
-  session becomes available, compacts or leaves.
-- **Compact.** `rewake compact <name> [focus]` compacts an idle worker's conversation,
-  optionally telling the summary what to keep.
-- **Interrupt.** `rewake interrupt <name>` stops the worker's current turn, as Esc would.
-
-**Parallel work**
-
-- **Worktrees.** `rewake claude --worktree=fix-login` starts the session in its own
-  checkout, on its own branch. `rewake worktree land fix-login` fast-forwards your
-  branch to it. `finish` lands the branch and removes the worktree; `ls` and `rm`
-  list and remove worktrees.
-
-**Launch conveniences**
-
-- **Aliases and defaults.** Name a worker in `~/.config/rewake/aliases.toml` or a
-  project's `.rewake/aliases.toml`, and main opens it with `rewake space open <space>
-  --alias <alias>`, raised for a kind of work with `--type`. Set default models and
-  efforts in `~/.config/rewake/settings`.
-
-**For agents**
-
-- **Built for scripts.** Every command takes `--json`, nothing ever prompts, and a
-  refusal names the next thing to try.
-
-## How it works
-
-`rewake claude` starts the harness as a child process in your
-terminal, with the same flags, login and screen. rewake registers the session under
-a name. Messages are files in a private state directory. The session's wrapper
-announces each message through a channel the harness offers itself: for Claude Code,
-its session inbox socket.
-
-When a turn ends, its final message goes back to whoever is waiting for it.
-
-rewake does not proxy the terminal, type into anyone's screen, or read transcripts.
-It runs no daemon: each wrapper lives exactly as long as its session. rewake never
-edits your harness configuration; it passes what it needs as flags for that one
-launch.
-
-## Commands
-
-| Command | What it does |
-|---|---|
-| `rewake`, `rewake guide` | The map: every command, the usual order of work, the exit codes |
-| `rewake claude [args]` | Start a session; your arguments pass through to the harness |
-| `rewake list` | The running sessions of this room |
-| `rewake send <name> <text>` | Send a task; add `--question` or `--notify` for the other kinds |
-| `rewake inbox` | Read waiting mail; `--peek` previews it, `--owed` shows what you owe, `--awaited` what others owe you |
-| `rewake pending <text>` | Mark a turn that ends before the work does |
-| `rewake withdraw <id>`, `rewake edit <id> <text>` | Take back or replace an unread message |
-| `rewake compact <name>`, `rewake interrupt <name>` | Steer a worker (main only) |
-| `rewake worktree ls \| land \| finish \| rm` | List, land, finish or remove the worktrees made for `--worktree` launches |
-| `rewake whoami` | Show this session's name, room and role |
-
-`rewake <command> --help` gives the flags, notes and real examples for each command.
-
-## Requirements
-
-- Linux on x64 or arm64.
-- Node and npm, to install only. rewake is a single static binary and does not run on
-  Node.
-- Claude Code 2.1.287 or newer, installed and logged in on its own; a launch reads the
-  installed version first and refuses an older one.
-
-## Limits
-
-- Only sessions started through rewake take part. A plain `claude` in another terminal
-  cannot be reached; restart it with `rewake claude`.
-- One machine, one user. Nothing crosses the network, and messages cannot cross rooms.
-- A task sent from a plain shell gets no report back: there is no session to deliver it
-  to. `--question` needs one too.
-- rewake grants no permissions: a session writes and commits within its own.
-- rewake depends on each harness's behaviour, which can change with a new release.
-  What was checked, and on which version, is recorded in `docs/research*.md`.
+The harnesses are Claude Code and pi, in any mix: a main on Claude Code can run workers on
+pi, and the other way round.
 
 ## Install
 
@@ -161,26 +18,62 @@ npm install -g @praline-labs/rewake
 rewake --version
 ```
 
-npm installs a small launcher and the binary for your platform.
+Linux on x64 or arm64. npm installs rewake, its shell and the pi it runs, which needs Node.js
+22.19 or newer. Claude Code you install yourself, 2.1.287 or newer, and log in to as usual.
 
-To build from source, you need Go 1.25 or newer:
+## Your part
 
-```bash
-git clone https://github.com/praline-labs/rewake.git && cd rewake
-go build -o rewake ./cmd/rewake
-```
+1. In your project's directory, from your own terminal:
 
-[docs/install.md](docs/install.md) covers stamping the build time into `--version`,
-replacing an installed binary safely, and how a release is made.
+   ```bash
+   rewake claude    # or: rewake pi
+   ```
 
-## Learn more
+   This is main, `main-claude`, in the room of this directory. Claude Code's or pi's own
+   flags go after the word, as with the plain command: `rewake claude --continue`.
 
-- [docs/flow.md](docs/flow.md): the path of one message, from launch to report.
-- [docs/design.md](docs/design.md): the design, the state directory and the CLI
-  contract.
-- [docs/traps.md](docs/traps.md): behaviour that surprises, listed by symptom.
-- [docs/README.md](docs/README.md): the full map of the documentation.
-- [docs/roadmap/README.md](docs/roadmap/README.md): the open work and its order.
+2. Tell main what you want, in plain words:
+
+   > Raise a writer and a reviewer. Have the writer fix the failing login test in a checkout
+   > of its own, have the reviewer check it, and tell me when it is ready to land.
+
+3. The first time a Claude Code worker opens, its pane says "Not logged in", and main tells
+   you so: click that pane, type `/login`, and log in with your account. Once is enough for
+   every later worker. On pi, log in once with `/login` in the first pi session.
+
+That is all a person does. Workers are raised from **templates**, which main reads with
+`rewake workers`; rewake ships none, so the first time main will ask for some — let it write
+`~/.config/rewake/aliases.toml` for you, or write it yourself
+([the guide](docs/user-guide.md#worker-templates)).
+
+## What main does from there
+
+- **Raises workers** from the templates, each on the harness, model and effort the template
+  names, in a checkout of its own when asked: `rewake space open api --alias write`.
+- **Sends tasks, questions and notes** — `rewake send api-claude "..."` — and reads every
+  report when the worker's turn ends; a worker that is still at it says what it waits for.
+- **Answers the workers' permission requests and questions**, which come to it as mail; you
+  may answer first in the worker's pane.
+- **Watches and steers**: each worker's activity, model and context fill; compacts a
+  worker's conversation or stops its turn.
+- **Lands the work** from a worker's checkout with `rewake worktree land`, and closes a worker
+  whose work is done.
+
+Every command is meant for the agents and prints its own help: `rewake guide` is the map,
+`rewake <command> --help` the details. Closing the shell, or its terminal, ends main and all
+its workers; nothing runs on unseen.
+
+## Read more
+
+- [docs/user-guide.md](docs/user-guide.md) — the few things only you do: logins, templates, a
+  project's `.rewake/`, the shell's keys, stopping and restarting, where things live,
+  upgrading.
+- [docs/project.md](docs/project.md) — what rewake is and the principles it holds.
+- [docs/flow.md](docs/flow.md) — the path of one message, from launch to report.
+- [docs/README.md](docs/README.md) — the map of the documentation.
+
+To build from source you need Go 1.25 or newer and [Bun](https://bun.sh) for the shell;
+[docs/install.md](docs/install.md) has the steps.
 
 ## License
 
