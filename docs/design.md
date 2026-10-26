@@ -370,7 +370,7 @@ harness; live runs with real harnesses by hand ([testing.md](testing.md), `AGENT
   inside, about 99 MB; rewake finds it beside its own executable
   ([shell.md](shell.md#how-rewake-starts-the-shell-and-how-it-ships)).
 - A non-npm alternative: `go install`, with pi installed and the shell compiled beside the binary
-  by hand ([install.md](install.md#trying-20-beside-103)).
+  by hand ([install.md](install.md#building-from-source)).
 - The repository lives in the GitHub organization `praline-labs`, the module path is
   `github.com/praline-labs/rewake` and the npm scope `@praline-labs` (the unscoped name `rewake`
   belongs to someone else); the license is MIT, and every package carries `LICENSE`.

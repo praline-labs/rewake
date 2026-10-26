@@ -1,60 +1,43 @@
 ---
-description: Installing, updating and releasing rewake, and running a 2.0 build beside 1.0.3.
+description: Installing rewake with npm or from source, updating it, a second build beside an installed one, testing how a release installs, upgrading from 1.x, and releasing to npm.
 ---
 
 # Installing and releasing
 
-Locally, without publishing, there are two ways, and they answer different questions.
-
-**To use it.** Build beside the installed command, then replace it atomically:
+## Installing with npm
 
 ```bash
-go build -ldflags "-X github.com/praline-labs/rewake/internal/cli.built=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-  -o ~/.local/bin/rewake.new ./cmd/rewake
-mv -f ~/.local/bin/rewake.new ~/.local/bin/rewake
+npm install -g @praline-labs/rewake
+rewake --version
 ```
 
-The `-ldflags` passes in the build time, which `rewake --version` and the guide show:
-the binary cannot know it otherwise. Built without it, they show the revision's commit
-time instead, labeled `committed`, and two builds of one revision with a modified tree
-look alike.
+Linux on x64 or arm64. npm installs a small entry, the build for this machine's cpu — the
+binary and rewake's shell beside it — and the pi rewake runs, at the exact version this build
+was checked with. pi runs under Node.js 22.19 or newer (`node --version`); a `pi` of your own on
+`PATH` is not used. Claude Code is installed and logged in on its own, 2.1.287 or newer.
 
-Building directly over a running executable can fail with `text file busy`.
-Renaming a neighboring file avoids that: existing wrappers keep their old
-executable, while new launches use the replacement. Restart existing sessions
-separately when their ongoing wrappers need the new behavior.
+The first use asks for two logins, each once: `/login` in the first Claude Code worker's pane,
+for the workers' configuration directory of their own, and `/login` in the first pi session, for
+rewake's pi. What else is left to the person — the worker templates, a project's `.rewake/`, the
+shell's keys, where things live — is in [user-guide.md](user-guide.md).
 
-**To test how it will be installed.** `scripts/pack.sh [version]` builds the npm
-uploads into `dist/npm` — a build per platform plus the entry, all versions of the one
-package `@praline-labs/rewake` — and publishes nothing. It needs [Bun](https://bun.sh), which
-compiles rewake's shell into each platform build beside the binary. The entry reaches its builds
-through `npm:` aliases, which npm resolves only against a registry: an install from the
-tarballs on disk would look for the builds on the public registry. So the install is
-tested by the release gate's dry run, which serves the release from a registry of its
-own on the loopback interface and has npm install it there:
+To update, run the same `npm install -g` again; to remove, `npm uninstall -g @praline-labs/rewake`,
+and the build goes with the entry. Sessions already running keep the build they started with,
+and a room is one build: end a room's main, and its workers with it, before starting main there
+on the new build.
 
-```bash
-go run ./tools/release 1.0.2
-```
+**Limits** a person meets:
 
-It installs the entry globally into a scratch prefix and runs the command and the shell beside
-the binary, installs each
-other build as npm would choose it for that cpu, and installs the entry with
-`--omit=optional` to see the command fail naming the reinstall. That last one goes into
-a project rather than globally: npm 11.17 installs a global package's optional
-dependencies even under `--omit=optional`, seen on September 28, 2026. On a tree with
-uncommitted changes or an unreleased version the checks before the build fail, and the
-build and the install checks still run and report.
-
-`rewake --version` names the version, the revision the binary was built from
-(`build unknown` for one built outside a git checkout) and the build time
-`scripts/pack.sh` passes in.
-
-That exercises everything a registry release would except the public registry itself:
-the package contents, npm resolving the aliases and choosing a build by `os` and `cpu`,
-the shim resolving its binary, and the command landing in PATH. An install from the
-registry is removed with `npm uninstall -g @praline-labs/rewake`; the build goes with
-the entry.
+- The harnesses are Claude Code and pi. pi runs only at the version installed with rewake; a pi
+  named with `--command` (a template's `command`) runs from 1.2.0, with a note when it is not
+  that version.
+- Sessions read and send mail with the `rewake` command in their shell, so a harness that may
+  run no shell commands cannot take part. Only sessions started through rewake take part, on one
+  machine.
+- No grants: main cannot give a worker a directory or Git permissions through rewake. A worker
+  has what its own launch gives it, such as the harness's permission flags in its template.
+- A main started in print mode (`claude -p`) gets no report: it exits before a worker's turn
+  ends.
 
 The entry package's `bin` is a POSIX script rather than a Node shim: it execs the
 binary and disappears, so the terminal, the signals and the exit code belong to
@@ -62,144 +45,92 @@ rewake rather than to a process in between. It follows the symlink npm installs
 first — resolving the link is the difference between finding the binary and
 reporting it missing.
 
-## Trying 2.0 beside 1.0.3
+## Building from source
 
-This is for working on 2.0 for a while without touching the installed 1.0.3: the `rewake`
-command from npm keeps working as it is, and 2.0 runs under another name, `rewake2`, with
-state of its own. No knowledge of Go is needed beyond having it installed.
-
-**Once: what is needed.** Go 1.25 or newer (`go version` prints it; otherwise install it from
-<https://go.dev/dl/>), Git, and this repository checked out. `~/.local/bin` must be on `PATH`,
-as it already is when 1.0.3 was installed there.
-
-**Build 2.0.** In a terminal, from the checkout:
+Go 1.25 or newer, Git, [Bun](https://bun.sh) for the shell and Node.js 22.19 or newer for pi.
+rewake finds its shell and its pi beside its own executable, symlinks followed, so a build lives
+in a directory of its own, here `~/.local/share/rewake`, linked onto `PATH`. From the checkout:
 
 ```bash
-git switch v2
-git pull
-mkdir -p ~/.local/share/rewake2
+dir=~/.local/share/rewake
+mkdir -p "$dir"
 go build -ldflags "-X github.com/praline-labs/rewake/internal/cli.built=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-  -o ~/.local/share/rewake2/rewake.new ./cmd/rewake
-mv -f ~/.local/share/rewake2/rewake.new ~/.local/share/rewake2/rewake
+  -o "$dir/rewake.new" ./cmd/rewake
+mv -f "$dir/rewake.new" "$dir/rewake"
+(cd shell && bun install --frozen-lockfile && bun build.ts bun-linux-x64 "$dir/rewake-shell")
+npm install --prefix "$dir" @earendil-works/pi-coding-agent@1.3.0
+ln -sf "$dir/rewake" ~/.local/bin/rewake
 ```
 
-To update later, run the same lines again; sessions already running keep the build they
-started with.
+- **The build time.** The `-ldflags` passes it in, and `rewake --version` and the guide show
+  it: the binary cannot know it otherwise. Built without it, they show the revision's commit
+  time instead, labeled `committed`, and two builds of one revision with a modified tree
+  look alike. `rewake --version` names the version, the revision the binary was built from
+  (`build unknown` for one built outside a git checkout) and the build time.
+- **Replacing a running build.** Building directly over a running executable can fail with
+  `text file busy`; renaming a neighboring file avoids that. Existing wrappers keep their old
+  executable, while new launches use the replacement.
+- **The shell** is compiled again when an update changes `shell/` (`bun-linux-arm64` on an
+  arm64 machine). Without it, `rewake claude` at a terminal refuses, naming where it looked.
+  `REWAKE_SHELL=<checkout>/shell/rewake-shell` runs the shell from its sources instead, as you
+  edit them.
+- **pi** is looked for in a `node_modules` above the executable's directory, as node resolves a
+  dependency. The version is `PinnedVersion` in `internal/adapter/pi/ship.go`; when an update
+  changes it, install that one, or the start of a pi session refuses, naming both versions.
+  `REWAKE_PI=<pi package directory or entry script>` names another copy instead.
 
-**Once, for pi: its pinned copy.** pi is part of rewake: the npm package installs the one
-version rewake was checked with, and `rewake pi` starts no other (a `pi` on `PATH` is not used).
-A build from the checkout has no npm install around it, so put that version beside it, where
-the build looks for it — a `node_modules` above its own directory. It needs Node.js 22.19 or
-newer (`node --version`):
+### A second build beside an installed one
 
-```bash
-npm install --prefix ~/.local/share/rewake2 @earendil-works/pi-coding-agent@1.3.0
-```
-
-The version is `PinnedVersion` in `internal/adapter/pi/ship.go`; when an update of the
-checkout changes it, run this line again with the new one, or the start of a pi session
-refuses, naming both versions. `REWAKE_PI=<pi package directory or entry script>` in the
-environment names another copy instead.
-
-**Once, for the shell: its executable.** The npm package carries rewake's shell compiled beside
-the binary; a build from the checkout has none, and `rewake2 claude` at a terminal refuses, naming
-where it looked. Compile it there with [Bun](https://bun.sh), from the checkout, and again when an update
-changes `shell/` (`bun-linux-arm64` on an arm64 machine):
-
-```bash
-(cd shell && bun install --frozen-lockfile && bun build.ts bun-linux-x64 ~/.local/share/rewake2/rewake-shell)
-```
-
-To run the shell from its sources instead, as you edit them, put
-`REWAKE_SHELL=<checkout>/shell/rewake-shell` in the environment: it names the shell to run in
-place of the one beside the binary.
-
-**Once, in the first pi session: `/login`.** rewake's pi keeps everything of its own —
-login, settings, extensions, skills, prompts, themes, models, packages, trust decisions,
-sessions — in `~/.config/rewake/pi/agent`, not in `~/.pi`: your own pi is neither read nor
-changed, and nothing is copied from it. Log in there once with `/login`, as in pi. An
-extension, skill or theme you want in rewake's pi goes into that directory's
-`extensions/`, `skills/` or `themes/`, and a package is installed into it with
-`PI_CODING_AGENT_DIR=~/.config/rewake/pi/agent` set for `pi install <source>`. In a
-project with `.pi` resources or `.agents/skills`, pi asks once whether to trust the folder
-before the session is ready for mail; `/trust` keeps the answer.
-
-**Once: the `rewake2` command.** Create the file `~/.local/bin/rewake2` with these lines:
+A build under test can run beside the installed `rewake` with state of its own, under another
+command name — `rewake-dev` here. Build it as above into a directory of its own,
+`~/.local/share/rewake-dev`, without the link, and create `~/.local/bin/rewake-dev`:
 
 ```sh
 #!/bin/sh
-export REWAKE_DIR="$HOME/.rewake2"
-export REWAKE_WORKTREES="$HOME/.rewake2-worktrees"
-exec "$HOME/.local/share/rewake2/rewake" "$@"
+export REWAKE_DIR="$HOME/.rewake-dev"
+export REWAKE_WORKTREES="$HOME/.rewake-dev-worktrees"
+exec "$HOME/.local/share/rewake-dev/rewake" "$@"
 ```
 
-and make it runnable: `chmod +x ~/.local/bin/rewake2`. Check it: `rewake2 --version` prints a
-line with `build` and the time of your build (the version number still reads 1.0.3 until 2.0 is
-released; the build is told by `build <commit>`), and `rewake2 list` says no sessions are running.
+and make it runnable: `chmod +x ~/.local/bin/rewake-dev`. The script gives every command of that
+build its own state base (`REWAKE_DIR`) and its own place for `--worktree` checkouts
+(`REWAKE_WORKTREES`), so nothing of the installed build's is read or written. The binary itself
+stays named `rewake`: inside a session the agent types `rewake inbox`, `rewake send` and so on,
+and a launch puts the directory of the binary that started it first on the session's `PATH`, so
+in a session of either build `rewake` is that build. The logins and the folders under
+`~/.config/rewake/` are shared by both.
 
-To see which build a running service is, `readlink /proc/<servicePid>/exe`: a path ending in
-`(deleted)` means the file was replaced under it and the service needs a restart.
+To see which build a running wrapper is, `readlink /proc/<servicePid>/exe`: a path ending in
+`(deleted)` means the file was replaced under it and the session needs a restart. To remove the
+second build: end its sessions, then `rm ~/.local/bin/rewake-dev` and
+`rm -rf ~/.local/share/rewake-dev ~/.rewake-dev`, and `~/.rewake-dev-worktrees` once nothing in
+the checkouts there is wanted (`rewake-dev worktree ls` lists them first).
 
-Why a script and not a binary named `rewake2`: the script gives every 2.0 command its own state
-base (`REWAKE_DIR`) and its own place for `--worktree` checkouts (`REWAKE_WORKTREES`), so
-nothing of 1.0.3's is read or written. And the binary itself is named `rewake`, in a directory
-of its own: inside a session the agent types `rewake inbox`, `rewake send` and so on, and a
-launch puts the directory of the binary that started it first on the session's `PATH`, so in a
-2.0 session `rewake` is 2.0 and in a 1.0.3 session it stays 1.0.3.
+## Testing how a release installs
 
-**Log the Claude Code workers in, once.** Claude Code workers have a configuration directory of
-their own, rewake's `~/.config/rewake/claude/worker/`, with its own login, so their
-conversations stay out of your `claude --resume` and your login is never refreshed by a
-worker. The first Claude Code worker main opens shows "Not logged in · Run /login" in its
-pane, and main tells you so: type `/login` in that worker's pane and log in with your account.
-That once serves every later Claude Code worker.
-
-**Start a room.** Start main in the project's directory, from your own terminal, not a shell an
-agent runs (started inside a rewake session, a launch refuses and exits 2):
+`scripts/pack.sh [version]` builds the npm uploads into `dist/npm` — a build per platform plus
+the entry, all versions of the one package `@praline-labs/rewake` — and publishes nothing. It
+needs Bun, which compiles rewake's shell into each platform build beside the binary. The entry
+reaches its builds through `npm:` aliases, which npm resolves only against a registry: an install
+from the tarballs on disk would look for the builds on the public registry. So the install is
+tested by the release gate's dry run, which serves the release from a registry of its own on the
+loopback interface and has npm install it there:
 
 ```bash
-rewake2 claude
+go run ./tools/release 2.0.0
 ```
 
-It is `main-claude`, in the room of that directory, and runs in rewake's shell. A second
-`rewake2 claude` in the same directory is refused; another directory is another room. Workers
-are raised by main alone: ask it for one, and it runs `rewake space open api --alias <alias>` with an alias of
-`rewake workers`; the worker `api-claude` joins main's room and ends when main ends. From 120
-columns the chosen worker shows beside main, and `Ctrl-\` then `n` or a digit chooses it.
-`rewake2 pi` is main on pi, the same way: `main-pi`, in the shell, raising workers. Sessions of 2.0 never see
-sessions of 1.0.3, nor 1.0.3 theirs.
-`rewake2 space list` shows the spaces and what they left.
+It installs the entry globally into a scratch prefix and runs the command and the shell beside
+the binary, installs each other build as npm would choose it for that cpu, and installs the
+entry with `--omit=optional` to see the command fail naming the reinstall. That last one goes
+into a project rather than globally: npm 11.17 installs a global package's optional
+dependencies even under `--omit=optional`, seen on September 28, 2026. On a tree with
+uncommitted changes or an unreleased version the checks before the build fail, and the build
+and the install checks still run and report.
 
-**Go back to 1.0.3.** End the 2.0 sessions as usual (`/exit` in each; a space's worker ends
-with its main). Then remove what 2.0 added:
-
-```bash
-rm ~/.local/bin/rewake2
-rm -rf ~/.local/share/rewake2 ~/.rewake2
-```
-
-Remove `~/.rewake2-worktrees` too once nothing in the checkouts there is wanted;
-`rewake2 worktree ls` lists them while `rewake2` still exists. Nothing of 1.0.3 was changed:
-`rewake --version` still says 1.0.3, and its sessions start as before.
-
-**Known limits.** What 2.0 does not do yet, or no longer does:
-
-- Codex is not supported: `rewake2 codex` is an unknown command. Claude Code (2.1.287 or newer)
-  and pi are.
-- pi runs only at its pinned version (1.3.0), on Node.js 22.19 or newer; another is refused at
-  the start, naming the version. A pi named with `--command` (an alias's `command`) runs from
-  1.2.0, with a note when it is not the pinned one.
-- No grants: main cannot give a worker a directory or Git permissions through rewake. A
-  worker has what its own launch gives it, such as the harness's permission flags.
-- No mail tool: sessions read and send mail with the `rewake` command in their shell, so a
-  harness that may run no shell commands cannot take part.
-- A main started in print mode (`claude -p`) gets no report: it exits before a worker's turn
-  ends.
-- Since October 19, 2026 the aliases (`~/.config/rewake/aliases.toml` and a project's
-  `.rewake/aliases.toml`, before October 21 `.rewake.toml`, now refused) are only main's catalogue of workers, opened with `rewake space open
-  --alias`; a file of 1.0.3's form, with `rewake` lists or `main = true`, is refused naming
-  each field until rewritten ([launch-defaults.md](launch-defaults.md#the-worker-catalogue)).
-  rewake writes nothing there.
+That exercises everything a registry release would except the public registry itself: the
+package contents, npm resolving the aliases and choosing a build by `os` and `cpu`, the shim
+resolving its binary, and the command landing in PATH.
 
 ## Upgrading from 1.x
 
@@ -252,11 +183,11 @@ Every release goes through the gate, `tools/release`:
 2. The dry run, which publishes nothing:
 
    ```bash
-   go run ./tools/release 1.0.0
+   go run ./tools/release 2.0.0
    ```
 
-   It asks the registry for each of the three versions exactly — `1.0.2`,
-   `1.0.2-linux-x64`, `1.0.2-linux-arm64` — and wants none of them there, builds them
+   It asks the registry for each of the three versions exactly — `2.0.0`,
+   `2.0.0-linux-x64`, `2.0.0-linux-arm64` — and wants none of them there, builds them
    with `scripts/pack.sh`, checks each one's `package.json` and what
    `npm pack --dry-run --json` would upload against an allowlist in both directions,
    and wants the entry's `optionalDependencies` to be exactly the aliases to this
@@ -275,7 +206,7 @@ Every release goes through the gate, `tools/release`:
    account asks for one:
 
    ```bash
-   go run ./tools/release 1.0.0 --publish --otp 123456
+   go run ./tools/release 2.0.0 --publish --otp 123456
    ```
 
    A failed check before the build stops it there, and nothing is published unless

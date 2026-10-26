@@ -266,7 +266,7 @@ pi is shipped with rewake at a pinned version (`PinnedVersion` in
 refuses any other. Before raising it, compare the new package's extension declarations and
 changelog with the pinned one's and rerun the live checks of
 [research-pi.md](research-pi.md#the-bundled-pi) on it, with the new copy installed where a
-build finds it ([install.md](install.md#trying-20-beside-103)).
+build finds it ([install.md](install.md#building-from-source)).
 
 ## Reading a result
 
