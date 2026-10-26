@@ -227,9 +227,10 @@ presence in the tagged run. The locked-caller check in `internal` still loads th
 in both variants. The list is derived from build constraints, not maintained separately:
 
 ```bash
+# The path keeps rg off its standard input, which in an agent's shell is no terminal: it would wait.
 mapfile -t tagged_packages < <(
-  rg -l '^//go:build .*rewaketest' --glob '*.go' --glob '!archive/**' |
-    xargs -r -n 1 dirname | sort -u | sed 's|^|./|'
+  rg -l '^//go:build .*rewaketest' --glob '*.go' --glob '!archive/**' . |
+    xargs -r -n 1 dirname | sort -u
 )
 # A missing tag must not turn the additional check into a check of no packages.
 ((${#tagged_packages[@]})) || exit 1
