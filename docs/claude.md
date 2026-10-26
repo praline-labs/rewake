@@ -203,6 +203,10 @@ person's status line or measuring a full context breakdown. The native model win
 percentage are used as given; a launch's `--autocompact` sets the window the conversation is kept
 to, and the host recomputes the percent against it.
 
+The model's name is the status line's `model.display_name`, posted the same way
+(`StatusLineRequest.modelName`) and kept across loads; it follows `/model`, and `rewake list` shows
+it over the template's `launch.label` and the id.
+
 Effort comes from two sources, and the host shows the one whose value changed last: what the
 latest main-loop `turn.step` asked for, and the status line's `effort.level`, which `rewake
 statusline` posts beside the cache (`StatusLineRequest.effort`) and which follows `/effort` before

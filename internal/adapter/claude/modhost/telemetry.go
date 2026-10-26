@@ -20,6 +20,9 @@ type observations struct {
 	// when its value changes, so whichever changed last is shown; both are
 	// kept across loads, as a reload forgets a request's until the next.
 	effort, requestEffort, lineEffort string
+	// modelName is the status line's model.display_name: the harness's own
+	// name of the model, kept across loads like the effort.
+	modelName string
 	// told says main was told of the dialog the snapshot names.
 	told     bool
 	snapshot session.Snapshot
@@ -201,6 +204,10 @@ func (s *Server) SessionState() session.Snapshot {
 	case s.cfg.Effort != "":
 		effort := s.cfg.Effort
 		snapshot.Effort, snapshot.EffortSource = &effort, session.EffortFromLaunch
+	}
+	if observed.modelName != "" {
+		name := observed.modelName
+		snapshot.ModelName = &name
 	}
 	snapshot.CompactionEvents = append([]session.CompactionEvent{}, observed.events...)
 	snapshot.CompactionOutcomes = append([]session.CompactionOutcome{}, observed.outcomes...)

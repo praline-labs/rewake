@@ -132,7 +132,7 @@ context = "400k"
 | `[alias.<name>.launch] model` | Applied by the adapter: `--model` on Claude Code and pi. |
 | `launch.effort` | Applied as Claude Code's `--effort` or pi's `--thinking`. |
 | `launch.context` | The auto-compact window, applied on Claude Code as `--autocompact`: `auto`, or 100k–1M tokens such as `300k` or `1M`, any other value refused. Shown only on a harness without such a flag (pi). On Claude Code the strip and `rewake list` show it as the window and measure the fill against it, since the mod reports only the model's. |
-| `launch.label` | How the strip and `rewake list` name the model, such as `Opus 5.5`; kept in the space record's `worker.label` and used only where the harness gives no display name of its own (Claude Code gives none to a mod; pi gives its registry's `name`). Without either, the model's id is shown. |
+| `launch.label` | How the strip and `rewake list` name the model, such as `Opus 5.5`; kept in the space record's `worker.label` and used only where the harness gives no display name of its own (a Claude Code worker's status line gives `model.display_name` once it has run, and that wins; pi gives its registry's `name`). Without either, the model's id is shown. |
 
 TOML, because this is a structure rather than a list of names and values; a separate file
 from `settings`, because that one is `KEY=VALUE` and a file cannot be both. **Lists, not

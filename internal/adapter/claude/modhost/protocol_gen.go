@@ -227,7 +227,7 @@ type Refusal struct {
 }
 
 // StatusLineRequest is what the status line's input tells of the session as Claude Code gave it
-// — its prompt_cache and its effort — without transcript content.
+// — its prompt_cache, effort and model name — without transcript content.
 type StatusLineRequest struct {
 	// Ttl is the cache's lifetime of the last request, 5m or 1h, absent when unknown.
 	Ttl *string `json:"ttl,omitempty"`
@@ -242,6 +242,10 @@ type StatusLineRequest struct {
 	// Effort is the input's effort.level, the session's effort setting, which follows /effort
 	// before any request; absent for a model without effort.
 	Effort *string `json:"effort,omitempty"`
+
+	// ModelName is the input's model.display_name, the harness's own name of the session's model,
+	// which follows /model; absent when the input has none.
+	ModelName *string `json:"modelName,omitempty"`
 }
 
 // ClosingRequest says the harness's process has begun to end.

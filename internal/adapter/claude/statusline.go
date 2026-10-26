@@ -23,7 +23,7 @@ import (
 // own JSON on stdin. Its prompt_cache is the only place the cache's lifetime is
 // told — the mod cannot read it — and its effort.level the only place an
 // /effort shows before the next request (docs/research.md, the status line),
-// so the command forwards both to the run's host over the mod socket and
+// so the command forwards both, and the model's own name (model.display_name, which follows /model), to the run's host over the mod socket and
 // prints the person's own status line, if the workers' settings.json names
 // one, in its place.
 
@@ -52,7 +52,7 @@ type promptCache struct {
 	ExpiresAt *int64  `json:"expires_at"`
 }
 
-// StatusLine posts the input's prompt_cache and effort to the run's host and
+// StatusLine posts the input's prompt_cache, effort and model.display_name to the run's host and
 // prints the person's own line. Either failing leaves the other alone.
 func (claudeHarness) StatusLine(ctx context.Context, input []byte, out io.Writer) {
 	if os.Getenv(statusLineGuardEnv) != "" {
@@ -63,6 +63,9 @@ func (claudeHarness) StatusLine(ctx context.Context, input []byte, out io.Writer
 		Effort      struct {
 			Level any `json:"level"`
 		} `json:"effort"`
+		Model struct {
+			DisplayName string `json:"display_name"`
+		} `json:"model"`
 	}
 	posted := make(chan struct{})
 	go func() {
@@ -71,10 +74,10 @@ func (claudeHarness) StatusLine(ctx context.Context, input []byte, out io.Writer
 			return
 		}
 		effort := effortText(seen.Effort.Level)
-		if seen.PromptCache != nil || effort != "" {
+		if seen.PromptCache != nil || effort != "" || seen.Model.DisplayName != "" {
 			post, cancel := context.WithTimeout(ctx, postTimeout)
 			defer cancel()
-			postLine(post, os.Getenv(modSocketEnv), seen.PromptCache, effort)
+			postLine(post, os.Getenv(modSocketEnv), seen.PromptCache, effort, seen.Model.DisplayName)
 		}
 	}()
 	line, cancel := context.WithTimeout(ctx, statusLineTimeout)
@@ -95,7 +98,7 @@ func effortText(level any) string {
 	return ""
 }
 
-func postLine(ctx context.Context, socket string, cache *promptCache, effort string) {
+func postLine(ctx context.Context, socket string, cache *promptCache, effort, modelName string) {
 	if socket == "" {
 		return
 	}
@@ -109,6 +112,9 @@ func postLine(ctx context.Context, socket string, cache *promptCache, effort str
 	}
 	if effort != "" {
 		body.Effort = &effort
+	}
+	if modelName != "" {
+		body.ModelName = &modelName
 	}
 	data, err := json.Marshal(body)
 	if err != nil {

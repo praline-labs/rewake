@@ -56,6 +56,12 @@ func TestStatusLineForwardsTheCacheAndPrintsThePersonsLine(t *testing.T) {
 		t.Fatalf("the effort's post: %s", line)
 	}
 
+	// The model's own name goes alone too.
+	claudeHarness{}.StatusLine(context.Background(), []byte(`{"model":{"id":"m1","display_name":"Haiku 5.5"}}`), &out)
+	if line := <-got; line != `/v1/status/line {"modelName":"Haiku 5.5"}` {
+		t.Fatalf("the model name's post: %s", line)
+	}
+
 	// Neither cache nor effort (a model without effort, before any request)
 	// posts nothing; no socket and no line print nothing and fail nothing.
 	claudeHarness{}.StatusLine(context.Background(), []byte(`{"model":{"id":"m1"}}`), &out)

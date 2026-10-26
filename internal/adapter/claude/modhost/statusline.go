@@ -70,6 +70,9 @@ func (s *Server) statusLine(w http.ResponseWriter, r *http.Request) {
 	if line.Effort != nil {
 		s.management.observed.effortFrom(&s.management.observed.lineEffort, *line.Effort)
 	}
+	if line.ModelName != nil && *line.ModelName != "" {
+		s.management.observed.modelName = *line.ModelName
+	}
 	s.mu.Unlock()
 	reply(w, http.StatusOK, Done{})
 }

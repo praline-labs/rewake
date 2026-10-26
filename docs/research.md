@@ -210,8 +210,9 @@ that binary, for what needs a login, a request or a feature. "Used" names what r
 - `scratchpad_dir` — the session's scratchpad, only where the scratchpad is on **[source]**;
   absent in the probe; unused. (2.1.280 listed it unconditionally.)
 - `session_name` — the name `/rename` gave, absent before **[live]**; unused.
-- `model.id`, `model.display_name` — `claude-haiku-5-5`, `Haiku 5.5` **[live]**; unused (the
-  mod reads the id; nothing fills the display name for Claude Code).
+- `model.id`, `model.display_name` — `claude-haiku-5-5`, `Haiku 5.5` **[live]**; the mod reads the
+  id, and the worker's status line posts `display_name` as the session's model name
+  (`rewake list`), following `/model`.
 - `workspace.current_dir`, `project_dir`, `added_dirs` **[live]**; `workspace.git_worktree` —
   the linked worktree's directory name (`work2`), absent outside one **[live]**;
   `workspace.repo` — `{host, owner, name}` of `origin` **[live]**; unused.
