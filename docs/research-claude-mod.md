@@ -678,6 +678,37 @@ the types its settings list: `permission_prompt`, `idle_prompt`, `auth_success`,
 - `turn.step`'s `usage` (`TurnUsage`) carries the API's `input_tokens`, `cache_read_input_tokens` and `cache_creation_input_tokens` of each response: the source of the hit percent. It has no ttl or expiry; `PreModelSwitch` (`prompt_cache_warm`, `cache_ttl`) and a resume's `SessionStart` (`prompt_cache_likely_expired`) mention it only at their moments.
 - The status-line input has `prompt_cache` once a request was made: `warm`, `caching_observed`, `ttl` (`5m`/`1h`), `expires_at` (epoch seconds), `requests`, `misses`, `hit_ratio`, `cache_write_tokens` and more — read from the strings of the installed binary, not from a live sample (it needs a login). `statusLine.refreshInterval` is seconds, at least 1, beside the event-driven runs; the command inherits the harness's environment, `REWAKE_MOD_SOCKET` among it, and is a child of the harness process. The run's `--settings` `statusLine` beats the user settings'. See [claude.md](claude.md#the-cache-ttl).
 
+## The model's name and thinking
+
+October 26, 2026, Claude Code 2.1.310, the `mods` skill taken from the same version and the
+strings of the installed binary:
+
+- The mod has the model's id alone: `$.session.model()` answers the main loop's model "as
+  `/model` shows it", which for main was `claude-opus-5-5[1m]` in `rewake list`, and
+  `turn.step`'s `model` is the id the request names. No call of the mod gives a display name.
+- The status line's input builds `model: {id, display_name}` with `display_name` from the
+  engine's own name of that id — `Haiku 5.5`, and `Opus 5.5 (1M context)` for a 1M variant,
+  whose parenthesis names the native window, not what `--autocompact` keeps the conversation to.
+- It also carries `thinking: {enabled}` for every model: on unless the session's thinking was
+  turned off, and on for a model that rejects disabled thinking whatever the setting. A model
+  without thinking reads `true` as well, so `enabled` alone does not say a model thinks.
+- `$.config.list()` has a `thinking` row (2.1.302, above), the setting rather than the session.
+- Nothing of the mod says what a request asked of thinking: `turn.step` carries `agentId`,
+  `effort`, `index`, `messageCount`, `model` and `turnId`, and its response streams thinking
+  chunks, which say thinking happened, not that it is on. A review's probe on an old model saw
+  `thinking.enabled` `true`.
+- Project and local settings: `<project>/.claude/settings.json`, and `settings.local.json` at the
+  repository's canonical root — the main checkout for a linked worktree — when the session starts
+  below it and the root, its `.git` and `.claude` are the user's, else in the session's own
+  directory. A project-only `statusLine` was drawn before rewake's overlay and gone after it, until
+  `rewake statusline` read the project's layers (review, October 26, 2026).
+
+So main's launch passes rewake's status line as a worker's does, and the host takes the name and
+`thinking.enabled` from it ([claude.md](claude.md#telemetry)). Live the same day, a main of a dev
+build in a scratch repository under `--model haiku`, no request: its `rewake list` row read
+`"Haiku 5.5"`, `"medium"`, Thinking `on`; the person's own status line drew in main's pane as
+before, and the strip read `Haiku 5.5 medium thinking`.
+
 ## The mod on Claude Code 2.1.310 (October 25, 2026)
 
 - Read against the `mods` skill's changelog "2.1.302 → 2.1.310": an `ask` a plugin's `tool.check` makes is marked `plugin` in the verdict (2.1.304; `decider` is gone), so the EnterWorktree check keeps a verdict with `plugin` as the person's policy (`hooks/enter.ts`). After Esc or Stop the engine refuses a mod's own new work — `$.prompt.submit`, `$.command.run`, `$.agent.spawn`, `$.session.send`, a background `$.tool.call` — until the person's next input; the mod calls none of them.

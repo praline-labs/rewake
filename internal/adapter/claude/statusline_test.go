@@ -12,7 +12,7 @@ import (
 	"testing"
 )
 
-// The command forwards the input's prompt_cache and effort to the run's host and prints
+// The command forwards the input's prompt_cache, effort, model name and thinking to the run's host and prints
 // the person's own status line, run with the same input; a host that is not
 // there and a line that is not set each leave the other alone.
 func TestStatusLineForwardsTheCacheAndPrintsThePersonsLine(t *testing.T) {
@@ -60,6 +60,12 @@ func TestStatusLineForwardsTheCacheAndPrintsThePersonsLine(t *testing.T) {
 	claudeHarness{}.StatusLine(context.Background(), []byte(`{"model":{"id":"m1","display_name":"Haiku 5.5"}}`), &out)
 	if line := <-got; line != `/v1/status/line {"modelName":"Haiku 5.5"}` {
 		t.Fatalf("the model name's post: %s", line)
+	}
+
+	// So does whether the model thinks, off as well as on.
+	claudeHarness{}.StatusLine(context.Background(), []byte(`{"model":{"id":"m1"},"thinking":{"enabled":false}}`), &out)
+	if line := <-got; line != `/v1/status/line {"thinking":false}` {
+		t.Fatalf("the thinking's post: %s", line)
 	}
 
 	// Neither cache nor effort (a model without effort, before any request)

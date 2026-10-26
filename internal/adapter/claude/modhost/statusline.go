@@ -73,6 +73,10 @@ func (s *Server) statusLine(w http.ResponseWriter, r *http.Request) {
 	if line.ModelName != nil && *line.ModelName != "" {
 		s.management.observed.modelName = *line.ModelName
 	}
+	if line.Thinking != nil {
+		on := *line.Thinking
+		s.management.observed.thinking = &on
+	}
 	s.mu.Unlock()
 	reply(w, http.StatusOK, Done{})
 }

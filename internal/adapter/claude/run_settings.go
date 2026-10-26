@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/core/role"
 )
 
@@ -57,11 +58,8 @@ func runSettings(settings map[string]any, folder, root, memoryKey string, enter 
 	// (statusline.go); it needs the run's host, which a launch with no run
 	// directory has no mod for.
 	if executable, err := os.Executable(); err == nil && runDir != "" {
-		overlay["statusLine"] = map[string]any{
-			"type":            "command",
-			"command":         shellQuote(executable) + " statusline",
-			"refreshInterval": statusLineInterval(settings),
-		}
+		line, _ := settings["statusLine"].(map[string]any)
+		overlay["statusLine"] = statusLineSetting(executable, line["refreshInterval"])
 	}
 	var notes []string
 	switch {
@@ -107,18 +105,57 @@ func deniedIn(settings map[string]any) []any {
 	return deny
 }
 
-// statusLineInterval is how often the run's status line command runs beside
-// the harness's events: the person's own interval where the folder's settings
-// have a status line with one, since that line is run by ours.
-func statusLineInterval(settings map[string]any) any {
-	line, _ := settings["statusLine"].(map[string]any)
-	// The folder's settings are read with numbers kept as json.Number.
-	if every, ok := line["refreshInterval"].(json.Number); ok {
+// statusLineSetting is the run's statusLine: rewake's command, which runs the
+// person's own (statusline.go), so it keeps that line's refreshInterval — how
+// often the command runs beside the harness's events — or rewake's own where
+// the line has none. Claude Code merges the key field by field, so the
+// person's padding stands (docs/research.md, "How --settings meets a
+// configured status line").
+func statusLineSetting(executable string, every any) map[string]any {
+	line := map[string]any{
+		"type":            "command",
+		"command":         shellQuote(executable) + " statusline",
+		"refreshInterval": statusLineRefresh,
+	}
+	// The settings are read with numbers kept as json.Number.
+	if every, ok := every.(json.Number); ok {
 		if seconds, err := every.Float64(); err == nil && seconds >= 1 {
-			return every
+			line["refreshInterval"] = every
 		}
 	}
-	return statusLineRefresh
+	return line
+}
+
+// mainSettings is the one --settings main's launch passes: the status line
+// alone, so the host hears the model's name, its thinking, the cache's life
+// and a changed effort as a worker's does (docs/claude.md#the-cache-ttl). It
+// reads only the statusLine of the person's own settings (ownStatusLine), for
+// its interval. None where the
+// launch has no run directory for the mod, under --command, whose wrapper
+// decides the configuration, where the person passes a --settings of their
+// own, which a second would replace, or a --setting-sources, whose layers
+// rewake's line would not keep to when it finds the person's.
+func mainSettings(request adapter.LaunchRequest, args []string) profile {
+	switch {
+	case request.RunDir == "", request.Command != "":
+		return profile{}
+	}
+	for _, flag := range []string{settingsFlag, settingSourcesFlag} {
+		if adapter.HasFlag(args, flag) {
+			return profile{notes: []string{"no status line of rewake's: the launch passes its own " + flag + ", so main's row shows the model's id and no cache life"}}
+		}
+	}
+	executable, err := os.Executable()
+	if err != nil {
+		return profile{}
+	}
+	cwd, _ := os.Getwd()
+	own := ownStatusLine(os.Getenv(configDirEnv), cwd)
+	data, err := json.Marshal(map[string]any{"statusLine": statusLineSetting(executable, own.RefreshInterval)})
+	if err != nil {
+		return profile{}
+	}
+	return profile{args: []string{settingsFlag, string(data)}}
 }
 
 // shellQuote makes a path one word of the status line's shell command.

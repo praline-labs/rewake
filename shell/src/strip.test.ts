@@ -39,3 +39,11 @@ test("a long line drops the model, then the cache, then the branch", () => {
   const noBranch = texts(noCache.join(" · ").length - 1);
   expect(noBranch).not.toContain("⎇ wt-1");
 });
+
+test("thinking is named after the effort only while it is on", () => {
+  const model = (thinking?: boolean) =>
+    stripParts({ session: "w", status: { ...base, thinking } }, 200, now).map((p) => p.text);
+  expect(model(true)).toContain("Model low thinking");
+  expect(model(false)).toContain("Model low");
+  expect(model(undefined)).toContain("Model low");
+});

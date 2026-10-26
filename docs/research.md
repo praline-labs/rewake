@@ -210,9 +210,10 @@ that binary, for what needs a login, a request or a feature. "Used" names what r
 - `scratchpad_dir` — the session's scratchpad, only where the scratchpad is on **[source]**;
   absent in the probe; unused. (2.1.280 listed it unconditionally.)
 - `session_name` — the name `/rename` gave, absent before **[live]**; unused.
-- `model.id`, `model.display_name` — `claude-haiku-5-5`, `Haiku 5.5` **[live]**; the mod reads the
-  id, and the worker's status line posts `display_name` as the session's model name
-  (`rewake list`), following `/model`.
+- `model.id`, `model.display_name` — `claude-haiku-5-5`, `Haiku 5.5` **[live]**; a 1M variant's
+  name ends in ` (1M context)` **[source]**. The mod reads the id; the status line of every run
+  with a mod posts `display_name` as the session's model name (`rewake list` drops a trailing
+  parenthesis), following `/model`.
 - `workspace.current_dir`, `project_dir`, `added_dirs` **[live]**; `workspace.git_worktree` —
   the linked worktree's directory name (`work2`), absent outside one **[live]**;
   `workspace.repo` — `{host, owner, name}` of `origin` **[live]**; unused.
@@ -226,8 +227,11 @@ that binary, for what needs a login, a request or a feature. "Used" names what r
   `current_usage` (the four raw counts), `used_percentage`, `remaining_percentage` — before
   the first response the counts are 0 and the rest `null` **[live]**; unused (the mod reads
   `$.session.usage()`).
-- `exceeds_200k_tokens`, `fast_mode`, `thinking.enabled` — `false`, `false`, `true` **[live]**;
-  unused.
+- `exceeds_200k_tokens`, `fast_mode` — `false`, `false` **[live]**; unused.
+- `thinking.enabled` — `true` **[live]**: the session's thinking setting, on unless turned off, and
+  on for a model that cannot turn it off; present for every model, one without thinking included
+  **[source, 2.1.310]**. **Used**: the session's thinking setting, `rewake list`'s Thinking and the
+  strip ([research-claude-mod.md](research-claude-mod.md#the-models-name-and-thinking)).
 - `effort.level` — the session's effort setting: `high` from `--effort high`, `max` right after
   `/effort max`, the picker's choice right after it, all before any request **[live]**; absent
   for a model without effort **[source]**. **Used**: the live effort of `rewake list`

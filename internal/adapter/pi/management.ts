@@ -7,6 +7,9 @@ export type State = {
   model: string | null;
   modelName: string | null;
   effort: string | null;
+  // thinking is whether the model thinks: its thinking level is not off; null
+  // for a model without reasoning, whose level means nothing.
+  thinking: boolean | null;
   tokens: number | null;
   window: number | null;
   percent: number | null;
@@ -90,6 +93,7 @@ export function management(
       model: ctx?.model?.id ?? null,
       modelName: ctx?.model?.name || null,
       effort: ctx?.thinkingLevel ?? null,
+      thinking: ctx?.model?.reasoning && ctx.thinkingLevel ? ctx.thinkingLevel !== "off" : null,
       tokens: usage?.tokens ?? null,
       window: usage?.contextWindow ?? ctx?.model?.contextWindow ?? null,
       percent: usage?.percent ?? null,

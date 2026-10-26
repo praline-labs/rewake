@@ -12,11 +12,14 @@ import (
 // A sample's sequence orders event pushes and answers to polls on one
 // connection. A late poll answer cannot replace a newer pushed observation.
 type sample struct {
-	Sequence   uint64   `json:"sequence"`
-	Activity   string   `json:"activity"`
-	Model      *string  `json:"model"`
-	ModelName  *string  `json:"modelName"`
-	Effort     *string  `json:"effort"`
+	Sequence  uint64  `json:"sequence"`
+	Activity  string  `json:"activity"`
+	Model     *string `json:"model"`
+	ModelName *string `json:"modelName"`
+	Effort    *string `json:"effort"`
+	// Thinking is whether the model's thinking level is on; absent from an
+	// extension that predates it and for a model without reasoning.
+	Thinking   *bool    `json:"thinking,omitempty"`
 	Tokens     *int64   `json:"tokens"`
 	Window     *int64   `json:"window"`
 	Percent    *float64 `json:"percent"`
@@ -91,7 +94,7 @@ func (r *run) observeLocked(l *link, thread string, value *sample) bool {
 	snapshot.Thread, snapshot.Selection = thread, "ready"
 	snapshot.ObservedAt, snapshot.ActivityAt, snapshot.SettingsAt, snapshot.ContextAt = &now, &now, &now, &now
 	snapshot.Fresh, snapshot.ActivityFresh, snapshot.SettingsFresh, snapshot.ContextFresh = true, true, true, true
-	snapshot.Activity, snapshot.Model, snapshot.Effort = &value.Activity, value.Model, value.Effort
+	snapshot.Activity, snapshot.Model, snapshot.Effort, snapshot.Thinking = &value.Activity, value.Model, value.Effort, value.Thinking
 	if value.ModelName != nil && *value.ModelName != "" {
 		snapshot.ModelName = value.ModelName
 	}

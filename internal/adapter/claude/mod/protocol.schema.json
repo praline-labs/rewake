@@ -75,7 +75,7 @@
     },
     {
       "path": "status/line",
-      "description": "reports the prompt cache's life from the status line of a worker's run, which Claude Code starts as a child of the harness and rewake's `rewake statusline` fills; unlike every other endpoint its peer may be any descendant of the harness's process, since its payload is telemetry and nothing it says is acted on. Not an endpoint of the mod.",
+      "description": "reports what the status line of a run with a mod is told — the prompt cache's life, effort, the model's name and thinking — which Claude Code starts as a child of the harness and rewake's `rewake statusline` fills; unlike every other endpoint its peer may be any descendant of the harness's process, since its payload is telemetry and nothing it says is acted on. Not an endpoint of the mod.",
       "request": {"$ref": "#/$defs/StatusLineRequest"},
       "answer": {"$ref": "#/$defs/Done"}
     },
@@ -214,13 +214,14 @@
     },
     "StatusLineRequest": {
       "type": "object",
-      "description": "is what the status line's input tells of the session as Claude Code gave it — its prompt_cache, effort and model name — without transcript content.",
+      "description": "is what the status line's input tells of the session as Claude Code gave it — its prompt_cache, effort, model name and thinking — without transcript content.",
       "properties": {
         "ttl": {"type": "string", "description": "is the cache's lifetime of the last request, 5m or 1h, absent when unknown."},
         "expiresAt": {"type": "integer", "description": "is when the cache expires, in seconds since the epoch, absent when unknown."},
         "warm": {"type": "boolean", "description": "says Claude Code takes the cache for warm; absent when the input has no prompt_cache, before the first request, and then no cache field is sent."},
         "effort": {"type": "string", "description": "is the input's effort.level, the session's effort setting, which follows /effort before any request; absent for a model without effort."},
-        "modelName": {"type": "string", "description": "is the input's model.display_name, the harness's own name of the session's model, which follows /model; absent when the input has none."}
+        "modelName": {"type": "string", "description": "is the input's model.display_name, the harness's own name of the session's model, which follows /model; absent when the input has none."},
+        "thinking": {"type": "boolean", "description": "is the input's thinking.enabled, whether the session's thinking is on, which follows its toggle; absent when the input has none."}
       },
       "required": [],
       "additionalProperties": false

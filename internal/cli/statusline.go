@@ -25,19 +25,19 @@ func readStatusLineInput(in *os.File, wait time.Duration) []byte {
 	return input
 }
 
-// statuslineCommand is what a worker's harness runs as its status line
+// statuslineCommand is what a run's harness runs as its status line
 // (docs/claude.md#the-cache-ttl): called by the harness on its own,
 // never by an agent.
 func statuslineCommand(catalog adapter.Catalog) *Command {
 	return &Command{
 		Name:    "statusline",
-		Summary: "The status line a worker's harness runs: forwards what its input tells of the session to the run's host.",
+		Summary: "The status line a run's harness runs: forwards what its input tells of the session to the run's host.",
 		Hidden:  true,
 		Examples: []string{
 			"rewake statusline",
 		},
 		Notes: []string{
-			"Reads the harness's JSON on stdin, prints the person's own status line if the workers' settings name one, and always exits 0: a status line must not break the pane.",
+			"Reads the harness's JSON on stdin, prints the person's own status line, the one their settings name for the session's project, and always exits 0: a status line must not break the pane.",
 		},
 		Access: viewForm,
 		Handler: func(ctx *Context, _ Call) error {

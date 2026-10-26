@@ -25,7 +25,7 @@ is in [research-claude-mod.md](research-claude-mod.md), each record with its ver
 | Launch | `claude` with one `--plugin-dir`, the briefing in `--append-system-prompt`, the worker profile for a worker | [launch.md](launch.md#claude-code) |
 | Wake | a line on the session's inbound socket, with the inbound gate's receipts | [delivery-adapters.md](delivery-adapters.md#claude-code) |
 | TurnBoundary | `turn.start` and `turn.complete` of the main loop, reported without holding, proven after the harness starts | [claude-turns.md](claude-turns.md) |
-| Telemetry | native context, the configured model, effort, compactions, the prompt cache and its life | [below](#telemetry) |
+| Telemetry | native context, the configured model and its name, effort, thinking, compactions, the prompt cache and its life | [below](#telemetry) |
 | Control | compact with an optional focus, interrupt; no clear | [below](#control) |
 | Spaces | a main run, once its hello is admitted | [rules/adapter-api.md](rules/adapter-api.md#spaces) |
 | Conversation | `--session-id <uuid>` | [rules/adapter-api.md](rules/adapter-api.md#conversation-names) |
@@ -117,7 +117,7 @@ another status with a refusal:
 | `mod/state` | every admitted load | native state samples | [telemetry](#telemetry) |
 | `mod/control` | every admitted load | a control command's acknowledgement and final outcome | [control](#control) |
 | `session/closing` | every load, at `session.end` with an exit reason | the harness has begun to end its process; a main in rewake's shell has its closing screen started by it | [shell.md](shell.md#who-owns-which-pty) |
-| `status/line` | `rewake statusline`, the status line of a worker's run | the prompt cache's life; not an endpoint of the mod | [the cache's life](#the-cache-ttl) |
+| `status/line` | `rewake statusline`, the status line of every run with a mod | the prompt cache's life, effort, the model's name, thinking; not an endpoint of the mod | [the cache's life](#the-cache-ttl) |
 | `ask/open`, `ask/poll`, `ask/settle` | a worker's mod | a permission request or a question for main, held by polls, ended with the first answer | [permission-requests.md](permission-requests.md) |
 
 **One description.** The protocol is one JSON schema,
@@ -198,14 +198,20 @@ The mod samples native context and the configured model after its hello, on `ses
 turn's fill grows as it runs. It sends complete samples through `mod/state`, with the load,
 heartbeat generation, selected conversation and a load-local sequence. The host accepts only its
 current live generation and newer samples; unknown tokens clear an older reading. It publishes
-cached observations through `core/session.Snapshot`, without reading transcripts, wrapping the
-person's status line or measuring a full context breakdown. The native model window and
+cached observations through `core/session.Snapshot`, without reading transcripts or measuring a
+full context breakdown. The native model window and
 percentage are used as given; a launch's `--autocompact` sets the window the conversation is kept
 to, and the host recomputes the percent against it.
 
 The model's name is the status line's `model.display_name`, posted the same way
-(`StatusLineRequest.modelName`) and kept across loads; it follows `/model`, and `rewake list` shows
-it over the template's `launch.label` and the id.
+(`StatusLineRequest.modelName`) and kept across loads, since the mod has only the id
+([research](research-claude-mod.md#the-models-name-and-thinking)); it follows `/model`, and
+`rewake list` shows it, less a trailing parenthesis such as ` (1M context)` — the native window,
+which the Context column shows as the run is held to it — over the template's `launch.label` and
+the id. The session's thinking setting is the status line's `thinking.enabled`
+(`StatusLineRequest.thinking`, `thinking` of the telemetry), kept the same way. It is the setting,
+not what a request asked: no event of the mod carries a request's thinking. Known limit: Claude
+Code tells it for every model, so a model without thinking reads as on.
 
 Effort comes from two sources, and the host shows the one whose value changed last: what the
 latest main-loop `turn.step` asked for, and the status line's `effort.level`, which `rewake
@@ -242,12 +248,23 @@ installation a native compaction is not counted
 
 The mod cannot read how long the prompt cache lives; Claude Code's status-line input carries it
 as `prompt_cache` (`warm`, `ttl` of `5m` or `1h`, `expires_at` in epoch seconds, …) once a
-request was made (read from the strings of 2.1.302). A worker's run therefore sets `statusLine`
-in its `--settings` overlay — `'<rewake>' statusline`, `refreshInterval` 30 or the person's own —
-which beats the folder's `settings.json`. The hidden `rewake statusline` reads that input, posts
-`ttl`, `expiresAt` and `warm` to the run's host at `status/line`, and prints the person's own
-`statusLine` command from the folder's `settings.json` (run with the same input) or nothing,
-always exiting 0. The expiry is absolute, so a slow timer loses nothing; the command runs after
+request was made (read from the strings of 2.1.302). Every run with a mod therefore sets
+`statusLine` in its `--settings` — `'<rewake>' statusline`, `refreshInterval` 30 or the person's
+own — which beats every settings file but a managed one: a worker's in its overlay, main's in a
+`--settings` of that key alone. Main has none where its launch
+passes a `--settings` of its own, which a second would replace, or a `--setting-sources`, whose
+layers rewake's reading of the person's line would not keep to — the launch says so in a note —
+and none under `--command`. Claude Code merges the key field by field, so the person's `padding`
+stands. The hidden `rewake statusline` reads that input, posts `ttl`, `expiresAt` and `warm`, the
+effort, the model's name and `thinking.enabled` to the run's host at `status/line`, and prints
+what the person's own `statusLine` command prints, run with the same input, or nothing, always
+exiting 0. The person's line is the one Claude Code would draw without rewake's, reading only
+`statusLine` of each file: the user's `settings.json` (`$CLAUDE_CONFIG_DIR`'s — the workers'
+folder for a worker — else `~/.claude`'s), then the project's `.claude/settings.json`, then its
+`.claude/settings.local.json` — at the repository's root, the main checkout's for a linked
+worktree, as Claude Code keeps it since 2.1.310 — each later file's keys over the earlier's; the
+project is the input's `workspace.project_dir`. A managed `statusLine` outranks rewake's, which then
+does not run. The expiry is absolute, so a slow timer loses nothing; the command runs after
 each response too.
 
 The post (2 s) and the person's command (5 s) run side by side with deadlines of their own; the
@@ -258,7 +275,9 @@ post nothing. The stdin read is bounded in time (3 s) as well as size.
 
 The host keeps the last in `Snapshot.CacheLife` (`cacheLife`: `ttl`, `expiresAt`, `warm`), beside
 `Cache`; `rewake list` shows the Cache cell as `90% 42m` (`—` once expired, `<1m`), the remaining
-time counted by the reader's clock. Main's own run has no such status line. pi has no observed
+time counted by the reader's clock. Since October 26, 2026 main's run has the same status line,
+so main's row gains its model's name, thinking, the cache's life and an effort that follows
+`/effort` before the next request. pi has no observed
 expiry; its extension reckons one into the same `cacheLife`
 ([research-pi.md](research-pi.md#telemetry-and-remote-control)).
 
@@ -293,7 +312,8 @@ its control directory.
 ## What the mod never does
 
 It reads no transcript and no prompt text (`turn.start`'s text is not forwarded); it forwards the
-end's `answer`, which is the report. It replaces no status line of main's, sends no settings, and
+end's `answer`, which is the report. It sets no status line — the launch does — sends no
+settings, and
 does no heavy work in a hook: the hooks worker is shared and a mod that stalls it is unloaded. It
 draws nothing of the workers: rewake's shell does, on the person's terminal
 ([shell.md](shell.md)), and the mod knows nothing of who draws the screen.

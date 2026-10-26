@@ -40,12 +40,18 @@ func sessionTable(room string, sessions []sessionView, visible bool) []string {
 		header = append(header, "Harness")
 	}
 	// Likewise the cache column: only a harness that reports the cache fills it.
-	cached := false
+	// And the thinking column: only a harness that tells it fills it.
+	cached, thinks := false, false
 	for _, session := range sessions {
 		cached = cached || (session.Telemetry != nil && session.Telemetry.Cache != nil)
+		thinks = thinks || (session.Telemetry != nil && session.Telemetry.Thinking != nil)
 	}
 	if visible {
-		header = append(header, "Status", "Model", "Effort", "Context")
+		header = append(header, "Status", "Model", "Effort")
+		if thinks {
+			header = append(header, "Thinking")
+		}
+		header = append(header, "Context")
 		if cached {
 			header = append(header, "Cache")
 		}
@@ -71,6 +77,9 @@ func sessionTable(room string, sessions []sessionView, visible bool) []string {
 			if cached {
 				cells = slices.Insert(cells, 4, cacheCell(session.Telemetry))
 			}
+			if thinks {
+				cells = slices.Insert(cells, 3, thinkingCell(session.Telemetry))
+			}
 			row = append(row, cells...)
 		}
 		row = append(row, age(session.Age()))
@@ -82,6 +91,22 @@ func sessionTable(room string, sessions []sessionView, visible bool) []string {
 	_ = writer.Flush()
 	lines = append(lines, strings.TrimSuffix(buffer.String(), "\n"))
 	return lines
+}
+
+// thinkingCell is whether the model thinks, on or off, "-" where the harness
+// does not tell.
+func thinkingCell(snapshot *session.Snapshot) string {
+	if snapshot == nil || snapshot.Thinking == nil {
+		return "-"
+	}
+	cell := "off"
+	if *snapshot.Thinking {
+		cell = "on"
+	}
+	if !snapshot.Fresh || !snapshot.SettingsFresh {
+		cell += " (stale)"
+	}
+	return cell
 }
 
 func cacheCell(snapshot *session.Snapshot) string {

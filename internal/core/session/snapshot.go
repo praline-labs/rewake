@@ -41,11 +41,15 @@ type Snapshot struct {
 	Effort    *string `json:"configuredReasoningEffort"`
 	// EffortSource is EffortFromLaunch when Effort is what the launch passed,
 	// not what the harness was seen to run at; empty when observed.
-	EffortSource string     `json:"reasoningEffortSource,omitempty"`
-	SettingsAt   *time.Time `json:"settingsObservedAt"`
-	Compactions  *uint64    `json:"completedCompactions"`
-	Compacting   *bool      `json:"compactionInProgress"`
-	Coverage     string     `json:"compactionCoverage"`
+	EffortSource string `json:"reasoningEffortSource,omitempty"`
+	// Thinking says whether thinking is on, as the harness tells it: Claude
+	// Code's session setting, pi's level for a model with reasoning; nil
+	// where the harness does not tell.
+	Thinking    *bool      `json:"thinking,omitempty"`
+	SettingsAt  *time.Time `json:"settingsObservedAt"`
+	Compactions *uint64    `json:"completedCompactions"`
+	Compacting  *bool      `json:"compactionInProgress"`
+	Coverage    string     `json:"compactionCoverage"`
 	// Interruptions says whether a turn a person interrupts is heard:
 	// observed, unobserved, or empty while nobody can tell yet.
 	Interruptions string `json:"interruptions,omitempty"`

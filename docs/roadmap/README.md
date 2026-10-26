@@ -24,7 +24,8 @@ what it taught goes into the living documents.
      ([worker-profile.md](../worker-profile.md#the-login));
    - a Claude Code worker raised from a pi main, which needs the same login.
 2. **Acceptance of additive fields** — the cache telemetry, the `status/line` endpoint,
-   `worker.type`, `configuredModelName` and `worker.label` changed the protocol or the state
+   `worker.type`, `configuredModelName`, `worker.label`, and `thinking` (the telemetry's and
+   `StatusLineRequest`'s, October 26, 2026) changed the protocol or the state
    by adding fields; only the dialog fields' acceptance is on record. Whether the others need
    it is main's call (`AGENTS.md`, "Delegation and review").
 

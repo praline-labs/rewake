@@ -64,8 +64,12 @@ func handleList(ctx *Context, _ Call) error {
 		}
 		if visible {
 			view.Telemetry = sessionSnapshot(dir, view.Name, view.Epoch())
-			// The harness's own name wins; the template's label stands in
-			// for a harness that gives none.
+			// The harness's own name wins, less what it adds in parentheses
+			// — a window the Context column shows truly; the template's
+			// label stands in for a harness that gives none.
+			if t := view.Telemetry; t != nil && t.ModelName != nil {
+				t.ModelName = shortModelName(*t.ModelName)
+			}
 			if t := view.Telemetry; t != nil && t.ModelName == nil && t.Model != nil && worker.Label != "" {
 				t.ModelName = &worker.Label
 			}
@@ -187,5 +191,17 @@ func unknownSessionFor(command *Command, dir, name string) error {
 	return &UsageError{Command: command, Message: message}
 }
 
-// assumedLine says which gates a run's launch took as closed: such a run
-// rests on an assumption the live checks are there to test.
+// shortModelName is a harness's display name of a model without a trailing
+// parenthesised part, such as the native window a capped run is not held to;
+// nil when nothing is left.
+func shortModelName(name string) *string {
+	if strings.HasSuffix(name, ")") {
+		if open := strings.LastIndex(name, " ("); open > 0 {
+			name = name[:open]
+		}
+	}
+	if name = strings.TrimSpace(name); name == "" {
+		return nil
+	}
+	return &name
+}

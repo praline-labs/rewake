@@ -18,3 +18,22 @@ func TestStateCellsShowTheModelNameWhenThereIsOne(t *testing.T) {
 		t.Fatalf("with a name the cell is %s", got)
 	}
 }
+
+// A display name loses only a trailing parenthesised part, such as a native
+// window the run may not be held to.
+func TestShortModelNameDropsTheParenthesisedSuffix(t *testing.T) {
+	for name, want := range map[string]string{
+		"Some Model 5 (1M context)": "Some Model 5",
+		"Some Model 5":              "Some Model 5",
+		"Model (a) (b)":             "Model (a)",
+		"(only)":                    "(only)",
+		"Model (open":               "Model (open",
+	} {
+		if got := shortModelName(name); got == nil || *got != want {
+			t.Fatalf("%q: %v, want %q", name, got, want)
+		}
+	}
+	if got := shortModelName(" "); got != nil {
+		t.Fatalf("a blank name: %q", *got)
+	}
+}
