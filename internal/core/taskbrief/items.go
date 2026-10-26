@@ -10,7 +10,7 @@ import (
 // The items of a text: task-list lines outside a fenced block, found by a
 // line scanner of rewake's own, so Go takes no markdown dependency. The
 // shell renders the same text with a full parser; an odd checkbox the two
-// read apart is a known limit (docs/roadmap/briefs.md).
+// read apart is a known limit (docs/briefs.md).
 
 var (
 	// taskLine is a list item whose content starts with a checkbox and a
@@ -95,6 +95,17 @@ func cut(text string) string {
 		return text
 	}
 	return string(runes[:maxTitle])
+}
+
+// echo is an item's text as a tick records it: at most maxItemEcho code
+// points, a cut one ending in "…". A tick that stored a long item whole
+// would write an entry past what a reader takes.
+func echo(text string) string {
+	runes := []rune(text)
+	if len(runes) <= maxItemEcho {
+		return text
+	}
+	return string(runes[:maxItemEcho-1]) + "…"
 }
 
 // render writes the text with each item's box set as done says and, when

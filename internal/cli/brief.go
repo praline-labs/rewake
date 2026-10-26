@@ -15,7 +15,7 @@ import (
 
 // briefGroup is the brief command: main writes a markdown text per task and
 // sends it with send --brief; the runs it was sent to tick its items and
-// comment (docs/roadmap/briefs.md).
+// comment (docs/briefs.md).
 func briefGroup() Group {
 	return Group{
 		Title:   "BRIEFS",

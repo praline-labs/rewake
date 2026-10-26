@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { createConnection, type Socket } from "node:net";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-
+import { briefTools } from "./briefs.ts";
 import { management, type State } from "./management.ts";
 import { worktreeTools } from "./worktree.ts";
 
@@ -49,6 +49,7 @@ const socketPath = process.env.REWAKE_PI_SOCKET;
 
 export default function (pi: ExtensionAPI) {
   worktreeTools(pi);
+  briefTools(pi);
   let context: ExtensionContext | undefined;
   let active = false;
   let current: Link | undefined;

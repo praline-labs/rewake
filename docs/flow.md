@@ -171,6 +171,9 @@ session's shell, or from a person's shell in the same room. A shell without
    the new text as a new letter; `rewake send write-claude "..." --to <id>` adds to the
    task, and one report settles both. A short tail of the id is enough
    ([delivery-sent.md](delivery-sent.md)).
+7. **A brief.** Main's `--brief 3` on a task or a question gives the recipient's run brief 3,
+   after every check above and before the file is written; the letter carries `brief: "3"`, not
+   the text ([briefs.md](briefs.md)).
 
 ## Act 3. The wrapper announces it
 
@@ -242,7 +245,9 @@ why it was refused or failed — comes later as a notify from the worker
    printed, oldest first, with its sender, kind and time. Reports reserved by a
    waiting `send --question` are skipped (Act 6). A verified main caller first
    sees a [session-state header](session-state.md) and blank line for each message;
-   workers see the original output. Stored agent text is unchanged.
+   workers see the original output. Stored agent text is unchanged. A letter that carries a
+   brief is followed by the brief as it reads now: its header, how to tick and comment, and its
+   text with each item's number ([briefs.md](briefs.md#the-commands)).
 3. **Then record.** Only once the output got through: for each `task` or
    `question` from a session, the sender's run is written into
    `awaiting/<own epoch>/<sender>` — this run now owes that run a report. A
@@ -254,7 +259,7 @@ why it was refused or failed — comes later as a notify from the worker
    do not answer a `notify` at all. After a context compaction, re-read the task
    with `rewake inbox --owed` rather than from the summary, and read new mail with
    `rewake inbox`: `--owed` prints again, in full, every message whose `awaiting/`
-   record is still there, and changes nothing; tasks and questions still unread it
+   record is still there, with its brief as it reads now, and changes nothing; tasks and questions still unread it
    only counts, in a last line naming `rewake inbox`. The sender's side of the same
    record: `rewake inbox --awaited` in the sending run lists, by recipient, what it
    sent and has no report on yet — unread, read and being worked on, pending,

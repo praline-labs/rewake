@@ -9,6 +9,9 @@ var mainPlaybook = Playbook{
 		{Do: "rewake list", Why: "who is in the room: each session's activity, context use, model and effort"},
 		{Do: "rewake send <name> \"...\"", Why: "a task; the report arrives when that session's turn ends"},
 		{Do: "rewake send <name> \"...\" --question", Why: "the same, and this command waits for the answer, up to 600 seconds by default"},
+		{Do: "rewake brief new --file <path> / rewake brief edit <id> --rev <n> --file <path>", Why: "keep a task's brief in the room: markdown with - [ ] items, kept across compactions; an edit starts from the text with its ticks, which brief show prints as markdown, at the revision its header names"},
+		{Do: "rewake send <name> \"...\" --brief <id>", Why: "a task that gives the worker brief <id>: it gets the text with the letter, ticks the items and comments under it; an edit tells nobody, so send again with --brief for a new text"},
+		{Do: "rewake brief list | show <id> | close <id>", Why: "the briefs with their items done, comments and the runs they were given to; close one when its work is accepted"},
 		{Do: "rewake send <name> \"...\" --notify", Why: "a message that owes no report; a worker's blocking notify or permission request is still answered by you, with the decision it asks for"},
 		{Do: "rewake inbox", Why: "read what came back: finished, error, stopped, and pending — work still going"},
 		{Do: "rewake inbox --awaited", Why: "what you handed out and where each item stands"},
@@ -21,7 +24,7 @@ var mainPlaybook = Playbook{
 	Sections: []Section{
 		{Title: "HANDING OUT WORK", Lines: []string{
 			"Delegate substantial work to a worker whose template fits it; rewake workers lists the templates as they are now. Where no template writes code, write the code yourself and give a reviewer the review. Keep coordination, review and the actions workers cannot perform with you.",
-			"Give each worker a self-contained brief: goal, acceptance criteria, exact paths and write scope, constraints, verified facts and assumptions, and expected report. Include relevant context unavailable in the repository — a constraint of the environment, the reason for an unusual choice, where to find an example; the worker cannot see your conversation.",
+			"Give each worker a self-contained brief — as a rewake brief, given with send --brief, or a file whose path the task names: goal, acceptance criteria as - [ ] items, exact paths and write scope, constraints, verified facts and assumptions, and expected report. Include relevant context unavailable in the repository — a constraint of the environment, the reason for an unusual choice, where to find an example; the worker cannot see your conversation.",
 			"State the question and the evidence you need in neutral words, without presupposing the result.",
 			"Keep two workers out of the same files: split the work by files, or give each a checkout of its own.",
 			"Before a large task, check the worker's context in rewake list; when it is high, compact an idle worker first and wait for the completion notice. Unknown or stale values are not measurements.",

@@ -131,50 +131,54 @@ export function runEnv(values: Record<string, string | undefined>): Record<strin
   return env;
 }
 
-// serveWorktreeStatus answers the tools' calls. The command's environment is
-// the run's own variables, set over the harness's environment, so the
-// command answers for this run whatever the harness passes its children.
-// The variables are named one by one: the engine lists what a module reads.
-// A call of a tool the session was not offered cannot arrive: no tool, no call.
-export function serveWorktreeStatus(on: Parameters<Register>[0]) {
-  const serve = (
-    tool: string,
-    what: string,
-    timeoutMs: number,
-    argv: (executable: string, input: Record<string, unknown>) => string[] | string,
-  ) => {
-    on("tool.call", { tool }, async ($, e) => {
-      const executable = await $.env.get("REWAKE_EXECUTABLE");
-      if (!executable) {
-        return {
-          isError: true,
-          result: "this session was not started by a rewake that sets REWAKE_EXECUTABLE",
-        };
-      }
-      const command = argv(executable, e as unknown as Record<string, unknown>);
-      if (typeof command === "string") return { isError: true, result: command };
-      const env = runEnv({
-        REWAKE_DIR: await $.env.get("REWAKE_DIR"),
-        REWAKE_ROOM: await $.env.get("REWAKE_ROOM"),
-        REWAKE_SESSION: await $.env.get("REWAKE_SESSION"),
-        REWAKE_EPOCH: await $.env.get("REWAKE_EPOCH"),
+// serveCommand answers one tool's calls with a rewake command. The command's
+// environment is the run's own variables, set over the harness's environment,
+// so the command answers for this run whatever the harness passes its
+// children. The variables are named one by one: the engine lists what a
+// module reads. A call of a tool the session was not offered cannot arrive:
+// no tool, no call. The brief tools are served the same way (briefs.ts).
+export function serveCommand(
+  on: Parameters<Register>[0],
+  tool: string,
+  what: string,
+  timeoutMs: number,
+  argv: (executable: string, input: Record<string, unknown>) => string[] | string,
+) {
+  on("tool.call", { tool }, async ($, e) => {
+    const executable = await $.env.get("REWAKE_EXECUTABLE");
+    if (!executable) {
+      return {
+        isError: true,
+        result: "this session was not started by a rewake that sets REWAKE_EXECUTABLE",
+      };
+    }
+    const command = argv(executable, e as unknown as Record<string, unknown>);
+    if (typeof command === "string") return { isError: true, result: command };
+    const env = runEnv({
+      REWAKE_DIR: await $.env.get("REWAKE_DIR"),
+      REWAKE_ROOM: await $.env.get("REWAKE_ROOM"),
+      REWAKE_SESSION: await $.env.get("REWAKE_SESSION"),
+      REWAKE_EPOCH: await $.env.get("REWAKE_EPOCH"),
+    });
+    try {
+      const ran = await $.process.run(command, {
+        cwd: await $.session.cwd(),
+        env,
+        timeoutMs,
       });
-      try {
-        const ran = await $.process.run(command, {
-          cwd: await $.session.cwd(),
-          env,
-          timeoutMs,
-        });
-        return answer(ran, what);
-      } catch (error) {
-        return unrun(error, what);
-      }
-    }).catch((_$, _e, next) => ({
-      isError: true,
-      result: `${tool} failed: ${next.error.message}`,
-    }));
-  };
-  serve(worktreeToolName, "rewake worktree status", statusTimeoutMs, statusArgv);
-  serve(worktreeListToolName, "rewake worktree ls", statusTimeoutMs, listArgv);
-  serve(worktreeLandToolName, "rewake worktree land", landTimeoutMs, landArgv);
+      return answer(ran, what);
+    } catch (error) {
+      return unrun(error, what);
+    }
+  }).catch((_$, _e, next) => ({
+    isError: true,
+    result: `${tool} failed: ${next.error.message}`,
+  }));
+}
+
+// serveWorktreeStatus answers the worktree tools' calls.
+export function serveWorktreeStatus(on: Parameters<Register>[0]) {
+  serveCommand(on, worktreeToolName, "rewake worktree status", statusTimeoutMs, statusArgv);
+  serveCommand(on, worktreeListToolName, "rewake worktree ls", statusTimeoutMs, listArgv);
+  serveCommand(on, worktreeLandToolName, "rewake worktree land", landTimeoutMs, landArgv);
 }

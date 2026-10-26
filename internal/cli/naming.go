@@ -12,6 +12,7 @@ func sendExamples(catalog adapter.Catalog) []string {
 		"rewake send " + address + " \"the migration is merged\" --notify",
 		"rewake send " + address + " - --wait 20",
 		"rewake send " + address + " \"also rerun the lint\" --to 8d4ddd85",
+		"rewake send " + address + " \"do brief 3; tick the items as they land\" --brief 3",
 	}
 }
 

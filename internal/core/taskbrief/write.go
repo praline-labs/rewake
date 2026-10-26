@@ -108,7 +108,7 @@ func Tick(dir string, id int, author Author, edition, n int, done bool) (Item, e
 		}
 		ticked = brief.items[n-1]
 		ticked.Done = done
-		entry := Entry{N: next(brief), At: time.Now().UTC(), From: author.Name, Epoch: author.Epoch, Kind: kind, Edition: edition, Item: n, ItemText: ticked.Text}
+		entry := Entry{N: next(brief), At: time.Now().UTC(), From: author.Name, Epoch: author.Epoch, Kind: kind, Edition: edition, Item: n, ItemText: echo(ticked.Text)}
 		return publish(path, entry)
 	})
 	return ticked, err
@@ -224,11 +224,11 @@ func next(brief Brief) int {
 }
 
 func publish(path string, entry Entry) error {
-	raw, err := json.MarshalIndent(entry, "", "  ")
+	raw, err := encode(entry)
 	if err != nil {
 		return err
 	}
-	err = state.PublishExclusive(filepath.Join(path, logDir, FormatID(entry.N)+".json"), append(raw, '\n'))
+	err = state.PublishExclusive(filepath.Join(path, logDir, FormatID(entry.N)+".json"), raw)
 	if errors.Is(err, state.ErrNameTaken) {
 		return fmt.Errorf("entry %d of %s exists already", entry.N, path)
 	}
@@ -236,9 +236,24 @@ func publish(path string, entry Entry) error {
 }
 
 func writeRecord(path string, record Record) error {
-	raw, err := json.MarshalIndent(record, "", "  ")
+	raw, err := encode(record)
 	if err != nil {
 		return err
 	}
-	return state.WriteAtomic(filepath.Join(path, recordFile), append(raw, '\n'))
+	return state.WriteAtomic(filepath.Join(path, recordFile), raw)
+}
+
+// encode answers a record as it is written, refused past maxRecordBytes
+// before anything is written: no accepted write may leave a brief its
+// readers refuse.
+func encode(record any) ([]byte, error) {
+	raw, err := json.MarshalIndent(record, "", "  ")
+	if err != nil {
+		return nil, err
+	}
+	raw = append(raw, '\n')
+	if len(raw) > maxRecordBytes {
+		return nil, fmt.Errorf("%w: a record of %d bytes, past the bound of %d", ErrTooLarge, len(raw), maxRecordBytes)
+	}
+	return raw, nil
 }

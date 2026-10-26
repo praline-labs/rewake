@@ -14,6 +14,7 @@ import type {
 } from "../protocol.gen.ts";
 import { paths } from "../protocol.gen.ts";
 import { Asks } from "./asks.ts";
+import { briefToolsFor, serveBriefs } from "./briefs.ts";
 import { exitReasons, tellClosing } from "./closing.ts";
 import { serveDialogs } from "./dialogs.ts";
 import { serveWorktreeEnter, worktreeEnterTool } from "./enter.ts";
@@ -169,7 +170,8 @@ export const register: Register = (on) => {
       return started;
     }
     if (await $.env.get("REWAKE_EXECUTABLE")) {
-      for (const tool of worktreeToolsFor(await $.env.get("REWAKE_ROLE"))) {
+      const role = await $.env.get("REWAKE_ROLE");
+      for (const tool of [...worktreeToolsFor(role), ...briefToolsFor(role)]) {
         await $.tool.register(tool).catch(() => undefined);
       }
       if ((await $.env.get("REWAKE_WORKTREE_ENTER")) === "1") {
@@ -326,6 +328,7 @@ export const register: Register = (on) => {
 
   serveWorktreeStatus(on);
   serveWorktreeEnter(on);
+  serveBriefs(on);
 
   on("session.measure", async ($, e, next) => {
     const measured = await next(e);

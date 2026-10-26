@@ -128,7 +128,7 @@ holding the lock exclusive uses up: then the launch is refused as busy.
 mailbox, control, space, brief — and before a worktree is created; no path takes it while
 holding any of them, and there is no upgrade under a mailbox lock. No pruning and no name
 lock inside a mailbox section. The brief lock is taken with no other lock of the room held,
-and nothing is taken inside it ([roadmap/briefs.md](../roadmap/briefs.md)).
+and nothing is taken inside it ([briefs.md](../briefs.md#the-records)).
 
 **Who owns what.** `infra/state` owns an opaque authorization scoped to one room;
 `infra/build` owns the identity and the acquisition and calls `state`, which never imports
