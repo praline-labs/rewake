@@ -105,9 +105,6 @@ func openLeaseFile(room string, create bool) (*os.File, error) {
 	return file, nil
 }
 
-// Room is the room the lock belongs to.
-func (l *LeaseLock) Room() string { return l.room }
-
 // File is the lock's identity, for naming its holders: the device and inode
 // of the file it holds.
 func (l *LeaseLock) File() (dev, ino uint64, err error) {

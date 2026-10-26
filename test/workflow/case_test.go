@@ -131,14 +131,11 @@ func (c *Case) Contradicted(name, format string, args ...any) {
 	c.record(name, Fail, fmt.Sprintf(format, args...))
 }
 
-// Unsupported records that the harness cannot offer this observation at all.
-// A capability the harness lacks is not a license to stay silent: the case
-// still has to say so by name, or a missing mechanism reads as a defect that
-// swallowed it.
-func (c *Case) Unsupported(name, reason string) { c.record(name, Unsupported, reason) }
-
-// UnsupportedCapability is Unsupported with the capability named as a field,
-// so whoever reads the record learns which one without parsing the reason.
+// UnsupportedCapability records that the harness cannot offer this observation
+// at all. A capability the harness lacks is not a license to stay silent: the
+// case still has to say so by name, or a missing mechanism reads as a defect
+// that swallowed it. The capability is a field, so whoever reads the record
+// learns which one without parsing the reason.
 func (c *Case) UnsupportedCapability(name, capability, reason string) {
 	c.record(name, Unsupported, reason)
 	c.mu.Lock()

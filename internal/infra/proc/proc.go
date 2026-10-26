@@ -8,7 +8,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"syscall"
 )
 
 // Reader reads a /proc-shaped tree. The root is a field so tests can point it
@@ -119,9 +118,4 @@ func (r Reader) Namespace() string {
 		return ""
 	}
 	return link
-}
-
-// Signal sends a signal to a process, reporting whether it was still there.
-func Signal(pid int, signal syscall.Signal) error {
-	return syscall.Kill(pid, signal)
 }

@@ -48,15 +48,6 @@ import (
 
 const faultEnv = "REWAKE_FAULT"
 
-// FaultEnv is what a process passes on to the processes it starts, so their
-// faults come from the same plan.
-func FaultEnv() []string {
-	if value, ok := os.LookupEnv(faultEnv); ok {
-		return []string{faultEnv + "=" + value}
-	}
-	return nil
-}
-
 func init() {
 	spec := os.Getenv(faultEnv)
 	if spec == "" {
