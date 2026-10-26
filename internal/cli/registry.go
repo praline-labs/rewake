@@ -274,10 +274,13 @@ func flow(catalog adapter.Catalog) []FlowStep {
 		if !reportsTurns(h) || !h.Offers().Spaces {
 			continue
 		}
+		if last == "" {
+			steps = append(steps, FlowStep{
+				Command: "rewake workers",
+				Summary: "From main, see the templates workers are raised from; rewake ships none, and rewake workers --help says where they are defined.",
+			})
+		}
 		steps = append(steps, FlowStep{
-			Command: "rewake workers",
-			Summary: "From main, see the templates workers are raised from; rewake ships none, and rewake workers --help says where they are defined.",
-		}, FlowStep{
 			Command: fmt.Sprintf("rewake space open helper --alias %s-%s", h.ID(), role.General.ID),
 			Summary: fmt.Sprintf("Raise the worker helper-%s in main's room from a template of rewake workers, which names its harness and role; %s-%s is an example name. Only main starts workers.", h.ID(), h.ID(), role.General.ID),
 		}, FlowStep{
