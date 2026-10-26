@@ -159,7 +159,8 @@ rewake --command my-claude claude
   tells the host the model's name, thinking, effort and the cache's life
   ([claude.md](claude.md#the-cache-ttl)). A caller's own `--settings` reaches main's harness as
   given in its place: rewake neither reads nor merges it, and the launch notes that main's row
-  then lacks those. A worker's is refused, since the worker profile owns that flag.
+  then lacks those. A caller's `--setting-sources` likewise leaves main without rewake's status
+  line, with the same note. A worker's is refused, since the worker profile owns that flag.
 - **The workers' profile.** Every launch but main's, unless `--command` names a wrapper, sets
   `CLAUDE_CONFIG_DIR` to the workers' service folder and adds one `--settings` with what the run
   alone gets: [worker-profile.md](worker-profile.md).

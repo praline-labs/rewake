@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/adapter"
@@ -39,7 +40,8 @@ func TestRunSettingsSetTheStatusLineOfARunWithAMod(t *testing.T) {
 
 // Main's launch gets the status line alone in its --settings, carrying the
 // person's own interval from their settings.json; a launch with
-// its own --settings keeps it and is told why main's row lacks the name, and
+// its own --settings or --setting-sources keeps them and is told why main's
+// row lacks the name, and
 // one with no run directory or under --command gets nothing.
 func TestMainsLaunchGetsTheStatusLineAlone(t *testing.T) {
 	folder := t.TempDir()
@@ -60,8 +62,10 @@ func TestMainsLaunchGetsTheStatusLineAlone(t *testing.T) {
 	if len(overlay) != 1 || fmt.Sprint(line["refreshInterval"]) != "7" || line["command"] == "mine" {
 		t.Fatalf("the overlay: %v", overlay)
 	}
-	if got := mainSettings(request, []string{settingsFlag, "{}"}); got.args != nil || len(got.notes) != 1 {
-		t.Fatalf("with the person's own --settings: %+v", got)
+	for _, own := range [][]string{{settingsFlag, "{}"}, {settingSourcesFlag, "user"}, {settingSourcesFlag + "=user,project"}} {
+		if got := mainSettings(request, own); got.args != nil || len(got.notes) != 1 || !strings.Contains(got.notes[0], strings.SplitN(own[0], "=", 2)[0]) {
+			t.Fatalf("with the person's own %q: %+v", own, got)
+		}
 	}
 	for _, request := range []adapter.LaunchRequest{{Role: role.Main}, {Role: role.Main, RunDir: "/run", Command: "wrapper"}} {
 		if got := mainSettings(request, nil); got.args != nil || got.notes != nil {

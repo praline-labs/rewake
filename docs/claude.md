@@ -252,7 +252,8 @@ request was made (read from the strings of 2.1.302). Every run with a mod theref
 `statusLine` in its `--settings` — `'<rewake>' statusline`, `refreshInterval` 30 or the person's
 own — which beats every settings file but a managed one: a worker's in its overlay, main's in a
 `--settings` of that key alone. Main has none where its launch
-passes a `--settings` of its own, which a second would replace — the launch says so in a note —
+passes a `--settings` of its own, which a second would replace, or a `--setting-sources`, whose
+layers rewake's reading of the person's line would not keep to — the launch says so in a note —
 and none under `--command`. Claude Code merges the key field by field, so the person's `padding`
 stands. The hidden `rewake statusline` reads that input, posts `ttl`, `expiresAt` and `warm`, the
 effort, the model's name and `thinking.enabled` to the run's host at `status/line`, and prints

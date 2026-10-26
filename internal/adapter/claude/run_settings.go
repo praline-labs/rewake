@@ -132,14 +132,18 @@ func statusLineSetting(executable string, every any) map[string]any {
 // reads only the statusLine of the person's own settings (ownStatusLine), for
 // its interval. None where the
 // launch has no run directory for the mod, under --command, whose wrapper
-// decides the configuration, or where the person passes a --settings of
-// their own, which a second would replace.
+// decides the configuration, where the person passes a --settings of their
+// own, which a second would replace, or a --setting-sources, whose layers
+// rewake's line would not keep to when it finds the person's.
 func mainSettings(request adapter.LaunchRequest, args []string) profile {
 	switch {
 	case request.RunDir == "", request.Command != "":
 		return profile{}
-	case adapter.HasFlag(args, settingsFlag):
-		return profile{notes: []string{"no status line of rewake's: the launch passes its own " + settingsFlag + ", so main's row shows the model's id and no cache life"}}
+	}
+	for _, flag := range []string{settingsFlag, settingSourcesFlag} {
+		if adapter.HasFlag(args, flag) {
+			return profile{notes: []string{"no status line of rewake's: the launch passes its own " + flag + ", so main's row shows the model's id and no cache life"}}
+		}
 	}
 	executable, err := os.Executable()
 	if err != nil {
