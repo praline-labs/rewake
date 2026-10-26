@@ -76,7 +76,7 @@ func TestAReplacementNamesTheMessageItReplaces(t *testing.T) {
 	}
 	older := mail.Message{ID: "o", From: "peer", Kind: mail.Note, Text: "build finished"}
 	replacement.CreatedAt = time.Now()
-	if got := mail.Notice(mail.Message{ID: "group", Batch: []mail.Message{older, replacement}}); got != "Rewake: 2 new messages\n  ↳ main task: Replaces 5ca1ab1e0001 (withdrawn): rerun the lint and the vet\n  ↳ peer notify: build finished" {
+	if got := mail.Notice(mail.Message{ID: "group", Batch: []mail.Message{older, replacement}}); got != "Rewake: 2 new messages\n  ↳ main task: Replaces 5ca1ab1e0001 (withdrawn): rerun the lint… (a preview only: run rewake inbox)\n  ↳ peer notify: build finished" {
 		t.Fatalf("grouped notice = %q", got)
 	}
 }
@@ -126,7 +126,7 @@ func TestASingleCorrectionIsShownBesideTheNewestUnread(t *testing.T) {
 		t.Fatalf("recall: notice = %q, want %q", got, want)
 	}
 	replacement := mail.Message{ID: "r", From: "main", Kind: mail.Task, CreatedAt: at, Replaces: "100-5ca1ab1e0002", Text: "use the replica", Unread: 2, Latest: &newer}
-	want = "Rewake: peer notify, 2 new messages\n  ↳ main task: Replaces 5ca1ab1e0002 (withdrawn): use the replica\n  ↳ build finished"
+	want = "Rewake: peer notify, 2 new messages\n  ↳ main task: Replaces 5ca1ab1e0002 (withdrawn): use the replica (a preview only: run rewake inbox)\n  ↳ build finished"
 	if got := mail.Notice(replacement); got != want {
 		t.Fatalf("replacement: notice = %q, want %q", got, want)
 	}

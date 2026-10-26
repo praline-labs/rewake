@@ -66,7 +66,7 @@ func departureMessage(self registry.Session, worker *knownWorker, reason string)
 	snapshot.Stale()
 	snapshot.CompactionEvents, snapshot.CompactionOutcomes = nil, nil
 	identity := mail.Availability{Name: peer.Name, Role: role.Of(peer.Role).ID, Harness: peer.Harness, Room: peer.Room, CWD: peer.CWD}
-	body := fmt.Sprintf("Session is no longer available in this room (%s).\nname: %s\nrole: %s\nharness: %s\nroom: %s\ncwd: %q", reason, identity.Name, identity.Role, identity.Harness, identity.Room, identity.CWD)
+	body := fmt.Sprintf("Session is no longer available in this room (%s).\nname: %s\nrole: %s\nharness: %s\nroom: %s\nlaunch cwd: %q (a checkout the worker entered later is in rewake worktree ls)", reason, identity.Name, identity.Role, identity.Harness, identity.Room, identity.CWD)
 	// The observer retains this message across failed publication attempts, including
 	// its timestamp. PutOnce protects a write that succeeded before reporting error.
 	return mail.Message{ID: fmt.Sprintf("%019d-%x", now.UnixNano(), sum[:12]), From: peer.Name, FromEpoch: peer.Epoch(), To: self.Name, ToEpoch: self.Epoch(), Kind: mail.Note, CreatedAt: now, Text: body, Departure: &mail.DepartureNotice{Identity: identity, Reason: reason}, SenderState: &snapshot}

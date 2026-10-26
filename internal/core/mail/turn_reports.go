@@ -179,6 +179,11 @@ func prepareTurnReports(dir string, self registry.Session, event TurnEnd, pendin
 	case pending:
 		kind = Interim
 	}
+	if kind == Error && strings.TrimSpace(event.Text) == "" {
+		// A letter of only a header says nothing to main, which is told the
+		// letter says why.
+		event.Text = "The turn ended in error with no final answer and no reason given; look at the worker and its saved work."
+	}
 	var reports []Message
 	for _, waiter := range waiters {
 		// A report to an ended run can reach nobody. Read without the name

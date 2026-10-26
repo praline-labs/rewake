@@ -82,7 +82,7 @@ func executorSections(git string) []Section {
 		}},
 		{Title: "REPORTING", Lines: []string{
 			"Your final reply is the report. Open it with one line stating the result, then what was done, what was checked and how, and what is left open; say what you verified and what you assumed.",
-			"Never answer a task with rewake send: ending the turn already reports, and the sender would get the result twice. Do not answer a notify only to acknowledge it.",
+			"Never answer a task with rewake send: ending the turn already reports, and the sender would get the result twice. Do not answer a notify only to acknowledge it; one that asks you for a decision needs the decision.",
 			"Before ending a turn that still waits on outside work or a decision — background work, a subagent, the owner, a refusal to be cleared — run rewake pending \"<what it waits for>\", including turns woken by background work or subagents. The mark covers only that turn's normal end and carries its final text; without it, a normal end reports completion.",
 			"After a context compaction, re-read your task with rewake inbox --owed and new mail with rewake inbox instead of working from the summary, and say in your report that you did.",
 		}},

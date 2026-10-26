@@ -18,7 +18,7 @@ var ErrThreadUnavailable = errors.New("delivery thread is unavailable")
 var ErrNotYet = errors.New("the conversation cannot take a message yet")
 
 // ThreadChangedWarning lets the caller decide whether an old task needs resending.
-const ThreadChangedWarning = "Rewake: the reader's thread changed after delivery; this may not answer it, resend the message"
+const ThreadChangedWarning = "Rewake: the reader's thread changed after delivery; check that this answers the task, and read rewake inbox --awaited before sending the work again"
 
 // ThreadPath is the directory in which the delivery server records the
 // conversation an owed letter goes into, before the letter becomes readable;

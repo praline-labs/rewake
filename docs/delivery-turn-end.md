@@ -235,7 +235,7 @@ conversation does not clear waits or resend tasks. `rewake inbox` prints this li
 marked report:
 
 ```
-Rewake: the reader's thread changed after delivery; this may not answer it, resend the message
+Rewake: the reader's thread changed after delivery; check that this answers the task, and read rewake inbox --awaited before sending the work again
 ```
 
 A waiting `send --question` also prints the warning and keeps the boolean in its JSON result.

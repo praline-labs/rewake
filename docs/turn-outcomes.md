@@ -19,7 +19,7 @@ peek to reach it. The same holds for the stops below.
 The adapter that heard the turn end hands the core its reason (`adapter.TurnEnd`): a failed
 end and a refused one — the harness declined the turn — both report `error` with the
 harness's words unchanged, an aborted one `stopped`. An empty answer after the turn read work
-produces an error with empty text. Successful turns produce `finished`. `error` is a kind of
+produces an error whose text says the turn ended with no final answer and no reason. Successful turns produce `finished`. `error` is a kind of
 message with no send flag — `send --error` is refused — and creates no reply obligation.
 
 Errors go to all live waiters of the run; with none, they go to the room's main. A failing

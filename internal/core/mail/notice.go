@@ -96,7 +96,7 @@ func correctionLines(corrections []Message) string {
 			lines += "\n  ↳ " + preview(correction.Text)
 			continue
 		}
-		lines += "\n  ↳ " + preview(fmt.Sprintf("%s %s: %s", correction.From, KindOf(correction), firstLine(correction)))
+		lines += "\n  ↳ " + shownPreview(fmt.Sprintf("%s %s: %s", correction.From, KindOf(correction), firstLine(correction)), KindOf(correction))
 	}
 	return lines
 }

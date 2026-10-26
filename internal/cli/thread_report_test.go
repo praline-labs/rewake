@@ -89,7 +89,7 @@ func TestInboxExplainsAReportFromAnotherThread(t *testing.T) {
 	t.Setenv(state.SessionEnv, "api")
 	rawUnread(t, dir, "api", map[string]any{"toEpoch": epochOf(t, dir, "api"), "kind": "finished", "text": "new turn result", "threadChanged": true})
 	code, out, errOut := run("inbox")
-	if code != 0 || !strings.Contains(out, "new turn result") || !strings.Contains(out, "new turn result\nRewake: the reader's thread changed after delivery; this may not answer it, resend the message") {
+	if code != 0 || !strings.Contains(out, "new turn result") || !strings.Contains(out, "new turn result\nRewake: the reader's thread changed after delivery; check that this answers the task, and read rewake inbox --awaited before sending the work again") {
 		t.Fatalf("warning missing: %d %s %s", code, out, errOut)
 	}
 }
@@ -115,7 +115,7 @@ func TestAQuestionPreservesTheThreadWarning(t *testing.T) {
 				if err := json.Unmarshal([]byte(out), &model); err != nil || model["threadChanged"] != true {
 					t.Fatalf("warning lost: %s %v", out, err)
 				}
-			} else if !strings.Contains(out, "\nRewake: the reader's thread changed after delivery; this may not answer it, resend the message") {
+			} else if !strings.Contains(out, "\nRewake: the reader's thread changed after delivery; check that this answers the task, and read rewake inbox --awaited before sending the work again") {
 				t.Fatalf("warning lost: %s", out)
 			}
 		})
