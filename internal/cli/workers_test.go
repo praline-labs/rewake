@@ -105,6 +105,20 @@ context = "large"
 	}
 }
 
+// With no write template left, workers says main writes the code itself.
+func TestWorkersSaysWhenNoTemplateWrites(t *testing.T) {
+	workerAliases(t, "[alias.agent-general]\nharness = \"agent\"\n")
+	code, out, errOut := run("workers")
+	if code != ExitOK || strings.Count(out, "No template writes code here") != 1 {
+		t.Fatalf("no writer: %d %s %s", code, out, errOut)
+	}
+	workerAliases(t, workerAliasesExample)
+	code, out, errOut = run("workers")
+	if code != ExitOK || strings.Contains(out, "No template writes code") {
+		t.Fatalf("a writer: %d %s %s", code, out, errOut)
+	}
+}
+
 func TestWorkersUnreadableFileRefuses(t *testing.T) {
 	path := workerAliases(t, "[alias.bad\n")
 	code, _, errOut := run("workers")

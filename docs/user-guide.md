@@ -105,7 +105,8 @@ A project can carry its own catalogue beside its code, read from the directory m
   with your template's name replaces yours. It may not set `role` or `command`: those stay in
   your own file.
 - **`[aliases] off = ["helper"]`** in that file hides those of your templates in this project
-  alone.
+  alone. Hide every template with `role = "write"` and main writes the code itself, with a
+  reviewer worker; `rewake workers` says so.
 - **`[types] off = ["process"]`**, in either file, hides built-in types.
 - **`.rewake/types/<type>.md`** — a type of the project's own, which also wins over a built-in
   of the same name; yours go in `~/.config/rewake/types/`. A type file opens with a TOML front

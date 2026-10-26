@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/core/worktype"
 	"github.com/praline-labs/rewake/internal/host/launch"
 )
@@ -39,6 +40,9 @@ type workersListing struct {
 	Workers []workerTemplate `json:"workers"`
 	// Types are the kinds of work space open --type takes.
 	Types []worktype.Type `json:"types"`
+	// NoWriter says no template of the catalog as read now has the write
+	// role, so main writes the code itself.
+	NoWriter bool `json:"noWriter"`
 }
 
 func workersCommand() *Command {
@@ -77,6 +81,12 @@ func handleWorkers(ctx *Context, call Call) error {
 			}
 		}
 		out.Workers = append(out.Workers, view)
+	}
+	out.NoWriter = true
+	for _, w := range out.Workers {
+		if w.Role == role.Write.ID {
+			out.NoWriter = false
+		}
 	}
 	return printValue(ctx, out, out.lines)
 }
@@ -119,6 +129,9 @@ func workerView(template launch.Template) workerTemplate {
 
 func (l workersListing) lines() []string {
 	lines := l.workerLines()
+	if l.NoWriter && len(l.Workers) > 0 {
+		lines = append(lines, "", "No template writes code here: main writes it itself.")
+	}
 	lines = append(lines, "", "Types (space open --type <type>):")
 	if len(l.Types) == 0 {
 		lines = append(lines, "  none")

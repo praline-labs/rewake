@@ -39,7 +39,7 @@ var General = Role{
 // nobody: reporting back to the sessions that reported to it would never end.
 var Main = Role{
 	ID:      "main",
-	Summary: "The session every rewake <harness> starts. Hands out work and reads the reports; its own successful turns go to nobody, so reports never wake each other endlessly. rewake gives it no write permission of its own.",
+	Summary: "The session every rewake <harness> starts. Hands out work and reads the reports; its own successful turns go to nobody, so reports never wake each other endlessly. rewake grants it no permissions beyond what its harness gives.",
 	Silent:  true,
 	Spaces:  true,
 	Play:    mainPlaybook,

@@ -49,6 +49,8 @@ without waking the same failing conversation. Old records with role `worker` are
 reporting fallback inside the catalogue.
 The write role reports like general.
 
+Main's briefing holds when a project hides every `write` template (`[aliases] off`): it delegates to a template that fits, and where none writes code it writes the code itself and gives the reviewer the review. `rewake workers` reads the catalogue each time and says so, so a mid-session change of the file needs no restart. rewake grants main no permissions beyond its harness's.
+
 ## What a session is told
 
 A role's `Play` carries its heading, its steps and its sections — titled groups of
