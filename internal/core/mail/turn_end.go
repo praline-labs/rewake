@@ -76,7 +76,7 @@ func EndTurn(parent context.Context, dir string, self registry.Session, event Tu
 				return err
 			}
 		}
-		waiters, err := ScopedWaiters(dir, self.Name, self.Epoch(), event.Boundary)
+		waiters, err := scopedWaiters(dir, self.Name, self.Epoch(), event.Boundary)
 		if err != nil {
 			return err
 		}
@@ -108,11 +108,11 @@ func turnMark(dir string, self registry.Session, event TurnEnd) (*Mark, error) {
 	if event.Failed || event.Stopped || event.Ended == 0 {
 		return nil, nil
 	}
-	start, err := TurnWindowStart(dir, self.Name, self.Epoch(), event.Started, event.Ended)
+	start, err := turnWindowStart(dir, self.Name, self.Epoch(), event.Started, event.Ended)
 	if err != nil {
 		return nil, err
 	}
-	mark, ok, err := MarkWithin(dir, self.Name, self.Epoch(), start, event.Ended)
+	mark, ok, err := markWithin(dir, self.Name, self.Epoch(), start, event.Ended)
 	if err != nil || !ok {
 		return nil, err
 	}

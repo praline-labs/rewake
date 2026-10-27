@@ -13,25 +13,25 @@ import (
 // knows.
 func TestTheLatestTurnStartIsTheLargestReading(t *testing.T) {
 	dir := stateDir(t)
-	if got, err := LatestTurnStart(dir, "api", "e1"); got != 0 || err != nil {
+	if got, err := latestTurnStart(dir, "api", "e1"); got != 0 || err != nil {
 		t.Fatalf("none recorded: %d %v", got, err)
 	}
 	for _, at := range []int64{200, 150, 300, 300} {
-		if err := RecordTurnStart(dir, "api", "e1", at); err != nil {
+		if err := recordTurnStart(dir, "api", "e1", at); err != nil {
 			t.Fatal(err)
 		}
 	}
-	if got, err := LatestTurnStart(dir, "api", "e1"); got != 300 || err != nil {
+	if got, err := latestTurnStart(dir, "api", "e1"); got != 300 || err != nil {
 		t.Fatalf("latest: %d %v", got, err)
 	}
 	entries, _ := os.ReadDir(filepath.Join(state.AwaitingPath(dir, "api"), "e1", turnStartsDir))
 	if len(entries) != 1 {
 		t.Fatalf("%d readings kept", len(entries))
 	}
-	if other, _ := LatestTurnStart(dir, "api", "e2"); other != 0 {
+	if other, _ := latestTurnStart(dir, "api", "e2"); other != 0 {
 		t.Fatalf("another run's start: %d", other)
 	}
-	if err := RecordTurnStart(dir, "api", "e1", 0); err == nil {
+	if err := recordTurnStart(dir, "api", "e1", 0); err == nil {
 		t.Fatal("a start without a time was recorded")
 	}
 }
@@ -40,7 +40,7 @@ func TestTheLatestTurnStartIsTheLargestReading(t *testing.T) {
 // a mark's turn ended.
 func TestAnUnreadableTurnStartIsAnError(t *testing.T) {
 	dir := stateDir(t)
-	if err := RecordTurnStart(dir, "api", "e1", 100); err != nil {
+	if err := recordTurnStart(dir, "api", "e1", 100); err != nil {
 		t.Fatal(err)
 	}
 	path := filepath.Join(state.AwaitingPath(dir, "api"), "e1", turnStartsDir)
@@ -48,7 +48,7 @@ func TestAnUnreadableTurnStartIsAnError(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = os.Chmod(path, 0o700) })
-	if _, err := LatestTurnStart(dir, "api", "e1"); err == nil {
+	if _, err := latestTurnStart(dir, "api", "e1"); err == nil {
 		t.Fatal("unreadable readings read as none")
 	}
 }

@@ -16,7 +16,7 @@ func TestAJournalThatTookAHeldEndNamesItInEveryForm(t *testing.T) {
 	if err := KeepAnswer(dir, "api", epoch, "the held answer", "held-op", "the reason"); err != nil {
 		t.Fatal(err)
 	}
-	taken, ok, err := KeptAnswerThrough(dir, "api", epoch, nil)
+	taken, ok, err := keptAnswerThrough(dir, "api", epoch, nil)
 	if err != nil || !ok || taken.Held != "held-op" {
 		t.Fatalf("the kept answer: %+v %v %v", taken, ok, err)
 	}

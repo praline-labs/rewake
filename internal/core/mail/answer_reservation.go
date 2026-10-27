@@ -12,7 +12,7 @@ import (
 // ReserveAnswer starts the lease before a question can produce a reply. The
 // heartbeat runs during delivery and printing too; a stopped process loses
 // its lease, while a live one waiting for stdout keeps its reservation.
-func ReserveAnswer(dir, name, question string) (func(), error) {
+func reserveAnswer(dir, name, question string) (func(), error) {
 	marks := state.AnsweringPath(dir, name)
 	if err := state.EnsureSubdir(marks); err != nil {
 		return nil, err
@@ -57,8 +57,8 @@ func releaseMark(dir, name, mark string) {
 
 // AvailableUnread excludes reports owned by waiting sends. The caller holds
 // the mailbox lock through printing and marking, just like a waiting send.
-func AvailableUnread(dir, name, epoch string) ([]Message, error) {
-	messages, err := PeekUnread(dir, name, epoch)
+func availableUnread(dir, name, epoch string) ([]Message, error) {
+	messages, err := peekUnread(dir, name, epoch)
 	if err != nil {
 		return nil, err
 	}
@@ -105,5 +105,5 @@ func receiveAnswer(dir, name, epoch, question string, message Message) error {
 			return nil
 		}
 	}
-	return MarkRead(dir, name, epoch, message, false)
+	return markRead(dir, name, epoch, message, false)
 }

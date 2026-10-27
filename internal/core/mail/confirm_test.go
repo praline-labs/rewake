@@ -17,10 +17,10 @@ func TestAKeptAnswerBelongsToItsRun(t *testing.T) {
 	if err := KeepAnswer(dir, "api", "1.1", "the answer", "", ""); err != nil {
 		t.Fatal(err)
 	}
-	if _, ok, _ := KeptAnswer(dir, "api", "2.2"); ok {
+	if _, ok, _ := keptAnswer(dir, "api", "2.2"); ok {
 		t.Error("another run read this run's kept answer")
 	}
-	taken, ok, err := KeptAnswerThrough(dir, "api", "1.1", nil)
+	taken, ok, err := keptAnswerThrough(dir, "api", "1.1", nil)
 	version := taken.Version
 	if err != nil || !ok {
 		t.Fatalf("the answer: %v %v", ok, err)
@@ -28,13 +28,13 @@ func TestAKeptAnswerBelongsToItsRun(t *testing.T) {
 	if err := live(dir).dropKeptVersion("api", "1.1", "an earlier version"); err != nil {
 		t.Fatal(err)
 	}
-	if _, ok, _ := KeptAnswer(dir, "api", "1.1"); !ok {
+	if _, ok, _ := keptAnswer(dir, "api", "1.1"); !ok {
 		t.Error("dropping another version took this answer")
 	}
 	if err := live(dir).dropKeptVersion("api", "1.1", version); err != nil {
 		t.Fatal(err)
 	}
-	if _, ok, _ := KeptAnswer(dir, "api", "1.1"); ok {
+	if _, ok, _ := keptAnswer(dir, "api", "1.1"); ok {
 		t.Error("the answer outlived dropping its version")
 	}
 	if err := live(dir).dropKeptVersion("api", "1.1", version); err != nil {
@@ -58,7 +58,7 @@ func TestAKeptAnswerIsTakenOnlyAtOrBelowTheBoundary(t *testing.T) {
 		through *uint64
 		want    bool
 	}{{ptr(record.Seq - 1), false}, {ptr(record.Seq), true}, {ptr(record.Seq + 5), true}, {nil, true}} {
-		if _, ok, err := KeptAnswerThrough(dir, "api", "1.1", c.through); err != nil || ok != c.want {
+		if _, ok, err := keptAnswerThrough(dir, "api", "1.1", c.through); err != nil || ok != c.want {
 			t.Errorf("through %v: %v %v, want %v", c.through, ok, err, c.want)
 		}
 	}
@@ -83,7 +83,7 @@ func TestAnUnreadableKeptAnswerIsNotWrittenOver(t *testing.T) {
 	if err := KeepAnswer(dir, "api", "1.1", "another", "", ""); err == nil {
 		t.Error("an unreadable kept answer was written over")
 	}
-	if _, _, err := KeptAnswerThrough(dir, "api", "1.1", nil); err == nil {
+	if _, _, err := keptAnswerThrough(dir, "api", "1.1", nil); err == nil {
 		t.Error("an unreadable kept answer read as none")
 	}
 }
@@ -124,21 +124,21 @@ func TestTheInterimRecordKeepsTheLastWord(t *testing.T) {
 	if err := recordInterim(dir, "api", epoch, "b", 200, line("waits"), false); err != nil {
 		t.Fatal(err)
 	}
-	if text, ok, _ := LastInterim(dir, "api", epoch); !ok || text != "waits" {
+	if text, ok, _ := lastInterim(dir, "api", epoch); !ok || text != "waits" {
 		t.Fatalf("absent, then written: %q %v", text, ok)
 	}
 	// A settling end that ended earlier is late: superseded.
 	if err := recordInterim(dir, "api", epoch, "a", 150, nil, true); err != nil {
 		t.Fatal(err)
 	}
-	if _, ok, _ := LastInterim(dir, "api", epoch); !ok {
+	if _, ok, _ := lastInterim(dir, "api", epoch); !ok {
 		t.Error("a late settling end brought down a later interim end")
 	}
 	// The same operation again is its retry: done.
 	if err := recordInterim(dir, "api", epoch, "b", 200, line("other words"), false); err != nil {
 		t.Fatal(err)
 	}
-	if text, _, _ := LastInterim(dir, "api", epoch); text != "waits" {
+	if text, _, _ := lastInterim(dir, "api", epoch); text != "waits" {
 		t.Errorf("a retry wrote again: %q", text)
 	}
 	// Ended later: written over, and settled stays settled for a late one.
@@ -226,7 +226,7 @@ func TestTheInterimRecordOfAnotherRun(t *testing.T) {
 	if err := recordInterim(dir, "api", epoch, "w", 1000, nil, true); err == nil {
 		t.Error("an unreadable interim record was written over")
 	}
-	if _, _, err := LastInterim(dir, "api", epoch); err == nil {
+	if _, _, err := lastInterim(dir, "api", epoch); err == nil {
 		t.Error("an unreadable interim record read as none")
 	}
 }

@@ -66,11 +66,11 @@ func (s *Server) sweepFinished() {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	_ = state.WithMailboxLock(ctx, s.Dir, s.Name, func() error {
+	_ = s.box().WithLock(ctx, func(l mail.Locked) error {
 		if !s.liveRun() {
 			return nil
 		}
-		mail.SweepFinishedLocked(s.Dir, s.Name, s.Epoch)
+		l.SweepFinished()
 		return nil
 	})
 }

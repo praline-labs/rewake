@@ -121,7 +121,7 @@ func addendumRefusal(dir string, self registry.Session, epoch string, root mail.
 	case !mail.AsksForWork(root):
 		return failf("%s is a %s, which owes nothing to add to; send another with: %s --notify", root.ID, mail.KindOf(root), next)
 	}
-	item, settled, err := mail.StandingOf(dir, self.Name, epoch, root)
+	item, settled, err := mail.Open(dir, self.Name, epoch).StandingOf(root)
 	switch {
 	case err != nil:
 		return unreadableTask(root, err)

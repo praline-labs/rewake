@@ -231,7 +231,7 @@ func TestASessionEndingInTheWindowKeepsTheReport(t *testing.T) {
 		t.Fatalf("note after the session ended: %+v", status)
 	}
 	status, _, _ := mail.ReadStatus(f.dir, "api", report.ID)
-	available, err := mail.AvailableUnread(f.dir, "api", "5.5")
+	available, err := mail.Open(f.dir, "api", "5.5").AvailableUnread()
 	if !status.ReportAvailable || err != nil || len(available) != 1 || available[0].ID != report.ID {
 		t.Fatalf("report after the session ended: status %+v, readable %v %v", status, available, err)
 	}

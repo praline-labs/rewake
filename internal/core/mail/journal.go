@@ -124,7 +124,7 @@ func HeldEndTaken(dir, name, epoch, op string) (bool, error) {
 // that failed to be recorded widens nothing: a mark an earlier end of the run
 // used, or could have, lies at or before that end. A journal that cannot be
 // read may be this run's, and is an error.
-func TurnWindowStart(dir, name, epoch string, started, ended int64) (int64, error) {
+func turnWindowStart(dir, name, epoch string, started, ended int64) (int64, error) {
 	entries, err := os.ReadDir(JournalPath(dir, name))
 	if errors.Is(err, os.ErrNotExist) {
 		return started, nil

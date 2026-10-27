@@ -19,7 +19,7 @@ func TestAWaitingReportKeepsItsDeliveryThread(t *testing.T) {
 	if err := mailtest.WriteDeliveryThread(dir, "api", task.ID, "old"); err != nil {
 		t.Fatal(err)
 	}
-	if err := MarkRead(dir, "api", run, task, true); err != nil {
+	if err := markRead(dir, "api", run, task, true); err != nil {
 		t.Fatal(err)
 	}
 	path := filepath.Join(ThreadPath(dir, "api"), task.ID)
@@ -31,8 +31,8 @@ func TestAWaitingReportKeepsItsDeliveryThread(t *testing.T) {
 	if !ReportThreadChanged(dir, "api", []string{task.ID}, "new") {
 		t.Fatal("sweep discarded an unsettled wait's thread")
 	}
-	for _, waiter := range Waiters(dir, "api", run) {
-		if err := ClearAwaiting(dir, "api", run, waiter); err != nil {
+	for _, waiter := range waitersOf(dir, "api", run) {
+		if err := clearAwaiting(dir, "api", run, waiter); err != nil {
 			t.Fatal(err)
 		}
 	}

@@ -43,7 +43,7 @@ func TestTheMainSessionReportsNothing(t *testing.T) {
 	markMain(t, dir, "api")
 	web := otherRun(t, dir, "web")
 	readFrom(t, dir, web)
-	if waiting := mail.Waiters(dir, "api", epochOf(t, dir, "api")); len(waiting) != 0 {
+	if waiting := mail.Open(dir, "api", epochOf(t, dir, "api")).Waiters(); len(waiting) != 0 {
 		t.Errorf("waiting = %v, want none for the main session", waiting)
 	}
 

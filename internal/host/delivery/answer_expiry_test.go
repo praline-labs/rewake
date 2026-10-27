@@ -25,10 +25,10 @@ func TestAReleasedOldAnswerIsStillAnnounced(t *testing.T) {
 	notices := 0
 	server := &Server{Dir: dir, Name: "api", attempts: map[string]time.Time{}, outcomes: map[string]mail.Result{}, Deliver: func(context.Context, mail.Message) mail.Result { notices++; return mail.Result{State: mail.Delivered} }}
 	server.drain(context.Background())
-	before, _ := mail.PeekUnread(dir, "api", "")
+	before, _ := mail.Open(dir, "api", "").PeekUnread()
 	release()
 	server.drain(context.Background())
-	after, _ := mail.PeekUnread(dir, "api", "")
+	after, _ := mail.Open(dir, "api", "").PeekUnread()
 	status, _, _ := mail.ReadStatus(dir, "api", report.ID)
 	t.Logf("before=%d after=%d notices=%d status=%+v", len(before), len(after), notices, status)
 	if len(after) != 1 || notices != 1 {
@@ -63,7 +63,7 @@ func TestAcceptedAnswersSurviveRetentionAndServerRestart(t *testing.T) {
 	server = newServer()
 	server.drain(context.Background())
 	server.sweepFinished()
-	messages, err := mail.PeekUnread(dir, "api", run)
+	messages, err := mail.Open(dir, "api", run).PeekUnread()
 	if err != nil || len(messages) != 1 || notices != 1 {
 		t.Fatalf("accepted report lost: messages=%v notices=%d err=%v", messages, notices, err)
 	}

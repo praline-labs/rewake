@@ -43,7 +43,7 @@ func handlePending(ctx *Context, call Call) error {
 	if !mail.OwesReports(self.Role) {
 		return &UsageError{Command: call.Command, Message: "the " + self.Role + " session's turns are reported to nobody, so there is nothing to keep open; end the turn as usual."}
 	}
-	if _, err := mail.LatestTurnStart(dir, self.Name, epoch); err != nil {
+	if _, err := mail.Open(dir, self.Name, epoch).LatestTurnStart(); err != nil {
 		return failf("the latest start of this turn cannot be read, so a mark could not be tied to this turn; nothing was marked: %v", err)
 	}
 	// The mark is tied to the turn by the time this call started, on the boot
@@ -63,14 +63,14 @@ func handlePending(ctx *Context, call Call) error {
 	err = state.WithMailboxLock(lockCtx, dir, self.Name, func() error {
 		// A record that cannot be read may be a waiter: "nothing owed" is
 		// an answer only when every one of them was read.
-		waiters, err := mail.ReadWaiters(dir, self.Name, epoch)
+		waiters, err := mail.Open(dir, self.Name, epoch).ReadWaiters()
 		if err != nil {
 			return fmt.Errorf("could not read who waits for this turn: %w", err)
 		}
 		for _, waiter := range waiters {
 			waiting = append(waiting, waiter.Name)
 		}
-		started, err := mail.LatestTurnStart(dir, self.Name, epoch)
+		started, err := mail.Open(dir, self.Name, epoch).LatestTurnStart()
 		if err != nil {
 			return fmt.Errorf("the latest start of this turn cannot be read, so the mark cannot be tied to its turn: %w", err)
 		}

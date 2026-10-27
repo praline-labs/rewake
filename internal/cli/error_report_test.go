@@ -85,7 +85,7 @@ func TestUnclaimedFailuresReachMainAndMainKeepsItsOwn(t *testing.T) {
 				t.Fatal(err)
 			}
 			if self {
-				messages, err := mail.PeekUnread(dir, "api", epochOf(t, dir, "api"))
+				messages, err := mail.Open(dir, "api", epochOf(t, dir, "api")).PeekUnread()
 				if err != nil || len(messages) != 1 || string(messages[0].Kind) != "error" {
 					t.Fatalf("local error=%+v %v", messages, err)
 				}
@@ -105,7 +105,7 @@ func TestReadingAnErrorOwesNothing(t *testing.T) {
 	t.Setenv(state.SessionEnv, "api")
 	rawUnread(t, dir, "api", map[string]any{"kind": "error", "text": "failure", "from": "web", "fromEpoch": peer.Epoch(), "toEpoch": epochOf(t, dir, "api")})
 	run("inbox")
-	if len(mail.Waiters(dir, "api", epochOf(t, dir, "api"))) != 0 {
+	if len(mail.Open(dir, "api", epochOf(t, dir, "api")).Waiters()) != 0 {
 		t.Fatal("error created a reply obligation")
 	}
 	code, _, errOut := run("send", "web", "fake failure", "--error")

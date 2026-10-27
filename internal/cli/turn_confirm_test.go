@@ -53,7 +53,7 @@ func (lab interimLab) reportsOf(t *testing.T, kind mail.Kind) []string {
 }
 
 func (lab interimLab) kept() bool {
-	_, kept, _ := mail.KeptAnswer(lab.dir, "api", lab.self.Epoch())
+	_, kept, _ := mail.Open(lab.dir, "api", lab.self.Epoch()).KeptAnswer()
 	return kept
 }
 
@@ -77,7 +77,7 @@ func TestAConfirmedEndAfterAnInterimOneIsHeldOnce(t *testing.T) {
 	if lab.kept() {
 		t.Error("the kept answer outlived its report")
 	}
-	if _, interim, _ := mail.LastInterim(lab.dir, "api", lab.self.Epoch()); interim {
+	if _, interim, _ := mail.Open(lab.dir, "api", lab.self.Epoch()).LastInterim(); interim {
 		t.Error("the report left the run marked interim")
 	}
 }

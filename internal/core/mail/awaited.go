@@ -353,7 +353,7 @@ var afterListing = func(string) {}
 
 // waiterFor is what a recipient's run still owes this run, if anything.
 func waiterFor(dir, recipient, run, name, epoch string) (Waiter, error) {
-	waiters, err := ReadWaiters(dir, recipient, run)
+	waiters, err := readWaiters(dir, recipient, run)
 	if err != nil {
 		return Waiter{}, err
 	}

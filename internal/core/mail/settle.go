@@ -31,7 +31,7 @@ var removeWaiting = state.Discard
 // letter it left — named by a stop, or its archive or removal failed — is
 // still owed, and the passes find it again by its status and its copies
 // (settleRecorded), not by anything remembered here.
-func SettleLocked(dir, name, id string, outcome State) bool {
+func settleLocked(dir, name, id string, outcome State) bool {
 	waiting := filepath.Join(state.InboxPath(dir, name), id+".json")
 	switch outcome {
 	case Held:

@@ -37,7 +37,7 @@ func TestSocketNeverSuppressesLaterMail(t *testing.T) {
 	if calls != 4 {
 		t.Fatal("old unread replay")
 	}
-	unread, _ := mail.PeekUnread(dir, s.Name, s.Epoch)
+	unread, _ := mail.Open(dir, s.Name, s.Epoch).PeekUnread()
 	if len(unread) != 4 {
 		t.Fatal("fallback lost independent messages")
 	}

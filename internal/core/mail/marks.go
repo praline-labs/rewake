@@ -94,7 +94,7 @@ func MarkPending(dir, name, epoch, file, text string, at int64) error {
 // then by name. A mark whose name falls in the window and that cannot be read
 // is an error naming it: it may be this turn's. The caller holds the mailbox
 // lock.
-func MarkWithin(dir, name, epoch string, start, ended int64) (Mark, bool, error) {
+func markWithin(dir, name, epoch string, start, ended int64) (Mark, bool, error) {
 	path, ok := marksPath(dir, name, epoch)
 	if !ok || ended <= 0 {
 		return Mark{}, false, nil

@@ -35,7 +35,7 @@ func TestNewBatchPreservesReservedAnswersAndExpiry(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	release, err := mail.ReserveAnswer(dir, s.Name, "question")
+	release, err := mail.Open(dir, s.Name, "").ReserveAnswer("question")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -44,7 +44,7 @@ func TestNewBatchPreservesReservedAnswersAndExpiry(t *testing.T) {
 	if len(announced) != 2 {
 		t.Fatal("new eligible mail was not dispatched")
 	}
-	if available, _ := mail.AvailableUnread(dir, s.Name, s.Epoch); len(available) != 1+len(later) {
+	if available, _ := mail.Open(dir, s.Name, s.Epoch).AvailableUnread(); len(available) != 1+len(later) {
 		t.Fatal("reserved answer became ordinary unread or new mail was lost")
 	}
 	if st, _, _ := mail.ReadStatus(dir, s.Name, expired.ID); st.State != mail.Failed {
@@ -55,7 +55,7 @@ func TestNewBatchPreservesReservedAnswersAndExpiry(t *testing.T) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
-	if _, found, err := mail.AwaitAnswer(ctx, dir, s.Name, s.Epoch, "question", func(m mail.Message) error {
+	if _, found, err := mail.Open(dir, s.Name, s.Epoch).AwaitAnswer(ctx, "question", func(m mail.Message) error {
 		if m.ID != answer.ID {
 			t.Fatal("wrong reserved answer")
 		}
@@ -98,7 +98,7 @@ func TestConsumedDuringPreparationNeverProducesAStaleAnnouncement(t *testing.T) 
 		return &consumedAnnouncement{reservationFixture: &reservationFixture{prepare: func(fn func(string) error) error { return fn("A") }}, calls: &calls, consume: func() {
 			if err := state.WithMailboxLock(context.Background(), dir, s.Name, func() error {
 				for _, m := range members {
-					if err := mail.MarkRead(dir, s.Name, s.Epoch, m, false); err != nil {
+					if err := mail.Open(dir, s.Name, s.Epoch).MarkRead(m, false); err != nil {
 						return err
 					}
 				}

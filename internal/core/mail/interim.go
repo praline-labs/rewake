@@ -51,7 +51,7 @@ func (w world) readInterim(name string) (*interimRecord, error) {
 
 // LastInterim answers the pending line of this run's last word, when that
 // word is an interim end.
-func LastInterim(dir, name, epoch string) (string, bool, error) {
+func lastInterim(dir, name, epoch string) (string, bool, error) {
 	record, err := readInterim(dir, name)
 	if err != nil || record == nil || record.Epoch != epoch || record.Settled {
 		return "", false, err

@@ -32,7 +32,7 @@ func TestGroupedPreparationRechecksAnswerLeasesExpiryAndEpoch(t *testing.T) {
 	}}
 	s.Reserve = func(context.Context, mail.Message) (mail.Reservation, error) {
 		var err error
-		release, err = mail.ReserveAnswer(dir, "api", "question-id")
+		release, err = mail.Open(dir, "api", "").ReserveAnswer("question-id")
 		return r, err
 	}
 	s.drain(context.Background())
@@ -40,7 +40,7 @@ func TestGroupedPreparationRechecksAnswerLeasesExpiryAndEpoch(t *testing.T) {
 	if len(group.Batch) != len(members) {
 		t.Fatal("reserved, expired or foreign letter entered group")
 	}
-	available, _ := mail.AvailableUnread(dir, "api", s.Epoch)
+	available, _ := mail.Open(dir, "api", s.Epoch).AvailableUnread()
 	if len(available) != 4 {
 		t.Fatal("lease did not protect ordinary reads")
 	}
@@ -121,7 +121,7 @@ func TestCancellationBeforeGroupAdmissionRetainsOnlyUnexpiredReports(t *testing.
 			t.Fatalf("shutdown outcome %+v", status)
 		}
 	}
-	unread, _ := mail.AvailableUnread(dir, "api", s.Epoch)
+	unread, _ := mail.Open(dir, "api", s.Epoch).AvailableUnread()
 	if len(unread) != 1 || unread[0].Kind != mail.Finished {
 		t.Fatal("shutdown discarded report")
 	}

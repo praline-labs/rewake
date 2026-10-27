@@ -108,7 +108,7 @@ func TestAnUnpublishedReportIsCompletedByTheNextTurnEnd(t *testing.T) {
 // of self's run so far, and none after. An event keeps it for every retry.
 func boundaryNow(t *testing.T, dir string, self registry.Session) *mail.ReadBoundary {
 	t.Helper()
-	clock, err := mail.OpenReadClock(context.Background(), dir, self.Name, self.Epoch())
+	clock, err := mail.Open(dir, self.Name, self.Epoch()).OpenReadClock(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}

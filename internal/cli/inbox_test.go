@@ -78,7 +78,7 @@ func TestInboxShowsAnEarlierRunsMailOwingNothing(t *testing.T) {
 	if !strings.Contains(out, "finished · ") || strings.Count(out, " · for an earlier run") != 2 || !strings.Contains(out, "earlier task\n"+earlierRunNote) || strings.Contains(out, "current task\n"+earlierRunNote) || !strings.Contains(out, "earlier report") {
 		t.Fatalf("inbox = %q, want all three, the earlier two marked", out)
 	}
-	owed, err := mail.OwedMessages(dir, self.Name, self.Epoch())
+	owed, err := mail.Open(dir, self.Name, self.Epoch()).OwedMessages()
 	if err != nil || len(owed) != 1 || owed[0].Text != "current task" {
 		t.Fatalf("owed = %+v %v, want only the current task", owed, err)
 	}

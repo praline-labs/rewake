@@ -22,7 +22,7 @@ import (
 //
 // Nothing is removed on a guess: a record whose keeping depends on another
 // that could not be read stays, and the next sweep decides it.
-func SweepFinishedLocked(dir, name, epoch string) {
+func sweepFinishedLocked(dir, name, epoch string) {
 	cutoff := time.Now().Add(-keepFinished)
 	receipts, receiptsErr := retainedReceipts(dir, name)
 	// A task read a day ago and still worked on is still owed, and rewake

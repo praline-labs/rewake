@@ -13,8 +13,8 @@ import (
 
 // EndedSince says whether a journal of run epoch records an end at or after
 // at.
-func EndedSince(dir, name, epoch string, at int64) (bool, error) {
-	latest, err := LatestEnd(dir, name, epoch)
+func endedSince(dir, name, epoch string, at int64) (bool, error) {
+	latest, err := latestEndOf(dir, name, epoch)
 	return latest > 0 && latest >= at, err
 }
 
@@ -22,7 +22,7 @@ func EndedSince(dir, name, epoch string, at int64) (bool, error) {
 // none does. A journal is retired to its done name under the mailbox lock; a
 // caller without it may see one leave between the listing and the read, and
 // then lists again.
-func LatestEnd(dir, name, epoch string) (int64, error) {
+func latestEndOf(dir, name, epoch string) (int64, error) {
 	for range 3 {
 		latest, moved, err := latestEnd(dir, name, epoch)
 		if !moved {

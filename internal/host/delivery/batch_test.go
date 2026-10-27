@@ -37,7 +37,7 @@ func TestMixedGroupUsesOneReservationAndIndependentReceipts(t *testing.T) {
 	r := &reservationFixture{}
 	s.Reserve = func(context.Context, mail.Message) (mail.Reservation, error) {
 		reserved++
-		if unread, _ := mail.PeekUnread(dir, "api", s.Epoch); len(unread) != 0 {
+		if unread, _ := mail.Open(dir, "api", s.Epoch).PeekUnread(); len(unread) != 0 {
 			t.Fatal("group readable before reservation")
 		}
 		return r, nil
@@ -54,7 +54,7 @@ func TestMixedGroupUsesOneReservationAndIndependentReceipts(t *testing.T) {
 		if r.closed || len(m.Batch) != 4 || m.Unread != 4 {
 			t.Fatal("group lost reservation or membership")
 		}
-		available, err := mail.AvailableUnread(dir, "api", s.Epoch)
+		available, err := mail.Open(dir, "api", s.Epoch).AvailableUnread()
 		if err != nil || len(available) != 4 {
 			t.Fatal("native signal preceded member readability")
 		}
@@ -67,7 +67,7 @@ func TestMixedGroupUsesOneReservationAndIndependentReceipts(t *testing.T) {
 			}
 		}
 		// A fast selected read remains final even if the shared ACK is lost.
-		if err := state.WithMailboxLock(context.Background(), dir, "api", func() error { return mail.MarkRead(dir, "api", s.Epoch, m.Batch[0], true) }); err != nil {
+		if err := state.WithMailboxLock(context.Background(), dir, "api", func() error { return mail.Open(dir, "api", s.Epoch).MarkRead(m.Batch[0], true) }); err != nil {
 			t.Fatal(err)
 		}
 		return mail.Result{State: mail.Failed, Detail: "ACK lost"}
@@ -87,7 +87,7 @@ func TestMixedGroupUsesOneReservationAndIndependentReceipts(t *testing.T) {
 			t.Fatalf("member outcome %d: %+v", i, status)
 		}
 	}
-	unread, _ := mail.AvailableUnread(dir, "api", s.Epoch)
+	unread, _ := mail.Open(dir, "api", s.Epoch).AvailableUnread()
 	if len(unread) != 1 || unread[0].Kind != mail.Finished {
 		t.Fatal("failed group lost report or retained unaccepted task")
 	}
@@ -200,7 +200,7 @@ func TestGroupRefusalKeepsReportsAndDoesNotAcquireAgain(t *testing.T) {
 			t.Fatalf("refusal lost identity: %+v", status)
 		}
 	}
-	unread, _ := mail.AvailableUnread(dir, "api", s.Epoch)
+	unread, _ := mail.Open(dir, "api", s.Epoch).AvailableUnread()
 	if len(unread) != 1 || unread[0].Kind != mail.Finished {
 		t.Fatal("refusal lost report")
 	}

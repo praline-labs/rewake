@@ -19,7 +19,7 @@ func mark(t *testing.T, dir, epoch, text string, at int64) string {
 
 func within(t *testing.T, dir, epoch string, start, ended int64) (string, bool) {
 	t.Helper()
-	found, ok, err := MarkWithin(dir, "api", epoch, start, ended)
+	found, ok, err := markWithin(dir, "api", epoch, start, ended)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -138,16 +138,16 @@ func TestAnUnreadableMarkInTheWindowIsAnError(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(path, file), []byte("{"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := MarkWithin(dir, "api", "e1", 100, 200); err == nil {
+	if _, _, err := markWithin(dir, "api", "e1", 100, 200); err == nil {
 		t.Error("an unreadable mark in the window was passed over")
 	}
-	if _, _, err := MarkWithin(dir, "api", "e1", 150, 200); err != nil {
+	if _, _, err := markWithin(dir, "api", "e1", 150, 200); err != nil {
 		t.Errorf("an unreadable mark outside the window stopped the end: %v", err)
 	}
 	if err := os.WriteFile(filepath.Join(path, "stray"), nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, _, err := MarkWithin(dir, "api", "e1", 150, 200); err == nil {
+	if _, _, err := markWithin(dir, "api", "e1", 150, 200); err == nil {
 		t.Error("a file that names no mark was passed over")
 	}
 }
@@ -197,17 +197,17 @@ func TestTheWindowOpensAfterTheRunsLatestEarlierEnd(t *testing.T) {
 		}
 	}
 	for _, started := range []int64{0, 100, 150} {
-		if start, err := TurnWindowStart(dir, "api", "e1", started, 200); err != nil || start != 150 {
+		if start, err := turnWindowStart(dir, "api", "e1", started, 200); err != nil || start != 150 {
 			t.Errorf("started %d: the window opens at %d (%v), want 150", started, start, err)
 		}
 	}
-	if start, _ := TurnWindowStart(dir, "api", "e1", 160, 200); start != 160 {
+	if start, _ := turnWindowStart(dir, "api", "e1", 160, 200); start != 160 {
 		t.Errorf("a recorded start after the earlier end opens it at %d, want 160", start)
 	}
 	if err := os.WriteFile(filepath.Join(JournalPath(dir, "api"), "broken"), []byte("{"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := TurnWindowStart(dir, "api", "e1", 100, 200); err == nil {
+	if _, err := turnWindowStart(dir, "api", "e1", 100, 200); err == nil {
 		t.Error("an unreadable journal was passed over")
 	}
 }

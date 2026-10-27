@@ -49,7 +49,7 @@ func openReadClock(dir, name, epoch string) (*ReadClock, error) {
 }
 
 // OpenReadClock initializes the mapping before native event production starts.
-func OpenReadClock(ctx context.Context, dir, name, epoch string) (clock *ReadClock, err error) {
+func openClock(ctx context.Context, dir, name, epoch string) (clock *ReadClock, err error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	err = state.WithMailboxLock(ctx, dir, name, func() error {
@@ -61,7 +61,7 @@ func OpenReadClock(ctx context.Context, dir, name, epoch string) (clock *ReadClo
 		// A record that cannot be read may hold the highest sequence: the
 		// clock started below it would hand a later read a sequence already
 		// taken.
-		waiters, err := ReadWaiters(dir, name, epoch)
+		waiters, err := readWaiters(dir, name, epoch)
 		if err != nil {
 			clock.Close()
 			clock = nil
@@ -115,7 +115,7 @@ func onReadClock(dir, name, epoch string, write func(uint64) error) error {
 	}
 	defer c.Close()
 	next := c.Snapshot().Through
-	waiters, err := ReadWaiters(dir, name, epoch)
+	waiters, err := readWaiters(dir, name, epoch)
 	if err != nil {
 		return err
 	}
@@ -171,8 +171,8 @@ func raiseReadClock(dir, name, epoch string, seq uint64) error {
 
 // ScopedWaiters resolves only still-owed messages committed before the captured
 // boundary. Later reads and recipient epochs cannot enter a delayed result.
-func ScopedWaiters(dir, name, epoch string, boundary *ReadBoundary) ([]Waiter, error) {
-	waiters, err := ReadWaiters(dir, name, epoch)
+func scopedWaiters(dir, name, epoch string, boundary *ReadBoundary) ([]Waiter, error) {
+	waiters, err := readWaiters(dir, name, epoch)
 	if err != nil {
 		return nil, err
 	}

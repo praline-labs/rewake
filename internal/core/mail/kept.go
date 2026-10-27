@@ -93,7 +93,7 @@ func KeepAnswer(dir, name, epoch, text, held, reason string) error {
 }
 
 // KeptAnswer answers this run's kept answer, and whether there is one.
-func KeptAnswer(dir, name, epoch string) (string, bool, error) {
+func keptAnswer(dir, name, epoch string) (string, bool, error) {
 	record, ok, err := readKept(dir, name, epoch)
 	return record.Text, ok, err
 }
@@ -108,7 +108,7 @@ type KeptTaken struct {
 // an end with a read boundary, only one kept at or below through; for an end
 // heard once (through nil), whatever it finds, since nothing can be kept
 // between its reading and its effects, which share the lock.
-func KeptAnswerThrough(dir, name, epoch string, through *uint64) (KeptTaken, bool, error) {
+func keptAnswerThrough(dir, name, epoch string, through *uint64) (KeptTaken, bool, error) {
 	record, ok, err := readKept(dir, name, epoch)
 	if err != nil || !ok {
 		return KeptTaken{}, false, err

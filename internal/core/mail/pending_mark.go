@@ -21,7 +21,7 @@ const (
 // start on record, zero when none is. An error writes no mark: a journal that
 // cannot be read may be this turn's end.
 func JudgeMark(dir string, self registry.Session, epoch string, at, started int64) (MarkVerdict, error) {
-	ended, err := EndedSince(dir, self.Name, epoch, at)
+	ended, err := endedSince(dir, self.Name, epoch, at)
 	if err != nil {
 		return 0, err
 	}

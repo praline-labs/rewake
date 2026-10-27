@@ -151,8 +151,8 @@ func (w world) writeWaiter(file string, waiter Waiter) error {
 // they wrote themselves. Nothing in the mail paths calls it (a test says so):
 // it passes over a record it could not read, which is no answer that nobody
 // waits.
-func Waiters(dir, name, epoch string) []Waiter {
-	waiters, _ := ReadWaiters(dir, name, epoch)
+func waitersOf(dir, name, epoch string) []Waiter {
+	waiters, _ := readWaiters(dir, name, epoch)
 	return waiters
 }
 
@@ -160,7 +160,7 @@ func Waiters(dir, name, epoch string) []Waiter {
 // forgotten here: a waiter is cleared only once the report to it is written.
 // It answers the waiters it read and an error for any it could not, since a
 // record that cannot be read may be a waiter.
-func ReadWaiters(dir, name, epoch string) ([]Waiter, error) {
+func readWaiters(dir, name, epoch string) ([]Waiter, error) {
 	return live(dir).readWaiters(name, epoch)
 }
 
@@ -253,7 +253,7 @@ func parseWaiter(name, raw string) (Waiter, error) {
 // changed still names what was reported, and the next task read from the same
 // sender would join it and be reported with it a second time. The caller keeps
 // the clearing to finish before the record is used again.
-func ClearAwaiting(dir, name, epoch string, peer Waiter) error {
+func clearAwaiting(dir, name, epoch string, peer Waiter) error {
 	return live(dir).clearAwaiting(name, epoch, peer)
 }
 
@@ -308,7 +308,7 @@ func (w world) clearAwaiting(name, epoch string, peer Waiter) error {
 // for. The delivery server's followEarlierRun calls it inside the mailbox
 // section; it takes no lock of its own, since the mailbox lock is not
 // reentrant; its callers are held by internal/layout_callers_test.go.
-func SweepAwaitingLocked(dir, name, epoch string) {
+func sweepAwaitingLocked(dir, name, epoch string) {
 	entries, err := os.ReadDir(state.AwaitingPath(dir, name))
 	if err != nil {
 		return

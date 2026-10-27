@@ -26,7 +26,7 @@ const turnStartsDir = ".turn-starts"
 // RecordTurnStart adds a reading, on the boot clock, and drops the older ones
 // it finds so the directory stays a handful of entries. The time is the
 // harness's for the start, at or before anything the turn ran.
-func RecordTurnStart(dir, name, epoch string, started int64) error {
+func recordTurnStart(dir, name, epoch string, started int64) error {
 	path, ok := awaitingPath(dir, name, epoch)
 	if !ok || started <= 0 {
 		return errors.New("a turn start needs a run and a time")
@@ -63,7 +63,7 @@ func RecordTurnStart(dir, name, epoch string, started int64) error {
 // LatestTurnStart is the latest recorded turn start of the run, 0 when none
 // is recorded. A directory that cannot be read is an error: it may hold a
 // start that proves a turn ended.
-func LatestTurnStart(dir, name, epoch string) (int64, error) {
+func latestTurnStart(dir, name, epoch string) (int64, error) {
 	path, ok := awaitingPath(dir, name, epoch)
 	if !ok {
 		return 0, nil

@@ -15,14 +15,18 @@ import (
 // the other shutdown stages, so a change here has to be reflected there.
 const shutdownLockWait = 2 * time.Second
 
-// lock runs fn under the mailbox lock, waiting no longer than the server's
-// lock context allows. A lock that cannot be taken leaves fn unrun.
-func (s *Server) lock(fn func() error) error {
-	return s.lockWithContext(s.lockCtx(), fn)
-}
-
 func (s *Server) lockWithContext(ctx context.Context, fn func() error) error {
 	return state.WithMailboxLock(ctx, s.Dir, s.Name, fn)
+}
+
+// box is this server's run's own mail.
+func (s *Server) box() mail.Box { return mail.Open(s.Dir, s.Name, s.Epoch) }
+
+// locked runs fn under the mailbox lock, waiting no longer than the server's
+// lock context allows; a lock that cannot be taken leaves fn unrun. What
+// retires or moves a letter runs here, since only mail.Locked can do it.
+func (s *Server) locked(fn func(mail.Locked) error) error {
+	return s.box().WithLock(s.lockCtx(), fn)
 }
 
 func (s *Server) lockCtx() context.Context {
@@ -41,7 +45,7 @@ func (s *Server) lockCtx() context.Context {
 // That an open fails proves nobody else holds the lock no more than it
 // proves anything of a descriptor opened earlier: a holder from before the
 // file's mode changed keeps its lock. So what fn decides alone, another may
-// decide at once; nothing that takes a copy away runs here (SettleLocked
+// decide at once; nothing that takes a copy away runs here (Locked.Settle
 // runs under lock only).
 func (s *Server) lockOrAlone(ctx context.Context, fn func() error) error {
 	err := s.lockWithContext(ctx, fn)
@@ -82,12 +86,12 @@ func (s *Server) publish(id string, result mail.Result) bool {
 	s.attempts[id] = time.Now()
 
 	settled := false
-	err := s.lock(func() error {
+	err := s.locked(func(l mail.Locked) error {
 		outcome, err := s.recordLocked(id, result)
 		if err != nil {
 			return err
 		}
-		settled = s.settleOutcome(id, outcome, result.ReportAvailable)
+		settled = s.settleOutcome(l, id, outcome, result.ReportAvailable)
 		return nil
 	})
 	var unusable *state.LockUnusableError
@@ -141,11 +145,11 @@ func (s *Server) recordLocked(id string, result mail.Result) (mail.State, error)
 
 // The durable flag distinguishes a failed wake-up from expired or foreign
 // mail. Recovery never manufactures an unread copy for an old failed status.
-func (s *Server) settleOutcome(id string, outcome mail.State, reportAvailable bool) bool {
+func (s *Server) settleOutcome(l mail.Locked, id string, outcome mail.State, reportAvailable bool) bool {
 	if outcome == mail.Failed && reportAvailable {
-		return mail.SettleLocked(s.Dir, s.Name, id, mail.Delivered)
+		return l.Settle(id, mail.Delivered)
 	}
-	return mail.SettleLocked(s.Dir, s.Name, id, outcome)
+	return l.Settle(id, outcome)
 }
 
 // alreadySettled reports whether this message has an outcome, from this run or
@@ -178,8 +182,8 @@ func (s *Server) alreadySettled(message mail.Message) bool {
 		return true
 	}
 	s.attempts[message.ID] = time.Now()
-	_ = s.lock(func() error {
-		s.settleOnRecord(message.ID)
+	_ = s.locked(func(l mail.Locked) error {
+		s.settleOnRecord(l, message.ID)
 		return nil
 	})
 	return true
@@ -188,16 +192,16 @@ func (s *Server) alreadySettled(message mail.Message) bool {
 // settleOnRecord settles a letter by its status as it stands under the lock
 // the caller holds, not as it was read before the lock was taken: a
 // withdrawal, a read or a claim that came while the lock was waited for
-// decides instead (SettleLocked), and a status that no longer reads or no longer
+// decides instead (Locked.Settle), and a status that no longer reads or no longer
 // holds an outcome settles nothing. A letter settled is forgotten; one left
 // is tried again once the retry interval has passed.
-func (s *Server) settleOnRecord(id string) {
+func (s *Server) settleOnRecord(l mail.Locked, id string) {
 	status, ok, err := mail.ReadStatus(s.Dir, s.Name, id)
 	if err != nil || !ok || status.State == mail.Pending || status.State == mail.Held {
 		return
 	}
 	s.outcomes[id] = status.Result()
-	if s.settleOutcome(id, status.Outcome(), status.ReportAvailable) {
+	if s.settleOutcome(l, id, status.Outcome(), status.ReportAvailable) {
 		delete(s.attempts, id)
 	}
 }

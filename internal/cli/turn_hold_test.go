@@ -37,4 +37,4 @@ func newInterimLab(t *testing.T) interimLab {
 	return interimLab{dir: dir, self: self, start: markAt - 5}
 }
 
-func (lab interimLab) owed() int { return len(mail.Waiters(lab.dir, "api", lab.self.Epoch())) }
+func (lab interimLab) owed() int { return len(mail.Open(lab.dir, "api", lab.self.Epoch()).Waiters()) }

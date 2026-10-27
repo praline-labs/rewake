@@ -88,7 +88,7 @@ func TestAReadAddendumStaysAndItsTaskIsRecalled(t *testing.T) {
 	dir, _ := sender(t)
 	task := sendOK(t, "api", "rerun the smoke")
 	addendum := sendOK(t, "api", "also rerun the lint", "--to", task)
-	if err := mail.MarkRead(dir, "api", epochOf(t, dir, "api"), stored(t, dir, addendum), true); err != nil {
+	if err := mail.Open(dir, "api", epochOf(t, dir, "api")).MarkRead(stored(t, dir, addendum), true); err != nil {
 		t.Fatal(err)
 	}
 	code, out, errOut := run("withdraw", task)
@@ -132,7 +132,7 @@ func TestAnEditsReplacementKeepsTheAddenda(t *testing.T) {
 
 	api := epochOf(t, dir, "api")
 	for _, id := range []string{replacement, addendum} {
-		if err := mail.MarkRead(dir, "api", api, stored(t, dir, id), true); err != nil {
+		if err := mail.Open(dir, "api", api).MarkRead(stored(t, dir, id), true); err != nil {
 			t.Fatal(err)
 		}
 	}

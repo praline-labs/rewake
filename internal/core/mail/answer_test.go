@@ -18,7 +18,7 @@ func TestAnAnswerAtTheLastMomentIsTaken(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
-	got, found, err := AwaitAnswer(ctx, dir, "api", "5.5", "q1", func(Message) error { return nil })
+	got, found, err := awaitAnswer(ctx, dir, "api", "5.5", "q1", func(Message) error { return nil })
 	if err != nil || !found || got.ID != report.ID {
 		t.Errorf("AwaitAnswer = %v, %v, %v; want the answer taken", got.ID, found, err)
 	}

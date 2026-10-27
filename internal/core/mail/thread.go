@@ -83,7 +83,7 @@ func owedByAnyRun(dir, name, id string) (bool, error) {
 		if !run.IsDir() {
 			continue
 		}
-		waiters, err := ReadWaiters(dir, name, run.Name())
+		waiters, err := readWaiters(dir, name, run.Name())
 		if err != nil {
 			return false, err
 		}

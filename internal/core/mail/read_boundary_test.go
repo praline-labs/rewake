@@ -15,7 +15,7 @@ import (
 
 func TestReadBoundaryExcludesLaterReadsAndIncludesSameTurnSteering(t *testing.T) {
 	dir := stateDir(t)
-	clock, err := OpenReadClock(context.Background(), dir, "api", "1.1")
+	clock, err := openClock(context.Background(), dir, "api", "1.1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -32,8 +32,8 @@ func TestReadBoundaryExcludesLaterReadsAndIncludesSameTurnSteering(t *testing.T)
 	read("steered")
 	boundary := clock.Snapshot()
 	read("next-turn")
-	readAt := Waiters(dir, "api", "1.1")[0].ReadAt
-	selected, err := ScopedWaiters(dir, "api", "1.1", boundary)
+	readAt := waitersOf(dir, "api", "1.1")[0].ReadAt
+	selected, err := scopedWaiters(dir, "api", "1.1", boundary)
 	if err != nil || len(selected) != 1 || !slices.Equal(selected[0].Messages, []string{"first", "steered"}) {
 		t.Fatalf("scope=%v %v", selected, err)
 	}
@@ -42,24 +42,24 @@ func TestReadBoundaryExcludesLaterReadsAndIncludesSameTurnSteering(t *testing.T)
 	if len(readAt) != 3 || !slices.Equal(selected[0].ReadAt, readAt[:2]) {
 		t.Fatalf("read times %v, scoped %v", readAt, selected[0].ReadAt)
 	}
-	if err := ClearAwaiting(dir, "api", "1.1", selected[0]); err != nil {
+	if err := clearAwaiting(dir, "api", "1.1", selected[0]); err != nil {
 		t.Fatal(err)
 	}
-	remaining := Waiters(dir, "api", "1.1")
+	remaining := waitersOf(dir, "api", "1.1")
 	if len(remaining) != 1 || !slices.Equal(remaining[0].Messages, []string{"next-turn"}) || !slices.Equal(remaining[0].ReadAt, readAt[2:]) {
 		t.Fatal(remaining)
 	}
-	if _, err := ScopedWaiters(dir, "api", "other", boundary); err == nil {
+	if _, err := scopedWaiters(dir, "api", "other", boundary); err == nil {
 		t.Fatal("foreign epoch accepted")
 	}
-	if _, err := ScopedWaiters(dir, "other", "1.1", boundary); err == nil {
+	if _, err := scopedWaiters(dir, "other", "1.1", boundary); err == nil {
 		t.Fatal("foreign mailbox accepted")
 	}
 }
 
 func TestReadBoundaryCaptureNeverWaitsForMailbox(t *testing.T) {
 	dir := stateDir(t)
-	clock, err := OpenReadClock(context.Background(), dir, "api", "1.1")
+	clock, err := openClock(context.Background(), dir, "api", "1.1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -85,7 +85,7 @@ func TestReadBoundaryCaptureNeverWaitsForMailbox(t *testing.T) {
 
 func TestReadBoundaryHighWatermarkPreventsReuseAfterCounterLoss(t *testing.T) {
 	dir := stateDir(t)
-	clock, err := OpenReadClock(context.Background(), dir, "api", "1.1")
+	clock, err := openClock(context.Background(), dir, "api", "1.1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -94,8 +94,8 @@ func TestReadBoundaryHighWatermarkPreventsReuseAfterCounterLoss(t *testing.T) {
 		t.Fatal(err)
 	}
 	boundary := clock.Snapshot()
-	for _, waiter := range Waiters(dir, "api", "1.1") {
-		if err := ClearAwaiting(dir, "api", "1.1", waiter); err != nil {
+	for _, waiter := range waitersOf(dir, "api", "1.1") {
+		if err := clearAwaiting(dir, "api", "1.1", waiter); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -103,7 +103,7 @@ func TestReadBoundaryHighWatermarkPreventsReuseAfterCounterLoss(t *testing.T) {
 	if err := markScopedAwaiting(dir, "api", "1.1", Message{ID: "later", From: "peer", FromEpoch: "2.2"}); err != nil {
 		t.Fatal(err)
 	}
-	selected, err := ScopedWaiters(dir, "api", "1.1", boundary)
+	selected, err := scopedWaiters(dir, "api", "1.1", boundary)
 	if err != nil || len(selected) != 0 {
 		t.Fatalf("old boundary absorbed a new read: %v %v", selected, err)
 	}
@@ -137,7 +137,7 @@ func TestReadClockProcessWriter(t *testing.T) {
 
 func TestReadBoundaryIsSharedWithAnotherReaderProcess(t *testing.T) {
 	dir := stateDir(t)
-	clock, err := OpenReadClock(context.Background(), dir, "api", "1.1")
+	clock, err := openClock(context.Background(), dir, "api", "1.1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -154,7 +154,7 @@ func TestReadBoundaryIsSharedWithAnotherReaderProcess(t *testing.T) {
 	if before.Through != 0 || after.Through == 0 {
 		t.Fatalf("mapping did not observe another process: before=%v after=%v", before, after)
 	}
-	selected, err := ScopedWaiters(dir, "api", "1.1", after)
+	selected, err := scopedWaiters(dir, "api", "1.1", after)
 	if err != nil || len(selected) != 1 || !slices.Equal(selected[0].Messages, []string{"from-process"}) {
 		t.Fatalf("reader scope: %v %v", selected, err)
 	}

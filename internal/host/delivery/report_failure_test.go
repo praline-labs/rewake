@@ -34,7 +34,7 @@ func requireReportState(t *testing.T, s *Server, m mail.Message, want mail.State
 	if !ok || status.State != want {
 		t.Fatalf("status=%+v want=%s", status, want)
 	}
-	available, err := mail.AvailableUnread(s.Dir, s.Name, s.Epoch)
+	available, err := mail.Open(s.Dir, s.Name, s.Epoch).AvailableUnread()
 	count := 0
 	if visible {
 		count = 1
@@ -62,7 +62,7 @@ func TestReportFailureAdmissionAndShutdown(t *testing.T) {
 				m.Kind = mail.Note
 			case "read during failure":
 				s.Deliver = func(context.Context, mail.Message) mail.Result {
-					if err := mail.MarkRead(s.Dir, s.Name, s.Epoch, m, true); err != nil {
+					if err := mail.Open(s.Dir, s.Name, s.Epoch).MarkRead(m, true); err != nil {
 						t.Fatal(err)
 					}
 					return mail.Result{State: mail.Failed, Detail: "late refusal"}
@@ -119,7 +119,7 @@ func TestReportFailureRecovery(t *testing.T) {
 				unblock = func() {}
 			}
 			s.drain(context.Background())
-			if unread, err := mail.PeekUnread(s.Dir, s.Name, s.Epoch); err != nil || len(unread) != 1 {
+			if unread, err := mail.Open(s.Dir, s.Name, s.Epoch).PeekUnread(); err != nil || len(unread) != 1 {
 				t.Fatalf("fault lost report: %v %v", unread, err)
 			}
 			unblock()
@@ -139,16 +139,16 @@ func TestReportFailureRecovery(t *testing.T) {
 				t.Fatal("report still queued")
 			}
 			if fault == "archive" {
-				if err := mail.MarkRead(s.Dir, s.Name, s.Epoch, m, true); err == nil {
+				if err := mail.Open(s.Dir, s.Name, s.Epoch).MarkRead(m, true); err == nil {
 					t.Fatal("archive obstruction ignored")
 				}
-				if unread, _ := mail.PeekUnread(s.Dir, s.Name, s.Epoch); len(unread) != 1 {
+				if unread, _ := mail.Open(s.Dir, s.Name, s.Epoch).PeekUnread(); len(unread) != 1 {
 					t.Fatal("failed read removed report")
 				}
 				if err := os.Remove(state.DonePath(s.Dir, s.Name)); err != nil {
 					t.Fatal(err)
 				}
-				if err := mail.MarkRead(s.Dir, s.Name, s.Epoch, m, true); err != nil {
+				if err := mail.Open(s.Dir, s.Name, s.Epoch).MarkRead(m, true); err != nil {
 					t.Fatal(err)
 				}
 				requireReportState(t, s, m, mail.Read, false)
@@ -167,7 +167,7 @@ func TestFailedReportReservationAndRetention(t *testing.T) {
 	release := reserve(t, s.Dir, "q1")
 	s.drain(context.Background())
 	s.refuseWaiting("session ended")
-	if available, _ := mail.AvailableUnread(s.Dir, s.Name, s.Epoch); len(available) != 0 || *calls != 0 {
+	if available, _ := mail.Open(s.Dir, s.Name, s.Epoch).AvailableUnread(); len(available) != 0 || *calls != 0 {
 		t.Fatal("reserved report escaped")
 	}
 	// A stopped receipt must not consume the later finished result.
@@ -186,7 +186,7 @@ func TestFailedReportReservationAndRetention(t *testing.T) {
 		t.Fatalf("notice calls=%d", *calls)
 	}
 	// The asker of q1 takes its answer, which records its receipt.
-	if answer, found, err := mail.AwaitAnswer(context.Background(), s.Dir, s.Name, s.Epoch, "q1", func(mail.Message) error { return nil }); err != nil || !found || answer.ID != m.ID {
+	if answer, found, err := mail.Open(s.Dir, s.Name, s.Epoch).AwaitAnswer(context.Background(), "q1", func(mail.Message) error { return nil }); err != nil || !found || answer.ID != m.ID {
 		t.Fatalf("q1's answer was not taken: %+v %v %v", answer, found, err)
 	}
 	requireReportState(t, s, m, mail.Failed, true)
@@ -197,7 +197,7 @@ func TestFailedReportReservationAndRetention(t *testing.T) {
 		t.Fatal(err)
 	}
 	s.sweepFinished()
-	if unread, _ := mail.PeekUnread(s.Dir, s.Name, s.Epoch); len(unread) != 0 {
+	if unread, _ := mail.Open(s.Dir, s.Name, s.Epoch).PeekUnread(); len(unread) != 0 {
 		t.Fatal("normal retention no longer expires report")
 	}
 }

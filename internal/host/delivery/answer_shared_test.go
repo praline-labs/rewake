@@ -24,7 +24,7 @@ func TestAnActiveAnswerDoesNotExpire(t *testing.T) {
 		return mail.Result{}
 	}}
 	server.drain(context.Background())
-	messages, err := mail.PeekUnread(dir, "api", "")
+	messages, err := mail.Open(dir, "api", "").PeekUnread()
 	if err != nil || len(messages) != 1 {
 		t.Fatalf("active answer expired: %v %v", messages, err)
 	}

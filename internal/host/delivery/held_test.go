@@ -213,7 +213,7 @@ func TestTheFirstNoticeWaitsForTheOpening(t *testing.T) {
 		t.Fatal("a notice went out before the session could take it")
 	case <-time.After(3 * pollInterval):
 	}
-	if available, _ := mail.AvailableUnread(f.dir, "api", "api-epoch"); len(available) != 0 {
+	if available, _ := mail.Open(f.dir, "api", "api-epoch").AvailableUnread(); len(available) != 0 {
 		t.Fatal("mail was readable before it was announced")
 	}
 	started := time.Now()

@@ -44,7 +44,7 @@ func TestNeutralEndsWithDistinctIDsReportTwice(t *testing.T) {
 	if reports := finishedFor(t, dir, peer.Name); len(reports) != 2 {
 		t.Fatalf("two ends with distinct ids made %d reports", len(reports))
 	}
-	if waiters := mail.Waiters(dir, self.Name, self.Epoch()); len(waiters) != 0 {
+	if waiters := mail.Open(dir, self.Name, self.Epoch()).Waiters(); len(waiters) != 0 {
 		t.Fatalf("waits remain: %v", waiters)
 	}
 }
@@ -59,7 +59,7 @@ func TestNeutralStoppedThenFinishedEndsOfOneTurnReportTwice(t *testing.T) {
 	readFrom(t, dir, peer)
 	stopped := adapter.TurnEnd{Event: "run/A/T", Thread: "A", Reason: adapter.Aborted, Answer: "stopped", Boundary: boundaryNow(t, dir, self)}
 	confirm(t, dir, self, stopped)
-	if waiters := mail.Waiters(dir, self.Name, self.Epoch()); len(waiters) != 1 {
+	if waiters := mail.Open(dir, self.Name, self.Epoch()).Waiters(); len(waiters) != 1 {
 		t.Fatalf("the stopped end settled the wait: %v", waiters)
 	}
 	final := stopped
@@ -68,7 +68,7 @@ func TestNeutralStoppedThenFinishedEndsOfOneTurnReportTwice(t *testing.T) {
 	if reports := finishedFor(t, dir, peer.Name); len(reports) != 2 {
 		t.Fatalf("a stopped and a finished end made %d reports", len(reports))
 	}
-	if waiters := mail.Waiters(dir, self.Name, self.Epoch()); len(waiters) != 0 {
+	if waiters := mail.Open(dir, self.Name, self.Epoch()).Waiters(); len(waiters) != 0 {
 		t.Fatalf("the finished end did not settle: %v", waiters)
 	}
 }
@@ -148,7 +148,7 @@ func TestNeutralEndsWithoutTheirScopeReportNothing(t *testing.T) {
 					t.Fatalf("reports to %s: %v", peer, files)
 				}
 			}
-			if len(mail.Waiters(dir, "api", self.Epoch())) != 2 {
+			if len(mail.Open(dir, "api", self.Epoch()).Waiters()) != 2 {
 				t.Fatal("the refused end cleared its waits")
 			}
 		})
@@ -170,7 +170,7 @@ func TestNeutralUnclaimedFailuresReachMainAndMainKeepsItsOwn(t *testing.T) {
 			self := selfOf(t, dir)
 			confirm(t, dir, self, adapter.TurnEnd{Event: "run/A/failed", Thread: "A", Reason: adapter.Failed, Answer: "failure", Boundary: boundaryNow(t, dir, self)})
 			if own {
-				messages, err := mail.PeekUnread(dir, "api", self.Epoch())
+				messages, err := mail.Open(dir, "api", self.Epoch()).PeekUnread()
 				if err != nil || len(messages) != 1 || messages[0].Kind != mail.Error {
 					t.Fatalf("main's own failure: %+v %v", messages, err)
 				}
