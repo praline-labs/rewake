@@ -27,6 +27,8 @@ Open a document for numbers, commands and names: the map only points.
 
 ### docs/
 
+- `docs/briefs.md` — Briefs — a markdown brief per task that main writes, bound to workers by send --brief, ticked and commented by them; the records under briefs/, the brief commands, the JSON the shell reads, and the worker tools of both harnesses.
+  sections: The records · The commands · The tools · Tests · Known limits
 - `docs/claude-turns.md` — A Claude Code session's turns through the mod — the outbox and end ids, the hello and its loads, the heartbeat and the live set, readiness and admission, what not holding an end costs.
   sections: The mod's side · The host's side · The live set · Readiness and admission · The start time · What not holding costs
 - `docs/claude.md` — The Claude Code adapter as one mod — loading it, when it does not load, the mod↔host protocol, the peer check, tools, telemetry and the cache's life, control.
@@ -69,7 +71,7 @@ Open a document for numbers, commands and names: the map only points.
 - `docs/remote-control.md` — Main steering a running worker: rewake compact and interrupt, their checks and outcomes, the control directory, how each harness serves it, and the compaction letter.
   sections: The commands · The control directory · The served side · The letter · Known limits · Owner decisions
 - `docs/research-claude-mod.md` — Dated records of what probe mods and rewake's mod were seen to do inside Claude Code, by version.
-  sections: How the first probe ran · P4: the peer of the mod's requests · P11: a process the mod starts · P12b: a subagent of main as the worktree's keeper · P15a: the space's terminal in the keeper's own tool row · P15b: a real pseudo-terminal in the keeper's row · A worker acts on the notice's preview · S4-6: a worker's turns through the mod · The mod on Claude Code 2.1.302 · The workers' pane (October 18, 2026, 2.1.302) · Compactions counted · Effort · The end of the process, as the mod hears it · Entering a checkout mid-session (October 20, 2026, 2.1.302) · Permission requests and questions through the mod · A worker's dialogs in auto mode · The prompt cache (October 23, 2026, 2.1.302) · The mod on Claude Code 2.1.310 (October 25, 2026)
+  sections: How the first probe ran · P4: the peer of the mod's requests · P11: a process the mod starts · P12b: a subagent of main as the worktree's keeper · P15a: the space's terminal in the keeper's own tool row · P15b: a real pseudo-terminal in the keeper's row · A worker acts on the notice's preview · S4-6: a worker's turns through the mod · The mod on Claude Code 2.1.302 · The workers' pane (October 18, 2026, 2.1.302) · Compactions counted · Effort · The end of the process, as the mod hears it · Entering a checkout mid-session (October 20, 2026, 2.1.302) · Permission requests and questions through the mod · A worker's dialogs in auto mode · The prompt cache (October 23, 2026, 2.1.302) · The model's name and thinking · The mod on Claude Code 2.1.310 (October 25, 2026)
 - `docs/research-launch.md` — What a harness binary answers at launch: models, efforts, repeated flags, the settings order, the workers' configuration folder.
   sections: Models, efforts and their catalogues · Which flags may be repeated · When a check through the help text can be trusted · Passing a model and an effort for one launch · How each harness is published on npm · Whether Claude Code has a client-server split to sit between · A prompt draft at launch · A worktree at launch · Hook options and settings order that rewake's launch layer relies on · What the worker profile relies on · A configuration directory of the workers · A read outside the working directories · Claude Code's cross-session inbound gate
 - `docs/research-pi.md` — pi's adapter: how it launches, wakes and hears turns, its wire contract, the bundled copy, and the probes behind each fact.
@@ -82,8 +84,8 @@ Open a document for numbers, commands and names: the map only points.
   sections: Roles · What a session is told · Names
 - `docs/session-state.md` — What main sees of its workers: the state header, the session table, activity labels, availability, compaction and departure notices, and where telemetry comes from.
   sections: The state header · The session table · Activity · Availability notices · Compaction notices · Departure notices · Claude Code source · pi source · Persistence and freshness
-- `docs/shell.md` — rewake's shell — its layout and panes, who owns each pseudo-terminal, closing, the raw stream a worker's pane is fed, the space host's emulator, keys, colours, the bar, the strip, and how it ships.
-  sections: Who owns which pty · How a pane is fed: the raw stream · The space host's emulator · What the widget lacks and what the shell does about it · Solid: registering the widget, room for a modal · The prefix and the room · The bar · The strip · How rewake starts the shell, and how it ships
+- `docs/shell.md` — rewake's shell — its layout and panes, who owns each pseudo-terminal, closing, the raw stream a worker's pane is fed, the space host's emulator, keys, colours, the bar, the strip, the briefs view, and how it ships.
+  sections: Who owns which pty · How a pane is fed: the raw stream · The space host's emulator · What the widget lacks and what the shell does about it · Solid: registering the widget, room for a modal · The prefix and the room · The bar · The strip · The briefs · How rewake starts the shell, and how it ships
 - `docs/space.md` — A space — main starting a worker through a detached space host, the worker's launch, the space record and its states, the listing, closing, kept checkouts and what a restore would read.
   sections: Opening · The worker's launch · The stream to the shell · The record · The listing · Closing · Restore
 - `docs/testing-cases.md` — What each of the 24 workflow scenarios in test/workflow claims — the sessions it starts, what the fixture plays and what it must see — and what none of them proves.
@@ -107,7 +109,7 @@ Open a document for numbers, commands and names: the map only points.
 
 ### docs/roadmap/
 
-- `docs/roadmap/README.md` — The open work and its order — the owner's looks and logins, the acceptance of additive fields — and the ideas not scheduled.
+- `docs/roadmap/README.md` — The open work and its order — the owner's looks and logins, and the acceptance of additive fields — and the ideas not scheduled.
   sections: Open, in order · Not scheduled
 
 ### docs/rules/
