@@ -186,6 +186,9 @@ It goes when the review ends — at `brief close`, and at the close of the revie
 the release a worker's checkout gets at its close ([after the session](#the-launch)): changes,
 a hidden edit or a lock keep it, files git ignores do not, and a commit no local branch holds
 keeps it. A reviewer's checkout given again for a new commit releases the one before. The
+order — create, bind, release the one before, and the checkout taken back when the bind fails —
+and the rule of whose checkout it is are `internal/host/reviewcheckout`'s; this package keeps the
+git safety of the release. The
 record's `review` field is additive: a build without it reads the record as a detached
 checkout with no owner.
 

@@ -1,10 +1,10 @@
 package spacehost
 
 import (
-	"slices"
 	"strings"
 
 	"github.com/praline-labs/rewake/internal/core/space"
+	"github.com/praline-labs/rewake/internal/host/reviewcheckout"
 	"github.com/praline-labs/rewake/internal/host/worktree"
 )
 
@@ -75,20 +75,16 @@ func (h *host) release() (stays, note string) {
 }
 
 // releaseReviews removes the checkouts the worker was given to review in,
-// its run having ended, and says which stay and why. A root that cannot be
-// read leaves them to rm.
+// its run having ended, and says which stay and why, and what kept it from
+// looking.
 func (h *host) releaseReviews() string {
-	root, err := worktree.Root()
-	if err != nil || h.record.Worker.Run == "" {
-		return ""
-	}
-	kept, _ := worktree.ReleaseReviews(root, func(r worktree.Record) bool {
-		return r.Review.Reviewer.Epoch == h.record.Worker.Run && r.Review.Reviewer.Dir == h.spec.Dir
-	})
+	released := reviewcheckout.ReleaseRun(h.spec.Dir, h.record.Worker.Run)
 	var notes []string
-	for path, why := range kept {
-		notes = append(notes, "its review checkout "+path+" stays: "+why)
+	for _, path := range released.Paths() {
+		notes = append(notes, "its review checkout "+path+" stays: "+released.Kept[path])
 	}
-	slices.Sort(notes)
+	if released.Err != nil {
+		notes = append(notes, "its review checkouts could not all be released: "+released.Err.Error())
+	}
 	return strings.Join(notes, "; ")
 }

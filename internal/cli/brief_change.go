@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/praline-labs/rewake/internal/core/taskbrief"
+	"github.com/praline-labs/rewake/internal/host/reviewcheckout"
 )
 
 // The changes of a brief: main's new, edit and close; a bound run's tick and
@@ -67,6 +68,9 @@ type briefClosed struct {
 	// CheckoutsKept are the reviewers' checkouts the close left, each with
 	// why: they hold what removing them would lose.
 	CheckoutsKept map[string]string `json:"checkoutsKept,omitempty"`
+	// CheckoutsError says why some could not be looked at, and so were not
+	// released; the close is done all the same.
+	CheckoutsError string `json:"checkoutsError,omitempty"`
 }
 
 func briefClose(ctx *Context, call Call, home taskbrief.Home, caller briefRun, args []string) error {
@@ -84,14 +88,21 @@ func briefClose(ctx *Context, call Call, home taskbrief.Home, caller briefRun, a
 	if err != nil {
 		return briefError(call, err)
 	}
-	answer := briefClosed{ID: id, Already: already, CheckoutsKept: releaseReviewCheckouts(home.Room, id)}
+	released := reviewcheckout.ReleaseBrief(home.Room, id)
+	answer := briefClosed{ID: id, Already: already, CheckoutsKept: released.Kept}
+	if released.Err != nil {
+		answer.CheckoutsError = released.Err.Error()
+	}
 	return printValue(ctx, answer, func() []string {
 		lines := []string{fmt.Sprintf("Rewake: brief %d closed and archived; its bindings ended. rewake brief list --closed shows it.", id)}
 		if already {
 			lines = []string{fmt.Sprintf("Rewake: brief %d was closed already.", id)}
 		}
-		for path, why := range answer.CheckoutsKept {
-			lines = append(lines, fmt.Sprintf("Rewake: the reviewer's checkout %s stays: %s; rewake worktree rm removes it.", path, why))
+		for _, path := range released.Paths() {
+			lines = append(lines, fmt.Sprintf("Rewake: the reviewer's checkout %s stays: %s; rewake worktree rm removes it.", path, answer.CheckoutsKept[path]))
+		}
+		if answer.CheckoutsError != "" {
+			lines = append(lines, "Rewake: the reviewers' checkouts could not all be released: "+answer.CheckoutsError+"; rewake worktree ls shows them.")
 		}
 		return lines
 	})

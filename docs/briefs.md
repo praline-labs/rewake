@@ -215,7 +215,7 @@ the shell's pane; `brief show` marks a reviewer in its `bound:` line, `api (revi
 binding has ended when the brief is closed or its `run` is `ended`. Main may show a closed
 brief; `--markdown` changes nothing under `--json`. The changes answer: `new` and `edit` a
 summary, `tick` `{id, edition, item}`, `comment` `{id, n}`, `close` `{id, already,
-checkoutsKept?: {path: why}}`.
+checkoutsKept?: {path: why}, checkoutsError?}`.
 
 ## A reviewer's checkout
 
@@ -239,7 +239,9 @@ its own, detached at that commit:
   nothing in it would be lost.
 - **Made before the binding.** The brief is read first, so a missing or closed one makes
   nothing; then the checkout; then the binding records its path and commit; then the letter.
-  A send that fails after the checkout leaves it, `rewake worktree rm` takes it.
+  One module, `internal/host/reviewcheckout`, owns that order (`Give`): a binding that fails
+  takes the checkout just made back. A send that fails after the binding leaves it, `rewake
+  worktree rm` takes it.
 - **The letter.** The checkout is not copied into the letter: the reviewer's inbox prints the
   brief with a line naming the path and commit under the line saying how to act on it, and
   `brief show` (and `brief_read`) print the same line to that reviewer, read from its binding.
@@ -247,7 +249,10 @@ its own, detached at that commit:
 - **Removed when the review ends**: at `brief close`, and when the reviewer's space closes —
   its run ended — each through the release a worker's own checkout gets at its close
   ([worktree.md](worktree.md#a-reviewers-checkout)). One holding changes stays, named in the
-  close's answer (`checkoutsKept`) or the space's end, for `rewake worktree rm`.
+  close's answer (`checkoutsKept`) or the space's end, for `rewake worktree rm`. A release that
+  could not look at them (`checkoutsError`, a line of the space's end, a line on stderr of the
+  send that replaced one) says so and fails nothing: the close, the end and the send are done.
+  The module's `ReleaseBrief` and `ReleaseRun` hold the one rule of whose a checkout is.
 
 ## The tools
 

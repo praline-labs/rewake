@@ -144,7 +144,7 @@ func handleSend(ctx *Context, call Call) error {
 	if err != nil {
 		return err
 	}
-	brief, err := bindBrief(call, dir, self, selfErr, session)
+	brief, err := bindBrief(ctx, call, dir, self, selfErr, session)
 	if err != nil {
 		return err
 	}

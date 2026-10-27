@@ -42,6 +42,7 @@ internal/host/launch/                         a launch's host side: the run's en
 internal/host/herdr/                          main reporting itself to herdr, the terminal manager it runs in: its state from the telemetry, its resume command, the release
 internal/host/delivery/                       the delivery server: the serving loop, notices and their batches, the coalescing window, outcomes and the sweep's lock
 internal/host/terminal/                       a program's pseudo-terminal by the standard library, whether a file is a terminal, the screen the program draws with its input modes, keyboard protocols and title, and the raw stream with its preamble for a late client, the one package the emulator library enters
+internal/host/reviewcheckout/                 a reviewer's checkout from the brief's assignment to its release: create, bind, release the one before, and whose checkout it is at a brief's close and a run's end
 internal/host/spacehost/                      the space host: the worker's pseudo-terminal and screen, the space socket's raw stream for the shell; and opening a space for main (`Open`): the record, the host started, the wait for the worker's registration, the rollback
 internal/host/worktree/                       checkouts rewake makes for a launch: git worktree add, records, land, removal and what keeps one, a worker's release at its close; a reviewer's detached checkout
 scripts/                                      packaging scripts and the tests of the npm shim

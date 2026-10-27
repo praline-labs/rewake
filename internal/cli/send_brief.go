@@ -37,7 +37,7 @@ func briefFlagFits(call Call, kind messageKind) error {
 // the id the letter carries: as work, or with --review to read and comment
 // only, and with --commit in a checkout of its own (send_review.go). Only main gives a brief. A send that fails after this leaves the run
 // bound, a known limit (docs/briefs.md).
-func bindBrief(call Call, dir string, self registry.Session, selfErr error, recipient registry.Session) (string, error) {
+func bindBrief(ctx *Context, call Call, dir string, self registry.Session, selfErr error, recipient registry.Session) (string, error) {
 	value, given := call.Flags["brief"]
 	if !given {
 		return "", nil
@@ -55,7 +55,7 @@ func bindBrief(call Call, dir string, self registry.Session, selfErr error, reci
 	}
 	var err error
 	if _, commit := call.Flags["commit"]; commit {
-		err = reviewCheckout(call, dir, self, recipient, id)
+		err = reviewCheckout(ctx, call, dir, self, recipient, id)
 	} else {
 		err = taskbrief.Bind(quietHomeOf(dir), id, taskbrief.Author{Name: recipient.Name, Epoch: recipient.Epoch()}, kind)
 	}
