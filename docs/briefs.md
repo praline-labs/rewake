@@ -104,7 +104,7 @@ made with `--dir` is forgotten by such a wipe, a known limit.
 - **Ids** stay the room's: past the highest of the room's directories, `closed/`, the index and
   every `brief-<id>` in the project's folder, whatever room made it, so no name collides.
 - **Moved.** An indexed brief whose folder is gone or holds no `brief.json` — a task archived with
-  its folder — lists in `unreadable` as `{path, why: "moved"}`, so `--json` readers and the shell
+  its folder — or holds another room's brief now, lists in `unreadable` as `{path, why: "moved"}`, so `--json` readers and the shell
   need no new field. `show`, `tick`, `comment`, `edit` and `send --brief` answer that the brief
   moved, exit 1, and nothing else fails. `brief close` of it marks its index entry `closed` and
   never removes the entry: no id is taken again while the room lives.

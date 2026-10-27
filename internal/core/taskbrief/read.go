@@ -117,11 +117,16 @@ func find(home Home, id int) (path string, outside bool, err error) {
 	if !ok {
 		return "", false, ErrNotFound
 	}
-	if _, err := os.Lstat(filepath.Join(entry.Path, recordFile)); err != nil {
-		if errors.Is(err, os.ErrNotExist) || errors.Is(err, syscall.ENOTDIR) {
-			return "", true, &MovedError{ID: id, Path: entry.Path}
-		}
+	var record Record
+	err = readJSON(filepath.Join(entry.Path, recordFile), &record)
+	switch {
+	case errors.Is(err, os.ErrNotExist), errors.Is(err, syscall.ENOTDIR):
+		return "", true, &MovedError{ID: id, Path: entry.Path}
+	case err != nil:
 		return "", true, err
+	case !home.isOurs(record):
+		// Another room's brief now stands where ours was.
+		return "", true, &MovedError{ID: id, Path: entry.Path}
 	}
 	return entry.Path, true, nil
 }
@@ -267,31 +272,40 @@ func List(home Home, closed bool) ([]Brief, []Problem, error) {
 			archived = append(archived, brief)
 		}
 	}
-	scanned, err := foldersIn(home.Folder)
-	if err != nil {
-		return nil, nil, err
-	}
-	seen := map[string]bool{}
-	for _, id := range scanned {
-		seen[folderPath(home.Folder, id)] = true
-		load(id, folderPath(home.Folder, id), true)
-	}
 	idx, err := readIndex(dir)
 	if err != nil {
 		return nil, nil, err
 	}
+	// The index decides first for the paths it names: a tombstone or a
+	// brief of another room there is moved, not an error of the scan.
+	indexedPath := map[string]bool{}
+	for _, entry := range idx.Briefs {
+		indexedPath[entry.Path] = true
+	}
+	scanned, err := foldersIn(home.Folder)
+	if err != nil {
+		return nil, nil, err
+	}
+	for _, id := range scanned {
+		if folder := folderPath(home.Folder, id); !indexedPath[folder] {
+			load(id, folder, true)
+		}
+	}
 	for _, id := range idx.ids() {
 		entry := idx.Briefs[FormatID(id)]
-		if seen[entry.Path] {
-			continue
-		}
-		if _, err := os.Lstat(filepath.Join(entry.Path, recordFile)); errors.Is(err, os.ErrNotExist) || errors.Is(err, syscall.ENOTDIR) {
+		brief, err := loadAt(entry.Path, id)
+		switch {
+		case errors.Is(err, os.ErrNotExist), errors.Is(err, syscall.ENOTDIR), err == nil && !home.isOurs(brief.Record):
 			if !entry.Closed {
 				problems = append(problems, Problem{Path: entry.Path, Why: "moved"})
 			}
-			continue
+		case err != nil:
+			problems = append(problems, Problem{Path: entry.Path, Why: err.Error()})
+		case !brief.IsClosed():
+			open = append(open, brief)
+		case closed:
+			archived = append(archived, brief)
 		}
-		load(id, entry.Path, false)
 	}
 	byNewest := func(a, b Brief) int { return b.ID - a.ID }
 	slices.SortFunc(open, byNewest)

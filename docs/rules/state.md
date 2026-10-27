@@ -223,9 +223,10 @@ precedence over a missing lease; every refusal is counted, so a swallowed one st
 A folder of the project, where a brief may live, is admitted for the length of one call:
 `WithOutside(room, folder, fn)` refuses unless the room is leased and the folder is absolute, clean,
 reaches no link and lies neither in, around nor under any state directory, and inside `fn` the
-guard takes writes under the folder as it takes a room's, the view and no-lease checks of each
-write unchanged; only the briefs' package calls it
-(`TestOnlyTheBriefsAdmitAFolderOutsideTheRoom`). A reply socket outside the room is claimed for that one clean path and widens nothing of
+guard takes writes under the folder as it takes a room's: the view check and the lease check of
+each write, against the admitting room, so a write after the lease went is refused, and a link
+anywhere between the folder and the path refuses it too, checked at the write. Only the briefs'
+package refers to it (`TestOnlyTheBriefsAdmitAFolderOutsideTheRoom`, over the syntax tree). A reply socket outside the room is claimed for that one clean path and widens nothing of
 any state: a path in a state directory, as written or where its links lead, is guarded by
 the lease of the room it lies in, and a spelling that only cleans to the claimed path is
 refused, since the kernel follows a link before a `..`. The write primitives are
@@ -260,6 +261,8 @@ Tests:
 - `internal/infra/state/outside_test.go` `TestOnlyTheBriefsAdmitAFolderOutsideTheRoom`
 - `internal/infra/state/outside_test.go` `TestAFolderOutsideTheRoomIsWritableOnlyInsideItsAdmission`
 - `internal/core/taskbrief/outside_test.go` `TestOnlyAFolderOfTheProjectIsAdmitted`
+- `internal/core/taskbrief/outside_test.go` `TestALinkInsideAnAdmittedFolderTakesNoWrite`
+- `internal/core/taskbrief/outside_test.go` `TestAnAdmissionEndsWithItsRoomsLease`
 - `internal/infra/state/bypass_test.go` `TestStateWritesHaveNoBypass`
 - `internal/infra/state/bypass_test.go` `TestTheBypassCheckSeesEveryWrite`
 - `internal/infra/state/bypass_test.go` `TestTheBypassTableFailsOnAStaleEntry`

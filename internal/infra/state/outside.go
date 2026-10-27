@@ -18,33 +18,39 @@ import (
 // ErrOutsideRefused is a folder that WithOutside will not admit.
 var ErrOutsideRefused = errors.New("not a folder rewake may write for a room")
 
+// admission is one folder admitted for a room, for the length of one call.
+type admission struct{ room, folder string }
+
 var admitted struct {
-	mu      sync.Mutex
-	folders map[string]int
+	mu   sync.Mutex
+	held map[admission]int
 }
 
-// WithOutside runs fn with writes under folder admitted, as under a leased
-// room. It refuses unless the process holds the room's lease, and folder is
-// absolute, clean, reaches no link and lies apart from the state base: a
-// folder that held the base would admit every room in it.
+// WithOutside runs fn with writes under folder admitted for room, as under a
+// leased room: each write inside asks the room's lease again, so one made
+// after the lease went is refused, and reaches no link below the folder. It
+// refuses unless the process holds the room's lease, and folder is absolute,
+// clean, reaches no link and lies apart from the state base: a folder that
+// held the base would admit every room in it.
 func WithOutside(room, folder string, fn func() error) error {
-	if !leased(room) {
+	if !leasedRoom(filepath.Clean(room)) {
 		return refuseNoLease(opLock, room)
 	}
 	if err := checkOutside(room, folder); err != nil {
 		return err
 	}
+	entry := admission{room: filepath.Clean(room), folder: folder}
 	admitted.mu.Lock()
-	if admitted.folders == nil {
-		admitted.folders = map[string]int{}
+	if admitted.held == nil {
+		admitted.held = map[admission]int{}
 	}
-	admitted.folders[folder]++
+	admitted.held[entry]++
 	admitted.mu.Unlock()
 	defer func() {
 		admitted.mu.Lock()
 		defer admitted.mu.Unlock()
-		if admitted.folders[folder]--; admitted.folders[folder] <= 0 {
-			delete(admitted.folders, folder)
+		if admitted.held[entry]--; admitted.held[entry] <= 0 {
+			delete(admitted.held, entry)
 		}
 	}()
 	return fn()
@@ -89,16 +95,42 @@ func within(path, dir string) bool {
 }
 
 // admittedOutside answers whether path lies inside a folder WithOutside
-// admits now.
+// admits now, for a room whose lease is still held, with no link on the way
+// from the folder to it: a link put where a directory was would take the
+// write elsewhere. The walk is a check at the write, not a lock on the tree.
 func admittedOutside(path string) bool {
 	admitted.mu.Lock()
 	defer admitted.mu.Unlock()
-	for folder := range admitted.folders {
-		if within(path, folder) {
+	for entry := range admitted.held {
+		if within(path, entry.folder) && leasedRoom(entry.room) && linkFree(entry.folder, path) {
 			return true
 		}
 	}
 	return false
+}
+
+// linkFree says that no part of path below folder, as far as it exists, is a
+// link.
+func linkFree(folder, path string) bool {
+	rest, err := filepath.Rel(folder, path)
+	if err != nil {
+		return false
+	}
+	at := folder
+	for _, part := range strings.Split(rest, string(filepath.Separator)) {
+		if part == "." {
+			continue
+		}
+		at = filepath.Join(at, part)
+		info, err := os.Lstat(at)
+		if err != nil {
+			return true // not made yet, nothing to follow
+		}
+		if info.Mode()&os.ModeSymlink != 0 {
+			return false
+		}
+	}
+	return true
 }
 
 // EnsureOutsideDir creates a directory inside an admitted folder, with the

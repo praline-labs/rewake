@@ -174,3 +174,81 @@ func buildRoomNamed(t *testing.T, name string) string {
 	}
 	return buildtest.Room(t, base, name)
 }
+
+// Another room's brief that stands where ours was is not ours to write.
+func TestARoomDoesNotWriteABriefThatReplacedItsOwn(t *testing.T) {
+	folder := t.TempDir()
+	a := Home{Room: buildRoomNamed(t, "a"), Folder: folder}
+	b := Home{Room: buildRoomNamed(t, "b"), Folder: folder}
+	if _, err := New(a, main, "# A", ""); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Rename(filepath.Join(folder, "brief-1"), filepath.Join(t.TempDir(), "archived")); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := New(b, main, "# B", ""); err != nil {
+		t.Fatal(err)
+	}
+	var moved *MovedError
+	if _, err := Edit(a, 1, main, 1, "# overwritten by A"); !errors.As(err, &moved) {
+		got, _ := Load(b, 1)
+		t.Fatalf("room A edited room B's brief (%v): room %q text %q", err, got.Room, got.Text)
+	}
+	if _, _, err := Comment(a, 1, worker, "x"); !errors.As(err, &moved) {
+		t.Errorf("a comment on it: %v", err)
+	}
+}
+
+// A link put where a directory of the brief was must not take a write out of
+// the admitted folder.
+func TestALinkInsideAnAdmittedFolderTakesNoWrite(t *testing.T) {
+	home, folder := folderHome(t)
+	if _, err := New(home, main, "# A", ""); err != nil {
+		t.Fatal(err)
+	}
+	text := filepath.Join(folder, "brief-1", "text")
+	elsewhere := filepath.Join(t.TempDir(), "text")
+	if err := os.Rename(text, elsewhere); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(elsewhere, text); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Edit(home, 1, main, 1, "# escaped"); err == nil {
+		raw, _ := os.ReadFile(filepath.Join(elsewhere, "2.md"))
+		t.Fatalf("an edit went through a link out of the folder: %q", raw)
+	}
+}
+
+// A write inside an admission is a write of its room: once the lease is gone
+// it is refused.
+func TestAnAdmissionEndsWithItsRoomsLease(t *testing.T) {
+	home := Home{Room: room(t)}
+	folder := t.TempDir()
+	err := state.WithOutside(home.Room, folder, func() error {
+		buildtest.Release(home.Room)
+		return state.WriteAtomic(filepath.Join(folder, "x"), []byte("escaped"))
+	})
+	if !errors.Is(err, state.ErrNoLease) {
+		t.Fatalf("a write after the room's lease was released: %v", err)
+	}
+}
+
+// A brief closed after its record went is a tombstone, not an error of the
+// scan.
+func TestAClosedTombstoneIsNotListed(t *testing.T) {
+	home, folder := folderHome(t)
+	if _, err := New(home, main, "# A", ""); err != nil {
+		t.Fatal(err)
+	}
+	record := filepath.Join(folder, "brief-1", "brief.json")
+	if err := os.Rename(record, record+".moved"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Close(home, 1); err != nil {
+		t.Fatal(err)
+	}
+	if _, problems, err := List(home, true); err != nil || len(problems) != 0 {
+		t.Fatalf("a closed moved brief remains listed: %v, %v", problems, err)
+	}
+}

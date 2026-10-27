@@ -2,16 +2,19 @@ package state
 
 import (
 	"errors"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 )
 
 // WithOutside lets a write reach a folder the room does not hold, so only the
-// briefs' package calls it (docs/rules/state.md#what-is-a-writer): a call
-// from anywhere else of internal/ would be a write nobody reviewed.
+// briefs' package refers to it (docs/rules/state.md#what-is-a-writer): a
+// reference from anywhere else of internal/ — a call, an alias, a function
+// value — would be a write nobody reviewed.
 func TestOnlyTheBriefsAdmitAFolderOutsideTheRoom(t *testing.T) {
 	root := filepath.Join("..", "..")
 	var calls []string
@@ -23,15 +26,16 @@ func TestOnlyTheBriefsAdmitAFolderOutsideTheRoom(t *testing.T) {
 		if strings.Contains(slash, "/infra/state/") || strings.Contains(slash, "/core/taskbrief/") {
 			return nil
 		}
-		raw, err := os.ReadFile(path)
+		file, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
 		if err != nil {
 			return err
 		}
-		for _, name := range []string{"state.WithOutside(", "state.EnsureOutsideDir("} {
-			if strings.Contains(string(raw), name) {
-				calls = append(calls, slash+": "+name)
+		ast.Inspect(file, func(node ast.Node) bool {
+			if selector, ok := node.(*ast.SelectorExpr); ok && (selector.Sel.Name == "WithOutside" || selector.Sel.Name == "EnsureOutsideDir") {
+				calls = append(calls, slash+": "+selector.Sel.Name)
 			}
-		}
+			return true
+		})
 		return nil
 	})
 	if err != nil {
