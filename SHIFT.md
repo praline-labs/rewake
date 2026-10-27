@@ -27,7 +27,7 @@ Open a document for numbers, commands and names: the map only points.
 
 ### docs/
 
-- `docs/briefs.md` — Briefs — a markdown brief per task that main writes, bound to workers by send --brief, ticked and commented by them; the records under briefs/, where a brief lives (the room or a folder of the project), the brief commands, the JSON the shell reads, and the worker tools of both harnesses.
+- `docs/briefs.md` — Briefs — a markdown brief per task that main writes, bound to workers by send --brief, ticked and commented by them, read and commented by a reviewer given it with --review; the records under briefs/, where a brief lives (the room or a folder of the project), the brief commands, the JSON the shell reads, and the worker tools of both harnesses.
   sections: The records · Where a brief lives · The commands · The tools · Tests · Known limits
 - `docs/claude-turns.md` — A Claude Code session's turns through the mod — the outbox and end ids, the hello and its loads, the heartbeat and the live set, readiness and admission, what not holding an end costs.
   sections: The mod's side · The host's side · The live set · Readiness and admission · The start time · What not holding costs
