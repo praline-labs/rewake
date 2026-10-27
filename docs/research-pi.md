@@ -6,7 +6,8 @@ description: pi's adapter: how it launches, wakes and hears turns, its wire cont
 
 Verified October 18, 2026 against installed `@earendil-works/pi-coding-agent` 1.2.0.
 This package, not the older reference checkout, is the source for this adapter. Since
-October 19, 2026 pi is shipped with rewake at the pinned **1.3.0**, which a launch of the
+October 19, 2026 pi is shipped with rewake at a pinned version, **1.3.0** then and **1.4.0** since
+October 27, 2026 ([below](#the-bundled-pi)), which a launch of the
 shipped copy requires exactly ([below](#the-bundled-pi)); the minimum, **1.2.0**, holds a pi
 named with `--command`, and the gate refuses older or unreadable versions. Main also compared the 1.3.0 package on October 18: its extension
 declarations were byte-identical to 1.2.0 and its changelog contained no extension, event or
@@ -346,3 +347,31 @@ through `REWAKE_PI`, a private HOME and `REWAKE_DIR` under `/tmp`, no login, in 
 extension wrote its marker and the boundary was live 0.8 s after the start; nothing was written
 to `trust.json` or `~/.pi`. The same build without the change showed "Trust project folder?" with
 neither within 25 s. With `-na` typed, no prompt, the boundary live and the marker not written.
+
+**Raised to 1.4.0, October 27, 2026.** The 1.3.0 and 1.4.0 packages were installed side by side
+and compared. Byte-identical: `dist/core/extensions/types.d.ts` (the extension API rewake's
+extension uses), `dist/cli/args.js`, `dist/main.js` (flags and the settings read before
+`--version`), `dist/utils/clipboard.js`. What changed, none of it in rewake's contract: the
+changelog's provider-attribution headers, summaries without a fixed output cap, codemode worker
+queueing, model catalogue entries and defaults; `AgentSession` gained a private-field removal and
+a method to omit a failed attempt; the extension loader also resolves `@earendil-works/pi-ai/models`;
+`pi-tui` restores the terminal on an exit without teardown (mouse, focus, keyboard and alternate
+screen modes), which does not change the modes it turns on; the clipboard helper
+(`clipboard-command.js`) starts `wl-copy`/`xclip`/`xsel` detached so Ctrl+Z does not stop them,
+which `docs/shell.md`'s copy path does not depend on.
+
+**[live]** October 27, 2026, the branch's build with 1.4.0 beside it in one `node_modules`
+(`REWAKE_SHELL` at an installed shell), a private HOME and a short `REWAKE_DIR` under `/tmp`, a
+pty of 120 by 40, no login, `--model openai-codex/gpt-5.3-codex-spark --thinking minimal`:
+
+| Check | Seen |
+|---|---|
+| the shipped copy starts | pi's screen `v1.4.0`, `[Extensions] extension.ts`, `rewake list` showed `main-pi`, the status line `idle · … minimal thinking` |
+| `REWAKE_PI` at the 1.3.0 package | refused before the claim: `pi 1.3.0 was found where rewake's own copy should be; this rewake runs pi 1.4.0: reinstall rewake, or name another program with --command` |
+| `--command` at the 1.3.0 `pi` | started, `v1.3.0` on its screen; the note (`… is not the 1.4.0 this rewake was checked with`, `internal/adapter/pi/launch.go`, held by `ship_test.go`) was not visible in the captured screen |
+
+`go test ./internal/adapter/pi/... ./internal/host/launch/` and the extension's `bun test` (14
+tests) pass. Not run, because they need a model and the owner's login: a turn's answer reaching
+main through the bundled 1.4.0, and the telemetry's thinking level and `model.reasoning` on a real
+model. `scripts/pack.sh 0.0.1` wrote `"@earendil-works/pi-coding-agent": "1.4.0"` into the entry's
+dependencies.

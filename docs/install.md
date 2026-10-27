@@ -58,7 +58,7 @@ go build -ldflags "-X github.com/praline-labs/rewake/internal/cli.built=$(date -
   -o "$dir/rewake.new" ./cmd/rewake
 mv -f "$dir/rewake.new" "$dir/rewake"
 (cd shell && bun install --frozen-lockfile && bun build.ts bun-linux-x64 "$dir/rewake-shell")
-npm install --prefix "$dir" @earendil-works/pi-coding-agent@1.3.0
+npm install --prefix "$dir" @earendil-works/pi-coding-agent@1.4.0
 ln -sf "$dir/rewake" ~/.local/bin/rewake
 ```
 
