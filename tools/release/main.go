@@ -23,6 +23,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 )
 
 func main() {
@@ -59,11 +60,23 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	return g.release(ctx)
 }
 
+// sleep waits d, or less when ctx ends first.
+func sleep(ctx context.Context, d time.Duration) error {
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		return nil
+	}
+}
+
 func usage(to io.Writer) {
 	_, _ = fmt.Fprint(to, `release — build, check and, only when told, publish the npm package of rewake
 
   go run ./tools/release <version>                        check everything, publish nothing
-  go run ./tools/release <version> --publish [--otp <code>]
+  go run ./tools/release <version> --publish [--otp <code>] [--wait[=<duration>]]
 
 Without --publish nothing is uploaded: the gate checks, builds and reports, and
 a dry run keeps going past a failed check so that one run shows every problem.
@@ -105,21 +118,26 @@ https://registry.npmjs.org/, and stops at the first failure, naming what was
 and was not published. It asks the registry for each version and the
 dist-tags afterwards and reports; a version not visible yet a minute after
 its upload, or a tag not on it, is reported and ends the run with 1 and no
-tag, since only a later look tells a delay from an upload npm skipped. The
-git tag is printed, not created.
+tag, since only a later look tells a delay from an upload npm skipped. With
+--wait it asks again every 30 seconds until every version and tag is there,
+40 minutes unless a duration is given, and only then reports. The git tag is
+printed, not created.
 
   go run ./tools/release 1.0.0
   go run ./tools/release 1.0.0 --publish --otp 123456
+  go run ./tools/release 1.0.0 --publish --wait
 
 Flags
   --publish       upload the packages once every check passed
   --otp <code>    a one-time password, passed to npm publish
+  --wait[=<d>]    after the uploads, wait for the registry to show them
+                  (default 40m), then report
   --help          this text
 
 Exit codes
   0  every check passed; with --publish, every package was published
   1  a check failed, a publish did not complete, or a version it published
-     or a dist-tag is not visible yet
+     or a dist-tag is not visible yet (with --wait, by the end of the wait)
   2  the call was wrong
 `)
 }

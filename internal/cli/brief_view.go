@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -43,6 +44,10 @@ type boundRun struct {
 	// Kind is its right: work reads, ticks and comments, review reads and
 	// comments.
 	Kind taskbrief.BindingKind `json:"kind"`
+	// Checkout and Commit are a reviewer's checkout of its own, if it was
+	// given one.
+	Checkout string `json:"checkout,omitempty"`
+	Commit   string `json:"commit,omitempty"`
 }
 
 type briefListing struct {
@@ -99,7 +104,7 @@ func briefSummaryOf(brief taskbrief.Brief) briefSummary {
 		if run == "" {
 			run = "unknown"
 		}
-		summary.Bound = append(summary.Bound, boundRun{Name: binding.Name, Epoch: binding.Epoch, Since: binding.Since, Run: run, Kind: binding.Kind.Of()})
+		summary.Bound = append(summary.Bound, boundRun{Name: binding.Name, Epoch: binding.Epoch, Since: binding.Since, Run: run, Kind: binding.Kind.Of(), Checkout: binding.Checkout, Commit: binding.Commit})
 	}
 	return summary
 }
@@ -169,7 +174,7 @@ func briefShow(ctx *Context, call Call, home taskbrief.Home, caller briefRun, ar
 	if err != nil {
 		return briefError(call, err)
 	}
-	reader := asMain
+	reader, checkout := asMain, ""
 	if !caller.isMain() {
 		binding, bound := brief.BindingOf(caller.author)
 		if !bound {
@@ -178,13 +183,21 @@ func briefShow(ctx *Context, call Call, home taskbrief.Home, caller briefRun, ar
 		if brief.IsClosed() {
 			return briefError(call, &taskbrief.ClosedError{ID: id})
 		}
-		reader = binding.Kind.Of()
+		reader, checkout = binding.Kind.Of(), reviewCheckoutLine(binding)
 	}
 	view := briefDetailOf(brief)
 	if call.Switch("markdown") && !ctx.JSON {
 		return emit(ctx, strings.Split(strings.TrimSuffix(view.Text, "\n"), "\n")...)
 	}
-	return printValue(ctx, view, func() []string { return view.lines(reader) })
+	return printValue(ctx, view, func() []string {
+		lines := view.lines(reader)
+		if checkout != "" {
+			// After the line saying how to act on it.
+			at := slices.Index(lines, view.how(reader)) + 1
+			lines = slices.Insert(lines, at, checkout)
+		}
+		return lines
+	})
 }
 
 // lines are the brief as a reader reads it — main, or a run by the kind of

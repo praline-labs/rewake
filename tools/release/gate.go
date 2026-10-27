@@ -26,6 +26,10 @@ type gate struct {
 	// arch is this machine's npm cpu, "" when no package serves it.
 	arch     string
 	failures []string
+	// clock and pause are the time --wait reads and sleeps; nil is the
+	// real one.
+	clock func() time.Time
+	pause func(ctx context.Context, d time.Duration) error
 }
 
 func (g *gate) say(format string, args ...any) {

@@ -28,7 +28,7 @@ Under the room, beside `inbox/` and `spaces/`:
 
 ```
 briefs/.lock                 one flock for every write under briefs/
-briefs/<id>/brief.json       {id, created, bound: [{name, epoch, since, kind: work|review}]}, closed once closed
+briefs/<id>/brief.json       {id, created, bound: [{name, epoch, since, kind: work|review, checkout?, commit?}]}, closed once closed
 briefs/<id>/log/<n>.json     {n, at, from, epoch, kind: edit|tick|untick|comment, edition, item, itemText | text, capacity}
 briefs/<id>/text/<e>.md      the text of edition e, as main wrote it
 briefs/closed/<id>/          a closed brief, moved whole
@@ -82,7 +82,8 @@ briefs/index.json            {briefs: {"<id>": {path, closed?}}}, the briefs kep
   ticks and comments, `review` reads and comments. A comment's `capacity` is the kind of its
   writer's binding when it wrote, kept as written though the binding changes later. Both are
   additive: a binding written before them has no `kind` and is `work`, a comment none and shows
-  its writer's name alone.
+  its writer's name alone. A review binding given a checkout names its path and commit
+  ([below](#a-reviewers-checkout)), additive too.
 - **The letter.** A task or question sent with `--brief` carries `brief: "<id>"`, an additive
   field of the message record ([mailbox-records.md](mailbox-records.md)); the brief's text is not copied into it.
 
@@ -136,12 +137,12 @@ The `brief` group of the command table, with `--json` on each, examples parsed a
 |---|---|---|---|
 | `brief new <text>` or `--file <path>`, `[--dir <path>]` | main | change | a new brief; answers its id and title. Text at most 64 KiB, not empty. Where it goes: [above](#where-a-brief-lives) |
 | `brief edit <id> --rev <n> <text>` or `--file <path>` | main | change | replaces the text whole, refused unless `n` is still the brief's revision; the ticks since the last edit end there |
-| `brief close <id>` | main | change | moves it to `closed/`; every binding ends |
+| `brief close <id>` | main | change | moves it to `closed/`; every binding ends, and the reviewers' checkouts go unless they hold work |
 | `brief list [--closed]` | main | view | open briefs, or closed ones too: id, title, done of items, comments, who is bound and whether that run lives |
 | `brief show <id> [--markdown]` | main, a bound run | view | a header with the edition and the revision, the bound runs, the text with ticks applied and each item's number, the comments; `--markdown` prints only the text with ticks applied, no numbers, for main to edit |
 | `brief tick <id> <n> --edition <e> [--undo]` | a run bound as `work` | change | ticks or unticks item `n` of edition `e`, refused once main edited since; answers the item's text |
 | `brief comment <id> -- <text>` | a bound run | change | markdown, at most 1000 characters (code points), not empty; recorded with the binding's kind as its capacity |
-| `send <worker> <text> --brief <id> [--review]` | main | change | a task or `--question` that binds the brief to the recipient's run, as `work` or with `--review` as `review`, and carries the brief; refused beside `--notify`; `--review` without `--brief` is refused |
+| `send <worker> <text> --brief <id> [--review [--commit <rev>]]` | main | change | a task or `--question` that binds the brief to the recipient's run, as `work` or with `--review` as `review`, and carries the brief; with `--commit` the reviewer gets a checkout of its own at that commit; refused beside `--notify`; `--review` without `--brief`, and `--commit` without `--review`, are refused |
 
 - **Who.** "main" is the verified run of the room's main (`ownRunIn`, its record's role `main`, as
   `compact` checks); "a bound run" is a run whose name and epoch `brief.json` lists. Anyone else is
@@ -186,7 +187,7 @@ brief list [--closed] --json  {room, briefs: [summary], unreadable: [{path, why}
 summary                       {id, title, closed, created, closedAt?, edition, revision,
                                done, total, commentCount,
                                bound: [{name, epoch, since, run: running|ended|unknown,
-                                        kind: work|review}]}
+                                        kind: work|review, checkout?, commit?}]}
 brief show <id> --json        summary and {text, items: [{n, text, done}],
                                comments: [{n, from, at, edition, text, capacity?}]}
                               n is the comment's place among the brief's comments, 1, 2, 3 …,
@@ -206,7 +207,40 @@ the shell's pane; `brief show` marks a reviewer in its `bound:` line, `api (revi
 `text` is the current text with the ticks applied and no numbers, what `<markdown>` renders; a
 binding has ended when the brief is closed or its `run` is `ended`. Main may show a closed
 brief; `--markdown` changes nothing under `--json`. The changes answer: `new` and `edit` a
-summary, `tick` `{id, edition, item}`, `comment` `{id, n}`, `close` `{id, already}`.
+summary, `tick` `{id, edition, item}`, `comment` `{id, n}`, `close` `{id, already,
+checkoutsKept?: {path: why}}`.
+
+## A reviewer's checkout
+
+Decided by the owner, October 27, 2026, from the retro: a reviewer three times reviewed a
+writer's checkout that had moved on to its next brief, and main made
+`git worktree add --detach /tmp/rewake-review-<name> <commit>` by hand. So
+`send <reviewer> "..." --brief <id> --review --commit <rev>` gives the reviewer a checkout of
+its own, detached at that commit:
+
+- **Which commit: main's word.** `--commit` takes a commit, branch or tag, resolved in the
+  repository main's session runs in (its record's working directory), where every writer's
+  worktree branch is visible. Rejected: the bound writer's HEAD at send time — main often gives
+  the writer its next brief before the review goes out, which is the very case that failed, and
+  main has the commit from the writer's report anyway. Without `--commit`, `--review` gives no
+  checkout, as before: a review of a document needs none.
+- **The checkout** is a `git worktree add --detach` under the worktree root, beside the launch
+  checkouts, named `review-<id>-<reviewer>-<commit's first 7>`, with a record like theirs
+  ([worktree.md](worktree.md#a-reviewers-checkout)): no branch, no session, and a `review`
+  field naming the brief and the reviewer's run. The same commit given again finds the
+  checkout it has; a new commit makes another, and the one the binding named before goes when
+  nothing in it would be lost.
+- **Made before the binding.** The brief is read first, so a missing or closed one makes
+  nothing; then the checkout; then the binding records its path and commit; then the letter.
+  A send that fails after the checkout leaves it, `rewake worktree rm` takes it.
+- **The letter.** The checkout is not copied into the letter: the reviewer's inbox prints the
+  brief with a line naming the path and commit under the line saying how to act on it, and
+  `brief show` (and `brief_read`) print the same line to that reviewer, read from its binding.
+  `--owed` prints it again after a compaction.
+- **Removed when the review ends**: at `brief close`, and when the reviewer's space closes —
+  its run ended — each through the release a worker's own checkout gets at its close
+  ([worktree.md](worktree.md#a-reviewers-checkout)). One holding changes stays, named in the
+  close's answer (`checkoutsKept`) or the space's end, for `rewake worktree rm`.
 
 ## The tools
 
@@ -247,7 +281,8 @@ logic); the records' format and the rights (`taskbrief/store_test.go`), a review
 record from before kinds (`taskbrief/review_test.go`); a project's folder, the wiped room, a moved brief, a shared folder and the admitted folders (`taskbrief/outside_test.go`, `cli/brief_folder_test.go`, `state/outside_test.go`); the `--json` the shell
 reads, the checks before any effect and the rights of the commands (`cli/brief_test.go`); the
 binding of `send --brief` and what `inbox` and `--owed` print (`cli/brief_send_test.go`), and
-`--review` from the send to the show (`cli/brief_review_test.go`); the
+`--review` from the send to the show (`cli/brief_review_test.go`), a reviewer's checkout from
+the send to the close (`cli/brief_review_checkout_test.go`, `worktree/review_test.go`); the
 tools' argv and refused input in the mod's `tests/briefs.test.ts` and pi's `briefs.test.ts`; and
 one workflow scenario, `brief`: main makes a brief, sends it, the fixture worker reads it with
 its task, ticks and comments, a reviewer given it with `--review` is refused a tick and comments,

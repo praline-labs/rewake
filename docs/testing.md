@@ -124,6 +124,22 @@ mod and pi's extension, leaving out the generated `protocol.gen.ts` and `room_vi
 escape-sequence parsers may write control characters in a regular expression, and the mod's
 test doubles may be `any`, standing in for the host's untyped objects.
 
+**Landing a step** on `v2` is `go run ./tools/land <branch-or-commit>`, from the main checkout
+on `v2` with a clean tree. It fast-forwards `v2`, or makes a merge commit with the subject
+`--subject` gives and the two `Co-Authored-By` lines it reads from `AGENTS.md`, and refuses a
+conflict with the tree left as it was. Then the checks of a step's last commit, every one even
+after a red one: `go test -race -shuffle=on -timeout 20m ./...` with `-p 4`, or `-p 2` while the
+process list shows another `go test -race` or a run over a whole tree; the whole workflow suite
+with `-v`; and the shell's `bun install --frozen-lockfile && bun run check` when `shell/` changed
+between the old `v2` and the new. On green it pushes `v2` and builds `cmd/rewake` into
+`~/.local/share/rewake2/rewake.next` (`--install <dir>` for another), renamed over `rewake` there:
+the owner's rule, a swap right after landing and green checks, and the room runs it once
+restarted. On red, or interrupted during the checks, it resets `v2` to where it was — nothing was pushed — and names the failing
+checks. It prints those lines and the path of a log under `.scratch/land/` with every command's
+output; `--no-push` is a dry run that resets `v2` after the checks, green or red. Exit 0 landed
+(with `--no-push`, green), 1 a refusal, a red check or a failed push or install, 2 a wrong call.
+The scenarios a change touches are the floor; the tool runs them all, half a minute more.
+
 **Every `go test`** clears `REWAKE_SESSION`, `REWAKE_EPOCH`, `REWAKE_DIR` and `REWAKE_ROOM`,
 the workflow suite's included, because a test that inherits them reads the live session's state
 as its own. The unit tests start no harness, no container and no network request, whatever else

@@ -53,6 +53,9 @@ func (e *RefusedError) Error() string {
 // any other checkout is refused: that may be a worker's, the worktree's own
 // among them, and a merge there would change files and HEAD under it.
 func Land(record Record, into string) (Landing, error) {
+	if record.Review != nil {
+		return Landing{}, &StateError{Reason: fmt.Sprintf("%s is a reviewer's checkout, detached with no branch to land: rewake worktree rm %s removes it", record.Ref(), record.Ref())}
+	}
 	if repositoryGone(record) {
 		return Landing{}, &StateError{Reason: fmt.Sprintf("the repository %s of %s is gone", record.CommonDir, record.Ref())}
 	}

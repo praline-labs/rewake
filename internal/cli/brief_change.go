@@ -64,6 +64,9 @@ func briefEdit(ctx *Context, call Call, home taskbrief.Home, caller briefRun, ar
 type briefClosed struct {
 	ID      int  `json:"id"`
 	Already bool `json:"already"`
+	// CheckoutsKept are the reviewers' checkouts the close left, each with
+	// why: they hold what removing them would lose.
+	CheckoutsKept map[string]string `json:"checkoutsKept,omitempty"`
 }
 
 func briefClose(ctx *Context, call Call, home taskbrief.Home, caller briefRun, args []string) error {
@@ -81,12 +84,16 @@ func briefClose(ctx *Context, call Call, home taskbrief.Home, caller briefRun, a
 	if err != nil {
 		return briefError(call, err)
 	}
-	answer := briefClosed{ID: id, Already: already}
+	answer := briefClosed{ID: id, Already: already, CheckoutsKept: releaseReviewCheckouts(home.Room, id)}
 	return printValue(ctx, answer, func() []string {
+		lines := []string{fmt.Sprintf("Rewake: brief %d closed and archived; its bindings ended. rewake brief list --closed shows it.", id)}
 		if already {
-			return []string{fmt.Sprintf("Rewake: brief %d was closed already.", id)}
+			lines = []string{fmt.Sprintf("Rewake: brief %d was closed already.", id)}
 		}
-		return []string{fmt.Sprintf("Rewake: brief %d closed and archived; its bindings ended. rewake brief list --closed shows it.", id)}
+		for path, why := range answer.CheckoutsKept {
+			lines = append(lines, fmt.Sprintf("Rewake: the reviewer's checkout %s stays: %s; rewake worktree rm removes it.", path, why))
+		}
+		return lines
 	})
 }
 

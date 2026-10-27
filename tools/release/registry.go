@@ -22,6 +22,10 @@ var registryFlags = []string{"--registry", registry, "--" + scope + ":registry="
 const (
 	viewLimit    = time.Minute
 	publishLimit = 5 * time.Minute
+	// pollEvery is how often --wait asks the registry again: often enough
+	// that a release seen is reported within a minute, rarely enough that
+	// forty minutes of it are eighty calls of four looks each.
+	pollEvery = 30 * time.Second
 )
 
 // presence is what the registry says about one package at one version.
@@ -187,48 +191,111 @@ func (g *gate) publishAll(ctx context.Context) bool {
 	return true
 }
 
-// verify asks the registry for what was just published, once, without
-// retrying: right after an upload the registry may answer 404 for a while. It
-// reports whether every version was seen and every dist-tag points at its
-// upload; one that does not may be delay, or an upload npm skipped while
-// saying it made it, and only a later look tells.
-func (g *gate) verify(ctx context.Context) bool {
-	g.say("")
-	g.say("in the registry now:")
-	var unseen []string
+// view is what the registry showed of the release at one look: each
+// package's version, and each dist-tag.
+type view struct {
+	// seen says, per package in order, whether its version is there; why is
+	// set when it could not be asked.
+	seen []presence
+	why  []string
+	// tags are the dist-tags, nil when they could not be read.
+	tags map[string]string
+}
+
+// look asks the registry once for every version of the release and for the
+// dist-tags.
+func (g *gate) look(ctx context.Context) view {
+	var v view
 	for _, p := range packages {
-		ref := p.ref(g.version)
-		switch answer, why := g.lookup(ctx, packageName, p.version(g.version)); answer {
-		case present:
-			g.say("  %s visible", ref)
-		case absent:
-			g.say("  %s not visible yet", ref)
-			unseen = append(unseen, ref)
-		default:
-			g.say("  %s could not be asked: %s", ref, why)
-			unseen = append(unseen, ref)
-		}
+		answer, why := g.lookup(ctx, packageName, p.version(g.version))
+		v.seen, v.why = append(v.seen, answer), append(v.why, why)
 	}
 	args := append([]string{"view", packageName, "dist-tags", "--json"}, registryFlags...)
 	r := g.run(ctx, viewLimit, g.root, "npm", args...)
 	var tags map[string]string
-	read := r.ok() && json.Unmarshal([]byte(strings.TrimSpace(r.stdout)), &tags) == nil
-	var untagged []string
+	if r.ok() && json.Unmarshal([]byte(strings.TrimSpace(r.stdout)), &tags) == nil {
+		v.tags = tags
+	}
+	return v
+}
+
+// missing names the packages not visible and the tags not on their upload.
+func (g *gate) missing(v view) (unseen, untagged []string) {
+	for index, p := range packages {
+		if v.seen[index] != present {
+			unseen = append(unseen, p.ref(g.version))
+		}
+		if v.tags == nil || v.tags[p.tag(g.version)] != p.version(g.version) {
+			untagged = append(untagged, p.tag(g.version))
+		}
+	}
+	return unseen, untagged
+}
+
+// verify asks the registry for what was just published and reports whether
+// every version was seen and every dist-tag points at its upload. Without
+// --wait it asks once: right after an upload the registry may answer 404 for
+// a while, and one that does not show may be delay, or an upload npm skipped
+// while saying it made it, and only a later look tells. With --wait it asks
+// again every pollEvery until all is there or the wait is over, then reports
+// the last look.
+func (g *gate) verify(ctx context.Context) bool {
+	v := g.look(ctx)
+	if g.wait > 0 {
+		deadline := g.clockNow().Add(g.wait)
+		for {
+			unseen, untagged := g.missing(v)
+			if len(unseen) == 0 && len(untagged) == 0 {
+				break
+			}
+			left := deadline.Sub(g.clockNow())
+			if left <= 0 {
+				g.say("")
+				g.say("waited %s; the registry still does not show all of the release", g.wait)
+				break
+			}
+			g.say("waiting for the registry (%s left): %s", left.Round(time.Second), strings.Join(append(unseen, untagged...), ", "))
+			if g.sleep(ctx, min(pollEvery, left)) != nil {
+				g.say("")
+				g.say("the wait was interrupted")
+				break
+			}
+			v = g.look(ctx)
+		}
+	}
+	return g.report(v)
+}
+
+// report prints a look at the registry and says whether it shows the whole
+// release.
+func (g *gate) report(v view) bool {
+	g.say("")
+	g.say("in the registry now:")
+	for index, p := range packages {
+		ref := p.ref(g.version)
+		switch v.seen[index] {
+		case present:
+			g.say("  %s visible", ref)
+		case absent:
+			g.say("  %s not visible yet", ref)
+		default:
+			g.say("  %s could not be asked: %s", ref, v.why[index])
+		}
+	}
 	for _, p := range packages {
 		tag, want := p.tag(g.version), p.version(g.version)
 		switch {
-		case !read:
+		case v.tags == nil:
 			g.say("  the tag %s could not be read yet: npm view %s dist-tags", tag, packageName)
-		case tags[tag] == want:
+		case v.tags[tag] == want:
 			g.say("  %s is %s", tag, want)
-			continue
-		case tags[tag] == "":
+		case v.tags[tag] == "":
 			g.say("  there is no tag %s yet; if it stays so: npm dist-tag add %s %s", tag, p.ref(g.version), tag)
 		default:
-			g.say("  %s is %s, not %s; if it stays so: npm dist-tag add %s %s", tag, tags[tag], want, p.ref(g.version), tag)
+			g.say("  %s is %s, not %s; if it stays so: npm dist-tag add %s %s", tag, v.tags[tag], want, p.ref(g.version), tag)
 		}
-		untagged = append(untagged, tag)
 	}
+	unseen, untagged := g.missing(v)
 	if len(unseen) > 0 {
 		g.say("")
 		g.say("npm said every upload went through, but the registry does not show %s yet. That is usually its delay; it can also be an upload npm skipped. Ask again in a few minutes, and tag only once each is there:", strings.Join(unseen, ", "))
@@ -248,4 +315,20 @@ func listOrNone(refs []string) string {
 		return "none"
 	}
 	return strings.Join(refs, ", ")
+}
+
+// clockNow is the time --wait reads: the gate's clock, else the real one.
+func (g *gate) clockNow() time.Time {
+	if g.clock == nil {
+		return time.Now()
+	}
+	return g.clock()
+}
+
+// sleep is --wait's pause: the gate's, else the real one.
+func (g *gate) sleep(ctx context.Context, d time.Duration) error {
+	if g.pause == nil {
+		return sleep(ctx, d)
+	}
+	return g.pause(ctx, d)
 }

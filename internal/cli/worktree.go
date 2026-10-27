@@ -251,8 +251,8 @@ func removeWorktree(ctx *Context, call Call, record worktree.Record) error {
 	})
 }
 
-// ownerLabel names who works in a checkout: the sessions running there, or
-// the one it was made for, ended.
+// ownerLabel names who works in a checkout: the sessions running there, the
+// one it was made for, ended, or the reviewer it was made for.
 func ownerLabel(view worktreeView) string {
 	switch {
 	case view.Running:
@@ -266,6 +266,8 @@ func ownerLabel(view worktreeView) string {
 		return "- (launching)"
 	case view.Session != nil:
 		return view.Session.Name + " (ended)"
+	case view.Review != nil:
+		return view.Review.Reviewer.Name + " (review of brief " + view.Review.Brief + ")"
 	}
 	return "-"
 }

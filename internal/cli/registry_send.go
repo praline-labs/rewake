@@ -19,6 +19,7 @@ func sendCommand(catalog adapter.Catalog) *Command {
 			Option{Flag: "--to", Value: "<id>", Summary: "Add to an unreported task or question this run sent: a task of its own, announced at once, shown with it by rewake inbox --owed and settled by the same report. Takes a unique prefix of the id; an id rewake edit replaced adds to the replacement."},
 			Option{Flag: "--brief", Value: "<id>", Summary: "Main only, with a task or a --question: give this brief of rewake brief list with it. The recipient's run may then read, tick and comment it, and reads its text with the letter."},
 			Option{Flag: "--review", Summary: "With --brief: give the brief to review — the recipient's run reads and comments it but never ticks. Giving it again without --review makes it the run's work, and the other way round."},
+			Option{Flag: "--commit", Value: "<rev>", Summary: "With --brief --review: give the reviewer a detached checkout of this commit, branch or tag of the repository main runs in, under the worktree root; the letter names its path. It is removed when the brief closes or the reviewer's run ends, unless it holds changes."},
 			jsonOption,
 		),
 		Examples: sendExamples(catalog),

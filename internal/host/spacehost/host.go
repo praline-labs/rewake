@@ -223,6 +223,9 @@ func (h *host) close(why string) error {
 	if note != "" {
 		why += "; " + note
 	}
+	if kept := h.releaseReviews(); kept != "" {
+		why += "; " + kept
+	}
 	why = space.WithStays(why, stays)
 	_, err := space.Close(h.spec.Dir, h.spec.ID, space.End{
 		At: time.Now().UTC(), Why: why, Worker: space.WorkerEnded, Checkout: seen(h.spec.Dir, h.record),

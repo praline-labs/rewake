@@ -43,14 +43,15 @@ internal/host/herdr/                          main reporting itself to herdr, th
 internal/host/delivery/                       the delivery server: the serving loop, notices and their batches, the coalescing window, outcomes and the sweep's lock
 internal/host/terminal/                       a program's pseudo-terminal by the standard library, whether a file is a terminal, the screen the program draws with its input modes, keyboard protocols and title, and the raw stream with its preamble for a late client, the one package the emulator library enters
 internal/host/spacehost/                      the space host: the worker's pseudo-terminal and screen, the space socket's raw stream for the shell; and opening a space for main (`Open`): the record, the host started, the wait for the worker's registration, the rollback
-internal/host/worktree/                       checkouts rewake makes for a launch: git worktree add, records, land, removal and what keeps one, a worker's release at its close
+internal/host/worktree/                       checkouts rewake makes for a launch: git worktree add, records, land, removal and what keeps one, a worker's release at its close; a reviewer's detached checkout
 scripts/                                      packaging scripts and the tests of the npm shim
 test/workflow/                                the workflow suite: end-to-end scenarios against fixtures
 test/workflow/record/                         the record format a suite run prints and the summarizer reads
 test/launch/                                  a space's worker command checked against every registered harness, with and without a worktree
 test/leaserig/                                the room's build lease raced between real builds of rewake, each paused at a named step
 tools/checksummary/                           summarizes a suite run into a few lines and summary.json
-tools/release/                                the release gate: checks, builds with pack.sh, publishes only when told
+tools/release/                                the release gate: checks, builds with pack.sh, publishes only when told, waits for the registry with --wait
+tools/land/                                   lands an accepted branch on v2: merges, runs a step's last-commit checks, pushes and installs rewake2's build, or resets on red
 tools/protogen/                               writes the Go and TypeScript types of two schemas, the mod protocol's and the shell's room view (internal/cli/room_view.schema.json); its test fails when a checked-in file differs
 ```
 

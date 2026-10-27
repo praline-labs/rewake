@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 )
 
 // call is a parsed command line.
@@ -13,7 +14,14 @@ type call struct {
 	version string
 	publish bool
 	otp     string
+	// wait is how long --publish waits for the registry to show the
+	// release; 0 asks once.
+	wait time.Duration
 }
+
+// defaultWait is --wait without a value: arm64's build of 2.5.0 took 25
+// minutes to show.
+const defaultWait = 40 * time.Minute
 
 // semver is the grammar of semver.org 2.0.0, the one npm accepts.
 var semver = regexp.MustCompile(`^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)` +
@@ -56,9 +64,18 @@ func parseArgs(args []string) (call, error) {
 				return c, errors.New("--otp needs the code")
 			}
 			c.otp = joined
+		case "--wait":
+			c.wait = defaultWait
+			if hasValue {
+				wait, err := time.ParseDuration(joined)
+				if err != nil || wait <= 0 {
+					return c, fmt.Errorf("--wait takes a duration such as 40m or 1h, not %q", joined)
+				}
+				c.wait = wait
+			}
 		default:
 			if strings.HasPrefix(argument, "-") {
-				return c, fmt.Errorf("no flag %s; the flags are --publish, --otp and --help", argument)
+				return c, fmt.Errorf("no flag %s; the flags are --publish, --otp, --wait and --help", argument)
 			}
 			if c.version != "" {
 				return c, fmt.Errorf("one version only: %s and %s", c.version, argument)
@@ -90,6 +107,9 @@ func parseArgs(args []string) (call, error) {
 	}
 	if c.otp != "" && !c.publish {
 		return c, errors.New("--otp is for --publish: a dry run uploads nothing")
+	}
+	if c.wait > 0 && !c.publish {
+		return c, errors.New("--wait is for --publish: it waits for the uploads to show in the registry")
 	}
 	return c, nil
 }
