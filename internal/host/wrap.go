@@ -19,6 +19,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/core/control"
+	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/core/space"
@@ -64,11 +65,12 @@ type Request struct {
 	// RoleReason says why the launch has its role, for the record and the
 	// briefing; empty says the role was selected with its flag.
 	RoleReason string
-	// OnTurn publishes a turn's end the run's TurnBoundary reported.
-	OnTurn func(context.Context, registry.Session, adapter.TurnEnd) error
+	// OnTurn publishes a turn's end the run's TurnBoundary reported, and
+	// answers what the published end said.
+	OnTurn func(context.Context, registry.Session, adapter.TurnEnd) (mail.Outcome, error)
 	// OnConfirm runs an end the adapter may hold open, beside OnTurn
-	// (adapter.TurnHandler.Confirm).
-	OnConfirm func(context.Context, registry.Session, adapter.TurnEnd) (string, error)
+	// (adapter.TurnHandler.Confirm); a held one answers its reason in Held.
+	OnConfirm func(context.Context, registry.Session, adapter.TurnEnd) (mail.Outcome, error)
 	// OnClaimed hears the session once its name is claimed, before the
 	// harness is planned: whatever was prepared for the launch learns whose
 	// it is. An error ends the launch.

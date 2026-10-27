@@ -53,7 +53,8 @@ func (lab endLab) end(t *testing.T, id string) TurnEnd {
 
 func (lab endLab) complete(t *testing.T, end TurnEnd) error {
 	t.Helper()
-	return CompleteTurn(t.Context(), lab.dir, lab.self, end, "thread-1", TurnEndOptions{})
+	_, err := CompleteTurn(t.Context(), lab.dir, lab.self, end, "thread-1", TurnEndOptions{})
+	return err
 }
 
 // finished is what web holds of api's finished reports.

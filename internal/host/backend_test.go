@@ -69,9 +69,9 @@ func TestBackendStartsBeforeTUIAndSharesItsLifetime(t *testing.T) {
 			fake := &backendHarness{fakeHarness: fakeHarness{script: fmt.Sprintf("test -f %q", marker)}, backend: backend}
 			observed := false
 			started := time.Now()
-			code, err := Run(context.Background(), Request{Harness: fake, Dir: dir, Name: "api", OnTurn: func(_ context.Context, self registry.Session, result adapter.TurnEnd) error {
+			code, err := Run(context.Background(), Request{Harness: fake, Dir: dir, Name: "api", OnTurn: func(_ context.Context, self registry.Session, result adapter.TurnEnd) (mail.Outcome, error) {
 				observed = self.Name == "api-fake" && result.Answer == "result"
-				return nil
+				return mail.Outcome{}, nil
 			}})
 			if err != nil || !observed || !backend.closed {
 				t.Fatalf("lifecycle: code=%d err=%v observed=%v closed=%v", code, err, observed, backend.closed)

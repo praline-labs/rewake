@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/adapter"
+	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/registry"
 )
 
@@ -61,13 +62,13 @@ func TestTheWrapperPassesEachEndOnWithItsEventAndReason(t *testing.T) {
 	var published, confirmed []adapter.TurnEnd
 	_, err := Run(context.Background(), Request{
 		Harness: fake, Dir: dir, Name: "api",
-		OnTurn: func(_ context.Context, _ registry.Session, end adapter.TurnEnd) error {
+		OnTurn: func(_ context.Context, _ registry.Session, end adapter.TurnEnd) (mail.Outcome, error) {
 			published = append(published, end)
-			return nil
+			return mail.Outcome{}, nil
 		},
-		OnConfirm: func(_ context.Context, _ registry.Session, end adapter.TurnEnd) (string, error) {
+		OnConfirm: func(_ context.Context, _ registry.Session, end adapter.TurnEnd) (mail.Outcome, error) {
 			confirmed = append(confirmed, end)
-			return "", nil
+			return mail.Outcome{}, nil
 		},
 	})
 	if err != nil {

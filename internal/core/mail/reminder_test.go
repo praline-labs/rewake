@@ -76,8 +76,9 @@ func TestAFinishedTurnIsRemindedOnceOfTheTaskItLeftUnread(t *testing.T) {
 	}
 }
 
-// An interim end says the work goes on, and an end a later one superseded has
-// that later end's window: neither reminds.
+// An interim end says the work goes on: its publication calls it no finish,
+// so it is never looked at. An end a later one superseded has that later end's
+// window, and reminds of nothing.
 func TestAnInterimOrSupersededEndRemindsOfNothing(t *testing.T) {
 	lab := newUnattendedLab(t)
 	lab.left(t, Task, boottime.Now())
@@ -86,11 +87,9 @@ func TestAnInterimOrSupersededEndRemindsOfNothing(t *testing.T) {
 	}
 	interim := lab.end(t, "interim")
 	interim.Started = 0
-	if err := lab.complete(t, interim); err != nil {
-		t.Fatal(err)
-	}
-	if left := lab.unattended(t, interim.Ended); len(left) != 0 {
-		t.Fatalf("an interim end reminded of %v", ids(left))
+	outcome, err := CompleteTurn(t.Context(), lab.dir, lab.self, interim, "thread-1", TurnEndOptions{})
+	if err != nil || !outcome.Interim || outcome.Finished != 0 {
+		t.Fatalf("an interim end said %+v, %v; want interim and no finish", outcome, err)
 	}
 
 	lab = newUnattendedLab(t)

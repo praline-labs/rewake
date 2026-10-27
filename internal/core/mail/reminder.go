@@ -11,16 +11,17 @@ import "fmt"
 // announced in, and the reminded turn's window opens after that end.
 
 // Unattended answers the letters asking for work that this run still has
-// unread after its finished turn end at ended (boot clock), of those announced
-// inside that turn's window: after the run's previous end on record, up to
-// ended. announced answers when a letter's notice was handed to the harness,
-// on the boot clock; the delivery server keeps that for its run only.
+// unread after its finished turn end at ended (boot clock), Outcome.Finished
+// of the end's publication, of those announced inside that turn's window:
+// after the run's previous end on record, up to ended. announced answers when
+// a letter's notice was handed to the harness, on the boot clock; the delivery
+// server keeps that for its run only.
 //
 // The window is TurnWindowStart's without the turn's own start: a task that
 // woke an idle session was announced before its turn began, and is that
-// turn's all the same. An end the interim record shows was interim, or that a
-// later end of the run has superseded, reminds of nothing: a pending end says
-// the work goes on, and the later end has its own window.
+// turn's all the same. An end a later end of the run has superseded by the
+// time it is looked at reminds of nothing: the later end has its own window,
+// and only the record says one was published.
 func (b Box) Unattended(ended int64, announced func(id string) (int64, bool)) ([]Message, error) {
 	if ended == 0 {
 		return nil, nil
@@ -29,7 +30,7 @@ func (b Box) Unattended(ended int64, announced func(id string) (int64, bool)) ([
 	if err != nil {
 		return nil, err
 	}
-	if record != nil && record.Epoch == b.epoch && (record.Ended > ended || record.Ended == ended && !record.Settled) {
+	if record != nil && record.Epoch == b.epoch && record.Ended > ended {
 		return nil, nil
 	}
 	start, err := turnWindowStart(b.dir, b.name, b.epoch, 0, ended)

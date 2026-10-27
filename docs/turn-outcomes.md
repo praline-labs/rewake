@@ -95,7 +95,8 @@ can hold an end open; in this build that is the fixture's alone, and on Claude C
 briefing alone asks for the mark (O1's known limit).
 
 - **How.** The adapter calls the completion handler's `Confirm` in place of `Publish`, and
-  `ConfirmCompletion` answers `""` when the end was published, or a reason when it was held;
+  `ConfirmCompletion` answers what the end said (`mail.Outcome`): its reason in `Held` when
+  it was held, which the wrapper hands the adapter, `""` when it was published;
   the adapter continues the turn with that reason and confirms the next end again. Such an
   end names its event and may be retried, so it is refused without its event id and read
   boundary.

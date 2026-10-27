@@ -3,24 +3,21 @@ package host
 import (
 	"testing"
 
-	"github.com/praline-labs/rewake/internal/adapter"
+	"github.com/praline-labs/rewake/internal/core/mail"
 )
 
-// Only a turn that finished with an answer is looked at for the reminder: a
-// failed, refused or stopped one keeps the rule that a session is woken only
-// by new mail (docs/turn-outcomes.md), and an end of no known time has no
-// window.
+// The delivery server hears the end of a turn its publication called finished,
+// and of no other: the wrapper forwards the core's word on the end rather than
+// judge the adapter's (cli's completion tests hold what is called finished).
 func TestOnlyAFinishedEndReachesTheReminder(t *testing.T) {
 	ends := make(chan int64, 8)
-	for _, end := range []adapter.TurnEnd{
-		{Reason: adapter.Failed, Answer: "broke", Ended: 1},
-		{Reason: adapter.Refused, Answer: "no", Ended: 2},
-		{Reason: adapter.Aborted, Answer: "stopped", Ended: 3},
-		{Reason: adapter.Answered, Answer: " ", Ended: 4},
-		{Reason: adapter.Answered, Answer: "done"},
-		{Reason: adapter.Answered, Answer: "done", Ended: 6},
+	for _, outcome := range []mail.Outcome{
+		{Held: "asked to confirm"},
+		{Interim: true},
+		{},
+		{Finished: 6},
 	} {
-		finished(ends, end)
+		finished(ends, outcome)
 	}
 	close(ends)
 	var got []int64
@@ -30,5 +27,5 @@ func TestOnlyAFinishedEndReachesTheReminder(t *testing.T) {
 	if len(got) != 1 || got[0] != 6 {
 		t.Fatalf("ends passed on %v, want only the finished one", got)
 	}
-	finished(nil, adapter.TurnEnd{Reason: adapter.Answered, Answer: "done", Ended: 7})
+	finished(nil, mail.Outcome{Finished: 7})
 }

@@ -11,27 +11,29 @@ import (
 )
 
 // ReportCompletion publishes a turn's end with the scope it captured, without
-// sampling newer reads. An end without its event, its scope or a known reason
-// is refused, and the waits it would answer stay owed for the next end
+// sampling newer reads, and answers what the published end said
+// (mail.Outcome). An end without its event, its scope or a known reason is
+// refused, and the waits it would answer stay owed for the next end
 // (docs/rules/effects.md, E7).
-func ReportCompletion(ctx context.Context, dir string, self registry.Session, end adapter.TurnEnd) error {
+func ReportCompletion(ctx context.Context, dir string, self registry.Session, end adapter.TurnEnd) (mail.Outcome, error) {
 	if err := end.Check(); err != nil {
-		return fmt.Errorf("%w; report remains pending", err)
+		return mail.Outcome{}, fmt.Errorf("%w; report remains pending", err)
 	}
-	return runGone(mail.CompleteTurn(ctx, dir, self, turnEndOf(end), end.Thread, mail.TurnEndOptions{BeforeReports: beforeReports}))
+	outcome, err := mail.CompleteTurn(ctx, dir, self, turnEndOf(end), end.Thread, mail.TurnEndOptions{BeforeReports: beforeReports})
+	return outcome, runGone(err)
 }
 
 // ConfirmCompletion runs an end the adapter can hold open: it publishes it and
-// answers "", or holds it, keeps its answer and answers the reason the adapter
-// continues the turn with (docs/rules/adapter-api.md#turnboundary). A held end
-// confirmed again — its answer lost — is known by its event, and answered the
-// same.
-func ConfirmCompletion(ctx context.Context, dir string, self registry.Session, end adapter.TurnEnd) (string, error) {
+// answers what it said, or holds it, keeps its answer and answers in Held the
+// reason the adapter continues the turn with
+// (docs/rules/adapter-api.md#turnboundary). A held end confirmed again — its
+// answer lost — is known by its event, and answered the same.
+func ConfirmCompletion(ctx context.Context, dir string, self registry.Session, end adapter.TurnEnd) (mail.Outcome, error) {
 	if err := end.Check(); err != nil {
-		return "", fmt.Errorf("%w; report remains pending", err)
+		return mail.Outcome{}, fmt.Errorf("%w; report remains pending", err)
 	}
-	reason, err := mail.EndTurn(ctx, dir, self, turnEndOf(end), true, end.Thread, mail.TurnEndOptions{BeforeReports: beforeReports})
-	return reason, runGone(err)
+	outcome, err := mail.EndTurn(ctx, dir, self, turnEndOf(end), true, end.Thread, mail.TurnEndOptions{BeforeReports: beforeReports})
+	return outcome, runGone(err)
 }
 
 // runGone is the adapter's word for an end of a run proven no longer to own

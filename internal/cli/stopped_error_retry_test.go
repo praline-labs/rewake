@@ -29,7 +29,7 @@ func TestStoppedAndErrorRetriesSettleOriginalScopeOnce(t *testing.T) {
 	// Both events were observed before the second message, but publication is delayed.
 	second := readFrom(t, dir, peer)
 	for _, event := range []adapter.TurnEnd{stopped, stopped, final, final} {
-		if err := ReportCompletion(context.Background(), dir, self, event); err != nil {
+		if _, err := ReportCompletion(context.Background(), dir, self, event); err != nil {
 			t.Fatal(err)
 		}
 	}

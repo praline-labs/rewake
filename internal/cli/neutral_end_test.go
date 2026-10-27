@@ -17,8 +17,8 @@ import (
 // confirm hands one end to the core as an adapter that can hold it does.
 func confirm(t *testing.T, dir string, self registry.Session, completion adapter.TurnEnd) {
 	t.Helper()
-	if reason, err := ConfirmCompletion(context.Background(), dir, self, completion); err != nil || reason != "" {
-		t.Fatalf("confirming %s: reason %q, %v", completion.Event, reason, err)
+	if outcome, err := ConfirmCompletion(context.Background(), dir, self, completion); err != nil || outcome.Held != "" {
+		t.Fatalf("confirming %s: reason %q, %v", completion.Event, outcome.Held, err)
 	}
 }
 

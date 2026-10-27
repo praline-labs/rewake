@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strings"
 	"sync"
 	"testing"
 
@@ -51,9 +50,9 @@ func startServing(ctx context.Context, request Request, self registry.Session, n
 			if request.OnTurn == nil {
 				return nil
 			}
-			err := request.OnTurn(ctx, reportSession, end)
+			outcome, err := request.OnTurn(ctx, reportSession, end)
 			if err == nil {
-				finished(ends, end)
+				finished(ends, outcome)
 			}
 			return err
 		}}
@@ -64,11 +63,11 @@ func startServing(ctx context.Context, request Request, self registry.Session, n
 		}
 		if request.OnConfirm != nil {
 			handler.Confirm = func(ctx context.Context, end adapter.TurnEnd) (string, error) {
-				reason, err := request.OnConfirm(ctx, reportSession, end)
-				if err == nil && reason == "" {
-					finished(ends, end)
+				outcome, err := request.OnConfirm(ctx, reportSession, end)
+				if err == nil {
+					finished(ends, outcome)
 				}
-				return reason, err
+				return outcome.Held, err
 			}
 		}
 		plan.TurnBoundary.ReportTurns(handler)
@@ -104,16 +103,16 @@ func startServing(ctx context.Context, request Request, self registry.Session, n
 	return stop, nil
 }
 
-// finished passes a published end that finished with an answer to the
-// delivery server, which reminds of what its turn left unread. A failed,
-// stopped or empty end, or one of no known time, reminds of nothing; an end
-// the server has no room for is dropped rather than wait on it.
-func finished(ends chan<- int64, end adapter.TurnEnd) {
-	if end.Reason != adapter.Answered || strings.TrimSpace(end.Answer) == "" || end.Ended == 0 {
+// finished passes the end of a turn its publication called finished
+// (mail.Outcome) to the delivery server, which reminds of what that turn left
+// unread; any other end reminds of nothing. An end the server has no room for
+// is dropped rather than wait on it.
+func finished(ends chan<- int64, outcome mail.Outcome) {
+	if outcome.Finished == 0 {
 		return
 	}
 	select {
-	case ends <- end.Ended:
+	case ends <- outcome.Finished:
 	default:
 	}
 }

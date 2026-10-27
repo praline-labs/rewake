@@ -30,11 +30,11 @@ func (lab interimLab) heldEnd(t *testing.T) adapter.TurnEnd {
 // again confirms an end as it is, its boundary included.
 func (lab interimLab) again(t *testing.T, end adapter.TurnEnd) string {
 	t.Helper()
-	reason, err := ConfirmCompletion(context.Background(), lab.dir, lab.self, end)
+	outcome, err := ConfirmCompletion(context.Background(), lab.dir, lab.self, end)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return reason
+	return outcome.Held
 }
 
 func (lab interimLab) clockPath() string {
@@ -100,7 +100,11 @@ func TestTwoEqualConfirmationsAtOnceHoldOnce(t *testing.T) {
 	reasons := make([]string, 2)
 	errs := make([]error, 2)
 	for i := range reasons {
-		wg.Go(func() { reasons[i], errs[i] = ConfirmCompletion(context.Background(), lab.dir, lab.self, end) })
+		wg.Go(func() {
+			var outcome mail.Outcome
+			outcome, errs[i] = ConfirmCompletion(context.Background(), lab.dir, lab.self, end)
+			reasons[i] = outcome.Held
+		})
 	}
 	wg.Wait()
 	if errs[0] != nil || errs[1] != nil || reasons[0] == "" || reasons[0] != reasons[1] {

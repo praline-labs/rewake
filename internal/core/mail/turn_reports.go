@@ -45,10 +45,12 @@ func turnOp(self registry.Session, event TurnEnd) string {
 //
 // The scope is the event's (docs/delivery-turn-end.md#the-operation): waits
 // and the kept answer at or below its read boundary, the pending mark in its
-// window. mark is that mark, nil when there is none.
-func publishTurnContext(ctx context.Context, dir string, self registry.Session, event TurnEnd, currentThread string, waiters []Waiter, op string, mark *Mark) error {
+// window. mark is that mark, nil when there is none. It answers what the
+// published end said: interim under the mark, finished when it finished with
+// words.
+func publishTurnContext(ctx context.Context, dir string, self registry.Session, event TurnEnd, currentThread string, waiters []Waiter, op string, mark *Mark) (Outcome, error) {
 	if err := ctx.Err(); err != nil {
-		return err
+		return Outcome{}, err
 	}
 	var through *uint64
 	if event.Boundary != nil {
@@ -61,7 +63,7 @@ func publishTurnContext(ctx context.Context, dir string, self registry.Session, 
 	// without it, the report would lose the answer.
 	held, kept, err := keptAnswerThrough(dir, self.Name, self.Epoch(), through)
 	if err != nil {
-		return err
+		return Outcome{}, err
 	}
 	if kept {
 		if event.Failed || event.Stopped {
@@ -82,22 +84,26 @@ func publishTurnContext(ctx context.Context, dir string, self registry.Session, 
 		}
 		pending, event.Text = true, text
 	}
+	outcome := Outcome{Interim: pending}
+	if !event.Failed && !event.Stopped && !pending && strings.TrimSpace(event.Text) != "" {
+		outcome.Finished = event.Ended
+	}
 	reports, reported, err := prepareTurnReports(dir, self, event, pending, currentThread, waiters, op)
 	if err != nil {
-		return err
+		return Outcome{}, err
 	}
 	for _, report := range reports {
 		if err := ctx.Err(); err != nil {
-			return err
+			return Outcome{}, err
 		}
 		if err := writeTurnReport(dir, self.Name, report); err != nil {
-			return fmt.Errorf("could not write the report %s to %s: %w", report.ID, report.To, err)
+			return Outcome{}, fmt.Errorf("could not write the report %s to %s: %w", report.ID, report.To, err)
 		}
 	}
 	if !event.Stopped && !pending {
 		for _, waiter := range reported {
 			if err := clearAwaiting(dir, self.Name, self.Epoch(), waiter); err != nil {
-				return fmt.Errorf("could not clear what %s was owed: %w", waiter.Name, err)
+				return Outcome{}, fmt.Errorf("could not clear what %s was owed: %w", waiter.Name, err)
 			}
 		}
 	}
@@ -105,7 +111,7 @@ func publishTurnContext(ctx context.Context, dir string, self registry.Session, 
 		// Taken once published, and only this version of it: an answer kept
 		// after it is a later turn end's.
 		if err := live(dir).dropKeptVersion(self.Name, self.Epoch(), held.Version); err != nil {
-			return err
+			return Outcome{}, err
 		}
 	}
 	// What the next unmarked turn end is asked about. A stop says nothing of
@@ -118,7 +124,7 @@ func publishTurnContext(ctx context.Context, dir string, self registry.Session, 
 			line = &mark.Text
 		}
 		if err := recordInterim(dir, self.Name, self.Epoch(), op, event.Ended, line, !pending && !event.Stopped); err != nil {
-			return err
+			return Outcome{}, err
 		}
 	}
 	// Every end whose time is known is recorded, one that did nothing too:
@@ -126,13 +132,16 @@ func publishTurnContext(ctx context.Context, dir string, self registry.Session, 
 	// is named beside it, so that end confirmed again learns it was published
 	// with this one (HeldEndTaken).
 	if event.Ended == 0 && len(reports) == 0 && len(reported) == 0 && !kept {
-		return nil
+		return outcome, nil
 	}
 	done := TurnJournal{Epoch: self.Epoch(), Op: op, Ended: event.Ended, Done: true}
 	if kept {
 		done.Held = held.Held
 	}
-	return writeDoneJournal(dir, self.Name, op, done)
+	if err := writeDoneJournal(dir, self.Name, op, done); err != nil {
+		return Outcome{}, err
+	}
+	return outcome, nil
 }
 
 // writeTurnReport writes one report into its recipient's mailbox unless it is

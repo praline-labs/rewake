@@ -33,11 +33,11 @@ func reasonReporting(kind mail.Kind) adapter.EndReason {
 func (lab interimLab) confirm(t *testing.T, end adapter.TurnEnd) string {
 	t.Helper()
 	end.Boundary = boundaryNow(t, lab.dir, lab.self)
-	reason, err := ConfirmCompletion(context.Background(), lab.dir, lab.self, end)
+	outcome, err := ConfirmCompletion(context.Background(), lab.dir, lab.self, end)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return reason
+	return outcome.Held
 }
 
 // reportsOf answers the texts of web's reports of one kind.
