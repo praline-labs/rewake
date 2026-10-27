@@ -47,8 +47,8 @@ func TestEveryFailureOfTheConfirmationCheckFallsToPublishing(t *testing.T) {
 				return nil
 			}
 			t.Cleanup(func() { state.Fault = nil })
-			if reason, err := EndTurn(t.Context(), lab.dir, lab.self, end, true, "", TurnEndOptions{}); err != nil || reason != "" {
-				t.Fatalf("the failed hold check: reason %q, error %v", reason, err)
+			if outcome, err := EndTurn(t.Context(), lab.dir, lab.self, end, true, "", TurnEndOptions{}); err != nil || outcome.Held != "" {
+				t.Fatalf("the failed hold check: reason %q, error %v", outcome.Held, err)
 			}
 			state.Fault = nil
 			if !failed {

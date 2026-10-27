@@ -105,6 +105,10 @@ type Server struct {
 	// the boot clock, until a turn end has looked at it (reminder.go). Only
 	// in memory: a run's letters are owed only to that run.
 	announced map[string]int64
+	// looked is the latest turn end the reminder has looked at, on the boot
+	// clock: a release the harness made before it, heard only after, is
+	// that end's still.
+	looked int64
 }
 
 // Serve drains the mailbox until the context is canceled, then refuses whatever
@@ -170,7 +174,7 @@ func (s *Server) Serve(ctx context.Context) {
 			s.retryNow()
 			schedule(collectionInterval)
 		case receipt := <-s.Receipts:
-			s.receive(receipt)
+			s.receive(ctx, receipt)
 		case ended := <-s.Ends:
 			s.remind(ctx, ended)
 		}

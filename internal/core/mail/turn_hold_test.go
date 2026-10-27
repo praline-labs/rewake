@@ -44,7 +44,7 @@ func newInterimLab(t *testing.T) interimLab {
 	if err := markPending(base.dir, "api", self.Epoch(), "the suite is running", markAt-8); err != nil {
 		t.Fatal(err)
 	}
-	if err := CompleteTurn(t.Context(), base.dir, self, TurnEnd{Text: "started the suite", Started: markAt - 10, Ended: markAt - 5}, "t", TurnEndOptions{}); err != nil {
+	if _, err := CompleteTurn(t.Context(), base.dir, self, TurnEnd{Text: "started the suite", Started: markAt - 10, Ended: markAt - 5}, "t", TurnEndOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	if got := kinds(turnReports(t, base.dir)); len(got) != 1 || got[0] != string(Interim) {
@@ -153,7 +153,7 @@ func TestAContinuationThatMarksPendingKeepsTheTaskOwed(t *testing.T) {
 func TestAStopAfterAHoldCarriesTheHeldAnswer(t *testing.T) {
 	lab := newInterimLab(t)
 	lab.held(t, "the report")
-	if err := CompleteTurn(t.Context(), lab.dir, lab.self, TurnEnd{Stopped: true, Text: stoppedText, Started: lab.start, Ended: markAt + 1}, "t", TurnEndOptions{}); err != nil {
+	if _, err := CompleteTurn(t.Context(), lab.dir, lab.self, TurnEnd{Stopped: true, Text: stoppedText, Started: lab.start, Ended: markAt + 1}, "t", TurnEndOptions{}); err != nil {
 		t.Fatal(err)
 	}
 	var stopped []string
@@ -267,7 +267,8 @@ type boundaryEnd struct {
 
 func (lab interimLab) end(t *testing.T, end boundaryEnd) (string, error) {
 	t.Helper()
-	return EndTurn(context.Background(), lab.dir, lab.self, TurnEnd{Text: end.text, Failed: end.failed, Started: lab.turnStart(t), Ended: boottime.Now()}, end.holdable, end.thread, TurnEndOptions{})
+	outcome, err := EndTurn(context.Background(), lab.dir, lab.self, TurnEnd{Text: end.text, Failed: end.failed, Started: lab.turnStart(t), Ended: boottime.Now()}, end.holdable, end.thread, TurnEndOptions{})
+	return outcome.Held, err
 }
 
 func markPending(dir, name, epoch, text string, at int64) error {

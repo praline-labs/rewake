@@ -36,6 +36,15 @@ retry of the same event finds it and answers from it; the next end's window open
 A done journal is kept while its run lives; the live run's sweep removes those of ended runs
 a day later.
 
+The end answers what it said (`mail.Outcome`), decided where it was published rather than
+inferred again from the adapter's end by whoever acts on it: held, with the reason the adapter
+continues the turn with; interim, published under a pending mark of its turn; or finished, with
+its end on the boot clock, when it published neither a failure nor a stop nor an empty answer —
+the answer kept by a held end counts as the continuation's. The wrapper passes only a finished
+end's time to its delivery server, for the [reminder](delivery.md#the-notice). An end answered
+from its record — published already, or taken with the continuation of the end it held — says
+nothing again.
+
 Writing the report before clearing the wait is the order that matters: a cleared wait counts
 as answered (`internal/core/mail/awaited.go`), so the other order, cut short, would leave an
 answer on record and no letter. A failure returns at the step it met, and a retry of the

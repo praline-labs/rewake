@@ -92,8 +92,8 @@ func TestAnUndecodableSenderIsNotTakenForGone(t *testing.T) {
 	}
 	end := lab.end("turn-2", 1, mail.Finished, "the work is done")
 	end.Boundary = boundaryNow(t, lab.dir, lab.self)
-	reason, _ := ConfirmCompletion(context.Background(), lab.dir, lab.self, end)
-	if reason != "" || lab.kept() {
+	outcome, _ := ConfirmCompletion(context.Background(), lab.dir, lab.self, end)
+	if reason := outcome.Held; reason != "" || lab.kept() {
 		t.Fatalf("an undecodable sender was taken for gone and the end held: reason=%q kept=%v", reason, lab.kept())
 	}
 }

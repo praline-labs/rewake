@@ -36,7 +36,7 @@ func ownerLab(t *testing.T) (string, registry.Session, adapter.TurnEnd) {
 func TestAnEndOfARunWhoseNamePassedOnIsGoneAndTakesNothing(t *testing.T) {
 	dir, self, end := ownerLab(t)
 	otherRun(t, dir, "api")
-	if err := ReportCompletion(context.Background(), dir, self, end); !errors.Is(err, adapter.ErrRunGone) {
+	if _, err := ReportCompletion(context.Background(), dir, self, end); !errors.Is(err, adapter.ErrRunGone) {
 		t.Fatalf("ReportCompletion = %v, want ErrRunGone", err)
 	}
 	if _, err := ConfirmCompletion(context.Background(), dir, self, end); !errors.Is(err, adapter.ErrRunGone) {
@@ -63,7 +63,7 @@ func TestAnEndWhoseRecordCannotBeReadIsRetriedAndPublishedOnce(t *testing.T) {
 	if err := os.WriteFile(path, []byte("{"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	err = ReportCompletion(context.Background(), dir, self, end)
+	_, err = ReportCompletion(context.Background(), dir, self, end)
 	if err == nil || errors.Is(err, adapter.ErrRunGone) {
 		t.Fatalf("an unreadable record answers %v, want an error to retry on", err)
 	}
@@ -74,7 +74,7 @@ func TestAnEndWhoseRecordCannotBeReadIsRetriedAndPublishedOnce(t *testing.T) {
 		t.Fatal(err)
 	}
 	for attempt := range 2 {
-		if err := ReportCompletion(context.Background(), dir, self, end); err != nil {
+		if _, err := ReportCompletion(context.Background(), dir, self, end); err != nil {
 			t.Fatalf("attempt %d: %v", attempt, err)
 		}
 	}
@@ -87,17 +87,17 @@ func TestAnEndWhoseRecordCannotBeReadIsRetriedAndPublishedOnce(t *testing.T) {
 // run owns its name, and as gone once it does not.
 func TestAnEndTakenWhoseReceiptWasLostIsAnsweredFromTheJournal(t *testing.T) {
 	dir, self, end := ownerLab(t)
-	if err := ReportCompletion(context.Background(), dir, self, end); err != nil {
+	if _, err := ReportCompletion(context.Background(), dir, self, end); err != nil {
 		t.Fatal(err)
 	}
-	if err := ReportCompletion(context.Background(), dir, self, end); err != nil {
+	if _, err := ReportCompletion(context.Background(), dir, self, end); err != nil {
 		t.Fatalf("the retry of an end taken answers %v", err)
 	}
 	if got := reportsTo(t, dir, "web"); len(got) != 1 {
 		t.Fatalf("web got %d reports, want one", len(got))
 	}
 	otherRun(t, dir, "api")
-	if err := ReportCompletion(context.Background(), dir, self, end); !errors.Is(err, adapter.ErrRunGone) {
+	if _, err := ReportCompletion(context.Background(), dir, self, end); !errors.Is(err, adapter.ErrRunGone) {
 		t.Fatalf("a retry after the name passed on answers %v, want ErrRunGone", err)
 	}
 }

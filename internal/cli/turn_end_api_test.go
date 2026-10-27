@@ -17,7 +17,10 @@ type endPath func(context.Context, string, registry.Session, adapter.TurnEnd) er
 
 func endPaths() map[string]endPath {
 	return map[string]endPath{
-		"published": ReportCompletion,
+		"published": func(ctx context.Context, dir string, self registry.Session, end adapter.TurnEnd) error {
+			_, err := ReportCompletion(ctx, dir, self, end)
+			return err
+		},
 		"confirmed": func(ctx context.Context, dir string, self registry.Session, end adapter.TurnEnd) error {
 			_, err := ConfirmCompletion(ctx, dir, self, end)
 			return err

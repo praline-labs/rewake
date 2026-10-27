@@ -24,8 +24,10 @@ func (s *Server) announce(id string, at int64) {
 // Wake as any notice. It writes no status: the letters were announced already,
 // and a reminder that does not go is not tried again. Every announcement up to
 // ended is forgotten after the look: a later turn's window opens after this
-// end, so no letter is reminded twice, a retry of the same end included.
+// end, so no letter is reminded twice, a retry of the same end included. The
+// latest end looked at is kept for a release heard after it (receive).
 func (s *Server) remind(ctx context.Context, ended int64) {
+	s.looked = max(s.looked, ended)
 	var members []mail.Message
 	err := s.lockOrAlone(s.lockCtx(), func() error {
 		var err error

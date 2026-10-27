@@ -260,16 +260,22 @@ main's mailbox, so they share one wake.
 **A task a finished turn left unread is reminded once.** A worker once ended a turn while a
 task announced to it in that turn stayed unread, and nothing woke it again; main found the task
 by `rewake inbox --awaited` and nudged the worker by hand. The owner agreed (October 27, 2026)
-that such a session is woken. After a turn end that published a finish — the harness said
-answered, with an answer, and the end was neither held nor interim — the wrapper hands its end
-on the boot clock to its delivery server. Under the mailbox lock the server asks the core
+that such a session is woken. After a turn end the core published as finished — answered, with
+words, neither held nor interim, as the completion answers
+([delivery-turn-end.md](delivery-turn-end.md#the-end-of-a-turn)) — the wrapper hands its end on
+the boot clock to its delivery server. Under the mailbox lock the server asks the core
 (`mail.Box.Unattended`, `internal/core/mail/reminder.go`) for this run's unread tasks and
 questions whose notice went out inside the turn's window: after the run's previous end on
 record, up to this end. It is the window of [pending marks](delivery-turn-end.md#pending-marks)
 without the turn's own start, so the task that woke an idle session counts for the turn it
-woke. An end the interim record shows was interim, or that a later end of the run superseded,
-reminds of nothing. If any are left, one notice goes through the usual Wake, both harnesses
-alike, its members fixed and checked again just before it goes like any notice's:
+woke. An end the interim record shows a later end of the run superseded by the time the
+server looks reminds of nothing. A notice goes out when the harness has it: a delivered one just
+before its Wake, a [held](delivery-adapters.md) one when the harness says it released it — the
+time the adapter heard the word, carried on the receipt (`mail.Receipt.At`), not the time the
+server handles it, which may be after the turn the release woke has ended. A release heard only
+after the server looked at that end is looked at for that end again, alone. If any are left,
+one notice goes through the usual Wake, both harnesses alike, its members fixed and checked
+again just before it goes like any notice's:
 
 ```
 Rewake: 1 unread task still waiting

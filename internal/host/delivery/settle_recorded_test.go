@@ -41,7 +41,7 @@ func lateRefusal(t *testing.T, lab twoSessionLab) (*Server, mail.Message, string
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = os.Chmod(lock, 0o600) })
-	server.receive(mail.Receipt{ID: letter.ID, Result: mail.Result{State: mail.Failed, Detail: "late refusal"}})
+	server.receive(context.Background(), mail.Receipt{ID: letter.ID, Result: mail.Result{State: mail.Failed, Detail: "late refusal"}})
 	if status, ok, err := mail.ReadStatus(lab.dir, letter.To, letter.ID); err != nil || !ok || status.State != mail.Failed {
 		t.Fatalf("the refusal is not on record: %+v, %v, %v", status, ok, err)
 	}
@@ -195,7 +195,7 @@ func TestALateRefusalItsStatusMissedIsRecordedThenSettled(t *testing.T) {
 		return nil
 	}
 	t.Cleanup(func() { state.Fault = previous })
-	server.receive(mail.Receipt{ID: letter.ID, Result: mail.Result{State: mail.Failed, Detail: "late refusal"}})
+	server.receive(context.Background(), mail.Receipt{ID: letter.ID, Result: mail.Result{State: mail.Failed, Detail: "late refusal"}})
 	state.Fault = previous
 	if status, _, err := mail.ReadStatus(lab.dir, letter.To, letter.ID); err != nil || status.State != mail.Delivered {
 		t.Fatalf("the refusal reached the status: %+v, %v", status, err)

@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/praline-labs/rewake/internal/adapter"
+	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/host"
@@ -84,10 +85,10 @@ func handleLaunch(h adapter.Harness) func(*Context, Call) error {
 		}
 
 		code, err := host.Run(context.Background(), host.Request{
-			OnTurn: func(ctx context.Context, self registry.Session, result adapter.TurnEnd) error {
+			OnTurn: func(ctx context.Context, self registry.Session, result adapter.TurnEnd) (mail.Outcome, error) {
 				return ReportCompletion(ctx, dir, self, result)
 			},
-			OnConfirm: func(ctx context.Context, self registry.Session, result adapter.TurnEnd) (string, error) {
+			OnConfirm: func(ctx context.Context, self registry.Session, result adapter.TurnEnd) (mail.Outcome, error) {
 				return ConfirmCompletion(ctx, dir, self, result)
 			},
 			Harness:    h,
