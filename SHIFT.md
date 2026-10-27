@@ -30,7 +30,7 @@ Open a document for numbers, commands and names: the map only points.
 - `docs/adding.md` — The steps of adding a harness, a role or a message kind, and what each must touch; open before adding one.
   sections: A harness · A role or a message kind
 - `docs/briefs.md` — Briefs — a markdown brief per task that main writes, bound to workers by send --brief, ticked and commented by them, read and commented by a reviewer given it with --review; the records under briefs/, where a brief lives (the room or a folder of the project), the brief commands, the JSON the shell reads, and the worker tools of both harnesses.
-  sections: The records · Where a brief lives · The commands · The tools · Tests · Known limits
+  sections: The records · Where a brief lives · The commands · A reviewer's checkout · The tools · Tests · Known limits
 - `docs/build-for-failures.md` — The owner's rule of building a protective mechanism only for a failure seen in real work, and when to stop and simplify; open before adding a guard, a retry, a journal or a test of a failure.
 - `docs/claude-turns.md` — A Claude Code session's turns through the mod — the outbox and end ids, the hello and its loads, the heartbeat and the live set, readiness and admission, what not holding an end costs.
   sections: The mod's side · The host's side · The live set · Readiness and admission · The start time · What not holding costs
@@ -110,7 +110,7 @@ Open a document for numbers, commands and names: the map only points.
 - `docs/worktree-tools.md` — A worker entering a checkout mid-session, the worktree status tool and its close forecast, and main's list and land tools.
   sections: A template's `worktree = true` · `rewake worktree status` · The `worktree_status` tool · Main's `worktree_list` and `worktree_land` · A worker's entry: `enter_worktree = true` and `worktree_enter`
 - `docs/worktree.md` — Checkouts rewake makes for a launch: creation, records, land and finish, removal and what keeps one.
-  sections: The launch · Launches at once · Files git ignores: `.worktreeinclude` · Landing and finishing · Listing and removing
+  sections: The launch · A reviewer's checkout · Launches at once · Files git ignores: `.worktreeinclude` · Landing and finishing · Listing and removing
 
 ### docs/roadmap/
 
