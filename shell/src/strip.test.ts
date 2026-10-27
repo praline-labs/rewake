@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import type { Session } from "./room.ts";
-import { cacheOf, stripParts } from "./strip.tsx";
+import { cacheOf, markOf, stripParts } from "./strip.tsx";
 
 const base: Session = {
   name: "w",
@@ -46,4 +46,19 @@ test("thinking is named after the effort only while it is on", () => {
   expect(model(true)).toContain("Model low thinking");
   expect(model(false)).toContain("Model low");
   expect(model(undefined)).toContain("Model low");
+});
+
+test("the button's edge blinks while a turn runs fresh, holds when it stopped, else is off", () => {
+  const mark = (s: Partial<Session>) => markOf({ ...base, ...s });
+  expect(mark({ activity: "working" })).toBe("blink");
+  expect(mark({ activity: "idle", compacting: true })).toBe("blink");
+  expect(mark({ activity: "working", fresh: false })).toBe("steady");
+  expect(mark({ activity: "working", waiting: "permission" })).toBe("steady");
+  expect(mark({ activity: "working", waiting: "question" })).toBe("steady");
+  expect(mark({ activity: "idle", dialog: "trust" })).toBe("steady");
+  expect(mark({ activity: "idle", waiting: "permission", fresh: false })).toBe("steady");
+  expect(mark({ activity: "idle" })).toBe("off");
+  expect(mark({ activity: "idle", fresh: false })).toBe("off");
+  expect(mark({ activity: undefined })).toBe("off");
+  expect(markOf(undefined)).toBe("off");
 });

@@ -3,13 +3,18 @@
 // the prefix reaches it; and the hints for the current focus. Both, and the
 // strips, are the shell's own rows, drawn alike by ShellRow.
 import { RGBA, TextAttributes } from "@opentui/core";
-import { For, type JSX, Show } from "solid-js";
+import { createEffect, createMemo, createSignal, For, type JSX, onCleanup, Show } from "solid-js";
 import { type Context, fitHints, hintsFor, separator } from "./hints.ts";
+import type { Mark } from "./strip.tsx";
 import { ink, inkOr, type Theme } from "./theme.ts";
 
 export { separator };
 
 export type Tab = { id: string; label: string };
+
+// blinkPhase is how long a blinking edge stays lit, then dark: about once a
+// second.
+const blinkPhase = 500;
 
 // ShellRow is one of the shell's own rows: the band behind it, the panes'
 // column of padding on each side, its content from the left.
@@ -48,7 +53,25 @@ export function Bar(props: {
   // pick chooses a worker by its id, or the briefs by theirs.
   pick: (id: string) => void;
   briefs: string;
+  // mark is what a worker's activity paints its button's edge with.
+  mark: (id: string) => Mark;
 }) {
+  // One clock for every blinking edge, running only while one blinks: a
+  // redraw per phase, none while nothing blinks.
+  const [lit, setLit] = createSignal(true);
+  const blinking = createMemo(() => props.tabs.some((t) => props.mark(t.id) === "blink"));
+  createEffect(() => {
+    if (!blinking()) return;
+    setLit(true);
+    const timer = setInterval(() => setLit((on) => !on), blinkPhase);
+    onCleanup(() => clearInterval(timer));
+  });
+  // The edge is the button's first cell, its padding, so a mark going on or
+  // off moves nothing: lit, or the button's own background.
+  const edge = (t: Tab, bg: string) => {
+    const mark = props.mark(t.id);
+    return mark === "steady" || (mark === "blink" && lit()) ? props.theme.edge : bg;
+  };
   const style = (t: Tab) => {
     if (t.id === props.focused) {
       const bg = props.theme.worker;
@@ -78,9 +101,11 @@ export function Bar(props: {
             flexShrink={0}
             {...style(t)}
             {...selecting(props.theme)}
-            content={` ${t.label} `}
             onMouseDown={() => props.pick(t.id)}
-          />
+          >
+            <span style={{ bg: edge(t, style(t).bg) }}> </span>
+            {`${t.label} `}
+          </text>
         )}
       </For>
       <text

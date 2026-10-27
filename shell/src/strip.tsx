@@ -63,6 +63,20 @@ function activityOf(s: Session): string | undefined {
   return text;
 }
 
+// Mark is what a worker's button edge says (docs/shell.md, "The bar"): off
+// for no work, blinking while it works, steady when it stopped for a reason.
+export type Mark = "off" | "blink" | "steady";
+
+// markOf reads the activity as activityOf does: a waiting label wins, and a
+// stale one keeps it; a turn or a compaction blinks while fresh, and a stale
+// one has stopped. Idle, unknown and ended are off.
+export function markOf(s: Session | undefined): Mark {
+  if (!s || (s.activity !== "idle" && s.activity !== "working")) return "off";
+  if (s.waiting === "permission" || s.waiting === "question" || s.dialog) return "steady";
+  if (s.activity === "idle" && !s.compacting) return "off";
+  return s.fresh ? "blink" : "steady";
+}
+
 function contextOf(s: Session): Part | undefined {
   if (!s.window) return undefined;
   if (s.used === undefined || s.percent === undefined)

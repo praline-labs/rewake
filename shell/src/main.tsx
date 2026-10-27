@@ -40,7 +40,7 @@ import {
 import { pollRoom, type Space, spacesOver } from "./room.ts";
 import { Scanner } from "./scan.ts";
 import { connectWorker, type MainRun, mainEnv, type Source, startMain } from "./sources.ts";
-import { mainStrip, Strip, showSessions, showSpaces, stripOf } from "./strip.tsx";
+import { mainStrip, markOf, Strip, showSessions, showSpaces, stripOf } from "./strip.tsx";
 import { themeOf } from "./theme.ts";
 
 const args = process.argv.slice(2);
@@ -243,6 +243,7 @@ function App() {
       theme={theme}
       pick={show}
       briefs={briefs}
+      mark={(id) => markOf(stripOf(id).status)}
     />
   );
   const hints = () => (

@@ -11,6 +11,9 @@ export type Theme = {
   main: string;
   worker: string;
   idle: string;
+  // edge is a worker's lit button edge (docs/shell.md, "The bar"), the one
+  // colour for the focused button and the others.
+  edge: string;
   // text is the closing screen's words, and background the terminal's own
   // when it said, for the layers drawn over the panes; the shell's rows draw
   // their words in the terminal's own foreground.
@@ -31,7 +34,13 @@ export type Theme = {
   selection: { bg: string; fg: string };
 };
 
-const fallback = { main: "#5f87d7", worker: "#87af5f", idle: "#585858", text: "#a8a8a8" };
+const fallback = {
+  main: "#5f87d7",
+  worker: "#87af5f",
+  idle: "#585858",
+  text: "#a8a8a8",
+  edge: "#ffd75f",
+};
 
 // bandShare is how far the band moves from the background towards the ink
 // on it: enough to read as a band, not as a bar.
@@ -41,11 +50,15 @@ export function themeOf(colors: TerminalColors | undefined): Theme {
   const p = colors?.palette ?? [];
   const background = colors?.defaultBackground ?? undefined;
   const selected = colors?.defaultForeground ?? standInForeground;
+  const worker = p[2] ?? fallback.worker;
+  const idle = p[8] ?? fallback.idle;
+  const text = colors?.defaultForeground ?? p[7] ?? fallback.text;
   return {
     main: p[4] ?? fallback.main,
-    worker: p[2] ?? fallback.worker,
-    idle: p[8] ?? fallback.idle,
-    text: colors?.defaultForeground ?? p[7] ?? fallback.text,
+    worker,
+    idle,
+    edge: standOut([p[11] ?? fallback.edge, p[3] ?? fallback.edge, text], [worker, idle]),
+    text,
     background,
     faint:
       background && colors?.defaultForeground
@@ -84,6 +97,13 @@ function luminance(hex: string): number {
 function contrast(a: string, b: string): number {
   const [x, y] = [luminance(a), luminance(b)].sort((m, n) => n - m);
   return (x! + 0.05) / (y! + 0.05);
+}
+
+// standOut is the candidate whose weakest contrast with the backgrounds is
+// the strongest, the first of equals.
+function standOut(candidates: string[], backgrounds: string[]): string {
+  const weakest = (c: string) => Math.min(...backgrounds.map((b) => contrast(c, b)));
+  return candidates.reduce((best, c) => (weakest(c) > weakest(best) ? c : best));
 }
 
 // ink is the text for a background: near black or near white, whichever
