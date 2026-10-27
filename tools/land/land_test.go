@@ -219,6 +219,31 @@ func TestAConflictLeavesTheTreeAsItWas(t *testing.T) {
 	}
 }
 
+// An interrupt during the checks still takes the merge back: the rollback
+// does not run in the run's canceled context (found in review).
+func TestAnInterruptDuringTheChecksResets(t *testing.T) {
+	for _, noPush := range []bool{false, true} {
+		r := newRepo(t)
+		old := r.at(branch)
+		r.branchOff("work", "a.go", "package a\n")
+		ctx, cancel := context.WithCancel(context.Background())
+		var out strings.Builder
+		l := &lander{call: call{target: "work", noPush: noPush, install: r.install}, root: r.root, out: &out, processes: func() [][]string { return nil }}
+		l.run = func(ctx context.Context, c command, log io.Writer) result {
+			if c.name == "go" && slices.Contains(c.args, "-race") {
+				cancel()
+				return result{code: -1, err: ctx.Err()}
+			}
+			return r.run(ctx, c, log)
+		}
+		code := l.land(ctx)
+		cancel()
+		if code != exitFailed || r.at(branch) != old || r.git(r.origin, "rev-parse", branch) != old || !strings.Contains(out.String(), "interrupted; v2 reset") {
+			t.Errorf("--no-push %v: exit %d, v2 %s, want 1 and %s\n%s", noPush, code, r.at(branch), old, out.String())
+		}
+	}
+}
+
 // --no-push checks and changes nothing.
 func TestNoPushIsADryRun(t *testing.T) {
 	r := newRepo(t)

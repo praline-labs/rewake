@@ -84,7 +84,7 @@ Run from the main checkout with v2 checked out and a clean tree. The steps:
   - on green: git push origin v2, then go build of cmd/rewake into
     <install>/rewake.next, renamed over <install>/rewake; the room runs it
     once the owner restarts it;
-  - on red: v2 is reset to where it was — nothing was pushed — and the failing
+  - on red, or on an interrupt during the checks: v2 is reset to where it was — nothing was pushed — and the failing
     checks are named.
 
 It prints what landed, each check's verdict and the pushed commit, and the

@@ -134,7 +134,7 @@ with `-v`; and the shell's `bun install --frozen-lockfile && bun run check` when
 between the old `v2` and the new. On green it pushes `v2` and builds `cmd/rewake` into
 `~/.local/share/rewake2/rewake.next` (`--install <dir>` for another), renamed over `rewake` there:
 the owner's rule, a swap right after landing and green checks, and the room runs it once
-restarted. On red it resets `v2` to where it was — nothing was pushed — and names the failing
+restarted. On red, or interrupted during the checks, it resets `v2` to where it was — nothing was pushed — and names the failing
 checks. It prints those lines and the path of a log under `.scratch/land/` with every command's
 output; `--no-push` is a dry run that resets `v2` after the checks, green or red. Exit 0 landed
 (with `--no-push`, green), 1 a refusal, a red check or a failed push or install, 2 a wrong call.

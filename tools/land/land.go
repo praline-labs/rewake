@@ -113,8 +113,8 @@ func (l *lander) land(ctx context.Context) int {
 		message := l.subject + "\n\n" + strings.Join(trailers, "\n") + "\n"
 		if r := l.git(ctx, "merge", "--no-ff", "-m", message, target); !r.ok() {
 			conflicted := l.git(ctx, "diff", "--name-only", "--diff-filter=U")
-			if !l.git(ctx, "merge", "--abort").ok() {
-				l.git(ctx, "reset", "--hard", l.old)
+			if !l.git(cleanup(ctx), "merge", "--abort").ok() {
+				l.git(cleanup(ctx), "reset", "--hard", l.old)
 			}
 			if names := strings.Fields(conflicted.stdout); len(names) > 0 {
 				return l.refuse("merging %s conflicts in %s; %s is as it was, at %s", l.target, strings.Join(names, ", "), branch, short(l.old))
@@ -129,8 +129,13 @@ func (l *lander) land(ctx context.Context) int {
 
 	failed := l.checks(ctx)
 	if len(failed) > 0 || l.noPush {
-		if !l.git(ctx, "reset", "--hard", l.old).ok() {
+		if !l.git(cleanup(ctx), "reset", "--hard", l.old).ok() {
 			l.say("FAIL  could not reset %s to %s: run git reset --hard %s in %s", branch, short(l.old), l.old, l.root)
+			l.say("log: %s", l.logPath)
+			return exitFailed
+		}
+		if ctx.Err() != nil {
+			l.say("interrupted; %s reset to %s, nothing pushed", branch, short(l.old))
 			l.say("log: %s", l.logPath)
 			return exitFailed
 		}
@@ -145,7 +150,7 @@ func (l *lander) land(ctx context.Context) int {
 	}
 
 	if r := l.git(ctx, "push", "origin", branch); !r.ok() {
-		if l.git(ctx, "reset", "--hard", l.old).ok() {
+		if l.git(cleanup(ctx), "reset", "--hard", l.old).ok() {
 			l.say("FAIL  git push origin %s: %s; %s reset to %s", branch, r.why(), branch, short(l.old))
 		} else {
 			l.say("FAIL  git push origin %s: %s; %s is still at %s, unpushed", branch, r.why(), branch, short(landed))
@@ -162,6 +167,13 @@ func (l *lander) land(ctx context.Context) int {
 	l.say("installed %s; the room runs it once restarted", filepath.Join(l.install, "rewake"))
 	l.say("log: %s", l.logPath)
 	return exitDone
+}
+
+// cleanup is the context a rollback runs in: not canceled with the run's,
+// since an interrupt during the checks is exactly when v2 must go back, and
+// bounded by the runner's own limit (found in review, October 27, 2026).
+func cleanup(ctx context.Context) context.Context {
+	return context.WithoutCancel(ctx)
 }
 
 // installBuild builds cmd/rewake into rewake.next beside the room's build
