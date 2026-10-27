@@ -268,19 +268,20 @@ and the bar under the worker's.
   have the keys, underlined while they show beside main, otherwise in the same grey with the
   terminal's foreground, since it names no program; a click on it shows them.
 - **The activity edge.** The owner asked on October 27, 2026 to see in the navigation which
-  workers work: «если точки нет, значит не работает; если точка горит, значит агент по какой-то
-  причине встал; главное не двигать строку при исчезании точки … может быть … просто краешек кнопки
-  навигации красить». The first cell of each worker's button, its left padding, is that edge,
-  painted by the worker's activity as the strip reads it (`markOf`, `shell/src/strip.tsx`;
-  [session-state.md](session-state.md#activity)): **blinking**, lit and dark half a second each,
-  while it is `working` or `compacting`; **steady** when it has stopped for a reason — `waiting for
-  a permission`, `waiting for an answer`, `waiting at a dialog`, or a turn whose snapshot went
-  stale; **not lit**, the button's own background, when `idle`, `unknown` or ended. Both lit states
-  are one colour, so the meaning is in the motion: of the palette's bright yellow (11), its yellow
-  (3) and the terminal's foreground, the one that stands out most from both the focused button and
-  the others (`shell/src/theme.ts`). The cell is always there, so a mark going on or off moves
-  nothing; one clock drives every blinking edge, a redraw per phase, and stops while none blinks.
-  The briefs button has none.
+  workers work, without the row moving when a mark goes, on the edge of the navigation's button,
+  and the same day, having seen it live, set what it says: «если мигает, значит воркер встал по
+  какой-то причине; если просто горит, значит работает; если не горит, значит в idle». The first
+  cell of each worker's button, its left padding, is that edge, painted by the worker's activity as
+  the strip reads it (`markOf`, `shell/src/strip.tsx`;
+  [session-state.md](session-state.md#activity)): **steady** while it is `working` or
+  `compacting`; **blinking**, lit and dark half a second each, when it has stopped for a reason —
+  `waiting for a permission`, `waiting for an answer`, `waiting at a dialog`, or a turn whose
+  snapshot went stale; **not lit**, the button's own background, when `idle`, `unknown` or ended.
+  Both lit states are one colour, so the meaning is in the motion: of the palette's bright yellow
+  (11), its yellow (3) and the terminal's foreground, the one that stands out most from both the
+  focused button and the others (`shell/src/theme.ts`). The cell is always there, so a mark going
+  on or off moves nothing; one clock drives every blinking edge, a redraw per phase, and stops
+  while none blinks. The briefs button has none.
 - **The hints** (`shell/src/hints.ts`): what the keys do now — where typing goes, the prefix
   commands that apply, and after a Ctrl+\\ the commands themselves until one is taken or the two
   seconds pass. A hint is a row of one table keyed by the context (main focused, a worker focused,

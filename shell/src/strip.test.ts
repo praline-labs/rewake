@@ -48,15 +48,15 @@ test("thinking is named after the effort only while it is on", () => {
   expect(model(undefined)).toContain("Model low");
 });
 
-test("the button's edge blinks while a turn runs fresh, holds when it stopped, else is off", () => {
+test("the button's edge holds while a turn runs fresh, blinks when it stopped, else is off", () => {
   const mark = (s: Partial<Session>) => markOf({ ...base, ...s });
-  expect(mark({ activity: "working" })).toBe("blink");
-  expect(mark({ activity: "idle", compacting: true })).toBe("blink");
-  expect(mark({ activity: "working", fresh: false })).toBe("steady");
-  expect(mark({ activity: "working", waiting: "permission" })).toBe("steady");
-  expect(mark({ activity: "working", waiting: "question" })).toBe("steady");
-  expect(mark({ activity: "idle", dialog: "trust" })).toBe("steady");
-  expect(mark({ activity: "idle", waiting: "permission", fresh: false })).toBe("steady");
+  expect(mark({ activity: "working" })).toBe("steady");
+  expect(mark({ activity: "idle", compacting: true })).toBe("steady");
+  expect(mark({ activity: "working", fresh: false })).toBe("blink");
+  expect(mark({ activity: "working", waiting: "permission" })).toBe("blink");
+  expect(mark({ activity: "working", waiting: "question" })).toBe("blink");
+  expect(mark({ activity: "idle", dialog: "trust" })).toBe("blink");
+  expect(mark({ activity: "idle", waiting: "permission", fresh: false })).toBe("blink");
   expect(mark({ activity: "idle" })).toBe("off");
   expect(mark({ activity: "idle", fresh: false })).toBe("off");
   expect(mark({ activity: undefined })).toBe("off");
