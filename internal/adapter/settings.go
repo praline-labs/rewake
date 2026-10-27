@@ -44,12 +44,13 @@ const (
 // directory and the room are spelled with the same prefix, so a file found in
 // whatever directory somebody is in could end up steering another session's
 // state. What a file may decide is listed here, not inferred from a name.
-// Each harness's pair is here, and its launch page names its own keys.
+// Each harness's keys are here, and its launch page names them.
 var readable = map[string]bool{
-	"REWAKE_CLAUDE_MODEL":  true,
-	"REWAKE_CLAUDE_EFFORT": true,
-	"REWAKE_PI_MODEL":      true,
-	"REWAKE_PI_EFFORT":     true,
+	"REWAKE_CLAUDE_MODEL":   true,
+	"REWAKE_CLAUDE_EFFORT":  true,
+	"REWAKE_CLAUDE_CONTEXT": true,
+	"REWAKE_PI_MODEL":       true,
+	"REWAKE_PI_EFFORT":      true,
 }
 
 // SettingsHelp is the one line that tells a person these files exist, printed

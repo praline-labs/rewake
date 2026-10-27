@@ -28,7 +28,7 @@ func TestPiTakesItsDefaultsFromTheSettingsFile(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "settings"), []byte("REWAKE_PI_MODEL=from-the-file\nREWAKE_PI_EFFORT=low\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	args, _ := adapter.ApplyDefaults(nil, defaults())
+	args, _, _ := adapter.ApplyDefaults(nil, defaults())
 	if line := strings.Join(args, " "); !strings.Contains(line, "--model from-the-file") || !strings.Contains(line, "--thinking low") {
 		t.Errorf("the settings file's pi defaults were not applied: %v", args)
 	}

@@ -38,7 +38,10 @@ func (harness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, error)
 		}
 		args = adapter.AddFlags(args, sessionIDFlag, request.Conversation)
 	}
-	args, notes := adapter.ApplyDefaults(args, defaults())
+	args, notes, err := adapter.ApplyDefaults(args, defaults())
+	if err != nil {
+		return adapter.LaunchPlan{}, err
+	}
 	file := filepath.Join(request.RunDir, "extension.ts")
 	// -e adds rewake's extension to those pi finds, the person's and the
 	// project's, which load as they would without rewake.
