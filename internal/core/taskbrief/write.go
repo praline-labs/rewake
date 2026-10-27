@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -20,55 +21,94 @@ import (
 
 // New writes a brief of edition 1 and answers it. It is written into a
 // temporary directory and renamed into place, so a brief is whole or absent.
-func New(dir string, author Author, text string) (Brief, error) {
+// It goes in the project's folder when the setting names one, in dir when
+// that is given (which then wins), else in the room. A brief outside the room
+// is entered in the index, the project's folder's included, so a move of its
+// folder reads moved and its id stays taken.
+func New(home Home, author Author, text, dir string) (Brief, error) {
 	if err := CheckText(text); err != nil {
 		return Brief{}, err
 	}
 	var made Brief
-	err := state.WithBriefLock(dir, func() error {
-		id, err := nextID(dir)
+	err := state.WithBriefLock(home.Room, func() error {
+		id, err := nextID(home)
 		if err != nil {
 			return err
 		}
-		now := time.Now().UTC()
-		tmp := filepath.Join(state.BriefsPath(dir), tmpPrefix+rand.Text())
-		for _, sub := range []string{logDir, textDir} {
-			if err := state.EnsureSubdir(filepath.Join(tmp, sub)); err != nil {
+		parent := dir
+		if parent == "" {
+			parent = home.Folder
+		}
+		if parent == "" {
+			made, err = build(home, author, text, id, state.BriefsPath(home.Room), openPath(home.Room, id), false)
+			return err
+		}
+		return state.WithOutside(home.Room, parent, func() error {
+			final := folderPath(parent, id)
+			if _, err := os.Lstat(final); err == nil {
+				return fmt.Errorf("%s exists already: a brief of another room, or a folder of the project's own; name another directory with --dir", final)
+			}
+			if err := state.EnsureOutsideDir(parent); err != nil {
 				return err
 			}
-		}
-		if err := state.WriteAtomic(textPath(tmp, 1), []byte(text)); err != nil {
-			return err
-		}
-		edit := Entry{N: 1, At: now, From: author.Name, Epoch: author.Epoch, Kind: KindEdit, Edition: 1}
-		if err := publish(tmp, edit); err != nil {
-			return err
-		}
-		if err := writeRecord(tmp, Record{ID: id, Created: now, Bound: []Binding{}}); err != nil {
-			return err
-		}
-		if err := state.Rename(tmp, openPath(dir, id)); err != nil {
-			return err
-		}
-		if err := state.SyncDir(state.BriefsPath(dir)); err != nil {
-			return err
-		}
-		made, err = loadAt(openPath(dir, id), id)
-		return err
+			if made, err = build(home, author, text, id, parent, final, true); err != nil {
+				return err
+			}
+			idx, err := readIndex(home.Room)
+			if err != nil {
+				return err
+			}
+			idx.Briefs[FormatID(id)] = indexed{Path: final}
+			return writeIndex(home.Room, idx)
+		})
 	})
 	return made, err
+}
+
+// build writes brief id into a temporary directory of parent and renames it
+// to final. outside says final lies in a folder of the project, which
+// records the room in the brief.
+func build(home Home, author Author, text string, id int, parent, final string, outside bool) (Brief, error) {
+	mkdir, room := state.EnsureSubdir, ""
+	if outside {
+		mkdir, room = state.EnsureOutsideDir, home.roomName()
+	}
+	now := time.Now().UTC()
+	tmp := filepath.Join(parent, tmpPrefix+rand.Text())
+	for _, sub := range []string{logDir, textDir} {
+		if err := mkdir(filepath.Join(tmp, sub)); err != nil {
+			return Brief{}, err
+		}
+	}
+	if err := state.WriteAtomic(textPath(tmp, 1), []byte(text)); err != nil {
+		return Brief{}, err
+	}
+	edit := Entry{N: 1, At: now, From: author.Name, Epoch: author.Epoch, Kind: KindEdit, Edition: 1}
+	if err := publish(tmp, edit); err != nil {
+		return Brief{}, err
+	}
+	if err := writeRecord(tmp, Record{ID: id, Created: now, Bound: []Binding{}, Room: room}); err != nil {
+		return Brief{}, err
+	}
+	if err := state.Rename(tmp, final); err != nil {
+		return Brief{}, err
+	}
+	if err := state.SyncDir(parent); err != nil {
+		return Brief{}, err
+	}
+	return loadAt(final, id)
 }
 
 // Edit replaces the text of an open brief, refused unless revision is still
 // the brief's: neither a tick nor an edit made since main read it is written
 // over. The text is written first and its entry last, so the entry is the
 // commit point.
-func Edit(dir string, id int, author Author, revision int, text string) (Brief, error) {
+func Edit(home Home, id int, author Author, revision int, text string) (Brief, error) {
 	if err := CheckText(text); err != nil {
 		return Brief{}, err
 	}
 	var edited Brief
-	err := changeOpen(dir, id, func(path string, brief Brief) error {
+	err := changeOpen(home, id, func(path string, brief Brief) error {
 		if revision != brief.Revision {
 			return &StaleRevisionError{ID: id, Given: revision, Current: brief.Revision}
 		}
@@ -90,9 +130,9 @@ func Edit(dir string, id int, author Author, revision int, text string) (Brief, 
 // Tick sets item n of edition done or not, for a bound run: refused once
 // main has edited since that edition, so a number read in an older text
 // never ticks another item. It answers the item as it now stands.
-func Tick(dir string, id int, author Author, edition, n int, done bool) (Item, error) {
+func Tick(home Home, id int, author Author, edition, n int, done bool) (Item, error) {
 	var ticked Item
-	err := changeOpen(dir, id, func(path string, brief Brief) error {
+	err := changeOpen(home, id, func(path string, brief Brief) error {
 		if !brief.Has(author) {
 			return &NotBoundError{ID: id, Name: author.Name}
 		}
@@ -114,26 +154,30 @@ func Tick(dir string, id int, author Author, edition, n int, done bool) (Item, e
 	return ticked, err
 }
 
-// Comment adds a bound run's comment and answers its entry.
-func Comment(dir string, id int, author Author, text string) (Entry, error) {
+// Comment adds a bound run's comment and answers its entry and its number
+// among the brief's comments, 1 for the first: the number a worker names, apart
+// from the log's, which edits and ticks share.
+func Comment(home Home, id int, author Author, text string) (Entry, int, error) {
 	if err := CheckComment(text); err != nil {
-		return Entry{}, err
+		return Entry{}, 0, err
 	}
 	var entry Entry
-	err := changeOpen(dir, id, func(path string, brief Brief) error {
+	number := 0
+	err := changeOpen(home, id, func(path string, brief Brief) error {
 		if !brief.Has(author) {
 			return &NotBoundError{ID: id, Name: author.Name}
 		}
+		number = len(brief.Comments()) + 1
 		entry = Entry{N: next(brief), At: time.Now().UTC(), From: author.Name, Epoch: author.Epoch, Kind: KindComment, Edition: brief.Edition, Text: text}
 		return publish(path, entry)
 	})
-	return entry, err
+	return entry, number, err
 }
 
 // Bind gives the brief to a run, or keeps it given; an earlier run of the
 // same name stays listed as it was.
-func Bind(dir string, id int, run Author) error {
-	return changeOpen(dir, id, func(path string, brief Brief) error {
+func Bind(home Home, id int, run Author) error {
+	return changeOpen(home, id, func(path string, brief Brief) error {
 		if brief.Has(run) {
 			return nil
 		}
@@ -143,14 +187,39 @@ func Bind(dir string, id int, run Author) error {
 	})
 }
 
-// Close records the brief closed and moves it to the archive, which ends
-// every binding. A close already done answers already; one cut short
-// between its two steps is finished.
-func Close(dir string, id int) (already bool, err error) {
+// Close records the brief closed. A brief of the room is moved to the
+// archive, which ends every binding; one in a folder of the project is
+// marked in place, the folder being the project's. A close already done
+// answers already; one cut short between its two steps is finished. A brief
+// whose folder has moved is marked closed in the index and stays there, so
+// its id is not taken again.
+func Close(home Home, id int) (already bool, err error) {
+	dir := home.Room
 	err = state.WithBriefLock(dir, func() error {
-		path, err := find(dir, id)
+		path, outside, err := find(home, id)
+		var moved *MovedError
+		if errors.As(err, &moved) {
+			already, err = markMoved(dir, id)
+			return err
+		}
 		if err != nil {
 			return err
+		}
+		if outside {
+			return state.WithOutside(dir, path, func() error {
+				brief, err := loadAt(path, id)
+				if err != nil {
+					return err
+				}
+				if brief.IsClosed() {
+					already = true
+					return nil
+				}
+				now := time.Now().UTC()
+				record := brief.Record
+				record.Closed = &now
+				return writeRecord(path, record)
+			})
 		}
 		brief, err := loadAt(path, id)
 		if err != nil {
@@ -182,11 +251,28 @@ func Close(dir string, id int) (already bool, err error) {
 	return already, err
 }
 
+// markMoved sets the index entry of brief id closed, answering whether it
+// was.
+func markMoved(room string, id int) (already bool, err error) {
+	idx, err := readIndex(room)
+	if err != nil {
+		return false, err
+	}
+	entry := idx.Briefs[FormatID(id)]
+	if entry.Closed {
+		return true, nil
+	}
+	entry.Closed = true
+	idx.Briefs[FormatID(id)] = entry
+	return false, writeIndex(room, idx)
+}
+
 // changeOpen runs change under the lock on brief id as it is, refused when
-// the brief is closed.
-func changeOpen(dir string, id int, change func(path string, brief Brief) error) error {
-	return state.WithBriefLock(dir, func() error {
-		path, err := find(dir, id)
+// the brief is closed. A brief in a folder of the project is changed with
+// that folder admitted to the seam.
+func changeOpen(home Home, id int, change func(path string, brief Brief) error) error {
+	return state.WithBriefLock(home.Room, func() error {
+		path, outside, err := find(home, id)
 		if err != nil {
 			return err
 		}
@@ -197,14 +283,18 @@ func changeOpen(dir string, id int, change func(path string, brief Brief) error)
 		if brief.IsClosed() {
 			return &ClosedError{ID: id}
 		}
+		if outside {
+			return state.WithOutside(home.Room, path, func() error { return change(path, brief) })
+		}
 		return change(path, brief)
 	})
 }
 
-// nextID is the highest id open or archived plus one.
-func nextID(dir string) (int, error) {
+// nextID is past the highest id the room has: open, archived, in the
+// project's folder whatever room made them, and in the index.
+func nextID(home Home) (int, error) {
 	highest := 0
-	for _, path := range []string{state.BriefsPath(dir), state.ClosedBriefsPath(dir)} {
+	for _, path := range []string{state.BriefsPath(home.Room), state.ClosedBriefsPath(home.Room)} {
 		taken, err := ids(path)
 		if err != nil {
 			return 0, err
@@ -212,6 +302,17 @@ func nextID(dir string) (int, error) {
 		for _, id := range taken {
 			highest = max(highest, id)
 		}
+	}
+	scanned, err := foldersIn(home.Folder)
+	if err != nil {
+		return 0, err
+	}
+	idx, err := readIndex(home.Room)
+	if err != nil {
+		return 0, err
+	}
+	for _, id := range append(scanned, idx.ids()...) {
+		highest = max(highest, id)
 	}
 	return highest + 1, nil
 }

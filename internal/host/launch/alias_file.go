@@ -16,13 +16,23 @@ import (
 // Load reads the user's files and then the project's: the alias files, then
 // the types beside each.
 func Load() *Set {
+	working, err := os.Getwd()
+	if err != nil {
+		working = ""
+	}
+	return LoadIn(working)
+}
+
+// LoadIn is Load for the project in a directory, which is main's: a command
+// run from another directory, or by a worker, reads the project main runs in.
+func LoadIn(working string) *Set {
 	set := newSet()
 	if home, err := os.UserHomeDir(); err == nil {
 		dir := filepath.Join(home, ".config", userDir)
 		set.read(filepath.Join(dir, userFile), "the user alias file", true)
 		set.readTypes(filepath.Join(dir, typesDir), worktype.User)
 	}
-	if working, err := os.Getwd(); err == nil {
+	if working != "" {
 		// This directory only, like the settings file: a parent directory does
 		// not get to decide how a session launches.
 		set.refuseMoved(filepath.Join(working, movedProjectFile))
@@ -81,6 +91,10 @@ func (s *Set) read(path, description string, user bool) {
 		Aliases struct {
 			Off []string `toml:"off"`
 		} `toml:"aliases"`
+		// Briefs says where new briefs go: a project's choice.
+		Briefs struct {
+			Dir string `toml:"dir"`
+		} `toml:"briefs"`
 	}
 	decoder := toml.NewDecoder(bytes.NewReader(raw))
 	// A field rewake does not know is refused, not skipped: a silently
@@ -110,6 +124,13 @@ func (s *Set) read(path, description string, user bool) {
 	if err := s.noteAliasesOff(file.Aliases.Off, file.Alias, description, path, user); err != nil {
 		s.unreadable(err.Error())
 		return
+	}
+	if file.Briefs.Dir != "" {
+		if user {
+			s.unreadable(fmt.Sprintf("%s at %s has [briefs] dir; it belongs in a project's .rewake/aliases.toml, since a folder is the project's to name", description, path))
+			return
+		}
+		s.briefsDir = file.Briefs.Dir
 	}
 	for name, value := range file.Alias {
 		s.aliases[name] = value

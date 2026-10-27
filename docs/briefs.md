@@ -1,5 +1,5 @@
 ---
-description: Briefs — a markdown brief per task that main writes, bound to workers by send --brief, ticked and commented by them; the records under briefs/, the brief commands, the JSON the shell reads, and the worker tools of both harnesses.
+description: Briefs — a markdown brief per task that main writes, bound to workers by send --brief, ticked and commented by them; the records under briefs/, where a brief lives (the room or a folder of the project), the brief commands, the JSON the shell reads, and the worker tools of both harnesses.
 ---
 
 # Briefs
@@ -26,6 +26,7 @@ briefs/<id>/brief.json       {id, created, bound: [{name, epoch, since}]}, close
 briefs/<id>/log/<n>.json     {n, at, from, epoch, kind: edit|tick|untick|comment, edition, item, itemText | text}
 briefs/<id>/text/<e>.md      the text of edition e, as main wrote it
 briefs/closed/<id>/          a closed brief, moved whole
+briefs/index.json            {briefs: {"<id>": {path, closed?}}}, the briefs kept outside the room
 ```
 
 - **A brief's id** is a positive integer, the highest in `briefs/` and `briefs/closed/` plus one,
@@ -74,13 +75,55 @@ briefs/closed/<id>/          a closed brief, moved whole
 - **The letter.** A task or question sent with `--brief` carries `brief: "<id>"`, an additive
   field of the message record ([mailbox-records.md](mailbox-records.md)); the brief's text is not copied into it.
 
+## Where a brief lives
+
+Decided by the owner, October 27, 2026: briefs are meant to outlive restarts, and the room is the
+temporary directory, so a brief may live in a folder the project names, beside its own task
+records, without main naming it each time. Three homes, in the order a brief is looked for:
+
+- **The room**, as above: `briefs/<id>/`, `briefs/closed/<id>/`. The default, and where every
+  brief made before this stays; it needs no entry anywhere.
+- **The project's folder**: `[briefs] dir = "<path>"` in the project's `.rewake/aliases.toml`
+  ([user-guide.md](user-guide.md#a-projects-rewake)), relative to main's directory, read from the
+  directory in main's session record, so a worker outside the project finds the same folder. A
+  new brief goes to `<dir>/brief-<id>/`, made if the folder is missing. The user's file may not set
+  it. A project file that does not read refuses `brief new` rather than put the brief in the room.
+- **Another folder**, `rewake brief new --dir <path>` (the directory must exist): the brief goes to
+  `<path>/brief-<id>/` and wins over the setting; a shift task's folder is the case it is for.
+
+A brief outside the room keeps the same format in its folder (`brief.json`, `log/`, `text/`), and
+its `brief.json` records `room`, the room's name: a folder rooms share holds only this room's briefs
+to it, and another room's `brief-<id>` is listed nowhere and never written. The room keeps
+`briefs/index.json`, `id → folder` for every brief kept outside it, the project's folder's
+included, written under the brief lock after the folder is renamed into place (a crash between
+leaves a folder no index names, which the project's folder scan still finds). The index is what
+makes a moved brief known and keeps its id taken; the scan of the project's folder is what finds its
+briefs again when the room was wiped with the temporary directory and the index with it. A brief
+made with `--dir` is forgotten by such a wipe, a known limit.
+
+- **Ids** stay the room's: past the highest of the room's directories, `closed/`, the index and
+  every `brief-<id>` in the project's folder, whatever room made it, so no name collides.
+- **Moved.** An indexed brief whose folder is gone or holds no `brief.json` — a task archived with
+  its folder — lists in `unreadable` as `{path, why: "moved"}`, so `--json` readers and the shell
+  need no new field. `show`, `tick`, `comment`, `edit` and `send --brief` answer that the brief
+  moved, exit 1, and nothing else fails. `brief close` of it marks its index entry `closed` and
+  never removes the entry: no id is taken again while the room lives.
+- **Close** of a brief in a project's folder records `closed` in its `brief.json` where it is, and
+  does not move it to `closed/`: the folder is the project's. It lists as closed all the same.
+- **The writes** go through the seam like every other: `state.WithOutside(room, folder, fn)` admits
+  writes under one folder for the length of `fn`, while the room's lease is held and under the
+  brief lock, and only the briefs' package calls it
+  ([rules/state.md](rules/state.md#what-is-a-writer)). The lock stays the room's one
+  `briefs/.lock`: allocating an id and writing the index need a single lock, and a lock file in a
+  project's folder would not outlive its move.
+
 ## The commands
 
 The `brief` group of the command table, with `--json` on each, examples parsed as every other:
 
 | Form | Who | Class | What |
 |---|---|---|---|
-| `brief new <text>` or `--file <path>` | main | change | a new brief; answers its id and title. Text at most 64 KiB, not empty |
+| `brief new <text>` or `--file <path>`, `[--dir <path>]` | main | change | a new brief; answers its id and title. Text at most 64 KiB, not empty. Where it goes: [above](#where-a-brief-lives) |
 | `brief edit <id> --rev <n> <text>` or `--file <path>` | main | change | replaces the text whole, refused unless `n` is still the brief's revision; the ticks since the last edit end there |
 | `brief close <id>` | main | change | moves it to `closed/`; every binding ends |
 | `brief list [--closed]` | main | view | open briefs, or closed ones too: id, title, done of items, comments, who is bound and whether that run lives |
@@ -127,6 +170,8 @@ summary                       {id, title, closed, created, closedAt?, edition, r
                                bound: [{name, epoch, since, run: running|ended|unknown}]}
 brief show <id> --json        summary and {text, items: [{n, text, done}],
                                comments: [{n, from, at, edition, text}]}
+                              n is the comment's place among the brief's comments, 1, 2, 3 …,
+                              derived, not the log's number
 ```
 
 `text` is the current text with the ticks applied and no numbers, what `<markdown>` renders; a
@@ -148,7 +193,7 @@ is an error result.
 |---|---|---|---|
 | `mcp__rewake__brief_read` / `brief_read` | `id` | `brief show <id>` | the line form, its header naming the edition a tick takes: markdown reads as written, not escaped in JSON |
 | `mcp__rewake__brief_tick` / `brief_tick` | `id`, `item`, `edition`, `undo?` | `brief tick <id> <item> --edition=<edition> [--undo]` | the item's number, text and state |
-| `mcp__rewake__brief_comment` / `brief_comment` | `id`, `text` | `brief comment <id> -- <text>` | the comment's number |
+| `mcp__rewake__brief_comment` / `brief_comment` | `id`, `text` | `brief comment <id> -- <text>` | the comment's number among the comments |
 
 The tool refuses before any process starts an `id`, `item` or `edition` that is not a positive
 integer and an empty `text`; the `--` keeps a comment that begins with a dash from being read as a
@@ -169,7 +214,7 @@ alike.
 ## Tests
 
 By `AGENTS.md`: the item scan, the title and tick resolution (`taskbrief/items_test.go`, pure
-logic); the records' format and the rights (`taskbrief/store_test.go`); the `--json` the shell
+logic); the records' format and the rights (`taskbrief/store_test.go`); a project's folder, the wiped room, a moved brief, a shared folder and the admitted folders (`taskbrief/outside_test.go`, `cli/brief_folder_test.go`, `state/outside_test.go`); the `--json` the shell
 reads, the checks before any effect and the rights of the commands (`cli/brief_test.go`); the
 binding of `send --brief` and what `inbox` and `--owed` print (`cli/brief_send_test.go`); the
 tools' argv and refused input in the mod's `tests/briefs.test.ts` and pi's `briefs.test.ts`; and
@@ -185,5 +230,6 @@ its task, ticks and comments, main's `show` sees both
   against mistakes, not against a session forging another's variables.
 - A send that fails after binding leaves the worker bound to a brief it never got; it may read,
   tick and comment there, as any bound run.
-- Briefs live in the state directory: a reboot that clears the temporary directory takes them, as
-  it takes mail. Closed ones are not swept.
+- Briefs in the room live in the state directory: a reboot that clears the temporary directory takes
+  them, as it takes mail; a project's `[briefs] dir` keeps them. A `--dir` brief is forgotten with
+  the index by such a wipe. Closed ones are not swept.

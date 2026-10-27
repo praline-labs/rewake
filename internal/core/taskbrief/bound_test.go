@@ -15,7 +15,7 @@ func TestATickOfALongItemLeavesTheBriefReadable(t *testing.T) {
 	for _, text := range []string{"- [ ] " + strings.Repeat("x", MaxText-6), "- [ ] " + strings.Repeat("<", 12000)} {
 		dir := room(t)
 		brief := made(t, dir, text)
-		item, err := Tick(dir, brief.ID, worker, 1, 1, true)
+		item, err := Tick(Home{Room: dir}, brief.ID, worker, 1, 1, true)
 		if err != nil || !item.Done {
 			t.Fatalf("tick of a %d-byte item: %+v, %v", len(text), item, err)
 		}
@@ -27,7 +27,7 @@ func TestATickOfALongItemLeavesTheBriefReadable(t *testing.T) {
 		if len([]rune(echoed)) != maxItemEcho || !strings.HasSuffix(echoed, "…") {
 			t.Fatalf("the tick echoes %d code points: %.40q", len([]rune(echoed)), echoed)
 		}
-		if _, err := Close(dir, brief.ID); err != nil {
+		if _, err := Close(Home{Room: dir}, brief.ID); err != nil {
 			t.Fatalf("close after the tick: %v", err)
 		}
 	}
@@ -41,7 +41,7 @@ func TestARecordPastTheBoundIsRefusedUnwritten(t *testing.T) {
 	var err error
 	bound := 1
 	for ; bound < 2000; bound++ {
-		if err = Bind(dir, brief.ID, Author{Name: fmt.Sprintf("run-%d", bound), Epoch: "300.3.boot"}); err != nil {
+		if err = Bind(Home{Room: dir}, brief.ID, Author{Name: fmt.Sprintf("run-%d", bound), Epoch: "300.3.boot"}); err != nil {
 			break
 		}
 	}

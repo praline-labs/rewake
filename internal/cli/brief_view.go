@@ -91,24 +91,24 @@ func briefDetailOf(brief taskbrief.Brief) briefDetail {
 	if view.Items == nil {
 		view.Items = []taskbrief.Item{}
 	}
-	for _, entry := range brief.Comments() {
-		view.Comments = append(view.Comments, commentView{N: entry.N, From: entry.From, At: entry.At, Edition: entry.Edition, Text: entry.Text})
+	for i, entry := range brief.Comments() {
+		view.Comments = append(view.Comments, commentView{N: i + 1, From: entry.From, At: entry.At, Edition: entry.Edition, Text: entry.Text})
 	}
 	return view
 }
 
-func briefList(ctx *Context, call Call, dir string, caller briefRun, args []string) error {
+func briefList(ctx *Context, call Call, home taskbrief.Home, caller briefRun, args []string) error {
 	if len(args) > 0 {
 		return &UsageError{Command: call.Command, Message: "brief list takes no other argument."}
 	}
 	if err := caller.mainOnly("list"); err != nil {
 		return err
 	}
-	briefs, problems, err := taskbrief.List(dir, call.Switch("closed"))
+	briefs, problems, err := taskbrief.List(home, call.Switch("closed"))
 	if err != nil {
 		return failf("could not read the briefs: %v", err)
 	}
-	listing := briefListing{Room: filepath.Base(dir), Briefs: []briefSummary{}, Unreadable: problems}
+	listing := briefListing{Room: filepath.Base(home.Room), Briefs: []briefSummary{}, Unreadable: problems}
 	if listing.Unreadable == nil {
 		listing.Unreadable = []taskbrief.Problem{}
 	}
@@ -139,7 +139,7 @@ func (l briefListing) lines() []string {
 	return lines
 }
 
-func briefShow(ctx *Context, call Call, dir string, caller briefRun, args []string) error {
+func briefShow(ctx *Context, call Call, home taskbrief.Home, caller briefRun, args []string) error {
 	id, err := briefID(call, "show", args)
 	if err != nil {
 		return err
@@ -147,7 +147,7 @@ func briefShow(ctx *Context, call Call, dir string, caller briefRun, args []stri
 	if len(args) > 1 {
 		return &UsageError{Command: call.Command, Message: "brief show takes the id alone."}
 	}
-	brief, err := taskbrief.Load(dir, id)
+	brief, err := taskbrief.Load(home, id)
 	if err != nil {
 		return briefError(call, err)
 	}

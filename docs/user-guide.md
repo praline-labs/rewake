@@ -104,6 +104,11 @@ A project can carry its own catalogue beside its code, read from the directory m
 - **`.rewake/aliases.toml`** — the project's templates, in the same form. A project template
   with your template's name replaces yours. It may not set `role` or `command`: those stay in
   your own file.
+- **`[briefs] dir = ".shift/briefs"`**, in that file, names where main's new briefs go, relative to
+  main's directory: each in `<dir>/brief-<id>/`. Briefs in the room's state are lost when the
+  temporary directory is cleared; a folder of the project is not. `rewake brief new --dir <path>`
+  puts one brief elsewhere, in a folder that exists. Your own file may not set it
+  ([briefs.md](briefs.md#where-a-brief-lives)).
 - **`[aliases] off = ["helper"]`** in that file hides those of your templates in this project
   alone. Hide every template with `role = "write"` and main writes the code itself, with a
   reviewer worker; `rewake workers` says so.
