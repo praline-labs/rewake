@@ -131,8 +131,8 @@ Open a document for numbers, commands and names: the map only points.
   sections: How a rule is written
 - `docs/rules/space.md` — SP1–SP10 — what a space guarantees about its worker, its record and its closing, and the tests that hold each rule.
   sections: The rules
-- `docs/rules/state.md` — The state root and its levels, the build's identity, the room's lease and its lock order, the bootstrap, views and changes through the write seam, and the state of 1.x left alone.
-  sections: The state root · The build's identity · The room's lease · Views and changes · The state of 1.x
+- `docs/rules/state.md` — The state root and its levels, the build's identity, the room's lease and its lock order, the bootstrap, the room's own copy of its build, views and changes through the write seam, and the state of 1.x left alone.
+  sections: The state root · The build's identity · The room's lease · The room's own copy · Views and changes · The state of 1.x
 - `docs/rules/turns.md` — O1–O2, an interim wake that must not close a task early and how failed and interrupted turns report; open before changing what a turn end reports.
   sections: The rules
 
