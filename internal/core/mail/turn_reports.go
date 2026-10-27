@@ -167,7 +167,7 @@ func prepareTurnReports(dir string, self registry.Session, event TurnEnd, pendin
 		event.Failed = true
 		event.Text = ""
 	}
-	if !event.Failed && !event.Stopped && (role.Of(self.Role).Silent || len(waiters) == 0) {
+	if !event.Failed && !event.Stopped && (!OwesReports(self.Role) || len(waiters) == 0) {
 		return nil, nil, nil
 	}
 	kind := Finished

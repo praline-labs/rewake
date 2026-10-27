@@ -58,7 +58,7 @@ type AwaitedMessage struct {
 // Gone says no report can come, because the run it was written for is over.
 func (m AwaitedMessage) Gone() bool { return m.Run != RunLive }
 
-// Awaited lists what one run sent — tasks and questions, never notes — and has
+// awaited lists what one run sent — tasks and questions, never notes — and has
 // no report on yet, oldest first. Beside the run's own it lists those of the
 // run it replaced, the latest earlier run of the name that sent any, so a
 // session restarted after a crash still sees what its predecessor waited on;
@@ -72,12 +72,12 @@ func (m AwaitedMessage) Gone() bool { return m.Run != RunLive }
 // swept from this run's mailbox. Once a new run has taken the name, the old
 // run's records are gone and only a settling report tells answered from lost.
 //
-// Like OwedMessages, it only reads: no lock, no status, nothing marked. Every
+// Standings is the way in: it resolves runOf itself. Like OwedMessages, it only reads: no lock, no status, nothing marked. Every
 // record read here is written whole or not at all, and a message caught
 // between two directories is counted once, at the stage further along. A
 // record that cannot be read makes it an error: where a message stands
 // decides whether its sender waits or sends it again.
-func Awaited(dir, name, epoch string, runOf func(recipient, run string) RecipientRun) ([]AwaitedMessage, error) {
+func awaited(dir, name, epoch string, runOf func(recipient, run string) RecipientRun) ([]AwaitedMessage, error) {
 	if epoch == "" {
 		return nil, nil
 	}
@@ -125,9 +125,9 @@ func Awaited(dir, name, epoch string, runOf func(recipient, run string) Recipien
 	return awaited, nil
 }
 
-// AwaitedOne places one message this run sent, as Awaited would: where it
+// awaitedOne places one message this run sent, as awaited would: where it
 // stands, or that a report has settled it.
-func AwaitedOne(dir, name, epoch string, message Message, runOf func(recipient, run string) RecipientRun) (AwaitedMessage, bool, error) {
+func awaitedOne(dir, name, epoch string, message Message, runOf func(recipient, run string) RecipientRun) (AwaitedMessage, bool, error) {
 	wait, err := waiterFor(dir, message.To, message.ToEpoch, name, epoch)
 	if err != nil {
 		return AwaitedMessage{}, false, err

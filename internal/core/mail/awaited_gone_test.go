@@ -5,11 +5,11 @@ import "testing"
 // awaitedBy is what the sender sees of each task it sent, given what became
 // of the run it was written for.
 func awaitedBy(dir string, what RecipientRun) map[string]AwaitedMessage {
-	awaited := map[string]AwaitedMessage{}
-	for _, item := range must(Awaited(dir, "web", "sender-epoch", func(string, string) RecipientRun { return what })) {
-		awaited[item.ID] = item
+	seen := map[string]AwaitedMessage{}
+	for _, item := range must(awaited(dir, "web", "sender-epoch", func(string, string) RecipientRun { return what })) {
+		seen[item.ID] = item
 	}
-	return awaited
+	return seen
 }
 
 // A task read by a run that ended owing it is lost for its sender, in a

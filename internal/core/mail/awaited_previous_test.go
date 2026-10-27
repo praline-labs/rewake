@@ -22,11 +22,11 @@ func sentIn(t *testing.T, dir, run string, age time.Duration) Message {
 }
 
 func awaitedAs(dir, run string, what RecipientRun) map[string]AwaitedMessage {
-	awaited := map[string]AwaitedMessage{}
-	for _, item := range must(Awaited(dir, "web", run, func(string, string) RecipientRun { return what })) {
-		awaited[item.ID] = item
+	seen := map[string]AwaitedMessage{}
+	for _, item := range must(awaited(dir, "web", run, func(string, string) RecipientRun { return what })) {
+		seen[item.ID] = item
 	}
-	return awaited
+	return seen
 }
 
 // A restarted session sees what the run it replaced was owed, as lost when the

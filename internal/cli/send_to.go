@@ -121,16 +121,7 @@ func addendumRefusal(dir string, self registry.Session, epoch string, root mail.
 	case !mail.AsksForWork(root):
 		return failf("%s is a %s, which owes nothing to add to; send another with: %s --notify", root.ID, mail.KindOf(root), next)
 	}
-	item, settled, err := mail.AwaitedOne(dir, self.Name, epoch, root, func(recipient, run string) mail.RecipientRun {
-		live, err := registry.LookupReadOnly(dir, recipient)
-		switch {
-		case err == nil && live.Epoch() == run:
-			return mail.RunLive
-		case err == nil || !errors.Is(err, registry.ErrNotFound):
-			return mail.RunReplaced
-		}
-		return mail.RunEnded
-	})
+	item, settled, err := mail.StandingOf(dir, self.Name, epoch, root)
 	switch {
 	case err != nil:
 		return unreadableTask(root, err)

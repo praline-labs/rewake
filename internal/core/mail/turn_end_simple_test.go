@@ -129,7 +129,7 @@ func TestAnEndThatFailedBeforeTheReportLeavesTheWaitStanding(t *testing.T) {
 	if got := lab.finished(t); len(got) != 0 || lab.owed() != 1 {
 		t.Fatalf("web holds %d reports, api owes %d", len(got), lab.owed())
 	}
-	awaited, err := Awaited(lab.dir, "web", lab.web.Epoch(), func(string, string) RecipientRun { return RunEnded })
+	awaited, err := awaited(lab.dir, "web", lab.web.Epoch(), func(string, string) RecipientRun { return RunEnded })
 	if err != nil || len(awaited) != 1 || awaited[0].ID != lab.task.ID || !awaited[0].Gone() {
 		t.Fatalf("web reads %+v: %v", awaited, err)
 	}

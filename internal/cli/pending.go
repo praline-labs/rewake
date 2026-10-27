@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/core/mail"
-	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/infra/boottime"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
@@ -41,7 +40,7 @@ func handlePending(ctx *Context, call Call) error {
 	if err != nil {
 		return &UsageError{Command: call.Command, Message: "rewake pending marks the turn of the session running it, and this is not one: " + err.Error() + "."}
 	}
-	if role.Of(self.Role).Silent {
+	if !mail.OwesReports(self.Role) {
 		return &UsageError{Command: call.Command, Message: "the " + self.Role + " session's turns are reported to nobody, so there is nothing to keep open; end the turn as usual."}
 	}
 	if _, err := mail.LatestTurnStart(dir, self.Name, epoch); err != nil {

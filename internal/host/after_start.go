@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter"
+	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/core/role"
 )
@@ -25,7 +26,7 @@ var afterStartBound = adapter.AfterStartBound
 // only after the start.
 func owesAfterStart(session registry.Session, h adapter.Harness) bool {
 	offer := h.Offers().TurnBoundary
-	return !role.Of(session.Role).Silent && offer.Reports && offer.AfterStart
+	return mail.OwesReports(session.Role) && offer.Reports && offer.AfterStart
 }
 
 // refuseWithheld refuses, before the harness starts, a launch of a role that

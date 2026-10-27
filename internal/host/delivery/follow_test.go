@@ -19,7 +19,7 @@ func TestANewRunForgetsTheEarlierWaits(t *testing.T) {
 	if len(mail.Waiters(dir, "api", "receiver-epoch")) != 0 || len(mail.Waiters(dir, "api", "next-epoch")) != 0 {
 		t.Fatalf("waits stayed or were taken over")
 	}
-	if item := awaitedBy(dir, mail.RunReplaced)[task.ID]; !item.Gone() {
+	if item := awaitedBy(dir)[task.ID]; !item.Gone() {
 		t.Errorf("the task reads as %+v", item)
 	}
 }

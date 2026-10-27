@@ -5,7 +5,6 @@ import (
 
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/registry"
-	"github.com/praline-labs/rewake/internal/core/role"
 )
 
 // owedView is one message read and still owed a report. Kept is false when the
@@ -31,7 +30,7 @@ type owedModel struct {
 // It changes nothing: a second read of a task is not a second obligation, and
 // the report still goes when the turn ends.
 func showOwed(ctx *Context, call Call, dir string, session registry.Session, epoch string) error {
-	if role.Of(session.Role).Silent {
+	if !mail.OwesReports(session.Role) {
 		return &UsageError{
 			Command: call.Command,
 			Message: fmt.Sprintf("%s owes no reports: a %s session's reads record no obligation, so --owed has nothing to show. rewake inbox --awaited shows what others owe it.", session.Name, session.Role),
