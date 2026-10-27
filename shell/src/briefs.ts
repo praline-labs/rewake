@@ -1,6 +1,7 @@
 // The briefs the shell shows in the worker's place (docs/shell.md, "The
-// briefs"): the JSON of rewake brief list and show, read as main's run once a
-// second while the view shows one of them, and the pure parts of drawing them.
+// briefs"): the JSON of rewake brief list, read as main's run once a second
+// while the view shows, and of brief show while a brief is open, and the pure
+// parts of drawing them.
 import { separator } from "./hints.ts";
 import { mainAs, readRewake } from "./room.ts";
 
@@ -21,27 +22,72 @@ export type Comment = { n: number; from: string; at: string; text: string };
 
 export type Detail = Summary & { text: string; comments: Comment[] };
 
-// A piece of a line: faint is drawn in the faint colour.
-export type Piece = { text: string; faint: boolean };
-
 // ended says whether a binding has ended: its run, or the brief itself.
 export const ended = (brief: Summary, b: Bound) => brief.closed || b.run === "ended";
 
-// rowOf is a list row as pieces: `3 · Auth refactor · 2/5 · 4 comments ·
-// write-claude, review-claude (ended)`. A closed brief is faint whole, and an
-// ended binding is faint in an open one.
-export function rowOf(brief: Summary): Piece[] {
-  const faint = brief.closed;
-  const comments = `${brief.commentCount} comment${brief.commentCount === 1 ? "" : "s"}`;
-  const head = [`${brief.id}`, brief.title, `${brief.done}/${brief.total}`, comments];
-  const pieces: Piece[] = [{ text: `${head.join(" · ")}`, faint }];
-  if (brief.closed) pieces.push({ text: " · closed", faint });
-  brief.bound.forEach((b, i) => {
-    const gone = ended(brief, b);
-    pieces.push({ text: i === 0 ? " · " : ", ", faint });
-    pieces.push({ text: gone && !brief.closed ? `${b.name} (ended)` : b.name, faint: gone });
-  });
-  return pieces;
+// ordered is the shell's order of the briefs, oldest first so a new one
+// lands at the bottom (the owner, October 27, 2026): the open ones by id,
+// then the closed ones by id. The CLI's own order stays newest first.
+export const ordered = (briefs: Summary[]) =>
+  [...briefs].sort((a, b) => Number(a.closed) - Number(b.closed) || a.id - b.id);
+
+// cut is a text at most width cells long, a cut one ending in `…`.
+export function cut(text: string, width: number): string {
+  if (text.length <= width) return text;
+  return width <= 0 ? "" : `${text.slice(0, width - 1)}…`;
+}
+
+// headOf is a list entry's first line, the one drawn as a button: `3 · Auth
+// refactor`.
+export const headOf = (brief: Summary) => `${brief.id} · ${brief.title}`;
+
+// infoOf is its second line, drawn faint under the title: `2/5 · 4 comments ·
+// write-claude, review-claude (ended)`; a closed brief says so, and its
+// bindings, all ended with it, are not marked one by one.
+export function infoOf(brief: Summary): string {
+  const parts = [
+    `${brief.done}/${brief.total}`,
+    `${brief.commentCount} comment${brief.commentCount === 1 ? "" : "s"}`,
+  ];
+  if (brief.closed) parts.push("closed");
+  const names = brief.bound.map((b) =>
+    ended(brief, b) && !brief.closed ? `${b.name} (ended)` : b.name,
+  );
+  if (names.length > 0) parts.push(names.join(", "));
+  return parts.join(separator);
+}
+
+// A navigation item over an opened brief: a brief by its id, or, without
+// one, the way back to the list.
+export type NavItem = { id?: number; text: string };
+
+export const backText = " ‹ briefs ";
+
+// navOf is the row in place of an opened brief's header: back to the list,
+// then the open briefs in the list's order and the shown one where it is
+// closed, each ` 3 Title `, one cell apart, in width cells. The titles are
+// cut to one length, the longest that lets the row fit, whichever brief
+// shows, so a change of the shown one moves nothing; a row too narrow even
+// for the numbers alone is cut at the width.
+export function navOf(briefs: Summary[], shown: number | undefined, width: number): NavItem[] {
+  const row = briefs.filter((b) => !b.closed || b.id === shown);
+  const itemOf = (b: Summary, room: number) => {
+    const title = cut(b.title, room);
+    return { id: b.id, text: title ? ` ${b.id} ${title} ` : ` ${b.id} ` };
+  };
+  const rowAt = (room: number) => row.map((b) => itemOf(b, room));
+  const length = (items: NavItem[]) =>
+    items.reduce((n, item) => n + item.text.length + 1, backText.length);
+  let room = Math.max(0, ...row.map((b) => b.title.length));
+  while (room > 0 && length(rowAt(room)) > width) room--;
+  return [{ text: backText }, ...rowAt(room)];
+}
+
+// stepOf is the brief ← or → shows from the shown one in the row, or none
+// past its ends.
+export function stepOf(items: NavItem[], shown: number | undefined, by: number) {
+  const ids = items.flatMap((item) => (item.id === undefined ? [] : [item.id]));
+  return ids[ids.indexOf(shown ?? -1) + by];
 }
 
 // stripOfBriefs is the strip's parts under the briefs, the first its name,
