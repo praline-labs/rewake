@@ -93,7 +93,7 @@ Open a document for numbers, commands and names: the map only points.
   sections: Who owns which pty · How a pane is fed: the raw stream · The space host's emulator · What the widget lacks and what the shell does about it · Solid: registering the widget, room for a modal · The prefix and the room · The bar · The strip · The briefs · How rewake starts the shell, and how it ships
 - `docs/space.md` — A space — main starting a worker through a detached space host, the worker's launch, the space record and its states, the listing, closing, kept checkouts and what a restore would read.
   sections: Opening · The worker's launch · The stream to the shell · The record · The listing · Closing · Restore
-- `docs/testing-cases.md` — What each of the 24 workflow scenarios in test/workflow claims — the sessions it starts, what the fixture plays and what it must see — and what none of them proves.
+- `docs/testing-cases.md` — What each of the 25 workflow scenarios in test/workflow claims — the sessions it starts, what the fixture plays and what it must see — and what none of them proves.
   sections: Delivery · Launch, reports and what a main waits on · A worktree · Actions on a sent message · Conversations · A stop, and steering a session · The live set · Spaces
 - `docs/testing.md` — How rewake is tested: the tiers, the fault build, the fixture column, running and reading the workflow suite, the checks before a publication, and the traps it has paid for.
   sections: The tiers · Running it · Checking a new harness version before updating · Reading a result · Which tests to write · Extending the suite · Traps this suite has already paid for
