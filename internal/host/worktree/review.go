@@ -43,15 +43,22 @@ func Resolve(from, rev string) (string, error) {
 // is meant to land. A checkout of the same name already made for this
 // reviewer's run is answered as it is.
 func CreateReview(root, from, commit string, review Review) (Record, error) {
+	record, _, err := MakeReview(root, from, commit, review)
+	return record, err
+}
+
+// MakeReview is CreateReview that also says whether the checkout was there
+// already (reused), so a caller undoing its work takes back only what it made.
+func MakeReview(root, from, commit string, review Review) (record Record, reused bool, err error) {
 	name := ReviewName(review.Brief, review.Reviewer.Name, commit)
 	if !ValidName(name) {
-		return Record{}, &UnusableError{Reason: fmt.Sprintf("the review checkout's name %q is not usable: %s", name, NameRule)}
+		return Record{}, false, &UnusableError{Reason: fmt.Sprintf("the review checkout's name %q is not usable: %s", name, NameRule)}
 	}
 	source, directory, err := locate(root, from)
 	if err != nil {
-		return Record{}, err
+		return Record{}, false, err
 	}
-	record := source
+	record = source
 	record.Name, record.Commit, record.Subdir = name, commit, ""
 	record.Path = filepath.Join(directory, flatName(name))
 	record.CreatedAt = time.Now().UTC()
@@ -59,7 +66,7 @@ func CreateReview(root, from, commit string, review Review) (Record, error) {
 	err = inDirectory(directory, func() error {
 		if held, err := read(recordPath(record)); err == nil {
 			if held.Review != nil && held.Review.Reviewer == review.Reviewer && held.Commit == commit {
-				record = held
+				record, reused = held, true
 				return nil
 			}
 			return &ExistsError{Record: held}
@@ -69,9 +76,9 @@ func CreateReview(root, from, commit string, review Review) (Record, error) {
 		return err
 	})
 	if err != nil {
-		return Record{}, err
+		return Record{}, false, err
 	}
-	return record, nil
+	return record, reused, nil
 }
 
 // Reviews lists the review checkouts under root that pick accepts.

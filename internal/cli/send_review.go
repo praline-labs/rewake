@@ -21,6 +21,11 @@ import (
 func reviewCheckout(ctx *Context, call Call, dir string, self registry.Session, recipient registry.Session, id int) error {
 	reviewer := worktree.Owner{Name: recipient.Name, Room: recipient.Room, Epoch: recipient.Epoch(), Harness: recipient.Harness, Dir: dir}
 	previous, err := reviewcheckout.Give(quietHomeOf(dir), id, self.CWD, call.Flags["commit"], reviewer)
+	// Said even when the give failed: a take-back that kept the checkout it
+	// made, for changes in it, leaves a path to remove.
+	for _, path := range previous.Paths() {
+		_, _ = fmt.Fprintf(ctx.Stderr, "Rewake: the reviewer's checkout %s stays: %s; rewake worktree rm removes it.\n", path, previous.Kept[path])
+	}
 	var step *reviewcheckout.StepError
 	var unusable *worktree.UnusableError
 	switch {
@@ -34,9 +39,6 @@ func reviewCheckout(ctx *Context, call Call, dir string, self registry.Session, 
 		return failf("could not make the reviewer's checkout: %v; nothing was sent.", err)
 	case err != nil:
 		return err
-	}
-	for _, path := range previous.Paths() {
-		_, _ = fmt.Fprintf(ctx.Stderr, "Rewake: the reviewer's earlier checkout %s stays: %s; rewake worktree rm removes it.\n", path, previous.Kept[path])
 	}
 	if previous.Err != nil {
 		_, _ = fmt.Fprintf(ctx.Stderr, "Rewake: the reviewer's earlier checkout could not be released: %v; rewake worktree ls shows it.\n", previous.Err)

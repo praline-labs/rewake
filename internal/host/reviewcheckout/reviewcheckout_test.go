@@ -245,3 +245,67 @@ func TestAReleaseWithNoRootSaysSo(t *testing.T) {
 		t.Errorf("outcome %+v", outcome)
 	}
 }
+
+// lockBriefs makes the briefs' lock unopenable, so a bind is refused.
+func lockBriefs(t *testing.T, s scene) {
+	t.Helper()
+	lock := filepath.Join(s.home.Room, "briefs", ".lock")
+	if err := os.Chmod(lock, 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(lock, 0o600) })
+	if f, err := os.Open(lock); err == nil {
+		_ = f.Close()
+		t.Skip("a file stays readable here (running as root)")
+	}
+}
+
+// A repeated Give whose bind fails leaves the checkout the existing binding
+// still names: it was found, not made by this call.
+func TestAFailedBindOfARepeatedGiveKeepsTheReusedCheckout(t *testing.T) {
+	s := newScene(t)
+	if _, err := Give(s.home, 1, s.repo, s.first, s.reviewer); err != nil {
+		t.Fatal(err)
+	}
+	old := s.bound(t).Checkout
+	lockBriefs(t, s)
+	if _, err := Give(s.home, 1, s.repo, s.first, s.reviewer); err == nil {
+		t.Fatal("Give succeeded with the briefs locked")
+	}
+	if !exists(old) {
+		t.Errorf("the checkout the binding names was removed: %s", old)
+	}
+}
+
+// A take-back that keeps the checkout it made — its commit is held by a tag
+// only, so removing it would lose it — returns what stays with the error.
+func TestAFailedBindReturnsTheCheckoutTheTakeBackKept(t *testing.T) {
+	s := newScene(t)
+	git := func(args ...string) string {
+		out, err := exec.Command("git", append([]string{"-C", s.repo}, args...)...).CombinedOutput()
+		if err != nil {
+			t.Fatalf("git %v: %v %s", args, err, out)
+		}
+		return strings.TrimSpace(string(out))
+	}
+	git("checkout", "-q", "--detach", s.second)
+	git("commit", "-q", "--allow-empty", "-m", "Tagged")
+	commit := git("rev-parse", "HEAD")
+	git("tag", "review-tag")
+	git("checkout", "-q", "v2")
+	lockBriefs(t, s)
+	outcome, err := Give(s.home, 1, s.repo, commit, s.reviewer)
+	if err == nil {
+		t.Fatal("Give succeeded with the briefs locked")
+	}
+	root, _ := worktree.Root()
+	records, listErr := worktree.List(root)
+	if listErr != nil || len(records) != len(outcome.Kept) {
+		t.Fatalf("records %+v (%v), kept %+v", records, listErr, outcome.Kept)
+	}
+	for _, record := range records {
+		if outcome.Kept[record.Path] == "" {
+			t.Errorf("%s stays and the outcome does not say so: %+v", record.Path, outcome)
+		}
+	}
+}

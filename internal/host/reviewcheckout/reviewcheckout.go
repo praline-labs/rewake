@@ -61,8 +61,10 @@ type Reviewer = worktree.Owner
 // from the repository holding from: the brief is read first, so one that is
 // gone or closed makes no checkout; then the checkout is made, the brief bound
 // to it, and the checkout the reviewer's binding named before released. A
-// bind that fails takes the checkout just made back, and the brief is not
-// left with one bound to nothing. The outcome is the previous one's release.
+// bind that fails takes back the checkout this call made, so the brief is not
+// left with one bound to nothing; a checkout found already made stays, an
+// earlier binding may name it. The outcome is the previous one's release, or,
+// with an error, what the take-back left.
 func Give(home taskbrief.Home, id int, from, rev string, reviewer Reviewer) (Outcome, error) {
 	brief, err := taskbrief.Load(home, id)
 	if err != nil {
@@ -80,17 +82,22 @@ func Give(home taskbrief.Home, id int, from, rev string, reviewer Reviewer) (Out
 		return Outcome{}, &StepError{Commit, err}
 	}
 	review := worktree.Review{Brief: taskbrief.FormatID(id), Reviewer: reviewer}
-	record, err := worktree.CreateReview(root, from, commit, review)
+	record, reused, err := worktree.MakeReview(root, from, commit, review)
 	if err != nil {
 		return Outcome{}, &StepError{Checkout, err}
 	}
 	previous, err := taskbrief.BindReview(home, id, taskbrief.Author{Name: reviewer.Name, Epoch: reviewer.Epoch}, record.Path, commit)
 	if err != nil {
+		// Only a checkout this call made goes: a reused one is what an
+		// earlier binding of the reviewer may still name.
+		if reused {
+			return Outcome{}, err
+		}
 		undone := release(root, func(r worktree.Record) bool { return r.Path == record.Path })
 		if undone.Err != nil {
 			err = errors.Join(err, fmt.Errorf("the checkout %s just made could not be released: %w", record.Path, undone.Err))
 		}
-		return Outcome{}, err
+		return Outcome{Kept: undone.Kept}, err
 	}
 	if previous == "" {
 		return Outcome{}, nil
