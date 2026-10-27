@@ -64,18 +64,18 @@ func (s *Server) statusLine(w http.ResponseWriter, r *http.Request) {
 		s.refuseEffect(w, http.StatusServiceUnavailable, errClosing)
 		return
 	}
+	view := s.management.observed.view
 	if life != nil {
-		s.management.observed.life = life
+		view.CacheLife(*life)
 	}
 	if line.Effort != nil {
-		s.management.observed.effortFrom(&s.management.observed.lineEffort, *line.Effort)
+		view.Effort("line", *line.Effort)
 	}
-	if line.ModelName != nil && *line.ModelName != "" {
-		s.management.observed.modelName = *line.ModelName
+	if line.ModelName != nil {
+		view.ModelName(*line.ModelName)
 	}
 	if line.Thinking != nil {
-		on := *line.Thinking
-		s.management.observed.thinking = &on
+		view.Thinking(*line.Thinking)
 	}
 	s.mu.Unlock()
 	reply(w, http.StatusOK, Done{})

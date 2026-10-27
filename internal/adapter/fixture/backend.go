@@ -17,6 +17,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/core/session"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
@@ -65,15 +66,14 @@ type backend struct {
 	// proves SpacesCapability.
 	hostsSpaces bool
 
-	mu      sync.Mutex
-	link    *link
-	thread  string
-	version string
-	live    map[string]bool
-	telem   telemetry
-	turns   map[string]turnRecord
-	ends    map[string]adapter.TurnEnd
-	compact compactions
+	mu       sync.Mutex
+	link     *link
+	thread   string
+	version  string
+	live     map[string]bool
+	turns    map[string]turnRecord
+	ends     map[string]adapter.TurnEnd
+	observed *session.Observer
 
 	// report is where the live set goes (ReportLive), told once the first
 	// exchange has run (exchanged) and at every change after; changes orders
@@ -106,8 +106,8 @@ type backend struct {
 func newBackend(program string, args, env []string, dir, socket, epoch string) *backend {
 	return &backend{
 		program: program, args: args, env: env, dir: dir, socket: socket, epoch: epoch, bound: readinessBound,
-		endWait: endDeadline,
-		exited:  make(chan struct{}), greeted: make(chan struct{}), hello: make(chan struct{}),
+		endWait: endDeadline, observed: session.NewObserver(session.ObserverConfig{Epoch: epoch}),
+		exited: make(chan struct{}), greeted: make(chan struct{}), hello: make(chan struct{}),
 		live: map[string]bool{}, turns: map[string]turnRecord{}, ends: map[string]adapter.TurnEnd{},
 		waiting: map[net.Conn]bool{},
 	}
@@ -262,7 +262,7 @@ func (b *backend) admit(conn net.Conn) {
 	live := b.probe(l, first.Serves)
 	b.mu.Lock()
 	if b.link == l {
-		b.live = live
+		b.takeLive(live)
 	}
 	b.exchanged = true
 	b.mu.Unlock()
@@ -390,6 +390,7 @@ func (b *backend) threadChanged(l *link, frame Frame) {
 		return
 	}
 	b.thread = frame.Thread
+	b.observed.Thread(frame.Thread)
 }
 
 func (b *backend) Done() <-chan struct{} { return b.exited }

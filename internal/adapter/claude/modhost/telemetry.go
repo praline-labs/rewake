@@ -2,38 +2,31 @@ package modhost
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/praline-labs/rewake/internal/core/session"
 )
 
+// observations is what the host keeps of the mod's samples beside the
+// session's observer: the wire's own order — the load, its generation and
+// the last sequence —, the conversation and the dialog the last sample named,
+// and whether main was told of it.
 type observations struct {
+	// view merges every observation into the session's snapshot; New makes
+	// it from the launch's effort and window.
+	view       *session.Observer
 	load       string
 	generation int
 	sequence   int
-	localCount int
-	count      uint64
-	partial    bool
-	// effort is the session's effort as last seen to change: what the main
-	// loop's latest request asked for, or the status line's effort.level,
-	// which follows /effort before the next request. Each source counts only
-	// when its value changes, so whichever changed last is shown; both are
-	// kept across loads, as a reload forgets a request's until the next.
-	effort, requestEffort, lineEffort string
-	// modelName is the status line's model.display_name: the harness's own
-	// name of the model, kept across loads like the effort.
-	modelName string
-	// thinking is the status line's thinking.enabled, nil until it told one,
-	// kept across loads like the name.
-	thinking *bool
-	// told says main was told of the dialog the snapshot names.
-	told     bool
-	snapshot session.Snapshot
-	events   []session.CompactionEvent
-	outcomes []session.CompactionOutcome
-	// life is the last the status line told of the prompt cache; the cache
-	// outlives a reload of the mod, so it is kept across loads (statusline.go).
-	life *session.CacheLife
+	thread     string
+	dialog     *string
+	// told says main was told of the dialog the last sample names.
+	told bool
+}
+
+// newObservations is a run's observations, nothing seen yet beside what its
+// launch passed.
+func newObservations(cfg Config) observations {
+	return observations{view: session.NewObserver(session.ObserverConfig{Epoch: cfg.Epoch, Effort: cfg.Effort, Window: cfg.Window})}
 }
 
 // currentGeneration excludes old loads, even though their durable turn ends
@@ -72,15 +65,12 @@ func (s *Server) state(w http.ResponseWriter, r *http.Request) {
 	}
 	observed := &s.management.observed
 	if observed.load != sample.LoadID {
-		if observed.load != "" {
-			observed.partial = true
-		}
-		observed.load, observed.sequence, observed.localCount = sample.LoadID, 0, 0
+		observed.load, observed.sequence = sample.LoadID, 0
 	}
 	if sample.Sequence > observed.sequence {
 		s.observeLocked(sample)
 	}
-	dialog := observed.snapshot.Dialog
+	dialog := observed.dialog
 	tell := dialog != nil && !observed.told && s.cfg.Dialog != nil
 	s.mu.Unlock()
 	if tell {
@@ -97,7 +87,7 @@ func (s *Server) tellDialog(message string) {
 		return
 	}
 	s.mu.Lock()
-	if dialog := s.management.observed.snapshot.Dialog; dialog != nil && *dialog == message {
+	if dialog := s.management.observed.dialog; dialog != nil && *dialog == message {
 		s.management.observed.told = true
 	}
 	s.mu.Unlock()
@@ -105,67 +95,37 @@ func (s *Server) tellDialog(message string) {
 
 func (s *Server) observeLocked(sample StateRequest) {
 	observed := &s.management.observed
-	now := time.Now()
-	snapshot := session.Unknown(s.cfg.Epoch)
-	snapshot.Thread, snapshot.Selection = sample.Conversation, "ready"
-	snapshot.ObservedAt, snapshot.ActivityAt, snapshot.SettingsAt, snapshot.ContextAt = &now, &now, &now, &now
-	snapshot.Fresh, snapshot.ActivityFresh, snapshot.SettingsFresh, snapshot.ContextFresh = true, true, true, true
-	snapshot.Activity, snapshot.Model = &sample.Activity, sample.Model
-	snapshot.Compacting = &sample.Compacting
 	if sample.Effort != nil {
-		observed.effortFrom(&observed.requestEffort, *sample.Effort)
+		observed.view.Effort("request", *sample.Effort)
 	}
-	snapshot.Interruptions = session.InterruptionsObserved
-	if sample.CacheRead != nil && sample.CacheWrite != nil && sample.CacheInput != nil {
-		snapshot.Cache = session.NewCache(int64(*sample.CacheRead), int64(*sample.CacheWrite), int64(*sample.CacheInput))
-	}
-	snapshot.ContextUsed, snapshot.ContextWindow = tokenCount(sample.Tokens), tokenCount(sample.Window)
-	if snapshot.ContextWindow != nil && *snapshot.ContextWindow == 0 {
-		snapshot.ContextWindow = nil
-	}
-	// The mod's window and percent are the model's; the window the launch
-	// limited the conversation to is the limit the person means.
-	if limit := s.cfg.Window; limit > 0 && (snapshot.ContextWindow == nil || limit < *snapshot.ContextWindow) {
-		snapshot.ContextWindow = &limit
-		if snapshot.ContextUsed != nil {
-			percent := min(100, int((*snapshot.ContextUsed*100+limit/2)/limit))
-			snapshot.FilledPercent = &percent
-		}
-	} else if snapshot.ContextUsed != nil && snapshot.ContextWindow != nil && sample.Percent != nil && *sample.Percent >= 0 && *sample.Percent <= 100 {
-		snapshot.FilledPercent = sample.Percent
-	}
-	if sample.Compactions > observed.localCount {
-		observed.count += uint64(sample.Compactions - observed.localCount)
-		observed.events = append(observed.events, session.CompactionEvent{Sequence: observed.count, ObservedAt: now, Request: sample.Request, RequestedBy: sample.From})
-		if len(observed.events) > 64 {
-			observed.events = observed.events[len(observed.events)-64:]
-		}
-		observed.localCount = sample.Compactions
-	}
+	observed.view.Compacted(sample.LoadID, uint64(sample.Compactions), sample.From, sample.Request)
+	var dialog, waiting string
+	observed.dialog = nil
 	if sample.Dialog != nil && *sample.Dialog != "" {
-		dialog := *sample.Dialog
-		snapshot.Dialog = &dialog
+		dialog = *sample.Dialog
+		observed.dialog = &dialog
 	} else {
 		observed.told = false
 	}
-	if sample.Waiting != nil && (*sample.Waiting == AskKindPermission || *sample.Waiting == AskKindQuestion) {
-		snapshot.Waiting = string(*sample.Waiting)
+	if sample.Waiting != nil {
+		waiting = string(*sample.Waiting)
 	}
-	observed.snapshot, observed.sequence, observed.generation = snapshot, sample.Sequence, sample.Generation
-}
-
-// effortFrom takes a source's effort, shown only when it changed: a sample
-// repeats the last request's on every heartbeat, and the status line its
-// setting on every run. Called under mu.
-func (o *observations) effortFrom(last *string, effort string) {
-	if effort == "" || effort == *last {
-		return
+	compacting := sample.Compacting
+	var cache *session.Cache
+	if sample.CacheRead != nil && sample.CacheWrite != nil && sample.CacheInput != nil {
+		cache = session.NewCache(int64(*sample.CacheRead), int64(*sample.CacheWrite), int64(*sample.CacheInput))
 	}
-	*last, o.effort = effort, effort
+	observed.view.Sample(session.Sample{
+		Thread: sample.Conversation, Activity: sample.Activity, Compacting: &compacting, Cache: cache,
+		Context:  &session.Context{Used: tokenCount(sample.Tokens), Window: tokenCount(sample.Window), Percent: sample.Percent},
+		Settings: &session.Settings{Model: sample.Model},
+		Dialog:   dialog, Waiting: waiting,
+	})
+	observed.thread, observed.sequence, observed.generation = sample.Conversation, sample.Sequence, sample.Generation
 }
 
 func tokenCount(value *int) *int64 {
-	if value == nil || *value < 0 {
+	if value == nil {
 		return nil
 	}
 	count := int64(*value)
@@ -178,45 +138,6 @@ func (s *Server) SessionState() session.Snapshot {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	observed := &s.management.observed
-	snapshot := observed.snapshot
-	if snapshot.Selection == "" {
-		snapshot = session.Unknown(s.cfg.Epoch)
-	}
-	if s.closed || s.current == nil || !s.current.live || s.current.hello.LoadID != observed.load || s.current.generation != observed.generation {
-		snapshot.Stale()
-	}
-	if observed.load != "" {
-		count := observed.count
-		snapshot.Compactions = &count
-		snapshot.Coverage = "observed"
-		if observed.partial {
-			snapshot.Coverage = "partial"
-		}
-	}
-	if observed.life != nil {
-		life := *observed.life
-		snapshot.CacheLife = &life
-	}
-	// The effort is set here, not at the sample: the status line changes it
-	// between samples.
-	snapshot.Effort, snapshot.EffortSource = nil, ""
-	switch {
-	case observed.effort != "":
-		effort := observed.effort
-		snapshot.Effort = &effort
-	case s.cfg.Effort != "":
-		effort := s.cfg.Effort
-		snapshot.Effort, snapshot.EffortSource = &effort, session.EffortFromLaunch
-	}
-	if observed.modelName != "" {
-		name := observed.modelName
-		snapshot.ModelName = &name
-	}
-	if observed.thinking != nil {
-		on := *observed.thinking
-		snapshot.Thinking = &on
-	}
-	snapshot.CompactionEvents = append([]session.CompactionEvent{}, observed.events...)
-	snapshot.CompactionOutcomes = append([]session.CompactionOutcome{}, observed.outcomes...)
-	return snapshot
+	live := !s.closed && s.current != nil && s.current.live && s.current.hello.LoadID == observed.load && s.current.generation == observed.generation
+	return observed.view.Snapshot(session.Reading{Live: live, Counted: true})
 }

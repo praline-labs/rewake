@@ -11,7 +11,7 @@ import (
 )
 
 func TestStateOrdersPushesAndPollsAndClearsUnknownUsage(t *testing.T) {
-	rig := newRig(t, func(r *run) { r.epoch = "run-epoch" })
+	rig := newRig(t, nil)
 	polls := make(chan frame, 2)
 	l := rig.client(t, "conversation", func(_ *link, request frame) { polls <- request })
 	poll := receive(t, polls)
@@ -125,7 +125,7 @@ func TestControlDoesNotRepeatUnknownRequestsAndCompactionDefersWake(t *testing.T
 }
 
 func TestStateCarriesTheCacheOfTheLastResponseAndOldExtensionsLeaveItEmpty(t *testing.T) {
-	rig := newRig(t, func(r *run) { r.epoch = "run-epoch" })
+	rig := newRig(t, nil)
 	l := rig.client(t, "conversation", nil)
 	askOK(t, l, frame{Op: "state", Thread: "conversation", State: &sample{Sequence: 2, Activity: "idle"}})
 	if got := rig.run.SessionState(); got.Cache != nil {

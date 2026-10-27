@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/adapter"
+	"github.com/praline-labs/rewake/internal/core/session"
 )
 
 // A compaction's end is counted once done, and the outcome of one a main asked
@@ -37,7 +38,7 @@ func TestCompactionsNeedALiveControl(t *testing.T) {
 	b, _ := paired(t, adapter.TurnHandler{}, Wake, Telemetry)
 	b.compacted(currentLink(b), Frame{Request: "r1", From: "lead", Outcome: "done"})
 	b.mu.Lock()
-	counted := b.compact.count
+	counted := *b.observed.Snapshot(session.Reading{Live: true, Counted: true}).Compactions
 	b.mu.Unlock()
 	if state := b.SessionState(); counted != 0 || state.Compactions != nil || len(state.CompactionOutcomes) != 0 {
 		t.Fatalf("counted %d; published %v, %+v", counted, state.Compactions, state.CompactionOutcomes)

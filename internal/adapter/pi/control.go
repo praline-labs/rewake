@@ -61,17 +61,10 @@ func (r *run) recordOutcome(request control.Request, answer control.Answer) {
 }
 
 func (r *run) outcomeLocked(request, from string, answer control.Answer) {
-	if request == "" || from == "" {
-		return
-	}
-	// The native completion can arrive before the initial control answer.
-	// Keep one outcome per request, including a final immediate refusal.
-	for _, known := range r.observed.outcomes {
-		if known.Request == request {
-			return
-		}
-	}
-	r.observed.outcomes = session.KeepOutcome(r.observed.outcomes, session.CompactionOutcome{
+	// The native completion can arrive before the initial control answer;
+	// the observer keeps one outcome per request, a final immediate refusal
+	// among them.
+	r.observed.view.Outcome(session.CompactionOutcome{
 		Request: request, RequestedBy: from, Outcome: answer.Outcome, Reason: answer.Reason, Detail: answer.Detail,
 		TokensBefore: answer.TokensBefore, TokensAfter: answer.TokensAfter, EndedAt: time.Now(),
 	})
@@ -87,17 +80,7 @@ func (r *run) compacted(l *link, request frame) frame {
 		if request.Sequence == 0 {
 			return frame{Error: "a compaction needs its event sequence"}
 		}
-		if request.Sequence <= l.compactionSequence {
-			return frame{OK: true}
-		}
-		l.compactionSequence = request.Sequence
-		r.observed.count++
-		r.observed.events = append(r.observed.events, session.CompactionEvent{
-			Sequence: r.observed.count, ObservedAt: time.Now(), RequestedBy: request.From, Request: request.Request,
-		})
-		if len(r.observed.events) > 64 {
-			r.observed.events = r.observed.events[len(r.observed.events)-64:]
-		}
+		r.observed.view.Compaction(l, request.Sequence, request.From, request.Request)
 	} else {
 		switch request.Outcome {
 		case control.Done, control.Refused, control.Failed:

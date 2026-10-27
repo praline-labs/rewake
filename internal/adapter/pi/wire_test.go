@@ -33,7 +33,7 @@ func newRig(t *testing.T, edit func(*run)) *rig {
 	}
 	t.Cleanup(func() { _ = os.RemoveAll(base) })
 	dir := buildtest.Room(t, base, "default")
-	r := newRun(filepath.Join(dir, "extension.ts"), filepath.Join(dir, "p.sock"))
+	r := newRun(filepath.Join(dir, "extension.ts"), filepath.Join(dir, "p.sock"), "run-epoch")
 	rig := &rig{run: r, live: make(chan []adapter.Capability, 16), ends: make(chan adapter.TurnEnd, 16), starts: make(chan int64, 16)}
 	r.ReportLive(func(caps []adapter.Capability) { rig.live <- caps })
 	r.ReportTurns(adapter.TurnHandler{

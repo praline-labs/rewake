@@ -63,15 +63,17 @@ func tierName(seconds int64) string {
 	return strconv.FormatInt(seconds, 10) + "s"
 }
 
+// observations is what the run keeps of its samples beside the session's
+// observer: the connection the last came on and its sequence, by which a
+// late answer to a poll cannot replace a newer pushed sample.
 type observations struct {
+	view     *session.Observer
 	link     *link
 	sequence uint64
-	snapshot session.Snapshot
-	count    uint64
-	events   []session.CompactionEvent
-	outcomes []session.CompactionOutcome
-	partial  bool
 }
+
+// sampleExpiry is how long a sample stays fresh: the run polls every second.
+const sampleExpiry = 3 * time.Second
 
 func (r *run) observe(l *link, thread string, value *sample) bool {
 	r.mu.Lock()
@@ -89,32 +91,22 @@ func (r *run) observeLocked(l *link, thread string, value *sample) bool {
 	if value.Activity != "working" && value.Activity != "idle" {
 		return false
 	}
-	now := time.Now()
-	snapshot := session.Unknown(r.epoch)
-	snapshot.Thread, snapshot.Selection = thread, "ready"
-	snapshot.ObservedAt, snapshot.ActivityAt, snapshot.SettingsAt, snapshot.ContextAt = &now, &now, &now, &now
-	snapshot.Fresh, snapshot.ActivityFresh, snapshot.SettingsFresh, snapshot.ContextFresh = true, true, true, true
-	snapshot.Activity, snapshot.Model, snapshot.Effort, snapshot.Thinking = &value.Activity, value.Model, value.Effort, value.Thinking
-	if value.ModelName != nil && *value.ModelName != "" {
-		snapshot.ModelName = value.ModelName
+	compacting := value.Compacting
+	observed := session.Sample{
+		Thread: thread, Activity: value.Activity, Compacting: &compacting,
+		Context:  &session.Context{Used: value.Tokens, Window: value.Window},
+		Settings: &session.Settings{Model: value.Model, ModelName: value.ModelName, Effort: value.Effort, Thinking: value.Thinking},
 	}
-	snapshot.Compacting = &value.Compacting
-	if value.Cache != nil {
-		snapshot.Cache = session.NewCache(value.Cache.Read, value.Cache.Write, value.Cache.Input)
-		snapshot.CacheLife = value.Cache.life(now)
-	}
-	snapshot.Interruptions = session.InterruptionsObserved
-	if value.Window != nil && *value.Window > 0 {
-		snapshot.ContextWindow = value.Window
-	}
-	if value.Tokens != nil && *value.Tokens >= 0 {
-		snapshot.ContextUsed = value.Tokens
-	}
-	if snapshot.ContextUsed != nil && snapshot.ContextWindow != nil && value.Percent != nil && *value.Percent >= 0 && !math.IsNaN(*value.Percent) && !math.IsInf(*value.Percent, 0) {
+	if value.Percent != nil && *value.Percent >= 0 && !math.IsNaN(*value.Percent) && !math.IsInf(*value.Percent, 0) {
 		percent := int(math.Round(math.Min(100, *value.Percent)))
-		snapshot.FilledPercent = &percent
+		observed.Context.Percent = &percent
 	}
-	r.observed.link, r.observed.sequence, r.observed.snapshot = l, value.Sequence, snapshot
+	if value.Cache != nil {
+		observed.Cache = session.NewCache(value.Cache.Read, value.Cache.Write, value.Cache.Input)
+		observed.CacheLife = value.Cache.life(time.Now())
+	}
+	r.observed.view.Sample(observed)
+	r.observed.link, r.observed.sequence = l, value.Sequence
 	return true
 }
 
@@ -123,27 +115,8 @@ func (r *run) observeLocked(l *link, thread string, value *sample) bool {
 func (r *run) SessionState() session.Snapshot {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	snapshot := r.observed.snapshot
-	if snapshot.Epoch == "" {
-		snapshot.Epoch = r.epoch
-	}
-	if snapshot.Selection == "" {
-		snapshot.Selection = "unknown"
-	}
-	if r.current == nil || r.current.gone() || r.current != r.observed.link || snapshot.ObservedAt == nil || time.Since(*snapshot.ObservedAt) > 3*time.Second {
-		snapshot.Stale()
-	}
-	if r.observed.link != nil {
-		count := r.observed.count
-		snapshot.Compactions = &count
-		snapshot.Coverage = "observed"
-		if r.observed.partial {
-			snapshot.Coverage = "partial"
-		}
-	}
-	snapshot.CompactionEvents = append([]session.CompactionEvent{}, r.observed.events...)
-	snapshot.CompactionOutcomes = append([]session.CompactionOutcome{}, r.observed.outcomes...)
-	return snapshot
+	live := r.current != nil && !r.current.gone() && r.current == r.observed.link
+	return r.observed.view.Snapshot(session.Reading{Live: live, Counted: true})
 }
 
 func (r *run) pollState(l *link, thread string) {

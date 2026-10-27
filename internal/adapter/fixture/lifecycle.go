@@ -8,6 +8,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/praline-labs/rewake/internal/core/session"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -24,12 +25,21 @@ func (b *backend) withdraw(l *link) {
 	current := b.link
 	if l == nil || current == l {
 		b.link, b.live = nil, map[string]bool{}
-		b.telem = telemetry{}
 	}
 	b.mu.Unlock()
 	b.changed()
 	if l == nil && current != nil {
 		current.close()
+	}
+}
+
+// takeLive makes live the set proven on the connection held now. A
+// connection whose telemetry is live is ready before it reports an activity:
+// what an earlier one reported is not its own. The caller holds b.mu.
+func (b *backend) takeLive(live map[string]bool) {
+	b.live = live
+	if live[Telemetry] {
+		b.observed.Sample(session.Sample{Thread: b.thread})
 	}
 }
 

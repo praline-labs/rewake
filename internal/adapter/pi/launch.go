@@ -80,8 +80,8 @@ func (harness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, error)
 	if worker {
 		env = append(env, SessionDirEnv+"="+filepath.Join(dir, workerSessions))
 	}
-	run := newRun(file, request.Socket)
-	run.epoch, run.controlDir = request.Epoch, request.ControlDir
+	run := newRun(file, request.Socket, request.Epoch)
+	run.controlDir = request.ControlDir
 	run.hostsSpaces, run.onClosing = request.Role.Spaces, request.Closing
 	command, args := request.Invocation(ID, args)
 	return adapter.LaunchPlan{

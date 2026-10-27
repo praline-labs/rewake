@@ -55,9 +55,8 @@ type link struct {
 	closed  chan struct{}
 	once    sync.Once
 	// Only the reader touches the current turn.
-	turn               string
-	started            int64
-	compactionSequence uint64
+	turn    string
+	started int64
 }
 
 func newLink(conn net.Conn) *link {

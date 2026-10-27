@@ -91,6 +91,8 @@ func servingWith(t *testing.T, setup func(*Server)) (*Server, string) {
 	server := New(Config{Socket: socket, Role: "main", Record: filepath.Join(run, "hello.json"), Wait: 2 * time.Second})
 	if setup != nil {
 		setup(server)
+		// What the setup changed of the launch is what the run observes beside.
+		server.management.observed = newObservations(server.cfg)
 	}
 	if err := server.Start(); err != nil {
 		t.Fatal(err)

@@ -197,11 +197,13 @@ The mod samples native context and the configured model after its hello, on `ses
 `turn.step`'s response, at compaction boundaries, and after each heartbeat answer, so a long
 turn's fill grows as it runs. It sends complete samples through `mod/state`, with the load,
 heartbeat generation, selected conversation and a load-local sequence. The host accepts only its
-current live generation and newer samples; unknown tokens clear an older reading. It publishes
-cached observations through `core/session.Snapshot`, without reading transcripts or measuring a
-full context breakdown. The native model window and
+current live generation and newer samples; unknown tokens clear an older reading. It hands each
+sample, and each status line, to the session's observer (`core/session.Observer`), which merges
+them into the published snapshot ([session-state.md](session-state.md#persistence-and-freshness));
+the host keeps only the wire's order — load, generation, sequence — and the dialog it tells main
+of. Nothing reads transcripts or measures a full context breakdown. The native model window and
 percentage are used as given; a launch's `--autocompact` sets the window the conversation is kept
-to, and the host recomputes the percent against it.
+to, and the observer recomputes the percent against it.
 
 The model's name is the status line's `model.display_name`, posted the same way
 (`StatusLineRequest.modelName`) and kept across loads, since the mod has only the id
@@ -213,11 +215,11 @@ the id. The session's thinking setting is the status line's `thinking.enabled`
 not what a request asked: no event of the mod carries a request's thinking. Known limit: Claude
 Code tells it for every model, so a model without thinking reads as on.
 
-Effort comes from two sources, and the host shows the one whose value changed last: what the
+Effort comes from two sources, and the observer shows the one whose value changed last: what the
 latest main-loop `turn.step` asked for, and the status line's `effort.level`, which `rewake
 statusline` posts beside the cache (`StatusLineRequest.effort`) and which follows `/effort` before
 the next request. A sample repeats the last request's effort and the status line its setting on
-every run, so a repeat changes nothing. Both are kept by the host across loads; before either,
+every run, so a repeat changes nothing. Both are kept across loads; before either,
 the launch's `--effort`, marked as the launch's (`reasoningEffortSource`), or unknown
 ([research](research-claude-mod.md#effort)). A worker's sample names what a dialog it holds for main asks
 (`waiting`: `permission` or `question`), and a dialog it waits at that nobody is asked about,
@@ -236,8 +238,8 @@ own usage is the only source and rewake adds nothing to it. A harness or an olde
 reports none leaves the field out, and `rewake list` shows a `Cache` column only when some
 session has it.
 
-**Compactions.** Completed compactions have a load-local count; the host folds its increases into
-the run's count and bounded notification events. A reload keeps the run's count and marks
+**Compactions.** Completed compactions have a load-local count; the observer folds its increases
+into the run's count and bounded notification events. A reload keeps the run's count and marks
 coverage partial. Native manual and automatic compactions are observed through the mod's event
 hook, remote ones through the native call's result, so re-entry cannot count one twice. A skipped
 or failed compaction clears the in-progress state and adds no completion. On a managed

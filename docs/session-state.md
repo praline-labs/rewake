@@ -150,7 +150,8 @@ The mod reports the native context use, the model's window and the percentage, t
 configured model, activity, compaction state and the prompt cache, sampled after its hello,
 measurements, turn and compaction events, and each heartbeat answer; its observations stay
 fresh only while the current mod's heartbeat holds ([claude.md](claude.md#telemetry)).
-The window and percentage are copied as the harness reports them. A fresh conversation or a
+The window and percentage are the harness's, unless the launch limited the window below the
+model's: that window is shown, and the percentage is of it. A fresh conversation or a
 completed compaction may have a known window and unknown usage until another response. Effort
 is live: the status line's `effort.level` follows `/effort` — typed with a level or chosen in its
 picker — at once, before any request, and the main loop's latest model request gives its own;
@@ -183,6 +184,20 @@ Manual and automatic completions increment one count for the wrapper's life; a r
 makes coverage partial. No transcript file is read.
 
 ## Persistence and freshness
+
+No adapter builds a snapshot. Each hands the session's observer (`internal/core/session`,
+`Observer`) what its harness reported, as typed observations, and the observer alone merges
+them; the fixture's adapter uses the same observer as the real ones. A sample is one report of
+the primary state: it replaces the last whole, and stamps the observation time and the freshness
+of each part it carries — activity, context, settings —, a part it leaves out staying unobserved.
+Standing facts from a second source between samples (Claude Code's status line: the effort, the
+model's name, thinking, the cache's life) are kept across samples and reloads and shown over a
+sample's own. The effort shown is the one whose source changed last, else the sample's, else the
+launch's, marked. Compactions are counted from one source at a time, by its running count (the
+mod's, per load) or by numbered ends (pi's, per connection); a source following another, or a
+dropped connection, makes coverage partial. At a read the adapter says only whether the source of
+the last sample is still live and whether compactions are counted; the observer marks a sample
+stale when it is not, or when it is older than the source's expiry (pi's three seconds).
 
 One wrapper-owned worker, independent of the socket readers, report publication and mailbox
 delivery, samples the adapter's snapshot at most four times a second and replaces one file of

@@ -297,7 +297,7 @@ func TestActivityBeforeTelemetryIsProvenStaysUnknown(t *testing.T) {
 	b, _ := paired(t, adapter.TurnHandler{}, Wake)
 	b.activity(currentLink(b), Frame{State: "working"})
 	b.mu.Lock()
-	b.live[Telemetry] = true
+	b.takeLive(map[string]bool{Wake: true, Telemetry: true})
 	b.mu.Unlock()
 	if state := b.SessionState(); state.Activity != nil {
 		t.Fatalf("a sample taken before telemetry was live became the state: %+v", state)

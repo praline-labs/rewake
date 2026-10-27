@@ -63,7 +63,7 @@ func (b *backend) withdrawnRequest(request control.Request, answer control.Answe
 	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	b.compact.outcomes = session.KeepOutcome(b.compact.outcomes, session.CompactionOutcome{
+	b.observed.Outcome(session.CompactionOutcome{
 		Request: request.ID, RequestedBy: request.From, Outcome: answer.Outcome, Reason: answer.Reason, EndedAt: time.Now(),
 	})
 }

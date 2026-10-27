@@ -77,9 +77,12 @@ type Server struct {
 // New is a run's mod endpoint, listening once Start binds it.
 func New(cfg Config) *Server {
 	return &Server{
-		management: management{wake: make(chan struct{}, 1), requests: map[string]*command{}},
-		asks:       asking.NewBroker(),
-		cfg:        cfg, known: make(chan struct{}), stop: make(chan struct{}), served: make(chan struct{}),
+		management: management{
+			wake: make(chan struct{}, 1), requests: map[string]*command{},
+			observed: newObservations(cfg),
+		},
+		asks: asking.NewBroker(),
+		cfg:  cfg, known: make(chan struct{}), stop: make(chan struct{}), served: make(chan struct{}),
 		loads: map[string]bool{}, superseded: map[string]bool{}, ends: map[string]*capture{},
 	}
 }

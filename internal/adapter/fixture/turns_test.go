@@ -28,9 +28,11 @@ func paired(t *testing.T, handler adapter.TurnHandler, live ...string) (*backend
 	b.ctx, b.cancel = context.WithCancel(context.Background())
 	l := newLink(near)
 	b.link, b.thread = l, programThrd
+	proven := map[string]bool{}
 	for _, capability := range live {
-		b.live[capability] = true
+		proven[capability] = true
 	}
+	b.takeLive(proven)
 	go l.serve(bufio.NewReader(near), func(frame Frame) { b.handle(l, frame) })
 	p := &peer{conn: far, reader: bufio.NewReader(far)}
 	t.Cleanup(func() { l.close(); _ = far.Close(); b.cancel() })

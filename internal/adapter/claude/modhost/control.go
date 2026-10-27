@@ -67,7 +67,7 @@ func (s *Server) dispatch(ctx context.Context, request control.Request) control.
 		s.mu.Unlock()
 		return control.Answer{Outcome: control.Refused, Detail: "unknown control action"}
 	}
-	thread := s.management.observed.snapshot.Thread
+	thread := s.management.observed.thread
 	if thread == "" {
 		thread = current.hello.SessionID
 	}
@@ -175,13 +175,7 @@ func (s *Server) outcomeLocked(request control.Request, answer control.Answer) {
 	if request.Action != control.Compact {
 		return
 	}
-	observed := &s.management.observed
-	for _, known := range observed.outcomes {
-		if known.Request == request.ID {
-			return
-		}
-	}
-	observed.outcomes = session.KeepOutcome(observed.outcomes, session.CompactionOutcome{
+	s.management.observed.view.Outcome(session.CompactionOutcome{
 		Request: request.ID, RequestedBy: request.From, Outcome: answer.Outcome, Reason: answer.Reason, Detail: answer.Detail,
 		TokensBefore: answer.TokensBefore, TokensAfter: answer.TokensAfter, EndedAt: time.Now(),
 	})

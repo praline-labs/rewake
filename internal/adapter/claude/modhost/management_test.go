@@ -77,31 +77,6 @@ func TestStateIsCurrentGenerationOrderedAndUnknownAfterCompaction(t *testing.T) 
 	}
 }
 
-// The launch's effort stands, marked, only until the mod sees the main loop
-// ask for one; a reload, whose mod has seen nothing yet, keeps what was seen.
-func TestEffortIsTheObservedOneOverTheLaunchs(t *testing.T) {
-	server, socket := servingWith(t, func(server *Server) { server.cfg.Effort = "high" })
-	postValue(t, socket, PathHello, HelloRequest{LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
-	sample := testState()
-	postValue(t, socket, PathModState, sample)
-	if got := server.SessionState(); got.Effort == nil || *got.Effort != "high" || got.EffortSource != session.EffortFromLaunch {
-		t.Fatalf("before a request: %v %q", got.Effort, got.EffortSource)
-	}
-	low := "low"
-	sample.Sequence, sample.Effort = 2, &low
-	postValue(t, socket, PathModState, sample)
-	if got := server.SessionState(); got.Effort == nil || *got.Effort != "low" || got.EffortSource != "" {
-		t.Fatalf("observed: %v %q", got.Effort, got.EffortSource)
-	}
-	postValue(t, socket, PathHello, HelloRequest{LoadID: "new", LoadSeq: 1, SessionID: "conversation-1", HarnessVersion: "test"})
-	sample = testState()
-	sample.LoadID, sample.Generation = "new", 2
-	postValue(t, socket, PathModState, sample)
-	if got := server.SessionState(); got.Effort == nil || *got.Effort != "low" || got.EffortSource != "" {
-		t.Fatalf("after a reload: %v %q", got.Effort, got.EffortSource)
-	}
-}
-
 func TestControlCrossesFilesHeartbeatAndFinalOutcome(t *testing.T) {
 	server, socket := servingWith(t, func(server *Server) {
 		server.cfg.ControlDir = filepath.Join(filepath.Dir(server.cfg.Record), "control")

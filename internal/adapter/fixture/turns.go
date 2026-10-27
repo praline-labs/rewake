@@ -31,12 +31,6 @@ type turnRecord struct {
 	boundary *mail.ReadBoundary
 }
 
-// telemetry is the last activity the program reported.
-type telemetry struct {
-	activity string
-	at       time.Time
-}
-
 // handle takes one frame on the reader. What fixes a frame's moment — the
 // liveness of the connection it came on, the read boundary of a turn's start
 // or end — is done here, before the next line is read, so no read the core
@@ -225,25 +219,16 @@ func (b *backend) activity(l *link, frame Frame) {
 	if l == nil || b.link != l || !b.live[Telemetry] {
 		return
 	}
-	b.telem = telemetry{activity: frame.State, at: time.Now()}
+	b.observed.Sample(session.Sample{Thread: b.thread, Activity: frame.State})
 }
 
-// SessionState is what the program has reported, while Telemetry is live.
+// SessionState is what the program has reported, while Telemetry is live;
+// its compactions are counted while Control is.
 func (b *backend) SessionState() session.Snapshot {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	snapshot := session.Unknown(b.epoch)
 	if b.link == nil || !b.live[Telemetry] {
-		return snapshot
+		return session.Unknown(b.epoch)
 	}
-	now := time.Now()
-	snapshot.Selection, snapshot.Thread = "ready", b.thread
-	snapshot.Fresh, snapshot.ObservedAt = true, &now
-	snapshot.Interruptions = session.InterruptionsObserved
-	if b.telem.activity != "" {
-		activity, at := b.telem.activity, b.telem.at
-		snapshot.Activity, snapshot.ActivityAt, snapshot.ActivityFresh = &activity, &at, true
-	}
-	b.publishCompactions(&snapshot)
-	return snapshot
+	return b.observed.Snapshot(session.Reading{Live: true, Counted: b.live[Control]})
 }

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter"
+	"github.com/praline-labs/rewake/internal/core/session"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -17,8 +18,7 @@ import (
 var extensions embed.FS
 
 type run struct {
-	file, socket      string
-	epoch, controlDir string
+	file, socket, controlDir string
 	// hostsSpaces is the run's role opening spaces: an admitted hello then
 	// proves SpacesCapability.
 	hostsSpaces bool
@@ -44,8 +44,11 @@ type run struct {
 	jobs        sync.WaitGroup
 }
 
-func newRun(file, socket string) *run {
-	return &run{file: file, socket: socket, links: make(map[*link]struct{}), ready: make(chan struct{})}
+func newRun(file, socket, epoch string) *run {
+	return &run{
+		file: file, socket: socket, links: make(map[*link]struct{}), ready: make(chan struct{}),
+		observed: observations{view: session.NewObserver(session.ObserverConfig{Epoch: epoch, Expiry: sampleExpiry})},
+	}
 }
 
 func (r *run) ReportTurns(handler adapter.TurnHandler)      { r.handler = handler }
@@ -149,7 +152,7 @@ func (r *run) change(l *link, hello frame) bool {
 	old := r.current
 	r.current, r.thread = l, hello.Thread
 	if old != nil {
-		r.observed.partial = true
+		r.observed.view.Partial()
 	}
 	r.observeLocked(l, hello.Thread, hello.State)
 	r.mu.Unlock()
@@ -182,7 +185,7 @@ func (r *run) disconnect(l *link) {
 	delete(r.links, l)
 	current := r.current == l
 	if current {
-		r.observed.partial = true
+		r.observed.view.Partial()
 		r.current = nil
 		r.thread = ""
 	}
