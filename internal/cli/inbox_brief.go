@@ -19,8 +19,10 @@ type letterBrief struct {
 	// EarlierRun says the brief was given to an earlier run of the name, not
 	// to the reader, which gets no right to it and is not shown it.
 	EarlierRun bool `json:"earlierRun,omitempty"`
-	// as is the kind of the reader's binding, which says how it may act.
-	as taskbrief.BindingKind
+	// as is the kind of the reader's binding, which says how it may act,
+	// and checkout the line naming a reviewer's checkout, if it has one.
+	as       taskbrief.BindingKind
+	checkout string
 }
 
 // withBriefs reads the brief of each letter that gives one, for the run
@@ -51,7 +53,7 @@ func letterBriefOf(dir, named string, reader taskbrief.Author) *letterBrief {
 		return &letterBrief{ID: id, EarlierRun: true}
 	}
 	view := briefDetailOf(brief)
-	return &letterBrief{ID: id, briefDetail: &view, as: binding.Kind.Of()}
+	return &letterBrief{ID: id, briefDetail: &view, as: binding.Kind.Of(), checkout: reviewCheckoutLine(binding)}
 }
 
 // briefLetterLines print a letter's brief under its text: a header, how to
@@ -71,6 +73,10 @@ func briefLetterLines(brief *letterBrief) []string {
 	if d.Closed {
 		header += " · closed"
 	}
-	lines := []string{"", header, d.how(brief.as), ""}
+	lines := []string{"", header, d.how(brief.as)}
+	if brief.checkout != "" && !d.Closed {
+		lines = append(lines, brief.checkout)
+	}
+	lines = append(lines, "")
 	return append(lines, strings.Split(strings.TrimSuffix(d.numbered, "\n"), "\n")...)
 }

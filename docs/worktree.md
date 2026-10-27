@@ -167,6 +167,25 @@ Claude Code and pi launches take the flag the same way (the owner's decisions of
   where it is, that the launch command runs there without `--worktree` to go on, and how
   to land, finish or remove it.
 
+## A reviewer's checkout
+
+`rewake send <reviewer> "..." --brief <id> --review --commit <rev>` makes a checkout for a
+reviewer, not for a launch ([briefs.md](briefs.md#a-reviewers-checkout)): the commit `--commit`
+names, resolved in the repository main runs in, checked out with
+`git worktree add --detach` under the repository's lock, in the same place as a launch's,
+`<repository>-<hash>/review-<id>-<reviewer>-<commit>/`, copies of `.worktreeinclude` and all.
+Its record has no branch and no session, so a space never takes it for its worker's own
+checkout, and a `review` field, `{brief, reviewer: {name, room, epoch, harness, dir}}`.
+`worktree ls` shows its owner as `<reviewer> (review of brief <id>)`; `land` and `finish` refuse
+it, having no branch to land; `rm` removes it as any other.
+
+It goes when the review ends — at `brief close`, and at the close of the reviewer's space — by
+the release a worker's checkout gets at its close ([after the session](#the-launch)): changes,
+a hidden edit or a lock keep it, files git ignores do not, and a commit no local branch holds
+keeps it. A reviewer's checkout given again for a new commit releases the one before. The
+record's `review` field is additive: a build without it reads the record as a detached
+checkout with no owner.
+
 ## Launches at once
 
 Several launches with `--worktree` in one repository make their checkouts one after

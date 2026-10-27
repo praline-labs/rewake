@@ -50,6 +50,10 @@ type Binding struct {
 	// Kind is the right: Work reads, ticks and comments, Review reads and
 	// comments. A binding written before kinds has none and is Work.
 	Kind BindingKind `json:"kind,omitempty"`
+	// Checkout is the detached checkout a review was given, at Commit;
+	// removed when the binding ends (docs/briefs.md). Absent without one.
+	Checkout string `json:"checkout,omitempty"`
+	Commit   string `json:"commit,omitempty"`
 }
 
 // BindingKind is what a binding lets its run do.

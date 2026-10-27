@@ -1,6 +1,9 @@
 package spacehost
 
 import (
+	"slices"
+	"strings"
+
 	"github.com/praline-labs/rewake/internal/core/space"
 	"github.com/praline-labs/rewake/internal/host/worktree"
 )
@@ -69,4 +72,23 @@ func (h *host) release() (stays, note string) {
 		return "", ""
 	}
 	return worktree.Release(record)
+}
+
+// releaseReviews removes the checkouts the worker was given to review in,
+// its run having ended, and says which stay and why. A root that cannot be
+// read leaves them to rm.
+func (h *host) releaseReviews() string {
+	root, err := worktree.Root()
+	if err != nil || h.record.Worker.Run == "" {
+		return ""
+	}
+	kept, _ := worktree.ReleaseReviews(root, func(r worktree.Record) bool {
+		return r.Review.Reviewer.Epoch == h.record.Worker.Run && r.Review.Reviewer.Dir == h.spec.Dir
+	})
+	var notes []string
+	for path, why := range kept {
+		notes = append(notes, "its review checkout "+path+" stays: "+why)
+	}
+	slices.Sort(notes)
+	return strings.Join(notes, "; ")
 }

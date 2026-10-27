@@ -71,6 +71,9 @@ type Record struct {
 	// about to be used.
 	Launcher *Launch `json:"launcher,omitempty"`
 	Session  *Owner  `json:"session,omitempty"`
+	// Review is set on a checkout made for a reviewer of a brief, detached
+	// and with no Session (review.go).
+	Review *Review `json:"review,omitempty"`
 }
 
 // Owner is the session a checkout was made for.

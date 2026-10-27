@@ -14,6 +14,9 @@ import (
 // binding without a task would give a worker a brief it was never told of.
 func briefFlagFits(call Call, kind messageKind) error {
 	value, given := call.Flags["brief"]
+	if _, commit := call.Flags["commit"]; commit && !call.Switch("review") {
+		return &UsageError{Command: call.Command, Message: "--commit names the commit a reviewer gets a checkout of, and goes with --brief <id> --review."}
+	}
 	if !given {
 		if call.Switch("review") {
 			return &UsageError{Command: call.Command, Message: "--review says how a brief is given, and goes with --brief <id>."}
@@ -32,7 +35,7 @@ func briefFlagFits(call Call, kind messageKind) error {
 // bindBrief gives the brief --brief names to the recipient's run, after
 // every other check of send and before the letter is written, and answers
 // the id the letter carries: as work, or with --review to read and comment
-// only. Only main gives a brief. A send that fails after this leaves the run
+// only, and with --commit in a checkout of its own (send_review.go). Only main gives a brief. A send that fails after this leaves the run
 // bound, a known limit (docs/briefs.md).
 func bindBrief(call Call, dir string, self registry.Session, selfErr error, recipient registry.Session) (string, error) {
 	value, given := call.Flags["brief"]
@@ -50,9 +53,18 @@ func bindBrief(call Call, dir string, self registry.Session, selfErr error, reci
 	if call.Switch("review") {
 		kind = taskbrief.Review
 	}
-	err := taskbrief.Bind(quietHomeOf(dir), id, taskbrief.Author{Name: recipient.Name, Epoch: recipient.Epoch()}, kind)
+	var err error
+	if _, commit := call.Flags["commit"]; commit {
+		err = reviewCheckout(call, dir, self, recipient, id)
+	} else {
+		err = taskbrief.Bind(quietHomeOf(dir), id, taskbrief.Author{Name: recipient.Name, Epoch: recipient.Epoch()}, kind)
+	}
 	var closed *taskbrief.ClosedError
+	var usage *UsageError
+	var failed *FailedError
 	switch {
+	case errors.As(err, &usage), errors.As(err, &failed):
+		return "", err
 	case errors.Is(err, taskbrief.ErrNotFound):
 		return "", &UsageError{Command: call.Command, Message: fmt.Sprintf("no brief %d: rewake brief list shows the open ones; nothing was sent.", id)}
 	case errors.As(err, &closed):

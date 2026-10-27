@@ -184,23 +184,40 @@ func Comment(home Home, id int, author Author, text string) (Entry, int, error) 
 // given; given before with the other kind, the run's binding is replaced. An
 // earlier run of the same name stays listed as it was.
 func Bind(home Home, id int, run Author, kind BindingKind) error {
-	return changeOpen(home, id, func(path string, brief Brief) error {
+	_, err := bind(home, id, Binding{Name: run.Name, Epoch: run.Epoch, Kind: kind.Of()})
+	return err
+}
+
+// BindReview gives the brief to a run to review in a checkout of its own at
+// commit, and answers the checkout the run's binding named before, if it was
+// another, for the caller to remove.
+func BindReview(home Home, id int, run Author, checkout, commit string) (string, error) {
+	return bind(home, id, Binding{Name: run.Name, Epoch: run.Epoch, Kind: Review, Checkout: checkout, Commit: commit})
+}
+
+func bind(home Home, id int, given Binding) (previous string, err error) {
+	err = changeOpen(home, id, func(path string, brief Brief) error {
 		record := brief.Record
 		record.Bound = slices.Clone(record.Bound)
-		given := Binding{Name: run.Name, Epoch: run.Epoch, Since: time.Now().UTC(), Kind: kind.Of()}
+		given.Since = time.Now().UTC()
 		for i, binding := range record.Bound {
-			if binding.Name != run.Name || binding.Epoch != run.Epoch {
+			if binding.Name != given.Name || binding.Epoch != given.Epoch {
 				continue
 			}
-			if binding.Kind.Of() == given.Kind {
+			if binding.Kind.Of() == given.Kind && binding.Checkout == given.Checkout {
 				return nil
 			}
+			previous = binding.Checkout
 			record.Bound[i] = given
 			return writeRecord(path, record)
 		}
 		record.Bound = append(record.Bound, given)
 		return writeRecord(path, record)
 	})
+	if err != nil || previous == given.Checkout {
+		return "", err
+	}
+	return previous, nil
 }
 
 // Close records the brief closed. A brief of the room is moved to the
