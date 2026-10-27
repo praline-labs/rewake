@@ -179,7 +179,7 @@ activity, the configured model, the reasoning effort the main loop asks for (the
 
 ### pi
 
-pi is part of rewake: a pinned pi, 1.3.0 today, is a
+pi is part of rewake: a pinned pi, 1.4.0 today, is a
 dependency of rewake's npm package, installed and updated with it ([install.md](install.md)).
 Without `--command`, `rewake pi` starts that copy and no `pi` on `PATH`: it finds the
 package in a `node_modules` above its own executable, as node resolves a dependency, or
