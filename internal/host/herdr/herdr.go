@@ -61,24 +61,24 @@ const (
 )
 
 // StateOf is herdr's state for a run's snapshot, with the message a blocked
-// state carries: the session's own activity, a compaction as work, a dialog
-// it waits at as blocked, and anything not observed now as unknown — never
-// idle, which would tell a person or a script waiting on it that it is done.
+// state carries, read off the snapshot's verdict
+// (docs/session-state.md#activity): a compaction is work, a session waiting
+// on something is blocked with the verdict's word as the message, and an
+// activity unknown or stale is unknown — never idle, which would tell a
+// person or a script waiting on it that it is done.
 func StateOf(snapshot session.Snapshot) (string, string) {
-	if snapshot.Activity == nil || !snapshot.ActivityFresh || (*snapshot.Activity != Idle && *snapshot.Activity != Working) {
-		return Unknown, ""
-	}
+	verdict := snapshot.Judge()
 	switch {
-	case snapshot.Waiting == session.WaitingPermission:
-		return Blocked, "waiting for a permission"
-	case snapshot.Waiting == session.WaitingQuestion:
-		return Blocked, "waiting for an answer"
-	case snapshot.Dialog != nil:
-		return Blocked, "waiting at a dialog"
-	case snapshot.Compacting != nil && *snapshot.Compacting:
+	case verdict.Stale:
+		return Unknown, ""
+	case verdict.Blocked != "":
+		return Blocked, verdict.Activity
+	case verdict.Activity == session.ActivityIdle:
+		return Idle, ""
+	case verdict.Activity == session.ActivityWorking || verdict.Activity == session.ActivityCompacting:
 		return Working, ""
 	}
-	return *snapshot.Activity, ""
+	return Unknown, ""
 }
 
 // ValidResume says herdr would take argv as a resume command: a plain command

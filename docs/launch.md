@@ -279,11 +279,12 @@ run outside herdr starts nothing, and so does a test binary, since it inherits i
 pane.
 
 - **Name and source.** The agent is the harness's id. The source is `rewake`.
-- **State.** The state comes from the run's telemetry, read four times a second:
+- **State.** The state is the activity verdict on the run's telemetry, read four times a second
+  ([session-state.md](session-state.md#activity)):
   - idle stays idle; working and compacting are working;
-  - a held permission request, a question or a dialog is blocked, with the activity label
+  - a held permission request, a question or a dialog is blocked, with the verdict's activity
     (`waiting for a permission`, …) as its message;
-  - anything not observed now is unknown, never idle.
+  - a stale or unknown activity is unknown, never idle.
 - **When it reports.** A report goes out only when the state, the conversation or the resume
   command changes. One is in flight at a time, cut after two seconds. A failure is ignored and
   tried again five seconds later with the state as it is then. `--seq` is the wall clock in

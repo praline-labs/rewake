@@ -11,69 +11,6 @@ import (
 	"github.com/praline-labs/rewake/internal/core/session"
 )
 
-func TestActivityLabelsAndUnknownAreExplicit(t *testing.T) {
-	now := time.Now()
-	snapshot := session.Unknown("epoch")
-	snapshot.Fresh = true
-	if got := activityText(&snapshot); got != "unknown" {
-		t.Fatal(got)
-	}
-	compacting := true
-	for _, row := range []struct {
-		activity   string
-		waiting    string
-		dialog     bool
-		compacting bool
-		want       string
-	}{
-		{activity: "idle", want: "idle"},
-		{activity: "working", want: "working"},
-		{activity: "working", waiting: session.WaitingPermission, want: "waiting for a permission"},
-		{activity: "working", waiting: session.WaitingQuestion, want: "waiting for an answer"},
-		{activity: "working", dialog: true, want: "waiting at a dialog"},
-		{activity: "idle", dialog: true, want: "waiting at a dialog"},
-		{activity: "idle", compacting: true, want: "compacting"},
-		{activity: "working", compacting: true, waiting: session.WaitingQuestion, want: "waiting for an answer"},
-		{activity: "not_loaded", want: "unknown"},
-	} {
-		snapshot.Activity = &row.activity
-		snapshot.Waiting = row.waiting
-		snapshot.Dialog = nil
-		if row.dialog {
-			message := "Claude needs your permission"
-			snapshot.Dialog = &message
-		}
-		snapshot.Compacting = nil
-		if row.compacting {
-			snapshot.Compacting = &compacting
-		}
-		snapshot.ActivityAt = &now
-		snapshot.ActivityFresh = true
-		if got := activityText(&snapshot); got != row.want {
-			t.Fatalf("%q != %q", got, row.want)
-		}
-	}
-	activity := "working"
-	snapshot.Activity = &activity
-	snapshot.Waiting = ""
-	snapshot.Compacting = nil
-	// A session whose interruptions go unheard says so; one that hears them
-	// adds nothing.
-	snapshot.Compacting = nil
-	snapshot.Interruptions = session.InterruptionsObserved
-	if got := activityText(&snapshot); got != "working" {
-		t.Fatal(got)
-	}
-	snapshot.Interruptions = session.InterruptionsUnobserved
-	if got := activityText(&snapshot); got != "working; interruptions unheard" {
-		t.Fatal(got)
-	}
-	snapshot.Stale()
-	if got := activityText(&snapshot); !strings.Contains(got, "stale") {
-		t.Fatal("cached activity looked fresh")
-	}
-}
-
 func TestCompactionRetrievalShowsLatestActivityWithoutEventTail(t *testing.T) {
 	for _, asJSON := range []bool{false, true} {
 		dir, self, peer := stateCaller(t, "main")

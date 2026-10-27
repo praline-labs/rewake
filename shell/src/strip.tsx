@@ -5,7 +5,7 @@
 import { RGBA } from "@opentui/core";
 import { createSignal, For, onCleanup } from "solid-js";
 import { ShellRow, selecting, separator } from "./bar.tsx";
-import type { Session, Space } from "./room.ts";
+import type { Session, Space, Verdict } from "./room.ts";
 import type { Theme } from "./theme.ts";
 
 export type StripState = { session: string; branch?: string; status?: Session };
@@ -52,29 +52,21 @@ export function tokens(n: number): string {
   return String(n);
 }
 
-// activityOf reads as rewake list's Status does (docs/session-state.md#activity).
+// activityOf is the verdict's label, as rewake list's Status has it; an
+// unknown activity says nothing in a narrow line.
 function activityOf(s: Session): string | undefined {
-  if (s.activity !== "idle" && s.activity !== "working") return undefined;
-  let text = s.compacting ? "compacting" : s.activity;
-  if (s.waiting === "permission") text = "waiting for a permission";
-  else if (s.waiting === "question") text = "waiting for an answer";
-  else if (s.dialog) text = "waiting at a dialog";
-  if (!s.fresh) text += " (stale)";
-  return text;
+  if (!s.verdict || s.verdict.activity === "unknown") return undefined;
+  return s.verdict.label;
 }
 
-// Mark is what a worker's button edge says (docs/shell.md, "The bar"): off
-// for no work, steady while it works, blinking when it stopped for a reason.
-export type Mark = "off" | "blink" | "steady";
+// Mark is what a worker's button edge says (docs/shell.md, "The bar"), as
+// rewake judged it.
+export type Mark = Verdict["mark"];
 
-// markOf reads the activity as activityOf does: a waiting label wins, and a
-// stale one keeps it; a turn or a compaction holds steady while fresh, and a
-// stale one has stopped. Idle, unknown and ended are off.
+// markOf is the verdict's mark; a session not listed, or with no telemetry,
+// is off.
 export function markOf(s: Session | undefined): Mark {
-  if (!s || (s.activity !== "idle" && s.activity !== "working")) return "off";
-  if (s.waiting === "permission" || s.waiting === "question" || s.dialog) return "blink";
-  if (s.activity === "idle" && !s.compacting) return "off";
-  return s.fresh ? "steady" : "blink";
+  return s?.verdict?.mark ?? "off";
 }
 
 function contextOf(s: Session): Part | undefined {
