@@ -21,7 +21,9 @@ name="@praline-labs/rewake"
 root="$(cd "$(dirname "$0")/.." && pwd)"
 # Where the source lives. The registry's page links to it, and resolves the
 # README's relative links against it; without it they lead nowhere.
-repository='"repository": { "type": "git", "url": "git+https://github.com/praline-labs/rewake.git" }'
+repository='"repository": { "type": "git", "url": "git+https://github.com/praline-labs/rewake.git" },
+  "homepage": "https://github.com/praline-labs/rewake#readme",
+  "bugs": { "url": "https://github.com/praline-labs/rewake/issues" }'
 out="$root/dist/npm"
 # The build time, which the binary cannot know otherwise: rewake --version
 # shows it, so two builds of one revision can be told apart.
@@ -93,6 +95,7 @@ cat > "$entry/package.json" <<JSON
   "version": "$version",
   "description": "Let the coding agents running on your machine message each other",
   "license": "MIT",
+  "keywords": ["coding-agents", "ai-agents", "multi-agent", "agent-orchestration", "agent-messaging", "terminal", "cli"],
   $repository,
   "bin": { "rewake": "bin/rewake" },
   "files": ["bin/rewake", "README.md", "LICENSE"],

@@ -1,5 +1,9 @@
 # rewake
 
+[![npm](https://img.shields.io/npm/v/@praline-labs/rewake)](https://www.npmjs.com/package/@praline-labs/rewake)
+[![downloads](https://img.shields.io/npm/dm/@praline-labs/rewake)](https://www.npmjs.com/package/@praline-labs/rewake)
+[![license](https://img.shields.io/npm/l/@praline-labs/rewake)](https://github.com/praline-labs/rewake/blob/main/LICENSE)
+
 Let one coding agent run a team of others on your machine.
 
 You start one session, **main**, in your project. Main raises its own workers — a writer, a
