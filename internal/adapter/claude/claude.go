@@ -189,6 +189,11 @@ func (claudeHarness) Offers() adapter.Offer {
 // is not a UUID or is already in use (`claude --help`, 2.1.296).
 const sessionIDFlag = "--session-id"
 
+// ResumeArgs continues a conversation by its id (`claude --help`, 2.1.296).
+func (claudeHarness) ResumeArgs(conversation string) []string {
+	return []string{"--resume", conversation}
+}
+
 // conversationRefusal refuses rewake's id for a launch whose arguments
 // already name or continue a conversation: the record would name one the
 // harness never started.

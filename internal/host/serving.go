@@ -5,11 +5,15 @@ import (
 	"fmt"
 	"os"
 	"sync"
+	"testing"
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/registry"
+	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/core/session"
+	"github.com/praline-labs/rewake/internal/host/herdr"
+	"github.com/praline-labs/rewake/internal/infra/build"
 )
 
 // startServing starts what serves the session beside the harness — the run's
@@ -82,8 +86,32 @@ func startServing(ctx context.Context, request Request, self registry.Session, n
 
 	if plan.Telemetry != nil {
 		stops = append(stops, session.Start(ctx, request.Dir, name, epoch, plan.Telemetry.SessionState, live.workers))
+		if pane, ok := herdrPane(self); ok {
+			stops = append(stops, herdr.Start(ctx, herdrConfig(pane, request.Harness, plan.Telemetry)))
+		}
 	}
 	return stop, nil
+}
+
+// herdrPane is the herdr pane main runs in, which it reports itself to
+// (docs/launch.md#herdr); a worker runs in none. A test binary never reports:
+// it inherits the variables of the pane its session runs in, a person's own.
+func herdrPane(self registry.Session) (herdr.Pane, bool) {
+	if self.Role != role.Main.ID || testing.Testing() {
+		return herdr.Pane{}, false
+	}
+	return herdr.FromEnv(os.Getenv)
+}
+
+func herdrConfig(pane herdr.Pane, harness adapter.Harness, telemetry adapter.Telemetry) herdr.Config {
+	config := herdr.Config{Pane: pane, Agent: harness.ID(), State: telemetry.SessionState}
+	if resumer, ok := harness.(adapter.Resumer); ok {
+		config.Build, _ = build.ID()
+		config.Resume = func(conversation string) []string {
+			return append([]string{harness.ID()}, resumer.ResumeArgs(conversation)...)
+		}
+	}
+	return config
 }
 
 // closeOnce closes service the first time it is called and never again: Run

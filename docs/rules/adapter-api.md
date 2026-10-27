@@ -111,6 +111,9 @@ The optional interfaces beside it:
   checkout is told it starts in main's and enters before its first change
   ([worktree-tools.md](../worktree-tools.md#a-workers-entry-enter_worktree--true-and-worktree_enter)).
 - `ThreadTracker` follows the conversation from the outside, given the run's process.
+- `Resumer` gives the arguments after `rewake <harness>` that continue a conversation by its
+  id, for herdr's resume command ([launch.md](../launch.md#herdr)). Claude Code answers
+  `--resume <id>` and pi `--session-id <id>`; pi's `--resume` opens a picker.
 
 The plan carries one run's capabilities as interfaces the wrapper calls and never asserts on
 the adapter: `Service`, started before the harness and closed with it, a `ProcessService`

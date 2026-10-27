@@ -268,6 +268,39 @@ extension says pi quits ([shell.md](shell.md#who-owns-which-pty)). It ends when 
 terminal goes: then it hangs main up and main's run's end ends every worker. A launch that failed
 inside the shell has its last lines printed once the shell leaves the screen.
 
+### herdr
+
+herdr, a terminal workspace manager for coding agents, finds an agent by its pane's foreground
+process, which for main in the shell is `rewake-shell`. So main's wrapper reports main itself,
+through herdr's own reporting command (`internal/host/herdr`). It does so only when `HERDR_ENV=1`
+and `HERDR_PANE_ID`, `HERDR_BIN_PATH` and `HERDR_SOCKET_PATH` are all set, and only for main.
+Workers run in no pane of herdr's: they inherit the variables, and the role keeps them out. A
+run outside herdr starts nothing, and so does a test binary, since it inherits its session's
+pane.
+
+- **Name and source.** The agent is the harness's id. The source is `rewake`.
+- **State.** The state comes from the run's telemetry, read four times a second:
+  - idle stays idle; working and compacting are working;
+  - a held permission request, a question or a dialog is blocked, with the activity label
+    (`waiting for a permission`, …) as its message;
+  - anything not observed now is unknown, never idle.
+- **When it reports.** A report goes out only when the state, the conversation or the resume
+  command changes. One is in flight at a time, cut after two seconds. A failure is ignored and
+  tried again five seconds later with the state as it is then. `--seq` is the wall clock in
+  microseconds, so it rises across main's restarts.
+- **Resume command.** A report carries one when the harness has a conversation id
+  (`adapter.Resumer`, [rules/adapter-api.md](rules/adapter-api.md#launch)): `rewake <harness>`
+  plus the adapter's arguments (`--resume <id>`; `--session-id <id>` on pi).
+  - It is carried only when the `rewake` on PATH reports this build's id from `--version --json`
+    (asked once, in the background). herdr reruns the command in a new shell of the pane, where
+    another build would bring main back under other state.
+  - A command that breaks herdr's rules (a plain command first, no apostrophe or control
+    character, at most 64 arguments and 8 KiB) is left out, not sent: herdr would refuse the
+    whole report.
+  - Main's own launch options are not carried.
+- **Release.** When main's run ends, its wrapper releases the pane. herdr's facts, with the version
+  they were checked on, are in [research-herdr.md](research-herdr.md).
+
 ### A worktree for a launch
 
 `rewake claude --worktree` gives main, and `rewake space open <name> … --worktree` a worker, a
