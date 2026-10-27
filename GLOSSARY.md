@@ -50,7 +50,7 @@ Means: the report of a turn that broke off — a policy filter, the network, a l
 Means: the report of a turn a person stopped with Ctrl+C or Esc; only those awaiting a report get it, nothing is owed, and the task is not sent again — the person decides.
 
 ## `rewake.next`
-Means: a new build installed beside the running `rewake`; it replaces the running one only on the owner's word «готов».
+Means: a new build installed beside the running `rewake2`; main swaps it in right after landing and green checks, and the owner restarts the room to run it.
 
 ## `unread/`
 Means: the folder of a session's mailbox holding the letters not yet read, one JSON file each with `from`, `kind` and `text`.
