@@ -76,7 +76,7 @@ func TestMemoryDefaultRetired(t *testing.T) {
 // template, none.
 func TestRunSettingsWithMemory(t *testing.T) {
 	folder, root := t.TempDir(), t.TempDir()
-	passed, enter, notes, err := runSettings(map[string]any{"a": true}, folder, root, "opus", false, "/run")
+	passed, enter, notes, err := runSettings(map[string]any{"a": true}, folder, root, "opus", false, "/run", "")
 	if err != nil || enter || len(notes) != 0 {
 		t.Fatalf("%s %v %v", passed, notes, err)
 	}
@@ -89,7 +89,7 @@ func TestRunSettingsWithMemory(t *testing.T) {
 		settings map[string]any
 		key      string
 	}{{map[string]any{"autoMemoryEnabled": false}, "opus"}, {map[string]any{}, ""}} {
-		passed, _, _, err := runSettings(c.settings, folder, root, c.key, false, "/run")
+		passed, _, _, err := runSettings(c.settings, folder, root, c.key, false, "/run", "")
 		if overlay := overlayOf(t, passed); err != nil || overlay["autoMemoryEnabled"] != nil || overlay["autoMemoryDirectory"] != nil {
 			t.Fatalf("%v %q: %v %v", c.settings, c.key, overlay, err)
 		}

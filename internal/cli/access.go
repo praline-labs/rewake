@@ -97,6 +97,7 @@ func (ctx *Context) within(class access, call Call, run func() int, refused func
 	if class != accessChange || (call.Command != nil && call.Command.Harness != nil) {
 		return run()
 	}
+	ctx.handOff()
 	lease, err := acquireCurrent(call.Command)
 	if err != nil {
 		return refused(err)
@@ -111,6 +112,7 @@ func (ctx *Context) within(class access, call Call, run func() int, refused func
 // another build is said to be another's, once, on stderr, whatever the form
 // prints on stdout.
 func (ctx *Context) asView(run func() int) int {
+	ctx.handOff()
 	leave := state.EnterView()
 	if dir, err := state.Dir(); err == nil {
 		if line := build.Foreign(dir); line != "" {

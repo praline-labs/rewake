@@ -13,10 +13,10 @@ import (
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
-// ExecutableEnv carries the path of the rewake that started the run, for a
-// tool of the harness's adapter to run the same rewake by argv rather than
-// whichever one PATH finds first. Set at every launch, replacing an inherited
-// value.
+// ExecutableEnv carries the path of the rewake the run's room runs — its own
+// copy of its build (docs/rules/state.md#the-rooms-own-copy) — for a tool of
+// the harness's adapter to run it by argv rather than whichever one PATH finds
+// first. Set at every launch, replacing an inherited value.
 const ExecutableEnv = "REWAKE_EXECUTABLE"
 
 // RoleEnv carries the run's role id, for a harness's front end to register
@@ -45,6 +45,10 @@ func SessionEnv(request adapter.LaunchRequest, strip []string) []string {
 		drop[name] = true
 	}
 
+	executable := request.Executable
+	if executable == "" {
+		executable, _ = os.Executable()
+	}
 	env := make([]string, 0, len(os.Environ())+2)
 	for _, entry := range os.Environ() {
 		name, value, found := strings.Cut(entry, "=")
@@ -52,7 +56,7 @@ func SessionEnv(request adapter.LaunchRequest, strip []string) []string {
 			continue
 		}
 		if found && name == "PATH" {
-			entry = "PATH=" + pathWithSelf(value)
+			entry = "PATH=" + pathFirst(executable, value)
 		}
 		env = append(env, entry)
 	}
@@ -60,7 +64,7 @@ func SessionEnv(request adapter.LaunchRequest, strip []string) []string {
 	if room == "" {
 		room = state.DefaultRoom
 	}
-	if executable, err := os.Executable(); err == nil {
+	if executable != "" {
 		env = append(env, ExecutableEnv+"="+executable)
 	}
 	if request.Role.ID != "" {
@@ -88,19 +92,36 @@ func ProbeEnv() []string {
 		case strings.HasPrefix(name, "REWAKE_BRIDGE_"):
 			continue
 		case name == "PATH":
-			entry = "PATH=" + pathWithSelf(value)
+			self, _ := os.Executable()
+			entry = "PATH=" + pathWithSelf(self, value)
 		}
 		env = append(env, entry)
 	}
 	return env
 }
 
+// pathFirst puts the directory of the room's rewake first on PATH, even when
+// it is there already further on: an install's directory the person's PATH
+// names holds the build an upgrade put there, not the room's.
+func pathFirst(executable, path string) string {
+	if executable == "" {
+		return path
+	}
+	dir := filepath.Dir(executable)
+	entries := []string{dir}
+	for _, entry := range filepath.SplitList(path) {
+		if entry != dir {
+			entries = append(entries, entry)
+		}
+	}
+	return strings.Join(entries, string(os.PathListSeparator))
+}
+
 // pathWithSelf makes sure the agent can run the same rewake that started it.
 // Found by a live run: the agent was told to answer with rewake send, tried, and
 // got "command not found" because the binary was not on its PATH.
-func pathWithSelf(path string) string {
-	executable, err := os.Executable()
-	if err != nil {
+func pathWithSelf(executable, path string) string {
+	if executable == "" {
 		return path
 	}
 	dir := filepath.Dir(executable)

@@ -56,6 +56,9 @@ func handleLaunch(h adapter.Harness) func(*Context, Call) error {
 			return err
 		}
 		defer lease.Release()
+		if note := lease.Note(); note != "" {
+			_, _ = fmt.Fprintln(ctx.Stderr, note)
+		}
 		root, err := state.Root()
 		if err != nil {
 			return &UsageError{Message: err.Error()}

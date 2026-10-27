@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 
 	"github.com/praline-labs/rewake/internal/adapter"
+	"github.com/praline-labs/rewake/internal/infra/build"
 )
 
 // PinnedVersion is the pi installed with rewake (scripts/pack.sh reads it):
@@ -58,7 +59,9 @@ func shippedEntry() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("could not find rewake's own executable, beside which pi is installed: %w", err)
 	}
-	if entry, ok := findShipped(filepath.Dir(executable)); ok {
+	// A room's own copy of rewake finds pi in the install it was placed from
+	// (docs/rules/state.md#the-rooms-own-copy).
+	if entry, ok := findShipped(build.Origin(executable)); ok {
 		return entry, nil
 	}
 	return "", fmt.Errorf("the pi installed with rewake is not in any node_modules above %s; reinstall rewake from npm, set %s to a pi %s package, or name a pi with --command",

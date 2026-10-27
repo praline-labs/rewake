@@ -190,7 +190,9 @@ activity, the configured model, the reasoning effort the main loop asks for (the
 pi is part of rewake: a pinned pi, 1.4.0 today, is a
 dependency of rewake's npm package, installed and updated with it ([install.md](install.md)).
 Without `--command`, `rewake pi` starts that copy and no `pi` on `PATH`: it finds the
-package in a `node_modules` above its own executable, as node resolves a dependency, or
+package in a `node_modules` above its own executable, as node resolves a dependency — for the
+room's own copy of rewake, above the directory its `origin` names
+([rules/state.md](rules/state.md#the-rooms-own-copy)) — or
 where `REWAKE_PI` names a package directory or entry script (a build npm did not install),
 and runs the entry with `node`. Before the claim it reads `node --version`, refusing below
 22.19.0 (pi's own `engines`, which pi does not check) or with no `node` on `PATH`, then

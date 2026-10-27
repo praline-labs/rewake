@@ -15,7 +15,7 @@ cmd/rewake/                                   entry point, top-level parsing
 internal/                                     the layout test of 2.0: the import rule, harness names outside the adapters, no registry
 internal/cli/                                 command table, parsing, overview, help, failures, printing
 internal/infra/state/                         directory: checks, paths, atomic writes
-internal/infra/build/                         the build id (SHA-256 of the image) and the room's build lease
+internal/infra/build/                         the build id (SHA-256 of the image), the room's build lease and its own copy of its build
 internal/infra/build/buildtest/               for tests: a room made and its build recorded the way a launch of the test binary does
 internal/infra/buildtime/                     durations a build may shorten through -ldflags, for the suite
 internal/core/registry/                       session record, name publishing, liveness and listing

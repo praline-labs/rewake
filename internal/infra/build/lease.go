@@ -30,6 +30,10 @@ type Lease struct {
 	// the last.
 	holds int
 	owner sync.Once
+
+	// executable is the rewake the room's sessions run, set by a launch;
+	// note says why it is not the room's own copy.
+	executable, note string
 }
 
 // Room is the room the lease holds.
@@ -150,15 +154,30 @@ func AcquireLaunch(base, room string) (*Lease, error) {
 }
 
 // Launch is AcquireLaunch for a launch that goes on to claim; both launch
-// routes, the CLI's and the host's, take the lease here. A tree of rewake 1.x
-// under the base is left as it is (docs/install.md).
+// routes, the CLI's and the host's, take the lease here, and the room's own
+// copy of its build is placed here, under it, before any other lock. A tree
+// of rewake 1.x under the base is left as it is (docs/install.md).
 func Launch(base, room string) (*Lease, error) {
 	lease, err := AcquireLaunch(base, room)
 	if err != nil {
 		return nil, err
 	}
+	own, err := ID()
+	if err != nil {
+		lease.Release()
+		return nil, err
+	}
+	lease.executable, lease.note = pin(lease.room, own)
 	state.Step("launch leased")
 	return lease, nil
+}
+
+// Note is why the room's sessions do not run its own copy, or "".
+func (l *Lease) Note() string {
+	if l == nil {
+		return ""
+	}
+	return l.note
 }
 
 func acquire(base, roomName string, launch bool) (*Lease, error) {

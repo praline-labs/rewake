@@ -161,8 +161,8 @@ start, so that is a documented limit, not a refusal.
 ## The tools
 
 The mod registers no mail tools: a session reads and sends through the shell commands. Its tools
-answer with rewake's own `rewake worktree …` command, run by argv through the rewake that
-started the run (`REWAKE_EXECUTABLE`):
+answer with rewake's own `rewake worktree …` command, run by argv through the room's own copy of
+its build (`REWAKE_EXECUTABLE`, [rules/state.md](rules/state.md#the-rooms-own-copy)):
 
 - `worktree_status` on every run: the checkout the session works in and what a space's close
   would do with it;

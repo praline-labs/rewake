@@ -86,6 +86,9 @@ func writePrimitives(t *testing.T, base, dir string) (map[string]func() error, s
 		"Move":      func() error { return Move(file, filepath.Join(dir, "moved")) },
 		"Touch":     func() error { return Touch(file, time.Unix(0, 0)) },
 		"Discard":   func() error { return Discard(file) },
+		"PlaceExecutable": func() error {
+			return PlaceExecutable(filepath.Join(dir, "placed"), file, file, func(string) error { return nil })
+		},
 		"RemoveAll": func() error { return RemoveAll(filepath.Join(dir, "sessions")) },
 		"Flock":     func() error { return Flock(locked, syscall.LOCK_EX|syscall.LOCK_NB) },
 		"OpenCounter": func() error {

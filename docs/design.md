@@ -85,6 +85,7 @@ verified main callers see them.
   v2/rooms/<room>/              2.0's root, then the room
     build.lock                 the room's build lease, flock(2): writers shared, a launch changing the build exclusive
     build                      the room's build id, the SHA-256 of the executable a launch established
+    bin/rewake, bin/origin     the room's own copy of that build, which its sessions run, and the directory it was installed in (rules/state.md#the-rooms-own-copy)
     directory                  the launch directory the room is named for
     .launch.lock               serializes role choice and name publication
     sessions/<name>.json       session record
@@ -118,9 +119,11 @@ excessively long state root still needs shortening. Since an epoch carries the m
 exception.
 
 One build holds a room at a time ([rules/state.md](rules/state.md#the-builds-identity)): an npm
-upgrade under running sessions meets a new binary at the install path that refuses to change the
+upgrade under running sessions puts a new binary at the install path that refuses to change the
 room until its sessions end, instead of writing records the running wrappers' build does not
-expect.
+expect. The room's sessions do not meet it: they run the room's own copy of its build, and a
+command of the new build in the room is handed to that copy
+([rules/state.md](rules/state.md#the-rooms-own-copy)).
 
 One thing rewake keeps outside the base: the checkouts it makes for a launch with `--worktree`,
 and their records. A checkout holds work that must outlive a restart, so they live in the user's
@@ -220,9 +223,13 @@ from the role and the harness are in [roles.md](roles.md).
 - `REWAKE_DIR=<base>` — the shared base, not its root `v2/` nor the room below it.
 - `REWAKE_ROOM=<room>` — the room for every child command. Inherited room, session and epoch
   markers are replaced with this launch's values.
-- `REWAKE_EXECUTABLE=<path>` — the rewake that started the run, over an inherited value: the
-  harness's `worktree_status` tool runs it by argv rather than whichever rewake PATH finds first
+- `REWAKE_EXECUTABLE=<path>` — the room's own copy of its build, or the launching rewake when the
+  room keeps none ([rules/state.md](rules/state.md#the-rooms-own-copy)), over an inherited value:
+  the harness's tools run it by argv rather than whichever rewake PATH finds first
   ([worktree-tools.md](worktree-tools.md)). A probe gets none.
+- `PATH` — the directory of that rewake first, ahead of an install's directory the inherited PATH
+  already names, so the agent's `rewake …` runs the room's build after an upgrade. A probe gets
+  the launching rewake's directory added only where PATH lacks it.
 - `REWAKE_ROLE=<id>` — the run's role, over an inherited value: main's `worktree_list` and
   `worktree_land` are registered only where it is `main`; a choice of what is shown, not an
   authorization. A probe gets none.

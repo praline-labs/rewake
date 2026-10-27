@@ -1,5 +1,5 @@
 ---
-description: The state root and its levels, the build's identity, the room's lease and its lock order, the bootstrap, views and changes through the write seam, and the state of 1.x left alone.
+description: The state root and its levels, the build's identity, the room's lease and its lock order, the bootstrap, the room's own copy of its build, views and changes through the write seam, and the state of 1.x left alone.
 ---
 
 # Rules: state and builds
@@ -188,6 +188,56 @@ Tests:
 - `internal/host/lease_test.go` `TestHostLeaseOutlivesCleanup`
 - `internal/host/lifetime_test.go` `TestRunKeepsTheLeaseAndItsDirectoryUntilItsWorkersStop`
 
+## The room's own copy
+
+An upgrade replaces the file at the install path under running sessions, and Go's
+`os.Executable()` drops the ` (deleted)` that `/proc/self/exe` then shows: every path rewake
+handed on from it would lead an old room's sessions to the new build, which the room refuses.
+So the room keeps its build (the owner's request, October 27, 2026: a running room keeps
+working on its own build until main is restarted, and the upgrade reaches it at its next
+launch).
+
+- **What is kept.** `bin/rewake`, the room's build, and `bin/origin`, one line naming the
+  directory that image was installed in, where what rewake ships beside itself — the bundled
+  pi — is found.
+- **Who writes it.** `build.Launch`, right after the lease is granted, shared and authorized,
+  before any other lock of the room, so the lock order above is unchanged. When `bin/rewake`
+  is missing or its id is not the launch's — a switched room, one made before this rule, a
+  damaged copy — it is placed again, `origin` first; else nothing is written. The primitive
+  `state.PlaceExecutable` hard-links the install's file to a temporary name and keeps it only
+  when its id is the launch's, which a file an upgrade already replaced fails; otherwise it
+  copies `/proc/self/exe` with mode 0700. A link keeps the install's own mode, which is never
+  changed. Then a rename and a directory sync. Two launches of one build write the same bytes.
+  A switch happens only with no holder, and the switching launch places its copy before it
+  starts its harness, so no session runs a stale one. A failed placement does not stop the
+  launch: one note, and the launching rewake's own path.
+- **What a session gets.** `REWAKE_EXECUTABLE` names the copy, its directory goes first on
+  PATH, and Claude Code's status line runs it ([design.md](../design.md#environment-the-harness-receives)).
+  A worker's `rewake …`, the tools of the mod and the pi extension, `space open` and the space
+  host and worker it starts all run the room's build. The mod and the extension are embedded
+  in the image. pi is not: the copy finds it above `origin`, and when an upgrade changed the
+  bundled pi a new pi worker in the old room is refused with a hint to restart main
+  (accepted by main, October 27, 2026).
+- **The hand-off.** A command of a room — not the guide, help or the version — run by another
+  build, in a room whose copy is the room's build, prints one line on stderr and execs the copy
+  with the same arguments, environment and pid; the copy takes its own lease. That covers a
+  person's terminal after an upgrade and main's shell, whose path is the install's. Otherwise
+  the refusal stands. A launch never hands off.
+- **What is left.** The copy lives and dies with the room's directory: a wiped base is a new
+  bootstrap and a new copy, a copy removed under a running room leaves PATH falling through to
+  the install, and the next launch of the room's build places it again. At most one binary per
+  room, none extra while the link shares the install's file. Nothing removes a room.
+- **Not covered.** The upgrade to the first build with this rule still broke the rooms then
+  running.
+
+Tests:
+- `internal/infra/state/executable_test.go` `TestPlaceExecutableLinksOrCopies`
+- `internal/infra/build/pin_test.go` `TestLaunchKeepsTheRoomsOwnCopy`
+- `internal/infra/build/pin_test.go` `TestHandoffOnlyToACopyOfTheRoomsBuild`
+- `internal/host/launch/environment_test.go` `TestARunRunsItsRoomsCopy`
+- `internal/cli/handoff_test.go` `TestACommandOfAnOlderRoomIsHandedToItsCopy`
+- `test/workflow/pinned_build_test.go` `TestPinnedBuild`
+
 ## Views and changes
 
 ### What is a writer
@@ -230,7 +280,7 @@ package refers to it (`TestOnlyTheBriefsAdmitAFolderOutsideTheRoom`, over the sy
 any state: a path in a state directory, as written or where its links lead, is guarded by
 the lease of the room it lies in, and a spelling that only cleans to the claimed path is
 refused, since the kernel follows a link before a `..`. The write primitives are
-`WriteAtomic`, `WriteAtomicHeld`, `PublishExclusive`, `Remove`, `Rename`, `EnsureSubdir`,
+`WriteAtomic`, `WriteAtomicHeld`, `PublishExclusive`, `PlaceExecutable`, `Remove`, `Rename`, `EnsureSubdir`,
 the locks (`WithRoomLock`, `WithNameLock`, `TryWithNameLock`, `WithSpaceLock`, `WithBriefLock`,
 `WithMailboxLock`, `WithMailboxLockAt`, `TryHold`), and the os calls they name behind the same guard
 (`OpenFile` with a write flag, `WriteFile`, `Link`, `Move`, `Touch`, `Discard`,
