@@ -2,7 +2,6 @@ package cli
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/praline-labs/rewake/internal/core/taskbrief"
 )
@@ -68,15 +67,9 @@ func briefLetterLines(brief *letterBrief) []string {
 	if brief.briefDetail == nil {
 		return []string{"", fmt.Sprintf("Rewake: this letter gives brief %d, which could not be read: %s. Read it with rewake brief show %d.", brief.ID, brief.Error, brief.ID)}
 	}
-	d := brief.briefDetail
-	header := fmt.Sprintf("brief %d · %s · edition %d · %d of %d done · %s", d.ID, d.Title, d.Edition, d.Done, d.Total, plural(d.CommentCount, "comment"))
-	if d.Closed {
-		header += " · closed"
+	checkout := brief.checkout
+	if brief.Closed {
+		checkout = ""
 	}
-	lines := []string{"", header, d.how(brief.as)}
-	if brief.checkout != "" && !d.Closed {
-		lines = append(lines, brief.checkout)
-	}
-	lines = append(lines, "")
-	return append(lines, strings.Split(strings.TrimSuffix(d.numbered, "\n"), "\n")...)
+	return append([]string{""}, brief.lines(brief.as, checkout, false)...)
 }

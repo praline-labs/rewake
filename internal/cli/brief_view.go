@@ -3,7 +3,6 @@ package cli
 import (
 	"fmt"
 	"path/filepath"
-	"slices"
 	"strings"
 	"time"
 
@@ -189,28 +188,31 @@ func briefShow(ctx *Context, call Call, home taskbrief.Home, caller briefRun, ar
 	if call.Switch("markdown") && !ctx.JSON {
 		return emit(ctx, strings.Split(strings.TrimSuffix(view.Text, "\n"), "\n")...)
 	}
-	return printValue(ctx, view, func() []string {
-		lines := view.lines(reader)
-		if checkout != "" {
-			// After the line saying how to act on it.
-			at := slices.Index(lines, view.how(reader)) + 1
-			lines = slices.Insert(lines, at, checkout)
-		}
-		return lines
-	})
+	return printValue(ctx, view, func() []string { return view.lines(reader, checkout, true) })
 }
 
 // lines are the brief as a reader reads it — main, or a run by the kind of
-// its binding: a header, how to act on it, the text with each item's number,
-// and the comments with who wrote each.
-func (d briefDetail) lines(reader taskbrief.BindingKind) []string {
-	lines := []string{d.header()}
-	if len(d.Bound) > 0 {
-		lines = append(lines, "bound: "+boundNames(d.briefSummary))
+// its binding — and the one place that orders the parts: a header, how to act
+// on it, the reviewer's checkout line if it has one, the text with each
+// item's number, and, in full, the comments with who wrote each. A letter
+// takes the short form: a shorter header, no bound runs, no comments.
+func (d briefDetail) lines(reader taskbrief.BindingKind, checkout string, full bool) []string {
+	var lines []string
+	if full {
+		lines = append(lines, d.header())
+		if len(d.Bound) > 0 {
+			lines = append(lines, "bound: "+boundNames(d.briefSummary))
+		}
+	} else {
+		lines = append(lines, d.letterHeader())
 	}
-	lines = append(lines, d.how(reader), "")
+	lines = append(lines, d.how(reader))
+	if checkout != "" {
+		lines = append(lines, checkout)
+	}
+	lines = append(lines, "")
 	lines = append(lines, strings.Split(strings.TrimSuffix(d.numbered, "\n"), "\n")...)
-	if len(d.Comments) == 0 {
+	if !full || len(d.Comments) == 0 {
 		return lines
 	}
 	lines = append(lines, "", "comments:")
@@ -230,6 +232,14 @@ func (d briefDetail) lines(reader taskbrief.BindingKind) []string {
 
 func (d briefDetail) header() string {
 	header := fmt.Sprintf("brief %d · %s · edition %d · revision %d · %d of %d done · %s", d.ID, d.Title, d.Edition, d.Revision, d.Done, d.Total, plural(d.CommentCount, "comment"))
+	if d.Closed {
+		header += " · closed"
+	}
+	return header
+}
+
+func (d briefDetail) letterHeader() string {
+	header := fmt.Sprintf("brief %d · %s · edition %d · %d of %d done · %s", d.ID, d.Title, d.Edition, d.Done, d.Total, plural(d.CommentCount, "comment"))
 	if d.Closed {
 		header += " · closed"
 	}
