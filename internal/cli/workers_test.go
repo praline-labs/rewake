@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"testing"
 
@@ -132,54 +131,37 @@ func TestWorkersUnreadableFileRefuses(t *testing.T) {
 	}
 }
 
-func TestSpaceAliasUsesTheTemplate(t *testing.T) {
-	workerAliases(t, workerAliasesExample+`
-[alias.agent-write.launch]
-model = "chosen"
-effort = "high"
-context = "large"
-`)
+// A worker comes only from a template, which names its harness and role:
+// space open takes neither as a flag.
+func TestSpaceOpenTakesNoHarnessOrRole(t *testing.T) {
 	ctx := &Context{table: newTable(adapter.NewCatalog(workerSettingsHarness{}))}
-	// A worker comes only from a template, which names its harness and role.
-	for _, argv := range [][]string{
-		{"space", "open", "api"},
-		{"space", "open", "api", "--alias", "nothing"},
-		{"space", "open", "api", "--alias", "agent-write", "--worktree="},
-	} {
-		parsed, err := ctx.table.parse(argv)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if _, err := ctx.spaceTarget(parsed.Call); err == nil {
-			t.Fatalf("accepted %v", argv)
-		}
-	}
 	for _, flag := range []string{"--harness", "--role"} {
 		if _, err := ctx.table.parse([]string{"space", "open", "api", "--alias", "agent-write", flag, "agent"}); err == nil {
 			t.Fatalf("%s parsed", flag)
 		}
 	}
-	parsed, err := ctx.table.parse([]string{"space", "open", "api", "--alias", "agent-write", "--", "--effort", "low"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	target, err := ctx.spaceTarget(parsed.Call)
-	if err != nil {
-		t.Fatal(err)
-	}
-	words, err := workerLaunch(target, parsed.Call, "fresh-id")
-	want := []string{"--command", "agent-worker", "agent", "--model", "chosen", "--effort", "low", "--session-id", "fresh-id"}
-	if err != nil || !reflect.DeepEqual(words, want) {
-		t.Fatalf("launch: %v, %v; want %v", words, err, want)
-	}
+}
 
-	// A literal prompt tail cannot swallow the space's conversation id or
-	// checkout flag; an explicit checkout replaces the alias's older one.
-	target.args = []string{"--worktree=old", "--", "--session-id=literal"}
-	target.worktree = "patch"
-	words, err = workerLaunch(target, parsed.Call, "fresh-id")
-	want = []string{"--command", "agent-worker", "agent", "--worktree=patch", "--session-id", "fresh-id", "--", "--session-id=literal"}
-	if err != nil || !reflect.DeepEqual(words, want) {
-		t.Fatalf("literal tail: %v, %v; want %v", words, err, want)
+// space open hands launch the request as typed: a bare --worktree asks for a
+// generated name, the words after -- are the harness's.
+func TestSpaceOpenAsksWhatWasTyped(t *testing.T) {
+	ctx := &Context{table: newTable(adapter.NewCatalog(workerSettingsHarness{}))}
+	for _, c := range []struct {
+		argv []string
+		want string
+	}{
+		{[]string{"--alias", "w"}, `{"Alias":"w","Worktree":null,"NoWorktree":false,"Type":null,"NoType":false,"Args":[]}`},
+		{[]string{"--alias", "w", "--worktree", "--type", "code", "--", "--model", "m"}, `{"Alias":"w","Worktree":"true","NoWorktree":false,"Type":"code","NoType":false,"Args":["--model","m"]}`},
+		{[]string{"--alias", "w", "--worktree=fix", "--no-type", "--no-worktree"}, `{"Alias":"w","Worktree":"fix","NoWorktree":true,"Type":null,"NoType":true,"Args":[]}`},
+		{[]string{"--worktree=", "--type="}, `{"Alias":"","Worktree":"","NoWorktree":false,"Type":"","NoType":false,"Args":[]}`},
+	} {
+		parsed, err := ctx.table.parse(append([]string{"space", "open", "api"}, c.argv...))
+		if err != nil {
+			t.Fatalf("%v: %v", c.argv, err)
+		}
+		got, _ := json.Marshal(spaceRequest(parsed.Call))
+		if string(got) != c.want {
+			t.Errorf("%v: %s, want %s", c.argv, got, c.want)
+		}
 	}
 }

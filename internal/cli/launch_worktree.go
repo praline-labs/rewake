@@ -9,6 +9,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/core/registry"
+	"github.com/praline-labs/rewake/internal/host/launch"
 	"github.com/praline-labs/rewake/internal/host/worktree"
 )
 
@@ -27,15 +28,15 @@ type launchCheckout struct {
 // launch without the flag, or of a harness that makes its own, comes back
 // unchanged with no checkout.
 func takeWorktree(h adapter.Harness, call Call, stderr io.Writer) ([]string, *launchCheckout, error) {
-	taker, ok := h.(adapter.WorktreeHarness)
-	if !ok {
-		return call.Raw, nil, nil
+	name, given, args, err := launch.WorktreeRequest(h, call.Raw)
+	if err != nil {
+		return nil, nil, &UsageError{Command: call.Command, Message: err.Error()}
 	}
+	if !given {
+		return args, nil, nil
+	}
+	taker := h.(adapter.WorktreeHarness)
 	flag := taker.WorktreeFlag()
-	name, given, args, err := worktreeRequest(call, flag, taker.WorktreeNameSpaced())
-	if err != nil || !given {
-		return args, nil, err
-	}
 	if err := taker.WorktreeRefusal(args); err != nil {
 		return nil, nil, &UsageError{Command: call.Command, Message: err.Error() + "."}
 	}
@@ -73,38 +74,6 @@ func takeWorktree(h adapter.Harness, call Call, stderr io.Writer) ([]string, *la
 		_, _ = fmt.Fprintf(stderr, "rewake: %s did not copy %s\n", worktree.IncludeFile, skipped)
 	}
 	return args, &launchCheckout{record: record, stderr: stderr, launch: "rewake " + h.ID()}, nil
-}
-
-// worktreeRequest finds the flag among the arguments meant for the harness:
-// a switch asks for a generated name, =<name> names the checkout. A spaced
-// value is not read: the word after a switch is the harness's, a prompt most
-// often, and taking it would change what a launch line already means. Where
-// the harness's own flag takes a spaced name, such a word is refused instead:
-// the person meant it as the name.
-func worktreeRequest(call Call, flag string, spaced bool) (name string, given bool, rest []string, err error) {
-	visible := adapter.BeforeTerminator(call.Raw)
-	rest = make([]string, 0, len(call.Raw))
-	for index, arg := range visible {
-		value, separate, ok := adapter.MatchFlag(arg, flag)
-		if !ok {
-			rest = append(rest, arg)
-			continue
-		}
-		if given {
-			return "", false, nil, &UsageError{Command: call.Command, Message: flag + " is given twice; a launch has one worktree."}
-		}
-		if !separate && value == "" {
-			return "", false, nil, &UsageError{Command: call.Command, Message: flag + "= needs a name; write " + flag + " alone for a generated one."}
-		}
-		if separate && spaced && index+1 < len(visible) && !strings.HasPrefix(visible[index+1], "-") {
-			word := visible[index+1]
-			return "", false, nil, &UsageError{Command: call.Command, Message: fmt.Sprintf(
-				"rewake's %s takes its name only as %s=<name>, and %q after it would reach the harness as the prompt of a worktree with a generated name. Write %s=%s to name it, or %s -- %q for a generated name with that prompt.",
-				flag, flag, word, flag, word, flag, word)}
-		}
-		given, name = true, value
-	}
-	return name, given, append(rest, call.Raw[len(visible):]...), nil
 }
 
 // claimed writes the session into the checkout's record once its name is

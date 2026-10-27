@@ -2,7 +2,6 @@ package cli
 
 import (
 	"encoding/json"
-	"slices"
 	"strings"
 	"testing"
 
@@ -20,72 +19,6 @@ harness = "agent"
 harness = "agent"
 args = ["--worktree=named"]
 `
-
-// The worker's worktree is resolved once, from the template and what space
-// open was given, and the launch carries exactly that one answer: a typed
-// --worktree, on space open or after --, wins; --no-worktree leaves the
-// template's out; two typed requests, or one beside --no-worktree, are
-// refused.
-func TestSpaceOpenResolvesTheWorktreeOnce(t *testing.T) {
-	workerAliases(t, worktreeAliases)
-	ctx := &Context{table: newTable(adapter.NewCatalog(workerSettingsHarness{}))}
-	cases := []struct {
-		argv    []string
-		want    string
-		refused string
-	}{
-		{[]string{"--alias", "tree"}, "true", ""},
-		{[]string{"--alias", "tree", "--worktree=fix"}, "fix", ""},
-		{[]string{"--alias", "tree", "--no-worktree"}, "", ""},
-		{[]string{"--alias", "tree", "--", "--worktree=after"}, "after", ""},
-		{[]string{"--alias", "plain"}, "", ""},
-		{[]string{"--alias", "plain", "--worktree"}, "true", ""},
-		{[]string{"--alias", "named"}, "named", ""},
-		{[]string{"--alias", "named", "--worktree=other"}, "other", ""},
-		{[]string{"--alias", "named", "--no-worktree"}, "", ""},
-		{[]string{"--alias", "plain", "--worktree", "--", "--worktree=again"}, "", "given both"},
-		{[]string{"--alias", "tree", "--no-worktree", "--worktree"}, "", "ask opposite things"},
-		{[]string{"--alias", "plain", "--no-worktree", "--", "--worktree"}, "", "ask opposite things"},
-	}
-	for _, c := range cases {
-		parsed, err := ctx.table.parse(append([]string{"space", "open", "api"}, c.argv...))
-		if err != nil {
-			t.Fatalf("%v: %v", c.argv, err)
-		}
-		target, err := ctx.spaceTarget(parsed.Call)
-		if c.refused != "" {
-			if err == nil || !strings.Contains(err.Error(), c.refused) {
-				t.Errorf("%v: %v, want a refusal with %q", c.argv, err, c.refused)
-			}
-			continue
-		}
-		if err != nil || target.worktree != c.want {
-			t.Errorf("%v: worktree %q, %v; want %q", c.argv, target.worktree, err, c.want)
-			continue
-		}
-		words, err := workerLaunch(target, parsed.Call, "fresh-id")
-		if err != nil {
-			t.Fatalf("%v: %v", c.argv, err)
-		}
-		var flags []string
-		for _, word := range words {
-			if strings.HasPrefix(word, "--worktree") {
-				flags = append(flags, word)
-			}
-		}
-		want := []string{}
-		switch c.want {
-		case "":
-		case "true":
-			want = []string{"--worktree"}
-		default:
-			want = []string{"--worktree=" + c.want}
-		}
-		if !slices.Equal(flags, want) {
-			t.Errorf("%v: the launch carries %q, want %q: %q", c.argv, flags, want, words)
-		}
-	}
-}
 
 // worktree = true is shown by rewake workers, and refused beside the
 // harness's own flag in args, which would be a second answer.
@@ -118,31 +51,13 @@ type enteringHarness struct{ workerSettingsHarness }
 
 func (enteringHarness) EntersWorktree() {}
 
-// enter_worktree = true lets a worker started without a checkout enter one:
-// a typed --worktree starts it in one instead, and the field is refused
-// beside worktree = true and on a harness that cannot enter one.
+// enter_worktree = true is shown by rewake workers, and refused beside
+// worktree = true and on a harness that cannot enter one; what it resolves to
+// is launch's test (TestRaisingResolvesTheWorktreeOnce).
 func TestATemplatesEntryIsItsOneCheckout(t *testing.T) {
 	workerAliases(t, "[alias.enter]\nharness = \"agent\"\nenter_worktree = true\n")
 	t.Setenv("REWAKE_SESSION", "")
 	catalog := adapter.NewCatalog(enteringHarness{})
-	ctx := &Context{table: newTable(catalog)}
-	for _, c := range []struct {
-		argv     []string
-		enter    bool
-		worktree string
-	}{
-		{[]string{"--alias", "enter"}, true, ""},
-		{[]string{"--alias", "enter", "--worktree"}, false, "true"},
-	} {
-		parsed, err := ctx.table.parse(append([]string{"space", "open", "api"}, c.argv...))
-		if err != nil {
-			t.Fatal(err)
-		}
-		target, err := ctx.spaceTarget(parsed.Call)
-		if err != nil || target.enter != c.enter || target.worktree != c.worktree {
-			t.Errorf("%v: enter %v worktree %q %v", c.argv, target.enter, target.worktree, err)
-		}
-	}
 	if _, out, _ := runOn(catalog, "workers"); !strings.Contains(out, "role=general command=\"agent\" enter_worktree") {
 		t.Fatalf("workers lines:\n%s", out)
 	}
