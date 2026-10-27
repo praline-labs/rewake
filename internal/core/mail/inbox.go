@@ -91,6 +91,10 @@ type Message struct {
 	Unread int `json:"-"`
 	// Batch is transport-only membership; each stored message keeps its own identity.
 	Batch []Message `json:"-"`
+	// Reminder marks a notice of letters a finished turn left unread
+	// (reminder.go). Transport-only like Batch: no letter, status or record
+	// carries it.
+	Reminder bool `json:"-"`
 }
 
 // Kind is the subject of a message.

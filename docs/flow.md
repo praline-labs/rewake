@@ -297,6 +297,11 @@ session's waits.
    `rewake inbox`; a `finished` asks for nothing back, so the exchange ends
    here. The main session never reports successful turns, which is
    what keeps two sessions from waking each other forever.
+5. **What the turn left unread.** After a finish, the reader's own wrapper looks for tasks and
+   questions announced in that turn and still unread, and if there are any wakes the reader
+   once more with `Rewake: 1 unread task still waiting` and the task's preview. Once per
+   letter, and never after a failed, stopped or interim end
+   ([delivery.md](delivery.md#the-notice)).
 
 If that wake-up fails, the report remains available to ordinary `rewake inbox`
 in the addressed epoch. Its failed notification status keeps the diagnostic.

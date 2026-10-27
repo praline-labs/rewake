@@ -16,7 +16,8 @@ import (
 // overview that must consume nothing, then one member at a time. The last
 // member of a group is deferred to the next delivery, so between the two the
 // mailbox holds mail that was announced and stays unread — the only state in
-// which "announced mail is never announced again" can be contradicted.
+// which "announced mail is never announced again", but for one reminder, can
+// be contradicted.
 func (s *shimSession) readEach(notice mailboxNotice) (string, error) {
 	if err := insideACase(); err != nil {
 		return "", err
@@ -144,6 +145,9 @@ func (s *shimSession) readMailbox() (string, error) {
 	if err := insideACase(); err != nil {
 		return "", err
 	}
+	if leavesUnread() {
+		return leftUnread, nil
+	}
 	waitAtReadGate()
 	arguments := []string{"inbox"}
 	if os.Getenv(shimInboxJSON) != "" {
@@ -173,4 +177,21 @@ func (s *shimSession) readMailbox() (string, error) {
 	// itself comes after it. A report quoting only the header would say
 	// nothing about which message it answers.
 	return "read: " + read, nil
+}
+
+// shimLeaveUnread names a file: while it exists the session reads no mail and
+// ends its turns all the same, as the worker did that ended a turn with a task
+// announced to it and never read (docs/delivery.md#the-notice).
+const shimLeaveUnread = "RW_SHIM_LEAVE_UNREAD"
+
+// leftUnread is the answer of a turn that read nothing.
+const leftUnread = "left the mail unread"
+
+func leavesUnread() bool {
+	path := os.Getenv(shimLeaveUnread)
+	if path == "" {
+		return false
+	}
+	_, err := os.Stat(path)
+	return err == nil
 }

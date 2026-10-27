@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 
@@ -20,8 +21,10 @@ import (
 // turn boundary, its service and its telemetry — before the harness itself,
 // and returns what stops them, in the reverse order. closeService closes the
 // plan's service once: Run owns it from the moment the plan is returned, and
-// a stop here only brings that close before the read clock's.
-func startServing(ctx context.Context, request Request, self registry.Session, name, epoch string, plan adapter.LaunchPlan, live *liveSet, closeService func()) (func(), error) {
+// a stop here only brings that close before the read clock's. ends hears the
+// boot-clock end of each finished turn published, for the delivery server's
+// reminder (delivery/reminder.go); nil hears none.
+func startServing(ctx context.Context, request Request, self registry.Session, name, epoch string, plan adapter.LaunchPlan, live *liveSet, closeService func(), ends chan<- int64) (func(), error) {
 	var stops []func()
 	stop := func() {
 		for i := len(stops) - 1; i >= 0; i-- {
@@ -45,10 +48,14 @@ func startServing(ctx context.Context, request Request, self registry.Session, n
 		// fails to the side of a report.
 		record := func(at int64) { _ = mail.Open(request.Dir, name, epoch).RecordTurnStart(at) }
 		handler := adapter.TurnHandler{Capture: clock.Snapshot, Publish: func(ctx context.Context, end adapter.TurnEnd) error {
-			if request.OnTurn != nil {
-				return request.OnTurn(ctx, reportSession, end)
+			if request.OnTurn == nil {
+				return nil
 			}
-			return nil
+			err := request.OnTurn(ctx, reportSession, end)
+			if err == nil {
+				finished(ends, end)
+			}
+			return err
 		}}
 		handler.Started = func(_, _ string, at int64) {
 			if at > 0 {
@@ -57,7 +64,11 @@ func startServing(ctx context.Context, request Request, self registry.Session, n
 		}
 		if request.OnConfirm != nil {
 			handler.Confirm = func(ctx context.Context, end adapter.TurnEnd) (string, error) {
-				return request.OnConfirm(ctx, reportSession, end)
+				reason, err := request.OnConfirm(ctx, reportSession, end)
+				if err == nil && reason == "" {
+					finished(ends, end)
+				}
+				return reason, err
 			}
 		}
 		plan.TurnBoundary.ReportTurns(handler)
@@ -91,6 +102,20 @@ func startServing(ctx context.Context, request Request, self registry.Session, n
 		}
 	}
 	return stop, nil
+}
+
+// finished passes a published end that finished with an answer to the
+// delivery server, which reminds of what its turn left unread. A failed,
+// stopped or empty end, or one of no known time, reminds of nothing; an end
+// the server has no room for is dropped rather than wait on it.
+func finished(ends chan<- int64, end adapter.TurnEnd) {
+	if end.Reason != adapter.Answered || strings.TrimSpace(end.Answer) == "" || end.Ended == 0 {
+		return
+	}
+	select {
+	case ends <- end.Ended:
+	default:
+	}
 }
 
 // herdrPane is the herdr pane main runs in, which it reports itself to

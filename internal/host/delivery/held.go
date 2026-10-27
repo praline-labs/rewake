@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/infra/boottime"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -162,6 +163,7 @@ func (s *Server) takeBack(receipt mail.Receipt, members []mail.Message) {
 			continue
 		}
 		s.outcomes[member.ID] = receipt.Result
+		delete(s.announced, member.ID)
 		held = append(held, member)
 	}
 	if len(held) > 0 {
@@ -179,6 +181,11 @@ func (s *Server) outcomeFor(member mail.Message, result mail.Result) mail.Result
 // is reported to its sender, who would otherwise wait for a report nobody owes.
 func (s *Server) settleHeld(message mail.Message, outcome mail.Result) {
 	s.finish(message, outcome)
+	if outcome.State == mail.Delivered {
+		s.announce(message.ID, boottime.Now())
+	} else {
+		delete(s.announced, message.ID)
+	}
 	if s.outcomes[message.ID].State == mail.Failed && !s.outcomes[message.ID].Withdrawn {
 		s.tellUndelivered(message, outcome.Detail)
 	}

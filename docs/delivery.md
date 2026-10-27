@@ -251,11 +251,41 @@ extended by later arrivals (`collectionInterval`, `internal/host/delivery/serve.
 arriving while delivery waits to be ready joins the group. Once handed to the harness, a
 group's membership, count and preview are fixed, and arrivals after that form the next group.
 Old announced-but-unread messages remain readable, never inflate later notices and never wake
-again. Each member keeps its own id, body, kind, epochs, status, receipts and obligation, and
+again, but for the one reminder below. Each member keeps its own id, body, kind, epochs, status, receipts and obligation, and
 is checked again for reservation, expiry and readability just before the notice goes; a
 member read, reserved or expired meanwhile invalidates the attempt, and a later pass rebuilds
 the set. A startup pass that publishes availability notices to main does so under one lock of
 main's mailbox, so they share one wake.
+
+**A task a finished turn left unread is reminded once.** A worker once ended a turn while a
+task announced to it in that turn stayed unread, and nothing woke it again; main found the task
+by `rewake inbox --awaited` and nudged the worker by hand. The owner agreed (October 27, 2026)
+that such a session is woken. After a turn end that published a finish — the harness said
+answered, with an answer, and the end was neither held nor interim — the wrapper hands its end
+on the boot clock to its delivery server. Under the mailbox lock the server asks the core
+(`mail.Box.Unattended`, `internal/core/mail/reminder.go`) for this run's unread tasks and
+questions whose notice went out inside the turn's window: after the run's previous end on
+record, up to this end. It is the window of [pending marks](delivery-turn-end.md#pending-marks)
+without the turn's own start, so the task that woke an idle session counts for the turn it
+woke. An end the interim record shows was interim, or that a later end of the run superseded,
+reminds of nothing. If any are left, one notice goes through the usual Wake, both harnesses
+alike, its members fixed and checked again just before it goes like any notice's:
+
+```
+Rewake: 1 unread task still waiting
+  ↳ <sender> <kind>: <first line> (a preview only: run rewake inbox)
+```
+
+It has an id of its own (`reminder-<hash of its members>`) and names its members even when there
+is one; it writes no status and is not tried again if the harness does not take it. "Once" needs
+nothing kept: the reminded turn's window opens after the end that sent the reminder, so its own
+end finds those letters before its window; the server also forgets every announcement time up to
+an end once it has looked, so a retry of the same end sends nothing. When each notice went out
+is kept in the server's memory only, on the boot clock (a status's `at` is the wall clock, and
+is rewritten): a reminder flag rides on the notice and reaches no letter, status or record. So a
+wrapper restarted loses those times and reminds of nothing from before — an accepted limit, as is
+a task announced in a turn that failed, was stopped or ended interim, which a later finish does
+not remind of either ([turn-outcomes.md](turn-outcomes.md#failed-turns)).
 
 **Mail that asks for nothing waits for company.** A burst of letters seconds apart — workers
 restarted give main a departure and an availability each — wakes the recipient once. After the
