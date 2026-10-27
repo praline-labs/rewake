@@ -23,7 +23,7 @@ func TestABoundaryRecordsItsStart(t *testing.T) {
 	dir := stateDir(t)
 	boundary := &startBoundary{}
 	stop, err := startServing(context.Background(), Request{Dir: dir}, registry.Session{}, "api", "1.1",
-		adapter.LaunchPlan{TurnBoundary: boundary}, newLiveSet(dir, "api", "1.1"), func() {})
+		adapter.LaunchPlan{TurnBoundary: boundary}, newLiveSet(dir, "api", "1.1"), func() {}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

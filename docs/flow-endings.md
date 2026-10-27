@@ -92,6 +92,7 @@ role.
 | Claude Code's gate says it holds only after the 300 ms | the delivery is taken back, for up to a minute | `delivered` (exit 0), then `held`; if it fails, a note |
 | the wrapper is killed while its session holds a line | the next session with the name fails it | `failed`, the session ended, if send still waits; a note once the name is taken again |
 | pi compacting | the extension answers `pending` | `pending`, then delivered once the compaction ends |
+| a finished turn left a task announced in it unread | one reminder wakes the reader, `Rewake: 1 unread task still waiting`; none again for that task | nothing; the report comes once the task is read and a turn ends |
 
 How a report notes that the reader's conversation changed underneath it is in
 [delivery-turn-end.md](delivery-turn-end.md#reports-after-a-thread-change); how a failed,

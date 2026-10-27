@@ -1,5 +1,5 @@
 ---
-description: What each of the 24 workflow scenarios in test/workflow claims — the sessions it starts, what the fixture plays and what it must see — and what none of them proves.
+description: What each of the 25 workflow scenarios in test/workflow claims — the sessions it starts, what the fixture plays and what it must see — and what none of them proves.
 ---
 
 # The workflow suite's cases
@@ -24,7 +24,8 @@ on the sender's side is checked too.
 `batch-arrival`: two letters that arrive inside one collection window are announced as one
 group of fixed membership whose notice previews the latest member, and a third letter after the
 window belongs to another group. Reads stay per message — an overview consumes nothing, one read
-takes one letter — and what was announced is never announced again: the recipient leaves the
+takes one letter — and what was announced is never announced again as new mail, and reminded of
+once at most ([delivery.md](delivery.md#the-notice)): the recipient leaves the
 last member of a group unread until the next delivery, and the third letter comes late enough for
 a replay to have shown in between. Three heads-ups 600 ms apart must not wake the recipient one
 by one.
@@ -34,6 +35,12 @@ turn to end, and the work already running still reports its own outcome, with no
 for the arrival. The session holds its turn open and writes down when it waits; the sender sends
 the second letter once the room's telemetry says the recipient is working, and the scenario reads
 the recipient's own record of whether the letter was steered into the open turn.
+
+`unread-reminder`: a task steered into a turn that ends without reading it brings one reminder,
+naming that task alone; the turn it wakes reads nothing either, and brings no second one; once
+the worker reads again — a note wakes it — the task's report reaches main. The worker holds its
+turns open and, while a file the scenario writes exists, reads no mail (`RW_SHIM_LEAVE_UNREAD`);
+the reminder is told from other notices by its words.
 
 ## Launch, reports and what a main waits on
 

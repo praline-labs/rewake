@@ -14,7 +14,8 @@ import (
 // one collection window are announced as one group of fixed membership, a
 // letter after the window belongs to another group, and reads stay per
 // message — an overview consumes nothing, one read takes one letter, and what
-// was announced is never announced again.
+// was announced is never announced again as new mail: a task a finished turn
+// left unread is reminded once (docs/delivery.md#the-notice), and only once.
 //
 // The last claim is the one an empty scenario would prove by itself: with
 // nothing announced and unread, there is nothing to replay. So the recipient
@@ -114,7 +115,7 @@ const (
 	obsNotesTogether       = "heads-ups 600 ms apart are not announced one by one"
 	obsPeekConsumedNothing = "an overview consumed nothing"
 	obsReadOneByOne        = "each member is read on its own"
-	obsNoReplay            = "announced mail is never announced again"
+	obsNoReplay            = "announced mail is never announced again, but for one reminder of a task left unread"
 	obsAlive               = "both sessions are still running when the case is judged"
 )
 
@@ -301,14 +302,20 @@ func judgeNoReplay(c *Case, col column, worker *scenarioSession) {
 	c.Observed(obsNoReplay, fmt.Sprintf("%d deliveries, nothing announced in two of them", len(deliveries)))
 }
 
+// announcedTwice names a letter announced as new mail twice, or reminded of
+// twice. A reminder is no replay: it says what is still waiting, once.
 func announcedTwice(deliveries []groupDelivery) string {
-	seen := map[string]bool{}
+	seen, reminded := map[string]bool{}, map[string]bool{}
 	for _, delivery := range deliveries {
+		record := seen
+		if strings.Contains(delivery.Notice, reminderLine) {
+			record = reminded
+		}
 		for _, id := range delivery.Members {
-			if seen[id] {
+			if record[id] {
 				return id
 			}
-			seen[id] = true
+			record[id] = true
 		}
 	}
 	return ""

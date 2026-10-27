@@ -14,7 +14,10 @@ path — a turn end, its `finished` report, and how waits are recorded and settl
 
 After a failed or interrupted turn, a session is woken only by new mail: what was already
 announced is never announced again, and new mail needs neither a manual continuation nor a
-peek to reach it. The same holds for the stops below.
+peek to reach it. The same holds for the stops below, and for an interim end. Only a finished
+turn that leaves a task announced in it unread brings one reminder of it
+([delivery.md](delivery.md#the-notice)); a task announced in a failed, stopped or interim
+turn is not reminded of later.
 
 The adapter that heard the turn end hands the core its reason (`adapter.TurnEnd`): a failed
 end and a refused one — the harness declined the turn — both report `error` with the

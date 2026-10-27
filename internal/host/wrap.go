@@ -251,7 +251,10 @@ func Run(ctx context.Context, request Request) (int, error) {
 	if counter, ok := plan.Service.(adapter.WorkerCounter); ok {
 		counter.CountWorkers(runWorkers{life: life})
 	}
-	stopServing, err := startServing(ctx, request, session, name, epoch, plan, live, closeService)
+	// Finished turn ends reach the delivery server, which reminds of what
+	// each turn left unread; a few are room for ends heard close together.
+	ends := make(chan int64, 8)
+	stopServing, err := startServing(ctx, request, session, name, epoch, plan, live, closeService, ends)
 	if err != nil {
 		return 0, err
 	}
@@ -345,6 +348,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 			// A burst of letters that ask for nothing wakes the session once.
 			Window:  delivery.Coalescing,
 			Deliver: wakeIfLive(plan.Wake, live),
+			Ends:    ends,
 		}
 		if reserver, ok := plan.Wake.(adapter.Reserver); ok {
 			server.Reserve = reserveIfLive(reserver, live)

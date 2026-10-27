@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/infra/boottime"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -98,6 +99,7 @@ func (s *Server) deliverGroup(ctx context.Context, pending []mail.Message) {
 	}
 	message := announcement(ready)
 	var result mail.Result
+	handed := boottime.Now()
 
 	switch {
 	case ctx.Err() != nil:
@@ -118,6 +120,11 @@ func (s *Server) deliverGroup(ctx context.Context, pending []mail.Message) {
 		shared = nil
 	}
 	s.track(message.ID, result, ready)
+	if result.State == mail.Delivered {
+		for _, member := range ready {
+			s.announce(member.ID, handed)
+		}
+	}
 	// Remember every irreversible result before any filesystem operation can fail.
 	if result.State != mail.Pending {
 		for _, member := range ready {

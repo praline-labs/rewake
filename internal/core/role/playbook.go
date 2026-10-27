@@ -50,7 +50,7 @@ var Mail = Section{
 	Lines: []string{
 		"Start every message and every final reply with one line stating its point.",
 		"Mail is announced as \"Rewake: <sender> <kind>, N new message(s)\", with a preview of the author's first line; a task's or a question's preview ends by saying it is only a preview.",
-		"Each notice has fixed members. Ready mail is submitted promptly: active work is steered, idle work is woken. Nothing waits for a peek or a finished turn, and old unread mail is not announced again.",
+		"Each notice has fixed members. Ready mail is submitted promptly: active work is steered, idle work is woken. Nothing waits for a peek or a finished turn, and old unread mail is not announced again, but for one reminder of a task a finished turn left unread: \"Rewake: N unread task(s) still waiting\".",
 	},
 }
 

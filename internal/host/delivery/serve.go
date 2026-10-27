@@ -70,6 +70,10 @@ type Server struct {
 	// Opened is closed once the harness can take its first notice. Until then
 	// mail waits, pending, and goes out right after. Nil means from the start.
 	Opened <-chan struct{}
+	// Ends carries the boot-clock end of each finished turn of this run the
+	// wrapper published; what that turn left unread is reminded once
+	// (reminder.go). Nil for a run whose turns are not reported.
+	Ends <-chan int64
 
 	// attempts remembers when each pending message was last tried.
 	attempts map[string]time.Time
@@ -97,6 +101,10 @@ type Server struct {
 	arrivals map[string]*arrival
 	// followed is set once the earlier runs' waits were forgotten.
 	followed bool
+	// announced is when each letter's notice was handed to the harness, on
+	// the boot clock, until a turn end has looked at it (reminder.go). Only
+	// in memory: a run's letters are owed only to that run.
+	announced map[string]int64
 }
 
 // Serve drains the mailbox until the context is canceled, then refuses whatever
@@ -163,6 +171,8 @@ func (s *Server) Serve(ctx context.Context) {
 			schedule(collectionInterval)
 		case receipt := <-s.Receipts:
 			s.receive(receipt)
+		case ended := <-s.Ends:
+			s.remind(ctx, ended)
 		}
 	}
 }
@@ -176,6 +186,7 @@ func (s *Server) begin(ctx context.Context) bool {
 	s.held = map[string][]mail.Message{}
 	s.recent = map[string]recentAnnouncement{}
 	s.arrivals = map[string]*arrival{}
+	s.announced = map[string]int64{}
 	s.lockContext = ctx
 	if ctx.Err() != nil || !s.owned() {
 		// Canceled before it began, or the name already belongs to somebody

@@ -14,6 +14,9 @@ import (
 // letter, and an agent that acts from the preview alone would never see a
 // correction hidden behind a neighbor.
 func Notice(message Message) string {
+	if message.Reminder {
+		return reminderNotice(message)
+	}
 	if len(message.Batch) > 1 {
 		var corrections []Message
 		var latest *Message
