@@ -46,8 +46,10 @@ layers, never another adapter. `test/` and `tools/` are drivers outside the laye
 
 The mail operations that run under a mailbox lock their caller holds are methods of
 `mail.Locked`, which only `mail.Box.WithLock` hands out, inside the locked section. The lock
-is not reentrant; with the operations off the type, a caller outside the section has no way to
-call one unlocked, which a test over callers (`internal/layout_callers_test.go`) held before.
+is not reentrant; with the operations off the type, a caller has no `Locked` to call one on
+outside the section, which a test over callers (`internal/layout_callers_test.go`) held before.
+A `Locked` must not outlive its callback: Go cannot stop a caller from keeping it, so that is a
+known limit of the API, not something a mechanism checks.
 
 ## Harness names outside the adapters
 
