@@ -144,8 +144,9 @@ func stateCells(snapshot *session.Snapshot) []string {
 	if snapshot.ModelName != nil {
 		model = snapshot.ModelName
 	}
-	activity := activityText(snapshot)
-	if !snapshot.Fresh && !strings.Contains(activity, "stale") {
+	verdict := snapshot.Judge()
+	activity := verdict.Label
+	if !snapshot.Fresh && !verdict.Stale {
 		activity += " (unavailable/stale)"
 	}
 	setting := func(value *string, source string) string {

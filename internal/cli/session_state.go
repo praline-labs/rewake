@@ -29,7 +29,15 @@ func sessionSnapshot(dir, name, epoch string) *session.Snapshot {
 	if err != nil || current.Epoch() != epoch {
 		value.Stale()
 	}
-	return &value
+	return judged(value)
+}
+
+// judged is the snapshot as a reader is shown it, with the verdict on its
+// activity judged now that what is stale is marked.
+func judged(snapshot session.Snapshot) *session.Snapshot {
+	verdict := snapshot.Judge()
+	snapshot.Verdict = &verdict
+	return &snapshot
 }
 
 type sessionView struct {
@@ -74,7 +82,7 @@ func viewedMessages(dir string, messages []mail.Message) []messageView {
 				frozen.Stale()
 				frozen.CompactionEvents, frozen.CompactionOutcomes = nil, nil
 				frozen.PublishedBoot = 0
-				view.Telemetry = &frozen
+				view.Telemetry = judged(frozen)
 			}
 		}
 		result = append(result, view)
@@ -93,7 +101,7 @@ func stateLine(name string, snapshot *session.Snapshot, settings bool) string {
 	if snapshot.Compactions != nil {
 		count = strconv.FormatUint(*snapshot.Compactions, 10)
 	}
-	line := fmt.Sprintf("%s: %s | context %s used / %s", name, activityText(snapshot), percent, window)
+	line := fmt.Sprintf("%s: %s | context %s used / %s", name, snapshot.Judge().Label, percent, window)
 	if snapshot.ContextAt != nil && !snapshot.ContextFresh {
 		line += " (stale)"
 	}
@@ -125,36 +133,3 @@ func stateLine(name string, snapshot *session.Snapshot, settings bool) string {
 }
 
 const sessionStateHelp = "A verified main also sees each launch's state: activity, model and effort as the session last reported them — an effort marked (launch) is the launch's own until the session reports one, and unknown when the launch passed none —, last reported context fill, usable window (in decimal K) and completed compactions, with unknown or stale values marked. Workers and plain shells get none of it, in JSON either."
-
-func activityText(snapshot *session.Snapshot) string {
-	label := "unknown"
-	if snapshot.Activity != nil && (*snapshot.Activity == "idle" || *snapshot.Activity == "working") {
-		label = *snapshot.Activity
-		// A compaction is what the session does while it lasts.
-		if snapshot.Compacting != nil && *snapshot.Compacting {
-			label = "compacting"
-		}
-		// A dialog stops the session whatever its turn is doing: one a
-		// request carries to main says what it asks, any other main was
-		// told of.
-		switch {
-		case snapshot.Waiting == session.WaitingPermission:
-			label = "waiting for a permission"
-		case snapshot.Waiting == session.WaitingQuestion:
-			label = "waiting for an answer"
-		case snapshot.Dialog != nil:
-			label = "waiting at a dialog"
-		}
-	}
-	// Only the gap is named. A session that hears interruptions behaves as
-	// expected and needs no word in a narrow cell, and a harness that always
-	// hears them never sets the field. A column of its own would read empty or
-	// "unknown" for every such row.
-	if snapshot.Interruptions == session.InterruptionsUnobserved {
-		label += "; interruptions unheard"
-	}
-	if snapshot.ActivityAt != nil && (!snapshot.ActivityFresh || !snapshot.Fresh) {
-		label += " (stale)"
-	}
-	return label
-}

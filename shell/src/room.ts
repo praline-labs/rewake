@@ -139,17 +139,9 @@ export type Session = {
   cwd: string;
   // branch is what is checked out where the session started.
   branch?: string;
-  // activity is idle or working; fresh is false when the run stopped
-  // publishing, and every value is then its last.
-  activity?: string;
-  // waiting is what a dialog a request carries to main asks: permission or
-  // question.
-  waiting?: string;
-  // dialog is set while the session waits at a dialog on its screen that no
-  // request carries to main.
-  dialog?: string;
-  compacting?: boolean;
-  fresh: boolean;
+  // verdict is what rewake judged the session does; absent while the
+  // listing carries no telemetry.
+  verdict?: Verdict;
   model?: string;
   effort?: string;
   // thinking is whether the model thinks, where the harness tells it.
@@ -162,12 +154,21 @@ export type Session = {
   cache?: { hit: number; expiresAt?: number };
 };
 
+// Verdict is rewake's verdict on a session's activity (session.Verdict,
+// docs/session-state.md#activity): the shell shows it and derives nothing.
+// TestTheShellsTypesOfTelemetry holds these names to what rewake emits.
+export type Verdict = {
+  activity: string;
+  label: string;
+  blocked: "" | "permission" | "question" | "dialog";
+  stale: boolean;
+  mark: "off" | "steady" | "blink";
+};
+
+// Telemetry is the part of a session's telemetry in `rewake list --json`
+// the shell reads.
 type Telemetry = {
-  activity?: string | null;
-  waiting?: string | null;
-  dialog?: string | null;
-  fresh?: boolean;
-  compactionInProgress?: boolean | null;
+  verdict?: Verdict | null;
   configuredModel?: string | null;
   configuredModelName?: string | null;
   configuredReasoningEffort?: string | null;
@@ -211,11 +212,7 @@ function sessionsOf(listing: SessionListing): Map<string, Session> {
       name: s.name,
       type: s.type,
       cwd: s.cwd,
-      activity: t?.activity ?? undefined,
-      waiting: t?.waiting ?? undefined,
-      dialog: t?.dialog ?? undefined,
-      compacting: t?.compactionInProgress ?? undefined,
-      fresh: t?.fresh ?? false,
+      verdict: t?.verdict ?? undefined,
       model: t?.configuredModelName ?? t?.configuredModel ?? undefined,
       effort: t?.configuredReasoningEffort ?? undefined,
       thinking: t?.thinking ?? undefined,

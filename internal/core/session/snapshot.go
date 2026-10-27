@@ -70,6 +70,10 @@ type Snapshot struct {
 	// it: the publisher and the reader are different processes, and the wall
 	// clock can be stepped by seconds between the two.
 	PublishedBoot int64 `json:"publishedBoot,omitempty"`
+	// Verdict is Judge's verdict, set by a reader for those it shows the
+	// snapshot to; Save never stores it, since its staleness is the
+	// reader's.
+	Verdict *Verdict `json:"verdict,omitempty"`
 }
 
 // Cache is the prompt-cache usage of the last request as the harness reports

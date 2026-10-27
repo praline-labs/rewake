@@ -45,8 +45,13 @@ model, exact values, field visibility and the empty list's shape.
 ## Activity
 
 Each snapshot carries the session's activity, with its own observation time and freshness.
-The Status labels say what the session does (`activityText`, `internal/cli/session_state.go`;
-the shell's strip reads the same fields the same way, `shell/src/strip.tsx`):
+What it amounts to is judged once, in `internal/core/session` (`Snapshot.Judge`, the
+**activity verdict**), and every reader renders that verdict and derives nothing: `rewake list`'s
+Status and the letters' state header take its label, main's report to herdr its activity and
+what it waits on ([launch.md](launch.md#herdr)), and the shell's strip its label and the worker's
+button its mark ([shell.md](shell.md#the-bar)). The verdict is judged at the read, never stored,
+and JSON carries it as the telemetry's `verdict` — `activity`, `label`, `blocked`, `stale`,
+`mark` — beside the fields it was judged from. The activity is one of:
 
 - `idle` — no turn running; `working` — a turn running, with nothing it is known to wait on.
 - `compacting` — a known compaction in progress, in place of either.
@@ -56,10 +61,28 @@ the shell's strip reads the same fields the same way, `shell/src/strip.tsx`):
   (`permission`, `question`) from the mod's state, and the label clears when the request ends.
 - `waiting at a dialog` — a dialog no request carries to main, which main is told of once
   ([permission-requests.md](permission-requests.md#a-dialog-nobody-is-asked-about)).
-- `unknown` — no activity reported yet, or an adapter that reports none.
+- `unknown` — no activity reported yet, a word the verdict does not know, or an adapter that
+  reports none.
 
-A waiting label wins over the others. A snapshot saying its interrupted turns go unheard adds
-`; interruptions unheard` (no adapter of this build sets it), and an old one adds `(stale)`.
+A waiting activity wins over the others, and `blocked` names what it waits on (`permission`,
+`question`, `dialog`; empty otherwise). The label is the activity, with `; interruptions
+unheard` when the snapshot says its interrupted turns go unheard (no adapter of this build sets
+it) and ` (stale)` when the verdict is stale. The mark is the shell's button edge: `blink` for a
+waiting activity or a `working` or `compacting` one gone stale — a turn stopped where nobody
+sees —, `steady` for a fresh `working` or `compacting`, `off` for `idle` and `unknown`, stale or
+not.
+
+**One freshness rule.** An observed activity is stale unless both the snapshot is fresh
+(`fresh`) and its activity observation is (`activityFresh`); an activity never reported is
+`unknown`, never stale. Decided October 27, 2026, when the rule was found written four ways: the
+CLI asked for both, herdr only for `activityFresh`, the shell only for `fresh`. The flags have two
+meanings — the run is live and publishing, and the activity was observed — and every path that
+marks a snapshot old (`Load` past the two-second heartbeat, a run no longer current in the
+registry, a departure, an adapter that lost its link) clears both, so asking for both is the one
+reading that stays right whichever a future source clears, on the stored snapshot and on the run's
+own alike. Since the flags move together on every adapter of this build, no reader's verdict
+changed; the shell's label gained `; interruptions unheard`, which the CLI already showed.
+
 pi's extension sees no dialog — pi 1.2.0 loads no permission gate or question tool — so a pi
 session reads `idle`, `working` or `compacting`. Unknown activity is never taken for idle.
 Since October 25, 2026 the labels `working (waiting state unknown)`, `not loaded` and

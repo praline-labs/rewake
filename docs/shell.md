@@ -271,9 +271,9 @@ and the bar under the worker's.
   workers work, without the row moving when a mark goes, on the edge of the navigation's button,
   and the same day, having seen it live, set what it says: «если мигает, значит воркер встал по
   какой-то причине; если просто горит, значит работает; если не горит, значит в idle». The first
-  cell of each worker's button, its left padding, is that edge, painted by the worker's activity as
-  the strip reads it (`markOf`, `shell/src/strip.tsx`;
-  [session-state.md](session-state.md#activity)): **steady** while it is `working` or
+  cell of each worker's button, its left padding, is that edge, painted by the mark of the worker's
+  activity verdict, which rewake judges and the shell only shows
+  ([session-state.md](session-state.md#activity)): **steady** while it is `working` or
   `compacting`; **blinking**, lit and dark half a second each, when it has stopped for a reason —
   `waiting for a permission`, `waiting for an answer`, `waiting at a dialog`, or a turn whose
   snapshot went stale; **not lit**, the button's own background, when `idle`, `unknown` or ended.
@@ -319,9 +319,10 @@ type, so its name stands alone.
 write-claude (code) · working · ⎇ wt-fd7596 · <model> low thinking · 23% 230k/1M · 90% 42m
 ```
 
-- **What it says**: the session and its type, the activity (`working`, `waiting for <name>`,
-  `waiting at a dialog` ([a dialog nobody is asked about](permission-requests.md#a-dialog-nobody-is-asked-about)),
-  `idle`, `, compacting`, ` (stale)` once the run stopped publishing), the branch, the model and
+- **What it says**: the session and its type, the activity as the label of its verdict, which
+  `rewake list` shows too (`working`, `waiting for a permission`, `waiting at a dialog`, `idle`,
+  `compacting`, with ` (stale)` once it is not current; nothing while it is `unknown`;
+  [session-state.md](session-state.md#activity)), the branch, the model and
   effort, with `thinking` after them while the harness says thinking is on — Claude Code's
   session setting, pi's level for a model with reasoning — and nothing when it is off or not told, the context as filled percent, used and window, and the prompt cache. A value rewake does
   not know is left out; a window without a measure reads `–/<window>`. The model reads as the

@@ -13,38 +13,31 @@ import (
 )
 
 func snapshot(activity string) session.Snapshot {
-	return session.Snapshot{Activity: &activity, ActivityFresh: true}
+	return session.Snapshot{Activity: &activity, Fresh: true, ActivityFresh: true}
 }
 
-func TestTheStateFollowsTheRunsActivity(t *testing.T) {
-	yes, dialog := true, "trust this folder"
-	compacting := snapshot("working")
+// herdr's four states from the verdict (session.TestTheVerdictOnASnapshot
+// holds the verdict itself): what is not observed now is never idle.
+func TestTheStateFollowsTheRunsVerdict(t *testing.T) {
+	yes := true
+	compacting := snapshot("idle")
 	compacting.Compacting = &yes
-	permission := snapshot("working")
-	permission.Waiting = session.WaitingPermission
-	question := snapshot("idle")
+	question := snapshot("working")
 	question.Waiting = session.WaitingQuestion
-	atDialog := snapshot("idle")
-	atDialog.Dialog = &dialog
 	stale := snapshot("idle")
-	stale.ActivityFresh = false
+	stale.Fresh = false
 	for _, c := range []struct {
 		name           string
 		snapshot       session.Snapshot
 		state, message string
 	}{
 		{"idle", snapshot("idle"), Idle, ""},
-		{"working", snapshot("working"), Working, ""},
 		{"compacting", compacting, Working, ""},
-		{"permission", permission, Blocked, "waiting for a permission"},
 		{"question", question, Blocked, "waiting for an answer"},
-		{"dialog", atDialog, Blocked, "waiting at a dialog"},
-		{"not reported yet", session.Unknown("e"), Unknown, ""},
 		{"stale", stale, Unknown, ""},
-		{"another word", snapshot("sleeping"), Unknown, ""},
+		{"not reported yet", session.Unknown("e"), Unknown, ""},
 	} {
-		state, message := StateOf(c.snapshot)
-		if state != c.state || message != c.message {
+		if state, message := StateOf(c.snapshot); state != c.state || message != c.message {
 			t.Errorf("%s: got %q %q, want %q %q", c.name, state, message, c.state, c.message)
 		}
 	}

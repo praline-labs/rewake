@@ -1,12 +1,10 @@
 import { expect, test } from "bun:test";
-import type { Session } from "./room.ts";
+import type { Session, Verdict } from "./room.ts";
 import { cacheOf, markOf, stripParts } from "./strip.tsx";
 
 const base: Session = {
   name: "w",
   cwd: "/p",
-  fresh: true,
-  activity: "idle",
   model: "Model",
   effort: "low",
   window: 100_000,
@@ -48,17 +46,26 @@ test("thinking is named after the effort only while it is on", () => {
   expect(model(undefined)).toContain("Model low");
 });
 
-test("the button's edge holds while a turn runs fresh, blinks when it stopped, else is off", () => {
-  const mark = (s: Partial<Session>) => markOf({ ...base, ...s });
-  expect(mark({ activity: "working" })).toBe("steady");
-  expect(mark({ activity: "idle", compacting: true })).toBe("steady");
-  expect(mark({ activity: "working", fresh: false })).toBe("blink");
-  expect(mark({ activity: "working", waiting: "permission" })).toBe("blink");
-  expect(mark({ activity: "working", waiting: "question" })).toBe("blink");
-  expect(mark({ activity: "idle", dialog: "trust" })).toBe("blink");
-  expect(mark({ activity: "idle", waiting: "permission", fresh: false })).toBe("blink");
-  expect(mark({ activity: "idle" })).toBe("off");
-  expect(mark({ activity: "idle", fresh: false })).toBe("off");
-  expect(mark({ activity: undefined })).toBe("off");
+test("the strip shows the verdict's label and the button its mark, deriving neither", () => {
+  const verdict = (v: Partial<Verdict>): Session => ({
+    ...base,
+    verdict: {
+      activity: "working",
+      label: "working",
+      blocked: "",
+      stale: false,
+      mark: "steady",
+      ...v,
+    },
+  });
+  const activity = (s: Session) => stripParts({ session: "w", status: s }, 200, now)[1]?.text;
+  expect(activity(verdict({ label: "working (stale)", stale: true, mark: "blink" }))).toBe(
+    "working (stale)",
+  );
+  expect(activity(verdict({ activity: "unknown", label: "unknown (stale)" }))).not.toContain(
+    "unknown",
+  );
+  expect(markOf(verdict({ mark: "blink" }))).toBe("blink");
+  expect(markOf(base)).toBe("off");
   expect(markOf(undefined)).toBe("off");
 });

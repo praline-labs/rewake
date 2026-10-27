@@ -32,7 +32,7 @@ func Save(dir, name, epoch string, snapshot Snapshot) error {
 	if !state.ValidName(name) || epoch == "" {
 		return fmt.Errorf("invalid observation identity")
 	}
-	snapshot.Epoch = epoch
+	snapshot.Epoch, snapshot.Verdict = epoch, nil
 	raw, err := json.Marshal(snapshot)
 	if err != nil {
 		return err
