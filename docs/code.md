@@ -39,6 +39,7 @@ internal/adapter/pi/                          launch arguments, embedded TypeScr
 internal/adapter/fixture/                     the test harness behind rewaketest: a scripted program over a socket, every contract interface
 internal/host/                                wrapper: launch, signals, lifecycle
 internal/host/launch/                         a launch's host side: the run's environment, the version read before the claim, the bounded probe, the worker aliases main opens
+internal/host/herdr/                          main reporting itself to herdr, the terminal manager it runs in: its state from the telemetry, its resume command, the release
 internal/host/delivery/                       the delivery server: the serving loop, notices and their batches, the coalescing window, outcomes and the sweep's lock
 internal/host/terminal/                       a program's pseudo-terminal by the standard library, whether a file is a terminal, the screen the program draws with its input modes, keyboard protocols and title, and the raw stream with its preamble for a late client, the one package the emulator library enters
 internal/host/spacehost/                      the space host: the worker's pseudo-terminal and screen, the space socket's raw stream for the shell

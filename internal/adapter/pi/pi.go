@@ -112,3 +112,9 @@ func (harness) Offers() adapter.Offer {
 		Conversation: adapter.ConversationOffer{Flag: sessionIDFlag},
 	}
 }
+
+// ResumeArgs opens a conversation by its id: --session-id names an existing
+// one as well as a new one, while --resume opens a picker (docs/research-pi.md).
+func (harness) ResumeArgs(conversation string) []string {
+	return []string{sessionIDFlag, conversation}
+}

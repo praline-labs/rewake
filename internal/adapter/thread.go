@@ -23,3 +23,10 @@ type ThreadTracker interface {
 type ThreadSource interface {
 	Thread() (string, error)
 }
+
+// Resumer is a harness whose conversation a later launch continues by its id:
+// the arguments after the launch command that resume it, for a terminal
+// manager that restarts the session after its own restart (docs/launch.md#herdr).
+type Resumer interface {
+	ResumeArgs(conversation string) []string
+}
