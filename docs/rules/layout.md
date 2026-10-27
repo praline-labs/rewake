@@ -48,8 +48,8 @@ The mail operations that run under a mailbox lock their caller holds are methods
 `mail.Locked`, which only `mail.Box.WithLock` hands out, inside the locked section. The lock
 is not reentrant; with the operations off the type, a caller has no `Locked` to call one on
 outside the section, which a test over callers (`internal/layout_callers_test.go`) held before.
-A `Locked` must not outlive its callback: Go cannot stop a caller from keeping it, so that is a
-known limit of the API, not something a mechanism checks.
+A `Locked` must not outlive the `WithLock` callback that gave it: saving it, or its methods, past
+the return is a misuse the type cannot stop and no mechanism checks; no caller does it.
 
 ## Harness names outside the adapters
 
