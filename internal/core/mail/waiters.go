@@ -307,7 +307,7 @@ func (w world) clearAwaiting(name, epoch string, peer Waiter) error {
 // SweepAwaitingLocked forgets what earlier runs of this name were waited on
 // for. The delivery server's followEarlierRun calls it inside the mailbox
 // section; it takes no lock of its own, since the mailbox lock is not
-// reentrant; its callers are held by internal/layout_callers_test.go.
+// reentrant; only mail.Locked reaches it.
 func sweepAwaitingLocked(dir, name, epoch string) {
 	entries, err := os.ReadDir(state.AwaitingPath(dir, name))
 	if err != nil {

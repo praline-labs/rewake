@@ -59,7 +59,7 @@ open for ever when forgotten.
 - **The turn's start and end.** The adapter times both as its harness reports them and
   carries them with the end, so a turn published late — queued, or retried when the mailbox
   was busy — cannot take a mark made in the turn after it. The start is also recorded for the
-  host (`mail.RecordTurnStart`, from the boundary's `TurnHandler.Started`): each reading a
+  host (`mail.Box.RecordTurnStart`, from the boundary's `TurnHandler.Started`): each reading a
   file of its own under the run's `awaiting/<epoch>/.turn-starts/`, named by the reading and
   never overwritten, the latest being the largest name; a start recorded after a mark's time
   proves the mark's turn over when its end was lost. A directory of readings that cannot be

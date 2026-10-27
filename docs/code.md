@@ -22,7 +22,7 @@ internal/core/registry/                       session record, name publishing, l
 internal/core/registry/registrytest/          for tests: the boot a session of this build carries
 internal/infra/proc/                          /proc: identity, liveness, job-control state, lineage, namespaces, owner and initial environment
 internal/infra/boottime/                      the boot clock, comparable across processes and never set back
-internal/core/mail/                           message, status, sender-side write, the locked sweep and settlement, turn ends
+internal/core/mail/                           message, status, sender-side write, turn ends; `Box` is one run's own mail (room, name, epoch) and `Locked` the operations that run under its mailbox lock
 internal/core/mail/mailtest/                  for tests outside mail: the paths and bytes of its records, each checked against mail
 internal/core/control/                        a main's control request to a run and its answer, as files
 internal/core/ask/                            a worker's permission requests and questions, held in its wrapper while main answers them

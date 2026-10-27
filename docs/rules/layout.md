@@ -44,10 +44,10 @@ exclusion from `adapter-new`: depguard cannot express "the current adapter" as
 an import prefix. Until that rule is added, the fallback allows only the shared
 layers, never another adapter. `test/` and `tools/` are drivers outside the layers.
 
-The mail functions that run under a mailbox lock their caller holds keep the
-callers checked in `internal/layout_callers_test.go`, over every production tag
-set. The lock is not reentrant; a caller outside its section would otherwise
-run unlocked with no warning from the lock itself.
+The mail operations that run under a mailbox lock their caller holds are methods of
+`mail.Locked`, which only `mail.Box.WithLock` hands out, inside the locked section. The lock
+is not reentrant; with the operations off the type, a caller outside the section has no way to
+call one unlocked, which a test over callers (`internal/layout_callers_test.go`) held before.
 
 ## Harness names outside the adapters
 
