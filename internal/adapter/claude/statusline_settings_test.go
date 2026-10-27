@@ -33,7 +33,7 @@ func TestThePersonsLineFollowsClaudeCodesLayers(t *testing.T) {
 		t.Fatalf("a project-only line: %+v", got)
 	}
 	writeLayer(t, filepath.Join(user, "settings.json"), `{"type":"command","command":"user-line","refreshInterval":4}`)
-	if got := ownStatusLine(user, project); got.Command != "project-line" || got.RefreshInterval == nil {
+	if got := ownStatusLine(user, project); got.Command != "project-line" || got.Refresh == "" {
 		t.Fatalf("the project's over the user's, the user's interval kept: %+v", got)
 	}
 	writeLayer(t, filepath.Join(project, ".claude", "settings.local.json"), `{"command":"local-line"}`)

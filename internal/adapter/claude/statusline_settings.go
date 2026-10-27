@@ -1,7 +1,6 @@
 package claude
 
 import (
-	"bytes"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -13,9 +12,7 @@ import (
 type personalLine struct {
 	Type    string
 	Command string
-	// Kept as read, json.Number for a number: a value of another type is
-	// Claude Code's to judge, and must not lose the person the command.
-	RefreshInterval any
+	Refresh json.Number
 }
 
 // ownStatusLine is the statusLine the person's settings give a session in
@@ -43,14 +40,15 @@ func ownStatusLine(configDir, project string) personalLine {
 			merged[key] = value
 		}
 	}
-	line := personalLine{RefreshInterval: merged["refreshInterval"]}
+	line := personalLine{Refresh: refreshOf(merged)}
 	line.Type, _ = merged["type"].(string)
 	line.Command, _ = merged["command"].(string)
 	return line
 }
 
 // statusLineIn is the statusLine object of one settings file, nil where it
-// has none.
+// has none or the file does not parse (the parser of the worker profile, so
+// both readers take a file the same way).
 func statusLineIn(path string) map[string]any {
 	if path == "" {
 		return nil
@@ -59,15 +57,12 @@ func statusLineIn(path string) map[string]any {
 	if err != nil {
 		return nil
 	}
-	var settings struct {
-		StatusLine map[string]any `json:"statusLine"`
-	}
-	decoder := json.NewDecoder(bytes.NewReader(data))
-	decoder.UseNumber()
-	if decoder.Decode(&settings) != nil {
+	settings, err := parseSettings(data)
+	if err != nil {
 		return nil
 	}
-	return settings.StatusLine
+	line, _ := settings["statusLine"].(map[string]any)
+	return line
 }
 
 // localSettings is where Claude Code keeps a project's local settings: since
@@ -114,18 +109,4 @@ func canonicalRoot(dir string) string {
 func exists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
-}
-
-// projectDir is the session's project directory: the status line input's
-// workspace.project_dir, else CLAUDE_PROJECT_DIR, which Claude Code sets for
-// the command, else the directory the command runs in.
-func projectDir(fromInput string) string {
-	if fromInput != "" {
-		return fromInput
-	}
-	if dir := os.Getenv("CLAUDE_PROJECT_DIR"); dir != "" {
-		return dir
-	}
-	dir, _ := os.Getwd()
-	return dir
 }

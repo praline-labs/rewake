@@ -5,7 +5,6 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"strings"
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/core/role"
@@ -59,7 +58,7 @@ func runSettings(settings map[string]any, folder, root, memoryKey string, enter 
 	// directory has no mod for.
 	if executable, err := os.Executable(); err == nil && runDir != "" {
 		line, _ := settings["statusLine"].(map[string]any)
-		overlay["statusLine"] = statusLineSetting(executable, line["refreshInterval"])
+		overlay["statusLine"] = statusLineSetting(executable, refreshOf(line))
 	}
 	var notes []string
 	switch {
@@ -105,27 +104,6 @@ func deniedIn(settings map[string]any) []any {
 	return deny
 }
 
-// statusLineSetting is the run's statusLine: rewake's command, which runs the
-// person's own (statusline.go), so it keeps that line's refreshInterval — how
-// often the command runs beside the harness's events — or rewake's own where
-// the line has none. Claude Code merges the key field by field, so the
-// person's padding stands (docs/research.md, "How --settings meets a
-// configured status line").
-func statusLineSetting(executable string, every any) map[string]any {
-	line := map[string]any{
-		"type":            "command",
-		"command":         shellQuote(executable) + " statusline",
-		"refreshInterval": statusLineRefresh,
-	}
-	// The settings are read with numbers kept as json.Number.
-	if every, ok := every.(json.Number); ok {
-		if seconds, err := every.Float64(); err == nil && seconds >= 1 {
-			line["refreshInterval"] = every
-		}
-	}
-	return line
-}
-
 // mainSettings is the one --settings main's launch passes: the status line
 // alone, so the host hears the model's name, its thinking, the cache's life
 // and a changed effort as a worker's does (docs/claude.md#the-cache-ttl). It
@@ -151,14 +129,9 @@ func mainSettings(request adapter.LaunchRequest, args []string) profile {
 	}
 	cwd, _ := os.Getwd()
 	own := ownStatusLine(os.Getenv(configDirEnv), cwd)
-	data, err := json.Marshal(map[string]any{"statusLine": statusLineSetting(executable, own.RefreshInterval)})
+	data, err := json.Marshal(map[string]any{"statusLine": statusLineSetting(executable, own.Refresh)})
 	if err != nil {
 		return profile{}
 	}
 	return profile{args: []string{settingsFlag, string(data)}}
-}
-
-// shellQuote makes a path one word of the status line's shell command.
-func shellQuote(path string) string {
-	return "'" + strings.ReplaceAll(path, "'", `'\''`) + "'"
 }
