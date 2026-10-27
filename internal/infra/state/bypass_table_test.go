@@ -18,8 +18,6 @@ var bypassExceptions = []bypass{
 	{"internal/host/worktree/recordfile.go", "os.Rename", 1, worktreeOutside + ": the worktree records"},
 	{"internal/host/worktree/recordfile.go", "os.Link", 1, worktreeOutside + ": the worktree records"},
 	{"internal/host/worktree/recordfile.go", "os.Remove", 3, worktreeOutside + ": the worktree records"},
-	{"internal/host/worktree/review.go", "os.MkdirAll", 2, worktreeOutside + ": a reviewer's checkout"},
-	{"internal/host/worktree/review.go", "os.Remove", 3, worktreeOutside + ": a reviewer's checkout made in vain"},
 	{"internal/host/worktree/serial.go", "os.OpenFile", 1, worktreeOutside + ": the serial lock of a checkout"},
 	{"internal/host/worktree/serial.go", "syscall.Flock", 2, worktreeOutside + ": the serial lock of a checkout"},
 	{"internal/host/worktree/include.go", "os.OpenFile", 1, worktreeOutside + ": the copies of included files"},
