@@ -27,8 +27,11 @@ Open a document for numbers, commands and names: the map only points.
 
 ### docs/
 
+- `docs/adding.md` — The steps of adding a harness, a role or a message kind, and what each must touch; open before adding one.
+  sections: A harness · A role or a message kind
 - `docs/briefs.md` — Briefs — a markdown brief per task that main writes, bound to workers by send --brief, ticked and commented by them, read and commented by a reviewer given it with --review; the records under briefs/, where a brief lives (the room or a folder of the project), the brief commands, the JSON the shell reads, and the worker tools of both harnesses.
   sections: The records · Where a brief lives · The commands · The tools · Tests · Known limits
+- `docs/build-for-failures.md` — The owner's rule of building a protective mechanism only for a failure seen in real work, and when to stop and simplify; open before adding a guard, a retry, a journal or a test of a failure.
 - `docs/claude-turns.md` — A Claude Code session's turns through the mod — the outbox and end ids, the hello and its loads, the heartbeat and the live set, readiness and admission, what not holding an end costs.
   sections: The mod's side · The host's side · The live set · Readiness and admission · The start time · What not holding costs
 - `docs/claude.md` — The Claude Code adapter as one mod — loading it, when it does not load, the mod↔host protocol, the peer check, tools, telemetry and the cache's life, control.
@@ -93,7 +96,7 @@ Open a document for numbers, commands and names: the map only points.
 - `docs/testing-cases.md` — What each of the 24 workflow scenarios in test/workflow claims — the sessions it starts, what the fixture plays and what it must see — and what none of them proves.
   sections: Delivery · Launch, reports and what a main waits on · A worktree · Actions on a sent message · Conversations · A stop, and steering a session · The live set · Spaces
 - `docs/testing.md` — How rewake is tested: the tiers, the fault build, the fixture column, running and reading the workflow suite, the checks before a publication, and the traps it has paid for.
-  sections: The tiers · Running it · Checking a new harness version before updating · Reading a result · Extending the suite · Traps this suite has already paid for
+  sections: The tiers · Running it · Checking a new harness version before updating · Reading a result · Which tests to write · Extending the suite · Traps this suite has already paid for
 - `docs/traps.md` — What misbehaves in rewake and the harnesses it lives with, by symptom — roles and reports, tests next to a live session, arguments, delivery — each entry dated, with its cause and what to do.
   sections: Roles and reports · Tests next to a live session · Arguments and continuing a conversation · Delivery and its proofs
 - `docs/turn-outcomes.md` — What each turn end reports — finished, error, stopped or pending — who it goes to, and the hold that keeps an interim end from closing a task.
