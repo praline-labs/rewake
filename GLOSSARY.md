@@ -32,7 +32,7 @@ Where: the owner says «задача».
 
 ## Brief
 Variants: briefs, `rewake brief`, `--brief`
-Means: a markdown document for one task that main keeps in the room — its goal, its checkbox items, anything markdown holds; main alone writes it, a worker it was given to with `send --brief` ticks its items and comments, the person reads it in the shell. Not the briefing, the text a session gets at its launch; a brief in `.scratch/` is a file a task names, which may hold the same.
+Means: a markdown document for one task that main keeps in the room — its goal, its checkbox items, anything markdown holds; main alone writes it, a worker it was given to with `send --brief` ticks its items and comments, a reviewer given it with `--brief --review` reads and comments but never ticks, the person reads it in the shell. Not the briefing, the text a session gets at its launch; a brief in `.scratch/` is a file a task names, which may hold the same.
 Where: [docs/briefs.md](docs/briefs.md); the records under `briefs/` of the room.
 
 ## Notify

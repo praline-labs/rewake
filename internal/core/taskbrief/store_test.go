@@ -31,7 +31,7 @@ func made(t *testing.T, dir, text string) Brief {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := Bind(Home{Room: dir}, brief.ID, worker); err != nil {
+	if err := Bind(Home{Room: dir}, brief.ID, worker, Work); err != nil {
 		t.Fatal(err)
 	}
 	return brief
@@ -171,10 +171,10 @@ func TestOnlyABoundRunTicksAndComments(t *testing.T) {
 	if _, _, err := Comment(Home{Room: dir}, brief.ID, later, "hi"); !errors.As(err, &unbound) {
 		t.Fatalf("a later run of the name commented: %v", err)
 	}
-	if err := Bind(Home{Room: dir}, brief.ID, worker); err != nil {
+	if err := Bind(Home{Room: dir}, brief.ID, worker, Work); err != nil {
 		t.Fatal(err)
 	}
-	if err := Bind(Home{Room: dir}, brief.ID, later); err != nil {
+	if err := Bind(Home{Room: dir}, brief.ID, later, Work); err != nil {
 		t.Fatal(err)
 	}
 	if read := loaded(t, dir, brief.ID); len(read.Bound) != 2 {

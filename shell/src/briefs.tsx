@@ -15,6 +15,7 @@ import {
 import { ShellRow, selecting, separator } from "./bar.tsx";
 import {
   type Answer,
+  authorOf,
   cut,
   type Detail,
   detailOf,
@@ -270,10 +271,10 @@ export function BriefsView(props: {
                       {(c) => (
                         <box flexDirection="column" marginBottom={1}>
                           <text fg={theme.text} attributes={1} wrapMode="none">
-                            {c.from}
+                            {authorOf(c)}
                             <span style={{ fg: faint }}>{` · ${timeOf(c.at)}`}</span>
                           </text>
-                          <text fg={theme.text} wrapMode="word" content={c.text} />
+                          <markdown content={c.text} syntaxStyle={style} fg={theme.text} />
                         </box>
                       )}
                     </For>

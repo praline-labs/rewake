@@ -41,13 +41,33 @@ const (
 	maxRecordBytes = 64 << 10
 )
 
-// Binding is a run a brief was sent to: the right to read, tick and comment
-// goes with the run, so a later run of the same name has none. It stays
-// listed once the run ends.
+// Binding is a run a brief was sent to: the right goes with the run, so a
+// later run of the same name has none. It stays listed once the run ends.
 type Binding struct {
 	Name  string    `json:"name"`
 	Epoch string    `json:"epoch"`
 	Since time.Time `json:"since"`
+	// Kind is the right: Work reads, ticks and comments, Review reads and
+	// comments. A binding written before kinds has none and is Work.
+	Kind BindingKind `json:"kind,omitempty"`
+}
+
+// BindingKind is what a binding lets its run do.
+type BindingKind string
+
+const (
+	// Work is a worker's binding: read, tick, comment.
+	Work BindingKind = "work"
+	// Review is a reviewer's: read and comment, never tick.
+	Review BindingKind = "review"
+)
+
+// Of reads a recorded kind, none being Work.
+func (k BindingKind) Of() BindingKind {
+	if k == "" {
+		return Work
+	}
+	return k
 }
 
 // Record is brief.json, main's file: the id, when it was made, who it is
@@ -90,6 +110,9 @@ type Entry struct {
 	ItemText string `json:"itemText,omitempty"`
 	// Text is a comment's.
 	Text string `json:"text,omitempty"`
+	// Capacity is a comment's: the kind of its writer's binding when it
+	// wrote. A comment written before kinds has none.
+	Capacity BindingKind `json:"capacity,omitempty"`
 }
 
 // Author is the run that writes: main for an edit, a bound run for a tick
@@ -137,6 +160,16 @@ type NotBoundError struct {
 
 func (e *NotBoundError) Error() string {
 	return fmt.Sprintf("brief %d was not given to this run of %s: only main and the runs it was sent to with send --brief may read it, and only those runs tick and comment", e.ID, e.Name)
+}
+
+// ReviewOnlyError is a tick by a run the brief was given to review.
+type ReviewOnlyError struct {
+	ID   int
+	Name string
+}
+
+func (e *ReviewOnlyError) Error() string {
+	return fmt.Sprintf("brief %d was given to this run of %s to review: a reviewer reads and comments, and ticking is the worker's; say in a comment which items you find done or not", e.ID, e.Name)
 }
 
 // StaleRevisionError is an edit made against a revision that is not the
@@ -193,10 +226,16 @@ func CheckComment(text string) error {
 
 // Has says whether the run is bound to the brief.
 func (r Record) Has(author Author) bool {
+	_, bound := r.BindingOf(author)
+	return bound
+}
+
+// BindingOf is the run's binding to the brief, if it has one.
+func (r Record) BindingOf(author Author) (Binding, bool) {
 	for _, binding := range r.Bound {
 		if binding.Name == author.Name && binding.Epoch == author.Epoch {
-			return true
+			return binding, true
 		}
 	}
-	return false
+	return Binding{}, false
 }

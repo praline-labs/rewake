@@ -31,7 +31,7 @@ func TestABriefInTheProjectsFolderSurvivesAWipedRoom(t *testing.T) {
 			t.Errorf("the brief's own format is missing %s: %v", name, err)
 		}
 	}
-	if err := Bind(home, 1, worker); err != nil {
+	if err := Bind(home, 1, worker, Work); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := Tick(home, 1, worker, 1, 1, true); err != nil {
@@ -90,7 +90,7 @@ func TestAMovedBriefReadsMovedAndKeepsItsID(t *testing.T) {
 	if _, err := New(home, main, "# A\n- [ ] x\n", ""); err != nil {
 		t.Fatal(err)
 	}
-	if err := Bind(home, 1, worker); err != nil {
+	if err := Bind(home, 1, worker, Work); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.Rename(folder, folder+"-archived"); err != nil {

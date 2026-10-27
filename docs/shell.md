@@ -386,7 +386,8 @@ outlives a worker being chosen over it, as a worker's screen does.
   пунктам, комментам и агентам которые с брифом, это не будет выделяться как кнопка»). The first,
   `3 · Auth refactor` (`headOf`, `shell/src/briefs.ts`), is a button on the buttons' grey; the
   second, faint and indented under the title, is `2/5 · 4 comments · write-claude, review-claude
-  (ended)` (`infoOf`): a binding whose run has `ended` is marked so, and a closed brief says
+  (review, ended)` (`infoOf`): a run given the brief to review is marked `review`, a binding whose
+  run has `ended` is marked so, and a closed brief says
   `closed` there, its title's words in a faint of their own for the grey (`faintOnIdle`,
   `shell/src/theme.ts`: the ink on the grey moved 40% towards it), since the faint colour is that
   very grey where the terminal did not say its foreground and background. Oldest first, so a new brief lands at the bottom
@@ -424,7 +425,10 @@ outlives a worker being chosen over it, as a worker's screen does.
   Under the row, a scrolling
   box holding the text, rendered by OpenTUI's `<markdown>` (headings, emphasis, fenced code and
   lists in the shell's colours; a task-list line shows as its `- [ ]` or `- [x]`), a rule, and the
-  comments, each its author and time (the person's clock) over its text. ↑ ↓, PgUp PgDn, Home End
+  comments, each its author, its capacity and time (the person's clock) over its text —
+  `review-pi · review · 2026-10-27 06:14` (`authorOf`), the name alone for a comment written before
+  capacities; a comment's text is rendered as markdown too, so its lines stay lines on the screen
+  and when copied (the owner saw a comment copy as one line, October 27, 2026). ↑ ↓, PgUp PgDn, Home End
   and the wheel scroll. The text keeps a column clear of the scrollbar, as the panes keep one from
   the screen's edge (the owner saw it stick to the bar, October 27, 2026): the bar lies over the
   scrolling box's last column and the content leaves two, so the text is as wide whether the bar

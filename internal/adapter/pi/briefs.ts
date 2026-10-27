@@ -12,9 +12,9 @@ export const briefTimeoutMs = 60_000;
 export const readDescription =
   "Read a brief main gave this run with a task: a header naming its edition, the items done and the comments, then its markdown text with each item's number after its box (- [ ] #3 ...), then the comments. id is the brief's number, as the letter names it. Only a run the brief was sent to may read it, while it is open.";
 export const tickDescription =
-  "Mark an item of a brief done, or not done with undo: item is its number as brief_read shows it after the box, edition the edition brief_read's header names. Refused once main has edited the brief since that edition: read it again and tick by the new numbers. Your own ticks leave the edition as it is. Only a run the brief was sent to may tick.";
+  "Mark an item of a brief done, or not done with undo: item is its number as brief_read shows it after the box, edition the edition brief_read's header names. Refused once main has edited the brief since that edition: read it again and tick by the new numbers. Your own ticks leave the edition as it is. Only a run the brief was sent to as work may tick; a run given it to review is refused, and says in a comment what it finds done.";
 export const commentDescription =
-  "Add a comment to a brief, at most 1000 characters, for main and the person to read under its text: what was found, what blocks, what was decided. It does not replace the report: that is still your final reply. Only a run the brief was sent to may comment.";
+  "Add a comment to a brief, at most 1000 characters, for main and the person to read under its text, shown with your name and whether you work on the brief or review it: what was found, what blocks, what was decided. Write markdown: a one-line point first, then short bullets, one idea per line, no wall of text; its lines are kept as written. It does not replace the report: that is still your final reply. Only a run the brief was sent to may comment.";
 
 const positive = (value: unknown) =>
   typeof value === "number" && Number.isInteger(value) && value > 0;

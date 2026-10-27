@@ -126,9 +126,10 @@
       "description": "is a run a brief was sent to.",
       "properties": {
         "name": {"type": "string", "description": "is the session's name."},
-        "run": {"$ref": "#/$defs/RunState", "description": "says whether that run lives; its right ends with it."}
+        "run": {"$ref": "#/$defs/RunState", "description": "says whether that run lives; its right ends with it."},
+        "kind": {"$ref": "#/$defs/BindingKind", "description": "is the run's right to the brief."}
       },
-      "required": ["name", "run"],
+      "required": ["name", "run", "kind"],
       "additionalProperties": false
     },
     "BriefComment": {
@@ -138,10 +139,16 @@
         "n": {"type": "integer", "description": "is the comment's number."},
         "from": {"type": "string", "description": "is the session that wrote it."},
         "at": {"type": "string", "description": "is when, as an RFC 3339 time."},
-        "text": {"type": "string", "description": "is the comment."}
+        "text": {"type": "string", "description": "is the comment."},
+        "capacity": {"$ref": "#/$defs/BindingKind", "description": "is the kind of the writer's binding when it wrote; absent on a comment written before kinds, which shows the name alone."}
       },
       "required": ["n", "from", "at", "text"],
       "additionalProperties": false
+    },
+    "BindingKind": {
+      "type": "string",
+      "description": "is a run's right to a brief: work reads, ticks and comments; review reads and comments, never ticks.",
+      "enum": ["work", "review"]
     },
     "Problem": {
       "type": "object",

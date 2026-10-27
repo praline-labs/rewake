@@ -40,6 +40,9 @@ type boundRun struct {
 	// Run is whether that run lives: running, ended or unknown. Its right
 	// ends with it, and every right ends when the brief closes.
 	Run string `json:"run"`
+	// Kind is its right: work reads, ticks and comments, review reads and
+	// comments.
+	Kind taskbrief.BindingKind `json:"kind"`
 }
 
 type briefListing struct {
@@ -68,7 +71,22 @@ type commentView struct {
 	At      time.Time `json:"at"`
 	Edition int       `json:"edition"`
 	Text    string    `json:"text"`
+	// Capacity is the kind of the writer's binding when it wrote, absent on
+	// a comment written before kinds.
+	Capacity taskbrief.BindingKind `json:"capacity,omitempty"`
 }
+
+// author is who wrote the comment and in what capacity, as every reader is
+// shown it: "review-pi · review", or the name alone for an old comment.
+func (c commentView) author() string {
+	if c.Capacity == "" {
+		return c.From
+	}
+	return c.From + " · " + string(c.Capacity)
+}
+
+// asMain is the reader main is, beside the kinds of a binding.
+const asMain taskbrief.BindingKind = "main"
 
 func briefSummaryOf(brief taskbrief.Brief) briefSummary {
 	summary := briefSummary{
@@ -81,7 +99,7 @@ func briefSummaryOf(brief taskbrief.Brief) briefSummary {
 		if run == "" {
 			run = "unknown"
 		}
-		summary.Bound = append(summary.Bound, boundRun{Name: binding.Name, Epoch: binding.Epoch, Since: binding.Since, Run: run})
+		summary.Bound = append(summary.Bound, boundRun{Name: binding.Name, Epoch: binding.Epoch, Since: binding.Since, Run: run, Kind: binding.Kind.Of()})
 	}
 	return summary
 }
@@ -92,7 +110,7 @@ func briefDetailOf(brief taskbrief.Brief) briefDetail {
 		view.Items = []taskbrief.Item{}
 	}
 	for i, entry := range brief.Comments() {
-		view.Comments = append(view.Comments, commentView{N: i + 1, From: entry.From, At: entry.At, Edition: entry.Edition, Text: entry.Text})
+		view.Comments = append(view.Comments, commentView{N: i + 1, From: entry.From, At: entry.At, Edition: entry.Edition, Text: entry.Text, Capacity: entry.Capacity})
 	}
 	return view
 }
@@ -151,38 +169,47 @@ func briefShow(ctx *Context, call Call, home taskbrief.Home, caller briefRun, ar
 	if err != nil {
 		return briefError(call, err)
 	}
+	reader := asMain
 	if !caller.isMain() {
-		if !brief.Has(caller.author) {
+		binding, bound := brief.BindingOf(caller.author)
+		if !bound {
 			return briefError(call, &taskbrief.NotBoundError{ID: id, Name: caller.author.Name})
 		}
 		if brief.IsClosed() {
 			return briefError(call, &taskbrief.ClosedError{ID: id})
 		}
+		reader = binding.Kind.Of()
 	}
 	view := briefDetailOf(brief)
 	if call.Switch("markdown") && !ctx.JSON {
 		return emit(ctx, strings.Split(strings.TrimSuffix(view.Text, "\n"), "\n")...)
 	}
-	return printValue(ctx, view, func() []string { return view.lines(caller.isMain()) })
+	return printValue(ctx, view, func() []string { return view.lines(reader) })
 }
 
-// lines are the brief as a run reads it: a header, how to act on it, the
-// text with each item's number, and the comments.
-func (d briefDetail) lines(forMain bool) []string {
+// lines are the brief as a reader reads it — main, or a run by the kind of
+// its binding: a header, how to act on it, the text with each item's number,
+// and the comments with who wrote each.
+func (d briefDetail) lines(reader taskbrief.BindingKind) []string {
 	lines := []string{d.header()}
 	if len(d.Bound) > 0 {
 		lines = append(lines, "bound: "+boundNames(d.briefSummary))
 	}
-	lines = append(lines, d.how(forMain), "")
+	lines = append(lines, d.how(reader), "")
 	lines = append(lines, strings.Split(strings.TrimSuffix(d.numbered, "\n"), "\n")...)
 	if len(d.Comments) == 0 {
 		return lines
 	}
 	lines = append(lines, "", "comments:")
 	for _, comment := range d.Comments {
-		lines = append(lines, fmt.Sprintf("%s · %s · #%d", comment.From, comment.At.Local().Format("15:04:05"), comment.N))
+		lines = append(lines, fmt.Sprintf("%s · %s · #%d", comment.author(), comment.At.Local().Format("15:04:05"), comment.N))
+		// A comment is markdown: each line indented under its header, a
+		// blank one left blank.
 		for _, line := range strings.Split(comment.Text, "\n") {
-			lines = append(lines, "  "+line)
+			if line != "" {
+				line = "  " + line
+			}
+			lines = append(lines, line)
 		}
 	}
 	return lines
@@ -196,12 +223,14 @@ func (d briefDetail) header() string {
 	return header
 }
 
-func (d briefDetail) how(forMain bool) string {
+func (d briefDetail) how(reader taskbrief.BindingKind) string {
 	switch {
 	case d.Closed:
 		return "Rewake: this brief is closed; it takes no edit, tick or comment."
-	case forMain:
-		return fmt.Sprintf("Rewake: edit the text rewake brief show %d --markdown prints, then rewake brief edit %d --rev %d --file <path>; give it with rewake send <name> \"...\" --brief %d.", d.ID, d.ID, d.Revision, d.ID)
+	case reader == asMain:
+		return fmt.Sprintf("Rewake: edit the text rewake brief show %d --markdown prints, then rewake brief edit %d --rev %d --file <path>; give it with rewake send <name> \"...\" --brief %d, or --brief %d --review to a reviewer.", d.ID, d.ID, d.Revision, d.ID, d.ID)
+	case reader == taskbrief.Review:
+		return fmt.Sprintf("Rewake: this brief was given to you to review: comment with rewake brief comment %d -- \"<text>\", read it again with rewake brief show %d; the tools brief_comment and brief_read do the same. Ticking is the worker's: say in a comment which items you find done or not.", d.ID, d.ID)
 	}
 	return fmt.Sprintf("Rewake: tick item n with rewake brief tick %d <n> --edition %d (--undo to untick), comment with rewake brief comment %d -- \"<text>\", read it again with rewake brief show %d; the tools brief_tick, brief_comment and brief_read do the same.", d.ID, d.Edition, d.ID, d.ID)
 }
@@ -210,8 +239,15 @@ func boundNames(summary briefSummary) string {
 	names := make([]string, 0, len(summary.Bound))
 	for _, run := range summary.Bound {
 		name := run.Name
+		var marks []string
+		if run.Kind == taskbrief.Review {
+			marks = append(marks, "review")
+		}
 		if summary.Closed || run.Run == "ended" {
-			name += " (ended)"
+			marks = append(marks, "ended")
+		}
+		if len(marks) > 0 {
+			name += " (" + strings.Join(marks, ", ") + ")"
 		}
 		names = append(names, name)
 	}

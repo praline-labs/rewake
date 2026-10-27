@@ -15,6 +15,9 @@ import (
 func briefFlagFits(call Call, kind messageKind) error {
 	value, given := call.Flags["brief"]
 	if !given {
+		if call.Switch("review") {
+			return &UsageError{Command: call.Command, Message: "--review says how a brief is given, and goes with --brief <id>."}
+		}
 		return nil
 	}
 	if kind.kind != mail.Task && kind.kind != mail.Question {
@@ -28,8 +31,9 @@ func briefFlagFits(call Call, kind messageKind) error {
 
 // bindBrief gives the brief --brief names to the recipient's run, after
 // every other check of send and before the letter is written, and answers
-// the id the letter carries. Only main gives a brief. A send that fails
-// after this leaves the run bound, a known limit (docs/briefs.md).
+// the id the letter carries: as work, or with --review to read and comment
+// only. Only main gives a brief. A send that fails after this leaves the run
+// bound, a known limit (docs/briefs.md).
 func bindBrief(call Call, dir string, self registry.Session, selfErr error, recipient registry.Session) (string, error) {
 	value, given := call.Flags["brief"]
 	if !given {
@@ -42,7 +46,11 @@ func bindBrief(call Call, dir string, self registry.Session, selfErr error, reci
 		return "", failf("only main gives a brief; %s is a %s session. Ask main to do it.", self.Name, self.Role)
 	}
 	id, _ := taskbrief.ParseID(value)
-	err := taskbrief.Bind(quietHomeOf(dir), id, taskbrief.Author{Name: recipient.Name, Epoch: recipient.Epoch()})
+	kind := taskbrief.Work
+	if call.Switch("review") {
+		kind = taskbrief.Review
+	}
+	err := taskbrief.Bind(quietHomeOf(dir), id, taskbrief.Author{Name: recipient.Name, Epoch: recipient.Epoch()}, kind)
 	var closed *taskbrief.ClosedError
 	switch {
 	case errors.Is(err, taskbrief.ErrNotFound):

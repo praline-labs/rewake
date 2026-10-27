@@ -10,7 +10,7 @@ var mainPlaybook = Playbook{
 		{Do: "rewake send <name> \"...\"", Why: "a task; the report arrives when that session's turn ends"},
 		{Do: "rewake send <name> \"...\" --question", Why: "the same, and this command waits for the answer, up to 600 seconds by default"},
 		{Do: "rewake brief new --file <path> / rewake brief edit <id> --rev <n> --file <path>", Why: "keep a task's brief in the room: markdown with - [ ] items, kept across compactions; an edit starts from the text with its ticks, which brief show prints as markdown, at the revision its header names"},
-		{Do: "rewake send <name> \"...\" --brief <id>", Why: "a task that gives the worker brief <id>: it gets the text with the letter, ticks the items and comments under it; an edit tells nobody, so send again with --brief for a new text"},
+		{Do: "rewake send <name> \"...\" --brief <id> [--review]", Why: "a task that gives the worker brief <id>: it gets the text with the letter, ticks the items and comments under it; with --review a reviewer reads and comments but never ticks, and its verdict still comes as the report; each comment names its author and capacity; an edit tells nobody, so send again with --brief for a new text"},
 		{Do: "rewake brief list | show <id> | close <id>", Why: "the briefs with their items done, comments and the runs they were given to; close one when its work is accepted"},
 		{Do: "rewake send <name> \"...\" --notify", Why: "a message that owes no report; a worker's blocking notify or permission request is still answered by you, with the decision it asks for"},
 		{Do: "rewake inbox", Why: "read what came back: finished, error, stopped, and pending — work still going"},

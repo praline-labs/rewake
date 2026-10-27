@@ -156,6 +156,8 @@ export interface BriefBound {
   name: string
   // run says whether that run lives; its right ends with it.
   run: RunState
+  // kind is the run's right to the brief.
+  kind: BindingKind
 }
 
 // BriefComment is a comment on a brief.
@@ -168,7 +170,14 @@ export interface BriefComment {
   at: string
   // text is the comment.
   text: string
+  // capacity is the kind of the writer's binding when it wrote; absent on a comment written
+  // before kinds, which shows the name alone.
+  capacity?: BindingKind
 }
+
+// BindingKind is a run's right to a brief: work reads, ticks and comments; review reads and
+// comments, never ticks.
+export type BindingKind = "work" | "review"
 
 // Problem is a file that does not read.
 export interface Problem {

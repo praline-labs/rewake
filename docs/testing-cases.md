@@ -87,12 +87,14 @@ other runs `rewake pending` in its turn, so its task stays owed. main's `rewake 
 interim's text, under `to <worker>`, and leave the first out. A note from main wakes the second
 worker, whose next turn end reports; the view must then be `Rewake: nobody owes you a report.`
 
-`brief` runs a main and a worker, each running its commands when the scenario asks. main makes
+`brief` runs a main, a worker and a reviewer, each running its commands when the scenario asks. main makes
 a brief of two items and sends the worker a task with `--brief`; the worker's inbox must print
 the brief's object with the task, its title and its items. The worker's own `brief show` must
 name edition 1, its tick of item 1 by that edition must answer the item's text, and its comment
-must be accepted; main's `brief show --json` must then have item 1 done, item 2 not, and the one
-comment under the worker's name ([briefs.md](briefs.md)).
+must be accepted. A third session, a reviewer, is given the brief with `--brief --review`: its
+tick must be refused, exit 1, saying ticking is the worker's, and its comment accepted. main's
+`brief show --json` must then have item 1 done, item 2 not, and the two comments, the worker's with
+capacity `work` and the reviewer's with `review` ([briefs.md](briefs.md)).
 
 ## A worktree
 

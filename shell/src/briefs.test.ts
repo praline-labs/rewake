@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import {
   type Answer,
+  authorOf,
   backText,
   detailOf,
   foldText,
@@ -29,8 +30,8 @@ const brief: Summary = {
   total: 5,
   commentCount: 4,
   bound: [
-    { name: "write-claude", run: "running" },
-    { name: "review-claude", run: "ended" },
+    { name: "write-claude", run: "running", kind: "work" },
+    { name: "review-claude", run: "ended", kind: "work" },
   ],
 };
 
@@ -44,6 +45,23 @@ test("an entry is its title, then progress, comments and who is bound, an ended 
 });
 
 const b = (id: number, title: string, closed = false): Summary => ({ ...brief, id, title, closed });
+
+test("a reviewer is marked in the entry, and every comment names its author and capacity", () => {
+  const reviewed = {
+    ...brief,
+    bound: [
+      { name: "write-claude", run: "running" as const, kind: "work" as const },
+      { name: "review-pi", run: "running" as const, kind: "review" as const },
+      { name: "review-claude", run: "ended" as const, kind: "review" as const },
+    ],
+  };
+  expect(infoOf(reviewed)).toBe(
+    "2/5 · 4 comments · write-claude, review-pi (review), review-claude (review, ended)",
+  );
+  const comment = { n: 1, from: "review-pi", at: "2026-10-27T06:00:00Z", text: "ok" };
+  expect(authorOf({ ...comment, capacity: "review" })).toBe("review-pi · review");
+  expect(authorOf(comment)).toBe("review-pi");
+});
 
 test("the shell lists the open briefs oldest first, then the closed ones", () => {
   const list = [b(5, "e"), b(2, "b", true), b(4, "d"), b(1, "a", true), b(3, "c")];

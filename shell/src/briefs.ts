@@ -53,20 +53,30 @@ export function cut(text: string, width: number): string {
 export const headOf = (brief: Summary) => `${brief.id} · ${brief.title}`;
 
 // infoOf is its second line, drawn faint under the title: `2/5 · 4 comments ·
-// write-claude, review-claude (ended)`; a closed brief says so, and its
-// bindings, all ended with it, are not marked one by one.
+// write-claude, review-claude (review, ended)`: a run given the brief to
+// review is marked so; a closed brief says so, and its bindings, all ended
+// with it, are not marked ended one by one.
 export function infoOf(brief: Summary): string {
   const parts = [
     `${brief.done}/${brief.total}`,
     `${brief.commentCount} comment${brief.commentCount === 1 ? "" : "s"}`,
   ];
   if (brief.closed) parts.push("closed");
-  const names = brief.bound.map((b) =>
-    ended(brief, b) && !brief.closed ? `${b.name} (ended)` : b.name,
-  );
+  const names = brief.bound.map((b) => {
+    const marks = [
+      ...(b.kind === "review" ? ["review"] : []),
+      ...(ended(brief, b) && !brief.closed ? ["ended"] : []),
+    ];
+    return marks.length > 0 ? `${b.name} (${marks.join(", ")})` : b.name;
+  });
   if (names.length > 0) parts.push(names.join(", "));
   return parts.join(separator);
 }
+
+// authorOf is who wrote a comment and in what capacity, `review-pi · review`;
+// a comment written before capacities were recorded shows the name alone.
+export const authorOf = (c: Comment) =>
+  c.capacity === undefined ? c.from : `${c.from}${separator}${c.capacity}`;
 
 // A navigation item over an opened brief: a brief by its id, or, without
 // one, the way back to the list.

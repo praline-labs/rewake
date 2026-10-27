@@ -41,7 +41,7 @@ func TestARecordPastTheBoundIsRefusedUnwritten(t *testing.T) {
 	var err error
 	bound := 1
 	for ; bound < 2000; bound++ {
-		if err = Bind(Home{Room: dir}, brief.ID, Author{Name: fmt.Sprintf("run-%d", bound), Epoch: "300.3.boot"}); err != nil {
+		if err = Bind(Home{Room: dir}, brief.ID, Author{Name: fmt.Sprintf("run-%d", bound), Epoch: "300.3.boot"}, Work); err != nil {
 			break
 		}
 	}

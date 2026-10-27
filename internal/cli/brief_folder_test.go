@@ -58,7 +58,7 @@ func TestABriefInTheProjectsFolder(t *testing.T) {
 	if code, _, errOut := run("brief", "new", "--dir", filepath.Join(other, "missing"), "# Task\n"); code != ExitUsage || !strings.Contains(errOut, "not an existing directory") {
 		t.Errorf("--dir that does not exist: %d %q", code, errOut)
 	}
-	if err := taskbrief.Bind(quietHomeOf(dir), 1, taskbrief.Author{Name: worker.Name, Epoch: worker.Epoch()}); err != nil {
+	if err := taskbrief.Bind(quietHomeOf(dir), 1, taskbrief.Author{Name: worker.Name, Epoch: worker.Epoch()}, taskbrief.Work); err != nil {
 		t.Fatal(err)
 	}
 	as(t, worker)

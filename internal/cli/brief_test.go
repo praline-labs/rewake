@@ -32,7 +32,7 @@ func TestAWorkerTicksByTheEditionItRead(t *testing.T) {
 	dir, worker := briefWorld(t)
 	lead, _ := registry.Lookup(dir, "lead")
 	run("brief", "new", "# Two steps\n- [ ] one\n- [ ] two\n")
-	if err := taskbrief.Bind(taskbrief.Home{Room: dir}, 1, taskbrief.Author{Name: worker.Name, Epoch: worker.Epoch()}); err != nil {
+	if err := taskbrief.Bind(taskbrief.Home{Room: dir}, 1, taskbrief.Author{Name: worker.Name, Epoch: worker.Epoch()}, taskbrief.Work); err != nil {
 		t.Fatal(err)
 	}
 	as(t, worker)

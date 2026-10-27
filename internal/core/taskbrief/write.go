@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"time"
 
 	"github.com/praline-labs/rewake/internal/infra/state"
@@ -133,8 +134,12 @@ func Edit(home Home, id int, author Author, revision int, text string) (Brief, e
 func Tick(home Home, id int, author Author, edition, n int, done bool) (Item, error) {
 	var ticked Item
 	err := changeOpen(home, id, func(path string, brief Brief) error {
-		if !brief.Has(author) {
+		binding, bound := brief.BindingOf(author)
+		if !bound {
 			return &NotBoundError{ID: id, Name: author.Name}
+		}
+		if binding.Kind.Of() == Review {
+			return &ReviewOnlyError{ID: id, Name: author.Name}
 		}
 		if edition != brief.Edition {
 			return &StaleEditionError{ID: id, Given: edition, Current: brief.Edition}
@@ -164,25 +169,36 @@ func Comment(home Home, id int, author Author, text string) (Entry, int, error) 
 	var entry Entry
 	number := 0
 	err := changeOpen(home, id, func(path string, brief Brief) error {
-		if !brief.Has(author) {
+		binding, bound := brief.BindingOf(author)
+		if !bound {
 			return &NotBoundError{ID: id, Name: author.Name}
 		}
 		number = len(brief.Comments()) + 1
-		entry = Entry{N: next(brief), At: time.Now().UTC(), From: author.Name, Epoch: author.Epoch, Kind: KindComment, Edition: brief.Edition, Text: text}
+		entry = Entry{N: next(brief), At: time.Now().UTC(), From: author.Name, Epoch: author.Epoch, Kind: KindComment, Edition: brief.Edition, Text: text, Capacity: binding.Kind.Of()}
 		return publish(path, entry)
 	})
 	return entry, number, err
 }
 
-// Bind gives the brief to a run, or keeps it given; an earlier run of the
-// same name stays listed as it was.
-func Bind(home Home, id int, run Author) error {
+// Bind gives the brief to a run with the right kind names, or keeps it
+// given; given before with the other kind, the run's binding is replaced. An
+// earlier run of the same name stays listed as it was.
+func Bind(home Home, id int, run Author, kind BindingKind) error {
 	return changeOpen(home, id, func(path string, brief Brief) error {
-		if brief.Has(run) {
-			return nil
-		}
 		record := brief.Record
-		record.Bound = append(record.Bound, Binding{Name: run.Name, Epoch: run.Epoch, Since: time.Now().UTC()})
+		record.Bound = slices.Clone(record.Bound)
+		given := Binding{Name: run.Name, Epoch: run.Epoch, Since: time.Now().UTC(), Kind: kind.Of()}
+		for i, binding := range record.Bound {
+			if binding.Name != run.Name || binding.Epoch != run.Epoch {
+				continue
+			}
+			if binding.Kind.Of() == given.Kind {
+				return nil
+			}
+			record.Bound[i] = given
+			return writeRecord(path, record)
+		}
+		record.Bound = append(record.Bound, given)
 		return writeRecord(path, record)
 	})
 }

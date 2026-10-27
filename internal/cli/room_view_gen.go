@@ -214,6 +214,9 @@ type BriefBound struct {
 
 	// Run says whether that run lives; its right ends with it.
 	Run RunState `json:"run"`
+
+	// Kind is the run's right to the brief.
+	Kind BindingKind `json:"kind"`
 }
 
 // BriefComment is a comment on a brief.
@@ -229,7 +232,21 @@ type BriefComment struct {
 
 	// Text is the comment.
 	Text string `json:"text"`
+
+	// Capacity is the kind of the writer's binding when it wrote; absent on a comment written
+	// before kinds, which shows the name alone.
+	Capacity *BindingKind `json:"capacity,omitempty"`
 }
+
+// BindingKind is a run's right to a brief: work reads, ticks and comments; review reads and
+// comments, never ticks.
+type BindingKind string
+
+// The values of BindingKind.
+const (
+	BindingKindWork   BindingKind = "work"
+	BindingKindReview BindingKind = "review"
+)
 
 // Problem is a file that does not read.
 type Problem struct {

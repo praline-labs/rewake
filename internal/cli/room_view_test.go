@@ -70,7 +70,7 @@ func TestTheRoomViewCarriesWhatOnlyMainReadsToMainsShell(t *testing.T) {
 	if code, _, errOut := run("brief", "close", "2"); code != ExitOK {
 		t.Fatalf("close: %d %s", code, errOut)
 	}
-	if err := taskbrief.Bind(taskbrief.Home{Room: dir}, 1, taskbrief.Author{Name: worker.Name, Epoch: worker.Epoch()}); err != nil {
+	if err := taskbrief.Bind(taskbrief.Home{Room: dir}, 1, taskbrief.Author{Name: worker.Name, Epoch: worker.Epoch()}, taskbrief.Work); err != nil {
 		t.Fatal(err)
 	}
 	shell := os.Getpid()

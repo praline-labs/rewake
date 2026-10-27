@@ -188,7 +188,11 @@ func briefOpened(home taskbrief.Home, id int) *BriefView {
 	view.Text = &detail.Text
 	view.Comments = make([]BriefComment, 0, len(detail.Comments))
 	for _, comment := range detail.Comments {
-		view.Comments = append(view.Comments, BriefComment{N: comment.N, From: comment.From, At: comment.At.Format(time.RFC3339), Text: comment.Text})
+		row := BriefComment{N: comment.N, From: comment.From, At: comment.At.Format(time.RFC3339), Text: comment.Text}
+		if comment.Capacity != "" {
+			row.Capacity = ptr(BindingKind(comment.Capacity))
+		}
+		view.Comments = append(view.Comments, row)
 	}
 	return &view
 }
@@ -199,7 +203,7 @@ func briefViewOf(summary briefSummary) BriefView {
 		Done: summary.Done, Total: summary.Total, CommentCount: summary.CommentCount, Bound: []BriefBound{},
 	}
 	for _, bound := range summary.Bound {
-		view.Bound = append(view.Bound, BriefBound{Name: bound.Name, Run: RunState(bound.Run)})
+		view.Bound = append(view.Bound, BriefBound{Name: bound.Name, Run: RunState(bound.Run), Kind: BindingKind(bound.Kind)})
 	}
 	return view
 }

@@ -13,6 +13,7 @@ func sendExamples(catalog adapter.Catalog) []string {
 		"rewake send " + address + " - --wait 20",
 		"rewake send " + address + " \"also rerun the lint\" --to 8d4ddd85",
 		"rewake send " + address + " \"do brief 3; tick the items as they land\" --brief 3",
+		"rewake send " + address + " \"review the diff against brief 3; comment there\" --brief 3 --review",
 	}
 }
 

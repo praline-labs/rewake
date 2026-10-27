@@ -57,6 +57,7 @@ func TestSendBriefIsRefusedBeforeAnythingIsSent(t *testing.T) {
 		code int
 	}{
 		{[]string{"send", "api", "fyi", "--notify", "--brief", "1"}, ExitUsage},
+		{[]string{"send", "api", "review it", "--review"}, ExitUsage},
 		{[]string{"send", "api", "do it", "--brief", "x"}, ExitUsage},
 		{[]string{"send", "api", "do it", "--brief", "9"}, ExitUsage},
 		{[]string{"send", "api", "do it", "--brief", "2"}, ExitFailed},
@@ -79,7 +80,7 @@ func TestSendBriefIsRefusedBeforeAnythingIsSent(t *testing.T) {
 // prints it again with main's edits and the ticks since.
 func TestTheInboxPrintsTheBriefWithTheLetter(t *testing.T) {
 	dir, web, api := briefSender(t)
-	if err := taskbrief.Bind(taskbrief.Home{Room: dir}, 1, taskbrief.Author{Name: "api", Epoch: api.Epoch()}); err != nil {
+	if err := taskbrief.Bind(taskbrief.Home{Room: dir}, 1, taskbrief.Author{Name: "api", Epoch: api.Epoch()}, taskbrief.Work); err != nil {
 		t.Fatal(err)
 	}
 	leaveUnread(t, dir, mail.Message{From: "web", FromEpoch: web.Epoch(), To: "api", ToEpoch: api.Epoch(), Kind: mail.Task, Text: "do the login", Brief: "1"})
@@ -118,7 +119,7 @@ func TestTheInboxPrintsTheBriefWithTheLetter(t *testing.T) {
 func TestALettersBriefThatDoesNotReadLeavesTheLetter(t *testing.T) {
 	dir, web, api := briefSender(t)
 	// Bound as send --brief binds before it writes the letter.
-	if err := taskbrief.Bind(taskbrief.Home{Room: dir}, 1, taskbrief.Author{Name: api.Name, Epoch: api.Epoch()}); err != nil {
+	if err := taskbrief.Bind(taskbrief.Home{Room: dir}, 1, taskbrief.Author{Name: api.Name, Epoch: api.Epoch()}, taskbrief.Work); err != nil {
 		t.Fatal(err)
 	}
 	run("brief", "close", "1")
@@ -137,7 +138,7 @@ func TestALettersBriefThatDoesNotReadLeavesTheLetter(t *testing.T) {
 func TestALaterRunIsNotShownAnEarlierRunsBrief(t *testing.T) {
 	dir, web, api := briefSender(t)
 	earlier := "123.456.old-boot"
-	if err := taskbrief.Bind(taskbrief.Home{Room: dir}, 1, taskbrief.Author{Name: api.Name, Epoch: earlier}); err != nil {
+	if err := taskbrief.Bind(taskbrief.Home{Room: dir}, 1, taskbrief.Author{Name: api.Name, Epoch: earlier}, taskbrief.Work); err != nil {
 		t.Fatal(err)
 	}
 	leaveUnread(t, dir, mail.Message{From: web.Name, FromEpoch: web.Epoch(), To: api.Name, ToEpoch: earlier, Kind: mail.Task, Text: "old task", Brief: "1"})

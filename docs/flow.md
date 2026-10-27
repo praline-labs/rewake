@@ -173,7 +173,8 @@ session's shell, or from a person's shell in the same room. A shell without
    ([delivery-sent.md](delivery-sent.md)).
 7. **A brief.** Main's `--brief 3` on a task or a question gives the recipient's run brief 3,
    after every check above and before the file is written; the letter carries `brief: "3"`, not
-   the text ([briefs.md](briefs.md)).
+   the text. With `--review` beside it the run gets the brief to read and comment, never to tick,
+   as a reviewer; its verdict still comes back as the report ([briefs.md](briefs.md)).
 
 ## Act 3. The wrapper announces it
 

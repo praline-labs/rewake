@@ -1,5 +1,5 @@
 ---
-description: Briefs — a markdown brief per task that main writes, bound to workers by send --brief, ticked and commented by them; the records under briefs/, where a brief lives (the room or a folder of the project), the brief commands, the JSON the shell reads, and the worker tools of both harnesses.
+description: Briefs — a markdown brief per task that main writes, bound to workers by send --brief, ticked and commented by them, read and commented by a reviewer given it with --review; the records under briefs/, where a brief lives (the room or a folder of the project), the brief commands, the JSON the shell reads, and the worker tools of both harnesses.
 ---
 
 # Briefs
@@ -7,10 +7,16 @@ description: Briefs — a markdown brief per task that main writes, bound to wor
 Decided by the owner, October 26, 2026: a **brief** is a markdown document for one task — a
 title, a description, checkbox items, anything markdown holds — kept in the room, many per room.
 Main alone writes and edits its text; a worker it was given to ticks items and writes comments of
-at most 1000 characters; the person reads briefs in the shell, in the worker's pane, and edits nothing there. A brief
+at most 1000 characters, and a reviewer it was given to only comments; the person reads briefs in the shell, in the worker's pane, and edits nothing there. A brief
 outlives compactions of main and workers; a closed one goes to an archive. Main gives one with
 `rewake send <worker> "..." --brief <id>`, and the worker gets its text with that task, and only
-then. The finish report stays mail and is not copied into the brief. The word is not the
+then. The finish report stays mail and is not copied into the brief.
+
+Decided by the owner, October 27, 2026: a reviewer gets a brief to read **and comment**, never to
+tick («делай второе»), with `send --brief <id> --review`; its findings land in the brief where the
+writer and the person see them, and its verdict still reaches main as the report. Every comment
+shows who wrote it and in what capacity, so the models reading it know its author («показывать
+там, кто сделал комментарий, чтобы модели получали инфу о авторе комментария»). The word is not the
 briefing, the launch text of `internal/core/brief`; the code lives in `internal/core/taskbrief`
 (the records), `internal/cli/brief*.go` and `send_brief.go` (the commands), and the tools in
 `internal/adapter/claude/mod/hooks/briefs.ts` and `internal/adapter/pi/briefs.ts`. The shell's
@@ -22,8 +28,8 @@ Under the room, beside `inbox/` and `spaces/`:
 
 ```
 briefs/.lock                 one flock for every write under briefs/
-briefs/<id>/brief.json       {id, created, bound: [{name, epoch, since}]}, closed once closed
-briefs/<id>/log/<n>.json     {n, at, from, epoch, kind: edit|tick|untick|comment, edition, item, itemText | text}
+briefs/<id>/brief.json       {id, created, bound: [{name, epoch, since, kind: work|review}]}, closed once closed
+briefs/<id>/log/<n>.json     {n, at, from, epoch, kind: edit|tick|untick|comment, edition, item, itemText | text, capacity}
 briefs/<id>/text/<e>.md      the text of edition e, as main wrote it
 briefs/closed/<id>/          a closed brief, moved whole
 briefs/index.json            {briefs: {"<id>": {path, closed?}}}, the briefs kept outside the room
@@ -67,11 +73,16 @@ briefs/index.json            {briefs: {"<id>": {path, closed?}}}, the briefs kep
 - **Who writes what.** Every write is a change form holding the room's build lease, then
   `briefs/.lock` (`state.WithBriefLock`, in the seam's lock
   list of [rules/state.md](rules/state.md#what-is-a-writer)). Main writes `brief.json` (`WriteAtomic`), the texts and their edits,
-  and moves a brief to `closed/` (`Rename`); a bound worker only adds ticks and comments to `log/`,
-  after checking under the same lock that the brief is open, its run is bound and, for a tick, its
-  edition is current. A view takes no lock: each file is whole by the atomic write, the set of them
+  and moves a brief to `closed/` (`Rename`); a bound run only adds ticks and comments to `log/`,
+  after checking under the same lock that the brief is open, its run is bound and, for a tick,
+  that the binding is `work` and its edition is current. A view takes no lock: each file is whole by the atomic write, the set of them
   is no snapshot. The lock is taken after the lease and with no other lock of the room held, and
   nothing is taken inside it.
+- **A binding's kind and a comment's capacity.** A binding's `kind` is its right: `work` reads,
+  ticks and comments, `review` reads and comments. A comment's `capacity` is the kind of its
+  writer's binding when it wrote, kept as written though the binding changes later. Both are
+  additive: a binding written before them has no `kind` and is `work`, a comment none and shows
+  its writer's name alone.
 - **The letter.** A task or question sent with `--brief` carries `brief: "<id>"`, an additive
   field of the message record ([mailbox-records.md](mailbox-records.md)); the brief's text is not copied into it.
 
@@ -128,23 +139,30 @@ The `brief` group of the command table, with `--json` on each, examples parsed a
 | `brief close <id>` | main | change | moves it to `closed/`; every binding ends |
 | `brief list [--closed]` | main | view | open briefs, or closed ones too: id, title, done of items, comments, who is bound and whether that run lives |
 | `brief show <id> [--markdown]` | main, a bound run | view | a header with the edition and the revision, the bound runs, the text with ticks applied and each item's number, the comments; `--markdown` prints only the text with ticks applied, no numbers, for main to edit |
-| `brief tick <id> <n> --edition <e> [--undo]` | a bound run | change | ticks or unticks item `n` of edition `e`, refused once main edited since; answers the item's text |
-| `brief comment <id> -- <text>` | a bound run | change | at most 1000 characters (code points), not empty |
-| `send <worker> <text> --brief <id>` | main | change | a task or `--question` that binds the brief to the recipient's run and carries the brief; refused beside `--notify` |
+| `brief tick <id> <n> --edition <e> [--undo]` | a run bound as `work` | change | ticks or unticks item `n` of edition `e`, refused once main edited since; answers the item's text |
+| `brief comment <id> -- <text>` | a bound run | change | markdown, at most 1000 characters (code points), not empty; recorded with the binding's kind as its capacity |
+| `send <worker> <text> --brief <id> [--review]` | main | change | a task or `--question` that binds the brief to the recipient's run, as `work` or with `--review` as `review`, and carries the brief; refused beside `--notify`; `--review` without `--brief` is refused |
 
 - **Who.** "main" is the verified run of the room's main (`ownRunIn`, its record's role `main`, as
   `compact` checks); "a bound run" is a run whose name and epoch `brief.json` lists. Anyone else is
-  refused, exit 1, naming who may. A shell outside a session reads no brief: the person reads them
+  refused, exit 1, naming who may; a tick by a run bound as `review` is refused, exit 1, saying it
+  was given the brief to review and that ticking is the worker's. Main is bound to no brief and
+  does not comment. A shell outside a session reads no brief: the person reads them
   in the shell, which asks as main's run.
 - **Binding.** `send --brief` runs every check of `send` first, then binds under the brief lock —
-  adding the recipient's run, or keeping it — then writes the letter. Binding is by run, so a later
+  adding the recipient's run, or keeping it; a run given the brief before with the other kind has
+  its binding replaced, kind and `since` — then writes the letter. `--review` is a switch beside
+  `--brief`, not a value of it: `--brief` keeps one meaning, the id, and `--review` says how it is
+  given, as `--undo` says how `tick` acts. Binding is by run, so a later
   worker of the same name gets no right to an earlier brief. It ends when the brief closes or the
   run ends; an ended run stays listed, marked ended. There is no bind or unbind of its own: a
   binding without a task would give a worker a brief it was never told of.
 - **What the worker gets.** `rewake inbox` prints a letter that carries a brief and then, read at
   that moment, the brief: a header `brief 3 · <title> · edition 2 · 2 of 5 done · 4 comments`, a
   line naming `rewake brief tick`, `comment` and `show` and their tools, and the text with each
-  item's number (`- [ ] #3 run the tests`); under `--json` the message gains a `brief` object.
+  item's number (`- [ ] #3 run the tests`); under `--json` the message gains a `brief` object. To a
+  reviewer the line says it was given the brief to review, names `comment` and `show` and their
+  tools, and that ticking is the worker's; `brief show` says the same to it.
   `inbox --owed` prints it again with the task, the current text, so a compacted worker re-reads
   it. A brief closed meanwhile prints as closed; one that cannot be read prints the letter whole
   and says the brief could not be read and how to read it again (E5, E6). A letter an earlier run
@@ -167,13 +185,24 @@ brief list [--closed] --json  {room, briefs: [summary], unreadable: [{path, why}
                               open briefs, then closed ones, each newest first
 summary                       {id, title, closed, created, closedAt?, edition, revision,
                                done, total, commentCount,
-                               bound: [{name, epoch, since, run: running|ended|unknown}]}
+                               bound: [{name, epoch, since, run: running|ended|unknown,
+                                        kind: work|review}]}
 brief show <id> --json        summary and {text, items: [{n, text, done}],
-                               comments: [{n, from, at, edition, text}]}
+                               comments: [{n, from, at, edition, text, capacity?}]}
                               n is the comment's place among the brief's comments, 1, 2, 3 …,
                               derived, not the log's number
 ```
 
+A comment is markdown and its newlines are kept from the tool's argument through the log to
+`brief show`, which prints its lines indented under the header line, a blank one blank, `--json`,
+the room view and the shell's pane, which renders it as markdown. Decided by the owner, October 27,
+2026, a copied comment having read as one line («нормальный md давать в комментарий? а не кашу»):
+the workers' briefing and the `brief_comment` tool's description ask for a one-line point first,
+then short bullets, one idea per line, no wall of text.
+`capacity` is absent on a comment written before capacities. Every place a comment is shown names
+its author and capacity — `review-pi · review`, `write-claude · work`, the name alone for an old
+comment: `brief show`'s lines (and so `brief_read`), `--json`, the room view's `BriefComment` and
+the shell's pane; `brief show` marks a reviewer in its `bound:` line, `api (review)`.
 `text` is the current text with the ticks applied and no numbers, what `<markdown>` renders; a
 binding has ended when the brief is closed or its `run` is `ended`. Main may show a closed
 brief; `--markdown` changes nothing under `--json`. The changes answer: `new` and `edit` a
@@ -192,7 +221,7 @@ is an error result.
 | Tool (Claude Code / pi) | Input | Runs | Answers |
 |---|---|---|---|
 | `mcp__rewake__brief_read` / `brief_read` | `id` | `brief show <id>` | the line form, its header naming the edition a tick takes: markdown reads as written, not escaped in JSON |
-| `mcp__rewake__brief_tick` / `brief_tick` | `id`, `item`, `edition`, `undo?` | `brief tick <id> <item> --edition=<edition> [--undo]` | the item's number, text and state |
+| `mcp__rewake__brief_tick` / `brief_tick` | `id`, `item`, `edition`, `undo?` | `brief tick <id> <item> --edition=<edition> [--undo]` | the item's number, text and state; a reviewer's refusal as an error |
 | `mcp__rewake__brief_comment` / `brief_comment` | `id`, `text` | `brief comment <id> -- <text>` | the comment's number among the comments |
 
 The tool refuses before any process starts an `id`, `item` or `edition` that is not a positive
@@ -214,12 +243,15 @@ alike.
 ## Tests
 
 By `AGENTS.md`: the item scan, the title and tick resolution (`taskbrief/items_test.go`, pure
-logic); the records' format and the rights (`taskbrief/store_test.go`); a project's folder, the wiped room, a moved brief, a shared folder and the admitted folders (`taskbrief/outside_test.go`, `cli/brief_folder_test.go`, `state/outside_test.go`); the `--json` the shell
+logic); the records' format and the rights (`taskbrief/store_test.go`), a review binding and a
+record from before kinds (`taskbrief/review_test.go`); a project's folder, the wiped room, a moved brief, a shared folder and the admitted folders (`taskbrief/outside_test.go`, `cli/brief_folder_test.go`, `state/outside_test.go`); the `--json` the shell
 reads, the checks before any effect and the rights of the commands (`cli/brief_test.go`); the
-binding of `send --brief` and what `inbox` and `--owed` print (`cli/brief_send_test.go`); the
+binding of `send --brief` and what `inbox` and `--owed` print (`cli/brief_send_test.go`), and
+`--review` from the send to the show (`cli/brief_review_test.go`); the
 tools' argv and refused input in the mod's `tests/briefs.test.ts` and pi's `briefs.test.ts`; and
 one workflow scenario, `brief`: main makes a brief, sends it, the fixture worker reads it with
-its task, ticks and comments, main's `show` sees both
+its task, ticks and comments, a reviewer given it with `--review` is refused a tick and comments,
+and main's `show` sees the tick and both comments with their capacities
 ([testing-cases.md](testing-cases.md#launch-reports-and-what-a-main-waits-on)).
 
 ## Known limits
