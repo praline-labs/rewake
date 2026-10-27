@@ -3,6 +3,7 @@ package cli
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 
 	"github.com/praline-labs/rewake/internal/core/taskbrief"
@@ -11,7 +12,7 @@ import (
 // The changes of a brief: main's new, edit and close; a bound run's tick and
 // comment. Each holds the room's lease, then the brief lock inside the core.
 
-func briefNew(ctx *Context, call Call, dir string, caller briefRun, args []string) error {
+func briefNew(ctx *Context, call Call, home taskbrief.Home, caller briefRun, args []string) error {
 	if err := caller.mainOnly("make"); err != nil {
 		return err
 	}
@@ -19,7 +20,11 @@ func briefNew(ctx *Context, call Call, dir string, caller briefRun, args []strin
 	if err != nil {
 		return err
 	}
-	brief, err := taskbrief.New(dir, caller.author, text)
+	where, err := briefWhere(call)
+	if err != nil {
+		return err
+	}
+	brief, err := taskbrief.New(home, caller.author, text, where)
 	if err != nil {
 		return briefError(call, err)
 	}
@@ -29,7 +34,7 @@ func briefNew(ctx *Context, call Call, dir string, caller briefRun, args []strin
 	})
 }
 
-func briefEdit(ctx *Context, call Call, dir string, caller briefRun, args []string) error {
+func briefEdit(ctx *Context, call Call, home taskbrief.Home, caller briefRun, args []string) error {
 	if err := caller.mainOnly("edit"); err != nil {
 		return err
 	}
@@ -45,7 +50,7 @@ func briefEdit(ctx *Context, call Call, dir string, caller briefRun, args []stri
 	if err != nil {
 		return err
 	}
-	brief, err := taskbrief.Edit(dir, id, caller.author, revision, text)
+	brief, err := taskbrief.Edit(home, id, caller.author, revision, text)
 	if err != nil {
 		return briefError(call, err)
 	}
@@ -61,7 +66,7 @@ type briefClosed struct {
 	Already bool `json:"already"`
 }
 
-func briefClose(ctx *Context, call Call, dir string, caller briefRun, args []string) error {
+func briefClose(ctx *Context, call Call, home taskbrief.Home, caller briefRun, args []string) error {
 	if err := caller.mainOnly("close"); err != nil {
 		return err
 	}
@@ -72,7 +77,7 @@ func briefClose(ctx *Context, call Call, dir string, caller briefRun, args []str
 	if len(args) > 1 {
 		return &UsageError{Command: call.Command, Message: "brief close takes the id alone."}
 	}
-	already, err := taskbrief.Close(dir, id)
+	already, err := taskbrief.Close(home, id)
 	if err != nil {
 		return briefError(call, err)
 	}
@@ -92,7 +97,7 @@ type briefTicked struct {
 	Item    taskbrief.Item `json:"item"`
 }
 
-func briefTick(ctx *Context, call Call, dir string, caller briefRun, args []string) error {
+func briefTick(ctx *Context, call Call, home taskbrief.Home, caller briefRun, args []string) error {
 	id, err := briefID(call, "tick", args)
 	if err != nil {
 		return err
@@ -108,7 +113,7 @@ func briefTick(ctx *Context, call Call, dir string, caller briefRun, args []stri
 	if err != nil {
 		return err
 	}
-	ticked, err := taskbrief.Tick(dir, id, caller.author, edition, item, !call.Switch("undo"))
+	ticked, err := taskbrief.Tick(home, id, caller.author, edition, item, !call.Switch("undo"))
 	if err != nil {
 		return briefError(call, err)
 	}
@@ -128,7 +133,7 @@ type briefCommented struct {
 	N  int `json:"n"`
 }
 
-func briefComment(ctx *Context, call Call, dir string, caller briefRun, args []string) error {
+func briefComment(ctx *Context, call Call, home taskbrief.Home, caller briefRun, args []string) error {
 	id, err := briefID(call, "comment", args)
 	if err != nil {
 		return err
@@ -145,13 +150,13 @@ func briefComment(ctx *Context, call Call, dir string, caller briefRun, args []s
 	if err := taskbrief.CheckComment(text); err != nil {
 		return &UsageError{Command: call.Command, Message: err.Error() + "."}
 	}
-	entry, err := taskbrief.Comment(dir, id, caller.author, text)
+	_, number, err := taskbrief.Comment(home, id, caller.author, text)
 	if err != nil {
 		return briefError(call, err)
 	}
-	answer := briefCommented{ID: id, N: entry.N}
+	answer := briefCommented{ID: id, N: number}
 	return printValue(ctx, answer, func() []string {
-		return []string{fmt.Sprintf("Rewake: comment #%d added to brief %d.", entry.N, id)}
+		return []string{fmt.Sprintf("Rewake: comment #%d added to brief %d.", number, id)}
 	})
 }
 
@@ -166,4 +171,24 @@ func positiveFlag(call Call, name, missing string) (int, error) {
 		return 0, &UsageError{Command: call.Command, Message: fmt.Sprintf("--%s takes a number from 1, not %q.", name, value)}
 	}
 	return n, nil
+}
+
+// briefWhere reads --dir: an existing directory, made absolute against the
+// directory the command runs in.
+func briefWhere(call Call) (string, error) {
+	dir, given := call.Flags["dir"]
+	if !given {
+		return "", nil
+	}
+	if dir == "" {
+		return "", &UsageError{Command: call.Command, Message: "--dir needs a directory."}
+	}
+	abs, err := filepath.Abs(dir)
+	if err != nil {
+		return "", &UsageError{Command: call.Command, Message: fmt.Sprintf("could not make %s absolute: %v", dir, err)}
+	}
+	if info, err := os.Stat(abs); err != nil || !info.IsDir() {
+		return "", &UsageError{Command: call.Command, Message: fmt.Sprintf("--dir %s is not an existing directory; make it first, the brief goes in %s/brief-<id>.", abs, abs)}
+	}
+	return abs, nil
 }

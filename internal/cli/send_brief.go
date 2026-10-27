@@ -42,7 +42,7 @@ func bindBrief(call Call, dir string, self registry.Session, selfErr error, reci
 		return "", failf("only main gives a brief; %s is a %s session. Ask main to do it.", self.Name, self.Role)
 	}
 	id, _ := taskbrief.ParseID(value)
-	err := taskbrief.Bind(dir, id, taskbrief.Author{Name: recipient.Name, Epoch: recipient.Epoch()})
+	err := taskbrief.Bind(quietHomeOf(dir), id, taskbrief.Author{Name: recipient.Name, Epoch: recipient.Epoch()})
 	var closed *taskbrief.ClosedError
 	switch {
 	case errors.Is(err, taskbrief.ErrNotFound):

@@ -40,7 +40,7 @@ func letterBriefOf(dir, named string, reader taskbrief.Author) *letterBrief {
 	if !ok {
 		return &letterBrief{Error: fmt.Sprintf("the letter names %q, which is no brief's id", named)}
 	}
-	brief, err := taskbrief.Load(dir, id)
+	brief, err := taskbrief.Load(quietHomeOf(dir), id)
 	if err != nil {
 		return &letterBrief{ID: id, Error: err.Error()}
 	}

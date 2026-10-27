@@ -27,6 +27,7 @@ func briefGroup() Group {
 			Summary:        "Make, edit, close and list briefs from main; read, tick and comment one from a run it was sent to.",
 			Options: []Option{
 				{Flag: "--file", Value: "<path>", Summary: "new, edit: read the text from this file instead of the argument."},
+				{Flag: "--dir", Value: "<path>", Summary: "new: put the brief in <path>/brief-<id> instead of where the project's [briefs] dir or the room keeps it; the directory must exist."},
 				{Flag: "--rev", Value: "<n>", Summary: "edit, required: the revision the new text starts from, as brief show printed it."},
 				{Flag: "--edition", Value: "<e>", Summary: "tick, required: the edition the item's number was read in, as brief show printed it."},
 				{Flag: "--undo", Summary: "tick: mark the item not done."},
@@ -37,6 +38,7 @@ func briefGroup() Group {
 			Examples: []string{
 				"rewake brief new \"# Auth refactor\n\n- [ ] move the login\n- [ ] run the tests\"",
 				"rewake brief new --file .scratch/auth.md --json",
+				"rewake brief new --dir .shift/tasks/auth --file .scratch/auth.md",
 				"rewake brief show 3", "rewake brief show 3 --markdown", "rewake brief show 3 --json",
 				"rewake brief edit 3 --rev 7 --file .scratch/auth.md",
 				"rewake brief list", "rewake brief list --closed --json",
@@ -50,7 +52,8 @@ func briefGroup() Group {
 				"A brief's id is a number from 1. Its title is its first \"# \" heading, else its first line. Its items are its task-list lines, \"- [ ] ...\", numbered from 1 in the text's order; show prints each number after its box.",
 				"Two numbers stay apart: the edition counts main's edits, the revision is the log's latest edit, tick or untick. A tick names the edition its number was read in and is refused once main edited since: read the brief again. An edit names the revision it started from and is refused once anything changed since: edit the text show --markdown prints, which carries the ticks as [x].",
 				"A text is at most 64 KiB, a comment at most 1000 characters; neither may be empty. A comment that begins with a dash goes after --. Use - as the text to read it from stdin.",
-				"An edit tells nobody: send a letter with --brief for a worker to read the new text. A closed brief is archived whole; brief list --closed shows it.",
+				"An edit tells nobody: send a letter with --brief for a worker to read the new text. A closed brief is archived whole; brief list --closed shows it. A brief in a project's folder is marked closed where it is.",
+				"Where a brief goes: --dir, else the project's .rewake/aliases.toml [briefs] dir = \"<path>\" (relative to main's directory), else the room's state, which a reboot may clear. Ids stay per room; a brief whose folder was moved lists as unreadable \"moved\" and rewake brief close marks it closed.",
 				"Exit 0 done; 1 refused — not main or not a run the brief was sent to, a closed brief, a stale edition or revision; 2 a wrong call — no such brief or item, a missing or bad argument.",
 			},
 			Access:  briefAccess,
@@ -75,7 +78,7 @@ func briefAccess(call Call) access {
 // briefFlags are the flags each verb takes; any other is refused rather than
 // run as if it were not there.
 var briefFlags = map[string][]string{
-	"new":     {"file"},
+	"new":     {"file", "dir"},
 	"edit":    {"file", "rev"},
 	"close":   {},
 	"list":    {"closed"},
@@ -106,22 +109,26 @@ func handleBrief(ctx *Context, call Call) error {
 	if err != nil {
 		return err
 	}
+	home, homeErr := briefHomeOf(dir)
+	if homeErr != nil && verb == "new" {
+		return failf("%v", homeErr)
+	}
 	args := call.Positionals[1:]
 	switch verb {
 	case "new":
-		return briefNew(ctx, call, dir, caller, args)
+		return briefNew(ctx, call, home, caller, args)
 	case "edit":
-		return briefEdit(ctx, call, dir, caller, args)
+		return briefEdit(ctx, call, home, caller, args)
 	case "close":
-		return briefClose(ctx, call, dir, caller, args)
+		return briefClose(ctx, call, home, caller, args)
 	case "list":
-		return briefList(ctx, call, dir, caller, args)
+		return briefList(ctx, call, home, caller, args)
 	case "show":
-		return briefShow(ctx, call, dir, caller, args)
+		return briefShow(ctx, call, home, caller, args)
 	case "tick":
-		return briefTick(ctx, call, dir, caller, args)
+		return briefTick(ctx, call, home, caller, args)
 	}
-	return briefComment(ctx, call, dir, caller, args)
+	return briefComment(ctx, call, home, caller, args)
 }
 
 // briefRun is the run that calls a brief command, as its environment names
@@ -203,6 +210,7 @@ func readBounded(from io.Reader) (string, error) {
 // briefError gives a refusal of the brief's records the CLI's shape.
 func briefError(call Call, err error) error {
 	var (
+		moved    *taskbrief.MovedError
 		closed   *taskbrief.ClosedError
 		unbound  *taskbrief.NotBoundError
 		revision *taskbrief.StaleRevisionError
@@ -214,6 +222,8 @@ func briefError(call Call, err error) error {
 		return &UsageError{Command: call.Command, Message: "no such brief: rewake brief list shows the open ones, and --closed the closed ones too."}
 	case errors.Is(err, taskbrief.ErrBadText), errors.As(err, &item):
 		return &UsageError{Command: call.Command, Message: err.Error() + "."}
+	case errors.As(err, &moved):
+		return failf("%v.", err)
 	case errors.As(err, &closed), errors.As(err, &unbound), errors.As(err, &revision), errors.As(err, &edition):
 		return failf("%v.", err)
 	}

@@ -55,13 +55,13 @@ func TestTheShellsJSONOfBriefs(t *testing.T) {
 		t.Fatalf("close: %d %q", code, errOut)
 	}
 	author := taskbrief.Author{Name: worker.Name, Epoch: worker.Epoch()}
-	if err := taskbrief.Bind(dir, 1, author); err != nil {
+	if err := taskbrief.Bind(taskbrief.Home{Room: dir}, 1, author); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := taskbrief.Tick(dir, 1, author, 1, 2, true); err != nil {
+	if _, err := taskbrief.Tick(taskbrief.Home{Room: dir}, 1, author, 1, 2, true); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := taskbrief.Comment(dir, 1, author, "the tests pass"); err != nil {
+	if _, _, err := taskbrief.Comment(taskbrief.Home{Room: dir}, 1, author, "the tests pass"); err != nil {
 		t.Fatal(err)
 	}
 	as(t, lead)
@@ -127,7 +127,7 @@ func TestAWorkerTicksByTheEditionItRead(t *testing.T) {
 	dir, worker := briefWorld(t)
 	lead, _ := registry.Lookup(dir, "lead")
 	run("brief", "new", "# Two steps\n- [ ] one\n- [ ] two\n")
-	if err := taskbrief.Bind(dir, 1, taskbrief.Author{Name: worker.Name, Epoch: worker.Epoch()}); err != nil {
+	if err := taskbrief.Bind(taskbrief.Home{Room: dir}, 1, taskbrief.Author{Name: worker.Name, Epoch: worker.Epoch()}); err != nil {
 		t.Fatal(err)
 	}
 	as(t, worker)
@@ -186,7 +186,7 @@ func TestOnlyMainAndBoundRunsReachABrief(t *testing.T) {
 	if code, _, errOut := run("brief", "list"); code != ExitFailed || !strings.Contains(errOut, "not part of a rewake session") {
 		t.Errorf("a plain shell's list: %d %q", code, errOut)
 	}
-	if _, err := taskbrief.Load(dir, 2); err == nil {
+	if _, err := taskbrief.Load(taskbrief.Home{Room: dir}, 2); err == nil {
 		t.Error("a worker made a brief")
 	}
 }

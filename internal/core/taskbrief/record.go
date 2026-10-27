@@ -57,6 +57,9 @@ type Record struct {
 	Created time.Time  `json:"created"`
 	Bound   []Binding  `json:"bound"`
 	Closed  *time.Time `json:"closed,omitempty"`
+	// Room names the room of a brief kept outside it, in a folder of the
+	// project that other rooms may share; a brief in the room has none.
+	Room string `json:"room,omitempty"`
 }
 
 // Kind is what a log entry records.

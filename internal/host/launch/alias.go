@@ -11,6 +11,7 @@ package launch
 import (
 	"errors"
 	"fmt"
+	"path/filepath"
 	"slices"
 	"sort"
 	"strings"
@@ -103,6 +104,9 @@ type Set struct {
 	// aliasOff names the aliases a project file turned off, with where; they
 	// are gone from aliases, and Template refuses them by name.
 	aliasOff map[string]string
+	// briefsDir is the project's [briefs] dir as written, relative to the
+	// project; empty without one.
+	briefsDir string
 	// pendingOff is what the project file asked, applied once every file is read.
 	pendingOff []offRequest
 }
@@ -296,4 +300,16 @@ func (a Alias) check(name, source string, knownHarnesses []string, fromProject b
 		}
 	}
 	return nil
+}
+
+// BriefsDir is the folder the project's [briefs] dir names, made absolute
+// against the project's directory working, or empty when it sets none.
+func (s *Set) BriefsDir(working string) string {
+	if s.briefsDir == "" {
+		return ""
+	}
+	if filepath.IsAbs(s.briefsDir) {
+		return filepath.Clean(s.briefsDir)
+	}
+	return filepath.Join(working, s.briefsDir)
 }

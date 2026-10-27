@@ -56,6 +56,11 @@ func NoLeaseRefusals() int64 { return refusedNoLease.Load() }
 // room: the resolvers that give a write its path give the lease its room.
 func leased(path string) bool {
 	clean := filepath.Clean(path)
+	return leasedRoom(clean) || admittedOutside(clean)
+}
+
+// leasedRoom is leased for a path in a room only.
+func leasedRoom(clean string) bool {
 	leases.mu.Lock()
 	defer leases.mu.Unlock()
 	for room := range leases.held {

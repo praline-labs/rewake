@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"syscall"
 
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
@@ -79,16 +80,59 @@ func (b Brief) Markdown() string { return render(b.Text, b.items, false) }
 func (b Brief) Numbered() string { return render(b.Text, b.items, true) }
 
 // Load reads one brief, open or closed.
-func Load(dir string, id int) (Brief, error) {
-	path, err := find(dir, id)
+func Load(home Home, id int) (Brief, error) {
+	path, _, err := find(home, id)
 	if err != nil {
 		return Brief{}, err
 	}
 	return loadAt(path, id)
 }
 
-// find is the directory of brief id: open, else archived.
-func find(dir string, id int) (string, error) {
+// find is the directory of brief id: open, else archived in the room, else
+// in the project's folder, else the folder the index names; outside says it
+// is not in the room. An indexed brief whose folder is gone is a MovedError.
+func find(home Home, id int) (path string, outside bool, err error) {
+	path, err = findInRoom(home.Room, id)
+	if !errors.Is(err, ErrNotFound) {
+		return path, false, err
+	}
+	if home.Folder != "" {
+		folder := folderPath(home.Folder, id)
+		var record Record
+		err := readJSON(filepath.Join(folder, recordFile), &record)
+		switch {
+		case err == nil && home.isOurs(record):
+			return folder, true, nil
+		case err == nil, errors.Is(err, os.ErrNotExist), errors.Is(err, syscall.ENOTDIR):
+			// absent, or another room's: not ours
+		default:
+			return "", true, err
+		}
+	}
+	idx, err := readIndex(home.Room)
+	if err != nil {
+		return "", false, err
+	}
+	entry, ok := idx.Briefs[FormatID(id)]
+	if !ok {
+		return "", false, ErrNotFound
+	}
+	var record Record
+	err = readJSON(filepath.Join(entry.Path, recordFile), &record)
+	switch {
+	case errors.Is(err, os.ErrNotExist), errors.Is(err, syscall.ENOTDIR):
+		return "", true, &MovedError{ID: id, Path: entry.Path}
+	case err != nil:
+		return "", true, err
+	case !home.isOurs(record):
+		// Another room's brief now stands where ours was.
+		return "", true, &MovedError{ID: id, Path: entry.Path}
+	}
+	return entry.Path, true, nil
+}
+
+// findInRoom is the directory of brief id in the room: open, else archived.
+func findInRoom(dir string, id int) (string, error) {
 	for _, path := range []string{openPath(dir, id), filepath.Join(state.ClosedBriefsPath(dir), FormatID(id))} {
 		info, err := os.Lstat(path)
 		if errors.Is(err, os.ErrNotExist) {
@@ -195,23 +239,78 @@ func readJSON(path string, into any) error {
 	return nil
 }
 
-// List reads the open briefs and, with closed, the archived ones too: open
-// ones first, each part newest first. A room with no briefs directory has
-// none. A brief that does not read is a Problem beside the others, never a
-// reason to show none.
-func List(dir string, closed bool) ([]Brief, []Problem, error) {
+// List reads the open briefs and, with closed, the closed ones too: open
+// ones first, each part newest first. A brief kept outside the room is read
+// where the project's folder or the index puts it and counted by its own
+// record; one whose folder is gone is a Problem "moved". A room with no
+// briefs directory has none. A brief that does not read is a Problem beside
+// the others, never a reason to show none.
+func List(home Home, closed bool) ([]Brief, []Problem, error) {
+	dir := home.Room
 	open, problems, err := listIn(dir, state.BriefsPath(dir))
 	if err != nil {
 		return nil, nil, err
 	}
-	if !closed {
-		return open, problems, nil
+	var archived []Brief
+	if closed {
+		var more []Problem
+		if archived, more, err = listIn(state.BriefsPath(dir), state.ClosedBriefsPath(dir)); err != nil {
+			return nil, nil, err
+		}
+		problems = append(problems, more...)
 	}
-	archived, more, err := listIn(state.BriefsPath(dir), state.ClosedBriefsPath(dir))
+	load := func(id int, folder string, others bool) {
+		brief, err := loadAt(folder, id)
+		switch {
+		case err != nil:
+			problems = append(problems, Problem{Path: folder, Why: err.Error()})
+		case others && !home.isOurs(brief.Record):
+			// another room's brief in a folder rooms share
+		case !brief.IsClosed():
+			open = append(open, brief)
+		case closed:
+			archived = append(archived, brief)
+		}
+	}
+	idx, err := readIndex(dir)
 	if err != nil {
 		return nil, nil, err
 	}
-	return append(open, archived...), append(problems, more...), nil
+	// The index decides first for the paths it names: a tombstone or a
+	// brief of another room there is moved, not an error of the scan.
+	indexedPath := map[string]bool{}
+	for _, entry := range idx.Briefs {
+		indexedPath[entry.Path] = true
+	}
+	scanned, err := foldersIn(home.Folder)
+	if err != nil {
+		return nil, nil, err
+	}
+	for _, id := range scanned {
+		if folder := folderPath(home.Folder, id); !indexedPath[folder] {
+			load(id, folder, true)
+		}
+	}
+	for _, id := range idx.ids() {
+		entry := idx.Briefs[FormatID(id)]
+		brief, err := loadAt(entry.Path, id)
+		switch {
+		case errors.Is(err, os.ErrNotExist), errors.Is(err, syscall.ENOTDIR), err == nil && !home.isOurs(brief.Record):
+			if !entry.Closed {
+				problems = append(problems, Problem{Path: entry.Path, Why: "moved"})
+			}
+		case err != nil:
+			problems = append(problems, Problem{Path: entry.Path, Why: err.Error()})
+		case !brief.IsClosed():
+			open = append(open, brief)
+		case closed:
+			archived = append(archived, brief)
+		}
+	}
+	byNewest := func(a, b Brief) int { return b.ID - a.ID }
+	slices.SortFunc(open, byNewest)
+	slices.SortFunc(archived, byNewest)
+	return append(open, archived...), problems, nil
 }
 
 // listIn reads the briefs of path, a directory directly inside parent.
@@ -227,8 +326,8 @@ func listIn(parent, path string) ([]Brief, []Problem, error) {
 	var problems []Problem
 	for _, entry := range entries {
 		name := entry.Name()
-		if strings.HasPrefix(name, ".") || (path == state.BriefsPath(parent) && name == archiveDir) {
-			continue // the lock, a new brief not yet in place, the archive
+		if strings.HasPrefix(name, ".") || (path == state.BriefsPath(parent) && (name == archiveDir || name == indexFile)) {
+			continue // the lock, a new brief not yet in place, the archive, the index
 		}
 		id, ok := ParseID(name)
 		if !ok {

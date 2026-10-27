@@ -34,7 +34,7 @@ func TestSendBriefBindsTheRecipientsRun(t *testing.T) {
 	if letter := stored(t, dir, id); letter.Brief != "1" || strings.Contains(letter.Text, "move it") {
 		t.Fatalf("the letter = %+v", letter)
 	}
-	brief, err := taskbrief.Load(dir, 1)
+	brief, err := taskbrief.Load(taskbrief.Home{Room: dir}, 1)
 	if err != nil || !brief.Has(taskbrief.Author{Name: "api", Epoch: api.Epoch()}) {
 		t.Fatalf("bound = %+v, %v", brief.Bound, err)
 	}
@@ -65,7 +65,7 @@ func TestSendBriefIsRefusedBeforeAnythingIsSent(t *testing.T) {
 			t.Errorf("%q: %d %q", c.argv, code, errOut)
 		}
 	}
-	if brief, err := taskbrief.Load(dir, 1); err != nil || len(brief.Bound) != 0 {
+	if brief, err := taskbrief.Load(taskbrief.Home{Room: dir}, 1); err != nil || len(brief.Bound) != 0 {
 		t.Fatalf("a refused send bound %+v (%v)", brief.Bound, err)
 	}
 	worker := otherRun(t, dir, "other")
@@ -79,7 +79,7 @@ func TestSendBriefIsRefusedBeforeAnythingIsSent(t *testing.T) {
 // prints it again with main's edits and the ticks since.
 func TestTheInboxPrintsTheBriefWithTheLetter(t *testing.T) {
 	dir, web, api := briefSender(t)
-	if err := taskbrief.Bind(dir, 1, taskbrief.Author{Name: "api", Epoch: api.Epoch()}); err != nil {
+	if err := taskbrief.Bind(taskbrief.Home{Room: dir}, 1, taskbrief.Author{Name: "api", Epoch: api.Epoch()}); err != nil {
 		t.Fatal(err)
 	}
 	leaveUnread(t, dir, mail.Message{From: "web", FromEpoch: web.Epoch(), To: "api", ToEpoch: api.Epoch(), Kind: mail.Task, Text: "do the login", Brief: "1"})
@@ -118,7 +118,7 @@ func TestTheInboxPrintsTheBriefWithTheLetter(t *testing.T) {
 func TestALettersBriefThatDoesNotReadLeavesTheLetter(t *testing.T) {
 	dir, web, api := briefSender(t)
 	// Bound as send --brief binds before it writes the letter.
-	if err := taskbrief.Bind(dir, 1, taskbrief.Author{Name: api.Name, Epoch: api.Epoch()}); err != nil {
+	if err := taskbrief.Bind(taskbrief.Home{Room: dir}, 1, taskbrief.Author{Name: api.Name, Epoch: api.Epoch()}); err != nil {
 		t.Fatal(err)
 	}
 	run("brief", "close", "1")
@@ -137,7 +137,7 @@ func TestALettersBriefThatDoesNotReadLeavesTheLetter(t *testing.T) {
 func TestALaterRunIsNotShownAnEarlierRunsBrief(t *testing.T) {
 	dir, web, api := briefSender(t)
 	earlier := "123.456.old-boot"
-	if err := taskbrief.Bind(dir, 1, taskbrief.Author{Name: api.Name, Epoch: earlier}); err != nil {
+	if err := taskbrief.Bind(taskbrief.Home{Room: dir}, 1, taskbrief.Author{Name: api.Name, Epoch: earlier}); err != nil {
 		t.Fatal(err)
 	}
 	leaveUnread(t, dir, mail.Message{From: web.Name, FromEpoch: web.Epoch(), To: api.Name, ToEpoch: earlier, Kind: mail.Task, Text: "old task", Brief: "1"})
