@@ -45,7 +45,8 @@ The harness exits, or Ctrl+C reaches the foreground group, or `kill` reaches the
    stay readable for their epoch. A reserved answer keeps its queue entry and lease semantics
    so its waiting command can consume it. A task the session had read and not reported on is
    lost: `rewake inbox --awaited` shows its sender "no report coming: <name> ended; check its
-   saved work and give the task to a new worker"
+   saved work and give the task to a new worker" — a sender restarted since, the run after it
+   included, sees its previous run's tasks too
    ([delivery-owed.md](delivery-owed.md#what-others-owe-you-rewake-inbox---awaited)).
 2. The record and the socket are removed; a later `list` will not show the name, and a `send`
    to it gets exit 2.

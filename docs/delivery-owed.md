@@ -61,8 +61,8 @@ what main does need.
 
 ## What others owe you (`rewake inbox --awaited`)
 
-The opposite list: the tasks and questions this run sent that have no report yet, by
-recipient. A main session needs it after its own compaction, when it would otherwise
+The opposite list: the tasks and questions this run sent, and those of the run it replaced,
+that have no report yet, by recipient. A main session needs it after its own compaction, when it would otherwise
 rebuild from the summary what it handed out and still waits on; the main playbook says
 to run it then. It works in any role — a worker that delegates is owed reports too.
 
@@ -70,9 +70,11 @@ It is assembled from files other sessions already keep. Every mailbox in the roo
 searched in the order a message moves — `inbox/`, `unread/`, `done/`, as `PutOnce`
 looks — so a message that moves on during the walk is found further along rather than
 missed in both, and a copy found later replaces one seen before. The search looks for messages whose `from` and `fromEpoch`
-are this run and whose kind owes a report; notes, mail from a plain shell and mail from
-an earlier run of this name are not this run's to wait on and are never listed. Each one
-is then placed:
+are this run, or the run it replaced, and whose kind owes a report; notes and mail from a
+plain shell are never listed. The run it replaced is the latest other run of this name that
+sent a task or a question, found from the mailboxes — no record names it — so after a crash
+and a restart (`--resume` included) main still sees what its previous run waited on, and the
+waits of runs before that one never pile up. Each one is then placed:
 
 | state | what it rests on |
 |---|---|
@@ -96,6 +98,8 @@ whatever stage it had reached: it is listed as `no report coming: <name> ended; 
 saved work and give the task to a new worker` (`… was replaced by a new run; …`) and counted apart from the reports still
 expected. No restore operation reopens a worker's conversation under its name, so nothing
 is promised for a resume: a new run of a name takes over none of an earlier run's waits.
+A report that arrives later for the previous run's message is not re-routed to the new run
+— a known limit; a restart also closes the room's space workers, so a surviving worker is rare.
 
 Whether a missing wait record can be trusted depends on who could have removed it. Only
 the report removes one, and only a new run of the name sweeps the old run's directory
