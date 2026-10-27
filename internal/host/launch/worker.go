@@ -10,7 +10,7 @@ import (
 // Worker is an ordinary launch owned by a space. Its name, role and room are
 // not words of it: the launch reads them from the space's record, named by
 // the space host's REWAKE_SPACE. Worktree is empty when no checkout was
-// requested.
+// requested, GeneratedWorktree for one of a generated name.
 type Worker struct {
 	Command      string
 	NoIntro      bool
@@ -37,7 +37,7 @@ func WorkerArgs(h adapter.Harness, worker Worker) ([]string, error) {
 			return nil, fmt.Errorf("%s makes no worktree through rewake; open the space without --worktree", h.Title())
 		}
 		flag := taker.WorktreeFlag()
-		if worker.Worktree != "true" {
+		if worker.Worktree != GeneratedWorktree {
 			flag += "=" + worker.Worktree
 		}
 		visible := adapter.BeforeTerminator(args)

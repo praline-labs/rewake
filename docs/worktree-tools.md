@@ -185,6 +185,7 @@ format or protocol changes.
   rewake's registry keeps the launch directory as the session's `cwd`.
 
 The tests: `internal/cli/worktree_enter_test.go`, `TestATemplatesEntryIsItsOneCheckout`,
+`TestRaisingResolvesTheWorktreeOnce` (`internal/host/launch`),
 `TestRunSettingsWithEntry`, `TestTheBriefingFollowsTheRunsEntry`,
 `TestACheckoutClaimedBeforeAnyPollIsKeptWhenMainEndsFirst` (both
 flags), the mod's `tests/enter.test.ts`, and the workflow scenario
