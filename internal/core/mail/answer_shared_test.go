@@ -13,7 +13,7 @@ import (
 
 func reserve(t *testing.T, dir, question string) func() {
 	t.Helper()
-	release, err := ReserveAnswer(dir, "api", question)
+	release, err := reserveAnswer(dir, "api", question)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -32,17 +32,17 @@ func TestASharedAnswerSurvivesAnAbandonedConsumer(t *testing.T) {
 			report.ToEpoch = "5.5"
 			unread(t, dir, report)
 			if reason == "output failed" {
-				_, _, err := AwaitAnswer(context.Background(), dir, "api", "5.5", "q1", func(Message) error { return errors.New("output failed") })
+				_, _, err := awaitAnswer(context.Background(), dir, "api", "5.5", "q1", func(Message) error { return errors.New("output failed") })
 				if err == nil {
 					t.Error("output failure ignored")
 				}
 			}
 			first()
-			_, found, err := AwaitAnswer(context.Background(), dir, "api", "5.5", "q2", func(Message) error { return nil })
+			_, found, err := awaitAnswer(context.Background(), dir, "api", "5.5", "q2", func(Message) error { return nil })
 			if err != nil || !found {
 				t.Fatalf("second answer: %v %v", found, err)
 			}
-			remaining, err := AvailableUnread(dir, "api", "5.5")
+			remaining, err := availableUnread(dir, "api", "5.5")
 			if err != nil || len(remaining) != 1 || remaining[0].ID != report.ID {
 				t.Fatalf("unreceived answer lost: %v %v", remaining, err)
 			}

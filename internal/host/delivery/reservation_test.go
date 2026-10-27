@@ -35,7 +35,7 @@ func TestReservationPrecedesReadabilityAndSurvivesFastRead(t *testing.T) {
 	r := &reservationFixture{}
 	s := &Server{Dir: dir, Name: "api", Epoch: "1.1", attempts: map[string]time.Time{}, outcomes: map[string]mail.Result{}}
 	s.Reserve = func(ctx context.Context, _ mail.Message) (mail.Reservation, error) {
-		unread, err := mail.PeekUnread(dir, "api", "1.1")
+		unread, err := mail.Open(dir, "api", "1.1").PeekUnread()
 		if err != nil || len(unread) != 0 {
 			t.Fatalf("readable before reservation: %v %v", unread, err)
 		}
@@ -51,7 +51,7 @@ func TestReservationPrecedesReadabilityAndSurvivesFastRead(t *testing.T) {
 		if r.closed || m.DeliveryThread != "A" || must(mailtest.DeliveryThread(dir, "api", m.ID)) != "A" {
 			t.Fatal("reservation/context lost before ACK")
 		}
-		if err := state.WithMailboxLock(context.Background(), dir, "api", func() error { return mail.MarkRead(dir, "api", "1.1", m, true) }); err != nil {
+		if err := state.WithMailboxLock(context.Background(), dir, "api", func() error { return mail.Open(dir, "api", "1.1").MarkRead(m, true) }); err != nil {
 			t.Fatal(err)
 		}
 		return mail.Result{State: mail.Failed, Detail: "notice acknowledgement lost"}
@@ -77,12 +77,12 @@ func TestReservationRefusalKeepsOnlyReportsReadable(t *testing.T) {
 			}, Deliver: func(context.Context, mail.Message) mail.Result { t.Fatal("sent after refusal"); return mail.Result{} }}
 			s.drain(context.Background())
 			status, _, _ := mail.ReadStatus(dir, "api", m.ID)
-			unread, _ := mail.PeekUnread(dir, "api", "")
+			unread, _ := mail.Open(dir, "api", "").PeekUnread()
 			if status.State != mail.Failed || status.ReportAvailable != mail.IsReport(m) || (len(unread) == 1) != mail.IsReport(m) {
 				t.Fatalf("refusal lost report or exposed task: %+v unread=%d", status, len(unread))
 			}
 			s.drain(context.Background())
-			if unread, _ := mail.PeekUnread(dir, "api", ""); (len(unread) == 1) != mail.IsReport(m) {
+			if unread, _ := mail.Open(dir, "api", "").PeekUnread(); (len(unread) == 1) != mail.IsReport(m) {
 				t.Fatal("recovery changed readability")
 			}
 		})
@@ -101,7 +101,7 @@ func TestReservationIsReleasedOnReadabilityFailure(t *testing.T) {
 	}}
 	s := &Server{Dir: dir, Name: "api", attempts: map[string]time.Time{}, outcomes: map[string]mail.Result{}, Reserve: func(context.Context, mail.Message) (mail.Reservation, error) { return r, nil }}
 	s.drain(context.Background())
-	unread, _ := mail.PeekUnread(dir, "api", "")
+	unread, _ := mail.Open(dir, "api", "").PeekUnread()
 	if !r.closed || len(unread) != 0 {
 		t.Fatal("invalid reservation exposed mail or held native gate")
 	}
@@ -120,7 +120,7 @@ func TestReportStaysReadableWhenReservedDestinationDisappears(t *testing.T) {
 	}}
 	s := &Server{Dir: dir, Name: "api", attempts: map[string]time.Time{}, outcomes: map[string]mail.Result{}, Reserve: func(context.Context, mail.Message) (mail.Reservation, error) { return r, nil }}
 	s.drain(context.Background())
-	unread, _ := mail.PeekUnread(dir, "api", "")
+	unread, _ := mail.Open(dir, "api", "").PeekUnread()
 	status, _, _ := mail.ReadStatus(dir, "api", m.ID)
 	if !r.closed || len(unread) != 1 || !status.ReportAvailable || status.State != mail.Failed {
 		t.Fatalf("lost-binding report was discarded: %+v", status)
@@ -145,7 +145,7 @@ func TestReservationNotYetKeepsTheMessagePending(t *testing.T) {
 	}}
 	s.drain(context.Background())
 	status, _, _ := mail.ReadStatus(dir, "api", m.ID)
-	unread, _ := mail.PeekUnread(dir, "api", "")
+	unread, _ := mail.Open(dir, "api", "").PeekUnread()
 	if status.State != mail.Pending || len(unread) != 0 {
 		t.Fatalf("while compacting: %+v, %d unread", status, len(unread))
 	}
@@ -179,7 +179,7 @@ func TestNoReservationTakesThePlainPath(t *testing.T) {
 			}
 			s.drain(context.Background())
 			status, _, _ := mail.ReadStatus(dir, "api", m.ID)
-			unread, _ := mail.PeekUnread(dir, "api", "")
+			unread, _ := mail.Open(dir, "api", "").PeekUnread()
 			if delivered != 1 || status.State != mail.Pending || len(unread) != 1 || unread[0].ID != m.ID {
 				t.Fatalf("delivered %d, status %+v, unread %d", delivered, status, len(unread))
 			}

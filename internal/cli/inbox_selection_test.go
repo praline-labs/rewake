@@ -16,7 +16,7 @@ import (
 
 func TestMixedGroupPeekThenSelectedReadAndReadAll(t *testing.T) {
 	dir, self, peer := stateCaller(t, "write")
-	clock, err := mail.OpenReadClock(context.Background(), dir, self.Name, self.Epoch())
+	clock, err := mail.Open(dir, self.Name, self.Epoch()).OpenReadClock(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -72,20 +72,20 @@ func TestMixedGroupPeekThenSelectedReadAndReadAll(t *testing.T) {
 			}
 		}
 	}
-	if len(mail.Waiters(dir, self.Name, self.Epoch())) != 0 || clock.Snapshot().Through != 0 {
+	if len(mail.Open(dir, self.Name, self.Epoch()).Waiters()) != 0 || clock.Snapshot().Through != 0 {
 		t.Fatal("peek created a waiter or advanced the read boundary")
 	}
-	if unread, err := mail.PeekUnread(dir, self.Name, self.Epoch()); err != nil || len(unread) != 4 {
+	if unread, err := mail.Open(dir, self.Name, self.Epoch()).PeekUnread(); err != nil || len(unread) != 4 {
 		t.Fatal("peek consumed mail")
 	}
 	code, out, stderr := run("inbox", "--message", messages[0].ID)
 	if code != ExitOK || !strings.Contains(out, messages[0].Text) || strings.Contains(out, "PRIVATE FULL BODY question") {
 		t.Fatalf("selected view: %d %s %s", code, out, stderr)
 	}
-	if unread, err := mail.PeekUnread(dir, self.Name, self.Epoch()); err != nil || len(unread) != 3 {
+	if unread, err := mail.Open(dir, self.Name, self.Epoch()).PeekUnread(); err != nil || len(unread) != 3 {
 		t.Fatal("selected read consumed neighbors")
 	}
-	if len(mail.Waiters(dir, self.Name, self.Epoch())) != 1 || clock.Snapshot().Through != 1 {
+	if len(mail.Open(dir, self.Name, self.Epoch()).Waiters()) != 1 || clock.Snapshot().Through != 1 {
 		t.Fatal("selected task did not create exactly one obligation")
 	}
 	code, out, stderr = run("inbox", "--json")
@@ -93,7 +93,7 @@ func TestMixedGroupPeekThenSelectedReadAndReadAll(t *testing.T) {
 	if code != ExitOK || json.Unmarshal([]byte(out), &all) != nil || len(all.Messages) != 3 {
 		t.Fatalf("old read-all: %d %s %s", code, out, stderr)
 	}
-	if unread, _ := mail.PeekUnread(dir, self.Name, self.Epoch()); len(unread) != 0 {
+	if unread, _ := mail.Open(dir, self.Name, self.Epoch()).PeekUnread(); len(unread) != 0 {
 		t.Fatal("read-all left available mail")
 	}
 	select {
@@ -106,7 +106,7 @@ func TestMixedGroupPeekThenSelectedReadAndReadAll(t *testing.T) {
 func TestInboxSelectionRefusesReservedAndInvalidIDs(t *testing.T) {
 	dir, self, peer := stateCaller(t, "general")
 	id := rawUnread(t, dir, self.Name, map[string]any{"from": peer.Name, "fromEpoch": peer.Epoch(), "toEpoch": self.Epoch(), "kind": "finished", "inReplyTo": []string{"question"}, "text": "reserved body"})
-	release, err := mail.ReserveAnswer(dir, self.Name, "question")
+	release, err := mail.Open(dir, self.Name, "").ReserveAnswer("question")
 	if err != nil {
 		t.Fatal(err)
 	}

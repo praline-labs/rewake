@@ -56,7 +56,7 @@ func TestATurnEndWithoutItsEventOrAKnownReasonIsRefused(t *testing.T) {
 						t.Fatalf("reports to %s: %v", peer, files)
 					}
 				}
-				if len(mail.Waiters(dir, "api", self.Epoch())) != 2 {
+				if len(mail.Open(dir, "api", self.Epoch()).Waiters()) != 2 {
 					t.Fatal("the refused end cleared its waits")
 				}
 			})

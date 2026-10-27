@@ -59,7 +59,7 @@ func publishTurnContext(ctx context.Context, dir string, self registry.Session, 
 	// short, adds to it. A failure or a stop leads, as the preview, and the
 	// answer follows. One that cannot be read stops the end here: published
 	// without it, the report would lose the answer.
-	held, kept, err := KeptAnswerThrough(dir, self.Name, self.Epoch(), through)
+	held, kept, err := keptAnswerThrough(dir, self.Name, self.Epoch(), through)
 	if err != nil {
 		return err
 	}
@@ -96,7 +96,7 @@ func publishTurnContext(ctx context.Context, dir string, self registry.Session, 
 	}
 	if !event.Stopped && !pending {
 		for _, waiter := range reported {
-			if err := ClearAwaiting(dir, self.Name, self.Epoch(), waiter); err != nil {
+			if err := clearAwaiting(dir, self.Name, self.Epoch(), waiter); err != nil {
 				return fmt.Errorf("could not clear what %s was owed: %w", waiter.Name, err)
 			}
 		}

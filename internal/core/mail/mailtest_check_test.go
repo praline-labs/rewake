@@ -89,7 +89,7 @@ func TestTheMailtestFixturesAreMailsRecords(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	got, want := Waiters(dir, "api", "5.5"), Waiters(other, "api", "5.5")
+	got, want := waitersOf(dir, "api", "5.5"), waitersOf(other, "api", "5.5")
 	if len(got) != 1 || len(want) != 1 {
 		t.Fatalf("Owe wrote %+v, markAwaiting %+v", got, want)
 	}

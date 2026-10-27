@@ -162,7 +162,7 @@ func TestReadingATombstoneKeepsItWithdrawn(t *testing.T) {
 	if status, _, _ := mail.ReadStatus(f.dir, "api", f.task.ID); !status.Withdrawn {
 		t.Fatalf("reading the tombstone turned it into %+v", status)
 	}
-	if len(mail.Waiters(f.dir, "api", "api-epoch")) != 0 {
+	if len(mail.Open(f.dir, "api", "api-epoch").Waiters()) != 0 {
 		t.Fatal("a tombstone owed a report")
 	}
 	if result, err := withdrawNow(t, f.dir, f.task, nil); err != nil || result != mail.AlreadyWithdrawn {
@@ -188,7 +188,7 @@ func TestWithdrawRefusesWhatIsFinal(t *testing.T) {
 	if err := mail.WriteStatus(dir, "api", failed.ID, mail.Result{State: mail.Failed, Detail: "the session ended"}); err != nil {
 		t.Fatal(err)
 	}
-	mail.SettleLocked(dir, "api", failed.ID, mail.Failed)
+	_ = mail.Open(dir, "api", "").WithLock(t.Context(), func(l mail.Locked) error { l.Settle(failed.ID, mail.Failed); return nil })
 	if _, err := withdrawNow(t, dir, failed, nil); !errors.Is(err, mail.ErrNotDelivered) {
 		t.Fatalf("a failed task: %v", err)
 	}

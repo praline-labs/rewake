@@ -27,7 +27,7 @@ func journalLab(t *testing.T) (string, string, Message) {
 	if err := markAwaiting(dir, "api", epoch, "web", web.Epoch(), "question"); err != nil {
 		t.Fatal(err)
 	}
-	waiters, err := ReadWaiters(dir, "api", epoch)
+	waiters, err := readWaiters(dir, "api", epoch)
 	if err != nil || len(waiters) != 1 {
 		t.Fatalf("the wait: %v %v", waiters, err)
 	}
@@ -78,7 +78,7 @@ func TestAnAbandonedJournalWriteIsNotAJournal(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(JournalPath(dir, "api"), ".tmp-123"), []byte("{\"Epo"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := TurnWindowStart(dir, "api", epoch, 0, 100); err != nil {
+	if _, err := turnWindowStart(dir, "api", epoch, 0, 100); err != nil {
 		t.Fatal(err)
 	}
 }

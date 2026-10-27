@@ -29,7 +29,7 @@ func TestEveryFailureOfTheConfirmationCheckFallsToPublishing(t *testing.T) {
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			lab := newInterimLab(t)
-			clock, err := OpenReadClock(t.Context(), lab.dir, "api", lab.self.Epoch())
+			clock, err := openClock(t.Context(), lab.dir, "api", lab.self.Epoch())
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -55,7 +55,7 @@ func TestEveryFailureOfTheConfirmationCheckFallsToPublishing(t *testing.T) {
 				t.Fatalf("nothing asked to %s %s", c.op, c.suffix)
 			}
 			got := slices.DeleteFunc(turnReports(t, lab.dir), func(m Message) bool { return KindOf(m) != Finished })
-			_, kept, err := KeptAnswer(lab.dir, "api", lab.self.Epoch())
+			_, kept, err := keptAnswer(lab.dir, "api", lab.self.Epoch())
 			if err != nil || len(got) != 1 || got[0].Text != "done" || lab.owed() != 0 || kept {
 				t.Fatalf("after the failure web holds %+v, %d owed, kept %v: %v", got, lab.owed(), kept, err)
 			}

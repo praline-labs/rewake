@@ -25,14 +25,14 @@ func TestDeliveryThreadIsRecordedBeforeAFastRead(t *testing.T) {
 			t.Error("delivery context was not durable before announcement")
 		}
 		err := state.WithMailboxLock(context.Background(), dir, "api", func() error {
-			messages, err := mail.PeekUnread(dir, "api", "1.1")
+			messages, err := mail.Open(dir, "api", "1.1").PeekUnread()
 			if err != nil {
 				return err
 			}
 			if len(messages) != 1 {
 				t.Fatalf("readable messages=%v", messages)
 			}
-			if err := mail.MarkRead(dir, "api", "1.1", messages[0], true); err != nil {
+			if err := mail.Open(dir, "api", "1.1").MarkRead(messages[0], true); err != nil {
 				return err
 			}
 			if !mail.ReportThreadChanged(dir, "api", []string{task.ID}, "new") {
@@ -64,7 +64,7 @@ func TestAnUnknownDeliveryThreadWaitsBeforeReadability(t *testing.T) {
 		return mail.Result{}
 	}}
 	server.drain(context.Background())
-	unread, _ := mail.PeekUnread(dir, "api", "")
+	unread, _ := mail.Open(dir, "api", "").PeekUnread()
 	if len(unread) != 0 {
 		t.Fatal("task became readable before thread identity")
 	}
@@ -87,7 +87,7 @@ func TestUnavailableThreadFailsWithoutBecomingReadable(t *testing.T) {
 	if status.State != mail.Failed {
 		t.Fatalf("unavailable conversation left status %s", status.State)
 	}
-	if unread, _ := mail.PeekUnread(dir, "api", "1.1"); len(unread) != 0 {
+	if unread, _ := mail.Open(dir, "api", "1.1").PeekUnread(); len(unread) != 0 {
 		t.Fatal("task was readable without a delivery thread")
 	}
 }

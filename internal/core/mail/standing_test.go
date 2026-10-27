@@ -40,7 +40,7 @@ func taskTo(t *testing.T, dir, run, text, addendumTo string) Message {
 func standingsOf(t *testing.T, dir string) map[string]Standing {
 	t.Helper()
 	seen := map[string]Standing{}
-	for _, item := range must(Standings(dir, "web", "sender-epoch")) {
+	for _, item := range must(Open(dir, "web", "sender-epoch").Standings()) {
 		seen[item.ID] = item
 	}
 	return seen
@@ -77,7 +77,7 @@ func TestAnUnreadableRecipientRecordIsTheLiveRun(t *testing.T) {
 	if got := standingsOf(t, dir)[task.ID]; !got.Coming() || got.GoneReason() != "" {
 		t.Fatalf("the task reads as %+v", got)
 	}
-	if item, settled, err := StandingOf(dir, "web", "sender-epoch", task); err != nil || settled || item.Gone() {
+	if item, settled, err := Open(dir, "web", "sender-epoch").StandingOf(task); err != nil || settled || item.Gone() {
 		t.Fatalf("the check reads %+v %v %v", item, settled, err)
 	}
 }
@@ -107,7 +107,7 @@ func TestAnAddendumFollowsItsTask(t *testing.T) {
 	other := taskTo(t, dir, session.Epoch(), "other", "")
 	addendum := taskTo(t, dir, session.Epoch(), "also", first.ID)
 	var order []string
-	for _, item := range must(Standings(dir, "web", "sender-epoch")) {
+	for _, item := range must(Open(dir, "web", "sender-epoch").Standings()) {
 		order = append(order, item.ID)
 		if item.ID == addendum.ID && (!item.Nested || item.Under != first.ID) {
 			t.Errorf("the addendum reads as %+v", item)

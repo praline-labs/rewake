@@ -22,7 +22,7 @@ func sweepAsLiveRun(t *testing.T, dir, name, epoch string) {
 		if err != nil || epoch == "" || current.Epoch() != epoch {
 			return fmt.Errorf("the sweeping run %q is not the live run of %s (%v): the server would sweep nothing", epoch, name, err)
 		}
-		SweepFinishedLocked(dir, name, epoch)
+		sweepFinishedLocked(dir, name, epoch)
 		return nil
 	}); err != nil {
 		t.Error(err)

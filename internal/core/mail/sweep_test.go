@@ -86,13 +86,13 @@ func TestAnOwedMessageOutlivesTheSweep(t *testing.T) {
 		if err := os.Remove(filepath.Join(state.InboxPath(dir, "api"), m.ID+".json")); err != nil {
 			t.Fatal(err)
 		}
-		if err := MarkRead(dir, "api", run, *m, true); err != nil {
+		if err := markRead(dir, "api", run, *m, true); err != nil {
 			t.Fatal(err)
 		}
 	}
-	for _, waiter := range Waiters(dir, "api", run) {
+	for _, waiter := range waitersOf(dir, "api", run) {
 		waiter.Messages = []string{reported.ID}
-		if err := ClearAwaiting(dir, "api", run, waiter); err != nil {
+		if err := clearAwaiting(dir, "api", run, waiter); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -109,7 +109,7 @@ func TestAnOwedMessageOutlivesTheSweep(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(state.DonePath(dir, "api"), reported.ID+".json")); !os.IsNotExist(err) {
 		t.Fatalf("a reported task outlived its age: %v", err)
 	}
-	if got := must(OwedMessages(dir, "api", run)); len(got) != 1 || got[0].ID != owedTask.ID || !got[0].Kept {
+	if got := must(owedMessages(dir, "api", run)); len(got) != 1 || got[0].ID != owedTask.ID || !got[0].Kept {
 		t.Fatalf("owed %+v", got)
 	}
 }
@@ -142,7 +142,7 @@ func TestAnOwedMessageLeftUnreadOutlivesTheSweep(t *testing.T) {
 	if _, err := os.Stat(unread); err != nil {
 		t.Fatalf("an owed task left in unread/ was swept: %v", err)
 	}
-	if got := must(OwedMessages(dir, "api", run)); len(got) != 1 || !got[0].Kept || got[0].Text != task.Text {
+	if got := must(owedMessages(dir, "api", run)); len(got) != 1 || !got[0].Kept || got[0].Text != task.Text {
 		t.Fatalf("owed %+v", got)
 	}
 }

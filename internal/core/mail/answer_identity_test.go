@@ -15,7 +15,7 @@ func TestAnAnswerToAnotherQuestionIsNotConsumed(t *testing.T) {
 	unread(t, dir, report)
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
-	got, found, err := AwaitAnswer(ctx, dir, "api", "5.5", "my-question", func(Message) error { return nil })
+	got, found, err := awaitAnswer(ctx, dir, "api", "5.5", "my-question", func(Message) error { return nil })
 	if err != nil {
 		t.Fatal(err)
 	}

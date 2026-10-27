@@ -168,7 +168,7 @@ adapter that can hold an end confirms it through `TurnHandler.Confirm` rather th
 it, so the core can continue the turn instead of closing it; one that cannot says so in its
 offer (`HoldsEnd`), and the core then cannot keep a task open across an unmarked interim end.
 A turn's start goes to `TurnHandler.Started`, and the wrapper records a timed start once
-(`mail.RecordTurnStart`): it is the evidence a pending mark of an earlier turn is judged by
+(`mail.Box.RecordTurnStart`): it is the evidence a pending mark of an earlier turn is judged by
 when that turn's end was lost
 ([delivery-turn-end.md](../delivery-turn-end.md#pending-marks)).
 

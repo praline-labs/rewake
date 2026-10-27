@@ -168,7 +168,7 @@ func handleSend(ctx *Context, call Call) error {
 		message.From, message.FromEpoch = self.Name, epoch
 	}
 	if kind.kind == mail.Question {
-		release, err := mail.ReserveAnswer(dir, self.Name, message.ID)
+		release, err := mail.Open(dir, self.Name, "").ReserveAnswer(message.ID)
 		if err != nil {
 			return failf("could not reserve the answer: %v", err)
 		}

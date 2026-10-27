@@ -32,7 +32,7 @@ func readIn(t *testing.T, dir, run, thread string, m mail.Message) {
 		if err := mail.LinkUnread(dir, "api", m.ID); err != nil {
 			return err
 		}
-		return mail.MarkRead(dir, "api", run, m, true)
+		return mail.Open(dir, "api", run).MarkRead(m, true)
 	}); err != nil {
 		t.Fatal(err)
 	}
@@ -40,7 +40,7 @@ func readIn(t *testing.T, dir, run, thread string, m mail.Message) {
 
 func reserve(t *testing.T, dir, question string) func() {
 	t.Helper()
-	release, err := mail.ReserveAnswer(dir, "api", question)
+	release, err := mail.Open(dir, "api", "").ReserveAnswer(question)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -129,7 +129,7 @@ func (r *endableRun) end() {
 // so its run is gone.
 func awaitedBy(dir string) map[string]mail.Standing {
 	awaited := map[string]mail.Standing{}
-	for _, item := range must(mail.Standings(dir, "web", "sender-epoch")) {
+	for _, item := range must(mail.Open(dir, "web", "sender-epoch").Standings()) {
 		awaited[item.ID] = item
 	}
 	return awaited
@@ -210,11 +210,11 @@ func readAll(t *testing.T, dir, epoch string) []mail.Message {
 	defer cancel()
 	err := state.WithMailboxLock(ctx, dir, "api", func() error {
 		var err error
-		if messages, err = mail.PeekUnread(dir, "api", epoch); err != nil {
+		if messages, err = mail.Open(dir, "api", epoch).PeekUnread(); err != nil {
 			return err
 		}
 		for _, m := range messages {
-			if err := mail.MarkRead(dir, "api", epoch, m, true); err != nil {
+			if err := mail.Open(dir, "api", epoch).MarkRead(m, true); err != nil {
 				return err
 			}
 		}

@@ -45,7 +45,7 @@ func endTurn(t *testing.T, end boundaryEnd) (string, error) {
 		return "", nil
 	}
 	event := mail.TurnEnd{Text: end.text, Failed: end.failed, Ended: boottime.Now()}
-	event.Started, _ = mail.LatestTurnStart(dir, self.Name, self.Epoch())
+	event.Started, _ = mail.Open(dir, self.Name, self.Epoch()).LatestTurnStart()
 	return mail.EndTurn(context.Background(), dir, self, event, end.holdable, end.thread, mail.TurnEndOptions{BeforeReports: beforeReports})
 }
 

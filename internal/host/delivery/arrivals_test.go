@@ -37,7 +37,7 @@ func TestSeparatedArrivalsDispatchWithoutOverview(t *testing.T) {
 	<-timer.C
 	cancel()
 	<-done
-	unread, err := mail.PeekUnread(dir, "api", "owner-example")
+	unread, err := mail.Open(dir, "api", "owner-example").PeekUnread()
 	if err != nil || len(unread) != 4 {
 		t.Fatalf("unread=%d err=%v", len(unread), err)
 	}

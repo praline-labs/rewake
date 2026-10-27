@@ -20,7 +20,7 @@ func TestReportFailureRecoveryAfterAFailedRemoval(t *testing.T) {
 	attempts, unblock := mail.FailWaitingRemoval(filepath.Join(state.InboxPath(s.Dir, s.Name), m.ID+".json"))
 	t.Cleanup(unblock)
 	s.drain(context.Background())
-	if unread, err := mail.PeekUnread(s.Dir, s.Name, s.Epoch); err != nil || len(unread) != 1 {
+	if unread, err := mail.Open(s.Dir, s.Name, s.Epoch).PeekUnread(); err != nil || len(unread) != 1 {
 		t.Fatalf("fault lost report: %v %v", unread, err)
 	}
 	if attempts() == 0 {

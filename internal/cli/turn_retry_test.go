@@ -55,7 +55,7 @@ func TestRetriedTurnDoesNotConsumeLaterWork(t *testing.T) {
 		t.Fatal(err)
 	}
 	files := finishedFor(t, dir, "one")
-	waits := mail.Waiters(dir, "api", epochOf(t, dir, "api"))
+	waits := mail.Open(dir, "api", epochOf(t, dir, "api")).Waiters()
 	for _, file := range files {
 		raw, err := os.ReadFile(file)
 		if err != nil {
@@ -78,14 +78,14 @@ func TestRetriedTurnDoesNotConsumeLaterWork(t *testing.T) {
 	if err := completeTurn(dir, self, changed, ""); err != nil {
 		t.Fatal(err)
 	}
-	if len(finishedFor(t, dir, "one")) != 1 || len(mail.Waiters(dir, "api", epochOf(t, dir, "api"))) != 1 {
+	if len(finishedFor(t, dir, "one")) != 1 || len(mail.Open(dir, "api", epochOf(t, dir, "api")).Waiters()) != 1 {
 		t.Fatal("completed replay consumed later work")
 	}
 	if err := completeTurn(dir, self, mail.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "next-turn", Text: "late task result"}, ""); err != nil {
 		t.Fatal(err)
 	}
 	files = finishedFor(t, dir, "one")
-	if len(files) != 2 || len(mail.Waiters(dir, "api", epochOf(t, dir, "api"))) != 0 {
+	if len(files) != 2 || len(mail.Open(dir, "api", epochOf(t, dir, "api")).Waiters()) != 0 {
 		t.Fatal("next real result did not settle later work")
 	}
 	for _, file := range files {
@@ -139,7 +139,7 @@ func TestPartialTurnRetryKeepsOriginalOutcome(t *testing.T) {
 	if report.Kind != mail.Error || report.Text != "original failure" || len(report.InReplyTo) != 0 {
 		t.Fatalf("retry changed the original outcome: %+v", report)
 	}
-	waits := mail.Waiters(dir, "api", epochOf(t, dir, "api"))
+	waits := mail.Open(dir, "api", epochOf(t, dir, "api")).Waiters()
 	if len(waits) != 1 || !slices.Equal(waits[0].Messages, []string{late}) {
 		t.Fatal("retry consumed work read after the original fallback")
 	}

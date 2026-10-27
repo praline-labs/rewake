@@ -29,7 +29,7 @@ func TestFailedReportNoticeRemainsReadable(t *testing.T) {
 			if !ok || status.State != mail.Failed {
 				t.Fatalf("notification failure lost: %+v", status)
 			}
-			available, err := mail.AvailableUnread(dir, m.To, m.ToEpoch)
+			available, err := mail.Open(dir, m.To, m.ToEpoch).AvailableUnread()
 			if err != nil || len(available) != 1 {
 				t.Fatalf("failed notice erased completed report: unread=%v err=%v", available, err)
 			}
@@ -37,10 +37,10 @@ func TestFailedReportNoticeRemainsReadable(t *testing.T) {
 			if calls != 1 {
 				t.Fatalf("notification retried %d times", calls)
 			}
-			if err := mail.MarkRead(dir, m.To, m.ToEpoch, m, true); err != nil {
+			if err := mail.Open(dir, m.To, m.ToEpoch).MarkRead(m, true); err != nil {
 				t.Fatal(err)
 			}
-			if waits := mail.Waiters(dir, m.To, m.ToEpoch); len(waits) != 0 {
+			if waits := mail.Open(dir, m.To, m.ToEpoch).Waiters(); len(waits) != 0 {
 				t.Fatalf("report creates self-report loop: %+v", waits)
 			}
 		})

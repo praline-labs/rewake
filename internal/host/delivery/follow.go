@@ -16,8 +16,8 @@ func (s *Server) followEarlierRun(ctx context.Context) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	if s.lockWithContext(ctx, func() error {
-		mail.SweepAwaitingLocked(s.Dir, s.Name, s.Epoch)
+	if s.box().WithLock(ctx, func(l mail.Locked) error {
+		l.SweepAwaiting()
 		return nil
 	}) == nil {
 		s.followed = true

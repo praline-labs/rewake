@@ -20,7 +20,7 @@ func readIn(t *testing.T, dir, run, thread string, m Message) {
 		if err := LinkUnread(dir, "api", m.ID); err != nil {
 			return err
 		}
-		return MarkRead(dir, "api", run, m, true)
+		return markRead(dir, "api", run, m, true)
 	}); err != nil {
 		t.Fatal(err)
 	}

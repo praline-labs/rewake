@@ -94,14 +94,14 @@ func (r *recipients) runOf(name, run string) RecipientRun {
 	return RunEnded
 }
 
-// Standings lists what the run of name, epoch sent — tasks and questions —
+// Standings lists what this run sent — tasks and questions —
 // and has no report on yet, oldest first, each addendum right after the task
 // it adds to. A task whose recipient answers nothing (OwesReports) is left
 // out unless its run is gone. Like OwedMessages, it only reads; a record that
 // cannot be read makes it an error rather than a partial list.
-func Standings(dir, name, epoch string) ([]Standing, error) {
-	who := &recipients{dir: dir}
-	sent, err := awaited(dir, name, epoch, who.runOf)
+func (b Box) Standings() ([]Standing, error) {
+	who := &recipients{dir: b.dir}
+	sent, err := awaited(b.dir, b.name, b.epoch, who.runOf)
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +112,7 @@ func Standings(dir, name, epoch string) ([]Standing, error) {
 		}
 		standing := Standing{AwaitedMessage: message}
 		if message.AddendumTo != "" {
-			if current, err := CurrentTask(dir, message.To, message.AddendumTo); err == nil {
+			if current, err := CurrentTask(b.dir, message.To, message.AddendumTo); err == nil {
 				standing.Under = current
 			}
 		}
@@ -121,11 +121,11 @@ func Standings(dir, name, epoch string) ([]Standing, error) {
 	return afterTheirTask(standings), nil
 }
 
-// StandingOf places one message the run of name, epoch sent, as Standings
+// StandingOf places one message this run sent, as Standings
 // would: where it stands, or that a report has settled it.
-func StandingOf(dir, name, epoch string, message Message) (AwaitedMessage, bool, error) {
-	who := &recipients{dir: dir}
-	return awaitedOne(dir, name, epoch, message, who.runOf)
+func (b Box) StandingOf(message Message) (AwaitedMessage, bool, error) {
+	who := &recipients{dir: b.dir}
+	return awaitedOne(b.dir, b.name, b.epoch, message, who.runOf)
 }
 
 // afterTheirTask lists each addendum right after the task it adds to, which

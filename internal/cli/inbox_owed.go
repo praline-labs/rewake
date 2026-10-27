@@ -42,11 +42,11 @@ func showOwed(ctx *Context, call Call, dir string, session registry.Session, epo
 	// other order could miss it twice and answer "nothing owed" with nothing
 	// unread — the trap the count is there for. One in both is counted once,
 	// as owed.
-	unread, err := mail.PeekUnread(dir, session.Name, "")
+	unread, err := mail.Open(dir, session.Name, "").PeekUnread()
 	if err != nil {
 		return failf("could not look at the unread mail of %s: %v; run rewake inbox", session.Name, err)
 	}
-	owed, err := mail.OwedMessages(dir, session.Name, epoch)
+	owed, err := mail.Open(dir, session.Name, epoch).OwedMessages()
 	if err != nil {
 		return failf("could not read what %s owes (%v); nothing is shown rather than part of it; run the same command again", session.Name, err)
 	}

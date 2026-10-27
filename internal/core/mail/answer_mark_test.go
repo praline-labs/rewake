@@ -60,7 +60,7 @@ func TestAMarkIsJudgedByItsBootReading(t *testing.T) {
 func TestTheHeartbeatDoesNotBringAMarkBack(t *testing.T) {
 	dir := stateDir(t)
 	question := NewID()
-	release, err := ReserveAnswer(dir, "web", question)
+	release, err := reserveAnswer(dir, "web", question)
 	if err != nil {
 		t.Fatal(err)
 	}

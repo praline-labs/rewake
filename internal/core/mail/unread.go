@@ -46,7 +46,7 @@ func dropUnread(dir, to, id string) {
 // message marked before its text reached anybody would be lost. An error says
 // a letter, or its status, could not be read, and so what is unread is not
 // known.
-func PeekUnread(dir, name, epoch string) ([]Message, error) {
+func peekUnread(dir, name, epoch string) ([]Message, error) {
 	messages, err := ListIn(state.UnreadPath(dir, name))
 	if err != nil {
 		return nil, err
@@ -92,7 +92,7 @@ func asWithdrawn(dir, name string, message Message) (Message, error) {
 // report its sender was owed.
 //
 // A reader that owes nobody — the main session — records no waits at all.
-func MarkRead(dir, name, epoch string, message Message, reports bool) error {
+func markRead(dir, name, epoch string, message Message, reports bool) error {
 	// A read status is written only after the waiter, so finding one means
 	// this is a retry of a read whose last step failed: the waiter was recorded
 	// then, and may have been reported to since. Recording it again owed a

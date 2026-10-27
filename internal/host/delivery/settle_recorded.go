@@ -74,7 +74,7 @@ func (s *Server) settleUnreadOnly(id string) {
 	}
 	s.attempts[id] = time.Now()
 	settled := false
-	_ = s.lock(func() error {
+	_ = s.locked(func(l mail.Locked) error {
 		status, known, err := mail.ReadStatus(s.Dir, s.Name, id)
 		if err != nil {
 			return err
@@ -83,7 +83,7 @@ func (s *Server) settleUnreadOnly(id string) {
 			settled = true
 			return nil
 		}
-		settled = mail.SettleLocked(s.Dir, s.Name, id, mail.Failed)
+		settled = l.Settle(id, mail.Failed)
 		return nil
 	})
 	if settled {

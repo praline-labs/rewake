@@ -20,7 +20,7 @@ func unread(t *testing.T, dir string, messages ...Message) {
 		if err := LinkUnread(dir, sent.To, sent.ID); err != nil {
 			t.Fatalf("LinkUnread: %v", err)
 		}
-		SettleLocked(dir, sent.To, sent.ID, Delivered)
+		settleLocked(dir, sent.To, sent.ID, Delivered)
 	}
 }
 
@@ -34,11 +34,11 @@ func readAll(t *testing.T, dir, epoch string) []Message {
 	defer cancel()
 	err := state.WithMailboxLock(ctx, dir, "api", func() error {
 		var err error
-		if messages, err = PeekUnread(dir, "api", epoch); err != nil {
+		if messages, err = peekUnread(dir, "api", epoch); err != nil {
 			return err
 		}
 		for _, m := range messages {
-			if err := MarkRead(dir, "api", epoch, m, true); err != nil {
+			if err := markRead(dir, "api", epoch, m, true); err != nil {
 				return err
 			}
 		}
@@ -83,7 +83,7 @@ func TestReadingKeepsToItsOwnEpoch(t *testing.T) {
 	if taken := readAll(t, dir, "100.1"); len(taken) != 1 || taken[0].Text != "mine" {
 		t.Fatalf("read = %v, want only this epoch's message", taken)
 	}
-	if left, err := AvailableUnread(dir, "api", "100.1"); err != nil || len(left) != 0 {
+	if left, err := availableUnread(dir, "api", "100.1"); err != nil || len(left) != 0 {
 		t.Errorf("unread for this epoch = %v, %v; want none", left, err)
 	}
 }
@@ -104,22 +104,22 @@ func TestReadingRecordsWhoWaits(t *testing.T) {
 	unread(t, dir, note, done, answer)
 
 	readAll(t, dir, "5.5")
-	waiting := Waiters(dir, "api", "5.5")
+	waiting := waitersOf(dir, "api", "5.5")
 	want := []Waiter{{Name: "dev", Epoch: "42.4"}, {Name: "web", Epoch: "40.4"}}
 	same := func(a, b Waiter) bool { return a.Name == b.Name && a.Epoch == b.Epoch && a.Since != 0 }
 	if len(waiting) != 2 || !same(waiting[0], want[0]) || !same(waiting[1], want[1]) {
 		t.Fatalf("waiting = %v, want %v with the time each began, and nobody for the finished notice", waiting, want)
 	}
-	if other := Waiters(dir, "api", "6.6"); len(other) != 0 {
+	if other := waitersOf(dir, "api", "6.6"); len(other) != 0 {
 		t.Errorf("another run of api sees waiters %v", other)
 	}
 
 	for _, waiter := range waiting {
-		if err := ClearAwaiting(dir, "api", "5.5", waiter); err != nil {
+		if err := clearAwaiting(dir, "api", "5.5", waiter); err != nil {
 			t.Fatal(err)
 		}
 	}
-	if waiting := Waiters(dir, "api", "5.5"); len(waiting) != 0 {
+	if waiting := waitersOf(dir, "api", "5.5"); len(waiting) != 0 {
 		t.Errorf("waiting = %v after clearing, want nobody", waiting)
 	}
 }
@@ -131,15 +131,15 @@ func TestClearingAnOldRunKeepsTheNewOne(t *testing.T) {
 	if err := markAwaiting(dir, "api", "5.5", "web", "40.4", "m0"); err != nil {
 		t.Fatalf("markAwaiting: %v", err)
 	}
-	old := Waiters(dir, "api", "5.5")[0]
+	old := waitersOf(dir, "api", "5.5")[0]
 	if err := markAwaiting(dir, "api", "5.5", "web", "41.4", "m0"); err != nil {
 		t.Fatalf("markAwaiting: %v", err)
 	}
 
-	if err := ClearAwaiting(dir, "api", "5.5", old); err != nil {
+	if err := clearAwaiting(dir, "api", "5.5", old); err != nil {
 		t.Fatal(err)
 	}
-	if remaining := Waiters(dir, "api", "5.5"); len(remaining) != 1 || remaining[0].Epoch != "41.4" {
+	if remaining := waitersOf(dir, "api", "5.5"); len(remaining) != 1 || remaining[0].Epoch != "41.4" {
 		t.Errorf("waiting = %v, want the newer run of web still owed", remaining)
 	}
 }
@@ -151,16 +151,16 @@ func TestClearingAnOldWaitKeepsANewOneOfTheSameRun(t *testing.T) {
 	if err := markAwaiting(dir, "api", "5.5", "web", "40.4", "m1"); err != nil {
 		t.Fatalf("markAwaiting: %v", err)
 	}
-	old := Waiters(dir, "api", "5.5")[0]
+	old := waitersOf(dir, "api", "5.5")[0]
 	time.Sleep(time.Millisecond)
 	if err := markAwaiting(dir, "api", "5.5", "web", "40.4", "m2"); err != nil {
 		t.Fatalf("markAwaiting: %v", err)
 	}
 
-	if err := ClearAwaiting(dir, "api", "5.5", old); err != nil {
+	if err := clearAwaiting(dir, "api", "5.5", old); err != nil {
 		t.Fatal(err)
 	}
-	remaining := Waiters(dir, "api", "5.5")
+	remaining := waitersOf(dir, "api", "5.5")
 	if len(remaining) != 1 || strings.Join(remaining[0].Messages, ",") != "m2" {
 		t.Fatalf("waiting = %v, want only the later message still owed", remaining)
 	}

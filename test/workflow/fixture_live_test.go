@@ -228,7 +228,7 @@ func (w *liveWorld) unwoken(session *scenarioSession, epoch string) (bool, strin
 		var unread []mail.Message
 		tried := accepted.ID != "" && waitFor(w.c, 8*time.Second, func() bool {
 			status, _, _ = mail.ReadStatus(room, session.name, accepted.ID)
-			unread, _ = mail.PeekUnread(room, session.name, epoch)
+			unread, _ = mail.Open(room, session.name, epoch).PeekUnread()
 			// The coalescing window keeps a note pending before its try.
 			return status.State == mail.Failed || strings.Contains(status.Detail, "no notice can reach this session")
 		})

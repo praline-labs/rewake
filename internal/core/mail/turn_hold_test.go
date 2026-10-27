@@ -50,17 +50,17 @@ func newInterimLab(t *testing.T) interimLab {
 	if got := kinds(turnReports(t, base.dir)); len(got) != 1 || got[0] != string(Interim) {
 		t.Fatalf("the first end: %v", got)
 	}
-	if err := RecordTurnStart(base.dir, "api", self.Epoch(), markAt-5); err != nil {
+	if err := recordTurnStart(base.dir, "api", self.Epoch(), markAt-5); err != nil {
 		t.Fatal(err)
 	}
 	return interimLab{dir: base.dir, self: self, start: markAt - 5}
 }
 
-func (lab interimLab) owed() int { return len(Waiters(lab.dir, "api", lab.self.Epoch())) }
+func (lab interimLab) owed() int { return len(waitersOf(lab.dir, "api", lab.self.Epoch())) }
 
 func (lab interimLab) turnStart(t *testing.T) int64 {
 	t.Helper()
-	at, err := LatestTurnStart(lab.dir, "api", lab.self.Epoch())
+	at, err := latestTurnStart(lab.dir, "api", lab.self.Epoch())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -110,10 +110,10 @@ func TestAnUnmarkedEndAfterAnInterimOneIsHeldOnce(t *testing.T) {
 	if report == nil || report.Text != "the suite is green: 40 pass\n\nnothing more to add" || lab.owed() != 0 {
 		t.Fatalf("after the continuation web holds %+v, %d owed", reports, lab.owed())
 	}
-	if _, kept, _ := KeptAnswer(lab.dir, "api", lab.self.Epoch()); kept {
+	if _, kept, _ := keptAnswer(lab.dir, "api", lab.self.Epoch()); kept {
 		t.Error("the kept answer outlived its report")
 	}
-	if _, interim, _ := LastInterim(lab.dir, "api", lab.self.Epoch()); interim {
+	if _, interim, _ := lastInterim(lab.dir, "api", lab.self.Epoch()); interim {
 		t.Error("the report left the run marked interim")
 	}
 }
@@ -140,7 +140,7 @@ func TestAContinuationThatMarksPendingKeepsTheTaskOwed(t *testing.T) {
 	if len(reports) != 2 || len(texts) != 2 || !slices.Contains(texts, "the second half is running\n\nhalf of the suite passed\n\nmarked") || lab.owed() != 1 {
 		t.Fatalf("after the marked continuation web holds %+v, %d owed", reports, lab.owed())
 	}
-	if line, _, _ := LastInterim(lab.dir, "api", lab.self.Epoch()); line != "the second half is running" {
+	if line, _, _ := lastInterim(lab.dir, "api", lab.self.Epoch()); line != "the second half is running" {
 		t.Errorf("the run is interim with %q", line)
 	}
 	if reason := lab.held(t, "all green"); !strings.Contains(reason, "the second half is running") {
@@ -165,10 +165,10 @@ func TestAStopAfterAHoldCarriesTheHeldAnswer(t *testing.T) {
 	if len(stopped) != 1 || stopped[0] != stoppedText+"\n\nthe report" || lab.owed() != 1 {
 		t.Fatalf("the stop after a hold sent %q, %d owed", stopped, lab.owed())
 	}
-	if _, kept, _ := KeptAnswer(lab.dir, "api", lab.self.Epoch()); kept {
+	if _, kept, _ := keptAnswer(lab.dir, "api", lab.self.Epoch()); kept {
 		t.Error("the stop left the answer kept")
 	}
-	if _, interim, _ := LastInterim(lab.dir, "api", lab.self.Epoch()); !interim {
+	if _, interim, _ := lastInterim(lab.dir, "api", lab.self.Epoch()); !interim {
 		t.Error("a stop cleared the interim record; the work is as it was")
 	}
 }
@@ -246,8 +246,8 @@ func TestATurnEndIsHeldOnlyAfterAnInterimOne(t *testing.T) {
 	}
 	t.Run("nobody waiting", func(t *testing.T) {
 		lab := newInterimLab(t)
-		for _, waiter := range Waiters(lab.dir, "api", lab.self.Epoch()) {
-			if err := ClearAwaiting(lab.dir, "api", lab.self.Epoch(), waiter); err != nil {
+		for _, waiter := range waitersOf(lab.dir, "api", lab.self.Epoch()) {
+			if err := clearAwaiting(lab.dir, "api", lab.self.Epoch(), waiter); err != nil {
 				t.Fatal(err)
 			}
 		}

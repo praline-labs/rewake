@@ -85,7 +85,7 @@ func TestAnAmbiguousPrefixListsTheCandidates(t *testing.T) {
 func TestWithdrawRefusesAReadMessageAndPointsToAnAddendum(t *testing.T) {
 	dir, _ := sender(t)
 	id := sendOK(t, "api", "rerun the smoke")
-	if err := mail.MarkRead(dir, "api", epochOf(t, dir, "api"), stored(t, dir, id), true); err != nil {
+	if err := mail.Open(dir, "api", epochOf(t, dir, "api")).MarkRead(stored(t, dir, id), true); err != nil {
 		t.Fatal(err)
 	}
 	code, _, errOut := run("withdraw", id)

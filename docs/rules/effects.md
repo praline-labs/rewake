@@ -83,7 +83,7 @@ built against it (`AGENTS.md`, "Build for failures that were seen").
 `rewake pending` marks the running turn (`internal/cli/pending.go`), and the mark speaks for
 that turn only. The call takes the boot-clock time it started (`At`); under the mailbox lock,
 just before the mark, it looks for an end of its run on record at or after `At`, or a turn
-start recorded after it (`mail.RecordTurnStart`): either proves the turn ended, and it marks
+start recorded after it (`mail.Box.RecordTurnStart`): either proves the turn ended, and it marks
 nothing and says so, exit 1. A recorded start is the harness's own time of the turn's start,
 never when the report arrived; a missing one proves nothing. A journal that cannot be read
 writes no mark, and the call fails, to be run again. The mark and an end's choice of its mark
@@ -94,7 +94,7 @@ one after it is never written (`mail.EndedSince`).
 
 A letter is the proof that it landed, and it is guarded by its recipient's mailbox lock. Its
 last copy leaves the mailbox only under that lock, by a sweep that has read, inside that
-section, that its own run is the name's live run (`SweepFinishedLocked`, the delivery
+section, that its own run is the name's live run (`Locked.SweepFinished`, the delivery
 server's `sweepFinished`). A sweep that cannot take the lock, or whose run has ended, retires
 nothing, so a server of an ended run cannot remove the live run's letters. Settling moves a
 copy only beside another that stands, so a copy whose archive failed stays for the next pass.

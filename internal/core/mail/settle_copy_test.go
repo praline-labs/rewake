@@ -57,7 +57,7 @@ func TestAFailedArchiveKeepsTheLastCopy(t *testing.T) {
 	unblock := blockDone(t, lab.dir, report.To)
 	settleLocked := func() {
 		if err := withLock(lab.dir, report.To, func() error {
-			SettleLocked(lab.dir, report.To, report.ID, Failed)
+			settleLocked(lab.dir, report.To, report.ID, Failed)
 			return nil
 		}); err != nil {
 			t.Fatal(err)
@@ -86,14 +86,14 @@ func TestSettlingADeliveredLetterKeepsItsOnlyCopy(t *testing.T) {
 		t.Fatal(err)
 	}
 	waiting := filepath.Join(state.InboxPath(lab.dir, report.To), report.ID+".json")
-	SettleLocked(lab.dir, report.To, report.ID, Delivered)
+	settleLocked(lab.dir, report.To, report.ID, Delivered)
 	if _, err := os.Stat(waiting); err != nil {
 		t.Fatalf("the only copy of a delivered letter went: %v", err)
 	}
 	if err := LinkUnread(lab.dir, report.To, report.ID); err != nil {
 		t.Fatal(err)
 	}
-	SettleLocked(lab.dir, report.To, report.ID, Delivered)
+	settleLocked(lab.dir, report.To, report.ID, Delivered)
 	if _, err := os.Stat(waiting); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("the waiting copy stayed beside its readable one: %v", err)
 	}
@@ -113,7 +113,7 @@ func TestADirectoryAtTheArchiveIsNoCopy(t *testing.T) {
 	}
 	settleLocked := func() {
 		if err := withLock(lab.dir, report.To, func() error {
-			SettleLocked(lab.dir, report.To, report.ID, Failed)
+			settleLocked(lab.dir, report.To, report.ID, Failed)
 			return nil
 		}); err != nil {
 			t.Fatal(err)

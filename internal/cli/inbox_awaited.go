@@ -41,7 +41,7 @@ type awaitedModel struct {
 // recipient — what a main session hands out, for one that lost track of it to a
 // compaction. It only reads: no lock, no record, nothing sent.
 func showAwaited(ctx *Context, dir string, session registry.Session, epoch string) error {
-	standings, err := mail.Standings(dir, session.Name, epoch)
+	standings, err := mail.Open(dir, session.Name, epoch).Standings()
 	if err != nil {
 		// A partial list would show a task as answered, or lost and worth
 		// sending again.

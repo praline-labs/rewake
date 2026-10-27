@@ -44,7 +44,7 @@ func AwaitedHere(dir, name string, message Message) (bool, error) {
 // AwaitAnswer shows the matching report under the mailbox lock, then records
 // receipt. ReserveAnswer must precede publishing the question and its release
 // must be deferred by the caller through the entire delivery and output path.
-func AwaitAnswer(ctx context.Context, dir, name, epoch, question string, show func(Message) error) (Message, bool, error) {
+func awaitAnswer(ctx context.Context, dir, name, epoch, question string, show func(Message) error) (Message, bool, error) {
 	for {
 		answer, found, err := takeAnswer(ctx, dir, name, epoch, question, show)
 		if err != nil || found {
@@ -68,7 +68,7 @@ func takeAnswer(ctx context.Context, dir, name, epoch, question string, show fun
 	var answer Message
 	found := false
 	err := state.WithMailboxLock(ctx, dir, name, func() error {
-		messages, err := PeekUnread(dir, name, epoch)
+		messages, err := peekUnread(dir, name, epoch)
 		if err != nil {
 			return err
 		}

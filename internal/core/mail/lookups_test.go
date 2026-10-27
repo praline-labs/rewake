@@ -32,10 +32,10 @@ func TestALetterThatCannotBeReadIsNotLeftOut(t *testing.T) {
 			} else if err := os.WriteFile(path, []byte("{"), 0o600); err != nil {
 				t.Fatal(err)
 			}
-			if unread, err := PeekUnread(dir, "api", "e1"); err == nil {
+			if unread, err := peekUnread(dir, "api", "e1"); err == nil {
 				t.Fatalf("listed %d letters past one it could not read", len(unread))
 			}
-			if available, err := AvailableUnread(dir, "api", "e1"); err == nil {
+			if available, err := availableUnread(dir, "api", "e1"); err == nil {
 				t.Fatalf("offered %d letters past one it could not read", len(available))
 			}
 		})
@@ -105,10 +105,10 @@ func TestAReadStopsOnAStatusItCannotRead(t *testing.T) {
 	dir := stateDir(t)
 	letter := announcedUnread(t, dir, Message{ID: NewID(), From: "web", FromEpoch: "w1", To: "api", ToEpoch: "e1", Kind: Task, Text: "read once", CreatedAt: time.Now()})
 	unreadable(t, statusPath(dir, "api", letter.ID), []byte(`{"state":"read"}`))
-	if err := MarkRead(dir, "api", "e1", letter, true); err == nil {
+	if err := markRead(dir, "api", "e1", letter, true); err == nil {
 		t.Fatal("read past a status it could not read")
 	}
-	if waiters, err := ReadWaiters(dir, "api", "e1"); err != nil || len(waiters) != 0 {
+	if waiters, err := readWaiters(dir, "api", "e1"); err != nil || len(waiters) != 0 {
 		t.Fatalf("waiters after the stopped read: %+v (%v)", waiters, err)
 	}
 	if _, err := os.Stat(filepath.Join(state.UnreadPath(dir, "api"), letter.ID+".json")); err != nil {
@@ -148,11 +148,11 @@ func TestATurnRecordThatCannotBeReadIsNotNone(t *testing.T) {
 		t.Fatal(err)
 	}
 	unreadable(t, keptPath(dir, "api"), []byte(`{"epoch":"e1","text":"the answer"}`))
-	if _, held, err := KeptAnswer(dir, "api", "e1"); err == nil {
+	if _, held, err := keptAnswer(dir, "api", "e1"); err == nil {
 		t.Fatalf("an unreadable kept answer answered held=%v", held)
 	}
 	unreadable(t, interimPath(dir, "api"), []byte(`{"epoch":"e1","text":"running"}`))
-	if _, interim, err := LastInterim(dir, "api", "e1"); err == nil {
+	if _, interim, err := lastInterim(dir, "api", "e1"); err == nil {
 		t.Fatalf("an unreadable interim record answered interim=%v", interim)
 	}
 	file := MarkName(2, NewID())
@@ -163,7 +163,7 @@ func TestATurnRecordThatCannotBeReadIsNotNone(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(path, file), []byte("{"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, marked, err := MarkWithin(dir, "api", "e1", 1, 2); err == nil {
+	if _, marked, err := markWithin(dir, "api", "e1", 1, 2); err == nil {
 		t.Fatalf("a mark that does not parse answered marked=%v", marked)
 	}
 	if _, err := os.Stat(filepath.Join(path, file)); err != nil {
@@ -315,7 +315,7 @@ func importedAs(file *ast.File, importPath string) string {
 func TestADamagedWaitRecordIsNotReadAsZeros(t *testing.T) {
 	dir := stateDir(t)
 	letter := announcedUnread(t, dir, Message{ID: NewID(), From: "web", FromEpoch: "w1", To: "api", ToEpoch: "1.1", Kind: Task, Text: "owed", CreatedAt: time.Now()})
-	if err := MarkRead(dir, "api", "1.1", letter, true); err != nil {
+	if err := markRead(dir, "api", "1.1", letter, true); err != nil {
 		t.Fatal(err)
 	}
 	path, _ := awaitingPath(dir, "api", "1.1")
@@ -329,13 +329,13 @@ func TestADamagedWaitRecordIsNotReadAsZeros(t *testing.T) {
 		if err := os.WriteFile(record, []byte(damaged), 0o600); err != nil {
 			t.Fatal(err)
 		}
-		if waiters, err := ReadWaiters(dir, "api", "1.1"); err == nil {
+		if waiters, err := readWaiters(dir, "api", "1.1"); err == nil {
 			t.Fatalf("%q read as %+v", damaged, waiters)
 		}
 		if err := markAwaitingSequence(dir, "api", "1.1", "web", "w1", NewID(), 0); err == nil {
 			t.Fatalf("recorded a read over %q", damaged)
 		}
-		if err := ClearAwaiting(dir, "api", "1.1", Waiter{Name: "web", Epoch: "w1", Messages: []string{letter.ID}}); err == nil {
+		if err := clearAwaiting(dir, "api", "1.1", Waiter{Name: "web", Epoch: "w1", Messages: []string{letter.ID}}); err == nil {
 			t.Fatalf("cleared %q", damaged)
 		}
 		if kept, _ := os.ReadFile(record); string(kept) != damaged {
@@ -345,7 +345,7 @@ func TestADamagedWaitRecordIsNotReadAsZeros(t *testing.T) {
 	if err := os.WriteFile(record, []byte("w1"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if waiters, err := ReadWaiters(dir, "api", "1.1"); err != nil || len(waiters) != 1 || waiters[0].Epoch != "w1" {
+	if waiters, err := readWaiters(dir, "api", "1.1"); err != nil || len(waiters) != 1 || waiters[0].Epoch != "w1" {
 		t.Fatalf("the record of the run alone: %+v (%v)", waiters, err)
 	}
 }

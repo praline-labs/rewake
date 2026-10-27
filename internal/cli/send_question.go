@@ -44,7 +44,7 @@ func answerQuestion(ctx *Context, question sent) error {
 	}()
 	defer func() { cancel(); <-watched }()
 
-	_, found, err := mail.AwaitAnswer(wait, question.dir, question.self.Name, question.epoch, model.ID, func(answer mail.Message) error {
+	_, found, err := mail.Open(question.dir, question.self.Name, question.epoch).AwaitAnswer(wait, model.ID, func(answer mail.Message) error {
 		model.State, model.Answer = string(mail.Read), answer.Text
 		if canSeeSessionState(question.dir) {
 			model.Telemetry = sessionSnapshot(question.dir, answer.From, answer.FromEpoch)

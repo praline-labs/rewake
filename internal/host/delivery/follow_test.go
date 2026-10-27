@@ -16,7 +16,7 @@ func TestANewRunForgetsTheEarlierWaits(t *testing.T) {
 	s := batchServer(dir)
 	s.Epoch = "next-epoch"
 	s.followEarlierRun(context.Background())
-	if len(mail.Waiters(dir, "api", "receiver-epoch")) != 0 || len(mail.Waiters(dir, "api", "next-epoch")) != 0 {
+	if len(mail.Open(dir, "api", "receiver-epoch").Waiters()) != 0 || len(mail.Open(dir, "api", "next-epoch").Waiters()) != 0 {
 		t.Fatalf("waits stayed or were taken over")
 	}
 	if item := awaitedBy(dir)[task.ID]; !item.Gone() {

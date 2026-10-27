@@ -28,7 +28,7 @@ func TestReceiptsOutliveTheirSharedAnswer(t *testing.T) {
 	notices := 0
 	server := &Server{Dir: dir, Name: "api", Epoch: run, attempts: map[string]time.Time{}, outcomes: map[string]mail.Result{}, Deliver: func(context.Context, mail.Message) mail.Result { notices++; return mail.Result{State: mail.Delivered} }}
 	server.drain(context.Background())
-	if _, found, err := mail.AwaitAnswer(context.Background(), dir, "api", run, "q1", func(mail.Message) error { return nil }); err != nil || !found {
+	if _, found, err := mail.Open(dir, "api", run).AwaitAnswer(context.Background(), "q1", func(mail.Message) error { return nil }); err != nil || !found {
 		t.Fatalf("first: %v %v", found, err)
 	}
 	receipt := filepath.Join(mailtest.AnswerReceiptsPath(dir, "api"), "q1")
@@ -37,11 +37,11 @@ func TestReceiptsOutliveTheirSharedAnswer(t *testing.T) {
 		t.Fatal(err)
 	}
 	server.sweepFinished()
-	if _, found, err := mail.AwaitAnswer(context.Background(), dir, "api", run, "q2", func(mail.Message) error { return nil }); err != nil || !found {
+	if _, found, err := mail.Open(dir, "api", run).AwaitAnswer(context.Background(), "q2", func(mail.Message) error { return nil }); err != nil || !found {
 		t.Fatalf("second: %v %v", found, err)
 	}
 	server.drain(context.Background())
-	left, _ := mail.PeekUnread(dir, "api", run)
+	left, _ := mail.Open(dir, "api", run).PeekUnread()
 	t.Logf("both outputs succeeded; unread=%d notices=%d", len(left), notices)
 	if len(left) != 0 || notices != 0 {
 		t.Fatal("shared report is announced again after both questions received it")
@@ -78,7 +78,7 @@ func TestUnreservedReportsKeepTheirExpiry(t *testing.T) {
 	server.attempts = map[string]time.Time{}
 	server.drain(context.Background())
 	server.sweepFinished()
-	left, _ := mail.PeekUnread(dir, "api", run)
+	left, _ := mail.Open(dir, "api", run).PeekUnread()
 	status, _, _ := mail.ReadStatus(dir, "api", report.ID)
 	t.Logf("no reservation ever; attempts=%d unread=%d status=%s", attempts, len(left), status.State)
 	if status.State != mail.Failed {

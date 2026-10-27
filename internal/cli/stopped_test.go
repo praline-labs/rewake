@@ -28,14 +28,14 @@ func TestStoppedKeepsWorkForTheHumanContinuation(t *testing.T) {
 		t.Fatal(err)
 	}
 	report := reportObject(t, dir, "web")
-	if report["kind"] != "stopped" || len(mail.Waiters(dir, "api", self.Epoch())) != 1 {
+	if report["kind"] != "stopped" || len(mail.Open(dir, "api", self.Epoch()).Waiters()) != 1 {
 		t.Fatal("stopped settled the task or lost its kind")
 	}
 	if err := completeTurn(dir, self, mail.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "thread/continued", Text: "continued result"}, "thread"); err != nil {
 		t.Fatal(err)
 	}
 	files := finishedFor(t, dir, "web")
-	if len(files) != 2 || len(mail.Waiters(dir, "api", self.Epoch())) != 0 {
+	if len(files) != 2 || len(mail.Open(dir, "api", self.Epoch()).Waiters()) != 0 {
 		t.Fatal("continuation did not settle the original task")
 	}
 	for _, file := range files {

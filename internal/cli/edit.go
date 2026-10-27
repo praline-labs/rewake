@@ -94,7 +94,7 @@ func handleEdit(ctx *Context, call Call) error {
 		Brief: old.Brief,
 	}
 	if kind.kind == mail.Question {
-		release, err := mail.ReserveAnswer(dir, self.Name, replacement.ID)
+		release, err := mail.Open(dir, self.Name, "").ReserveAnswer(replacement.ID)
 		if err != nil {
 			return failf("could not reserve the answer: %v", err)
 		}

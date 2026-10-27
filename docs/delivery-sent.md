@@ -104,14 +104,14 @@ waiting copy is there with no tombstone written, the next withdraw or edit does 
 again. The refusal says how far it got, from the status on disk: marked withdrawn (the
 recipient reads it so; finish with `rewake withdraw <id>`), or nothing changed. Removing the
 waiting copy is not a step: once the tombstone is written a copy that will not go is left to
-the serving process, which removes it as it settles the withdrawn status (`SettleLocked`), and
+the serving process, which removes it as it settles the withdrawn status (`Locked.Settle`), and
 the withdrawal counts as finished.
 
 **Withdrawn is final, like read.** The notice is sent outside the lock, so a withdrawal can
 land while it is on the way, and the harness's word can come after. From the moment the status
 is written, nothing the server learns about the notice changes it: the recorded outcome keeps
 `withdrawn` (`recordLocked`), settling it removes only the waiting copy and never archives the
-tombstone (`SettleLocked`), a message withdrawn before its notice is not made readable again
+tombstone (`Locked.Settle`), a message withdrawn before its notice is not made readable again
 and a group notice whose member was withdrawn is rebuilt (`prepareDelivery`,
 `validAnnouncement`), a late held or failed word leaves it withdrawn (`takeBack`, `stillHeld`,
 the batch pass), and a hold that ends after the withdrawal sends its sender no "not

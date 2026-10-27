@@ -12,7 +12,7 @@ import (
 
 func TestPeekHasNoConsumptionOrDispatchAcknowledgement(t *testing.T) {
 	dir, self, peer := stateCaller(t, "write")
-	clock, err := mail.OpenReadClock(context.Background(), dir, self.Name, self.Epoch())
+	clock, err := mail.Open(dir, self.Name, self.Epoch()).OpenReadClock(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -28,7 +28,7 @@ func TestPeekHasNoConsumptionOrDispatchAcknowledgement(t *testing.T) {
 			t.Fatal(errOut)
 		}
 	}
-	if clock.Snapshot().Through != 0 || len(mail.Waiters(dir, self.Name, self.Epoch())) != 0 {
+	if clock.Snapshot().Through != 0 || len(mail.Open(dir, self.Name, self.Epoch()).Waiters()) != 0 {
 		t.Fatal("peek consumed task")
 	}
 	entries, err := os.ReadDir(state.InboxPath(dir, self.Name))
@@ -43,7 +43,7 @@ func TestPeekHasNoConsumptionOrDispatchAcknowledgement(t *testing.T) {
 	if code, _, errOut := run("inbox"); code != ExitOK {
 		t.Fatal(errOut)
 	}
-	if clock.Snapshot().Through != 1 || len(mail.Waiters(dir, self.Name, self.Epoch())) != 1 {
+	if clock.Snapshot().Through != 1 || len(mail.Open(dir, self.Name, self.Epoch()).Waiters()) != 1 {
 		t.Fatal("actual read lost task boundary")
 	}
 }
@@ -67,7 +67,7 @@ func TestConcurrentPeeksAndFailedReadRecording(t *testing.T) {
 	if code, _, _ := run("inbox"); code == ExitOK {
 		t.Fatal("failed obligation recording reported success")
 	}
-	if unread, err := mail.AvailableUnread(dir, self.Name, self.Epoch()); err != nil || len(unread) != 1 {
+	if unread, err := mail.Open(dir, self.Name, self.Epoch()).AvailableUnread(); err != nil || len(unread) != 1 {
 		t.Fatal("failed read lost unread task", err)
 	}
 	if err := os.Remove(blocked); err != nil {
@@ -76,7 +76,7 @@ func TestConcurrentPeeksAndFailedReadRecording(t *testing.T) {
 	if code, _, _ := run("inbox", "--peek"); code != ExitOK {
 		t.Fatal("recovery peek failed")
 	}
-	if len(mail.Waiters(dir, self.Name, self.Epoch())) != 0 {
+	if len(mail.Open(dir, self.Name, self.Epoch()).Waiters()) != 0 {
 		t.Fatal("peek created obligation")
 	}
 }

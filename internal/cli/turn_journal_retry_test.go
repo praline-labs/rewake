@@ -18,7 +18,7 @@ import (
 // owes says whether api still owes id.
 func owes(t *testing.T, dir string, self registry.Session, id string) bool {
 	t.Helper()
-	waiters, err := mail.ReadWaiters(dir, "api", self.Epoch())
+	waiters, err := mail.Open(dir, "api", self.Epoch()).ReadWaiters()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -64,7 +64,7 @@ func TestARecoveredPendingEndKeepsItsInterimOnRecord(t *testing.T) {
 	if answersTo(t, dir, task) != 1 || !owes(t, dir, self, task) {
 		t.Fatalf("reports %d, still owed %v", answersTo(t, dir, task), owes(t, dir, self, task))
 	}
-	if line, ok, err := mail.LastInterim(dir, "api", self.Epoch()); err != nil || !ok || line != "the suite is running" {
+	if line, ok, err := mail.Open(dir, "api", self.Epoch()).LastInterim(); err != nil || !ok || line != "the suite is running" {
 		t.Fatalf("the interim end is not on record: %q %v %v", line, ok, err)
 	}
 }

@@ -99,7 +99,7 @@ func TestFixedTwoThenFourThroughPeekAndSelectedReads(t *testing.T) {
 					t.Fatal("overview acknowledged unannounced members")
 				}
 			}
-			if len(mail.Waiters(dir, self.Name, self.Epoch())) != 0 {
+			if len(mail.Open(dir, self.Name, self.Epoch()).Waiters()) != 0 {
 				t.Fatal("overview created task obligations")
 			}
 			later := []mail.Message{put(mail.Task), put(mail.Question), put(mail.Note), put(mail.Finished)}
@@ -112,13 +112,13 @@ func TestFixedTwoThenFourThroughPeekAndSelectedReads(t *testing.T) {
 			if mode == "read-all" {
 				expected = 4
 			}
-			if list, _ := mail.PeekUnread(dir, self.Name, self.Epoch()); len(list) != expected {
+			if list, _ := mail.Open(dir, self.Name, self.Epoch()).PeekUnread(); len(list) != expected {
 				t.Fatal("old unread lost or next members inflated")
 			}
 			if code, _, stderr := run("inbox", "--message", later[0].ID); code != ExitOK {
 				t.Fatal(stderr)
 			}
-			if len(mail.Waiters(dir, self.Name, self.Epoch())) != 1 {
+			if len(mail.Open(dir, self.Name, self.Epoch()).Waiters()) != 1 {
 				t.Fatal("actual selected task lost obligation")
 			}
 		})

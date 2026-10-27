@@ -17,12 +17,12 @@ import (
 // inside its mailbox section, once it has read there that the run epoch is the
 // live run of the name (docs/rules/effects.md#retiring-a-letter). It takes no
 // lock of its own, since the mailbox lock is not reentrant, and proves neither
-// the lock nor the run itself: its caller has. Its callers are held by
-// internal/layout_callers_test.go.
+// the lock nor the run itself: its caller has. Only mail.Locked
+// reaches it.
 //
 // Nothing is removed on a guess: a record whose keeping depends on another
 // that could not be read stays, and the next sweep decides it.
-func SweepFinishedLocked(dir, name, epoch string) {
+func sweepFinishedLocked(dir, name, epoch string) {
 	cutoff := time.Now().Add(-keepFinished)
 	receipts, receiptsErr := retainedReceipts(dir, name)
 	// A task read a day ago and still worked on is still owed, and rewake

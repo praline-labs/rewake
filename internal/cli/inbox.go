@@ -65,7 +65,7 @@ func handleInbox(ctx *Context, call Call) error {
 		// Every run's unread mail, not only this run's: an earlier run of the
 		// name that ended before reading what was announced to it leaves it in
 		// unread/, and nobody else will ever read it.
-		messages, err := mail.AvailableUnread(dir, session.Name, "")
+		messages, err := mail.Open(dir, session.Name, "").AvailableUnread()
 		if err != nil {
 			failure = failf("could not read the inbox of %s: %v", session.Name, err)
 			return nil
@@ -99,7 +99,7 @@ func handleInbox(ctx *Context, call Call) error {
 			// A task an earlier run never read is lost to its sender, who may
 			// have sent it again: reading it now owes nothing.
 			reports := mail.OwesReports(session.Role) && message.ToEpoch == epoch
-			if err := mail.MarkRead(dir, session.Name, epoch, message, reports); err != nil {
+			if err := mail.Open(dir, session.Name, epoch).MarkRead(message, reports); err != nil {
 				failure = failf("the messages were shown, but recording that failed, so they stay unread and show again next time: %v", err)
 				return nil
 			}

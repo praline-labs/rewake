@@ -23,7 +23,7 @@ type keptClock struct {
 func newKeptClock(t *testing.T) keptClock {
 	t.Helper()
 	dir := stateDir(t)
-	clock, err := OpenReadClock(context.Background(), dir, "api", "1.1")
+	clock, err := openClock(context.Background(), dir, "api", "1.1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,11 +93,11 @@ func TestAHoldReservesItsPositionBeforeItCommits(t *testing.T) {
 	if err != nil || !ok || record.Seq != reserved || during.Through >= reserved {
 		t.Fatalf("kept at %d, reserved %d, the word %d while it was written: %v", record.Seq, reserved, during.Through, err)
 	}
-	if _, ok, err := KeptAnswerThrough(k.dir, "api", k.epoch, &during.Through); ok || err != nil {
+	if _, ok, err := keptAnswerThrough(k.dir, "api", k.epoch, &during.Through); ok || err != nil {
 		t.Fatalf("a boundary captured while the hold wrote covers it: %v", err)
 	}
 	after := k.clock.Snapshot()
-	if _, ok, err := KeptAnswerThrough(k.dir, "api", k.epoch, &after.Through); !ok || err != nil {
+	if _, ok, err := keptAnswerThrough(k.dir, "api", k.epoch, &after.Through); !ok || err != nil {
 		t.Fatalf("a boundary captured after the hold does not cover it: %v", err)
 	}
 }

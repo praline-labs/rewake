@@ -18,8 +18,8 @@ var removeWaiting = state.Discard
 // The caller holds the mailbox lock: a server whose lock cannot be taken
 // settles nothing (the delivery server's lockOrAlone). The delivery server's
 // settleOutcome and settleUnreadOnly call it inside their mailbox section; it
-// takes no lock of its own, since the mailbox lock is not reentrant. Its
-// callers are held by internal/layout_callers_test.go.
+// takes no lock of its own, since the mailbox lock is not reentrant. Only
+// mail.Locked reaches it.
 //
 // Settling never removes a letter's last copy. The letter is the proof that it
 // landed, and retiring that proof is the sweep's alone, under the lock and by
@@ -31,7 +31,7 @@ var removeWaiting = state.Discard
 // letter it left — named by a stop, or its archive or removal failed — is
 // still owed, and the passes find it again by its status and its copies
 // (settleRecorded), not by anything remembered here.
-func SettleLocked(dir, name, id string, outcome State) bool {
+func settleLocked(dir, name, id string, outcome State) bool {
 	waiting := filepath.Join(state.InboxPath(dir, name), id+".json")
 	switch outcome {
 	case Held:

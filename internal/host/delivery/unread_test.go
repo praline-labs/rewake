@@ -53,7 +53,7 @@ func TestANewRunForgetsTheOldWaits(t *testing.T) {
 	server := &Server{Dir: dir, Name: "api", Epoch: "6.6", Deliver: func(context.Context, mail.Message) mail.Result {
 		return mail.Result{State: mail.Delivered}
 	}}
-	serveUntil(t, server, func() bool { return len(mail.Waiters(dir, "api", "5.5")) == 0 })
+	serveUntil(t, server, func() bool { return len(mail.Open(dir, "api", "5.5").Waiters()) == 0 })
 }
 
 // The agent is told a message is waiting and runs rewake inbox straight away.

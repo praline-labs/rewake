@@ -63,7 +63,7 @@ func TestAHalfDoneWithdrawalIsNeverReadAsTheTask(t *testing.T) {
 	if status, _, _ := mail.ReadStatus(f.dir, "api", f.task.ID); status.State != mail.Failed || !status.Withdrawn {
 		t.Fatalf("reading turned the withdrawn status into %+v", status)
 	}
-	if waiters := mail.Waiters(f.dir, "api", "api-epoch"); len(waiters) != 0 {
+	if waiters := mail.Open(f.dir, "api", "api-epoch").Waiters(); len(waiters) != 0 {
 		t.Fatalf("a withdrawn task was owed a report: %+v", waiters)
 	}
 	// What is kept is what was read: an archive holding the original would

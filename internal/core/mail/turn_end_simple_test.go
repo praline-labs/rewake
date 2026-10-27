@@ -43,7 +43,7 @@ func (lab endLab) read(t *testing.T, text string) Message {
 // end is the end of turn id, its scope everything read so far.
 func (lab endLab) end(t *testing.T, id string) TurnEnd {
 	t.Helper()
-	clock, err := OpenReadClock(t.Context(), lab.dir, "api", lab.self.Epoch())
+	clock, err := openClock(t.Context(), lab.dir, "api", lab.self.Epoch())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,7 +68,7 @@ func (lab endLab) finished(t *testing.T) []Message {
 	return reports
 }
 
-func (lab endLab) owed() int { return len(Waiters(lab.dir, "api", lab.self.Epoch())) }
+func (lab endLab) owed() int { return len(waitersOf(lab.dir, "api", lab.self.Epoch())) }
 
 // failFirst fails the first operation op on a path that contains part.
 func failFirst(t *testing.T, op, part string) *bool {
@@ -147,7 +147,7 @@ func TestAnEndSentAgainOnceDoneDoesNothing(t *testing.T) {
 	if err := lab.complete(t, end); err != nil {
 		t.Fatal(err)
 	}
-	waiters := Waiters(lab.dir, "api", lab.self.Epoch())
+	waiters := waitersOf(lab.dir, "api", lab.self.Epoch())
 	if got := lab.finished(t); len(got) != 1 || len(waiters) != 1 || waiters[0].Messages[0] != later.ID {
 		t.Fatalf("web holds %d reports, api owes %+v", len(got), waiters)
 	}

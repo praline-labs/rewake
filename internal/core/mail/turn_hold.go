@@ -28,11 +28,11 @@ func holdTurn(dir string, self registry.Session, event TurnEnd, op string, holda
 	if !holdable || event.Failed || event.Stopped {
 		return ""
 	}
-	line, interim, err := LastInterim(dir, self.Name, self.Epoch())
+	line, interim, err := lastInterim(dir, self.Name, self.Epoch())
 	if err != nil || !interim {
 		return ""
 	}
-	if _, held, err := KeptAnswer(dir, self.Name, self.Epoch()); err != nil || held {
+	if _, held, err := keptAnswer(dir, self.Name, self.Epoch()); err != nil || held {
 		// A turn end held before whose continuation was never heard of — a
 		// stop the harness did not report. This end publishes that answer
 		// with its own, and asks nothing again.

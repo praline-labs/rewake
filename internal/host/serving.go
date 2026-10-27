@@ -33,7 +33,7 @@ func startServing(ctx context.Context, request Request, self registry.Session, n
 		// read when each was heard, so the clock is open before the first
 		// can be.
 		reportSession := self
-		clock, err := mail.OpenReadClock(ctx, request.Dir, name, epoch)
+		clock, err := mail.Open(request.Dir, name, epoch).OpenReadClock(ctx)
 		if err != nil {
 			return stop, err
 		}
@@ -43,7 +43,7 @@ func startServing(ctx context.Context, request Request, self registry.Session, n
 		// (docs/rules/effects.md#a-pending-mark); a
 		// start that cannot be recorded leaves the mark unproven, which
 		// fails to the side of a report.
-		record := func(at int64) { _ = mail.RecordTurnStart(request.Dir, name, epoch, at) }
+		record := func(at int64) { _ = mail.Open(request.Dir, name, epoch).RecordTurnStart(at) }
 		handler := adapter.TurnHandler{Capture: clock.Snapshot, Publish: func(ctx context.Context, end adapter.TurnEnd) error {
 			if request.OnTurn != nil {
 				return request.OnTurn(ctx, reportSession, end)

@@ -29,7 +29,7 @@ type OwedMessage struct {
 // taken: every record read here is written whole or not at all. An error says
 // a wait record or a copy could not be read: a list without it would show a
 // task as not owed, or its text as no longer kept.
-func OwedMessages(dir, name, epoch string) ([]OwedMessage, error) {
+func owedMessages(dir, name, epoch string) ([]OwedMessage, error) {
 	type reading struct {
 		owed     OwedMessage
 		sequence uint64
@@ -37,7 +37,7 @@ func OwedMessages(dir, name, epoch string) ([]OwedMessage, error) {
 		order    int
 	}
 	var readings []reading
-	waiters, err := ReadWaiters(dir, name, epoch)
+	waiters, err := readWaiters(dir, name, epoch)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +87,7 @@ func OwedMessages(dir, name, epoch string) ([]OwedMessage, error) {
 // owedIDs is the set of message ids this run still owes a report for. An
 // error says a wait record could not be read, and the set may lack an id.
 func owedIDs(dir, name, epoch string) (map[string]bool, error) {
-	waiters, err := ReadWaiters(dir, name, epoch)
+	waiters, err := readWaiters(dir, name, epoch)
 	ids := map[string]bool{}
 	for _, waiter := range waiters {
 		for _, id := range waiter.Messages {

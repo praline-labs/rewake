@@ -77,7 +77,7 @@ func TestWithdrawingAgainSendsNoSecondRecall(t *testing.T) {
 	dir, _ := sender(t)
 	task := sendOK(t, "api", "rerun the smoke")
 	addendum := sendOK(t, "api", "also rerun the lint", "--to", task)
-	if err := mail.MarkRead(dir, "api", epochOf(t, dir, "api"), stored(t, dir, addendum), true); err != nil {
+	if err := mail.Open(dir, "api", epochOf(t, dir, "api")).MarkRead(stored(t, dir, addendum), true); err != nil {
 		t.Fatal(err)
 	}
 	if code, _, errOut := run("withdraw", task); code != ExitOK {

@@ -42,7 +42,7 @@ func kinds(messages []mail.Message) []string {
 // does when it hears one: at the given time on the boot clock, in the core.
 func turnStarted(t *testing.T, dir string, self registry.Session, at int64) {
 	t.Helper()
-	if err := mail.RecordTurnStart(dir, self.Name, self.Epoch(), at); err != nil {
+	if err := mail.Open(dir, self.Name, self.Epoch()).RecordTurnStart(at); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -73,7 +73,7 @@ func TestAPendingTurnEndKeepsTheTaskOwed(t *testing.T) {
 		len(interim[0].InReplyTo) != 1 || interim[0].InReplyTo[0] != task || mail.Owed(interim[0]) {
 		t.Fatalf("after the pending turn end web holds %+v", interim)
 	}
-	if len(mail.Waiters(dir, "api", self.Epoch())) != 1 {
+	if len(mail.Open(dir, "api", self.Epoch()).Waiters()) != 1 {
 		t.Fatal("the pending turn end settled the task")
 	}
 	// A retry of the same turn does not change its outcome.
@@ -92,7 +92,7 @@ func TestAPendingTurnEndKeepsTheTaskOwed(t *testing.T) {
 	if got != "pending,finished" && got != "finished,pending" {
 		t.Fatalf("web holds %v, want the interim message and the report", got)
 	}
-	if len(mail.Waiters(dir, "api", self.Epoch())) != 0 {
+	if len(mail.Open(dir, "api", self.Epoch()).Waiters()) != 0 {
 		t.Fatal("the report did not settle the task")
 	}
 }
@@ -118,7 +118,7 @@ func TestAMarkDoesNotSurviveAnInterruptedTurn(t *testing.T) {
 	if len(got) != 1 || mail.KindOf(got[0]) != mail.Finished || got[0].Text != "the final answer" {
 		t.Fatalf("web holds %v, want the final answer as the report", kinds(got))
 	}
-	if len(mail.Waiters(dir, "api", self.Epoch())) != 0 {
+	if len(mail.Open(dir, "api", self.Epoch()).Waiters()) != 0 {
 		t.Fatal("the report did not settle the task")
 	}
 }
@@ -250,6 +250,6 @@ func markPending(dir, name, epoch, text string, at int64) error {
 // markWithin answers the line of the mark that decides a turn end whose
 // window is (start, ended].
 func markWithin(dir, name, epoch string, start, ended int64) (string, bool, error) {
-	mark, ok, err := mail.MarkWithin(dir, name, epoch, start, ended)
+	mark, ok, err := mail.Open(dir, name, epoch).MarkWithin(start, ended)
 	return mark.Text, ok, err
 }
