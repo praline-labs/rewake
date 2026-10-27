@@ -44,27 +44,27 @@ func (claudeHarness) LaunchSettings(model, effort, context string) ([]string, er
 func (claudeHarness) AppliesContext() bool { return true }
 
 // windowTokens is a window in tokens, 0 for auto, empty or anything
-// checkWindow refuses.
+// parseWindow refuses.
 func windowTokens(value string) int64 {
-	if value == "" || value == "auto" || checkWindow(value) != nil {
+	tokens, err := parseWindow(value)
+	if err != nil {
 		return 0
 	}
-	scale := int64(1)
-	switch value[len(value)-1] {
-	case 'k', 'K':
-		scale = 1_000
-	case 'm', 'M':
-		scale = 1_000_000
-	}
-	count, _ := strconv.Atoi(strings.TrimRight(value, "kKmM"))
-	return int64(count) * scale
+	return tokens
 }
 
 // checkWindow accepts auto, or a count of tokens written as 200000, 300k or
 // 1M, between the bounds Claude Code allows.
 func checkWindow(value string) error {
+	_, err := parseWindow(value)
+	return err
+}
+
+// parseWindow is the one reading of a window: its tokens, 0 for auto, or the
+// refusal.
+func parseWindow(value string) (int64, error) {
 	if value == "auto" {
-		return nil
+		return 0, nil
 	}
 	digits, scale := value, 1
 	switch {
@@ -75,7 +75,7 @@ func checkWindow(value string) error {
 	}
 	count, err := strconv.Atoi(digits)
 	if err != nil || digits == "" || digits[0] == '+' || digits[0] == '-' || count > maxWindow || count*scale < minWindow || count*scale > maxWindow {
-		return fmt.Errorf("context is not a window Claude Code's %s takes: auto, or 100k to 1M tokens, such as 300k or 1M", autocompactFlag)
+		return 0, fmt.Errorf("context is not a window Claude Code's %s takes: auto, or 100k to 1M tokens, such as 300k or 1M", autocompactFlag)
 	}
-	return nil
+	return int64(count * scale), nil
 }
