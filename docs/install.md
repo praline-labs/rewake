@@ -217,6 +217,11 @@ Every release goes through the gate, `tools/release`:
    tag. Each goes with `--access public` to `https://registry.npmjs.org/`, named on the
    command line together with the scope's registry, since a scope setting on the machine
    would outrank `--registry` alone.
+   With `--wait` the gate waits for the registry after the uploads: it asks again every 30
+   seconds until every version and dist-tag is there, 40 minutes unless `--wait=<duration>`
+   says otherwise (arm64's build of 2.5.0 took 25 minutes to show), and only then reports and
+   prints the tag, or ends with 1 as below. It replaces waiting in a shell loop, which an
+   agent's tool cuts off after ten minutes.
 4. Tag the release with the command the gate prints; the gate creates no tag.
 
 The version check frees a version only on npm's own `E404`. `npm view` fails the same
@@ -249,5 +254,5 @@ prints no tag.
 
 `go run` reports every non-zero exit as 1; build the gate first when the codes matter:
 0 every check passed (and with `--publish`, every upload went up and is visible under
-its tag), 1 a check or an upload failed or a version or tag is not visible yet, 2 the
-call was wrong.
+its tag), 1 a check or an upload failed or a version or tag is not visible yet (with
+`--wait`, by the end of the wait), 2 the call was wrong.
