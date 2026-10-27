@@ -123,6 +123,15 @@ func claudeDefaults() []adapter.Default {
 				return adapter.AddFlags(args, effortFlag, value)
 			},
 		},
+		{
+			Env:     "REWAKE_CLAUDE_CONTEXT",
+			What:    "context window",
+			Present: func(args []string) bool { return adapter.HasFlag(args, autocompactFlag) },
+			Apply: func(args []string, value string) []string {
+				return adapter.AddFlags(args, autocompactFlag, value)
+			},
+			Check: checkWindow,
+		},
 	}
 }
 
@@ -133,6 +142,7 @@ func (claudeHarness) Notes() []string {
 		"A worker — any role but main — runs with rewake's worker profile: Claude Code's configuration directory of its own (CLAUDE_CONFIG_DIR), the service folder ~/.config/rewake/claude/worker/, whose missing entries the launch makes without overwriting what is there. Claude Code reads it as the user's: CLAUDE.md as the user's instructions, skills or symlinks to them in skills/, agents/, plugins installed there, and settings.json as the user's settings; mcp.json is added with --mcp-config. The person logs the folder in once, with /login in a worker's pane: until then space open opens a Claude Code worker and its answer says the person is to log in there; the workers' conversations stay in the folder, out of the person's resume lists. rewake writes its defaults into settings.json — subagents, Claude Code's own messaging, waking itself, worktree and plan-mode tools, workflows, the claude.ai connectors and other features of an unattended pane off, the person's own CLAUDE.md left out — which the person edits: taking \"Agent\" out of permissions.deny gives subagents back. A newer rewake adds only its newer defaults and keeps the person's changes. Before each launch rewake marks onboarding done and the repository it runs in trusted in the folder's .claude.json. A worker has Claude Code's own auto-memory, one per type or alias and project, in the folder's memory/<project>/<type or alias>/, unless settings.json sets autoMemoryEnabled false. A worker's own --settings or --setting-sources is refused; under --command the wrapper decides and the profile is not applied.",
 		"A turn's end is not held open: a turn that ends after rewake pending without a new mark closes the task as answered.",
 		"REWAKE_CLAUDE_MODEL and REWAKE_CLAUDE_EFFORT supply --model and --effort when the launch does not name them, a worker's included when its template sets neither.",
+		"Auto-compaction keeps to 272k tokens, rewake's default: a typed --autocompact, a template's launch.context or REWAKE_CLAUDE_CONTEXT (auto, or 100k to 1M such as 300k) beats it, in that order, and auto leaves the model's own window.",
 		"A launch through --command reaches the mod only when the command ends by exec-ing claude: a wrapper that runs it as a child is never admitted, and the session takes no tasks.",
 		"Arguments after claude reach it as written, beside the flags rewake adds for delivery, except: a --append-system-prompt of the caller's is kept, joined after rewake's briefing into the one such flag Claude Code reads, and --no-intro drops only the briefing; a --help first asks rewake for this page; --worktree is rewake's, below; and a typed flag replaces an alias's copy of it.",
 		"--worktree starts the session in a new checkout of HEAD on a new branch under rewake's worktree directory, at the same place within the repository; --worktree=<name> names both, and a name after a space is refused, since it would reach claude as the prompt. rewake worktree --help says how to land and remove it. It starts a new conversation only: --continue or -c, --resume or -r, --from-pr, --teleport, --fork-session, the attach and respawn commands, Claude Code's own -w and --tmux, --cloud and --environment are refused beside it. -w alone stays Claude Code's own worktree, inside the repository.",
@@ -236,7 +246,13 @@ func (claudeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, 
 		args = adapter.AddFlags(args, socketFlag, socket)
 	}
 
-	args, notes := adapter.ApplyDefaults(args, claudeDefaults())
+	args, notes, err := adapter.ApplyDefaults(args, claudeDefaults())
+	if err != nil {
+		return adapter.LaunchPlan{}, err
+	}
+	if !adapter.HasFlag(args, autocompactFlag) {
+		args = adapter.AddFlags(args, autocompactFlag, defaultWindow)
+	}
 	reply := replyPath(request, socket, owns)
 	if len(reply) > maxSocketPath {
 		notes = append(notes, "not hearing back about held messages: the socket path "+reply+" is longer than a unix socket allows")

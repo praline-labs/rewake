@@ -203,7 +203,9 @@ them into the published snapshot ([session-state.md](session-state.md#persistenc
 the host keeps only the wire's order — load, generation, sequence — and the dialog it tells main
 of. Nothing reads transcripts or measures a full context breakdown. The native model window and
 percentage are used as given; a launch's `--autocompact` sets the window the conversation is kept
-to, and the observer recomputes the percent against it.
+to — 272k unless a flag, a template or `REWAKE_CLAUDE_CONTEXT` says otherwise
+([launch-defaults.md](launch-defaults.md#the-context-window)) — and the observer recomputes the
+percent against it.
 
 The model's name is the status line's `model.display_name`, posted the same way
 (`StatusLineRequest.modelName`) and kept across loads, since the mod has only the id

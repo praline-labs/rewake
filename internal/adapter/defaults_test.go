@@ -23,7 +23,7 @@ func modelDefault() adapter.Default {
 }
 
 func TestAnUnsetVariableSubstitutesNothing(t *testing.T) {
-	args, notes := adapter.ApplyDefaults([]string{"--name", "worker"}, []adapter.Default{modelDefault()})
+	args, notes, _ := adapter.ApplyDefaults([]string{"--name", "worker"}, []adapter.Default{modelDefault()})
 	if len(args) != 2 {
 		t.Errorf("arguments were changed with nothing configured: %v", args)
 	}
@@ -38,7 +38,7 @@ func TestAnExplicitFlagIsNotReplaced(t *testing.T) {
 		{"--model", "chosen-by-the-person"},
 		{"--model=chosen-by-the-person"},
 	} {
-		args, notes := adapter.ApplyDefaults(append([]string{}, given...), []adapter.Default{modelDefault()})
+		args, notes, _ := adapter.ApplyDefaults(append([]string{}, given...), []adapter.Default{modelDefault()})
 		if strings.Contains(strings.Join(args, " "), "from-the-environment") {
 			t.Errorf("%v: the default overrode what the person asked for: %v", given, args)
 		}
@@ -50,7 +50,7 @@ func TestAnExplicitFlagIsNotReplaced(t *testing.T) {
 
 func TestASubstitutionIsAnnounced(t *testing.T) {
 	t.Setenv("REWAKE_TEST_MODEL", "from-the-environment")
-	args, notes := adapter.ApplyDefaults([]string{"--name", "worker"}, []adapter.Default{modelDefault()})
+	args, notes, _ := adapter.ApplyDefaults([]string{"--name", "worker"}, []adapter.Default{modelDefault()})
 	if !strings.Contains(strings.Join(args, " "), "--model from-the-environment") {
 		t.Errorf("the configured default was not applied: %v", args)
 	}
@@ -66,7 +66,7 @@ func TestASubstitutionIsAnnounced(t *testing.T) {
 
 func TestAnEmptyVariableIsTreatedAsUnset(t *testing.T) {
 	t.Setenv("REWAKE_TEST_MODEL", "   ")
-	_, notes := adapter.ApplyDefaults([]string{"--name", "worker"}, []adapter.Default{modelDefault()})
+	_, notes, _ := adapter.ApplyDefaults([]string{"--name", "worker"}, []adapter.Default{modelDefault()})
 	if len(notes) != 0 {
 		t.Errorf("blank configuration was treated as a value: %v", notes)
 	}

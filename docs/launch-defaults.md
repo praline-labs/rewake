@@ -22,6 +22,7 @@ models the same way nor take the reasoning effort the same way:
 | --- | --- |
 | `REWAKE_CLAUDE_MODEL` | the model for a Claude Code launch |
 | `REWAKE_CLAUDE_EFFORT` | its reasoning effort |
+| `REWAKE_CLAUDE_CONTEXT` | its auto-compact window ([below](#the-context-window)) |
 | `REWAKE_PI_MODEL` | the model for a pi launch |
 | `REWAKE_PI_EFFORT` | its thinking level |
 
@@ -43,9 +44,9 @@ around the name and the value are trimmed, and one matching pair of quotes is re
 Nothing more — no `$VAR` expansion, no commands, no line continuation. A file that can
 run things is a different and much larger promise, and this is a settings file.
 
-**A file may set these four, `REWAKE_CLAUDE_MODEL`, `REWAKE_CLAUDE_EFFORT`, `REWAKE_PI_MODEL`
-and `REWAKE_PI_EFFORT`, and nothing else** (`readable` in `internal/adapter/settings.go`); each
-launch page names its own harness's two, beside the one line on where the files are. Not a prefix — a list. That is
+**A file may set these five, `REWAKE_CLAUDE_MODEL`, `REWAKE_CLAUDE_EFFORT`,
+`REWAKE_CLAUDE_CONTEXT`, `REWAKE_PI_MODEL` and `REWAKE_PI_EFFORT`, and nothing else** (`readable` in `internal/adapter/settings.go`); each
+launch page names its own harness's keys, beside the one line on where the files are. Not a prefix — a list. That is
 a boundary rather than tidiness: a file sitting in whatever directory somebody happens
 to be in must not become a way to set arbitrary variables for the harness launching
 there, and names like the state directory or the room are spelled with the same prefix.
@@ -69,12 +70,30 @@ launch would teach people to skip these notes.
 
 Three rules, all about not surprising anyone. An explicit flag always wins: a launch
 that already names a model or an effort gets nothing added and no note. Nothing
-configured means nothing substituted — behavior without configuration is exactly what
+configured means nothing substituted, but for the context window below — behavior without configuration is exactly what
 it was before — and an **empty** variable is a choice rather than an absence: it turns
 the default off for that launch, and the files are not consulted behind it. And
 whatever is substituted is announced in a launch note naming both the variable and
 where its value came from, because a silently swapped model is the worst kind of
 surprise, and the second worst is not knowing where to change it.
+
+### The context window
+
+The one default that lives in the code: a Claude Code launch, main's and every worker's, keeps
+auto-compaction to 272k tokens (`--autocompact 272k`; the owner's decision, October 27, 2026),
+so nothing needs configuring for it. From the nearest to the farthest, the window is:
+
+1. a typed `--autocompact` (main's launch line, or after `--` on `space open`);
+2. a worker template's `launch.context`;
+3. `REWAKE_CLAUDE_CONTEXT`, from the environment, the project file or the user file;
+4. the code's 272k.
+
+`auto` at any step is the opt-out: the model's own window, whatever it is. A value is `auto`
+or 100k–1M tokens such as `300k`; a bad one in a file or the environment refuses the launch,
+naming the variable and where it was read, unless a nearer step made it unused. An empty
+variable is no answer here, so 272k applies; write `auto` to turn the limit off. pi has no
+flag for its window and is untouched. The strip and `rewake list` measure the fill against
+the window the launch passed ([claude.md](claude.md#telemetry)).
 
 "Already named" means every way of naming it, because the way a person writes a
 choice must not decide whether it is heard. Checked against the installed binaries,

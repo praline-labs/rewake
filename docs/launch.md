@@ -154,6 +154,14 @@ rewake --command my-claude claude
   `--allowedTools "Bash(rewake:*)"`, only when the caller passed no allow list of their
   own under either spelling, `--allowedTools` or `--allowed-tools`. This adds a rule for
   the run without touching the user's settings.
+- Keep auto-compaction to a window: `--autocompact 272k`, the owner's default (October 27, 2026),
+  for main and every worker, unless the launch already carries `--autocompact` — typed, or from
+  a template's `launch.context` — or `REWAKE_CLAUDE_CONTEXT` names a window
+  ([launch-defaults.md](launch-defaults.md#the-context-window)). It is a flag of this run
+  alone, as the other additions are (L1). Under `--command` it is passed to the wrapper like
+  the other flags, so a `CLAUDE_CODE_AUTO_COMPACT_WINDOW` the wrapper sets still wins, as for
+  a typed `--autocompact`; a person's own `--settings` is not read, and the flag, being on
+  the command line, outranks a window set there.
 - Main's status line: a launch of main with a run directory, not under `--command`, adds one
   `--settings` holding only `statusLine`, rewake's command, which runs the person's own and
   tells the host the model's name, thinking, effort and the cache's life
