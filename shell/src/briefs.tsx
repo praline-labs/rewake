@@ -192,7 +192,7 @@ export function BriefsView(props: {
   const headStyle = (brief: Summary, chosen: boolean) =>
     chosen
       ? { bg: theme.selection.bg, fg: theme.selection.fg }
-      : { bg: theme.idle, fg: brief.closed ? faint : RGBA.defaultForeground() };
+      : { bg: theme.idle, fg: brief.closed ? theme.faintOnIdle : RGBA.defaultForeground() };
   // The info line starts under the title, past the button's padding and its
   // number.
   const indentOf = (brief: Summary) => ` ${brief.id} · `.length;

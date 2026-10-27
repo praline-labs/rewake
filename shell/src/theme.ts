@@ -28,6 +28,9 @@ export type Theme = {
   // draws no dim over the terminal's own foreground, so it is a colour of its
   // own, halfway to the background where the terminal said both.
   faint: string;
+  // faintOnIdle is faint words on a button's grey, a closed brief's title:
+  // faint itself is that grey where the terminal did not say both colours.
+  faintOnIdle: string;
   // selection is the colours of a selection over the shell's own rows, the
   // ones a pane's has: the widget swaps a selected cell's colours, and a
   // pane's text is mostly the default foreground on the default background.
@@ -45,6 +48,10 @@ const fallback = {
 // bandShare is how far the band moves from the background towards the ink
 // on it: enough to read as a band, not as a bar.
 const bandShare = 0.06;
+
+// faintShare is how far faintOnIdle moves from the ink on the grey towards
+// the grey: far enough to read as faint, not so far that it fades into it.
+const faintShare = 0.4;
 
 export function themeOf(colors: TerminalColors | undefined): Theme {
   const p = colors?.palette ?? [];
@@ -64,6 +71,7 @@ export function themeOf(colors: TerminalColors | undefined): Theme {
       background && colors?.defaultForeground
         ? mix(colors.defaultForeground, background, 0.5)
         : (p[8] ?? fallback.idle),
+    faintOnIdle: mix(ink(idle), idle, faintShare),
     band: background && mix(background, ink(background), bandShare),
     selection: { bg: selected, fg: background ?? ink(selected) },
   };
@@ -94,7 +102,7 @@ function luminance(hex: string): number {
   return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!;
 }
 
-function contrast(a: string, b: string): number {
+export function contrast(a: string, b: string): number {
   const [x, y] = [luminance(a), luminance(b)].sort((m, n) => n - m);
   return (x! + 0.05) / (y! + 0.05);
 }

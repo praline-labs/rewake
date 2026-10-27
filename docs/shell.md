@@ -376,7 +376,9 @@ outlives a worker being chosen over it, as a worker's screen does.
   `3 · Auth refactor` (`headOf`, `shell/src/briefs.ts`), is a button on the buttons' grey; the
   second, faint and indented under the title, is `2/5 · 4 comments · write-claude, review-claude
   (ended)` (`infoOf`): a binding whose run has `ended` is marked so, and a closed brief says
-  `closed` there, its title's words faint too. Oldest first, so a new brief lands at the bottom
+  `closed` there, its title's words in a faint of their own for the grey (`faintOnIdle`,
+  `shell/src/theme.ts`: the ink on the grey moved 40% towards it), since the faint colour is that
+  very grey where the terminal did not say its foreground and background. Oldest first, so a new brief lands at the bottom
   (the owner, the same day: «новое добавляется вверх, а не вниз»): the open ones by id, then the
   closed ones by id (`ordered`); the CLI's own JSON stays newest first. ↑ ↓ and Enter, or a click
   on either line, open one; the selection, in a pane's selection colours, covers the first line
