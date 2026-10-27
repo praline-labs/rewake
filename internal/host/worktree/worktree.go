@@ -181,40 +181,69 @@ func Create(root, from, name string) (Record, error) {
 	if name != "" && !ValidName(name) {
 		return Record{}, &UnusableError{Reason: fmt.Sprintf("the worktree name %q is not usable: %s", name, NameRule)}
 	}
-	source, err := inspect(from)
+	source, directory, err := locate(root, from)
 	if err != nil {
 		return Record{}, err
 	}
-	// Git would list the checkout among the repository's own files, and an
-	// agent searching the repository would find a second copy of it. The main
-	// checkout is asked too: a launch from a linked one stands in another top.
-	for _, top := range append([]string{source.Source}, mainTops(source.CommonDir)...) {
-		if top != "" && inside(resolved(root), resolved(top)) {
-			return Record{}, &UnusableError{Reason: fmt.Sprintf("the worktree directory %s is inside the repository at %s; set %s to a directory outside it", root, top, RootEnv)}
-		}
-	}
-	directory := filepath.Join(root, source.Repository)
-	if err := os.MkdirAll(root, 0o755); err != nil {
-		return Record{}, fmt.Errorf("cannot create %s: %w", root, err)
-	}
 	var record Record
-	err = withRepositoryLock(directory, func() error {
-		if err := os.MkdirAll(directory, 0o755); err != nil {
-			return fmt.Errorf("cannot create %s: %w", directory, err)
-		}
-		made, err := add(source, directory, name)
-		if err != nil {
-			// Only when empty: a repository's directory holding other
-			// checkouts stays.
-			_ = os.Remove(directory)
-		}
-		record = made
+	err = inDirectory(directory, func() (err error) {
+		record, err = add(source, directory, name)
 		return err
 	})
 	if err != nil {
 		return Record{}, err
 	}
 	return record, nil
+}
+
+// locate inspects the repository holding from and makes root, answering the
+// repository and the directory under root its checkouts go in. The root must lie
+// outside every checkout of the repository: git would list the checkout among the
+// repository's own files, and an agent searching the repository would find a
+// second copy of it. The main checkout is asked too: a launch from a linked one
+// stands in another top.
+func locate(root, from string) (Record, string, error) {
+	source, err := inspect(from)
+	if err != nil {
+		return Record{}, "", err
+	}
+	for _, top := range append([]string{source.Source}, mainTops(source.CommonDir)...) {
+		if top != "" && inside(resolved(root), resolved(top)) {
+			return Record{}, "", &UnusableError{Reason: fmt.Sprintf("the worktree directory %s is inside the repository at %s; set %s to a directory outside it", root, top, RootEnv)}
+		}
+	}
+	if err := os.MkdirAll(root, 0o755); err != nil {
+		return Record{}, "", fmt.Errorf("cannot create %s: %w", root, err)
+	}
+	return source, filepath.Join(root, source.Repository), nil
+}
+
+// inDirectory runs build in directory under the repository's lock. A directory
+// left empty by a build that failed is removed; one holding other checkouts stays.
+func inDirectory(directory string, build func() error) error {
+	return withRepositoryLock(directory, func() error {
+		if err := os.MkdirAll(directory, 0o755); err != nil {
+			return fmt.Errorf("cannot create %s: %w", directory, err)
+		}
+		err := build()
+		if err != nil {
+			_ = os.Remove(directory)
+		}
+		return err
+	})
+}
+
+// place claims a record's name and checks it out at its path, then copies in
+// what .worktreeinclude asks for. A record with a branch is a launch's, one
+// without is detached at its commit: a review's.
+func place(source, record Record) (Record, error) {
+	if err := claim(record); err != nil {
+		return Record{}, err
+	}
+	if err := checkout(source, record); err != nil {
+		return Record{}, err
+	}
+	return keepIncluded(include(record)), nil
 }
 
 // add claims a name in directory and checks the source's commit out under it
@@ -230,19 +259,13 @@ func add(source Record, directory, name string) (Record, error) {
 		record.Path = filepath.Join(directory, flatName(record.Name))
 		record.CreatedAt = time.Now().UTC()
 		record.Launcher = launcher()
-		err := claim(record)
+		made, err := place(source, record)
 		var exists *ExistsError
 		var taken *BranchTakenError
 		if name == "" && (errors.As(err, &exists) || errors.As(err, &taken)) && try < generatedTries {
 			continue
 		}
-		if err != nil {
-			return Record{}, err
-		}
-		if err := checkout(source, record); err != nil {
-			return Record{}, err
-		}
-		return keepIncluded(include(record)), nil
+		return made, err
 	}
 }
 
@@ -252,9 +275,11 @@ func add(source Record, directory, name string) (Record, error) {
 // and it goes only while it is still at the commit and no checkout has it out;
 // the directory goes only when empty.
 func unclaim(record Record) {
-	if tip, err := refTip(record.CommonDir, branchRef(record.Branch)); err == nil && tip == record.Commit {
-		if at, err := checkedOutAt(record.CommonDir, branchRef(record.Branch)); err == nil && len(at) == 0 {
-			_ = gitDir(record.CommonDir, "update-ref", "-d", branchRef(record.Branch), record.Commit)
+	if record.Branch != "" {
+		if tip, err := refTip(record.CommonDir, branchRef(record.Branch)); err == nil && tip == record.Commit {
+			if at, err := checkedOutAt(record.CommonDir, branchRef(record.Branch)); err == nil && len(at) == 0 {
+				_ = gitDir(record.CommonDir, "update-ref", "-d", branchRef(record.Branch), record.Commit)
+			}
 		}
 	}
 	if info, err := os.Lstat(record.Path); err == nil && info.IsDir() {
@@ -286,6 +311,9 @@ func claim(record Record) error {
 			return &ExistsError{Record: record}
 		}
 		return err
+	}
+	if record.Branch == "" {
+		return nil
 	}
 	// An empty old value creates the ref only when there is none.
 	err = gitDir(record.CommonDir, "update-ref", "-m", "branch: Created from "+record.Commit, branchRef(record.Branch), record.Commit, "")

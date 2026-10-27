@@ -10,6 +10,8 @@ import (
 	"syscall"
 	"testing"
 	"time"
+
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // swap replaces a test hook for one test.
@@ -103,6 +105,32 @@ func TestAnAddMeetingAHalfWrittenEntryIsTriedOnceMore(t *testing.T) {
 	}
 	if head := must(t, record.Path, "rev-parse", "--abbrev-ref", "HEAD"); head != "retried" {
 		t.Errorf("checked out %q", head)
+	}
+}
+
+// A review's detached add meets the same half-written entry and is tried once
+// more as well.
+func TestADetachedAddMeetingAHalfWrittenEntryIsTriedOnceMore(t *testing.T) {
+	isolate(t)
+	t.Setenv(state.DirEnv, t.TempDir())
+	source := repository(t, "project")
+	commit, err := Resolve(source, "HEAD")
+	if err != nil {
+		t.Fatal(err)
+	}
+	entry := halfEntry(t, filepath.Join(source, ".git"), "elsewhere")
+	var adds int
+	swap(t, &beforeAdd, func(Record) { adds++ })
+	swap(t, &beforeRetry, func() { write(t, filepath.Join(entry, "commondir"), "../..\n") })
+	record, err := CreateReview(t.TempDir(), source, commit, Review{Brief: "3", Reviewer: Owner{Name: "review-pi", Epoch: "1.2", Dir: "/rooms/r"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if adds != 2 {
+		t.Errorf("%d adds", adds)
+	}
+	if head := must(t, record.Path, "rev-parse", "HEAD"); head != commit {
+		t.Errorf("checked out %s, want %s", head, commit)
 	}
 }
 

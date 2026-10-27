@@ -1,9 +1,7 @@
 package worktree
 
 import (
-	"errors"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -49,28 +47,16 @@ func CreateReview(root, from, commit string, review Review) (Record, error) {
 	if !ValidName(name) {
 		return Record{}, &UnusableError{Reason: fmt.Sprintf("the review checkout's name %q is not usable: %s", name, NameRule)}
 	}
-	source, err := inspect(from)
+	source, directory, err := locate(root, from)
 	if err != nil {
 		return Record{}, err
-	}
-	for _, top := range append([]string{source.Source}, mainTops(source.CommonDir)...) {
-		if top != "" && inside(resolved(root), resolved(top)) {
-			return Record{}, &UnusableError{Reason: fmt.Sprintf("the worktree directory %s is inside the repository at %s; set %s to a directory outside it", root, top, RootEnv)}
-		}
-	}
-	directory := filepath.Join(root, source.Repository)
-	if err := os.MkdirAll(root, 0o755); err != nil {
-		return Record{}, fmt.Errorf("cannot create %s: %w", root, err)
 	}
 	record := source
 	record.Name, record.Commit, record.Subdir = name, commit, ""
 	record.Path = filepath.Join(directory, flatName(name))
 	record.CreatedAt = time.Now().UTC()
 	record.Review = &review
-	err = withRepositoryLock(directory, func() error {
-		if err := os.MkdirAll(directory, 0o755); err != nil {
-			return fmt.Errorf("cannot create %s: %w", directory, err)
-		}
+	err = inDirectory(directory, func() error {
 		if held, err := read(recordPath(record)); err == nil {
 			if held.Review != nil && held.Review.Reviewer == review.Reviewer && held.Commit == commit {
 				record = held
@@ -78,29 +64,9 @@ func CreateReview(root, from, commit string, review Review) (Record, error) {
 			}
 			return &ExistsError{Record: held}
 		}
-		if _, err := os.Lstat(record.Path); err == nil {
-			return &ExistsError{Record: record}
-		}
-		data, err := encode(record)
-		if err != nil {
-			return err
-		}
-		if err := publishRecord(recordPath(record), data); err != nil {
-			if errors.Is(err, errRecordTaken) {
-				return &ExistsError{Record: record}
-			}
-			return err
-		}
-		if err := git(source.Source, "worktree", "add", "--detach", record.Path, commit); err != nil {
-			_ = os.Remove(recordPath(record))
-			if info, statErr := os.Lstat(record.Path); statErr == nil && info.IsDir() {
-				_ = os.Remove(record.Path)
-			}
-			_ = os.Remove(directory)
-			return fmt.Errorf("git worktree add --detach failed: %w", err)
-		}
-		record = keepIncluded(include(record))
-		return nil
+		made, err := place(source, record)
+		record = made
+		return err
 	})
 	if err != nil {
 		return Record{}, err

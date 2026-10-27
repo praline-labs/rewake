@@ -124,9 +124,16 @@ var (
 // this checkout's left behind. That one failure is tried again once: what it
 // met passes in a moment, and a second failure is something else.
 func checkout(source, record Record) error {
+	// A record without a branch is a review's, detached at its commit.
+	args := []string{"worktree", "add", record.Path, record.Branch}
+	what := "git worktree add"
+	if record.Branch == "" {
+		args = []string{"worktree", "add", "--detach", record.Path, record.Commit}
+		what += " --detach"
+	}
 	add := func() error {
 		beforeAdd(record)
-		return git(source.Source, "worktree", "add", record.Path, record.Branch)
+		return git(source.Source, args...)
 	}
 	err := add()
 	if err != nil && halfWritten.MatchString(err.Error()) && !exists(record.Path) {
@@ -135,7 +142,7 @@ func checkout(source, record Record) error {
 	}
 	if err != nil {
 		unclaim(record)
-		return fmt.Errorf("git worktree add failed: %w", err)
+		return fmt.Errorf("%s failed: %w", what, err)
 	}
 	return nil
 }

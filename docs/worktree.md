@@ -174,6 +174,9 @@ reviewer, not for a launch ([briefs.md](briefs.md#a-reviewers-checkout)): the co
 names, resolved in the repository main runs in, checked out with
 `git worktree add --detach` under the repository's lock, in the same place as a launch's,
 `<repository>-<hash>/review-<id>-<reviewer>-<commit>/`, copies of `.worktreeinclude` and all.
+It is built by the same steps as a launch's — the outside-root check, the lock, the claim of
+record and path, the add with its retry of a half-written entry (below), the inclusion — and
+differs in having no branch to claim, and in answering the same review again as it is.
 Its record has no branch and no session, so a space never takes it for its worker's own
 checkout, and a `review` field, `{brief, reviewer: {name, room, epoch, harness, dir}}`.
 `worktree ls` shows its owner as `<reviewer> (review of brief <id>)`; `land` and `finish` refuse
