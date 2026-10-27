@@ -19,6 +19,10 @@ export interface RoomView {
   // briefs are the room's briefs, open ones and closed, newest first as brief list gives them;
   // absent when none, when --briefs was not asked, and unless asMain.
   briefs?: BriefView[]
+  // briefsProblem is why the briefs could not be read at all, when --briefs was asked and the
+  // list failed as brief list fails: the shell shows it as the list's line, never as no briefs;
+  // briefs is absent then.
+  briefsProblem?: string
   // unreadableBriefs are the entries of the briefs directory that do not read as a brief:
   // shown, never taken for absent; absent as briefs is.
   unreadableBriefs?: Problem[]

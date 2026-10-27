@@ -2,7 +2,6 @@ import { expect, test } from "bun:test";
 import {
   type Answer,
   backText,
-  changes,
   detailOf,
   foldText,
   headOf,
@@ -11,6 +10,7 @@ import {
   navOf,
   ordered,
   pickOf,
+  redraws,
   rowsOf,
   type Summary,
   stepOf,
@@ -108,15 +108,29 @@ test("the opened brief is the one asked for, with its text", () => {
   }
 });
 
-test("an answer passes only when it differs from the last that passed", () => {
-  const answers: Answer<number>[] = [
-    { ok: true, value: 1 },
-    { ok: true, value: 1 },
-    { ok: false, line: "did not read" },
-    { ok: true, value: 2 },
-  ];
-  const changed = changes<number>();
-  expect(answers.filter(changed)).toEqual([answers[0]!, answers[2]!, answers[3]!]);
+test("a list that failed to read shows its reason, not an empty list", () => {
+  const failed = listOf(view({ briefsProblem: "index.json: invalid character" }));
+  expect(failed).toEqual({
+    ok: false,
+    line: "the briefs did not read: index.json: invalid character",
+  });
+});
+
+test("an answer is drawn when it differs from what shows, whatever was shown before", () => {
+  const good: Answer<number> = { ok: true, value: 1 };
+  const bad: Answer<number> = { ok: false, line: "did not read" };
+  const nothing = { same: () => false };
+  const shows = (n: number, problem?: string) => ({ problem, same: (v: number) => v === n });
+  // The same value is not drawn again; another is.
+  expect(redraws(good, shows(1))).toBe(false);
+  expect(redraws({ ok: true, value: 2 }, shows(1))).toBe(true);
+  // Read brief A, open B, return to A: the cleared view draws A's unchanged answer.
+  expect(redraws(good, nothing)).toBe(true);
+  // A line shown is replaced by the next good answer, though its value is the one shown.
+  expect(redraws(good, shows(1, "did not read"))).toBe(true);
+  // The same line is not drawn twice; another is.
+  expect(redraws(bad, shows(1, "did not read"))).toBe(false);
+  expect(redraws(bad, shows(1))).toBe(true);
 });
 
 test("a time that does not parse is shown as it came", () => {

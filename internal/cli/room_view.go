@@ -72,7 +72,11 @@ func handleRoom(ctx *Context, call Call) error {
 	if asMain {
 		home := quietHomeOf(dir)
 		if call.Switch("briefs") {
-			view.Briefs, view.UnreadableBriefs = briefRowsOf(home)
+			var problem error
+			view.Briefs, view.UnreadableBriefs, problem = briefRowsOf(home)
+			if problem != nil {
+				view.BriefsProblem = ptr(problem.Error())
+			}
 		}
 		if briefID > 0 {
 			view.Brief = briefOpened(home, briefID)
@@ -154,11 +158,12 @@ func spaceRowsOf(dir string, records []space.Record) []SpaceRow {
 }
 
 // briefRowsOf are the room's briefs, closed ones with them, and the entries
-// that do not read as one.
-func briefRowsOf(home taskbrief.Home) ([]BriefView, []Problem) {
+// that do not read as one; or why the list cannot be read, as brief list
+// fails, so the shell never shows a list that failed as an empty one.
+func briefRowsOf(home taskbrief.Home) ([]BriefView, []Problem, error) {
 	briefs, problems, err := taskbrief.List(home, true)
 	if err != nil {
-		return nil, nil
+		return nil, nil, err
 	}
 	rows := make([]BriefView, 0, len(briefs))
 	for _, brief := range briefs {
@@ -168,7 +173,7 @@ func briefRowsOf(home taskbrief.Home) ([]BriefView, []Problem) {
 	for _, problem := range problems {
 		unreadable = append(unreadable, Problem{Path: problem.Path, Why: problem.Why})
 	}
-	return rows, unreadable
+	return rows, unreadable, nil
 }
 
 // briefOpened is one brief with its text and comments, nil where it does not

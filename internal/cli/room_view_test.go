@@ -10,7 +10,33 @@ import (
 
 	"github.com/praline-labs/rewake/internal/core/session"
 	"github.com/praline-labs/rewake/internal/core/taskbrief"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
+
+// A list that brief list cannot read is a failure of the view's briefs, with
+// its reason, never an empty list: the shell shows it as the list's line.
+func TestTheRoomViewCarriesAFailedBriefList(t *testing.T) {
+	dir, _ := briefWorld(t)
+	lead := otherRun(t, dir, "lead")
+	markMain(t, dir, "lead")
+	as(t, lead)
+	shell := os.Getpid()
+	shellParent = func() int { return shell }
+	t.Cleanup(func() { shellParent = os.Getppid })
+	if code, _, errOut := run("brief", "new", "# Real brief\n"); code != ExitOK {
+		t.Fatalf("new: %d %s", code, errOut)
+	}
+	if err := state.WriteAtomic(filepath.Join(state.BriefsPath(dir), "index.json"), []byte("not json")); err != nil {
+		t.Fatal(err)
+	}
+	if code, _, _ := run("brief", "list", "--closed", "--json"); code == ExitOK {
+		t.Fatal("brief list reads what the view must report")
+	}
+	view := roomView(t, "--wrapper", strconv.Itoa(lead.ServicePID), "--briefs")
+	if !view.AsMain || view.BriefsProblem == nil || *view.BriefsProblem == "" || len(view.Briefs) != 0 {
+		t.Fatalf("the failed list: %+v", view)
+	}
+}
 
 // roomView is a room view's answer, read the way the shell reads it.
 func roomView(t *testing.T, args ...string) RoomView {

@@ -15,7 +15,6 @@ import {
 import { ShellRow, selecting, separator } from "./bar.tsx";
 import {
   type Answer,
-  changes,
   cut,
   type Detail,
   detailOf,
@@ -30,6 +29,7 @@ import {
   type Pick,
   pickOf,
   type Row,
+  redraws,
   rowsOf,
   type Summary,
   stepOf,
@@ -55,16 +55,19 @@ const [at, setAt] = createSignal<Pick>();
 // The closed briefs unfolded under their row; kept while the shell runs.
 const [unfolded, setUnfolded] = createSignal(false);
 
-const listChanged = changes<Listed>();
-const detailChanged = changes<Detail>();
+const sameJson = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
-// keep shows an answer when it is new: its value, or the line instead.
-function keep<T>(answer: Answer<T>, changed: (a: Answer<T>) => boolean, set: (v: T) => void) {
-  if (!changed(answer)) return;
-  if (answer.ok) {
-    setProblem(undefined);
-    set(answer.value);
-  } else setProblem(answer.line);
+// keep shows an answer when it is new to what shows: its value, or the line
+// instead.
+// It says whether the answer was a good one.
+function keep<T>(answer: Answer<T>, same: (value: T) => boolean, set: (v: T) => void): boolean {
+  if (redraws(answer, { problem: problem(), same })) {
+    if (answer.ok) {
+      setProblem(undefined);
+      set(answer.value);
+    } else setProblem(answer.line);
+  }
+  return answer.ok;
 }
 
 // takeBriefs is what each read of the room view says of the briefs, as far as
@@ -73,12 +76,17 @@ function keep<T>(answer: Answer<T>, changed: (a: Answer<T>) => boolean, set: (v:
 export function takeBriefs(view: RoomView | undefined, asked: Want) {
   if (!asked.briefs) return;
   if (!view) return setProblem("the room did not read");
-  keep(listOf(view), listChanged, (v) => {
-    setList(ordered(v.briefs));
-    setLost(v.unreadable);
-  });
-  if (asked.brief !== undefined && asked.brief === opened())
-    keep(detailOf(view, asked.brief), detailChanged, setDetail);
+  const listed = keep(
+    listOf(view),
+    (v: Listed) => sameJson(ordered(v.briefs), list()) && sameJson(v.unreadable, lost()),
+    (v) => {
+      setList(ordered(v.briefs));
+      setLost(v.unreadable);
+    },
+  );
+  // A list that failed keeps its line: the brief opened must not hide it.
+  if (listed && asked.brief !== undefined && asked.brief === opened())
+    keep(detailOf(view, asked.brief), (v: Detail) => sameJson(v, detail()), setDetail);
 }
 
 // briefOpen is one brief showing, not the list, for the hints.

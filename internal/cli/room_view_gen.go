@@ -21,6 +21,11 @@ type RoomView struct {
 	// absent when none, when --briefs was not asked, and unless asMain.
 	Briefs []BriefView `json:"briefs,omitempty"`
 
+	// BriefsProblem is why the briefs could not be read at all, when --briefs was asked and the
+	// list failed as brief list fails: the shell shows it as the list's line, never as no briefs;
+	// briefs is absent then.
+	BriefsProblem *string `json:"briefsProblem,omitempty"`
+
 	// UnreadableBriefs are the entries of the briefs directory that do not read as a brief: shown,
 	// never taken for absent; absent as briefs is.
 	UnreadableBriefs []Problem `json:"unreadableBriefs,omitempty"`

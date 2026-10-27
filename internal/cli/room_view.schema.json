@@ -12,6 +12,7 @@
         "spaces": {"type": "array", "items": {"$ref": "#/$defs/SpaceRow"}, "description": "are the spaces not over, in the order they opened."},
         "sessions": {"type": "array", "items": {"$ref": "#/$defs/SessionRow"}, "description": "are the room's running sessions."},
         "briefs": {"type": "array", "items": {"$ref": "#/$defs/BriefView"}, "description": "are the room's briefs, open ones and closed, newest first as brief list gives them; absent when none, when --briefs was not asked, and unless asMain."},
+        "briefsProblem": {"type": "string", "description": "is why the briefs could not be read at all, when --briefs was asked and the list failed as brief list fails: the shell shows it as the list's line, never as no briefs; briefs is absent then."},
         "unreadableBriefs": {"type": "array", "items": {"$ref": "#/$defs/Problem"}, "description": "are the entries of the briefs directory that do not read as a brief: shown, never taken for absent; absent as briefs is."},
         "brief": {"$ref": "#/$defs/BriefView", "description": "is the brief --brief named, with its text and comments; absent unless it was asked, asMain and it reads."}
       },

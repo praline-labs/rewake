@@ -160,6 +160,8 @@ const unknownMain = "main's run is not known yet; asking again";
 // from a caller that did not prove to be main's shell carries none.
 export function listOf(view: RoomView): Answer<Listed> {
   if (!view.asMain) return { ok: false, line: unknownMain };
+  if (view.briefsProblem !== undefined)
+    return { ok: false, line: `the briefs did not read: ${view.briefsProblem}` };
   return {
     ok: true,
     value: { briefs: view.briefs ?? [], unreadable: view.unreadableBriefs ?? [] },
@@ -176,15 +178,15 @@ export function detailOf(view: RoomView, id: number): Answer<Detail> {
   return { ok: true, value: { ...brief, text: brief.text, comments: brief.comments ?? [] } };
 }
 
-// changes is a filter that lets an answer through only when it differs from
-// the last one it let through: the view is redrawn, and its scroll position
-// reset, only by a change.
-export function changes<T>() {
-  let last: string | undefined;
-  return (answer: Answer<T>): boolean => {
-    const key = JSON.stringify(answer);
-    if (key === last) return false;
-    last = key;
-    return true;
-  };
+// redraws says whether an answer must be drawn, given what shows now: the
+// problem line, if one does, and whether the value shown is this one. Judged
+// against what shows and not against the last answer, so a state that was
+// cleared, or a line that was shown, is always replaced by the next good
+// answer; the view is redrawn, and its scroll position reset, only by a change.
+export function redraws<T>(
+  answer: Answer<T>,
+  shown: { problem?: string; same: (value: T) => boolean },
+): boolean {
+  if (!answer.ok) return shown.problem !== answer.line;
+  return shown.problem !== undefined || !shown.same(answer.value);
 }

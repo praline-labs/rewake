@@ -436,7 +436,7 @@ outlives a worker being chosen over it, as a worker's screen does.
   brief's row being made of it) and `--brief <id>` to while a brief shows (its text and comments);
   nothing is asked while a worker is chosen in their place (`wanting` in `shell/src/room.ts`,
   `takeBriefs` in `shell/src/briefs.tsx`). Briefs come only to the proven shell of main
-  (`asMain`). An answer is drawn only when it differs
+  (`asMain`); a list that cannot be read comes as `briefsProblem` and shows as the list's line, never as no briefs. An answer is drawn only when it differs
   from the last, and the scroll position stays. A read that fails, does not parse, or comes before
   main's run is known shows one line on the view's bottom row and is replaced by the next good
   answer; it never ends the shell.
