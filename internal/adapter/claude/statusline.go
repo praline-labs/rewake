@@ -3,13 +3,9 @@ package claude
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"io"
-	"net"
-	"net/http"
 	"os"
 	"os/exec"
-	"strconv"
 	"syscall"
 	"time"
 
@@ -19,17 +15,10 @@ import (
 
 // The status line of every run with a mod (docs/claude.md#the-cache-ttl):
 // Claude Code runs `rewake statusline` after each response and on a timer,
-// with its own JSON on stdin. Its prompt_cache is the only place the cache's
-// lifetime is told, its effort.level the only place an /effort shows before
-// the next request, and its model.display_name and thinking.enabled the only
-// place the model's own name and whether it thinks are told — the mod has
-// the model's id alone (docs/research-claude-mod.md#the-models-name-and-thinking) — so the
-// command forwards them to the run's host over the mod socket and prints the
-// person's own status line, if their settings.json names one, in its place.
-
-// statusLineRefresh is how often Claude Code runs the command beside its own
-// events; the expiry it reports is absolute, so a slow timer loses nothing.
-const statusLineRefresh = 30
+// with its own JSON on stdin. The command forwards what the input tells to
+// the run's host over the mod socket and prints the person's own status line,
+// if their settings.json names one, in its place. What it reads, posts and
+// installs is statusline_contract.go; this file runs it.
 
 // The two deadlines are separate and the two jobs run side by side: the
 // telemetry is optional and must not spend the person's line's time, and the
@@ -46,38 +35,20 @@ const statusLineGuardEnv = "REWAKE_STATUSLINE_PASSTHROUGH"
 
 var _ adapter.StatusLiner = claudeHarness{}
 
-type promptCache struct {
-	Warm      bool    `json:"warm"`
-	TTL       *string `json:"ttl"`
-	ExpiresAt *int64  `json:"expires_at"`
-}
-
 // StatusLine posts what the input tells of the session to the run's host and
 // prints the person's own line. Either failing leaves the other alone.
 func (claudeHarness) StatusLine(ctx context.Context, input []byte, out io.Writer) {
 	if os.Getenv(statusLineGuardEnv) != "" {
 		return
 	}
-	var seen struct {
-		PromptCache *promptCache `json:"prompt_cache"`
-		Effort      struct {
-			Level any `json:"level"`
-		} `json:"effort"`
-		Model struct {
-			DisplayName string `json:"display_name"`
-		} `json:"model"`
-		Thinking struct {
-			Enabled *bool `json:"enabled"`
-		} `json:"thinking"`
-	}
+	seen, parsed := parseLineInput(input)
 	posted := make(chan struct{})
 	go func() {
 		defer close(posted)
-		if json.Unmarshal(input, &seen) != nil {
+		if !parsed {
 			return
 		}
-		body := lineBody(seen.PromptCache, effortText(seen.Effort.Level), seen.Model.DisplayName, seen.Thinking.Enabled)
-		if body != (modhost.StatusLineRequest{}) {
+		if body := seen.body(); body != (modhost.StatusLineRequest{}) {
 			post, cancel := context.WithTimeout(ctx, postTimeout)
 			defer cancel()
 			postLine(post, os.Getenv(modSocketEnv), body)
@@ -85,78 +56,16 @@ func (claudeHarness) StatusLine(ctx context.Context, input []byte, out io.Writer
 	}()
 	line, cancel := context.WithTimeout(ctx, statusLineTimeout)
 	defer cancel()
-	personal(line, input, out)
+	personal(line, input, seen.projectDir(), out)
 	<-posted
-}
-
-// effortText is an effort level as the mod sends a request's: a level's
-// name, or an integer budget as its decimal text; empty for none.
-func effortText(level any) string {
-	switch level := level.(type) {
-	case string:
-		return level
-	case float64:
-		return strconv.FormatFloat(level, 'f', -1, 64)
-	}
-	return ""
-}
-
-// lineBody is what the host is told; empty when the input told nothing.
-func lineBody(cache *promptCache, effort, modelName string, thinking *bool) modhost.StatusLineRequest {
-	var body modhost.StatusLineRequest
-	if cache != nil {
-		body.Warm, body.Ttl = &cache.Warm, cache.TTL
-		if cache.ExpiresAt != nil {
-			at := int(*cache.ExpiresAt)
-			body.ExpiresAt = &at
-		}
-	}
-	if effort != "" {
-		body.Effort = &effort
-	}
-	if modelName != "" {
-		body.ModelName = &modelName
-	}
-	body.Thinking = thinking
-	return body
-}
-
-func postLine(ctx context.Context, socket string, body modhost.StatusLineRequest) {
-	if socket == "" {
-		return
-	}
-	data, err := json.Marshal(body)
-	if err != nil {
-		return
-	}
-	client := http.Client{Transport: &http.Transport{
-		DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
-			return (&net.Dialer{}).DialContext(ctx, "unix", socket)
-		},
-		DisableKeepAlives: true,
-	}}
-	request, err := http.NewRequestWithContext(ctx, http.MethodPost, "http://rewake"+modhost.PathStatusLine, bytes.NewReader(data))
-	if err != nil {
-		return
-	}
-	request.Header.Set("Content-Type", "application/json")
-	if response, err := client.Do(request); err == nil {
-		_ = response.Body.Close()
-	}
 }
 
 // personal runs the person's own status line — the one their settings name
 // for the session's project (ownStatusLine) — with the same input, and
 // copies its output: the run's own statusLine shadows it, and the person's
 // line should not be lost to the cache's.
-func personal(ctx context.Context, input []byte, out io.Writer) {
-	var seen struct {
-		Workspace struct {
-			ProjectDir string `json:"project_dir"`
-		} `json:"workspace"`
-	}
-	_ = json.Unmarshal(input, &seen)
-	line := ownStatusLine(os.Getenv(configDirEnv), projectDir(seen.Workspace.ProjectDir))
+func personal(ctx context.Context, input []byte, project string, out io.Writer) {
+	line := ownStatusLine(os.Getenv(configDirEnv), project)
 	if line.Type != "command" || line.Command == "" {
 		return
 	}
