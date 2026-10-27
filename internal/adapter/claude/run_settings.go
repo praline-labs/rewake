@@ -40,7 +40,7 @@ const enterTool = "EnterWorktree"
 // holds EnterWorktree (defaults version 3). It says whether the run may
 // enter. A worker raised from no template — only a test build's direct
 // launch — has no memory.
-func runSettings(settings map[string]any, folder, root, memoryKey string, enter bool, runDir string) (string, bool, []string, error) {
+func runSettings(settings map[string]any, folder, root, memoryKey string, enter bool, runDir, executable string) (string, bool, []string, error) {
 	overlay := map[string]any{}
 	if memoryKey != "" && settings["autoMemoryEnabled"] != false {
 		dir, err := memoryDir(folder, root, memoryKey)
@@ -56,7 +56,7 @@ func runSettings(settings map[string]any, folder, root, memoryKey string, enter 
 	// The status line is where Claude Code tells the cache's lifetime
 	// (statusline.go); it needs the run's host, which a launch with no run
 	// directory has no mod for.
-	if executable, err := os.Executable(); err == nil && runDir != "" {
+	if executable := orSelf(executable); executable != "" && runDir != "" {
 		line, _ := settings["statusLine"].(map[string]any)
 		overlay["statusLine"] = statusLineSetting(executable, refreshOf(line))
 	}
@@ -123,8 +123,8 @@ func mainSettings(request adapter.LaunchRequest, args []string) profile {
 			return profile{notes: []string{"no status line of rewake's: the launch passes its own " + flag + ", so main's row shows the model's id and no cache life"}}
 		}
 	}
-	executable, err := os.Executable()
-	if err != nil {
+	executable := orSelf(request.Executable)
+	if executable == "" {
 		return profile{}
 	}
 	cwd, _ := os.Getwd()
@@ -134,4 +134,14 @@ func mainSettings(request adapter.LaunchRequest, args []string) profile {
 		return profile{}
 	}
 	return profile{args: []string{settingsFlag, string(data)}}
+}
+
+// orSelf is the rewake the status line runs: the room's own copy the host
+// named (docs/rules/state.md#the-rooms-own-copy), else this one.
+func orSelf(executable string) string {
+	if executable != "" {
+		return executable
+	}
+	self, _ := os.Executable()
+	return self
 }

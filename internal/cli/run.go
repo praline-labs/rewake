@@ -34,6 +34,9 @@ func Run(catalog adapter.Catalog, argv []string, stdout, stderr io.Writer) int {
 		return report(ctx, err)
 	}
 	ctx.JSON = result.Call.Switch("json")
+	if result.Call.Command != nil && result.Call.Command.Name != "guide" && !result.Help && !result.Guide && !result.Version {
+		ctx.argv = argv
+	}
 	class := formAccess(result)
 	// A refused lease is answered and nothing more.
 	return ctx.within(class, result.Call, func() int { return runParsed(ctx, result) }, func(err error) int {

@@ -129,6 +129,10 @@ type Context struct {
 	// the binary handed to Run.
 	table   *table
 	aliases *launch.Set
+	// argv is the invocation's arguments, which a hand-off to the room's own
+	// copy passes on (handoff.go); empty for a form that is no command of a
+	// room — the guide, help, the version — which this build answers.
+	argv []string
 }
 
 // Call is one parsed invocation.

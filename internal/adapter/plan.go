@@ -36,6 +36,10 @@ type LaunchRequest struct {
 	// replaces the program and nothing else: every argument, variable, socket
 	// and setting the adapter adds is the same.
 	Command string
+	// Executable is the rewake the run's tools and status line run: the
+	// room's own copy of its build (docs/rules/state.md#the-rooms-own-copy),
+	// or the launching rewake's path when the room keeps none.
+	Executable string
 	// ControlDir is where this run takes control requests, made by the
 	// wrapper before the launch and removed after it; empty when it could not
 	// be made (docs/remote-control.md).

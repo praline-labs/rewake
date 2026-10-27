@@ -42,6 +42,13 @@ the worker reads again — a note wakes it — the task's report reaches main. T
 turns open and, while a file the scenario writes exists, reads no mail (`RW_SHIM_LEAVE_UNREAD`);
 the reminder is told from other notices by its words.
 
+`pinned-build`: a room keeps its build across an upgrade. main and a worker start from an install
+of the case's own, which is then replaced by another build — the same program with bytes
+appended, so another id; the worker's `rewake send`, found on its PATH, still works and the
+room's build is the first install's; a person's `rewake list` of the new build is handed to the
+room's copy, its stderr saying so; once the sessions end, a new launch takes the new build and
+the room's copy becomes it.
+
 ## Launch, reports and what a main waits on
 
 `wrapped-launch` runs twice, in two rooms: a plain launch and one with `--command

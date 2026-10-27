@@ -65,8 +65,8 @@ no lock: later edits, commits and sessions change the answer, and it promises no
 The same name and contract in both harnesses: no input; it runs
 `$REWAKE_EXECUTABLE worktree status --json` by argv — no shell, nothing of the model's on the
 command line — and answers its JSON, or an error for a nonzero exit, a timeout, a cut answer or
-a command that could not start. `REWAKE_EXECUTABLE` is the path of the rewake that started the
-run, set by every launch over an inherited value
+a command that could not start. `REWAKE_EXECUTABLE` is the path of the room's own copy of its
+build ([rules/state.md](rules/state.md#the-rooms-own-copy)), set by every launch over an inherited value
 ([environment](design.md#environment-the-harness-receives)); without it no tool is registered.
 The bound is 60 seconds: the view reads records and git, and holds no lock to wait on.
 

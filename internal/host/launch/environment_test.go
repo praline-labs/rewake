@@ -35,6 +35,27 @@ func TestARunNamesItsOwnExecutable(t *testing.T) {
 	}
 }
 
+// A run of a room that keeps its own copy runs that copy: REWAKE_EXECUTABLE
+// names it and its directory comes first on PATH, ahead of an install's
+// directory the PATH already named.
+func TestARunRunsItsRoomsCopy(t *testing.T) {
+	t.Setenv("PATH", "/usr/lib/rewake/bin:/state/v2/rooms/default/bin:/usr/bin")
+	copied := "/state/v2/rooms/default/bin/rewake"
+	env := SessionEnv(adapter.LaunchRequest{Name: "api", Epoch: "1.2.boot", Dir: "/state", Executable: copied}, nil)
+	var path, executable string
+	for _, entry := range env {
+		if value, ok := strings.CutPrefix(entry, "PATH="); ok {
+			path = value
+		}
+		if value, ok := strings.CutPrefix(entry, ExecutableEnv+"="); ok {
+			executable = value
+		}
+	}
+	if executable != copied || path != "/state/v2/rooms/default/bin:/usr/lib/rewake/bin:/usr/bin" {
+		t.Fatalf("%s=%q, PATH=%q", ExecutableEnv, executable, path)
+	}
+}
+
 // The run's role goes to the front ends that register a role's tools, over an
 // inherited value; a probe has none.
 func TestARunNamesItsRole(t *testing.T) {

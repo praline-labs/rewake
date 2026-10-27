@@ -89,7 +89,7 @@ func workerProfile(request adapter.LaunchRequest, args []string) (profile, error
 	if err := prepareClaudeState(dir, root); err != nil {
 		return profile{}, err
 	}
-	passed, enter, notes, err := runSettings(settings, dir, root, memoryKey(request), request.WorktreeEntry, request.RunDir)
+	passed, enter, notes, err := runSettings(settings, dir, root, memoryKey(request), request.WorktreeEntry, request.RunDir, request.Executable)
 	if err != nil {
 		return profile{}, err
 	}

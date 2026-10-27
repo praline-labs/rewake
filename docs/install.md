@@ -22,9 +22,11 @@ rewake's pi. What else is left to the person — the worker templates, a project
 shell's keys, where things live — is in [user-guide.md](user-guide.md).
 
 To update, run the same `npm install -g` again; to remove, `npm uninstall -g @praline-labs/rewake`,
-and the build goes with the entry. Sessions already running keep the build they started with,
-and a room is one build: end a room's main, and its workers with it, before starting main there
-on the new build.
+and the build goes with the entry. A running room keeps the build it was launched with: its
+sessions run the room's own copy of it, a `rewake` command typed in a terminal there is handed to
+that copy with one line saying so, and restarting the room's main — its workers end with it —
+moves the room to the new build ([rules/state.md](rules/state.md#the-rooms-own-copy)). A pi
+worker raised in an old room after an update that changed the bundled pi is refused until then.
 
 **Limits** a person meets:
 

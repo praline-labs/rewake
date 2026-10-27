@@ -100,6 +100,9 @@ func Run(ctx context.Context, request Request) (int, error) {
 			return 0, err
 		}
 		defer acquired.Release()
+		if note := acquired.Note(); note != "" {
+			_, _ = fmt.Fprintln(os.Stderr, note)
+		}
 		lease = acquired
 	}
 	// The run's own hold outlasts the caller's: it goes once every worker
@@ -191,6 +194,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 		Args:       request.Args,
 		Intro:      request.Intro,
 		Command:    request.Command,
+		Executable: lease.Executable(),
 		Socket:     registry.SocketFor(request.Dir, name, epoch),
 		Epoch:      epoch,
 		Role:       role.Of(session.Role),
