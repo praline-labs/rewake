@@ -113,6 +113,13 @@ makes a moved brief known and keeps its id taken; the scan of the project's fold
 briefs again when the room was wiped with the temporary directory and the index with it. A brief
 made with `--dir` is forgotten by such a wipe, a known limit.
 
+A brief that goes with a task kept in folders, a shift task or any tracker with a folder per task,
+takes that task's folder per brief, with `--dir <task folder>`; `[briefs] dir` is only the default
+for a brief with no folder named. The folder is the link: the brief need not retell the task, it
+points to the task's own files. Close the brief (`rewake brief close <id>`) before the task's
+folder is moved or archived; a brief whose folder moved first lists as unreadable "moved", and only
+`brief close` still works on it.
+
 - **Ids** stay the room's: past the highest of the room's directories, `closed/`, the index and
   every `brief-<id>` in the project's folder, whatever room made it, so no name collides.
 - **Moved.** An indexed brief whose folder is gone or holds no `brief.json` — a task archived with

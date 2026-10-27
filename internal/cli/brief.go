@@ -55,6 +55,7 @@ func briefGroup() Group {
 				"A comment is markdown, kept line for line and shown with its author and capacity: write a one-line point first, then short bullets, one idea per line.",
 				"An edit tells nobody: send a letter with --brief for a worker to read the new text. A closed brief is archived whole; brief list --closed shows it. A brief in a project's folder is marked closed where it is.",
 				"Where a brief goes: --dir, else the project's .rewake/aliases.toml [briefs] dir = \"<path>\" (relative to main's directory), else the room's state, which a reboot may clear. Ids stay per room; a brief whose folder was moved lists as unreadable \"moved\" and rewake brief close marks it closed.",
+				"A brief beside a task kept in folders (a shift task, any tracker with a folder per task): give each brief its task's folder with --dir <task folder>; [briefs] dir is only the default for a brief with no folder named. The folder is the link, so the brief points to the task's own files rather than retelling it. Close the brief (rewake brief close <id>) before the task's folder is moved or archived.",
 				"Exit 0 done; 1 refused — not main or not a run the brief was sent to, a closed brief, a stale edition or revision; 2 a wrong call — no such brief or item, a missing or bad argument.",
 			},
 			Access:  briefAccess,
