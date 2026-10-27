@@ -62,7 +62,10 @@ const table: Record<Context["focus"] | "prefix", Entry[]> = {
   briefs: [
     { keys: "↑↓ Enter", does: "open a brief", when: (c) => !c.brief },
     { keys: "↑↓ PgUp PgDn", does: "scroll", when: (c) => c.brief === true },
-    { keys: "Esc", does: "the list", when: (c) => c.brief === true },
+    // Esc still goes back, but is never needed: it is the harnesses'
+    // interrupt, and a slip of the focus would send it to a worker.
+    { keys: "←→", does: "another brief", when: (c) => c.brief === true },
+    { keys: "Backspace", does: "the list", when: (c) => c.brief === true },
     { keys: "Ctrl+\\ ←/m", does: "main" },
     { keys: "Ctrl+\\ n/p", does: "next/previous", when: hasWorkers },
     { keys: "Ctrl+\\ z", does: (c) => (c.zoomed ? "end the zoom" : "zoom") },

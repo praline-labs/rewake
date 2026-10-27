@@ -1,10 +1,15 @@
 import { expect, test } from "bun:test";
 import {
   type Answer,
+  backText,
+  headOf,
+  infoOf,
   listOf,
+  navOf,
+  ordered,
   poll,
-  rowOf,
   type Summary,
+  stepOf,
   stripOfBriefs,
   timeOf,
   unreadableLine,
@@ -24,27 +29,43 @@ const brief: Summary = {
   ],
 };
 
-const text = (b: Summary) =>
-  rowOf(b)
-    .map((p) => p.text)
-    .join("");
-
-test("a row says title, progress, comments and who is bound, an ended run marked", () => {
-  expect(text(brief)).toBe(
-    "3 · Auth refactor · 2/5 · 4 comments · write-claude, review-claude (ended)",
-  );
-  expect(rowOf(brief).map((p) => p.faint)).toEqual([false, false, false, false, true]);
-  expect(text({ ...brief, commentCount: 1, bound: [] })).toBe(
-    "3 · Auth refactor · 2/5 · 1 comment",
+test("an entry is its title, then progress, comments and who is bound, an ended run marked", () => {
+  expect(headOf(brief)).toBe("3 · Auth refactor");
+  expect(infoOf(brief)).toBe("2/5 · 4 comments · write-claude, review-claude (ended)");
+  expect(infoOf({ ...brief, commentCount: 1, bound: [] })).toBe("2/5 · 1 comment");
+  expect(infoOf({ ...brief, closed: true })).toBe(
+    "2/5 · 4 comments · closed · write-claude, review-claude",
   );
 });
 
-test("a closed brief is faint whole and its bindings are not marked one by one", () => {
-  const closed = { ...brief, closed: true };
-  expect(text(closed)).toBe(
-    "3 · Auth refactor · 2/5 · 4 comments · closed · write-claude, review-claude",
-  );
-  expect(rowOf(closed).every((p) => p.faint)).toBe(true);
+const b = (id: number, title: string, closed = false): Summary => ({ ...brief, id, title, closed });
+
+test("the shell lists the open briefs oldest first, then the closed ones", () => {
+  const list = [b(5, "e"), b(2, "b", true), b(4, "d"), b(1, "a", true), b(3, "c")];
+  expect(ordered(list).map((x) => x.id)).toEqual([3, 4, 5, 1, 2]);
+});
+
+test("the navigation row holds the open briefs and fits its width whichever shows", () => {
+  const list = ordered([b(1, "Auth refactor"), b(2, "Shell bar"), b(3, "Old", true)]);
+  const texts = (shown: number, width: number) => navOf(list, shown, width).map((i) => i.text);
+  expect(texts(1, 80)).toEqual([backText, " 1 Auth refactor ", " 2 Shell bar "]);
+  // The closed brief shows only while it is the one shown, at the end.
+  expect(texts(3, 80)).toEqual([backText, " 1 Auth refactor ", " 2 Shell bar ", " 3 Old "]);
+  const width = (items: string[]) => items.reduce((n, t) => n + t.length + 1, 0) - 1;
+  const narrow = texts(1, 30);
+  expect(width(narrow)).toBeLessThanOrEqual(30);
+  expect(narrow).toEqual(texts(2, 30));
+  expect(narrow[1]).toEndWith("… ");
+  // Too narrow for any title: the numbers alone.
+  expect(texts(1, 18)).toEqual([backText, " 1 ", " 2 "]);
+});
+
+test("← and → step through the row and stop at its ends", () => {
+  const items = navOf(ordered([b(1, "a"), b(2, "b"), b(4, "d")]), 2, 80);
+  expect(stepOf(items, 2, -1)).toBe(1);
+  expect(stepOf(items, 2, 1)).toBe(4);
+  expect(stepOf(items, 4, 1)).toBeUndefined();
+  expect(stepOf(items, 1, -1)).toBeUndefined();
 });
 
 test("a list keeps the records that did not read, to show them", () => {

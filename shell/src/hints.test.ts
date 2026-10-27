@@ -20,7 +20,8 @@ test("the briefs' hints follow what they show and pass no Ctrl+\\", () => {
   const briefs = { ...worker, focus: "briefs", name: "briefs" } as const;
   const keys = (c: Parameters<typeof hintsFor>[0]) => hintsFor(c).map((h) => h.keys);
   expect(keys(briefs)[0]).toBe("↑↓ Enter");
-  expect(keys({ ...briefs, brief: true }).slice(0, 2)).toEqual(["↑↓ PgUp PgDn", "Esc"]);
+  expect(keys({ ...briefs, brief: true }).slice(0, 3)).toEqual(["↑↓ PgUp PgDn", "←→", "Backspace"]);
+  expect(keys({ ...briefs, brief: true })).not.toContain("Esc");
   expect(keys({ ...briefs, prefix: true })).not.toContain("Ctrl+\\ again");
   expect(keys({ ...briefs, prefix: true })).toContain("←");
 });

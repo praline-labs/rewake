@@ -370,29 +370,51 @@ before it opens the brief, since the row then unmounts and the press bubbles no 
 scrollboxes take no focus, so the keys reach the view once. The view's state — the brief opened, the row chosen, the last answers —
 outlives a worker being chosen over it, as a worker's screen does.
 
-- **The list**: one row per brief, `3 · Auth refactor · 2/5 · 4 comments · write-claude, review-claude`
-  (`rowOf`, `shell/src/briefs.ts`), open ones first, then the closed ones in the faint colour with
-  `closed`, each group as the CLI sorts it, newest first. A binding that has ended — its run
-  `ended`, or the brief closed — is faint, and marked `(ended)` in an open brief. ↑ ↓ and Enter, or
-  a click on a row, open one; a record the list could not read (`unreadable` in its JSON) is a faint row with its path and why, not an absent brief; an empty list says main makes briefs with
-  `rewake brief new`. The selected row is drawn in a pane's selection colours, and stays on its
-  brief when a poll changes the order.
+- **The list**: two lines per brief, as the owner asked on October 27, 2026 («1 строка будет
+  заголовок, и который будет как кнопка и взаимодействие как с кнопкой; 2 строка будет инфа по
+  пунктам, комментам и агентам которые с брифом, это не будет выделяться как кнопка»). The first,
+  `3 · Auth refactor` (`headOf`, `shell/src/briefs.ts`), is a button on the buttons' grey; the
+  second, faint and indented under the title, is `2/5 · 4 comments · write-claude, review-claude
+  (ended)` (`infoOf`): a binding whose run has `ended` is marked so, and a closed brief says
+  `closed` there, its title's words faint too. Oldest first, so a new brief lands at the bottom
+  (the owner, the same day: «новое добавляется вверх, а не вниз»): the open ones by id, then the
+  closed ones by id (`ordered`); the CLI's own JSON stays newest first. ↑ ↓ and Enter, or a click
+  on either line, open one; the selection, in a pane's selection colours, covers the first line
+  alone and stays on its brief when a poll changes the order. A record the list could not read
+  (`unreadable` in its JSON) is a faint row with its path and why, not an absent brief; an empty
+  list says main makes briefs with `rewake brief new`.
 - **The strip** under the view says what shows, a shell's row as a worker's strip is:
   `briefs · 3 open · 1 closed` under the list, `brief 3 · 2/5 · 4 comments` under one, the first
   part bold, cut with `…` at the width (`stripOfBriefs`, `shell/src/briefs.ts`).
-- **The hints** while the briefs have the keys are their own keys — ↑↓ Enter on the list, the
-  scroll and Esc on a brief — then the prefix's way to main, n/p and the zoom.
-- **One brief**: a line with its title and who is bound (its number and done of total are on the
-  strip), then a scrolling
+- **The hints** while the briefs have the keys are their own keys — ↑↓ Enter on the list; the
+  scroll, ←→ and Backspace on a brief — then the prefix's way to main, n/p and the zoom. They do not
+  name Esc: it still goes back, but it is the harnesses' interrupt, and a slip of the focus would
+  send it to a worker.
+- **One brief**: a navigation row in place of a header line, by the owner's request of October 27,
+  2026 — the header and the markdown's own title read the same words twice, and «чтобы не всегда
+  Esc жать (что весь тревожно иногда, это же команда "прервать" агента и случайно можно отправить
+  в окно воркера)». The row is ` ‹ briefs `, back to the list, then the open briefs in the list's
+  order as ` 3 Title `, and the shown one where it is closed (closed briefs are reached from the
+  list only), one cell apart on the bar's grey, the shown one filled as the bar's briefs button is
+  while it has the keys (`navOf`, `shell/src/briefs.ts`). The titles are cut to one length, the
+  longest that fits the row on one line, whichever brief shows, so changing it moves nothing;
+  where not even the numbers fit, the row is cut at the width. A click on an item, or ← →, shows
+  another brief; Backspace, or Esc, goes back to the list. The text keeps its title as written;
+  who is bound is on the list's second line, the number, done of total and comments on the strip.
+  Under the row, a scrolling
   box holding the text, rendered by OpenTUI's `<markdown>` (headings, emphasis, fenced code and
   lists in the shell's colours; a task-list line shows as its `- [ ]` or `- [x]`), a rule, and the
   comments, each its author and time (the person's clock) over its text. ↑ ↓, PgUp PgDn, Home End
-  and the wheel scroll; Esc or Backspace goes back to the list. The compiled shell draws it: the
+  and the wheel scroll. The text keeps a column clear of the scrollbar, as the panes keep one from
+  the screen's edge (the owner saw it stick to the bar, October 27, 2026): the bar lies over the
+  scrolling box's last column and the content leaves two, so the text is as wide whether the bar
+  shows or not, in the list too. The compiled shell draws it: the
   default tree-sitter client `<markdown>` starts works inside `bun build --compile`, checked on
   October 26, 2026 on Linux x64.
 - **How it reads.** By rewake's commands, as main's run, as the strip does (the identity found
   for the strip, `mainAs` in `shell/src/room.ts`): `rewake brief list --closed --json` once a second
-  while the list shows and `rewake brief show <id> --json` once a second while a brief shows, nothing
+  while the view shows, an opened brief's row being made of it, and `rewake brief show <id> --json`
+  once a second while a brief shows, nothing
   while a worker is chosen in their place (`poll`, `shell/src/briefs.ts`). An answer is drawn only when it differs
   from the last, and the scroll position stays. A read that fails, does not parse, or comes before
   main's run is known shows one line on the view's bottom row and is replaced by the next good
