@@ -116,13 +116,13 @@ Each principle names where it comes from.
   breakage would not be seen live or would be seen too late, where it already happened, for a
   contract between processes, or for pure logic cheaper to test than to try by hand; a rule is
   written down where behaviour is not obvious, as a reference, without naming its tests.
-  (`AGENTS.md`, "Which tests to write"; the analysis the owner accepted that day replaced the
+  ([testing.md](testing.md#which-tests-to-write); the analysis the owner accepted that day replaced the
   earlier principle "rules before code; every rule names its tests".)
 - **Complete by construction, not by care — where it pays.** Where something must be whole — a
   harness fully described or absent, every command with a machine-readable form, every layer
   importing only what it may — the structure makes the gap impossible or a test makes it fail,
   rather than a reviewer having to notice. Since October 17, 2026, by the owner's decision, it
-  no longer covers rules and documents. (`AGENTS.md`, "Adding a harness";
+  no longer covers rules and documents. ([adding.md](adding.md);
   [design.md](design.md#output).)
 - **The documentation is the memory of the project, in proportion.** What is not written down
   has to be recovered from the code next time, slower and less reliably, so a change of

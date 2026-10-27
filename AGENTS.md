@@ -66,7 +66,10 @@ env -u REWAKE_SESSION -u REWAKE_EPOCH -u REWAKE_DIR -u REWAKE_ROOM \
 (cd shell && bun install --frozen-lockfile && bun run check)   # when the shell changed
 ```
 
-and the workflow scenarios the change touches (below). The mod's own tests run inside
+and the workflow scenarios the change touches (below). The commit-msg hook refuses a message
+without a one-line subject and both trailers (`scripts/commit-msg-check.sh`), and the
+post-rewrite hook warns on an amend or a rebase, which are forbidden: add a new commit instead.
+The mod's own tests run inside
 `go test ./internal/adapter/claude/` (`claude plugin test`). A commit made without the hook
 runs its checks by hand: `golangci-lint fmt` over the files it touched, `golangci-lint run
 ./...` and `biome check .`. A step is done when it works live and breaks no existing test. A red
@@ -107,69 +110,17 @@ part; a timing taken under load is not evidence. Live runs use their own `REWAKE
 session exits 2. Never touch the owner's sessions; a run that spends quota uses a cheap model,
 and the owner is warned.
 
-### Which tests to write
+### Which tests to write, and what to build for
 
-A test is written when at least one of these holds: it already broke; the breakage would not
-be seen live, or too late — a lost or duplicated letter, a report to the wrong recipient, a
-corrupted room state; it is a contract between processes — the mod↔host protocol and its
-drift test, the format of records on disk; it is pure logic cheaper to test than to try.
-Not written: a test that a rule has a test or that a document is on a map; a mutant control
-per observation; a generated matrix of crashes and races, or a fault scenario, for a new
-feature; a test repeating a workflow scenario. A new feature gets unit tests by this criterion
-and one workflow scenario on its main path when the path crosses processes. The workflow
-suite has no mutants or controls; the fault seam's tests stay while they do not get in the way. A test clearly redundant, slow or flaky
-may be removed when it gets in the way, one at a time — never a clean-up for its own sake.
-A brief to a writer or a reviewer states this criterion.
+The criterion for a test is [docs/testing.md](docs/testing.md#which-tests-to-write); a brief to
+a writer or a reviewer states it. The rule of building a protective mechanism only for a
+failure seen in real work is [docs/build-for-failures.md](docs/build-for-failures.md); open it
+before adding a guard, a retry or a test of a failure.
 
-### Build for failures that were seen
+## Adding a harness, a role or a message kind
 
-The owner's rule, taken when the mechanics of unknown outcomes — thousands of lines of code
-and tests, no live case — gave way to a simple order of steps:
-
-- A protective mechanism is built for a failure seen in real work, or one that would lose or
-  duplicate mail unseen. "What if the process is killed between two writes" is a known limit
-  written in one line, not a reason for a mechanism.
-- The cost of a mistake sets the depth: when main asking again or restarting a worker is cheaper
-  than a mechanism, no mechanism is built.
-- The simple solution first: a lock, an atomic write, a deterministic id, a retry of the same
-  steps. Unknown states, journals before effects, operator decisions, matrices of worlds or
-  crashes come only by the owner's decision after a live case.
-- A review looks for breakage, not for imaginable orders of events: such a finding without a
-  live case is a note or a known limit, never a new round.
-- Stop and simplify when the tests of a mechanism outgrow its code, when each review round finds
-  "another way to lose", when a feature needs numbered rules, a world model or a scenario
-  generator, or when a mechanism can stop work that would otherwise have gone through.
-
-The turn end itself: under the sender's mailbox lock it writes its reports, then clears the waits
-they answer, and records itself done last; a retry runs the same steps from the disk
-([docs/delivery-turn-end.md](docs/delivery-turn-end.md#the-end-of-a-turn)). The build lease and
-epochs stay as they are.
-
-## Adding a harness
-
-Meant to be one move:
-
-1. A new package `internal/adapter/<name>` with a type implementing `adapter.Harness`: `ID`,
-   `Title`, `Summary`, `Examples`, `Notes`, `SingleUseFlags`, `Version`, `EnvNotInherited`,
-   `Offers` and `Launch`. `SingleUseFlags` names the flags that harness takes at most once,
-   each with all its spellings and whether it carries a value. Returning nothing is not a
-   neutral answer — it says every flag may be repeated, and a launch alias plus a typed flag
-   then reach a harness that may refuse to parse them. A test over the catalogue requires the
-   list to be non-empty. `Offers` says what the adapter offers beyond Launch, and the plan
-   `Launch` returns carries what one run serves — its service, wake, turn boundary, telemetry —
-   as the interfaces of `internal/adapter` (`docs/rules/adapter-api.md`). An offer with nothing in the plan
-   behind it is a capability the CLI admits and the run cannot serve. The offer answers
-   `Conversation` either way — the flag that names a new conversation with rewake's id, or why
-   there is none — and offers `Spaces` only where the run proves them through its live set; the
-   catalogue tests hold both (`docs/rules/adapter-api.md`).
-2. One entry in `New` of `internal/adapter/catalog/catalog.go`.
-3. Its private subtree's rule in the `depguard` settings of `.golangci.yml`: copy one
-   adapter's rule (`adapter-claude`) for the new package and exclude the subtree from
-   `adapter-new`.
-
-Everything else follows: the launch command, the guide entry, its own `--help` page, the step
-in FLOW, the `harnesses` field of the machine form. A harness cannot be half-registered —
-either it is in the catalogue and fully described, or it does not exist.
+The steps and what each touches are in [docs/adding.md](docs/adding.md); open it before adding
+one.
 
 ## Working on the Claude Code mod
 
@@ -184,15 +135,6 @@ work names the skill; a mod change made without it is refused in review.
 The project's documents do not copy the mod API; they cite the skill. What stays in them is
 rewake's own decisions and invariants about the mod, and dated records of what its probes
 observed, each with the version it was made on.
-
-## Adding a role or a message kind
-
-**A role** is a value in `internal/core/role/role.go` plus its line in the list; its `Play`
-text feeds both the briefing and the guide, and a copy of another role's fails a test.
-**A message kind** is the constant in `internal/core/mail/inbox.go`, a `messageKind` in
-`internal/cli/send_<kind>.go` and its line in `sendKinds`; a kind the other places do not know
-is treated as a task (`mail.Owed`), so before adding one meant to behave differently, grep for
-`mail.Task`, `mail.Note` and their neighbours and decide each place.
 
 ## How the CLI is organised
 

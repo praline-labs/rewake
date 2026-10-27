@@ -316,6 +316,20 @@ observations, never as a case's outcome: a declared observation nobody made is l
 case's acceptance, and a case's result is final only after the processes it owns have finished
 and its cleanup is checked.
 
+## Which tests to write
+
+A test is written when at least one of these holds: it already broke; the breakage would not
+be seen live, or too late — a lost or duplicated letter, a report to the wrong recipient, a
+corrupted room state; it is a contract between processes — the mod↔host protocol and its
+drift test, the format of records on disk; it is pure logic cheaper to test than to try.
+Not written: a test that a rule has a test or that a document is on a map; a mutant control
+per observation; a generated matrix of crashes and races, or a fault scenario, for a new
+feature; a test repeating a workflow scenario. A new feature gets unit tests by this criterion
+and one workflow scenario on its main path when the path crosses processes. The workflow
+suite has no mutants or controls; the fault seam's tests stay while they do not get in the way. A test clearly redundant, slow or flaky
+may be removed when it gets in the way, one at a time — never a clean-up for its own sake.
+A brief to a writer or a reviewer states this criterion.
+
 ## Extending the suite
 
 **A scenario** declares its observations before it starts (`Start` with a `Spec`), so an

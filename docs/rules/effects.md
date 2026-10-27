@@ -8,7 +8,7 @@ The rules every mail operation keeps: what an effect may be decided by, and in w
 turn end makes its effects. The path through the code is
 [delivery-turn-end.md](../delivery-turn-end.md#the-end-of-a-turn). A report lost when a process
 is killed in the milliseconds between two steps is asked for again by main; no mechanism is
-built against it (`AGENTS.md`, "Build for failures that were seen").
+built against it ([build-for-failures.md](../build-for-failures.md)).
 
 ## The rules
 

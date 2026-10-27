@@ -27,3 +27,16 @@ pre-commit:
             run: go build ./... && go vet ./...
           - name: lint
             run: golangci-lint run ./...
+
+# A commit message: one subject line and both Co-Authored-By trailers
+# (AGENTS.md, "Commits"), refused at commit time so no one needs to amend.
+commit-msg:
+  jobs:
+    - name: message
+      run: sh scripts/commit-msg-check.sh {1}
+
+# Git cannot refuse a rewrite once done; this only makes it loud.
+post-rewrite:
+  jobs:
+    - name: warn
+      run: sh scripts/post-rewrite-warn.sh {1}

@@ -6,7 +6,7 @@ description: The adapter API — capabilities offered and live, what the core do
 
 What an adapter offers the core, as named capabilities, what the core does when an adapter —
 or one run of it — lacks one, the catalogue every adapter is named in, and the version a
-launch requires. How to add a harness is `AGENTS.md`, "Adding a harness". The rules have no
+launch requires. How to add a harness is [adding.md](../adding.md). The rules have no
 numbers: each section below is one rule, with the tests that hold it.
 
 ## Why capabilities

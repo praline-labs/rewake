@@ -21,6 +21,8 @@ A person using rewake reads [user-guide.md](user-guide.md) alone. An agent worki
      → [turn-outcomes.md](turn-outcomes.md) → [delivery-owed.md](delivery-owed.md) →
      [delivery-sent.md](delivery-sent.md) → [mailbox-records.md](mailbox-records.md) →
      [rules/effects.md](rules/effects.md), [rules/turns.md](rules/turns.md);
+   - **adding a harness, a role or a message kind**: [adding.md](adding.md);
+   - **building a guard or a test of a failure**: [build-for-failures.md](build-for-failures.md);
    - **an adapter**: [rules/adapter-api.md](rules/adapter-api.md) → [claude.md](claude.md),
      [claude-turns.md](claude-turns.md) or [research-pi.md](research-pi.md) →
      [delivery-adapters.md](delivery-adapters.md) → the research records, with the `mods` skill
