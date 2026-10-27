@@ -18,10 +18,13 @@ func TestCommitMessageCheck(t *testing.T) {
 		{"other model names", "Add a thing\n\nCo-Authored-By: Codex (x) <a@b.c>\nco-authored-by: Claude Q <a@b.c>\n", ""},
 		{"git comments ignored", "Add a thing\n\n" + trailers + "# Please enter\n", ""},
 		{"merge commit", "Merge branch 'x'\n\n" + trailers, ""},
-		{"merge commit without trailers", "Merge branch 'x'\n", "Codex"},
+		{"merge commit without trailers", "Merge branch 'x'\n", "exactly one blank line"},
 		{"no Codex", "Add a thing\n\nCo-Authored-By: Claude Q <noreply@anthropic.com>\n", "Codex"},
 		{"no Claude", "Add a thing\n\nCo-Authored-By: Codex (x) <noreply@openai.com>\n", "Claude"},
 		{"body text", "Add a thing\n\nBecause it is needed.\n\n" + trailers, "Because it is needed."},
+		{"no blank line after the subject", "Add a thing\n" + trailers, "exactly one blank line"},
+		{"two blank lines after the subject", "Add a thing\n\n\n" + trailers, "exactly one blank line"},
+		{"blank line between trailers", "Add a thing\n\nCo-Authored-By: Codex (x) <a@b.c>\n\nCo-Authored-By: Claude Q <a@b.c>\n", "no blank line inside"},
 		{"empty subject", "\n\n" + trailers, "subject"},
 	}
 	for _, c := range cases {

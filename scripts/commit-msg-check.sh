@@ -29,12 +29,24 @@ TEXT
 subject=$(printf '%s\n' "$message" | sed -n '1p')
 [ -n "$subject" ] || fail "the first line, the subject, is empty"
 
-rest=$(printf '%s\n' "$message" | sed '1d')
-body=$(printf '%s\n' "$rest" | grep -v '^[[:space:]]*$' | grep -v '^[A-Za-z][A-Za-z-]*: ')
+# Trailing blank lines are git's to strip; what is left must be the subject, one blank
+# line and one unbroken block of trailers, the only shape git reads as trailers.
+message=$(printf '%s\n' "$message" | sed -e :a -e '/^[[:space:]]*$/{$d;N;ba' -e '}')
+second=$(printf '%s\n' "$message" | sed -n '2p')
+body=$(printf '%s\n' "$message" | sed '1d' | grep -v '^[[:space:]]*$' | grep -v '^[A-Za-z][A-Za-z-]*: ')
 [ -z "$body" ] || fail "text after the subject that is not a trailer (no body): $(printf '%s' "$body" | sed -n '1p')"
 
+third=$(printf '%s\n' "$message" | sed -n '3p')
+[ -z "$second" ] && [ -n "$third" ] ||
+	fail "the subject must be followed by exactly one blank line and then the trailers"
+rest=$(printf '%s\n' "$message" | sed '1,2d')
+printf '%s\n' "$rest" | grep -q '^[[:space:]]*$' &&
+	fail "the trailers must be one block with no blank line inside it"
+
+# git's own reading of the trailers decides which co-authors count.
+parsed=$(printf '%s\n' "$message" | git interpret-trailers --parse)
 trailer() {
-	printf '%s\n' "$rest" | grep -qi "^Co-Authored-By: $1 .*<[^>]*@[^>]*>[[:space:]]*\$"
+	printf '%s\n' "$parsed" | grep -qi "^Co-Authored-By: $1 .*<[^>]*@[^>]*>[[:space:]]*\$"
 }
 trailer Codex || fail "the Co-Authored-By trailer for Codex is missing"
 trailer Claude || fail "the Co-Authored-By trailer for Claude is missing"
