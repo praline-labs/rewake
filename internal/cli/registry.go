@@ -11,7 +11,7 @@ import (
 
 // Version is the released version of the tool. A release build sets it from the
 // package version, so the two cannot disagree.
-var Version = "2.2.0"
+var Version = "2.3.0"
 
 var jsonOption = Option{
 	Flag:    "--json",
