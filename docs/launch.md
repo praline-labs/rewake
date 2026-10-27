@@ -155,8 +155,8 @@ rewake --command my-claude claude
   own under either spelling, `--allowedTools` or `--allowed-tools`. This adds a rule for
   the run without touching the user's settings.
 - Keep auto-compaction to a window: `--autocompact 272k`, the owner's default (October 27, 2026),
-  for main and every worker, unless the launch already carries `--autocompact` — typed, or from
-  a template's `launch.context` — or `REWAKE_CLAUDE_CONTEXT` names a window
+  for a worker's launch only (main keeps the model's own window; corrected October 27, 2026), unless the launch already carries `--autocompact` — typed, or from
+  a template's `launch.context` — or `REWAKE_CLAUDE_CONTEXT` names a window, main's included
   ([launch-defaults.md](launch-defaults.md#the-context-window)). It is a flag of this run
   alone, as the other additions are (L1). Under `--command` it is passed to the wrapper like
   the other flags, so a `CLAUDE_CODE_AUTO_COMPACT_WINDOW` the wrapper sets still wins, as for

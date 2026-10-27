@@ -18,7 +18,8 @@ func launchWindow(t *testing.T, part role.Role, args ...string) ([]string, error
 	return adapter.FlagValues(plan.Args, autocompactFlag), err
 }
 
-// The window is 272k unless something nearer names one: the owner's default.
+// A worker's window is 272k unless something nearer names one: the owner's
+// default, for workers only; main keeps the model's own unless something names one.
 func TestClaudeLaunchKeepsTo272kUnlessSomethingNearerSays(t *testing.T) {
 	cases := []struct {
 		name string
@@ -28,7 +29,8 @@ func TestClaudeLaunchKeepsTo272kUnlessSomethingNearerSays(t *testing.T) {
 		want []string
 	}{
 		{"nothing set", "", nil, role.General, []string{"272k"}},
-		{"main gets it too", "", nil, role.Main, []string{"272k"}},
+		{"main gets none", "", nil, role.Main, nil},
+		{"main takes the setting", "300k", nil, role.Main, []string{"300k"}},
 		{"the setting beats it", "300k", nil, role.General, []string{"300k"}},
 		{"auto in the setting leaves the model's window", "auto", nil, role.General, []string{"auto"}},
 		{"a template's flag beats the setting", "300k", []string{"--autocompact", "auto"}, role.General, []string{"auto"}},

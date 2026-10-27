@@ -79,19 +79,20 @@ surprise, and the second worst is not knowing where to change it.
 
 ### The context window
 
-The one default that lives in the code: a Claude Code launch, main's and every worker's, keeps
-auto-compaction to 272k tokens (`--autocompact 272k`; the owner's decision, October 27, 2026),
-so nothing needs configuring for it. From the nearest to the farthest, the window is:
+The one default that lives in the code: a Claude Code worker's launch keeps
+auto-compaction to 272k tokens (`--autocompact 272k`; the owner's decision, October 27, 2026,
+corrected the same day to workers only), so nothing needs configuring for it. Main's launch
+gets no `--autocompact` from rewake and keeps the model's own window, unless a step below names one. From the nearest to the farthest, the window is:
 
 1. a typed `--autocompact` (main's launch line, or after `--` on `space open`);
 2. a worker template's `launch.context`;
 3. `REWAKE_CLAUDE_CONTEXT`, from the environment, the project file or the user file;
-4. the code's 272k.
+4. the code's 272k, for a worker only.
 
 `auto` at any step is the opt-out: the model's own window, whatever it is. A value is `auto`
 or 100k–1M tokens such as `300k`; a bad one in a file or the environment refuses the launch,
 naming the variable and where it was read, unless a nearer step made it unused. An empty
-variable is no answer here, so 272k applies; write `auto` to turn the limit off. pi has no
+variable is no answer here, so the code's default applies; write `auto` to turn the limit off. pi has no
 flag for its window and is untouched. The strip and `rewake list` measure the fill against
 the window the launch passed ([claude.md](claude.md#telemetry)).
 

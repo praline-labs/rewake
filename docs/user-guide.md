@@ -96,8 +96,9 @@ type = "analysis"
 included, are `KEY=VALUE` lines in `~/.config/rewake/settings`, or in `.rewake.env` in a
 project's directory: `REWAKE_CLAUDE_MODEL`, `REWAKE_CLAUDE_EFFORT`, `REWAKE_CLAUDE_CONTEXT`,
 `REWAKE_PI_MODEL`, `REWAKE_PI_EFFORT`. The environment beats both files, and a typed flag beats
-everything. A Claude Code session keeps auto-compaction to 272k tokens unless
-`REWAKE_CLAUDE_CONTEXT` says otherwise (`auto` is the model's own window).
+everything. A Claude Code worker keeps auto-compaction to 272k tokens unless
+`REWAKE_CLAUDE_CONTEXT` says otherwise (`auto` is the model's own window); main keeps the
+model's own window unless `REWAKE_CLAUDE_CONTEXT` or a typed `--autocompact` names one.
 
 ## A project's `.rewake/`
 

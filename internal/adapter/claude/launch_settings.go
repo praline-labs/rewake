@@ -12,9 +12,9 @@ import (
 // value it passed on would otherwise mean what Claude Code guessed.
 const autocompactFlag = "--autocompact"
 
-// defaultWindow is the window a launch keeps to when nothing nearer names one:
+// defaultWindow is the window a worker's launch keeps to when nothing nearer names one:
 // a typed --autocompact, a template's launch.context, REWAKE_CLAUDE_CONTEXT.
-// The owner's decision (October 27, 2026); "auto" in any of them opts out to
+// The owner's decision (October 27, 2026), for workers only, not main; "auto" in any of them opts out to
 // the model's own window.
 const defaultWindow = "272k"
 

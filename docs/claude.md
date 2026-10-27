@@ -203,7 +203,7 @@ them into the published snapshot ([session-state.md](session-state.md#persistenc
 the host keeps only the wire's order — load, generation, sequence — and the dialog it tells main
 of. Nothing reads transcripts or measures a full context breakdown. The native model window and
 percentage are used as given; a launch's `--autocompact` sets the window the conversation is kept
-to — 272k unless a flag, a template or `REWAKE_CLAUDE_CONTEXT` says otherwise
+to — for a worker 272k unless a flag, a template or `REWAKE_CLAUDE_CONTEXT` says otherwise, and for main the model's own unless one of them names it
 ([launch-defaults.md](launch-defaults.md#the-context-window)) — and the observer recomputes the
 percent against it.
 
