@@ -1,6 +1,7 @@
 package delivery
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -115,7 +116,7 @@ func (s *Server) pruneRecent(now time.Time) {
 
 // receive applies what the harness said about a notice after the fact. A word
 // about a notice this server no longer keeps changes nothing.
-func (s *Server) receive(receipt mail.Receipt) {
+func (s *Server) receive(ctx context.Context, receipt mail.Receipt) {
 	if receipt.Result.State == mail.Pending || !s.owned() {
 		return
 	}
@@ -124,10 +125,20 @@ func (s *Server) receive(receipt mail.Receipt) {
 			return
 		}
 		delete(s.held, receipt.ID)
+		// A release is dated when the harness said it, which may be before
+		// the end of the turn it was released in, however late it is heard.
+		at := receipt.At
+		if at == 0 {
+			at = boottime.Now()
+		}
 		for _, member := range members {
 			if s.outcomes[member.ID].State == mail.Held {
-				s.settleHeld(member, s.outcomeFor(member, receipt.Result))
+				s.settleHeld(member, s.outcomeFor(member, receipt.Result), at)
 			}
+		}
+		// That end may have been looked at already, without the release.
+		if receipt.Result.State == mail.Delivered && at <= s.looked {
+			s.remind(ctx, s.looked)
 		}
 		return
 	}
@@ -143,7 +154,7 @@ func (s *Server) receive(receipt mail.Receipt) {
 		// Refused or expired with no hold reported first: never delivered.
 		for _, member := range recent.members {
 			if s.outcomes[member.ID].State == mail.Delivered {
-				s.settleHeld(member, s.outcomeFor(member, receipt.Result))
+				s.settleHeld(member, s.outcomeFor(member, receipt.Result), 0)
 			}
 		}
 	}
@@ -179,10 +190,12 @@ func (s *Server) outcomeFor(member mail.Message, result mail.Result) mail.Result
 // settleHeld ends the hold of one message. Read stays final — the agent has the
 // text whatever the harness says — and a task or question that did not arrive
 // is reported to its sender, who would otherwise wait for a report nobody owes.
-func (s *Server) settleHeld(message mail.Message, outcome mail.Result) {
+// A delivered one is announced at released, the boot-clock time the harness
+// let the agent have it.
+func (s *Server) settleHeld(message mail.Message, outcome mail.Result, released int64) {
 	s.finish(message, outcome)
 	if outcome.State == mail.Delivered {
-		s.announce(message.ID, boottime.Now())
+		s.announce(message.ID, released)
 	} else {
 		delete(s.announced, message.ID)
 	}
@@ -198,7 +211,7 @@ func (s *Server) failAllHeld(reason string) {
 		delete(s.held, id)
 		for _, member := range members {
 			if s.outcomes[member.ID].State == mail.Held {
-				s.settleHeld(member, s.outcomeFor(member, mail.Result{State: mail.Failed, Detail: reason}))
+				s.settleHeld(member, s.outcomeFor(member, mail.Result{State: mail.Failed, Detail: reason}), 0)
 			}
 		}
 	}
@@ -213,7 +226,7 @@ func (s *Server) failForeignHeld(message mail.Message) bool {
 	if status, ok, err := mail.ReadStatus(s.Dir, s.Name, message.ID); err != nil || !ok || status.State != mail.Held {
 		return false
 	}
-	s.settleHeld(message, s.outcomeFor(message, mail.Result{State: mail.Failed, Detail: heldByEarlier}))
+	s.settleHeld(message, s.outcomeFor(message, mail.Result{State: mail.Failed, Detail: heldByEarlier}), 0)
 	return true
 }
 

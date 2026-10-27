@@ -58,7 +58,7 @@ func TestADeferredSettlementGetsAnotherPass(t *testing.T) {
 			if scene != "late refusal unread only" {
 				server.sweepForeign()
 			} else {
-				server.receive(mail.Receipt{ID: letter.ID, Result: mail.Result{State: mail.Failed, Detail: "late refusal"}})
+				server.receive(context.Background(), mail.Receipt{ID: letter.ID, Result: mail.Result{State: mail.Failed, Detail: "late refusal"}})
 			}
 			if status, ok, err := mail.ReadStatus(lab.dir, letter.To, letter.ID); err != nil || !ok || status.State != mail.Failed {
 				t.Fatalf("the refusal is not on record: %+v, %v, %v", status, ok, err)

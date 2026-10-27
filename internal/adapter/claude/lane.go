@@ -14,6 +14,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/infra/boottime"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -92,7 +93,7 @@ type sentNotice struct {
 	// claimed says Deliver returned held: every further word is the server's.
 	claimed bool
 	// backlog keeps words that came after the first and before the claim.
-	backlog []mail.Result
+	backlog []mail.Receipt
 	// at is when a line counted delivered from silence was counted so.
 	at time.Time
 }
@@ -273,8 +274,8 @@ func (l *lane) claim(waiting *sentNotice) {
 	defer l.mu.Unlock()
 	waiting.claimed = true
 	for _, word := range waiting.backlog {
-		l.enqueue(mail.Receipt{ID: waiting.id, Result: word})
-		if word.State != mail.Held {
+		l.enqueue(word)
+		if word.Result.State != mail.Held {
 			delete(l.sent, waiting.msgID)
 		}
 	}
@@ -287,13 +288,15 @@ func (l *lane) forget(msgID string) {
 	l.mu.Unlock()
 }
 
-// route passes one word to whoever waits for it. The caller holds no lock.
+// route passes one word to whoever waits for it, dated when it was heard. The
+// caller holds no lock.
 //
 // Each receipt comes on a connection of its own and is read on a goroutine of
 // its own, so two that follow closely may be routed in either order. A final
 // word wins either way: once one is routed the line is forgotten, and a "held"
 // read after it goes nowhere.
 func (l *lane) route(msgID string, word mail.Result) {
+	heard := boottime.Now()
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	waiting, ok := l.sent[msgID]
@@ -307,7 +310,7 @@ func (l *lane) route(msgID string, word mail.Result) {
 	}
 	switch {
 	case waiting.claimed:
-		l.enqueue(mail.Receipt{ID: waiting.id, Result: word})
+		l.enqueue(mail.Receipt{ID: waiting.id, Result: word, At: heard})
 		if word.State != mail.Held {
 			delete(l.sent, msgID)
 		} else {
@@ -319,7 +322,7 @@ func (l *lane) route(msgID string, word mail.Result) {
 		waiting.answered = true
 		waiting.first <- word
 	default:
-		waiting.backlog = append(waiting.backlog, word)
+		waiting.backlog = append(waiting.backlog, mail.Receipt{ID: waiting.id, Result: word, At: heard})
 	}
 }
 

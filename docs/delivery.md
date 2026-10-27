@@ -268,8 +268,13 @@ questions whose notice went out inside the turn's window: after the run's previo
 record, up to this end. It is the window of [pending marks](delivery-turn-end.md#pending-marks)
 without the turn's own start, so the task that woke an idle session counts for the turn it
 woke. An end the interim record shows was interim, or that a later end of the run superseded,
-reminds of nothing. If any are left, one notice goes through the usual Wake, both harnesses
-alike, its members fixed and checked again just before it goes like any notice's:
+reminds of nothing. A notice goes out when the harness has it: a delivered one just before its
+Wake, a [held](delivery-adapters.md) one when the harness says it released it — the time the
+adapter heard the word, carried on the receipt (`mail.Receipt.At`), not the time the server
+handles it, which may be after the turn the release woke has ended. A release heard only after
+the server looked at that end is looked at for that end again, alone. If any are left, one
+notice goes through the usual Wake, both harnesses alike, its members fixed and checked again
+just before it goes like any notice's:
 
 ```
 Rewake: 1 unread task still waiting

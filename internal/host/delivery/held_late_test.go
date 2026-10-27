@@ -97,7 +97,7 @@ func TestAWordPastTheWindowIsIgnored(t *testing.T) {
 	recent := f.server.recent[id]
 	recent.at = time.Now().Add(-2 * mail.LateWordWindow)
 	f.server.recent[id] = recent
-	f.server.receive(mail.Receipt{ID: id, Result: mail.Result{State: mail.Held, Detail: "held late"}})
+	f.server.receive(context.Background(), mail.Receipt{ID: id, Result: mail.Result{State: mail.Held, Detail: "held late"}})
 	if status, _, _ := mail.ReadStatus(f.dir, "api", f.task.ID); status.State != mail.Delivered {
 		t.Fatalf("a word past the window changed the status to %+v", status)
 	}

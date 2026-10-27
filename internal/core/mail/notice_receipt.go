@@ -5,10 +5,13 @@ import "time"
 // Receipt is what a harness says about a notice after its delivery attempt
 // returned: how a hold ended, or that a notice it was taken to accept was held or
 // refused after all. ID is the id of the announcement that was handed over,
-// which for a grouped notice names the group rather than a member.
+// which for a grouped notice names the group rather than a member. At is when
+// the harness said it, on the boot clock, zero when unknown: a release is the
+// moment the agent has the notice, and the server may hear of it a turn later.
 type Receipt struct {
 	ID     string
 	Result Result
+	At     int64
 }
 
 // A harness that accepts silently can still speak up late, and a delivery

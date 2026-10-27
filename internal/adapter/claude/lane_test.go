@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/infra/boottime"
 	"github.com/praline-labs/rewake/internal/infra/build/buildtest"
 )
 
@@ -125,6 +126,8 @@ func TestLaneSilenceIsDelivered(t *testing.T) {
 	}
 }
 
+// The release carries when it was heard: the server may take it only after the
+// turn it was released in has ended, and dates its announcement by it.
 func TestLaneHeldThenReleased(t *testing.T) {
 	dir := buildtest.Dir(t)
 	r := startReceiver(t, dir, "held")
@@ -134,9 +137,27 @@ func TestLaneHeldThenReleased(t *testing.T) {
 		t.Fatalf("a held line is held, with the harness's reason, got %+v", result)
 	}
 	line := <-r.lines
+	said := boottime.Now()
 	answer(t, l.reply, line["msg_id"].(string), "delivered")
-	if receipt := nextReceipt(t, l); receipt.ID != "m1" || receipt.Result.State != mail.Delivered {
+	// Heard once the lane forgets the line; the server has not taken it yet.
+	for deadline := time.Now().Add(2 * time.Second); ; time.Sleep(time.Millisecond) {
+		l.mu.Lock()
+		_, waiting := l.sent[line["msg_id"].(string)]
+		l.mu.Unlock()
+		if !waiting {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("the release was never heard")
+		}
+	}
+	taken := boottime.Now()
+	receipt := nextReceipt(t, l)
+	if receipt.ID != "m1" || receipt.Result.State != mail.Delivered {
 		t.Fatalf("the release goes to the server under the message id, got %+v", receipt)
+	}
+	if receipt.At < said || receipt.At >= taken {
+		t.Fatalf("the release is dated %d, want when it was heard, between %d and %d", receipt.At, said, taken)
 	}
 }
 
