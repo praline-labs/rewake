@@ -1,20 +1,17 @@
 package cli
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/registry"
-	"github.com/praline-labs/rewake/internal/core/role"
 )
 
 // awaitedView is one task or question this run sent and has no report on yet.
 // Gone is "ended" or "replaced" when the run it was written for no longer
-// lives: then no report is coming,
-// whatever the state says.
+// lives: then no report is coming, whatever the state says.
 type awaitedView struct {
 	ID        string     `json:"id"`
 	Kind      mail.Kind  `json:"kind"`
@@ -27,34 +24,7 @@ type awaitedView struct {
 	AddendumTo string `json:"addendumTo,omitempty"`
 	// nested is an addendum listed under its task.
 	nested bool
-}
-
-// afterTheirTask lists each addendum right after the task it adds to, which
-// other tasks sent in between would otherwise separate it from.
-func afterTheirTask(messages []awaitedView) []awaitedView {
-	roots := map[string]bool{}
-	for _, message := range messages {
-		roots[message.ID] = message.AddendumTo == ""
-	}
-	ordered := make([]awaitedView, 0, len(messages))
-	for _, message := range messages {
-		if roots[message.AddendumTo] {
-			continue
-		}
-		ordered = append(ordered, message)
-		for _, addendum := range messages {
-			if addendum.AddendumTo == message.ID && roots[message.ID] {
-				addendum.nested = true
-				ordered = append(ordered, addendum)
-			}
-		}
-	}
-	return ordered
-}
-
-// coming says whether a report on it can still arrive.
-func (v awaitedView) coming() bool {
-	return v.Gone == "" && v.State != mail.StageFailed
+	coming bool
 }
 
 type awaitedRecipient struct {
@@ -71,39 +41,7 @@ type awaitedModel struct {
 // recipient — what a main session hands out, for one that lost track of it to a
 // compaction. It only reads: no lock, no record, nothing sent.
 func showAwaited(ctx *Context, dir string, session registry.Session, epoch string) error {
-	type recipientRun struct {
-		run    string
-		silent bool
-		found  bool
-		// unknown says the recipient's record could not be read: this view
-		// only informs, so it is taken for the live run, which may still
-		// report, and never for one that ended and lost the task.
-		unknown bool
-	}
-	runs := map[string]recipientRun{}
-	current := func(name string) recipientRun {
-		if known, ok := runs[name]; ok {
-			return known
-		}
-		// Read-only on purpose: Lookup prunes a dead record, and this view
-		// writes nothing.
-		live, err := registry.LookupReadOnly(dir, name)
-		found := recipientRun{found: err == nil, unknown: err != nil && !errors.Is(err, registry.ErrNotFound)}
-		if found.found {
-			found.run, found.silent = live.Epoch(), role.Of(live.Role).Silent
-		}
-		runs[name] = found
-		return found
-	}
-	awaited, err := mail.Awaited(dir, session.Name, epoch, func(recipient, run string) mail.RecipientRun {
-		switch live := current(recipient); {
-		case live.unknown, live.found && live.run == run:
-			return mail.RunLive
-		case live.found:
-			return mail.RunReplaced
-		}
-		return mail.RunEnded
-	})
+	standings, err := mail.Standings(dir, session.Name, epoch)
 	if err != nil {
 		// A partial list would show a task as answered, or lost and worth
 		// sending again.
@@ -111,41 +49,19 @@ func showAwaited(ctx *Context, dir string, session registry.Session, epoch strin
 	}
 	model := awaitedModel{Session: session.Name, Recipients: []awaitedRecipient{}}
 	index := map[string]int{}
-	for _, message := range awaited {
-		live := current(message.To)
-		// A silent session's reads owe nothing, so a task to one is never
-		// answered by a report and is not waited on.
-		if !message.Gone() && live.silent {
-			continue
-		}
+	for _, standing := range standings {
 		view := awaitedView{
-			ID: message.ID, Kind: mail.KindOf(message.Message), CreatedAt: message.CreatedAt,
-			State: message.Stage, Detail: message.Detail, Text: message.Text,
+			ID: standing.ID, Kind: mail.KindOf(standing.Message), CreatedAt: standing.CreatedAt,
+			State: standing.Stage, Detail: standing.Detail, Text: standing.Text,
+			Gone: standing.GoneReason(), AddendumTo: standing.Under, nested: standing.Nested, coming: standing.Coming(),
 		}
-		if message.AddendumTo != "" {
-			// Under the task as it is now, an edit's replacement included,
-			// or the one it was sent to while a copy cannot be read.
-			if current, err := mail.CurrentTask(dir, message.To, message.AddendumTo); err == nil {
-				view.AddendumTo = current
-			}
-		}
-		switch {
-		case !message.Gone():
-		case message.Run == mail.RunEnded:
-			view.Gone = "ended"
-		case message.Run == mail.RunReplaced:
-			view.Gone = "replaced"
-		}
-		at, ok := index[message.To]
+		at, ok := index[standing.To]
 		if !ok {
 			at = len(model.Recipients)
-			index[message.To] = at
-			model.Recipients = append(model.Recipients, awaitedRecipient{Name: message.To})
+			index[standing.To] = at
+			model.Recipients = append(model.Recipients, awaitedRecipient{Name: standing.To})
 		}
 		model.Recipients[at].Messages = append(model.Recipients[at].Messages, view)
-	}
-	for index := range model.Recipients {
-		model.Recipients[index].Messages = afterTheirTask(model.Recipients[index].Messages)
 	}
 	return printValue(ctx, model, func() []string { return awaitedLines(model.Recipients) })
 }
@@ -154,7 +70,7 @@ func awaitedLines(recipients []awaitedRecipient) []string {
 	var coming, lost int
 	for _, recipient := range recipients {
 		for _, message := range recipient.Messages {
-			if message.coming() {
+			if message.coming {
 				coming++
 			} else {
 				lost++
@@ -200,9 +116,9 @@ func awaitedLines(recipients []awaitedRecipient) []string {
 // is in --json; one line of it is enough to know what to do.
 func awaitedState(recipient string, message awaitedView) string {
 	switch message.Gone {
-	case "ended":
+	case mail.GoneEnded:
 		return "no report coming: " + recipient + " ended; check its saved work and give the task to a new worker"
-	case "replaced":
+	case mail.GoneReplaced:
 		return "no report coming: " + recipient + " was replaced by a new run; check its saved work and give the task to a new worker"
 	}
 	detail := func(prefix string) string {

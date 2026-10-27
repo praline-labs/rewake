@@ -124,6 +124,15 @@ the current one, an edit's replacement included, as for `--owed`. Nothing awaite
 report's text), `gone` (`ended` or `replaced`, only when lost), `addendumTo`
 for an addendum, and the full `text`. A withdrawn message is a note from then on and is not listed.
 
+All of this is one module of `internal/core/mail` (`standing.go`: `Standings` for the list,
+`StandingOf` for one task): it reads the recipient's record itself, applies the silent-role
+rule (`OwesReports`, the one place a role is asked whether it answers; `send`, `inbox`,
+`pending` and the turn end ask it too), names why no report comes and puts each addendum after
+its task. The command only prints. A recipient record that cannot be read is taken for the
+live run: the view and the addendum check only inform or guard, and "no report is coming" on a
+guess would have a task given to a new worker while the first still works on it. An addendum
+is refused all the same when the task's run is not the one the name holds.
+
 It only reads, like `--owed`: no lock, no status, nothing marked, nothing sent, and a
 registry lookup that does not prune a dead record. A message caught between two
 directories is counted once, at the stage further along. `--awaited` is used alone.

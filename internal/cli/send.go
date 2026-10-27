@@ -12,7 +12,6 @@ import (
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/registry"
-	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/core/session"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
@@ -97,7 +96,7 @@ func handleSend(ctx *Context, call Call) error {
 	if err := refuseUnreported(ctx.table.catalog, session, kind.kind); err != nil {
 		return err
 	}
-	if kind.kind == mail.Question && role.Of(session.Role).Silent {
+	if kind.kind == mail.Question && !mail.OwesReports(session.Role) {
 		return &UsageError{Command: command, Message: fmt.Sprintf("Session %s does not report its turns, so it cannot answer --question; use plain send or --notify instead.", session.Name)}
 	}
 	started := time.Now()

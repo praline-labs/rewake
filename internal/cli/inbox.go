@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/core/mail"
-	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -99,7 +98,7 @@ func handleInbox(ctx *Context, call Call) error {
 		for _, message := range messages {
 			// A task an earlier run never read is lost to its sender, who may
 			// have sent it again: reading it now owes nothing.
-			reports := !role.Of(session.Role).Silent && message.ToEpoch == epoch
+			reports := mail.OwesReports(session.Role) && message.ToEpoch == epoch
 			if err := mail.MarkRead(dir, session.Name, epoch, message, reports); err != nil {
 				failure = failf("the messages were shown, but recording that failed, so they stay unread and show again next time: %v", err)
 				return nil

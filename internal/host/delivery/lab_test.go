@@ -125,11 +125,11 @@ func (r *endableRun) end() {
 	})
 }
 
-// awaitedBy is what the sender sees of each task it sent, given what became
-// of the run it was written for.
-func awaitedBy(dir string, what mail.RecipientRun) map[string]mail.AwaitedMessage {
-	awaited := map[string]mail.AwaitedMessage{}
-	for _, item := range must(mail.Awaited(dir, "web", "sender-epoch", func(string, string) mail.RecipientRun { return what })) {
+// awaitedBy is what the sender sees of each task it sent; api is not running,
+// so its run is gone.
+func awaitedBy(dir string) map[string]mail.Standing {
+	awaited := map[string]mail.Standing{}
+	for _, item := range must(mail.Standings(dir, "web", "sender-epoch")) {
 		awaited[item.ID] = item
 	}
 	return awaited
