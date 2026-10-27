@@ -10,7 +10,7 @@ import { createCliRenderer } from "@opentui/core";
 import { render, useTerminalDimensions } from "@opentui/solid";
 import { createEffect, createSignal, For, Show } from "solid-js";
 import { Bar, Hints } from "./bar.tsx";
-import { BriefsStrip, BriefsView, briefOpen } from "./briefs.tsx";
+import { BriefsStrip, BriefsView, briefOpen, takeBriefs } from "./briefs.tsx";
 import { Closing } from "./closing.tsx";
 import { askColors, seedOf } from "./colors.ts";
 import { endMain, tailText, watchTerminal } from "./ending.ts";
@@ -37,7 +37,7 @@ import {
   workers,
   zoomed,
 } from "./panes.ts";
-import { pollRoom, type Space, spacesOver } from "./room.ts";
+import { endedSpaces, pollRoom, shownSpaces, spacesOver } from "./room.ts";
 import { Scanner } from "./scan.ts";
 import { connectWorker, type MainRun, mainEnv, type Source, startMain } from "./sources.ts";
 import { mainStrip, markOf, Strip, showSessions, showSpaces, stripOf } from "./strip.tsx";
@@ -392,7 +392,12 @@ await render(() => <App />, renderer);
 stopRoom = pollRoom(
   rewake,
   room,
-  (spaces, ended) => takeSpaces(spaces, ended, closing, beginClosing),
   () => main?.child.pid,
-  showSessions,
+  (view, asked) => {
+    if (view) {
+      takeSpaces(shownSpaces(view), endedSpaces(view), closing, beginClosing);
+      showSessions(new Map(view.sessions.map((s) => [s.name, s])));
+    }
+    takeBriefs(view, asked);
+  },
 );

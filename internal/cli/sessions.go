@@ -51,31 +51,8 @@ func handleList(ctx *Context, _ Call) error {
 	}
 
 	visible := canSeeSessionState(dir)
-	workers := spaceWorkers(dir)
-	var views []sessionView
+	views := sessionViewsOf(dir, sessions, visible)
 	room := filepath.Base(dir)
-	for index := range sessions {
-		sessions[index].Room = room
-		sessions[index].Role = role.Of(sessions[index].Role).ID
-		worker := workers[sessions[index].Epoch()]
-		view := sessionView{Session: sessions[index], Type: worker.Type}
-		if !visible {
-			view.MessagingReadyAt = nil
-		}
-		if visible {
-			view.Telemetry = sessionSnapshot(dir, view.Name, view.Epoch())
-			// The harness's own name wins, less what it adds in parentheses
-			// — a window the Context column shows truly; the template's
-			// label stands in for a harness that gives none.
-			if t := view.Telemetry; t != nil && t.ModelName != nil {
-				t.ModelName = shortModelName(*t.ModelName)
-			}
-			if t := view.Telemetry; t != nil && t.ModelName == nil && t.Model != nil && worker.Label != "" {
-				t.ModelName = &worker.Label
-			}
-		}
-		views = append(views, view)
-	}
 	base, err := state.BaseForRoom(dir)
 	if err != nil {
 		return failf("%v", err)
@@ -117,6 +94,38 @@ func spaceWorkers(dir string) map[string]space.Worker {
 		}
 	}
 	return workers
+}
+
+// sessionViewsOf is the sessions as a list shows them: their roles and
+// types, and, to a reader allowed the session state, their telemetry, the
+// model named as the table names it.
+func sessionViewsOf(dir string, sessions []registry.Session, visible bool) []sessionView {
+	workers := spaceWorkers(dir)
+	var views []sessionView
+	room := filepath.Base(dir)
+	for index := range sessions {
+		sessions[index].Room = room
+		sessions[index].Role = role.Of(sessions[index].Role).ID
+		worker := workers[sessions[index].Epoch()]
+		view := sessionView{Session: sessions[index], Type: worker.Type}
+		if !visible {
+			view.MessagingReadyAt = nil
+		}
+		if visible {
+			view.Telemetry = sessionSnapshot(dir, view.Name, view.Epoch())
+			// The harness's own name wins, less what it adds in parentheses
+			// — a window the Context column shows truly; the template's
+			// label stands in for a harness that gives none.
+			if t := view.Telemetry; t != nil && t.ModelName != nil {
+				t.ModelName = shortModelName(*t.ModelName)
+			}
+			if t := view.Telemetry; t != nil && t.ModelName == nil && t.Model != nil && worker.Label != "" {
+				t.ModelName = &worker.Label
+			}
+		}
+		views = append(views, view)
+	}
+	return views
 }
 
 // whoamiModel is the machine form of the session's own identity.

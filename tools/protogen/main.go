@@ -25,13 +25,24 @@ import (
 	"path/filepath"
 )
 
-// The schema and the files written from it, from the module root.
+// target is a schema and the two files written from it, from the module
+// root, the Go one in the package named.
+type target struct {
+	schema, ts, goFile, goPackage string
+}
+
+// The schema of the mod's protocol and the one of the room view the shell
+// reads (docs/shell.md), with the files each generates.
 const (
 	schemaPath = "internal/adapter/claude/mod/protocol.schema.json"
 	tsPath     = "internal/adapter/claude/mod/protocol.gen.ts"
 	goPath     = "internal/adapter/claude/modhost/protocol_gen.go"
-	goPackage  = "modhost"
 )
+
+var targets = []target{
+	{schemaPath, tsPath, goPath, "modhost"},
+	{"internal/cli/room_view.schema.json", "shell/src/room_view.gen.ts", "internal/cli/room_view_gen.go", "cli"},
+}
 
 func main() {
 	if err := run(".", os.Stdout); err != nil {
@@ -40,7 +51,7 @@ func main() {
 	}
 }
 
-// run regenerates both files under root and names those it changed.
+// run regenerates the files of every target under root and names those it changed.
 func run(root string, out io.Writer) error {
 	files, err := generateAt(root)
 	if err != nil {
@@ -65,23 +76,25 @@ type generated struct {
 	content []byte
 }
 
-// generateAt reads the schema under root and returns what both files should
+// generateAt reads each schema under root and returns what its files should
 // hold, writing nothing: the test compares it with the checked-in files.
 func generateAt(root string) ([]generated, error) {
-	text, err := os.ReadFile(filepath.Join(root, schemaPath))
-	if err != nil {
-		return nil, err
+	var files []generated
+	for _, t := range targets {
+		text, err := os.ReadFile(filepath.Join(root, t.schema))
+		if err != nil {
+			return nil, err
+		}
+		schema, err := parseSchema(text)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", t.schema, err)
+		}
+		schema.source, schema.goPackage = filepath.Base(t.schema), t.goPackage
+		goSource, err := emitGo(schema)
+		if err != nil {
+			return nil, err
+		}
+		files = append(files, generated{path: t.ts, content: emitTS(schema)}, generated{path: t.goFile, content: goSource})
 	}
-	schema, err := parseSchema(text)
-	if err != nil {
-		return nil, fmt.Errorf("%s: %w", schemaPath, err)
-	}
-	goSource, err := emitGo(schema)
-	if err != nil {
-		return nil, err
-	}
-	return []generated{
-		{path: tsPath, content: emitTS(schema)},
-		{path: goPath, content: goSource},
-	}, nil
+	return files, nil
 }

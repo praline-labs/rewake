@@ -1,100 +1,85 @@
-// The room, from rewake's own commands polled once a second
-// (docs/shell.md, "The prefix and the room"): the spaces of the room's
-// running main, each with the socket its host serves the worker's screen on.
+// The room, from one call of rewake's own polled once a second
+// (docs/shell.md, "The prefix and the room"): `rewake room --json`, a hidden
+// command made for the shell, answers the spaces, the sessions with their
+// verdicts and, while the briefs show, the briefs. Its shape is the schema
+// internal/cli/room_view.schema.json, from which room_view.gen.ts and the
+// command's Go types are generated, so the shell maps nothing by hand.
+import type { RoomView, SessionRow, SpaceRow } from "./room_view.gen.ts";
 
-export type Space = {
-  id: string;
-  name: string;
-  worker: string;
-  socket: string;
-  // checkout is the worker's own worktree: the one its launch made, or the
-  // one it entered; absent while it works where main does.
-  checkout?: { path?: string; branch?: string };
-};
+export type {
+  BriefBound,
+  BriefComment,
+  BriefView,
+  Problem,
+  RoomView,
+  Verdict,
+} from "./room_view.gen.ts";
+export type Space = SpaceRow;
+export type Session = SessionRow;
 
 const every = 1000;
 
-type Listing = {
-  spaces?: {
-    id: string;
-    name: string;
-    state: string;
-    mainRun?: string;
-    socket?: string;
-    worker?: { name?: string; harness?: string };
-    checkout?: { path?: string; branch?: string };
-  }[];
+// What the next calls ask beyond the spaces and the sessions: the briefs
+// while their view shows, and the brief opened in it.
+export type Want = { briefs: boolean; brief?: number };
+
+let want: Want = { briefs: false };
+export const wanting = (next: Want) => {
+  want = next;
 };
 
 // One main lives in a room at a time, so the spaces whose main runs are this
 // shell's main's.
-function spacesOf(listing: Listing): Space[] {
-  return (listing.spaces ?? [])
-    .filter(
-      (s) => s.mainRun === "running" && s.socket && s.state !== "kept" && s.state !== "closed",
-    )
-    .map((s) => ({
-      id: s.id,
-      name: s.name,
-      worker: `${s.worker?.name ?? s.name}-${s.worker?.harness ?? ""}`,
-      socket: s.socket!,
-      checkout: s.checkout?.path ? s.checkout : undefined,
-    }));
-}
+export const shownSpaces = (view: RoomView): Space[] =>
+  view.spaces.filter((s) => s.mainRun === "running");
 
-// endedOf is the spaces not over whose main's run reads ended: the first
+// endedSpaces is the spaces not over whose main's run reads ended: the first
 // sign of main's end the room gives, while its hosts end the workers.
-function endedOf(listing: Listing): string[] {
-  return (listing.spaces ?? [])
-    .filter((s) => s.mainRun === "ended" && s.state !== "kept" && s.state !== "closed")
-    .map((s) => s.id);
-}
+export const endedSpaces = (view: RoomView): string[] =>
+  view.spaces.filter((s) => s.mainRun === "ended").map((s) => s.id);
 
-// readRewake is a view of rewake's in the room, read as JSON, or undefined
-// when it does not read; as names the session it is asked for.
-export async function readRewake<T>(
+// readRoom is the room view, or undefined when it does not read. mainPid is
+// the pid of main's wrapper once it runs: the command proves from it that the
+// caller is main's shell, and only then carries telemetry and briefs.
+export async function readRoom(
   rewake: string,
   room: string,
-  args: string[],
-  as?: Record<string, string>,
-): Promise<T | undefined> {
+  mainPid?: number,
+  asked: Want = { briefs: false },
+): Promise<RoomView | undefined> {
+  const args = ["room", "--json"];
+  if (mainPid !== undefined) args.push("--wrapper", String(mainPid));
+  if (asked.briefs) args.push("--briefs");
+  if (asked.brief !== undefined) args.push("--brief", String(asked.brief));
   try {
     const child = Bun.spawn([rewake, ...args], {
-      env: { ...(process.env as Record<string, string>), REWAKE_ROOM: room, ...as },
+      env: { ...(process.env as Record<string, string>), REWAKE_ROOM: room },
       stdout: "pipe",
       stderr: "ignore",
       stdin: "ignore",
     });
     const text = await new Response(child.stdout).text();
-    if ((await child.exited) === 0) return JSON.parse(text);
+    if ((await child.exited) === 0) return JSON.parse(text) as RoomView;
   } catch {
-    // Read as no listing.
+    // Read as no view.
   }
   return undefined;
 }
 
-// readListing is the room's spaces, or undefined when they do not read.
-function readListing(rewake: string, room: string): Promise<Listing | undefined> {
-  return readRewake<Listing>(rewake, room, ["space", "list", "--json"]);
-}
-
-// pollRoom calls onSpaces with each listing of the spaces that reads, and
-// onSessions with each of the sessions; a failed read keeps the last. It
-// returns the stop.
+// pollRoom calls onRead with each view that reads, and with undefined when
+// one does not, together with what that call asked for. It returns the stop.
 export function pollRoom(
   rewake: string,
   room: string,
-  onSpaces: (spaces: Space[], ended: string[]) => void,
   mainPid: () => number | undefined,
-  onSessions: (sessions: Map<string, Session>) => void,
+  onRead: (view: RoomView | undefined, asked: Want) => void,
 ): () => void {
   let stopped = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
-  const readSessions = sessionReader(rewake, room, mainPid);
   const once = async () => {
-    const [listing, sessions] = await Promise.all([readListing(rewake, room), readSessions()]);
-    if (listing && !stopped) onSpaces(spacesOf(listing), endedOf(listing));
-    if (sessions && !stopped) onSessions(sessions);
+    const asked = want;
+    const view = await readRoom(rewake, room, mainPid(), asked);
+    if (!stopped) onRead(view, asked);
     if (!stopped) timer = setTimeout(once, every);
   };
   void once();
@@ -105,178 +90,19 @@ export function pollRoom(
 }
 
 // spacesOver resolves once none of the spaces ids is open or closing in the
-// room's listing — each worker ended by its host after main's run ended — or
+// room's view — each worker ended by its host after main's run ended — or
 // once bound passes: a space host takes up to about nine seconds to end a
 // worker that ignores its hangup and SIGTERM.
 export async function spacesOver(rewake: string, room: string, ids: string[], bound: number) {
   const until = Date.now() + bound;
   while (ids.length > 0 && Date.now() < until) {
-    const listing = await readListing(rewake, room);
-    // A listing that does not read shows nothing to wait for.
-    if (!listing) return;
-    const live = (listing.spaces ?? []).filter(
+    const view = await readRoom(rewake, room);
+    // A view that does not read shows nothing to wait for.
+    if (!view) return;
+    const live = view.spaces.filter(
       (s) => ids.includes(s.id) && (s.state === "open" || s.state === "closing"),
     );
     if (live.length === 0) return;
     await new Promise((resolve) => setTimeout(resolve, 200));
   }
-}
-
-// askedAs names main's run once the listing found it: the identity a view
-// only main may read (the strip's telemetry, the briefs) is asked as.
-let askedAs: { REWAKE_SESSION: string; REWAKE_EPOCH: string } | undefined;
-export const mainAs = () => askedAs;
-
-// The room's sessions as main sees them, for the strip under each pane
-// (docs/shell.md, "The strip"): rewake list shows a session's telemetry
-// only to a verified main, and the shell is main's terminal, so it asks as
-// main's run, the one whose wrapper is its own child.
-export type Session = {
-  name: string;
-  // own marks the shell's main, the run the listing was asked as.
-  own?: boolean;
-  type?: string;
-  cwd: string;
-  // branch is what is checked out where the session started.
-  branch?: string;
-  // verdict is what rewake judged the session does; absent while the
-  // listing carries no telemetry.
-  verdict?: Verdict;
-  model?: string;
-  effort?: string;
-  // thinking is whether the model thinks, where the harness tells it.
-  thinking?: boolean;
-  used?: number;
-  window?: number;
-  percent?: number;
-  // cache is the prompt cache's hit percent of the last request, and when it
-  // expires (epoch milliseconds) where the harness says; absent when unknown.
-  cache?: { hit: number; expiresAt?: number };
-};
-
-// Verdict is rewake's verdict on a session's activity (session.Verdict,
-// docs/session-state.md#activity): the shell shows it and derives nothing.
-// TestTheShellsTypesOfTelemetry holds these names to what rewake emits.
-export type Verdict = {
-  activity: string;
-  label: string;
-  blocked: "" | "permission" | "question" | "dialog";
-  stale: boolean;
-  mark: "off" | "steady" | "blink";
-};
-
-// Telemetry is the part of a session's telemetry in `rewake list --json`
-// the shell reads.
-type Telemetry = {
-  verdict?: Verdict | null;
-  configuredModel?: string | null;
-  configuredModelName?: string | null;
-  configuredReasoningEffort?: string | null;
-  thinking?: boolean | null;
-  contextUsedTokens?: number | null;
-  contextWindowTokens?: number | null;
-  contextFilledPercent?: number | null;
-  cache?: { hitPercent: number } | null;
-  cacheLife?: { expiresAt?: string | null } | null;
-};
-
-type SessionListing = {
-  sessions?: {
-    name: string;
-    role: string;
-    cwd: string;
-    type?: string;
-    servicePid: number;
-    serviceStart: number;
-    boot?: string;
-    telemetry?: Telemetry;
-  }[];
-};
-
-// epochOf is a run's epoch as rewake names it (registry.RunEpoch).
-function epochOf(s: { servicePid: number; serviceStart: number; boot?: string }): string {
-  return `${s.servicePid}.${s.serviceStart}${s.boot ? `.${s.boot}` : ""}`;
-}
-
-function cacheOf(t: Telemetry | undefined): Session["cache"] {
-  if (typeof t?.cache?.hitPercent !== "number") return undefined;
-  const at = t.cacheLife?.expiresAt ? Date.parse(t.cacheLife.expiresAt) : Number.NaN;
-  return { hit: t.cache.hitPercent, expiresAt: Number.isNaN(at) ? undefined : at };
-}
-
-function sessionsOf(listing: SessionListing): Map<string, Session> {
-  const out = new Map<string, Session>();
-  for (const s of listing.sessions ?? []) {
-    const t = s.telemetry;
-    out.set(s.name, {
-      name: s.name,
-      type: s.type,
-      cwd: s.cwd,
-      verdict: t?.verdict ?? undefined,
-      model: t?.configuredModelName ?? t?.configuredModel ?? undefined,
-      effort: t?.configuredReasoningEffort ?? undefined,
-      thinking: t?.thinking ?? undefined,
-      used: t?.contextUsedTokens ?? undefined,
-      window: t?.contextWindowTokens ?? undefined,
-      percent: t?.contextFilledPercent ?? undefined,
-      cache: cacheOf(t),
-    });
-  }
-  return out;
-}
-
-// sessionReader reads the room's sessions. mainPid is the pid of main's
-// wrapper once it runs: its record, found by that pid, names the run the
-// listing is asked as; until then the listing has no telemetry.
-export function sessionReader(rewake: string, room: string, mainPid: () => number | undefined) {
-  const read = async (again = true): Promise<Map<string, Session> | undefined> => {
-    const listing = await readRewake<SessionListing>(rewake, room, ["list", "--json"], askedAs);
-    if (!listing) return undefined;
-    const pid = mainPid();
-    const own = listing.sessions?.find((s) => s.role === "main" && s.servicePid === pid);
-    const was = askedAs?.REWAKE_EPOCH;
-    askedAs = own ? { REWAKE_SESSION: own.name, REWAKE_EPOCH: epochOf(own) } : undefined;
-    // A listing asked as no run, or another, has no telemetry: asked again
-    // at once as main's.
-    if (askedAs && askedAs.REWAKE_EPOCH !== was && again) return read(false);
-    const sessions = sessionsOf(listing);
-    const mine = own && sessions.get(own.name);
-    if (mine) mine.own = true;
-    for (const s of sessions.values()) s.branch = await branchOf(s.cwd);
-    return sessions;
-  };
-  return read;
-}
-
-const branchEvery = 5000;
-
-// branches keeps the branch checked out in each directory a session started
-// in, read from git at most every five seconds: a worker without a checkout
-// of its own works on what is checked out there.
-const branches = new Map<string, { at: number; branch?: string }>();
-
-async function git(cwd: string, ...args: string[]): Promise<string | undefined> {
-  try {
-    const child = Bun.spawn(["git", "-C", cwd, ...args], {
-      stdout: "pipe",
-      stderr: "ignore",
-      stdin: "ignore",
-    });
-    const text = (await new Response(child.stdout).text()).trim();
-    if ((await child.exited) === 0 && text) return text;
-  } catch {
-    // No git: no branch shown.
-  }
-  return undefined;
-}
-
-// branchOf is the branch checked out in cwd, a detached head's short commit,
-// or undefined outside a repository.
-async function branchOf(cwd: string): Promise<string | undefined> {
-  const known = branches.get(cwd);
-  if (known && Date.now() - known.at < branchEvery) return known.branch;
-  let branch = await git(cwd, "rev-parse", "--abbrev-ref", "HEAD");
-  if (branch === "HEAD") branch = await git(cwd, "rev-parse", "--short", "HEAD");
-  branches.set(cwd, { at: Date.now(), branch });
-  return branch;
 }

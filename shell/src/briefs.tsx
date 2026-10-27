@@ -17,18 +17,19 @@ import {
   type Answer,
   cut,
   type Detail,
+  detailOf,
   foldText,
   headOf,
   infoOf,
+  type Listed,
+  listOf,
   type NavItem,
   navOf,
   ordered,
   type Pick,
   pickOf,
-  poll,
   type Row,
-  readBrief,
-  readList,
+  redraws,
   rowsOf,
   type Summary,
   stepOf,
@@ -37,6 +38,7 @@ import {
   type Unreadable,
   unreadableLine,
 } from "./briefs.ts";
+import { type RoomView, type Want, wanting } from "./room.ts";
 import { ink, type Theme } from "./theme.ts";
 
 // What the view shows outlives its mounting, as a worker's screen outlives
@@ -46,9 +48,46 @@ const [opened, setOpened] = createSignal<number>();
 const [list, setList] = createSignal<Summary[]>([]);
 const [lost, setLost] = createSignal<Unreadable[]>([]);
 const [detail, setDetail] = createSignal<Detail>();
+// The line shown instead when a view did not read, or came before main's run
+// was known; the next good answer replaces it.
+const [problem, setProblem] = createSignal<string>();
 const [at, setAt] = createSignal<Pick>();
 // The closed briefs unfolded under their row; kept while the shell runs.
 const [unfolded, setUnfolded] = createSignal(false);
+
+const sameJson = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+
+// keep shows an answer when it is new to what shows: its value, or the line
+// instead.
+// It says whether the answer was a good one.
+function keep<T>(answer: Answer<T>, same: (value: T) => boolean, set: (v: T) => void): boolean {
+  if (redraws(answer, { problem: problem(), same })) {
+    if (answer.ok) {
+      setProblem(undefined);
+      set(answer.value);
+    } else setProblem(answer.line);
+  }
+  return answer.ok;
+}
+
+// takeBriefs is what each read of the room view says of the briefs, as far as
+// that call asked for them: the list, and the brief opened. A view that did
+// not read is a line, never a crash.
+export function takeBriefs(view: RoomView | undefined, asked: Want) {
+  if (!asked.briefs) return;
+  if (!view) return setProblem("the room did not read");
+  const listed = keep(
+    listOf(view),
+    (v: Listed) => sameJson(ordered(v.briefs), list()) && sameJson(v.unreadable, lost()),
+    (v) => {
+      setList(ordered(v.briefs));
+      setLost(v.unreadable);
+    },
+  );
+  // A list that failed keeps its line: the brief opened must not hide it.
+  if (listed && asked.brief !== undefined && asked.brief === opened())
+    keep(detailOf(view, asked.brief), (v: Detail) => sameJson(v, detail()), setDetail);
+}
 
 // briefOpen is one brief showing, not the list, for the hints.
 export const briefOpen = () => opened() !== undefined;
@@ -95,7 +134,6 @@ export function BriefsView(props: {
   const theme = props.theme;
   const style = markdownStyle(renderer, theme);
   onCleanup(() => style.destroy());
-  const [problem, setProblem] = createSignal<string>();
   let scroll: ScrollBoxRenderable | undefined;
   let scrollbox: ScrollBoxRenderable | undefined;
 
@@ -105,34 +143,11 @@ export function BriefsView(props: {
     return i >= 0 ? i : 0;
   });
 
-  const keep = <T,>(answer: Answer<T>, set: (v: T) => void) => {
-    if (answer.ok) {
-      setProblem(undefined);
-      set(answer.value);
-    } else setProblem(answer.line);
-  };
-  // The list is read while the view shows, an opened brief's navigation row
-  // being made of it; the brief while it is open.
+  // The room view carries the list while this view shows, an opened brief's
+  // navigation row being made of it, and the brief while it is open.
   createEffect(() => {
-    const stop = poll(
-      () => readList(props.rewake, props.room),
-      (a) =>
-        keep(a, (v) => {
-          setList(ordered(v.briefs));
-          setLost(v.unreadable);
-        }),
-    );
-    onCleanup(stop);
-  });
-  createEffect(() => {
-    const id = opened();
-    if (id === undefined) return;
-    onCleanup(
-      poll(
-        () => readBrief(props.rewake, props.room, id),
-        (a) => keep(a, setDetail),
-      ),
-    );
+    wanting({ briefs: true, brief: opened() });
+    onCleanup(() => wanting({ briefs: false }));
   });
 
   const open = (id: number) => {

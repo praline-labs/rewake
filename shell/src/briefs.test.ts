@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import {
   type Answer,
   backText,
+  detailOf,
   foldText,
   headOf,
   infoOf,
@@ -9,7 +10,7 @@ import {
   navOf,
   ordered,
   pickOf,
-  poll,
+  redraws,
   rowsOf,
   type Summary,
   stepOf,
@@ -17,6 +18,7 @@ import {
   timeOf,
   unreadableLine,
 } from "./briefs.ts";
+import type { RoomView } from "./room.ts";
 
 const brief: Summary = {
   id: 3,
@@ -71,53 +73,69 @@ test("← and → step through the row and stop at its ends", () => {
   expect(stepOf(items, 1, -1)).toBeUndefined();
 });
 
+const view = (fields: Partial<RoomView>): RoomView => ({
+  room: "r",
+  asMain: true,
+  spaces: [],
+  sessions: [],
+  ...fields,
+});
+
 test("a list keeps the records that did not read, to show them", () => {
-  const listed = listOf({ briefs: [brief], unreadable: [{ path: "briefs/9", why: "bad json" }] });
-  expect(listed.briefs).toEqual([brief]);
-  expect(listed.unreadable.map(unreadableLine)).toEqual(["unreadable: briefs/9 — bad json"]);
-  expect(listOf({})).toEqual({ briefs: [], unreadable: [] });
+  const listed = listOf(
+    view({ briefs: [brief], unreadableBriefs: [{ path: "briefs/9", why: "bad json" }] }),
+  );
+  if (!listed.ok) throw new Error(listed.line);
+  expect(listed.value.briefs).toEqual([brief]);
+  expect(listed.value.unreadable.map(unreadableLine)).toEqual(["unreadable: briefs/9 — bad json"]);
+  expect(listOf(view({}))).toEqual({ ok: true, value: { briefs: [], unreadable: [] } });
+});
+
+test("a view of a caller not proved main's has no briefs, and says so", () => {
+  expect(listOf(view({ asMain: false }))).toEqual({
+    ok: false,
+    line: "main's run is not known yet; asking again",
+  });
+  expect(detailOf(view({ asMain: false }), 3).ok).toBe(false);
+});
+
+test("the opened brief is the one asked for, with its text", () => {
+  const opened = { ...brief, text: "# T", comments: [] };
+  expect(detailOf(view({ brief: opened }), 3)).toEqual({ ok: true, value: opened });
+  // One that is not there, or of another id, or without its text, is a line.
+  for (const bad of [undefined, { ...opened, id: 4 }, brief]) {
+    expect(detailOf(view({ brief: bad }), 3)).toEqual({ ok: false, line: "brief 3 did not read" });
+  }
+});
+
+test("a list that failed to read shows its reason, not an empty list", () => {
+  const failed = listOf(view({ briefsProblem: "index.json: invalid character" }));
+  expect(failed).toEqual({
+    ok: false,
+    line: "the briefs did not read: index.json: invalid character",
+  });
+});
+
+test("an answer is drawn when it differs from what shows, whatever was shown before", () => {
+  const good: Answer<number> = { ok: true, value: 1 };
+  const bad: Answer<number> = { ok: false, line: "did not read" };
+  const nothing = { same: () => false };
+  const shows = (n: number, problem?: string) => ({ problem, same: (v: number) => v === n });
+  // The same value is not drawn again; another is.
+  expect(redraws(good, shows(1))).toBe(false);
+  expect(redraws({ ok: true, value: 2 }, shows(1))).toBe(true);
+  // Read brief A, open B, return to A: the cleared view draws A's unchanged answer.
+  expect(redraws(good, nothing)).toBe(true);
+  // A line shown is replaced by the next good answer, though its value is the one shown.
+  expect(redraws(good, shows(1, "did not read"))).toBe(true);
+  // The same line is not drawn twice; another is.
+  expect(redraws(bad, shows(1, "did not read"))).toBe(false);
+  expect(redraws(bad, shows(1))).toBe(true);
 });
 
 test("a time that does not parse is shown as it came", () => {
   expect(timeOf("soon")).toBe("soon");
   expect(timeOf("2026-10-26T14:05:00Z")).toMatch(/^2026-10-2[67] \d\d:\d\d$/);
-});
-
-test("a poll shows an answer only when it changed, and stops", async () => {
-  const answers: Answer<number>[] = [
-    { ok: true, value: 1 },
-    { ok: true, value: 1 },
-    { ok: false, line: "did not read" },
-    { ok: true, value: 2 },
-  ];
-  let reads = 0;
-  const shown: Answer<number>[] = [];
-  const stop = poll(
-    async () => answers[Math.min(reads++, answers.length - 1)]!,
-    (a) => shown.push(a),
-    5,
-  );
-  await new Promise((resolve) => setTimeout(resolve, 80));
-  stop();
-  const seen = reads;
-  await new Promise((resolve) => setTimeout(resolve, 40));
-  expect(reads).toBe(seen);
-  expect(shown).toEqual([answers[0]!, answers[2]!, answers[3]!]);
-});
-
-test("a read that throws is a line, not a crash", async () => {
-  const shown: Answer<number>[] = [];
-  const stop = poll<number>(
-    async () => {
-      throw new Error("boom");
-    },
-    (a) => shown.push(a),
-    5,
-  );
-  await new Promise((resolve) => setTimeout(resolve, 30));
-  stop();
-  expect(shown).toHaveLength(1);
-  expect(shown[0]?.ok).toBe(false);
 });
 
 test("the strip under the briefs says what shows, cut at the width", () => {
