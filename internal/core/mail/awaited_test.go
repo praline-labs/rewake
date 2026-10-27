@@ -29,7 +29,7 @@ func TestTheWalkFindsAMessageThatMovesOn(t *testing.T) {
 		}
 	}
 	t.Cleanup(func() { afterListing = func(string) {} })
-	if found := must(sentBy(dir, "api", "lead", "run-1")); len(found) != 1 || found[0].ID != sent.ID {
+	if found := sentBy(must(everywhere(dir, "api")), "api", "lead", []string{"run-1"}); len(found) != 1 || found[0].ID != sent.ID {
 		t.Fatalf("found %+v, want the task once", found)
 	}
 }

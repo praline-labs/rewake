@@ -59,8 +59,10 @@ type AwaitedMessage struct {
 func (m AwaitedMessage) Gone() bool { return m.Run != RunLive }
 
 // Awaited lists what one run sent — tasks and questions, never notes — and has
-// no report on yet, oldest first. Only that run's mail is listed: an earlier
-// run of the same name was answered, or not, as someone else.
+// no report on yet, oldest first. Beside the run's own it lists those of the
+// run it replaced, the latest earlier run of the name that sent any, so a
+// session restarted after a crash still sees what its predecessor waited on;
+// older runs' are left to be answered, or not, as someone else's.
 //
 // runOf says what became of a recipient's run. It decides what a read message
 // with no wait record means. The record is cleared only once the report is
@@ -79,29 +81,36 @@ func Awaited(dir, name, epoch string, runOf func(recipient, run string) Recipien
 	if epoch == "" {
 		return nil, nil
 	}
-	reports, err := reportsTo(dir, name, epoch)
+	recipients, err := mailboxes(dir)
 	if err != nil {
 		return nil, err
 	}
-	recipients, err := mailboxes(dir)
+	written := map[string][]Message{}
+	for _, recipient := range recipients {
+		if written[recipient], err = everywhere(dir, recipient); err != nil {
+			return nil, err
+		}
+	}
+	runs := []string{epoch}
+	if previous := previousRun(written, name, epoch); previous != "" {
+		runs = append(runs, previous)
+	}
+	reports, err := reportsTo(dir, name, runs)
 	if err != nil {
 		return nil, err
 	}
 	var awaited []AwaitedMessage
 	for _, recipient := range recipients {
-		sent, err := sentBy(dir, recipient, name, epoch)
-		if err != nil {
-			return nil, err
-		}
-		waits := map[string]Waiter{}
-		for _, message := range sent {
-			run := message.ToEpoch
-			wait, seen := waits[run]
+		type waitKey struct{ to, from string }
+		waits := map[waitKey]Waiter{}
+		for _, message := range sentBy(written[recipient], recipient, name, runs) {
+			key := waitKey{message.ToEpoch, message.FromEpoch}
+			wait, seen := waits[key]
 			if !seen {
-				if wait, err = waiterFor(dir, recipient, run, name, epoch); err != nil {
+				if wait, err = waiterFor(dir, recipient, key.to, name, key.from); err != nil {
 					return nil, err
 				}
-				waits[run] = wait
+				waits[key] = wait
 			}
 			item, settled, err := placed(dir, message, reports[message.ID], wait, runOf)
 			if err != nil {
@@ -123,7 +132,7 @@ func AwaitedOne(dir, name, epoch string, message Message, runOf func(recipient, 
 	if err != nil {
 		return AwaitedMessage{}, false, err
 	}
-	reports, err := reportsTo(dir, name, epoch)
+	reports, err := reportsTo(dir, name, []string{epoch})
 	if err != nil {
 		return AwaitedMessage{}, false, err
 	}
@@ -261,31 +270,48 @@ func mailboxes(dir string) ([]string, error) {
 	return names, nil
 }
 
-// sentBy lists the tasks and questions one run wrote into a mailbox, wherever
-// the mailbox keeps them now.
-func sentBy(dir, recipient, name, epoch string) ([]Message, error) {
-	all, err := everywhere(dir, recipient)
-	if err != nil {
-		return nil, err
-	}
+// sentBy picks the tasks and questions the given runs wrote into a mailbox out
+// of everything it keeps, wherever it keeps them now.
+func sentBy(all []Message, recipient, name string, runs []string) []Message {
 	var sent []Message
 	for _, message := range all {
-		if message.From == name && message.FromEpoch == epoch && message.To == recipient && Owed(message) {
+		if message.From == name && slices.Contains(runs, message.FromEpoch) && message.To == recipient && Owed(message) {
 			sent = append(sent, message)
 		}
 	}
-	return sent, nil
+	return sent
 }
 
-// reportsTo gathers the reports this run received, by the message each answers.
-func reportsTo(dir, name, epoch string) (map[string][]Message, error) {
+// previousRun is the latest run of name other than epoch to have sent a task
+// or question, by what the mailboxes hold: no record of the run a new one
+// replaced exists, and a run that sent nothing left nothing to wait on.
+func previousRun(written map[string][]Message, name, epoch string) string {
+	var latest *Message
+	for recipient, all := range written {
+		for index, message := range all {
+			if message.From != name || message.FromEpoch == "" || message.FromEpoch == epoch || !Owed(message) {
+				continue
+			}
+			if latest == nil || message.CreatedAt.After(latest.CreatedAt) {
+				latest = &written[recipient][index]
+			}
+		}
+	}
+	if latest == nil {
+		return ""
+	}
+	return latest.FromEpoch
+}
+
+// reportsTo gathers the reports the given runs received, by the message each answers.
+func reportsTo(dir, name string, runs []string) (map[string][]Message, error) {
 	all, err := everywhere(dir, name)
 	if err != nil {
 		return nil, err
 	}
 	byTask := map[string][]Message{}
 	for _, report := range all {
-		if !IsReport(report) || report.ToEpoch != epoch {
+		if !IsReport(report) || !slices.Contains(runs, report.ToEpoch) {
 			continue
 		}
 		for _, id := range report.InReplyTo {
