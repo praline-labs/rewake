@@ -1,8 +1,6 @@
 package cli
 
 import (
-	"encoding/json"
-	"slices"
 	"strings"
 	"testing"
 
@@ -26,99 +24,6 @@ func as(t *testing.T, session registry.Session) {
 	t.Helper()
 	t.Setenv(state.SessionEnv, session.Name)
 	t.Setenv(state.EpochEnv, session.Epoch())
-}
-
-func keys(t *testing.T, raw any) []string {
-	t.Helper()
-	object, ok := raw.(map[string]any)
-	if !ok {
-		t.Fatalf("%v is no object", raw)
-	}
-	var names []string
-	for name := range object {
-		names = append(names, name)
-	}
-	slices.Sort(names)
-	return names
-}
-
-// The --json of list and show is what rewake's shell reads: its fields are
-// held here by name, so a rename fails before the shell draws nothing.
-func TestTheShellsJSONOfBriefs(t *testing.T) {
-	dir, worker := briefWorld(t)
-	lead, _ := registry.Lookup(dir, "lead")
-	if code, out, errOut := run("brief", "new", "# Auth refactor\n\n- [ ] move the login\n- [ ] run the tests\n"); code != ExitOK || !strings.Contains(out, "brief 1 made") {
-		t.Fatalf("new: %d %q %q", code, out, errOut)
-	}
-	run("brief", "new", "# Old work\n")
-	if code, _, errOut := run("brief", "close", "2"); code != ExitOK {
-		t.Fatalf("close: %d %q", code, errOut)
-	}
-	author := taskbrief.Author{Name: worker.Name, Epoch: worker.Epoch()}
-	if err := taskbrief.Bind(taskbrief.Home{Room: dir}, 1, author); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := taskbrief.Tick(taskbrief.Home{Room: dir}, 1, author, 1, 2, true); err != nil {
-		t.Fatal(err)
-	}
-	if _, _, err := taskbrief.Comment(taskbrief.Home{Room: dir}, 1, author, "the tests pass"); err != nil {
-		t.Fatal(err)
-	}
-	as(t, lead)
-
-	code, out, errOut := run("brief", "list", "--closed", "--json")
-	if code != ExitOK {
-		t.Fatalf("list: %d %q", code, errOut)
-	}
-	var listing map[string]any
-	if err := json.Unmarshal([]byte(out), &listing); err != nil {
-		t.Fatal(err)
-	}
-	if got := strings.Join(keys(t, listing), ","); got != "briefs,room,unreadable" {
-		t.Fatalf("list's fields: %s", got)
-	}
-	briefs := listing["briefs"].([]any)
-	if len(briefs) != 2 {
-		t.Fatalf("briefs = %v", briefs)
-	}
-	summaryFields := "bound,closed,commentCount,created,done,edition,id,revision,title,total"
-	if got := strings.Join(keys(t, briefs[0]), ","); got != summaryFields {
-		t.Fatalf("an open brief's fields: %s", got)
-	}
-	if got := strings.Join(keys(t, briefs[1]), ","); got != "bound,closed,closedAt,commentCount,created,done,edition,id,revision,title,total" {
-		t.Fatalf("a closed brief's fields: %s", got)
-	}
-	first := briefs[0].(map[string]any)
-	if first["id"] != 1.0 || first["title"] != "Auth refactor" || first["done"] != 1.0 || first["total"] != 2.0 || first["commentCount"] != 1.0 || first["edition"] != 1.0 || first["revision"] != 2.0 {
-		t.Fatalf("brief 1 = %v", first)
-	}
-	bound := first["bound"].([]any)
-	if len(bound) != 1 || strings.Join(keys(t, bound[0]), ",") != "epoch,name,run,since" || bound[0].(map[string]any)["run"] != "running" {
-		t.Fatalf("bound = %v", bound)
-	}
-
-	code, out, errOut = run("brief", "show", "1", "--json")
-	if code != ExitOK {
-		t.Fatalf("show: %d %q", code, errOut)
-	}
-	var shown map[string]any
-	if err := json.Unmarshal([]byte(out), &shown); err != nil {
-		t.Fatal(err)
-	}
-	if got := strings.Join(keys(t, shown), ","); got != "bound,closed,commentCount,comments,created,done,edition,id,items,revision,text,title,total" {
-		t.Fatalf("show's fields: %s", got)
-	}
-	if shown["text"] != "# Auth refactor\n\n- [ ] move the login\n- [x] run the tests\n" {
-		t.Fatalf("text = %q", shown["text"])
-	}
-	items := shown["items"].([]any)
-	if len(items) != 2 || strings.Join(keys(t, items[1]), ",") != "done,n,text" || items[1].(map[string]any)["done"] != true {
-		t.Fatalf("items = %v", items)
-	}
-	comments := shown["comments"].([]any)
-	if len(comments) != 1 || strings.Join(keys(t, comments[0]), ",") != "at,edition,from,n,text" || comments[0].(map[string]any)["from"] != "worker" {
-		t.Fatalf("comments = %v", comments)
-	}
 }
 
 // A worker reads the numbered text and ticks by its edition; main edits the

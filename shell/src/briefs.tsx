@@ -15,20 +15,21 @@ import {
 import { ShellRow, selecting, separator } from "./bar.tsx";
 import {
   type Answer,
+  changes,
   cut,
   type Detail,
+  detailOf,
   foldText,
   headOf,
   infoOf,
+  type Listed,
+  listOf,
   type NavItem,
   navOf,
   ordered,
   type Pick,
   pickOf,
-  poll,
   type Row,
-  readBrief,
-  readList,
   rowsOf,
   type Summary,
   stepOf,
@@ -37,6 +38,7 @@ import {
   type Unreadable,
   unreadableLine,
 } from "./briefs.ts";
+import { type RoomView, type Want, wanting } from "./room.ts";
 import { ink, type Theme } from "./theme.ts";
 
 // What the view shows outlives its mounting, as a worker's screen outlives
@@ -46,9 +48,38 @@ const [opened, setOpened] = createSignal<number>();
 const [list, setList] = createSignal<Summary[]>([]);
 const [lost, setLost] = createSignal<Unreadable[]>([]);
 const [detail, setDetail] = createSignal<Detail>();
+// The line shown instead when a view did not read, or came before main's run
+// was known; the next good answer replaces it.
+const [problem, setProblem] = createSignal<string>();
 const [at, setAt] = createSignal<Pick>();
 // The closed briefs unfolded under their row; kept while the shell runs.
 const [unfolded, setUnfolded] = createSignal(false);
+
+const listChanged = changes<Listed>();
+const detailChanged = changes<Detail>();
+
+// keep shows an answer when it is new: its value, or the line instead.
+function keep<T>(answer: Answer<T>, changed: (a: Answer<T>) => boolean, set: (v: T) => void) {
+  if (!changed(answer)) return;
+  if (answer.ok) {
+    setProblem(undefined);
+    set(answer.value);
+  } else setProblem(answer.line);
+}
+
+// takeBriefs is what each read of the room view says of the briefs, as far as
+// that call asked for them: the list, and the brief opened. A view that did
+// not read is a line, never a crash.
+export function takeBriefs(view: RoomView | undefined, asked: Want) {
+  if (!asked.briefs) return;
+  if (!view) return setProblem("the room did not read");
+  keep(listOf(view), listChanged, (v) => {
+    setList(ordered(v.briefs));
+    setLost(v.unreadable);
+  });
+  if (asked.brief !== undefined && asked.brief === opened())
+    keep(detailOf(view, asked.brief), detailChanged, setDetail);
+}
 
 // briefOpen is one brief showing, not the list, for the hints.
 export const briefOpen = () => opened() !== undefined;
@@ -95,7 +126,6 @@ export function BriefsView(props: {
   const theme = props.theme;
   const style = markdownStyle(renderer, theme);
   onCleanup(() => style.destroy());
-  const [problem, setProblem] = createSignal<string>();
   let scroll: ScrollBoxRenderable | undefined;
   let scrollbox: ScrollBoxRenderable | undefined;
 
@@ -105,34 +135,11 @@ export function BriefsView(props: {
     return i >= 0 ? i : 0;
   });
 
-  const keep = <T,>(answer: Answer<T>, set: (v: T) => void) => {
-    if (answer.ok) {
-      setProblem(undefined);
-      set(answer.value);
-    } else setProblem(answer.line);
-  };
-  // The list is read while the view shows, an opened brief's navigation row
-  // being made of it; the brief while it is open.
+  // The room view carries the list while this view shows, an opened brief's
+  // navigation row being made of it, and the brief while it is open.
   createEffect(() => {
-    const stop = poll(
-      () => readList(props.rewake, props.room),
-      (a) =>
-        keep(a, (v) => {
-          setList(ordered(v.briefs));
-          setLost(v.unreadable);
-        }),
-    );
-    onCleanup(stop);
-  });
-  createEffect(() => {
-    const id = opened();
-    if (id === undefined) return;
-    onCleanup(
-      poll(
-        () => readBrief(props.rewake, props.room, id),
-        (a) => keep(a, setDetail),
-      ),
-    );
+    wanting({ briefs: true, brief: opened() });
+    onCleanup(() => wanting({ briefs: false }));
   });
 
   const open = (id: number) => {

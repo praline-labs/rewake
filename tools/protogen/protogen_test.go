@@ -26,7 +26,7 @@ func TestTheCheckedInFilesMatchTheSchema(t *testing.T) {
 			continue
 		}
 		if !bytes.Equal(checkedIn, file.content) {
-			t.Errorf("%s differs from a fresh generation from %s: run go run ./tools/protogen from the module root", file.path, schemaPath)
+			t.Errorf("%s differs from a fresh generation from its schema: run go run ./tools/protogen from the module root", file.path)
 		}
 	}
 }
@@ -35,7 +35,11 @@ func TestTheCheckedInFilesMatchTheSchema(t *testing.T) {
 // files and their times alone.
 func TestARunRewritesOnlyWhatDiffers(t *testing.T) {
 	root := t.TempDir()
-	for _, path := range []string{schemaPath, tsPath, goPath} {
+	var paths []string
+	for _, t := range targets {
+		paths = append(paths, t.schema, t.ts, t.goFile)
+	}
+	for _, path := range paths {
 		text, err := os.ReadFile(filepath.Join(moduleRoot, path))
 		if err != nil {
 			t.Fatal(err)
@@ -147,6 +151,7 @@ func TestAnOptionalFieldStaysApartFromItsZero(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	s.source, s.goPackage = "small.schema.json", "small"
 	source, err := emitGo(s)
 	if err != nil {
 		t.Fatal(err)

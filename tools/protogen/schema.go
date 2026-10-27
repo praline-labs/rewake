@@ -15,6 +15,9 @@ import (
 // fields and endpoints keep the schema's order, so the generated files read in
 // the order the schema was written in.
 type schema struct {
+	// source is the schema file's name and goPackage the package of the Go
+	// side, both set by whoever reads the file.
+	source, goPackage  string
 	title, description string
 	bounds             []bound
 	endpoints          []endpoint
@@ -107,9 +110,14 @@ func parseSchema(text []byte) (schema, error) {
 		return schema{}, errors.New("the schema has a title and a description")
 	}
 	out := schema{title: raw.Title, description: raw.Description}
-	bounds, err := members(raw.Bounds, "x-bounds")
-	if err != nil {
-		return schema{}, err
+	// A schema of types alone, like the room view's, has no bounds and no
+	// endpoints; one that names them names them whole.
+	var bounds []member
+	if raw.Bounds != nil {
+		var err error
+		if bounds, err = members(raw.Bounds, "x-bounds"); err != nil {
+			return schema{}, err
+		}
 	}
 	for _, m := range bounds {
 		var b rawBound
@@ -135,7 +143,7 @@ func parseSchema(text []byte) (schema, error) {
 	if err := out.checkRefs(); err != nil {
 		return schema{}, err
 	}
-	if len(raw.Endpoints) == 0 {
+	if raw.Endpoints != nil && len(raw.Endpoints) == 0 {
 		return schema{}, errors.New("x-endpoints names no endpoint")
 	}
 	for _, e := range raw.Endpoints {

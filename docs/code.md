@@ -51,7 +51,7 @@ test/launch/                                  a space's worker command checked a
 test/leaserig/                                the room's build lease raced between real builds of rewake, each paused at a named step
 tools/checksummary/                           summarizes a suite run into a few lines and summary.json
 tools/release/                                the release gate: checks, builds with pack.sh, publishes only when told
-tools/protogen/                               writes the mod protocol's Go and TypeScript types from its schema; its test fails when a checked-in file differs
+tools/protogen/                               writes the Go and TypeScript types of two schemas, the mod protocol's and the shell's room view (internal/cli/room_view.schema.json); its test fails when a checked-in file differs
 ```
 
 `cmd/` holds only what the project ships; `tools/` holds development programs that ship

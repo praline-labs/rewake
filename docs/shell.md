@@ -231,10 +231,16 @@ wrapper in the shell does the same for main (`terminal.UTF8Locale`), whose worke
   `b` shows the briefs in the worker's place ([below](#the-briefs)), and while they have the keys
   goes back to what was chosen and focused before; the prefix again sends Ctrl+\\ to the focused
   program, but not to the briefs; any other key cancels.
-- **The room** comes from rewake's own commands, polled once a second (`shell/src/room.ts`):
-  `rewake space list --json` for the spaces, which carries each open space's socket path so the
-  shell never builds a path itself, and whose `mainRun` reading `ended` begins the closing screen;
-  `rewake list --json` for the strip (below).
+- **The room** comes from one call of rewake's own, polled once a second (`shell/src/room.ts`):
+  the hidden `rewake room --json`, whose shape is the schema `internal/cli/room_view.schema.json`.
+  `tools/protogen` writes the shell's types (`shell/src/room_view.gen.ts`) and the command's Go
+  types from it, and its test fails when a checked-in file differs, so the shell maps nothing by
+  hand and the command's answer cannot drift from what the shell reads. The view carries the
+  spaces not over — each with the socket path of its host, so the shell never builds one, and its
+  `mainRun`, whose reading `ended` begins the closing screen — and the sessions for the strip
+  (below); while the briefs show, also the briefs (below). The command is hidden like `statusline`:
+  the shell is its only caller, and a documented command would promise agents a shape. The
+  existing `list`, `space list` and `brief` `--json` forms stay as they are.
 
 ## The bar
 
@@ -335,14 +341,17 @@ write-claude (code) · working · ⎇ wt-fd7596 · <model> low thinking · 23% 2
   it expired, `90%` where the harness gives no expiry; left out where it gives no cache. The time is
   counted from `expiresAt` on the shell's own clock every five seconds, so it ticks down between
   polls.
-- **Where it comes from**: `rewake list --json` shows telemetry only to a verified main
-  (`internal/cli/session_state.go`), and the shell is main's terminal, so it asks as main's run.
-  That run's record is the main whose `servicePid` is the shell's own child, main's wrapper; its
-  name and epoch go to `REWAKE_SESSION` and `REWAKE_EPOCH` of the poll, and a new epoch is read
-  again at once. The same record is main's strip; until it is found the strip reads `main` alone.
-- **The branch** is the space record's `checkout.branch` for a worker in a checkout of its own
-  (made by its launch, or entered); otherwise the branch checked out where the session started,
-  read from `git` at most every five seconds, a detached head as its short commit.
+- **Where it comes from**: telemetry is shown only to a verified main, and the shell is main's
+  terminal and no session, so it proves itself by the process tree: it passes `--wrapper <pid>`,
+  the pid of main's wrapper, and the command takes it only for the `servicePid` of a main
+  record whose parent is the process that called it, as the shell is main's wrapper's parent
+  (`asMain` in the view). Then the view carries the sessions' telemetry and marks main's own row
+  `own`, which is main's strip; without the proof — before main's record is found — the sessions
+  come bare and the strip reads `main` alone, and the next call proves it.
+- **The branch** is in the view: the space record's `checkout.branch` for a worker in a checkout
+  of its own (made by its launch, or entered); otherwise the branch checked out where the session
+  started, read from `HEAD` by the command itself on each call (no process, so no cache), a
+  detached head as its first seven characters.
 - **Narrow**: the line fits the pane. Too long, it leaves out the model and effort, then the cache,
   then the branch; what still does not fit is cut with `…`. The name, the activity and the context
   stay.
@@ -393,7 +402,7 @@ outlives a worker being chosen over it, as a worker's screen does.
   line. Enter or a click unfolds the closed briefs under it, in the two-line form, and again folds
   them; with no open brief and some closed the list is that row alone. The fold is a signal of
   the view, kept while the shell runs and not across restarts. Nothing is deleted: the closed
-  briefs stay on disk and `rewake brief list --closed` shows them, which the poll still reads.
+  briefs stay on disk and `rewake brief list --closed` shows them, which the room view still carries.
 - **The strip** under the view says what shows, a shell's row as a worker's strip is:
   `briefs · 3 open · 1 closed` under the list, `brief 3 · 2/5 · 4 comments` under one, the first
   part bold, cut with `…` at the width (`stripOfBriefs`, `shell/src/briefs.ts`).
@@ -422,11 +431,12 @@ outlives a worker being chosen over it, as a worker's screen does.
   shows or not, in the list too. The compiled shell draws it: the
   default tree-sitter client `<markdown>` starts works inside `bun build --compile`, checked on
   October 26, 2026 on Linux x64.
-- **How it reads.** By rewake's commands, as main's run, as the strip does (the identity found
-  for the strip, `mainAs` in `shell/src/room.ts`): `rewake brief list --closed --json` once a second
-  while the view shows, an opened brief's row being made of it, and `rewake brief show <id> --json`
-  once a second while a brief shows, nothing
-  while a worker is chosen in their place (`poll`, `shell/src/briefs.ts`). An answer is drawn only when it differs
+- **How it reads.** From the same room view as the strip, in the same one call a second, which
+  the view adds `--briefs` to while it shows (the list, closed briefs included, an opened
+  brief's row being made of it) and `--brief <id>` to while a brief shows (its text and comments);
+  nothing is asked while a worker is chosen in their place (`wanting` in `shell/src/room.ts`,
+  `takeBriefs` in `shell/src/briefs.tsx`). Briefs come only to the proven shell of main
+  (`asMain`). An answer is drawn only when it differs
   from the last, and the scroll position stays. A read that fails, does not parse, or comes before
   main's run is known shows one line on the view's bottom row and is replaced by the next good
   answer; it never ends the shell.

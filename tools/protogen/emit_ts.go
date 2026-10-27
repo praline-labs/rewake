@@ -10,25 +10,30 @@ import (
 // with ?, as the Go side leaves it out when absent.
 func emitTS(s schema) []byte {
 	var b strings.Builder
-	fmt.Fprintf(&b, "// %s\n//\n", header)
+	fmt.Fprintf(&b, "// %s\n//\n", s.header())
 	writeComment(&b, "// ", s.title+". "+s.description)
-	b.WriteString("\n/** The paths of the protocol's endpoints, each a POST. */\nexport const paths = {\n")
-	for _, e := range s.endpoints {
-		parts := strings.Split(e.path, "/")
-		key := parts[0] + upperCamel(parts[1:])
-		writeComment(&b, "  // ", key+" "+e.description)
-		fmt.Fprintf(&b, "  %s: %q,\n", key, "/v1/"+e.path)
+	if len(s.endpoints) > 0 {
+		b.WriteString("\n/** The paths of the protocol's endpoints, each a POST. */\nexport const paths = {\n")
+		for _, e := range s.endpoints {
+			parts := strings.Split(e.path, "/")
+			key := parts[0] + upperCamel(parts[1:])
+			writeComment(&b, "  // ", key+" "+e.description)
+			fmt.Fprintf(&b, "  %s: %q,\n", key, "/v1/"+e.path)
+		}
+		b.WriteString("} as const\n\n/** What each endpoint is asked and answers. */\nexport interface Endpoints {\n")
+		for _, e := range s.endpoints {
+			fmt.Fprintf(&b, "  %q: { request: %s; answer: %s }\n", "/v1/"+e.path, e.request, e.answer)
+		}
+		b.WriteString("}\n")
 	}
-	b.WriteString("} as const\n\n/** What each endpoint is asked and answers. */\nexport interface Endpoints {\n")
-	for _, e := range s.endpoints {
-		fmt.Fprintf(&b, "  %q: { request: %s; answer: %s }\n", "/v1/"+e.path, e.request, e.answer)
+	if len(s.bounds) > 0 {
+		b.WriteString("\n/** The protocol's bounds. */\nexport const bounds = {\n")
+		for _, bound := range s.bounds {
+			writeComment(&b, "  // ", bound.name+" "+bound.description)
+			fmt.Fprintf(&b, "  %s: %d,\n", bound.name, bound.value)
+		}
+		b.WriteString("} as const\n")
 	}
-	b.WriteString("}\n\n/** The protocol's bounds. */\nexport const bounds = {\n")
-	for _, bound := range s.bounds {
-		writeComment(&b, "  // ", bound.name+" "+bound.description)
-		fmt.Fprintf(&b, "  %s: %d,\n", bound.name, bound.value)
-	}
-	b.WriteString("} as const\n")
 	for _, d := range s.defs {
 		b.WriteString("\n")
 		writeComment(&b, "// ", d.name+" "+d.description)

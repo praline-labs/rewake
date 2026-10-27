@@ -1,0 +1,156 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "The room view",
+  "description": "What rewake's shell reads of the room each second, from one hidden `rewake room --json` call (docs/shell.md#the-prefix-and-the-room): the open spaces, the sessions with their verdicts, and, when asked, the briefs. The shell's types and the command's are generated from this file by go run ./tools/protogen, so the two cannot drift.",
+  "$defs": {
+    "RoomView": {
+      "type": "object",
+      "description": "is the room as the shell draws it.",
+      "properties": {
+        "room": {"type": "string", "description": "is the room's name."},
+        "asMain": {"type": "boolean", "description": "says the caller proved to be the shell of the room's main: only then does the view carry the sessions' telemetry and the briefs."},
+        "spaces": {"type": "array", "items": {"$ref": "#/$defs/SpaceRow"}, "description": "are the spaces not over, in the order they opened."},
+        "sessions": {"type": "array", "items": {"$ref": "#/$defs/SessionRow"}, "description": "are the room's running sessions."},
+        "briefs": {"type": "array", "items": {"$ref": "#/$defs/BriefView"}, "description": "are the room's briefs, open ones and closed, newest first as brief list gives them; absent when none, when --briefs was not asked, and unless asMain."},
+        "unreadableBriefs": {"type": "array", "items": {"$ref": "#/$defs/Problem"}, "description": "are the entries of the briefs directory that do not read as a brief: shown, never taken for absent; absent as briefs is."},
+        "brief": {"$ref": "#/$defs/BriefView", "description": "is the brief --brief named, with its text and comments; absent unless it was asked, asMain and it reads."}
+      },
+      "required": ["room", "asMain", "spaces", "sessions"],
+      "additionalProperties": false
+    },
+    "SpaceRow": {
+      "type": "object",
+      "description": "is a space not over.",
+      "properties": {
+        "id": {"type": "string", "description": "names the space in its record and in the pane's source."},
+        "name": {"type": "string", "description": "is what main and the person call the space."},
+        "worker": {"type": "string", "description": "is the worker's session name, its --name and its harness."},
+        "state": {"$ref": "#/$defs/SpaceState", "description": "is where the space stands."},
+        "mainRun": {"$ref": "#/$defs/RunState", "description": "says whether the main that opened the space still runs: the first sign of main's end the room gives, while its hosts end the workers."},
+        "socket": {"type": "string", "description": "is where the space's host serves the worker's screen; the shell builds no path itself."},
+        "checkout": {"$ref": "#/$defs/Checkout", "description": "is the worker's own worktree; absent while it works where main does."}
+      },
+      "required": ["id", "name", "worker", "state", "mainRun", "socket"],
+      "additionalProperties": false
+    },
+    "SpaceState": {
+      "type": "string",
+      "description": "is a space that is not over: opening, open, or closing.",
+      "enum": ["opening", "open", "closing"]
+    },
+    "RunState": {
+      "type": "string",
+      "description": "is whether a run lives: running, ended, or unknown when that cannot be told.",
+      "enum": ["running", "ended", "unknown"]
+    },
+    "Checkout": {
+      "type": "object",
+      "description": "is a worker's own worktree.",
+      "properties": {
+        "path": {"type": "string", "description": "is the worktree's directory."},
+        "branch": {"type": "string", "description": "is the branch checked out there."}
+      },
+      "required": ["path"],
+      "additionalProperties": false
+    },
+    "SessionRow": {
+      "type": "object",
+      "description": "is a running session as main sees it, for the strip under its pane.",
+      "properties": {
+        "name": {"type": "string", "description": "is the session's name."},
+        "own": {"type": "boolean", "description": "marks the shell's own main, the run the caller proved to be."},
+        "type": {"type": "string", "description": "is the type of a worker opened with one."},
+        "cwd": {"type": "string", "description": "is the directory the session started in."},
+        "branch": {"type": "string", "description": "is the branch the session works on: its space's own checkout, else what is checked out where it started, a detached head as its short commit; absent outside a repository."},
+        "verdict": {"$ref": "#/$defs/Verdict", "description": "is what rewake judged the session does; absent while the room view carries no telemetry."},
+        "model": {"type": "string", "description": "is the harness's display name of the model, else the template's label, else the id."},
+        "effort": {"type": "string", "description": "is the reasoning effort."},
+        "thinking": {"type": "boolean", "description": "is whether the model thinks, where the harness tells it."},
+        "used": {"type": "integer", "description": "is the tokens the context holds."},
+        "window": {"type": "integer", "description": "is the limit the conversation is kept to, in tokens."},
+        "percent": {"type": "integer", "description": "is how full the context is, in percent of the window."},
+        "cache": {"$ref": "#/$defs/CacheRow", "description": "is the prompt cache, where the harness says; absent when unknown."}
+      },
+      "required": ["name", "cwd"],
+      "additionalProperties": false
+    },
+    "Mark": {
+      "type": "string",
+      "description": "is the edge of a session's button in the shell.",
+      "enum": ["off", "steady", "blink"]
+    },
+    "Verdict": {
+      "type": "object",
+      "description": "is rewake's verdict on a session's activity (docs/session-state.md#activity): the shell shows it and derives nothing.",
+      "properties": {
+        "activity": {"type": "string", "description": "is the word for what the session does: idle, working, compacting, waiting for a permission, waiting for an answer, waiting at a dialog or unknown."},
+        "label": {"type": "string", "description": "is the activity as a person reads it, with (stale) once it is not current."},
+        "blocked": {"type": "string", "description": "is what the session waits on: permission, question or dialog; empty when on nothing."},
+        "stale": {"type": "boolean", "description": "says an observed activity is not current."},
+        "mark": {"$ref": "#/$defs/Mark", "description": "is the edge of the session's button."}
+      },
+      "required": ["activity", "label", "blocked", "stale", "mark"],
+      "additionalProperties": false
+    },
+    "CacheRow": {
+      "type": "object",
+      "description": "is a prompt cache as the strip shows it.",
+      "properties": {
+        "hit": {"type": "integer", "description": "is the hit percent of the last request."},
+        "expiresAt": {"type": "integer", "description": "is when the cache expires, in epoch milliseconds, where the harness says."}
+      },
+      "required": ["hit"],
+      "additionalProperties": false
+    },
+    "BriefView": {
+      "type": "object",
+      "description": "is a brief; in the list without text and comments, which only the opened brief carries.",
+      "properties": {
+        "id": {"type": "integer", "description": "is the brief's number."},
+        "title": {"type": "string", "description": "is the text's first heading."},
+        "closed": {"type": "boolean", "description": "says the brief is closed."},
+        "edition": {"type": "integer", "description": "counts main's edits; a tick names it."},
+        "done": {"type": "integer", "description": "counts the current edition's items ticked."},
+        "total": {"type": "integer", "description": "counts the current edition's items."},
+        "commentCount": {"type": "integer", "description": "counts the comments."},
+        "bound": {"type": "array", "items": {"$ref": "#/$defs/BriefBound"}, "description": "are the runs the brief was sent to."},
+        "text": {"type": "string", "description": "is the current text with the ticks applied; only on the opened brief."},
+        "comments": {"type": "array", "items": {"$ref": "#/$defs/BriefComment"}, "description": "are the comments in order; only on the opened brief."}
+      },
+      "required": ["id", "title", "closed", "edition", "done", "total", "commentCount", "bound"],
+      "additionalProperties": false
+    },
+    "BriefBound": {
+      "type": "object",
+      "description": "is a run a brief was sent to.",
+      "properties": {
+        "name": {"type": "string", "description": "is the session's name."},
+        "run": {"$ref": "#/$defs/RunState", "description": "says whether that run lives; its right ends with it."}
+      },
+      "required": ["name", "run"],
+      "additionalProperties": false
+    },
+    "BriefComment": {
+      "type": "object",
+      "description": "is a comment on a brief.",
+      "properties": {
+        "n": {"type": "integer", "description": "is the comment's number."},
+        "from": {"type": "string", "description": "is the session that wrote it."},
+        "at": {"type": "string", "description": "is when, as an RFC 3339 time."},
+        "text": {"type": "string", "description": "is the comment."}
+      },
+      "required": ["n", "from", "at", "text"],
+      "additionalProperties": false
+    },
+    "Problem": {
+      "type": "object",
+      "description": "is a file that does not read.",
+      "properties": {
+        "path": {"type": "string", "description": "is where it lies."},
+        "why": {"type": "string", "description": "is why it does not read."}
+      },
+      "required": ["path", "why"],
+      "additionalProperties": false
+    }
+  }
+}
