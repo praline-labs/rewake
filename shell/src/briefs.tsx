@@ -17,14 +17,19 @@ import {
   type Answer,
   cut,
   type Detail,
+  foldText,
   headOf,
   infoOf,
   type NavItem,
   navOf,
   ordered,
+  type Pick,
+  pickOf,
   poll,
+  type Row,
   readBrief,
   readList,
+  rowsOf,
   type Summary,
   stepOf,
   stripOfBriefs,
@@ -41,7 +46,9 @@ const [opened, setOpened] = createSignal<number>();
 const [list, setList] = createSignal<Summary[]>([]);
 const [lost, setLost] = createSignal<Unreadable[]>([]);
 const [detail, setDetail] = createSignal<Detail>();
-const [at, setAt] = createSignal<number>();
+const [at, setAt] = createSignal<Pick>();
+// The closed briefs unfolded under their row; kept while the shell runs.
+const [unfolded, setUnfolded] = createSignal(false);
 
 // briefOpen is one brief showing, not the list, for the hints.
 export const briefOpen = () => opened() !== undefined;
@@ -90,11 +97,11 @@ export function BriefsView(props: {
   onCleanup(() => style.destroy());
   const [problem, setProblem] = createSignal<string>();
   let scroll: ScrollBoxRenderable | undefined;
-  let rows: ScrollBoxRenderable | undefined;
+  let scrollbox: ScrollBoxRenderable | undefined;
 
+  const rows = createMemo(() => rowsOf(list(), unfolded()));
   const selected = createMemo(() => {
-    const briefs = list();
-    const i = briefs.findIndex((b) => b.id === at());
+    const i = rows().findIndex((row) => pickOf(row) === at());
     return i >= 0 ? i : 0;
   });
 
@@ -139,12 +146,17 @@ export function BriefsView(props: {
     setOpened(undefined);
   };
   const move = (by: number) => {
-    const briefs = list();
-    const next = briefs[Math.max(0, Math.min(briefs.length - 1, selected() + by))];
+    const all = rows();
+    const next = all[Math.max(0, Math.min(all.length - 1, selected() + by))];
     if (!next) return;
-    setAt(next.id);
-    rows?.scrollChildIntoView(`brief-${next.id}`);
+    setAt(pickOf(next));
+    scrollbox?.scrollChildIntoView(`brief-${pickOf(next)}`);
   };
+  const toggle = () => {
+    setAt("fold");
+    setUnfolded((v) => !v);
+  };
+  const act = (row: Row) => ("fold" in row ? toggle() : open(row.brief.id));
 
   // The text keeps a column clear of the scrollbar, as the panes keep one
   // from the screen's edge: the bar lies over the viewport's last column and
@@ -164,8 +176,8 @@ export function BriefsView(props: {
       if (key.name === "up") move(-1);
       else if (key.name === "down") move(1);
       else if (key.name === "return") {
-        const brief = list()[selected()];
-        if (brief) open(brief.id);
+        const row = rows()[selected()];
+        if (row) act(row);
       }
       return;
     }
@@ -189,10 +201,10 @@ export function BriefsView(props: {
       : { bg: theme.idle, fg: RGBA.defaultForeground(), attributes: 0 };
   // A list entry's title is a button: the selected one in a pane's selection
   // colours, the others on the buttons' grey, a closed one's words faint.
-  const headStyle = (brief: Summary, chosen: boolean) =>
+  const headStyle = (faintText: boolean, chosen: boolean) =>
     chosen
       ? { bg: theme.selection.bg, fg: theme.selection.fg }
-      : { bg: theme.idle, fg: brief.closed ? theme.faintOnIdle : RGBA.defaultForeground() };
+      : { bg: theme.idle, fg: faintText ? theme.faintOnIdle : RGBA.defaultForeground() };
   // The info line starts under the title, past the button's padding and its
   // number.
   const indentOf = (brief: Summary) => ` ${brief.id} · `.length;
@@ -258,29 +270,29 @@ export function BriefsView(props: {
         }
       >
         <scrollbox
-          ref={(s: ScrollBoxRenderable) => (rows = s)}
+          ref={(s: ScrollBoxRenderable) => (scrollbox = s)}
           flexGrow={1}
           focusable={false}
           contentOptions={inset}
           verticalScrollbarOptions={bar}
         >
           <Show
-            when={list().length > 0 || lost().length > 0}
+            when={rows().length > 0 || lost().length > 0}
             fallback={
               <text fg={faint} content="no briefs; main makes them with rewake brief new" />
             }
           >
-            <For each={list()}>
-              {(brief, i) => (
-                // A press on either line opens the brief; the selection and
+            <For each={rows()}>
+              {(row, i) => (
+                // A press on either line acts on the row; the selection and
                 // the keys sit on the first.
                 <box
-                  id={`brief-${brief.id}`}
+                  id={`brief-${pickOf(row)}`}
                   flexDirection="column"
                   {...{
                     onMouseDown: () => {
                       props.choose();
-                      open(brief.id);
+                      act(row);
                     },
                   }}
                 >
@@ -289,17 +301,24 @@ export function BriefsView(props: {
                       height={1}
                       flexShrink={0}
                       wrapMode="none"
-                      {...headStyle(brief, i() === selected())}
+                      {...headStyle("fold" in row || row.brief.closed, i() === selected())}
                       {...selecting(theme)}
-                      content={` ${cut(headOf(brief), textWidth() - 2)} `}
+                      content={` ${cut("fold" in row ? foldText(row.fold) : headOf(row.brief), textWidth() - 2)} `}
                     />
                   </box>
-                  <text
-                    height={1}
-                    wrapMode="none"
-                    fg={faint}
-                    content={cut(`${" ".repeat(indentOf(brief))}${infoOf(brief)}`, textWidth())}
-                  />
+                  <Show when={"brief" in row && row.brief}>
+                    {(brief: Accessor<Summary>) => (
+                      <text
+                        height={1}
+                        wrapMode="none"
+                        fg={faint}
+                        content={cut(
+                          `${" ".repeat(indentOf(brief()))}${infoOf(brief())}`,
+                          textWidth(),
+                        )}
+                      />
+                    )}
+                  </Show>
                 </box>
               )}
             </For>

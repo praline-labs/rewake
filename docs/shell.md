@@ -386,6 +386,13 @@ outlives a worker being chosen over it, as a worker's screen does.
   alone and stays on its brief when a poll changes the order. A record the list could not read
   (`unreadable` in its JSON) is a faint row with its path and why, not an absent brief; an empty
   list says main makes briefs with `rewake brief new`.
+- **The fold**, by the owner's question of October 27, 2026 («а вообще если их убирать из списка?»)
+  and main's decision on it: the list shows the open briefs only, and under them, when any brief
+  is closed, one faint row `closed · N` (`rowsOf`, `foldText`), selectable like a brief's first
+  line. Enter or a click unfolds the closed briefs under it, in the two-line form, and again folds
+  them; with no open brief and some closed the list is that row alone. The fold is a signal of
+  the view, kept while the shell runs and not across restarts. Nothing is deleted: the closed
+  briefs stay on disk and `rewake brief list --closed` shows them, which the poll still reads.
 - **The strip** under the view says what shows, a shell's row as a worker's strip is:
   `briefs · 3 open · 1 closed` under the list, `brief 3 · 2/5 · 4 comments` under one, the first
   part bold, cut with `…` at the width (`stripOfBriefs`, `shell/src/briefs.ts`).

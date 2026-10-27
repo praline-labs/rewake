@@ -31,6 +31,28 @@ export const ended = (brief: Summary, b: Bound) => brief.closed || b.run === "en
 export const ordered = (briefs: Summary[]) =>
   [...briefs].sort((a, b) => Number(a.closed) - Number(b.closed) || a.id - b.id);
 
+// A row of the list: a brief, or the fold row `closed · N` that shows and
+// hides the closed ones.
+export type Row = { brief: Summary } | { fold: number };
+
+// rowsOf is the list's rows: the open briefs, then, when some are closed, the
+// fold row and, unfolded, the closed ones under it. `briefs` is in `ordered`.
+export function rowsOf(briefs: Summary[], unfolded: boolean): Row[] {
+  const open = briefs.filter((b) => !b.closed);
+  const closed = briefs.filter((b) => b.closed);
+  const rows: Row[] = open.map((brief) => ({ brief }));
+  if (closed.length > 0) rows.push({ fold: closed.length });
+  if (unfolded) rows.push(...closed.map((brief) => ({ brief })));
+  return rows;
+}
+
+// The selection is a brief's id or the fold row.
+export type Pick = number | "fold";
+
+export const pickOf = (row: Row): Pick => ("fold" in row ? "fold" : row.brief.id);
+
+export const foldText = (closed: number) => `closed${separator}${closed}`;
+
 // cut is a text at most width cells long, a cut one ending in `…`.
 export function cut(text: string, width: number): string {
   if (text.length <= width) return text;

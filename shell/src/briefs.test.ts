@@ -2,12 +2,15 @@ import { expect, test } from "bun:test";
 import {
   type Answer,
   backText,
+  foldText,
   headOf,
   infoOf,
   listOf,
   navOf,
   ordered,
+  pickOf,
   poll,
+  rowsOf,
   type Summary,
   stepOf,
   stripOfBriefs,
@@ -125,4 +128,17 @@ test("the strip under the briefs says what shows, cut at the width", () => {
   // A detail of the brief shown before is not this one's.
   expect(stripOfBriefs({ id: 4, detail: brief }, 80)).toEqual(["brief 4"]);
   expect(stripOfBriefs({ id: 3, detail: brief }, 12)).toEqual(["brief 3", "2…"]);
+});
+
+test("the list shows the open briefs and a fold row, the closed ones only unfolded", () => {
+  const list = ordered([b(1, "a"), b(2, "b", true), b(3, "c"), b(4, "d", true)]);
+  const picks = (unfolded: boolean) => rowsOf(list, unfolded).map(pickOf);
+  expect(picks(false)).toEqual([1, 3, "fold"]);
+  expect(picks(true)).toEqual([1, 3, "fold", 2, 4]);
+  expect(rowsOf(list, false)[2]).toEqual({ fold: 2 });
+  expect(foldText(2)).toBe("closed · 2");
+  // No closed brief: no row; only closed ones: the row alone.
+  expect(rowsOf([b(1, "a")], true).map(pickOf)).toEqual([1]);
+  expect(rowsOf([b(2, "b", true)], false).map(pickOf)).toEqual(["fold"]);
+  expect(rowsOf([], false)).toEqual([]);
 });
