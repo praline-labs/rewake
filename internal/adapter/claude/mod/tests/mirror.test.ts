@@ -1,6 +1,6 @@
 import { expect, test } from "claude-code/testing";
 import { MirrorOutbox } from "../hooks/mirror.ts";
-import { fit, jsonSize, pieces } from "../hooks/sizes.ts";
+import { fit, jsonSize, pieces, utf8Size } from "../hooks/sizes.ts";
 import { bounds } from "../protocol.gen.ts";
 import type { Reply } from "./world.ts";
 import { holdMs, start, world } from "./world.ts";
@@ -217,38 +217,53 @@ for (const drop of [undefined, "a Stop stands"]) {
   });
 }
 
-test("a step's open tool inputs count against its bound with its blocks", async ($, on) => {
-  const run = world(on, {
-    replies: { "/v1/hello": [drawn], "/v1/mirror/events": [{ status: 200, text: "{}" }] },
+// Each chunk of a tool's input ends with its number, so the tail of the
+// input the face gets says how much of it the mod held.
+const chunk = (char: string, n: number) => `${char.repeat(1024)}<${n}>`;
+
+function heldOf(char: string, text: string): number {
+  const last = /<(\d+)>$/.exec(text);
+  let held = 0;
+  for (let n = 0; last && n <= Number(last[1]); n++) held += utf8Size(chunk(char, n));
+  return held;
+}
+
+for (const char of ["x", "界"]) {
+  test(`a step's open tool inputs count against its bound with its blocks, in bytes (${char})`, async ($, on) => {
+    const run = world(on, {
+      replies: { "/v1/hello": [drawn], "/v1/mirror/events": [{ status: 200, text: "{}" }] },
+    });
+    on("turn.step", async function* (_: any, e: any) {
+      for (let i = 0; i < 10; i++) yield { kind: "tool", index: i, id: `call-${i}`, name: "Write" };
+      for (let i = 0; i < 10; i++)
+        for (let n = 0; n < 256; n++) yield { kind: "input", index: i, json: chunk(char, n) };
+      yield { kind: "stop", stopReason: "tool_use", usage: null };
+      return {
+        turnId: e.turnId,
+        index: e.index,
+        answer: "",
+        toolUses: [],
+        stopReason: "tool_use",
+        usage: null,
+      };
+    });
+    await start($);
+    await run.clock.settle();
+    const stream = $.turn.step({
+      turnId: "t",
+      index: 0,
+      model: "test-model",
+      messageCount: 1,
+    } as any);
+    for (let next = await stream.next(); next.done !== true; next = await stream.next()) {}
+    for (let i = 0; i < 20; i++) await run.clock.advance(50);
+    const inputs = mirrored(run).filter((e: any) => e.kind === "input");
+    const held = inputs.map((e: any) => heldOf(char, e.text));
+    // Each input holds at most 256 KiB, and all of them the step's 1 MiB.
+    expect(held.every((bytes: number) => bytes <= bounds.maxMirrorBlockBytes)).toBe(true);
+    const total = held.reduce((a: number, b: number) => a + b, 0);
+    expect(total <= 4 * bounds.maxMirrorBlockBytes).toBe(true);
+    expect(total > 3 * bounds.maxMirrorBlockBytes).toBe(true);
+    expect(inputs.length).toBe(10);
   });
-  const piece = "x".repeat(1024);
-  const perTool = bounds.maxMirrorBlockBytes / piece.length;
-  on("turn.step", async function* (_: any, e: any) {
-    for (let i = 0; i < 10; i++) yield { kind: "tool", index: i, id: `call-${i}`, name: "Write" };
-    for (let i = 0; i < 10; i++)
-      for (let n = 0; n < perTool; n++) yield { kind: "input", index: i, json: piece };
-    yield { kind: "stop", stopReason: "tool_use", usage: null };
-    return {
-      turnId: e.turnId,
-      index: e.index,
-      answer: "",
-      toolUses: [],
-      stopReason: "tool_use",
-      usage: null,
-    };
-  });
-  await start($);
-  await run.clock.settle();
-  const stream = $.turn.step({
-    turnId: "t",
-    index: 0,
-    model: "test-model",
-    messageCount: 1,
-  } as any);
-  for (let next = await stream.next(); next.done !== true; next = await stream.next()) {}
-  for (let i = 0; i < 20; i++) await run.clock.advance(50);
-  const inputs = mirrored(run).filter((e: any) => e.kind === "input");
-  // Four whole inputs fill the step's 1 MiB; the rest hold nothing.
-  expect(inputs.filter((e: any) => e.text !== "").length).toBe(4);
-  expect(inputs.length).toBe(10);
-});
+}

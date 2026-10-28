@@ -194,7 +194,8 @@ export function settles(turn: string, b: Block): MirrorEvent[] {
 }
 
 // stepBudget bounds what one step's open blocks and tool inputs hold
-// together.
+// together, in UTF-8 bytes as the outbox counts them, not in the UTF-16
+// units of a string's length.
 const stepBudget = 4 * bounds.maxMirrorBlockBytes;
 
 // shown is a tool's result as the face draws it.
@@ -272,7 +273,7 @@ export class Mirror {
     const out = this.outbox();
     if (out === undefined) return yield* stream;
     const blocks = new Map<number, Block>();
-    const tools = new Map<number, { id: string; json: string }>();
+    const tools = new Map<number, { id: string; json: string; bytes: number }>();
     let held = 0;
     const settle = () => {
       for (const b of blocks.values()) for (const event of settles(turn, b)) out.push(event);
@@ -298,23 +299,26 @@ export class Mirror {
         }
         // Past the step's bound a block's settle would be cut anyway: its
         // deltas still go, and the face keeps what they carried.
-        if (held + c.text.length <= stepBudget) {
+        const size = utf8Size(c.text);
+        if (held + size <= stepBudget) {
           b.parts.push(c.text);
-          held += c.text.length;
+          held += size;
         }
         for (const piece of pieces(c.text, textBudget)) {
           out.push({ kind: "delta", id: b.id, turn, block: c.kind, text: piece });
         }
       } else if (c.kind === "tool") {
-        tools.set(c.index, { id: c.id, json: "" });
+        tools.set(c.index, { id: c.id, json: "", bytes: 0 });
         out.push({ kind: "tool", id: c.id, turn, name: c.name });
       } else if (c.kind === "input") {
         // A tool's input is held whole until the step stops, so it counts
         // against the step's bound as a block does.
         const t = tools.get(c.index);
-        if (t && t.json.length < bounds.maxMirrorBlockBytes && held + c.json.length <= stepBudget) {
+        const size = utf8Size(c.json);
+        if (t && t.bytes + size <= bounds.maxMirrorBlockBytes && held + size <= stepBudget) {
           t.json += c.json;
-          held += c.json.length;
+          t.bytes += size;
+          held += size;
         }
       } else if (c.kind === "stop") {
         settle();
