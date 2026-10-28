@@ -14,7 +14,8 @@ import (
 // skillCatalog finds a brief's skills where main's harness reads its own
 // (docs/briefs.md#skills): main is the caller, so its harness, its directory
 // and its environment are this process's. A skill a [skills] never list
-// names is refused, naming the file. It is asked only when the text names a
+// names is refused, naming the file; a barred or a missing skill is marked,
+// since one a named skill links is noted or passed over. It is asked only when the text names a
 // skill, so a brief without one needs neither the harness nor the files.
 func skillCatalog(ctx *Context, caller briefRun) taskbrief.Catalog {
 	return func(name string) (string, error) {
@@ -28,7 +29,7 @@ func skillCatalog(ctx *Context, caller briefRun) taskbrief.Catalog {
 			return "", fmt.Errorf("the alias files do not read, so which skills are barred is not known: %w", err)
 		}
 		if file := set.SkillBarred(name); file != "" {
-			return "", fmt.Errorf("%s is barred from briefs by [skills] never in %s", name, file)
+			return "", taskbrief.SkillBarred(fmt.Errorf("%s is barred from briefs by [skills] never in %s", name, file))
 		}
 		home, err := os.UserHomeDir()
 		if err != nil {
@@ -41,6 +42,6 @@ func skillCatalog(ctx *Context, caller briefRun) taskbrief.Catalog {
 				return at, nil
 			}
 		}
-		return "", fmt.Errorf("no skill %s: none of %s holds %s/SKILL.md", name, strings.Join(folders, ", "), name)
+		return "", taskbrief.SkillMissing(fmt.Errorf("no skill %s: none of %s holds %s/SKILL.md", name, strings.Join(folders, ", "), name))
 	}
 }

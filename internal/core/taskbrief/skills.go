@@ -30,6 +30,9 @@ const (
 	skillFile = "SKILL.md"
 	// MaxSkills bounds the skills one brief names.
 	MaxSkills = 8
+	// MaxGivenSkills bounds the skills one brief gives: those it names and
+	// those they link, which come along.
+	MaxGivenSkills = 16
 	// maxSkillBytes and maxSkillEntries bound one skill's copy: about three
 	// times the largest skill seen in real work, 5 MB in 1,695 files.
 	maxSkillBytes   = 16 << 20
@@ -60,13 +63,21 @@ type Skill struct {
 	Description string `json:"description"`
 	// From is the folder it was copied from.
 	From string `json:"from"`
+	// BroughtBy names the skill whose link brought this one; none for a
+	// skill the text names.
+	BroughtBy string `json:"broughtBy,omitempty"`
+	// Barred are the skills this one links that [skills] never bars: not
+	// given, so those links lead nowhere in the copy.
+	Barred []string `json:"barred,omitempty"`
 }
 
 // SkillCopy is a skill as a reader is given it: its SKILL.md in the copy.
 type SkillCopy struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Path        string `json:"path"`
+	Name        string   `json:"name"`
+	Description string   `json:"description"`
+	Path        string   `json:"path"`
+	BroughtBy   string   `json:"broughtBy,omitempty"`
+	Barred      []string `json:"barred,omitempty"`
 }
 
 // DeclaredSkills reads the names a text's Skills line gives, none without
@@ -155,7 +166,10 @@ func (b Brief) Skills() ([]SkillCopy, error) {
 		if !skillName.MatchString(skill.Name) {
 			return nil, fmt.Errorf("%s names %q, no skill's name", filepath.Join(snapshot, skillsFile), skill.Name)
 		}
-		copies = append(copies, SkillCopy{Name: skill.Name, Description: skill.Description, Path: filepath.Join(snapshot, skill.Name, skillFile)})
+		copies = append(copies, SkillCopy{
+			Name: skill.Name, Description: skill.Description, Path: filepath.Join(snapshot, skill.Name, skillFile),
+			BroughtBy: skill.BroughtBy, Barred: skill.Barred,
+		})
 	}
 	return copies, nil
 }
@@ -167,57 +181,12 @@ func (b Brief) SkillNames() []string {
 	return names
 }
 
-// planned is a skill found and measured, before anything is written.
-type planned struct {
-	Skill
-	// resolved is the folder with its link resolved, what is copied.
-	resolved string
-}
-
-// planSkills finds and measures each skill a text names, and answers them
-// with the skills.json their snapshot will hold: the preflight, which
-// writes nothing. A text naming none needs no catalog.
-func planSkills(text string, catalog Catalog) ([]planned, []byte, error) {
-	names, err := DeclaredSkills(text)
-	if err != nil || len(names) == 0 {
-		return nil, nil, err
-	}
-	if catalog == nil {
-		return nil, nil, fmt.Errorf("%w: no skill folders are known here", ErrSkill)
-	}
-	plan := make([]planned, 0, len(names))
-	listed := make([]Skill, 0, len(names))
-	for _, name := range names {
-		from, err := catalog(name)
-		if err != nil {
-			return nil, nil, fmt.Errorf("%w: %v", ErrSkill, err)
-		}
-		resolved, err := filepath.EvalSymlinks(from)
-		if err != nil {
-			return nil, nil, fmt.Errorf("%w: %s: %v", ErrSkill, from, err)
-		}
-		if _, _, err := measure(resolved); err != nil {
-			return nil, nil, fmt.Errorf("%w: %s: %v", ErrSkill, name, err)
-		}
-		description, err := describe(filepath.Join(resolved, skillFile))
-		if err != nil {
-			return nil, nil, fmt.Errorf("%w: %s: %v", ErrSkill, name, err)
-		}
-		skill := Skill{Name: name, Description: description, From: from}
-		plan = append(plan, planned{Skill: skill, resolved: resolved})
-		listed = append(listed, skill)
-	}
-	raw, err := encode(listed)
-	if err != nil {
-		return nil, nil, err
-	}
-	return plan, raw, nil
-}
-
 // measure walks a skill's folder as a copy will, counting its entries and
-// bytes against the bound. A link to a regular file counts as that file;
-// any other link, a device or a socket is refused, named.
-func measure(root string) (entries int, size int64, err error) {
+// bytes against the bound, and hands each file within the bound to visit. A
+// link to a regular file counts as that file; any other link, a device or a
+// socket is refused, named.
+func measure(root string, visit func(path string) error) error {
+	entries, size := 0, int64(0)
 	var walk func(dir string) error
 	walk = func(dir string) error {
 		listed, err := os.ReadDir(dir)
@@ -242,10 +211,13 @@ func measure(root string) (entries int, size int64, err error) {
 			if size += info.Size(); size > maxSkillBytes {
 				return fmt.Errorf("more than %d bytes, past the bound of a skill's copy", maxSkillBytes)
 			}
+			if err := visit(path); err != nil {
+				return err
+			}
 		}
 		return nil
 	}
-	return entries, size, walk(root)
+	return walk(root)
 }
 
 // regularOrDir is what a copy takes at path: a folder, a regular file, or a

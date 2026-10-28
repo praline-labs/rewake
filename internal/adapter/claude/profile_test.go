@@ -72,8 +72,8 @@ func TestWorkerProfileDefaults(t *testing.T) {
 	}
 }
 
-// A worker's launch makes the service folder: private, with an empty
-// skills/ and instructions, rewake's settings, and Claude Code's state
+// A worker's launch makes the service folder: private, with empty
+// instructions and no skills/, rewake's settings, and Claude Code's state
 // saying onboarding is done and the project trusted.
 func TestTheServiceFolderIsMade(t *testing.T) {
 	home := t.TempDir()
@@ -84,8 +84,8 @@ func TestTheServiceFolderIsMade(t *testing.T) {
 	if info, err := os.Stat(dir); err != nil || info.Mode().Perm() != 0o700 {
 		t.Fatalf("the folder: %v %v", info, err)
 	}
-	if info, err := os.Stat(filepath.Join(dir, "skills")); err != nil || !info.IsDir() {
-		t.Fatalf("skills/: %v", err)
+	if _, err := os.Stat(filepath.Join(dir, "skills")); !os.IsNotExist(err) {
+		t.Fatalf("skills/ was made: %v", err)
 	}
 	if _, err := os.Stat(filepath.Join(dir, ".claude-plugin")); err == nil {
 		t.Fatal("the folder was made a plugin")

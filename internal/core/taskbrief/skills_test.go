@@ -80,7 +80,7 @@ func catalogOf(folder string) Catalog {
 	return func(name string) (string, error) {
 		at := filepath.Join(folder, name)
 		if _, err := os.Stat(filepath.Join(at, "SKILL.md")); err != nil {
-			return "", fmt.Errorf("no skill %s", name)
+			return "", SkillMissing(fmt.Errorf("no skill %s", name))
 		}
 		return at, nil
 	}

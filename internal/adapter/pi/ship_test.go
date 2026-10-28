@@ -166,12 +166,21 @@ func TestAnExistingAgentDirectoryIsMadePrivate(t *testing.T) {
 	}
 }
 
-// The folders a person adds extensions and skills to are made on a launch;
-// what a person already keeps there, a skills installer's link included, stays.
-func TestTheAgentDirectoryGetsExtensionsAndSkillsFolders(t *testing.T) {
+// The folder a person adds extensions to is made on a launch, skills/ is
+// not; a skills/ the person keeps, a skills installer's link included, stays.
+func TestTheAgentDirectoryGetsExtensionsButNoSkillsFolder(t *testing.T) {
 	request := launchRequest(t)
 	dir := filepath.Join(request.Dir, ".config", "rewake", "pi", "agent")
+	if _, err := (harness{}).Launch(request); err != nil {
+		t.Fatal(err)
+	}
+	if info, err := os.Stat(filepath.Join(dir, "extensions")); err != nil || !info.IsDir() || info.Mode().Perm() != 0o700 {
+		t.Errorf("extensions: %v, %v", info, err)
+	}
 	skills := filepath.Join(dir, "skills")
+	if _, err := os.Stat(skills); !os.IsNotExist(err) {
+		t.Errorf("skills/ was made: %v", err)
+	}
 	if err := os.MkdirAll(skills, 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -181,14 +190,6 @@ func TestTheAgentDirectoryGetsExtensionsAndSkillsFolders(t *testing.T) {
 	}
 	if _, err := (harness{}).Launch(request); err != nil {
 		t.Fatal(err)
-	}
-	for _, name := range []string{"extensions", "skills"} {
-		if info, err := os.Stat(filepath.Join(dir, name)); err != nil || !info.IsDir() {
-			t.Errorf("%s: %v, %v", name, info, err)
-		}
-	}
-	if info, err := os.Stat(filepath.Join(dir, "extensions")); err != nil || info.Mode().Perm() != 0o700 {
-		t.Errorf("extensions mode: %v, %v", info, err)
 	}
 	if got, err := os.Readlink(link); err != nil || got != request.Dir {
 		t.Errorf("the link in skills/: %q, %v", got, err)

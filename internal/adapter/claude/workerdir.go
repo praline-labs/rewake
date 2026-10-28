@@ -11,8 +11,10 @@ import (
 // The service folder (the owner's decisions, October 19 and 23, 2026): rewake
 // makes the profile's directory on a worker's launch, so the person only
 // drops things in. It is the workers' Claude Code configuration directory:
-// its CLAUDE.md, skills/ and settings.json are what Claude Code reads as the
-// user's own, beside the login, trust and transcripts it keeps there itself.
+// its CLAUDE.md and settings.json are what Claude Code reads as the user's
+// own, beside the login, trust and transcripts it keeps there itself. Skills
+// reach a worker with a brief (docs/briefs.md#skills), so no skills/ is made
+// (the owner's decision, October 28, 2026); one the person made stays.
 // Whatever is there already is the person's or Claude Code's and stays as it
 // is, but for settings.json, which workerSettings writes and brings up to
 // date, and the two keys of .claude.json prepareClaudeState adds.
@@ -25,10 +27,8 @@ var profileFiles = map[string]string{
 // makeProfileDir makes what of the folder is missing, never replacing a file
 // or a directory the person has.
 func makeProfileDir(dir string) error {
-	for _, sub := range []string{"skills"} {
-		if err := os.MkdirAll(filepath.Join(dir, sub), 0o700); err != nil {
-			return fmt.Errorf("the worker profile's directory %s could not be made: %w", dir, err)
-		}
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return fmt.Errorf("the worker profile's directory %s could not be made: %w", dir, err)
 	}
 	for name, text := range profileFiles {
 		path := filepath.Join(dir, name)

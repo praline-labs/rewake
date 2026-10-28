@@ -221,11 +221,12 @@ stores and looks up sessions there, below `--session-dir` and above the `session
 person's `--continue` or picker in a checkout a worker shared no longer lands in the worker's.
 A worker's own `--session-dir` is refused, naming the folder. Main keeps the person's variable: it is not among the names a launch drops before the adapter, which replaces it for a worker alone.
 
-The launch also makes `extensions/` and `skills/` in that directory (0700) when they are
-missing, so it is visible where a person's additions go, and leaves what is in them alone
-(a skills installer may already link into `skills/`). An extension is a file in `extensions/`,
-or `PI_CODING_AGENT_DIR=~/.config/rewake/pi/agent pi install npm:<package>`; a skill is a
-folder with a `SKILL.md` in `skills/`.
+The launch also makes `extensions/` in that directory (0700) when it is missing, so it is
+visible where a person's additions go, and leaves what is in it alone. An extension is a file in
+`extensions/`, or `PI_CODING_AGENT_DIR=~/.config/rewake/pi/agent pi install npm:<package>`. No
+`skills/` is made (the owner's decision, October 28, 2026): skills reach a worker with a brief
+([briefs.md](briefs.md#skills)). A `skills/` a person keeps there stays as it is, and pi reads it
+for main, whose catalogue it is part of.
 
 The adapter embeds `extension.ts`, its management module and its `worktree_status` tool
 ([worktree-tools.md](worktree-tools.md)), writing them in the run directory. It adds `-e <extension.ts>` and, unless `--no-intro`, its briefing through the

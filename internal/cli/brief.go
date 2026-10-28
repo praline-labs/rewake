@@ -223,7 +223,7 @@ func briefError(call Call, err error) error {
 	case errors.Is(err, taskbrief.ErrNotFound):
 		return &UsageError{Command: call.Command, Message: "no such brief: rewake brief list shows the open ones, and --closed the closed ones too."}
 	case errors.Is(err, taskbrief.ErrSkill):
-		return failf("%v. Name only skills main's harness has, as the refusal says, or take the line out.", err)
+		return failf("%v. Name only skills main's harness has, within the bound, as the refusal says, or take the line out.", err)
 	case errors.Is(err, taskbrief.ErrBadText), errors.As(err, &item):
 		return &UsageError{Command: call.Command, Message: err.Error() + "."}
 	case errors.As(err, &moved):

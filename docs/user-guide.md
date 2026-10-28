@@ -115,7 +115,9 @@ A project can carry its own catalogue beside its code, read from the directory m
 - **`[skills] never = ["keychain"]`**, in either file, bars those of your skills from briefs. Main
   gives a worker skills with a brief by a line of its text, `Skills: mods, mp-tdd`: rewake copies
   each from where main's harness reads your skills into the brief, the worker reads the copies,
-  and closing the brief takes them away. A barred or missing skill refuses the brief
+  and closing the brief takes them away; a skill one of them links, `../<name>/…`, comes along. This
+  is the only way a worker gets your skills. A barred or missing skill the line names refuses the
+  brief; a barred one a skill links is left out, and the letter says so
   ([briefs.md](briefs.md#skills)).
 - **`[aliases] off = ["helper"]`** in that file hides those of your templates in this project
   alone. Hide every template with `role = "write"` and main writes the code itself, with a
@@ -135,12 +137,12 @@ A project can carry its own catalogue beside its code, read from the directory m
 ## The workers' own settings
 
 A Claude Code worker reads `~/.config/rewake/claude/worker/` as its user configuration:
-`CLAUDE.md` for instructions every worker gets, `skills/` for skills (a folder or a symlink to
-one), and `settings.json`. rewake writes its defaults into `settings.json` on the first launch —
+`CLAUDE.md` for instructions every worker gets, and `settings.json`. Skills do not go there: a
+worker gets them with a brief, from your own skill folders (`[skills] never` above). rewake writes its defaults into `settings.json` on the first launch —
 subagents, scheduling and other features an unattended worker should not use, turned off — and
 you edit the file to change them: taking `"Agent"` out of `permissions.deny` gives the workers
 their subagents back. A newer rewake adds only its newer defaults and keeps your changes. Your
-project's own settings, `CLAUDE.md`, skills and MCP servers reach the workers as they reach you.
+project's own settings, `CLAUDE.md` and MCP servers reach the workers as they reach you.
 
 ## The shell
 
@@ -182,8 +184,8 @@ pane is typing to that worker: you may answer its dialog there before main does.
 | `~/.config/rewake/aliases.toml` | your worker templates |
 | `~/.config/rewake/settings` | your launch defaults |
 | `~/.config/rewake/types/` | your own types |
-| `~/.config/rewake/claude/worker/` | the Claude Code workers' configuration: login, conversations, `settings.json`, `CLAUDE.md`, `skills/`, their memory |
-| `~/.config/rewake/pi/agent/` | rewake's pi: login, settings, extensions, skills, sessions |
+| `~/.config/rewake/claude/worker/` | the Claude Code workers' configuration: login, conversations, `settings.json`, `CLAUDE.md`, their memory |
+| `~/.config/rewake/pi/agent/` | rewake's pi: login, settings, extensions, sessions |
 | `.rewake/` and `.rewake.env` in a project | the project's templates, types and launch defaults |
 | `$REWAKE_DIR/v2/`, by default `rewake-<uid>/v2/` in the system's temporary directory | the rooms: sessions, mail, spaces |
 | `$REWAKE_WORKTREES`, else `$XDG_DATA_HOME/rewake/worktrees/`, else `~/.local/share/rewake/worktrees/` | the checkouts made for `--worktree` |

@@ -1,5 +1,5 @@
 ---
-description: Briefs — a markdown brief per task that main writes, bound to workers by send --brief, ticked and commented by them, read and commented by a reviewer given it with --review; the records under briefs/, where a brief lives (the room or a folder of the project), the brief commands, the JSON the shell reads, the skills a brief gives, copied from main's harness, and the worker tools of both harnesses.
+description: Briefs — a markdown brief per task that main writes, bound to workers by send --brief, ticked and commented by them, read and commented by a reviewer given it with --review; the records under briefs/, where a brief lives (the room or a folder of the project), the brief commands, the JSON the shell reads, the skills a brief gives, copied from main's harness with the skills they link, and the worker tools of both harnesses.
 ---
 
 # Briefs
@@ -267,8 +267,10 @@ reads skills into the brief's folder; the worker given the brief reads them by t
 letter gives; closing the brief takes the copies away. Nothing is loaded into a running harness
 («если с динамикой не очень, то лучше не делать»). The accepted limit: a skill given so does not
 trigger by its description, it is read because the brief names it, and its scripts are read, not
-run. The workers' own skill folders ([worker-profile.md](worker-profile.md#skills-plugins-and-mcp-servers))
-stay as they are; rewake never writes there.
+run. Decided by the owner the same day: skills reach a worker only so. rewake makes no skills folder
+for the workers, neither in Claude Code's service folder nor in pi's agent directory
+([worker-profile.md](worker-profile.md#skills-plugins-and-mcp-servers)); one a person made stays
+theirs, never written.
 
 - **The line.** One line of the text, outside a fenced block: `Skills: mods, mp-tdd`. It is
   markdown as written, so the shell renders it with no change, and it survives `brief edit`,
@@ -292,9 +294,29 @@ stay as they are; rewake never writes there.
   ([user-guide.md](user-guide.md#a-projects-rewake)). A skill missing or barred refuses
   `brief new` and `edit`, exit 1, naming the folders looked in or the file that bars it; so does
   an alias file that does not read, since what it bars is then unknown. Nothing is written.
+- **Linked skills come along** (the owner, October 28, 2026). A skill may refer to a sibling skill —
+  `mp-tdd/SKILL.md` to `../mp-codebase-design/SKILL.md` — and the copy keeps the catalogue's layout,
+  `skills/<e>/<name>/`, so such a path leads somewhere only if the sibling is copied too. The
+  rule (`taskbrief.linksOut`): in every `.md` file of a skill being copied, each run of the
+  characters `A-Za-z0-9._~/-` that holds `../` and does not start with `/` — a markdown link's
+  target, a path in backticks or bare in the text alike — less one trailing full stop, is joined to
+  the folder of the file it is written in; when the result leaves the skill's folder by exactly one
+  level, `../<name>` or `../<name>/…`, and `<name>` is a skill's name, `<name>` is looked up in
+  main's catalogue, as a named skill is. Examples: `[design](../mp-codebase-design/SKILL.md)` in
+  `mp-tdd/SKILL.md` brings `mp-codebase-design`; ``see `../../mp-grilling/SKILL.md` `` in
+  `mp-tdd/references/flow.md` resolves from `references/` to `../mp-grilling/SKILL.md` and brings
+  `mp-grilling`. Found, it is copied whole and scanned in its turn, each skill once, so a cycle
+  ends; a name the catalogue has no skill of is passed over (`../cypress/support/e2e.js` stays a
+  path that leads nowhere); a name on `[skills] never` is not copied and the letter says so beside
+  the skill that links it. A name alone in prose is not followed — `mods` is a word — nor an
+  absolute path or a URL. **Bound: 16 skills given**, the named and the linked together, beside the
+  bound per skill; past it `new` and `edit` refuse, exit 1, naming the chain of links that reached
+  past it, `mp-a → mp-b → mp-c`. A catalogue that fails for another reason than a missing or a barred
+  name — an alias file that does not read — refuses as for a named skill.
 - **One snapshot per edition.** The skills of edition `e` are `skills/<e>/<name>/`, beside
-  `skills/<e>/skills.json`, `[{name, description, from}]`: the description from `SKILL.md`'s front
-  matter, cut to 1,024 code points, and the folder it was copied from. The current edition — the
+  `skills/<e>/skills.json`, `[{name, description, from, broughtBy?, barred?}]`: the description
+  from `SKILL.md`'s front matter, cut to 1,024 code points, the folder it was copied from, the
+  skill whose link brought a linked one, and the linked names `[skills] never` bars, not given. The current edition — the
   one the log's last edit commits — selects its snapshot, so a text and its skills change
   together. Every edit copies the named skills again, which is how a changed skill reaches the
   brief; a text without the line has none. `brief.json` does not change; a brief made before has
@@ -306,7 +328,7 @@ stay as they are; rewake never writes there.
   skill**, about three times the largest seen (5 MB in 1,695 files); checked when the skill is
   measured and again while it is copied.
 - **Preflight, then the order.** Before any effect the line is parsed, every skill found, barred
-  or not, walked against the bound and its entries, and `skills.json` encoded against the 64 KiB
+  or not, walked against the bound and its entries and scanned for its links, and `skills.json` encoded against the 64 KiB
   record bound; a refusal writes nothing. `new` writes `skills/1/` inside its `.tmp-*` build, so
   the brief is whole or absent. `edit` to edition `e`, under the lock: (a) drop a leftover
   `skills/<n>` for `n ≥ e` and any `skills/.tmp-*`, never committed and so read by nobody; (b)
@@ -318,10 +340,14 @@ stay as they are; rewake never writes there.
 - **The letter.** `inbox`, `--owed` and `brief show` to any bound run, the reviewer's included,
   print after the header: `Rewake: skills main gave with this brief: read each SKILL.md before you
   start, and the files beside it as it says; they are copies, read here, not run.`, then
-  `- <name> — <description> — <path of its SKILL.md>` per skill, the current edition's. A path read
+  `- <name> — <description> — <path of its SKILL.md>` per skill, the current edition's, the named
+  first in the line's order, then the linked as they were found, each ending `— linked from
+  <skill>`; under a skill that links a barred one, `  - its link to <name> leads nowhere: [skills]
+  never bars <name> from briefs, so it is not given`. A path read
   before an edit is gone after it: main sends `--brief` again, as for any edit. A snapshot that
   does not read prints one line saying so and asking main to edit the brief again. Under `--json`
-  the letter's `brief` object and `show` carry `skillFiles` and `skillsUnreadable`; the summary's
+  the letter's `brief` object and `show` carry `skillFiles`, each with `broughtBy` and `barred`
+  where they apply, and `skillsUnreadable`; the summary's
   `skills` are the names, taken from the text, so a closed brief and the room view still name
   them.
 - **Reading it.** A Claude Code worker's run `--settings` allows `Read(//<room>/briefs/**)`
@@ -374,7 +400,9 @@ binding of `send --brief` and what `inbox` and `--owed` print (`cli/brief_send_t
 `--review` from the send to the show (`cli/brief_review_test.go`), a reviewer's checkout from
 the send to the close (`cli/brief_review_checkout_test.go`, `worktree/review_test.go`); a
 brief's skills — the line, the copy and its bound, refusals that write nothing, an edit cut short
-before its commit, the close (`taskbrief/skills_test.go`), the catalogues' order
+before its commit, the close (`taskbrief/skills_test.go`), the link rule, a chain, a cycle, a
+barred link, one outside the catalogue and the bound of skills given
+(`taskbrief/skills_plan_test.go`), the catalogues' order
 (`adapter/skills_test.go`, each adapter's `skills_test.go`), the never-list
 (`launch/alias_briefs_test.go`), the commands and their `--json` (`cli/brief_skills_test.go`),
 the read rule (`claude/run_settings_test.go`); the
@@ -383,7 +411,8 @@ one workflow scenario, `brief`: main makes a brief, sends it, the fixture worker
 its task, ticks and comments, a reviewer given it with `--review` is refused a tick and comments,
 and main's `show` sees the tick and both comments with their capacities; and one, `brief-skill`:
 main makes a brief naming a skill of its fixture, the worker's letter gives the copy's path, the
-file there holds the skill, and the close takes it
+file there holds the skill, a skill it links comes next marked as brought by it, and the close
+takes them
 ([testing-cases.md](testing-cases.md#launch-reports-and-what-a-main-waits-on)).
 
 ## Known limits
@@ -400,5 +429,7 @@ file there holds the skill, and the close takes it
 - A skill given with a brief does not trigger by its description, and its scripts are read, not
   run; a skill whose instructions say to run a script beside it asks the worker to run a copy
   with no executable bit, through its interpreter. A plugin's skill, a managed one and pi's
-  nested or front-matter-named skills are not given. A `--dir` folder outside main's checkout is
+  nested or front-matter-named skills are not given. A linked skill is looked up by its name in
+  main's catalogue, not by where the link leads: a skill of that name in an earlier folder of the
+  catalogue is the one copied. A sibling mentioned by its name alone is not brought. A `--dir` folder outside main's checkout is
   not in a Claude Code worker's read rule: reading its copies there asks main for permission.

@@ -306,7 +306,8 @@ the 1.3.0 package (`pi-coding-agent/docs/cli.md`, `pi-coding-agent/docs/security
 - Adding to the bundled pi (owner decision, October 19, 2026): an extension is a file in
   `<agent dir>/extensions/`, or a package installed with `PI_CODING_AGENT_DIR=<agent dir> pi
   install npm:<package>`; a skill is a folder with a `SKILL.md` in `<agent dir>/skills/`. The
-  launch makes both folders when missing and touches nothing in them.
+  launch makes `extensions/` when missing and touches nothing in it; since October 28, 2026 it
+  makes no `skills/`, by the owner's decision ([briefs.md](briefs.md#skills)).
 - `PI_SKIP_VERSION_CHECK=1` stops pi offering its own update; rewake updates the copy.
 - A copy (fullscreen selection, `/copy`) goes through `copyToClipboard` (`dist/utils/clipboard.js`):
   on Linux `wl-copy` with `WAYLAND_DISPLAY`, `xclip`/`xsel` with `DISPLAY`; then on WSL OSC 52

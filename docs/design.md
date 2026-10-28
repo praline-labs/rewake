@@ -107,7 +107,7 @@ verified main callers see them.
     control/<name>.<epoch>/    a main's compact or interrupt request and its answer (remote-control.md)
     run/<name>.<epoch>/        what an adapter writes for one run, removed with the run or, after a kill, by a later launch once the run is proven dead (rules/launch.md, L3)
     letters/<name>/<id>.json   a compaction this main asked for, held by the command while it asks, kept on an answer that leaves the outcome open until its letter goes (remote-control.md#the-letter)
-    briefs/<id>/, briefs/closed/<id>/ a brief main wrote: brief.json, its log/ and text/ editions, skills/<edition>/ the copies of the skills it names (briefs.md#skills); a closed one moved whole; briefs/index.json the briefs kept in a folder of the project (briefs.md#the-records, briefs.md#where-a-brief-lives)
+    briefs/<id>/, briefs/closed/<id>/ a brief main wrote: brief.json, its log/ and text/ editions, skills/<edition>/ the copies of the skills it names and of those they link (briefs.md#skills); a closed one moved whole; briefs/index.json the briefs kept in a folder of the project (briefs.md#the-records, briefs.md#where-a-brief-lives)
     spaces/<id>.json           a space a main opened: its worker, checkout, space host, state and observed end, kept after it closes (space.md#the-record)
 ```
 

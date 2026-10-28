@@ -23,13 +23,13 @@ and `/resume`. What Claude Code reads from it (2.1.302):
 | --- | --- |
 | `settings.json` | the user's settings: its `env` reaches the process, its hooks run |
 | `CLAUDE.md` | the user's memory file |
-| `skills/<skill>/` | user skills, named as their folders |
+| `skills/<skill>/` | user skills, named as their folders; rewake makes no such folder ([below](#skills-plugins-and-mcp-servers)) |
 | `agents/`, commands, plugins installed there | the user's own |
 | `.claude.json` | onboarding, folder trust, user MCP servers, counters |
 | `projects/`, `sessions/`, history, `.credentials.json` | the workers' transcripts and login |
 
-What of it is missing a worker's launch makes — the folder itself (0700), an empty
-`CLAUDE.md` and an empty `skills/`. A file or directory already there is the person's or
+What of it is missing a worker's launch makes — the folder itself (0700) and an empty
+`CLAUDE.md`. A file or directory already there is the person's or
 Claude Code's and is never changed, but for `settings.json` (below) and two keys of
 `.claude.json`. rewake never reads `~/.claude`, `~/.claude.json` or a project's files; the
 person's own `~/.claude/CLAUDE.md`, read as an ancestor's under another configuration
@@ -69,10 +69,12 @@ the launch, naming it, and stays as it is.
 
 ## Skills, plugins and MCP servers
 
-A skill is attached by placing its folder, or a symlink to it, in `skills/`: Claude
-Code loads it as a user skill named as the folder. A skill for one task comes instead with the
-brief main gives: rewake copies it into the brief and the worker reads it by path
-([briefs.md](briefs.md#skills)). A plugin is installed with the
+Skills reach a worker only with a brief (the owner's decision, October 28, 2026): main names them
+in the brief's `Skills:` line, rewake copies them, with the skills they link, from where main's
+harness reads skills into the brief, and the worker reads them by path
+([briefs.md](briefs.md#skills)); `[skills] never` in an alias file keeps a skill out. rewake makes
+no `skills/` in the service folder; one a person made before stays theirs and Claude Code still
+loads it, but it is not how a worker is given a skill. A plugin is installed with the
 variable set (`claude plugin install`, or `/plugin` in a worker's pane); `plugins/` is Claude
 Code's own directory. `mcp.json` becomes `--mcp-config`.
 

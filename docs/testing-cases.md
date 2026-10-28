@@ -110,11 +110,12 @@ tick must be refused, exit 1, saying ticking is the worker's, and its comment ac
 `brief show --json` must then have item 1 done, item 2 not, and the two comments, the worker's with
 capacity `work` and the reviewer's with `review` ([briefs.md](briefs.md)).
 
-`brief-skill` runs a main and a worker. A skill is written into the fixture's skill folder in the
-case's home; main makes a brief whose `Skills:` line names it and sends it to the worker with
-`--brief`. The worker's letter must give the path of the copied `SKILL.md`, under the room's
-state, and the file there must hold the skill; main's `brief close` must then leave no file at
-that path ([briefs.md](briefs.md#skills)).
+`brief-skill` runs a main and a worker. Two skills are written into the fixture's skill folder in
+the case's home, the first linking `../<second>/SKILL.md`; main makes a brief whose `Skills:` line
+names the first and sends it to the worker with `--brief`. The worker's letter must give the path
+of the copied `SKILL.md`, under the room's state, and the file there must hold the skill; next it
+must give the second's copy, beside the first, marked `broughtBy` the first; main's `brief close`
+must then leave no file at the first's path ([briefs.md](briefs.md#skills)).
 
 ## A worktree
 

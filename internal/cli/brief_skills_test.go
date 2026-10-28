@@ -66,3 +66,46 @@ func TestABriefGivesTheSkillsMainNames(t *testing.T) {
 		t.Fatalf("the copy outlived the close: %v", err)
 	}
 }
+
+// A skill a named one links comes along, listed after the named and marked
+// with the skill that links it; a link to a barred skill is named under the
+// skill holding it, and a link to a folder that is no skill is passed over.
+func TestABriefBringsTheSkillsItsSkillsLink(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	projectMain(t, "[skills]\nnever = [\"secret\"]\n")
+	user := filepath.Join(home, ".agent", "skills")
+	skillIn(t, user, "probe")
+	skillIn(t, user, "secret")
+	skillIn(t, user, "linker")
+	text := "---\ndescription: the linker skill\n---\nRead ../probe/SKILL.md, ../secret/SKILL.md and ../cypress/e2e.js.\n"
+	if err := os.WriteFile(filepath.Join(user, "linker", "SKILL.md"), []byte(text), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if code, _, errOut := run("brief", "new", "Skills: linker\n- [ ] one\n"); code != ExitOK {
+		t.Fatalf("new: %d %q", code, errOut)
+	}
+	_, raw, _ := run("brief", "show", "1", "--json")
+	var shown struct {
+		SkillFiles []struct {
+			Name, Path, BroughtBy string
+			Barred                []string
+		} `json:"skillFiles"`
+	}
+	if err := json.Unmarshal([]byte(raw), &shown); err != nil || len(shown.SkillFiles) != 2 {
+		t.Fatalf("show --json = %s (%v)", raw, err)
+	}
+	linker, probe := shown.SkillFiles[0], shown.SkillFiles[1]
+	if linker.Name != "linker" || len(linker.Barred) != 1 || linker.Barred[0] != "secret" || probe.Name != "probe" || probe.BroughtBy != "linker" {
+		t.Fatalf("skillFiles = %+v", shown.SkillFiles)
+	}
+	_, out, _ := run("brief", "show", "1")
+	for _, want := range []string{
+		"- linker — the linker skill — " + linker.Path + "\n  - its link to secret leads nowhere: [skills] never bars secret from briefs, so it is not given\n",
+		"- probe — the probe skill — " + probe.Path + " — linked from linker\n",
+	} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("show = %q, want %q", out, want)
+		}
+	}
+}

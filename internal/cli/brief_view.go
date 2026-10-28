@@ -292,7 +292,9 @@ func boundNames(summary briefSummary) string {
 
 // skillLines name the skills main gave with the brief, each with its
 // description and the path of its SKILL.md in the copy: what the worker reads
-// before it starts, since a skill given this way never loads by itself.
+// before it starts, since a skill given this way never loads by itself. A
+// skill a named one links comes after the named, saying which links it; a
+// link to a barred skill is named under the skill that holds it.
 func (d briefDetail) skillLines() []string {
 	if d.SkillsUnreadable != "" {
 		return []string{fmt.Sprintf("Rewake: the skills this brief names could not be read: %s; ask main to edit the brief again, which copies them anew.", d.SkillsUnreadable)}
@@ -306,7 +308,14 @@ func (d briefDetail) skillLines() []string {
 		if skill.Description != "" {
 			line += " — " + skill.Description
 		}
-		lines = append(lines, line+" — "+skill.Path)
+		line += " — " + skill.Path
+		if skill.BroughtBy != "" {
+			line += " — linked from " + skill.BroughtBy
+		}
+		lines = append(lines, line)
+		for _, barred := range skill.Barred {
+			lines = append(lines, fmt.Sprintf("  - its link to %s leads nowhere: [skills] never bars %s from briefs, so it is not given", barred, barred))
+		}
 	}
 	return lines
 }
