@@ -289,7 +289,7 @@ and each parent up to the git root; the agent directory's `skills`, `$PI_CODING_
 the user's `~/.agents/skills`. It follows links, keeps the first skill of a name it finds, and
 takes the name from `SKILL.md`'s front matter, else the folder; it also finds skills nested deeper.
 A brief names a skill by its folder and looks only one level down. Reading is not gated: pi has no
-permission prompts (`docs/security.md:3`), so a pi worker reads a brief's copies with no rule.
+permission prompts (`pi-coding-agent/docs/security.md:3` of the 1.4.0 package), so a pi worker reads a brief's copies with no rule.
 
 ## The bundled pi
 
