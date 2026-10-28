@@ -7,15 +7,12 @@
 //   rewake-shell --room <room> -- <main's command line>
 
 import { createCliRenderer } from "@opentui/core";
-import { render, useTerminalDimensions } from "@opentui/solid";
-import { createEffect, createSignal, For, Show } from "solid-js";
-import { Bar, Hints } from "./bar.tsx";
-import { BriefsStrip, BriefsView, briefOpen, takeBriefs } from "./briefs.tsx";
-import { Closing } from "./closing.tsx";
+import { render, testRender, useTerminalDimensions } from "@opentui/solid";
+import { createEffect, createSignal } from "solid-js";
+import { takeBriefs } from "./briefs.tsx";
 import { askColors, seedOf } from "./colors.ts";
 import { endMain, tailText, watchTerminal } from "./ending.ts";
 import { type Command, isSuspend, prefixHandler } from "./keys.ts";
-import { layoutOf } from "./layout.ts";
 import { closingLayer } from "./lifting.ts";
 import { type PaneTerminal, paneHooks } from "./pane.ts";
 import {
@@ -39,9 +36,11 @@ import {
 } from "./panes.ts";
 import { endedSpaces, pollRoom, shownSpaces, spacesOver } from "./room.ts";
 import { Scanner } from "./scan.ts";
+import { type Frame, frameOf, listenScreen } from "./screen.ts";
 import { connectWorker, type MainRun, mainEnv, type Source, startMain } from "./sources.ts";
-import { mainStrip, markOf, Strip, showSessions, showSpaces, stripOf } from "./strip.tsx";
+import { showSessions } from "./strip.tsx";
 import { themeOf } from "./theme.ts";
+import { type Env, type View, Window } from "./window.tsx";
 
 const args = process.argv.slice(2);
 const split = args.indexOf("--");
@@ -105,6 +104,7 @@ function feed(pane: Pane, data: Uint8Array) {
     if (seen.mouse !== undefined && pane.term) pane.term.selectable = !seen.mouse;
   }
   pane.term?.write(data);
+  pane.shadow?.write(data);
 }
 
 function startMainPane(term: PaneTerminal) {
@@ -136,6 +136,7 @@ function attach(pane: Pane) {
   if (!term || !pane.space || ending) return;
   pane.scanner.reset();
   term.write(`\x1bc${seed.widget}`);
+  pane.shadow?.write(`\x1bc${seed.widget}`);
   pane.source = connectWorker(
     pane.space.socket,
     { cols: Math.max(term.width, 20), rows: Math.max(term.height, 5) },
@@ -207,150 +208,25 @@ paneHooks.pressed = (id) => {
 
 function App() {
   const dims = useTerminalDimensions();
-  const lay = () =>
-    layoutOf(dims().width, dims().height, {
-      chosen: chosen() !== undefined,
-      zoomed: zoomed(),
-      workers: workers().length,
-    });
-  const wide = () => lay().wide;
-  const shown = (p: Pane) => (wide() ? p === mainPane || p.id === chosen() : p.id === focused());
-  // The briefs show in the worker's place, chosen and focused as a worker is.
-  const briefsShown = () => (wide() ? chosen() : focused()) === briefs;
-  const widthOf = (p: Pane) => (p === mainPane ? lay().main : lay().worker);
-  const rowHeight = () => lay().rowHeight;
-  const height = () => lay().height;
-  // A pane sits in a box with a column of padding on each side, so the text
-  // does not touch the edge; the widget's size, and so the program's, is the
-  // inside. A press on the padding chooses the pane like one on its text.
-  const padded = (id: string, width: number) => ({
-    width,
-    height: height(),
-    paddingLeft: 1,
-    paddingRight: 1,
-    backgroundColor: seed.transparent ? undefined : theme.background,
-    onMouseDown: () => paneHooks.pressed(id),
+  const view = (): View => ({
+    focused: focused(),
+    chosen: chosen(),
+    zoomed: zoomed(),
+    width: dims().width,
+    height: dims().height,
+    prefix: prefixWaits(),
   });
-  const inner = (p: Pane) => Math.max(widthOf(p) - 2, 1);
-  const focusedPane = () => paneOf(focused()) ?? mainPane;
-  const onBriefs = () => focused() === briefs;
-  const bar = () => (
-    <Bar
-      tabs={workers().map((p) => ({ id: p.id, label: p.label }))}
-      focused={focused()}
-      chosen={wide() && focused() === "main" ? chosen() : undefined}
-      zoomed={zoomed()}
-      theme={theme}
-      pick={show}
-      briefs={briefs}
-      mark={(id) => markOf(stripOf(id).status)}
-    />
-  );
-  const hints = () => (
-    <Hints
-      context={{
-        focus: onBriefs() ? "briefs" : focusedPane() === mainPane ? "main" : "worker",
-        name: onBriefs() ? "briefs" : focusedPane().label,
-        brief: briefOpen(),
-        prefix: prefixWaits(),
-        zoomed: zoomed(),
-        workers: workers().length,
-      }}
-      width={wide() ? lay().main : dims().width}
-      theme={theme}
-      accent={onBriefs() ? theme.text : focusedPane() === mainPane ? theme.main : theme.worker}
-    />
-  );
-  // The work is hidden as a whole under the closing layer, so a terminal
-  // background the shell does not know never lets a pane show through.
-  return (
-    <box width="100%" height="100%">
-      <box flexDirection="column" width="100%" height="100%" visible={!closing()}>
-        <box flexDirection="row" height={rowHeight()}>
-          <box flexDirection="column" visible={shown(mainPane)} width={widthOf(mainPane)}>
-            <box {...padded(mainPane.id, widthOf(mainPane))}>
-              <pane_terminal
-                id="main"
-                ref={(t: PaneTerminal) => startMainPane(t)}
-                transparentBackground={seed.transparent}
-                width={inner(mainPane)}
-                height={height()}
-              />
-            </box>
-            <Strip
-              state={mainStrip}
-              width={widthOf(mainPane)}
-              colour={theme.main}
-              theme={theme}
-              pick={() => paneHooks.pressed("main")}
-            />
-            <Show when={wide()}>{hints()}</Show>
-          </box>
-          <Show when={wide()}>
-            <box width={1} height={rowHeight()} backgroundColor="#444444" />
-          </Show>
-          <box
-            flexDirection="column"
-            visible={workers().some(shown) || briefsShown()}
-            width={lay().worker}
-            height={rowHeight()}
-          >
-            <For each={workers()}>
-              {(pane) => (
-                <box visible={shown(pane)} flexDirection="column" width={widthOf(pane)}>
-                  <box {...padded(pane.id, widthOf(pane))}>
-                    <pane_terminal
-                      id={pane.id}
-                      ref={(t: PaneTerminal) => startWorkerPane(pane, t)}
-                      transparentBackground={seed.transparent}
-                      width={inner(pane)}
-                      height={height()}
-                    />
-                  </box>
-                  <Strip
-                    state={() => stripOf(pane.id)}
-                    width={widthOf(pane)}
-                    colour={theme.worker}
-                    theme={theme}
-                    pick={() => paneHooks.pressed(pane.id)}
-                  />
-                </box>
-              )}
-            </For>
-            <Show when={briefsShown() && !closing()}>
-              <box flexDirection="column" width={lay().worker}>
-                <box {...padded(briefs, lay().worker)}>
-                  <BriefsView
-                    rewake={rewake}
-                    room={room}
-                    theme={theme}
-                    width={Math.max(lay().worker - 2, 1)}
-                    height={height()}
-                    active={onBriefs}
-                    choose={() => paneHooks.pressed(briefs)}
-                  />
-                </box>
-                <BriefsStrip
-                  width={lay().worker}
-                  theme={theme}
-                  pick={() => paneHooks.pressed(briefs)}
-                />
-              </box>
-            </Show>
-            <Show when={wide() && workers().length > 0}>{bar()}</Show>
-          </box>
-        </box>
-        <Show when={!wide()}>
-          {hints()}
-          <Show when={workers().length > 0}>{bar()}</Show>
-        </Show>
-      </box>
-      <Show when={closing()}>
-        <Closing theme={theme} />
-      </Show>
-    </box>
-  );
+  return <Window env={liveEnv} view={view} />;
 }
+
+const base = { seed, theme, rewake, room };
+const liveEnv: Env = {
+  ...base,
+  live: true,
+  closing,
+  mainRef: startMainPane,
+  workerRef: startWorkerPane,
+};
 
 // finish ends the shell with main's code: main hung up and waited for, the
 // workers' streams closed, the screen given back. Unless the terminal is
@@ -360,6 +236,7 @@ async function finish(code?: number, lost = false) {
   ending = true;
   if (!lost) beginClosing();
   stopRoom();
+  stopScreen?.();
   for (const pane of workers()) pane.source?.close();
   if (main) code = await endMain(main.child, main.close);
   // Main's process ends only after its screen has gone, and the shell's
@@ -383,6 +260,95 @@ async function finish(code?: number, lost = false) {
   process.exit(code ?? 1);
 }
 
+// The shadow window: the same drawing in a tree of its own that is never put
+// on the person's screen, with a widget beside every pane's that is fed the
+// same bytes. rewake screen asks it for a window with another session in
+// its place, so nothing on the person's screen changes (docs/screen.md).
+const [shadowView, setShadowView] = createSignal<View>({
+  focused: "main",
+  chosen: undefined,
+  zoomed: false,
+  width: renderer.width,
+  height: renderer.height,
+  prefix: false,
+});
+const seedShadow = (t: PaneTerminal) => {
+  if (seed.widget) t.write(seed.widget);
+};
+const shadowEnv: Env = {
+  ...base,
+  live: false,
+  closing: () => false,
+  mainRef: (t) => {
+    mainPane.shadow = t;
+    seedShadow(t);
+  },
+  workerRef: (pane, t) => {
+    pane.shadow = t;
+    seedShadow(t);
+  },
+};
+const shadow = await testRender(() => <Window env={shadowEnv} view={shadowView} />, {
+  width: renderer.width,
+  height: renderer.height,
+});
+// The shadow widgets are laid out whenever the person's are — a pane that
+// appears, the window's size, the zoom — so each keeps the size its program
+// draws for: the bytes they are fed are of that size, and a widget left at
+// its default would be fed a screen it cannot hold.
+const [windowSize, setWindowSize] = createSignal({
+  width: renderer.width,
+  height: renderer.height,
+});
+renderer.on("resize", (width: number, height: number) => setWindowSize({ width, height }));
+createEffect(() => {
+  workers();
+  const { width, height } = windowSize();
+  setShadowView((v) => ({ ...v, width, height, chosen: chosen(), zoomed: zoomed() }));
+  shadow.resize(width, height);
+  void shadow.renderOnce();
+});
+
+// draw is the window with the pane in its place: main's own, or the worker's
+// beside main (or alone when the shell is narrow or zoomed).
+async function draw(id: string): Promise<Frame> {
+  const target = paneOf(id);
+  if (!target?.shadow) throw new Error(`no window ${id} to draw`);
+  const { width, height } = renderer;
+  setShadowView({
+    focused: id,
+    chosen: id === "main" ? chosen() : id,
+    zoomed: zoomed(),
+    width,
+    height,
+    prefix: false,
+  });
+  if (shadow.renderer.width !== width || shadow.renderer.height !== height)
+    shadow.resize(width, height);
+  await shadow.renderOnce();
+  await Bun.sleep(30);
+  await shadow.renderOnce();
+  const { cursor } = target.shadow.screen();
+  return frameOf(shadow.captureSpans(), {
+    pane: id,
+    fg: colors?.defaultForeground ?? undefined,
+    bg: colors?.defaultBackground ?? undefined,
+    cursor: cursor.visible
+      ? { x: target.shadow.screenX + cursor.x, y: target.shadow.screenY + cursor.y }
+      : undefined,
+  });
+}
+
+// One picture at a time: the shadow window has one state.
+let drawing: Promise<unknown> = Promise.resolve();
+function takeScreen(id: string): Promise<Frame> {
+  const next = drawing.then(() => draw(id));
+  drawing = next.catch(() => {});
+  return next;
+}
+let stopScreen: (() => void) | undefined;
+const screenPath = process.env.REWAKE_SHELL_SOCK;
+
 watchTerminal((_why, lost) => void finish(undefined, lost));
 renderer.on("selection", (selection: { getSelectedText?: () => string } | null) => {
   const text = selection?.getSelectedText?.() ?? "";
@@ -399,5 +365,6 @@ stopRoom = pollRoom(
       showSessions(new Map(view.sessions.map((s) => [s.name, s])));
     }
     takeBriefs(view, asked);
+    if (screenPath && !stopScreen && !ending) stopScreen = listenScreen(screenPath, takeScreen);
   },
 );

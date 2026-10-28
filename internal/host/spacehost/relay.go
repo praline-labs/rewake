@@ -13,16 +13,18 @@ import (
 )
 
 // The space's unix socket. A client writes one byte first, the mode: the raw
-// bytes (bytes.go) for the shell (docs/shell.md), the one mode there is.
-// The space host answers it with one byte and then writes the screen; the
-// client writes frames — a kind, a big-endian length of two bytes, the
-// payload: keys to type, or a resize of four bytes, columns then rows.
+// bytes (bytes.go) for the shell (docs/shell.md), or a snapshot (snapshot.go)
+// for rewake screen. The space host answers the first with one byte and then
+// writes the screen; the client writes frames — a kind, a big-endian length of
+// two bytes, the payload: keys to type, or a resize of four bytes, columns
+// then rows. A snapshot is one line of JSON and the end.
 const (
-	modeBytes   byte = 'b'
-	accepted    byte = 'A'
-	frameInput  byte = 'i'
-	frameResize byte = 'r'
-	maxFrame         = 1 << 15
+	modeBytes    byte = 'b'
+	modeSnapshot byte = 's'
+	accepted     byte = 'A'
+	frameInput   byte = 'i'
+	frameResize  byte = 'r'
+	maxFrame          = 1 << 15
 )
 
 // clientWrite bounds a write to a client: one that stops reading is dropped
@@ -92,11 +94,15 @@ func (r *relay) serve(l net.Listener) {
 func (r *relay) take(conn net.Conn) {
 	mode := make([]byte, 1)
 	_ = conn.SetReadDeadline(time.Now().Add(clientWrite))
-	if _, err := io.ReadFull(conn, mode); err != nil || mode[0] != modeBytes {
+	if _, err := io.ReadFull(conn, mode); err != nil || (mode[0] != modeBytes && mode[0] != modeSnapshot) {
 		_ = conn.Close()
 		return
 	}
 	_ = conn.SetReadDeadline(time.Time{})
+	if mode[0] == modeSnapshot {
+		r.snapshot(conn)
+		return
+	}
 	r.bytes(conn)
 }
 

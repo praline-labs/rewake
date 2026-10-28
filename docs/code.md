@@ -30,6 +30,7 @@ internal/core/role/                           the role catalogue: flag, briefing
 internal/core/brief/                          text injected into an agent, independent of transport
 internal/core/worktype/                       the kinds of work a worker is raised for: the built-in texts and the person's and project's own
 internal/core/session/                        optional, epoch-scoped observations of a harness (telemetry): the Observer every adapter reports to, which merges them into the snapshot, and the activity verdict on it
+internal/core/screen/                         a window as cells for `rewake screen`: the frame, its text, its PNG with the embedded font, the picture's file with its refusals
 internal/core/space/                          the record of each space a main opens: its states, its steps, the kept checkouts' reminder
 internal/adapter/                             the adapter API: the Harness interface, the catalogue value, launch plans, version gates, flags, defaults, settings
 internal/adapter/catalog/                     the one constructor of the catalogue, which cmd/rewake builds and hands to the CLI

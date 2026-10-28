@@ -12,6 +12,9 @@ export type Pane = {
   id: string;
   label: string;
   term?: PaneTerminal;
+  // shadow is the widget of the shadow window beside term, fed the same bytes
+  // (docs/screen.md).
+  shadow?: PaneTerminal;
   source?: Source;
   scanner: Scanner;
   title: string;

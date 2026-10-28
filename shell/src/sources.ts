@@ -45,6 +45,7 @@ export function mainEnv(hostColors: string | undefined): Record<string, string> 
     COLORTERM: "truecolor",
   };
   delete env.REWAKE_SHELL_CWD;
+  delete env.REWAKE_SHELL_SOCK;
   // The person's colours reach every space host through main's environment,
   // so a worker's program hears them from its host (docs/shell.md).
   if (hostColors) env.REWAKE_HOST_COLORS = hostColors;

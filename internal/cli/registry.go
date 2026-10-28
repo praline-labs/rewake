@@ -153,6 +153,8 @@ func buildGroups(catalog adapter.Catalog) []Group {
 		},
 	}
 
+	talk.Commands = append(talk.Commands, screenCommand())
+
 	worker := exampleAddress(catalog)
 	steer := Group{
 		Title:   "STEER A SESSION",

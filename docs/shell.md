@@ -362,6 +362,12 @@ write-claude (code) · working · ⎇ wt-fd7596 · <model> low thinking · 23% 2
   turn's end and with each heartbeat ([claude.md](claude.md#telemetry)), so the context grows
   through a long turn; pi publishes on its own events. The poll adds up to a second.
 
+## A picture of a window
+
+`rewake screen` draws any session's window in a shadow tree of the shell's, from the same
+`Window` as the person's; it is [screen.md](screen.md). Every byte a pane is fed is also written
+to its shadow widget.
+
 ## The briefs
 
 A brief is a markdown document main keeps in the room for one task ([briefs.md](briefs.md));

@@ -21,6 +21,8 @@ type emulator interface {
 	// replay is the screen and the input modes as bytes for a fresh
 	// terminal (replay.go).
 	replay() []byte
+	// look is the whole screen, styled rows with the cursor.
+	look() look
 	replies() io.Reader
 	// stopReplies ends replies, so its reader returns.
 	stopReplies() error

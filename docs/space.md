@@ -73,7 +73,9 @@ only the person's keys from main's shell.
 The space host serves `sock/space.<id>.sock` to the shell as a raw stream: a preamble from the
 emulator that keeps the worker's screen, then the worker's bytes, and the keys and sizes the
 shell sends back; the last size set is the worker's ([shell.md](shell.md)). The socket is open
-to any process of the user, as every room file is, and takes no request of the mod.
+to any process of the user, as every room file is, and takes no request of the mod. A client may write mode `s`
+instead, a snapshot: one JSON line of the emulator's screen and the end, no frames taken
+([screen.md](screen.md#no-shell-the-space-host)).
 
 ## The record
 
