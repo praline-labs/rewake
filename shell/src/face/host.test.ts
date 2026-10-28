@@ -113,3 +113,64 @@ test("a face that hangs is stopped when it misses its ping, and the shell's thre
   expect(failed.error).toContain("did not answer");
   expect(ticks > 5).toBe(true);
 });
+
+// A wrapper's mirror socket that serves a snapshot and never answers a
+// prompt, its connections at hand to cut.
+function silent(dir: string) {
+  const path = join(dir, "s.sock");
+  const open: { end(): void }[] = [];
+  const lines = [
+    { op: "hello", v: 1, inputs: ["prompt"] },
+    { op: "begin", items: 0, dropped: 0, turn: "idle" },
+    { op: "end" },
+  ];
+  const server = Bun.listen({
+    unix: path,
+    socket: {
+      open(s) {
+        open.push(s);
+        s.write(lines.map((l) => `${JSON.stringify(l)}\n`).join(""));
+      },
+      data() {},
+    },
+  });
+  ends.push(() => server.stop(true));
+  return { path, cut: () => open.at(-1)?.end() };
+}
+
+test("prompts that get no answer are bounded, expire, and go with their link, a reload and the face's end", async () => {
+  const dir = scratch();
+  const wrapper = silent(dir);
+  const url = faceFile(dir, `import ${JSON.stringify(worker)};\n`);
+  const { host, until } = hosted(url, wrapper.path, { pingEvery: 50, promptsExpireAfter: 500 });
+  const sent = (host as unknown as { sent: Map<string, { text: string }> }).sent;
+  const waiting = () => [...sent.values()];
+  const live = () => until((s) => s.link === "live");
+  host.start();
+  await live();
+
+  // Three disconnects, each with prompts in flight: none outlives its link.
+  for (let n = 1; n <= 3; n++) {
+    for (let i = 0; i < n; i++) host.prompt(`lost ${n}.${i}`);
+    expect(waiting().length).toBe(n);
+    wrapper.cut();
+    await until((s) => s.link === "lost");
+    expect(waiting().length).toBe(0);
+    await live();
+  }
+
+  // Many large prompts: a few wait, each with what a refusal shows of it.
+  for (let i = 0; i < 200; i++) host.prompt("x".repeat(64 * 1024));
+  expect(waiting().length).toBe(16);
+  expect(waiting().every((p) => p.text.length <= 40)).toBe(true);
+  await Bun.sleep(700);
+  expect(waiting().length).toBe(0);
+
+  host.prompt("before the reload");
+  host.start();
+  expect(waiting().length).toBe(0);
+  await live();
+  host.prompt("before the end");
+  host.end();
+  expect(waiting().length).toBe(0);
+});

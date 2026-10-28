@@ -71,7 +71,9 @@ flips the shown pane between `rewake` and `native`, and the strip says `dev rewa
 mounted, sized and fed, so its pty is never resized and its TUI runs on, and the switch costs
 nothing on either side. Its header says the turn's state, or the link while it is not live, and
 the face's last error; its body is the conversation's tail, PgUp and PgDn scroll it; its input line
-sends a prompt to the session, refused with its reason where the session does not take it. Under
+sends a prompt to the session, refused with its reason where the session does not take it. A prompt
+waits for its answer only while the answer can come: at most the latest 16, each for 30 s, none past
+the link it went by, a reload or the face's end. Under
 rewake's face the keys go to that input, never to the pty, and Esc does nothing. `rewake screen`
 takes the window as the person sees it: the shadow window draws the face too.
 

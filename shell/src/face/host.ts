@@ -23,9 +23,18 @@ export type FaceOptions = {
   onState: (state: FaceState) => void;
   pingEvery?: number;
   pongWithin?: number;
+  promptsExpireAfter?: number;
 };
 
 let ids = 0;
+
+// A prompt the face sent waits for its answer only while it can still come:
+// the wrapper answers within its own 10 s, on the link the prompt went by, to
+// the worker that sent it. Its text is kept only as far as the refusal shows
+// it, and only the latest few wait.
+const maxPrompts = 16;
+const shownChars = 40;
+const expireAfter = 30_000;
 
 export class FaceHost {
   state: FaceState = { lines: [], turn: "unknown", link: "connecting", prompts: false };
@@ -36,7 +45,7 @@ export class FaceHost {
   private ponged = 0;
   private pingedAt = 0;
   private timer: ReturnType<typeof setInterval> | undefined;
-  private sent = new Map<string, string>();
+  private sent = new Map<string, { text: string; at: number }>();
 
   constructor(private readonly options: FaceOptions) {}
 
@@ -72,6 +81,7 @@ export class FaceHost {
     const every = this.options.pingEvery ?? 1000;
     const within = this.options.pongWithin ?? 2000;
     this.timer = setInterval(() => {
+      this.expire();
       if (this.ponged < this.pinged && Date.now() - this.pingedAt > within)
         return this.failed(`the face did not answer for ${within / 1000} s and was stopped`);
       if (this.ponged === this.pinged) {
@@ -86,6 +96,8 @@ export class FaceHost {
   private heard(message: FromFace) {
     switch (message.kind) {
       case "lines":
+        // A lost link takes the answers of what went by it.
+        if (message.link === "lost" && this.state.link !== "lost") this.sent.clear();
         return this.set({
           lines: message.lines,
           turn: message.turn,
@@ -96,12 +108,12 @@ export class FaceHost {
       case "error":
         return this.set({ error: message.text });
       case "answer": {
-        const text = this.sent.get(message.id);
+        const text = this.sent.get(message.id)?.text;
         this.sent.delete(message.id);
         return this.set({
           said: message.ok
             ? undefined
-            : `not sent: ${message.detail ?? "refused"}${text ? ` (${text.slice(0, 40)})` : ""}`,
+            : `not sent: ${message.detail ?? "refused"}${text ? ` (${text})` : ""}`,
         });
       }
       case "pong":
@@ -138,18 +150,31 @@ export class FaceHost {
   prompt(text: string): boolean {
     if (!this.worker) return false;
     const id = `p${++ids}`;
-    this.sent.set(id, text);
+    this.expire();
+    this.sent.set(id, { text: text.slice(0, shownChars), at: Date.now() });
+    for (const old of this.sent.keys()) {
+      if (this.sent.size <= maxPrompts) break;
+      this.sent.delete(old);
+    }
     this.set({ said: undefined });
     this.send({ kind: "prompt", id, text });
     return true;
+  }
+
+  // expire forgets the prompts whose answer can no longer come.
+  private expire() {
+    const before = Date.now() - (this.options.promptsExpireAfter ?? expireAfter);
+    for (const [id, prompt] of this.sent) if (prompt.at < before) this.sent.delete(id);
   }
 
   get running() {
     return this.worker !== undefined;
   }
 
-  // end stops the worker, keeping what it drew.
+  // end stops the worker, keeping what it drew; the answers it owed go with
+  // it.
   end() {
+    this.sent.clear();
     clearInterval(this.timer);
     this.timer = undefined;
     const worker = this.worker;
