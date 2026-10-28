@@ -128,6 +128,10 @@ arrays, enums, references — and writes the TypeScript types the mod imports
 regenerates both in memory and fails when a checked-in file differs, so neither side can drift
 from the schema. An additive field is a change of the protocol all the same: a newer mod's field
 is refused by an older host's reader, a case one build per room never meets.
+The reviewer's acceptance of an added field checks the direction that does happen: a newer build
+reading what an older one left on disk, a missing field read as before. The fields added through
+October 26, 2026 — the cache telemetry and `cacheLife`, `status/line`, `worker.type`,
+`configuredModelName`, `worker.label`, `thinking` — were accepted so on October 28, 2026.
 
 ### The peer
 

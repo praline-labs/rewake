@@ -1,5 +1,5 @@
 ---
-description: The open work and its order — the acceptance of additive fields — and the ideas not scheduled.
+description: The open work and its order — none open now — and the ideas not scheduled.
 ---
 
 # Roadmap
@@ -10,11 +10,7 @@ what it taught goes into the living documents.
 
 ## Open, in order
 
-1. **Acceptance of additive fields** — the cache telemetry, the `status/line` endpoint,
-   `worker.type`, `configuredModelName`, `worker.label`, and `thinking` (the telemetry's and
-   `StatusLineRequest`'s, October 26, 2026) changed the protocol or the state
-   by adding fields; only the dialog fields' acceptance is on record. Whether the others need
-   it is main's call (`AGENTS.md`, "Delegation and review").
+None.
 
 ## Not scheduled
 
