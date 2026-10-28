@@ -389,3 +389,94 @@ tests) pass. Not run, because they need a model and the owner's login: a turn's 
 main through the bundled 1.4.0, and the telemetry's thinking level and `model.reasoning` on a real
 model. `scripts/pack.sh 0.0.1` wrote `"@earendil-works/pi-coding-agent": "1.4.0"` into the entry's
 dependencies.
+
+## A mirror of a live session for an interface of rewake's own (October 28, 2026, 1.4.0)
+
+The same questions as Claude Code's
+([research-claude-mod.md](research-claude-mod.md#a-mirror-of-a-live-session-for-an-interface-of-rewakes-own-october-28-2026-21310)),
+asked of the bundled pi 1.4.0 after reading its extension API (`docs/extensions.md`, `docs/tui.md`,
+`dist/core/extensions/types.d.ts`). One interactive pi ran in a terminal tab of the write
+session's own, in `/tmp/ui-probe-pi-36`, with `-e` naming a probe extension, `--no-session`, the
+workers' agent folder as `PI_CODING_AGENT_DIR` (its settings untouched), an environment cleared to
+HOME, PATH, TERM, LANG and the machine's proxy variables, the cheapest model at low thinking, four
+prompts and two from the extension. The extension appended every event to a log with its own
+`performance.now()` and held marked calls on 25-second long polls to a small server on a Unix
+socket; its source, the server, the launch script, a log viewer and the evidence are kept in the
+ignored `.scratch/ui-probe-pi/` (`probe.ts`, `server.ts`, `launch.sh`, `show.py`, `log.jsonl`,
+`screens/`). Times are from the prompt's `input` event. **[live]**
+
+- **Streaming.** Every piece of a reply reaches an extension as it streams: `message_update`
+  carries the provider's `assistantMessageEvent`, typed `text_start`/`text_delta`/`text_end`,
+  `thinking_*`, `toolcall_start`/`toolcall_delta`/`toolcall_end`, with the delta and the partial
+  message. A reply of 1594 characters came as 327 `text_delta`s from 4.36 to 6.01 s, a median of
+  5 characters (at most 13), in 70 bursts a median 20 ms apart (the longest gap 71 ms). The
+  assistant's `message_start` came at 1.50 s, `thinking_start` at 2.27 s, `thinking_end` at
+  4.36 s, `text_end` at 6.10 s and `message_end` at 6.11 s, carrying the whole message: its
+  content blocks, `stopReason`, usage. Thinking streamed as text only when the provider sent a
+  summary (one reply: 28 and 2 characters, drawn on screen as its summary line); otherwise the
+  block was empty, a signature only. `provider_stream_event` fired 341 times for that reply.
+  `message_start`/`message_end` fire for the system prompt, the user's message and every tool
+  result too, and the prompt's text is also in `input` (with its `source`: `interactive`,
+  `extension`, `rpc`). Tool arguments stream as `toolcall_delta`s of 2–4 characters (95 in the
+  run); then `tool_execution_start` with the whole arguments, `tool_call` under a millisecond
+  later, `tool_execution_update` with partial output, `tool_result`, `tool_execution_end` with
+  the result, `isError` and `durationMs`, a `toolResult` message and `turn_end` with the
+  results. Turns are `agent_start`, `turn_start`/`turn_end` per model step, `agent_end`, then
+  `agent_settled` with `aborted`.
+- **A long hold.** pi has no permission gate, but a `tool_call` handler is awaited without a
+  time limit and returns `{block, reason}`. The probe held bash calls on the long polls: 60.0 s
+  (3 polls) then allowed, 180.0 s (8 polls) then refused, 600.0 s (24 polls) then allowed; the
+  handler's `ctx.signal` never aborted. An allowed call ran 17 ms after the answer; the refused one
+  did not run, ended `isError` with the reason as its result, and the model went on to the next
+  step. Meanwhile the screen showed the call's row (`$ echo probe-hold-10`) under pi's
+  `⠧ Working` row, a free editor, the footer, and no dialog; the row then read `Took 0.0s` for
+  an allowed call (timed from the answer) and `Took 3m 0s` for the refused one.
+- **A question.** pi has no question tool of its own. The probe registered one (`ask_person`)
+  whose `execute` shows pi's own selector, `ctx.ui.select(question, options, {signal})`, and
+  races it with an answer from outside: the selector replaced the editor (`→ red`, `blue`,
+  `↑↓ navigate  enter select  escape/ctrl+c cancel`) and the working row, `ui_prompt_start`
+  fired with `kind: "select"` and the title only, and at 30.0 s the outside answer won; aborting
+  the signal closed the selector, `ui_prompt_end` fired, and the model read "The person chose:
+  Blue". Other extensions see a dialog only through those two events.
+- **Input back.** `pi.sendUserMessage(text)` while idle, from a timer 500 ms after a command,
+  started a turn: an `input` with `source: "extension"`, `before_agent_start` with `messageType:
+  "user"`, `agent_start` 4 ms later; the screen drew it as a typed prompt, with no mark of its
+  origin. With `deliverAs: "steer"` 2 s into a held call it drew `Steering: <text>` (`↳ Alt+Up
+  to edit all queued messages`) and was delivered as a user message at the next `turn_start`, 2 ms
+  after the call ended; `followUp`, by the docs, waits for the run to end. `ctx.abort()` 5 s into `sleep 30`
+  stopped the call (`Command aborted`, `Took 5.0s`), then one empty assistant message with
+  `stopReason: "error"` ("This operation was aborted"), `agent_end`, `agent_settled` with
+  `aborted: true`.
+- **The rest of the screen.** pi draws a header (logo, keys, the loaded extensions), the
+  transcript, a working row (spinner and message), the editor and a footer (the cwd, tokens,
+  cost, context use, model and thinking level); no event carries the spinner or the footer's
+  numbers. An extension can redraw each of them: `setHeader` and `setFooter` replaced the header
+  and footer with one-line components (the footer's statuses went with it), `setWidget` drew a
+  line above the editor, `setWorkingVisible(false)` hid the working row during a whole turn, and
+  `setStatus`, `setWorkingMessage`, `setWorkingIndicator`, `setTitle`, `setEditorComponent`,
+  `custom()` overlays and per-tool and per-message renderers are in the API. Running the command
+  again restored pi's own. Usage and context are in each assistant message's `usage` and through
+  `ctx.getContextUsage()`.
+- **Not tested.** `setStatus` under pi's own footer, a person answering or pressing Esc during a
+  hold, `followUp`, a hold past ten minutes, a run under load, RPC mode, which by its docs
+  (`docs/rpc.md`) gives a child process the same session events as JSON lines.
+
+| What the interface needs | Claude Code 2.1.310 (a mod) | pi 1.4.0 (an extension) |
+|---|---|---|
+| the prompt | `prompt.submit`, `UserMessage` render | `input`, the user `message_end` |
+| streamed text | `turn.step` chunks, ~9 characters 20 ms apart | `message_update` `text_delta`, ~5 characters in bursts 20 ms apart |
+| a settled block | `ui.render` `AssistantMessage` | `text_end`, `message_end` |
+| thinking | empty `thinking` chunks | `thinking_delta` when the provider sends a summary |
+| a tool call's input | `ToolGroup` (folded), `ToolUse` (unfolded), events | `toolcall_delta`, `tool_execution_start` |
+| a tool's output | `ToolResult` (unfolded), events | `tool_execution_update`/`_end`, the `toolResult` message |
+| holding a call | `tool.check`, 10 min seen, no dialog | `tool_call`, 10 min seen, no gate to hide |
+| a question | the model's `AskUserQuestion`, its render site | an extension's own tool on `ctx.ui.select`, closed by a signal |
+| a turn as if typed | `$.prompt.submit` from a timer, marked as the plugin's | `pi.sendUserMessage`, unmarked |
+| steering | (not probed) | `sendUserMessage(…, {deliverAs: "steer"})` |
+| abort | (not probed) | `ctx.abort()` |
+| the rest of the screen | `Spinner` render on mode changes; status, toast, band, pane | header, footer, widgets, working row: replaced or hidden |
+
+So an adapter for pi takes everything from events, the text per delta, with nothing to unfold
+and no render site to read; it can hold a call at `tool_call` for at least ten minutes, ask
+the person through pi's own selector and close it from outside, start, steer and abort a turn,
+and hide or replace pi's own working row, header and footer.
