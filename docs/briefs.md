@@ -302,7 +302,7 @@ theirs, never written.
   target, a path in backticks or bare in the text alike — less one trailing full stop, is joined to
   the folder of the file it is written in; when the result leaves the skill's folder by exactly one
   level, `../<name>` or `../<name>/…`, and `<name>` is a skill's name, `<name>` is looked up in
-  main's catalogue, as a named skill is. Examples: `[design](../mp-codebase-design/SKILL.md)` in
+  main's catalogue, as a named skill is. Examples: a markdown link whose target is `../mp-codebase-design/SKILL.md`, in
   `mp-tdd/SKILL.md` brings `mp-codebase-design`; ``see `../../mp-grilling/SKILL.md` `` in
   `mp-tdd/references/flow.md` resolves from `references/` to `../mp-grilling/SKILL.md` and brings
   `mp-grilling`. Found, it is copied whole and scanned in its turn, each skill once, so a cycle
