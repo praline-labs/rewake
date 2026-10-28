@@ -15,7 +15,9 @@ if (!target || !outfile) {
 }
 
 const result = await Bun.build({
-  entrypoints: [`${import.meta.dir}/src/main.tsx`],
+  // The face runs as a worker of its own (src/face/faces.ts), so it is an
+  // entrypoint beside the shell's.
+  entrypoints: [`${import.meta.dir}/src/main.tsx`, `${import.meta.dir}/src/face/worker.ts`],
   // The shell runs in the person's directory: a bunfig.toml, .env, tsconfig
   // or package.json there must not reach it, as they would by default — a
   // preload named in one stopped the spike's executable.

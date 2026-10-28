@@ -12,6 +12,7 @@ import { createEffect, createSignal } from "solid-js";
 import { takeBriefs } from "./briefs.tsx";
 import { askColors, seedOf } from "./colors.ts";
 import { endMain, tailText, watchTerminal } from "./ending.ts";
+import { endFaces, faceShown, takeMirrors, toggleFace } from "./face/faces.ts";
 import { type Command, isSuspend, prefixHandler } from "./keys.ts";
 import { closingLayer } from "./lifting.ts";
 import { type PaneTerminal, paneHooks } from "./pane.ts";
@@ -38,7 +39,7 @@ import { endedSpaces, pollRoom, shownSpaces, spacesOver } from "./room.ts";
 import { Scanner } from "./scan.ts";
 import { type Frame, frameOf, listenScreen } from "./screen.ts";
 import { connectWorker, type MainRun, mainEnv, type Source, startMain } from "./sources.ts";
-import { showSessions } from "./strip.tsx";
+import { showSessions, stripOf } from "./strip.tsx";
 import { themeOf } from "./theme.ts";
 import { type Env, type View, Window } from "./window.tsx";
 
@@ -168,8 +169,10 @@ createEffect(() => {
   for (const pane of allPanes()) if (pane.id !== id) pane.term?.blur();
   if (id === undefined) return;
   const pane = paneOf(id);
-  // On the next tick: a pane shown by this change is mounted only then.
-  setTimeout(() => pane?.term?.focus(), 0);
+  // On the next tick: a pane shown by this change is mounted only then. A
+  // pane under rewake's face leaves the keys to the face's input.
+  const face = faceShown(id);
+  setTimeout(() => (face ? pane?.term?.blur() : pane?.term?.focus()), 0);
   if (pane?.title) renderer.setTerminalTitle(pane.title);
 });
 
@@ -194,6 +197,8 @@ function run(c: Command) {
       return setZoomed(!zoomed());
     case "briefs":
       return toggleBriefs();
+    case "face":
+      return toggleFace(focused());
     // The prefix twice types it.
     case "prefix":
       return (focused() === "main" ? main : paneOf(focused())?.source)?.write(
@@ -237,6 +242,7 @@ async function finish(code?: number, lost = false) {
   if (!lost) beginClosing();
   stopRoom();
   stopScreen?.();
+  endFaces();
   for (const pane of workers()) pane.source?.close();
   if (main) code = await endMain(main.child, main.close);
   // Main's process ends only after its screen has gone, and the shell's
@@ -364,6 +370,7 @@ stopRoom = pollRoom(
     if (view) {
       takeSpaces(shownSpaces(view), endedSpaces(view), closing, beginClosing);
       showSessions(new Map(view.sessions.map((s) => [s.name, s])));
+      takeMirrors(workers().map((p) => [p.id, stripOf(p.id).status?.mirror]));
     }
     takeBriefs(view, asked);
     if (screenPath && !stopScreen && !ending) stopScreen = listenScreen(screenPath, takeScreen);

@@ -58,3 +58,46 @@ given a gap, and reconnects for a fresh snapshot.
 reads false) and refuses, exit 2, a harness that does not offer the mirror. The worker's launch
 reads the flag from its record and sets `LaunchRequest.Mirror`; on Claude Code the hello answer then
 says `mirror: true`. Without it no mirror code runs: no events, no socket, no field in the view.
+
+## The face
+
+The shell starts a face for each worker pane whose session row carries `mirror`, and ends it with
+the pane or the socket. A dev worker opens on rewake's face; the prefix's `v` (Ctrl+\ then `v`)
+flips the shown pane between `rewake` and `native`, and the strip says `dev rewake` or
+`dev native`. The face is a layer over the pane's rectangle: the native widget under it stays
+mounted, sized and fed, so its pty is never resized and its TUI runs on, and the switch costs
+nothing on either side. Its header says the turn's state, or the link while it is not live, and
+the face's last error; its body is the conversation's tail, PgUp and PgDn scroll it; its input line
+sends a prompt to the session, refused with its reason where the session does not take it. Under
+rewake's face the keys go to that input, never to the pty, and Esc does nothing. `rewake screen`
+takes the window as the person sees it: the shadow window draws the face too.
+
+## Hot reload
+
+The model lives in the wrapper and the face only draws it, so a face can be replaced at any moment
+and lose nothing: a new one connects and gets the snapshot. The face is a Bun `Worker`
+(`shell/src/face/worker.ts`, with `model.ts` and `render.ts`) that connects to the socket itself,
+keeps its copy of the model and posts plain lines with their tones to the shell's thread, which
+paints them (`host.ts`, `view.tsx`). The shell run from its sources (`shell/rewake-shell` as
+`REWAKE_SHELL`, a second build beside the installed one, [install.md](install.md)) watches
+`shell/src/face/` and starts every face again 150 ms after the last change; what reloads is the
+worker's code, while `faces.ts`, `host.ts` and `view.tsx` are the shell's own and change only with a
+new shell. A compiled shell holds the worker as a second entrypoint and watches nothing. A worker,
+not a module re-imported in the shell's thread: a module can neither be unloaded nor stopped when it
+loops, and its timers and sockets would stay; a worker is ended whole. The cost is a thread, a
+socket and a copy of the model (at most 4 MiB) per face, and lines rather than a widget tree.
+
+A reload never restarts or exits the shell and never writes to, resizes or closes a pane's pty,
+main's included: closing the shell ends main and every worker ([shell.md](shell.md)). Each failure
+is contained in the shell's thread, and the person can always switch to native with the prefix's
+`v`, since the input line is the shell's:
+
+- **fails to load** (a syntax error, a missing import): the worker's `error` event; the face stops,
+  its last lines stay with the error in its header.
+- **throws**: a drawing or a message that throws is caught in the worker and posted as the error,
+  the last lines staying; one that escapes ends in the `error` event, as above.
+- **hangs**: no answer to a ping within 2 s; the shell terminates the worker and shows why.
+- **its socket fails**: shown as `lost`, and the worker connects again a second later.
+
+A stopped face starts again at the next change of its sources, or when the person switches to it.
+Tests: `shell/src/face/host.test.ts`.

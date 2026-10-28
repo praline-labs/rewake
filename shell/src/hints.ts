@@ -12,6 +12,8 @@ export type Context = {
   prefix: boolean;
   zoomed: boolean;
   workers: number;
+  // face is the focused pane's face, where its session serves a mirror.
+  face?: "rewake" | "native";
 };
 
 export type Hint = { keys: string; does: string };
@@ -24,6 +26,8 @@ type Entry = {
 
 const hasWorkers = (c: Context) => c.workers > 0;
 const notMain = (c: Context) => c.focus !== "main";
+const hasFace = (c: Context) => c.face !== undefined;
+const otherFace = (c: Context) => (c.face === "rewake" ? "native face" : "rewake face");
 
 const table: Record<Context["focus"] | "prefix", Entry[]> = {
   // After Ctrl+\: the commands themselves.
@@ -35,6 +39,7 @@ const table: Record<Context["focus"] | "prefix", Entry[]> = {
     { keys: "0/m", does: "main", when: notMain },
     { keys: "z", does: (c) => (c.zoomed ? "end the zoom" : "zoom") },
     { keys: "b", does: (c) => (c.focus === "briefs" ? "back" : "briefs"), when: hasWorkers },
+    { keys: "v", does: otherFace, when: hasFace },
     {
       keys: "Ctrl+\\ again",
       does: (c) => `pass Ctrl+\\ to ${c.name}`,
@@ -50,7 +55,11 @@ const table: Record<Context["focus"] | "prefix", Entry[]> = {
     { keys: "Ctrl+\\", does: "the shell's commands", when: (c) => !hasWorkers(c) },
   ],
   worker: [
-    { keys: "keys", does: (c) => `go to ${c.name}` },
+    {
+      keys: "keys",
+      does: (c) => (c.face === "rewake" ? `a prompt for ${c.name}` : `go to ${c.name}`),
+    },
+    { keys: "Ctrl+\\ v", does: otherFace, when: hasFace },
     // Main has no button on the bar: m reaches it in every layout.
     { keys: "Ctrl+\\ ←/m", does: "main" },
     { keys: "Ctrl+\\ n/p", does: "next/previous" },
