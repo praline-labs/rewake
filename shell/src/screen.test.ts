@@ -41,6 +41,17 @@ test("the socket answers a line with a frame, and a bad line with why", async ()
   const path = join(mkdtempSync(join(tmpdir(), "scr")), "s.sock");
   const stop = listenScreen(path, async (pane) => {
     if (pane === "gone") throw new Error("no window gone to draw");
+    // Past what one write of a socket takes.
+    if (pane === "big")
+      return {
+        pane,
+        cols: 200,
+        rows: 60,
+        lines: Array.from({ length: 60 }, () =>
+          Array.from({ length: 200 }, () => ({ t: "x", w: 1, fg: "#112233", bg: "#445566" })),
+        ),
+      };
+    if (pane === "wide") return { pane, cols: 401, rows: 1, lines: [[]] };
     return { pane, cols: 1, rows: 1, lines: [[{ t: "x", w: 1 }]] };
   });
   expect(stop).toBeDefined();
@@ -65,6 +76,10 @@ test("the socket answers a line with a frame, and a bad line with why", async ()
     return JSON.parse(got);
   };
   expect((await ask('{"pane":"main"}')).lines[0][0].t).toBe("x");
+  const big = await ask('{"pane":"big"}');
+  expect(big.lines.length).toBe(60);
+  expect(big.lines[59].length).toBe(200);
+  expect((await ask('{"pane":"wide"}')).error).toContain("over 400x200");
   expect((await ask('{"pane":"gone"}')).error).toContain("no window gone");
   expect((await ask("not json")).error).toContain("JSON");
   expect((await ask("{}")).error).toContain("names no pane");

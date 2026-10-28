@@ -333,6 +333,7 @@ async function draw(id: string): Promise<Frame> {
     pane: id,
     fg: colors?.defaultForeground ?? undefined,
     bg: colors?.defaultBackground ?? undefined,
+    palette: colors?.palette,
     cursor: cursor.visible
       ? { x: target.shadow.screenX + cursor.x, y: target.shadow.screenY + cursor.y }
       : undefined,

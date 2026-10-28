@@ -3,7 +3,9 @@ package spacehost
 import (
 	"encoding/json"
 	"fmt"
+	"image/color"
 	"net"
+	"os"
 	"time"
 
 	"github.com/praline-labs/rewake/internal/core/screen"
@@ -16,7 +18,12 @@ import (
 // (docs/screen.md); the client sends no frame, so the worker's size stays.
 func (r *relay) snapshot(conn net.Conn) {
 	defer func() { _ = conn.Close() }()
-	data, err := json.Marshal(frameOf(r.grid.Snapshot()))
+	frame := frameOf(r.grid.Snapshot())
+	// The person's default colors, as the shell gave them to this host; the
+	// palette is not passed to a host, so indexed colors are xterm's.
+	fg, bg := terminal.ParseDefaults(os.Getenv(terminal.DefaultsEnv))
+	frame.Fg, frame.Bg = colorHex(fg), colorHex(bg)
+	data, err := json.Marshal(frame)
 	if err != nil {
 		return
 	}
@@ -40,6 +47,15 @@ func frameOf(snap terminal.Snapshot) *screen.Frame {
 		frame.Lines = append(frame.Lines, line)
 	}
 	return frame
+}
+
+// colorHex is a color as "#rrggbb"; nil is empty.
+func colorHex(c color.Color) string {
+	if c == nil {
+		return ""
+	}
+	r, g, b, _ := c.RGBA()
+	return fmt.Sprintf("#%02x%02x%02x", r>>8, g>>8, b>>8)
 }
 
 // hexOf is a run's color as "#rrggbb"; the default is empty.

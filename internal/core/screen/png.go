@@ -18,7 +18,7 @@ const (
 // The colors a frame that names none is drawn in.
 var (
 	defaultFg = color.RGBA{0xd8, 0xd8, 0xd8, 0xff}
-	defaultBg = color.RGBA{0x14, 0x14, 0x14, 0xff}
+	defaultBg = color.RGBA{0x28, 0x28, 0x28, 0xff}
 )
 
 // PNG draws the screen. A glyph the font lacks is a hollow box, a wide one

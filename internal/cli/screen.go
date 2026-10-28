@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/core/role"
@@ -21,6 +22,9 @@ type screenView struct {
 	Rows   int    `json:"rows"`
 	// Cursor is where the cursor is, from 0, when the pane shows one.
 	Cursor *screen.Cursor `json:"cursor,omitempty"`
+	// StandIn names the colors the terminal did not report, which the picture
+	// draws in stand-ins of its own.
+	StandIn []string `json:"standIn,omitempty"`
 	// PNG is the file written, when --png asked for one.
 	PNG string `json:"png,omitempty"`
 	// Text is the screen's lines, less their trailing blanks; left out when
@@ -36,6 +40,9 @@ func (v screenView) lines() []string {
 	out := []string{fmt.Sprintf("Rewake: %s's %s, %dx%d", v.Name, what, v.Cols, v.Rows)}
 	if v.PNG != "" {
 		out = append(out, "png: "+v.PNG)
+	}
+	if len(v.StandIn) > 0 {
+		out = append(out, "stand-in colors (the terminal did not report them): "+strings.Join(v.StandIn, ", "))
 	}
 	return append(out, v.Text...)
 }
@@ -88,7 +95,7 @@ func handleScreen(ctx *Context, call Call) error {
 	if err := frame.Check(); err != nil {
 		return failf("could not take %s's screen: %v", name, err)
 	}
-	view := screenView{Name: name, Source: frame.Source, Cols: frame.Cols, Rows: frame.Rows, Cursor: frame.Cursor}
+	view := screenView{Name: name, Source: frame.Source, Cols: frame.Cols, Rows: frame.Rows, Cursor: frame.Cursor, StandIn: frame.StandIn()}
 	if png == "" || call.Switch("text") {
 		view.Text = frame.Text()
 	}

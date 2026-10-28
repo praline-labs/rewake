@@ -12,6 +12,7 @@ export type Frame = {
   rows: number;
   fg?: string;
   bg?: string;
+  palette?: string[];
   cursor?: { x: number; y: number };
   lines: Run[][];
 };
@@ -47,7 +48,13 @@ function attrsOf(attributes: number): number {
 // glyph's columns counted by the renderer, equal neighbours not merged.
 export function frameOf(
   captured: CapturedFrame,
-  extra: { pane: string; fg?: string; bg?: string; cursor?: { x: number; y: number } },
+  extra: {
+    pane: string;
+    fg?: string;
+    bg?: string;
+    palette?: (string | null)[];
+    cursor?: { x: number; y: number };
+  },
 ): Frame {
   const lines = captured.lines.map((line) =>
     line.spans.map((span) => {
@@ -64,12 +71,35 @@ export function frameOf(
   const frame: Frame = { pane: extra.pane, cols: captured.cols, rows: captured.rows, lines };
   if (extra.fg) frame.fg = extra.fg;
   if (extra.bg) frame.bg = extra.bg;
+  // The terminal's own sixteen, an entry empty where it gave none.
+  if (extra.palette?.some(Boolean)) frame.palette = extra.palette.map((c) => c ?? "");
   if (extra.cursor) frame.cursor = extra.cursor;
   return frame;
 }
 
 const requestMax = 4096;
 const answerWithin = 5000;
+// The model's bounds (internal/core/screen), held here too so a window the
+// CLI would refuse is not written.
+const maxCols = 400;
+const maxRows = 200;
+
+type Conn = { held: string; out?: Buffer; sent: number; timer?: ReturnType<typeof setTimeout> };
+
+// flush writes the answer as the socket takes it and ends the connection
+// when all of it is out: a write of a large frame is partial, the rest waits
+// for drain.
+function flush(socket: { write(d: Buffer): number; end(): void; data: Conn }) {
+  const c = socket.data;
+  if (!c.out) return;
+  while (c.sent < c.out.length) {
+    const n = socket.write(c.out.subarray(c.sent));
+    if (n <= 0) return;
+    c.sent += n;
+  }
+  clearTimeout(c.timer);
+  socket.end();
+}
 
 // listenScreen serves the requests at path: a line {"pane": "<id>|main"}, the
 // answer a line with the frame, or {"error": "..."}. It returns what stops
@@ -82,11 +112,18 @@ export function listenScreen(
   try {
     // A socket left by a shell that was killed; the room has one main.
     if (existsSync(path)) unlinkSync(path);
-    const server = Bun.listen<{ held: string }>({
+    const server = Bun.listen<Conn>({
       unix: path,
       socket: {
         open(socket) {
-          socket.data = { held: "" };
+          // A request that never completes is dropped.
+          socket.data = { held: "", sent: 0, timer: setTimeout(() => socket.end(), answerWithin) };
+        },
+        close(socket) {
+          clearTimeout(socket.data.timer);
+        },
+        drain(socket) {
+          flush(socket);
         },
         data(socket, bytes) {
           socket.data.held += Buffer.from(bytes).toString("utf8");
@@ -96,8 +133,8 @@ export function listenScreen(
           const line = socket.data.held.slice(0, at);
           socket.data.held = "";
           void answer(line, take).then((text) => {
-            socket.write(`${text}\n`);
-            socket.end();
+            socket.data.out = Buffer.from(`${text}\n`);
+            flush(socket);
           });
         },
       },
@@ -129,6 +166,10 @@ async function answer(line: string, take: (pane: string) => Promise<Frame>): Pro
         setTimeout(() => no(new Error("the shell did not draw it in time")), answerWithin),
       ),
     ]);
+    if (frame.cols > maxCols || frame.rows > maxRows)
+      throw new Error(
+        `the window is ${frame.cols}x${frame.rows} cells, over ${maxCols}x${maxRows}`,
+      );
     return JSON.stringify(frame);
   } catch (e) {
     return JSON.stringify({ error: e instanceof Error ? e.message : String(e) });

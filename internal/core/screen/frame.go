@@ -59,10 +59,36 @@ type Frame struct {
 	Cols int    `json:"cols"`
 	Rows int    `json:"rows"`
 	// Fg and Bg are the default colors, empty where nobody said.
-	Fg     string  `json:"fg,omitempty"`
-	Bg     string  `json:"bg,omitempty"`
-	Cursor *Cursor `json:"cursor,omitempty"`
-	Lines  [][]Run `json:"lines"`
+	Fg string `json:"fg,omitempty"`
+	Bg string `json:"bg,omitempty"`
+	// Palette is the person's terminal's sixteen colors as it reported them,
+	// "#rrggbb", an entry empty where it did not. Cells carry their colors
+	// resolved; the list says which of the sixteen were the terminal's own.
+	Palette []string `json:"palette,omitempty"`
+	Cursor  *Cursor  `json:"cursor,omitempty"`
+	Lines   [][]Run  `json:"lines"`
+}
+
+// StandIn names the colors the picture draws in a stand-in of its own
+// because the terminal did not report them: the default foreground and
+// background and the palette (every entry must be there to count as
+// reported).
+func (f *Frame) StandIn() []string {
+	var out []string
+	if f.Fg == "" {
+		out = append(out, "foreground")
+	}
+	if f.Bg == "" {
+		out = append(out, "background")
+	}
+	reported := len(f.Palette) == 16
+	for _, c := range f.Palette {
+		reported = reported && c != ""
+	}
+	if !reported {
+		out = append(out, "palette")
+	}
+	return out
 }
 
 // Check refuses a frame outside the bounds or not made of its lines.
