@@ -9,6 +9,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/host/terminal"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 const (
@@ -21,6 +22,10 @@ const (
 	// the shell, so it runs main rather than another shell. The launch takes
 	// it out of its environment, and the harness never sees it.
 	shellMainEnv = "REWAKE_SHELL_MAIN"
+	// shellSocketEnv is where the shell listens for rewake screen
+	// (docs/screen.md): the room's sock/shell.sock, whose folder the main
+	// the shell starts makes. The shell takes it out of main's environment.
+	shellSocketEnv = "REWAKE_SHELL_SOCK"
 )
 
 // enterShell starts the shell for main on a terminal (the owner's decision,
@@ -57,6 +62,9 @@ func enterShell(h adapter.Harness, id launchIdentity) (bool, error) {
 	// The room, for the shell's own reads of it.
 	argv := append([]string{program, "--room", id.room, "--", self}, os.Args[1:]...)
 	env := append(os.Environ(), shellMainEnv+"=1")
+	if dir, err := state.Dir(); err == nil {
+		env = append(env, shellSocketEnv+"="+state.SocketPath(dir, "shell", ""))
+	}
 	return false, failf("could not start the shell %s: %v", program, syscall.Exec(program, argv, env))
 }
 

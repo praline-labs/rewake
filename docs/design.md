@@ -102,6 +102,7 @@ verified main callers see them.
     inbox/<name>/awaiting/<epoch>/<peer> reports owed by this run
     inbox/<name>/pending/      this run's `rewake pending` marks; its last word on the work and a held answer (turn-outcomes.md)
     sock/<name>.<epoch>.sock   one inbound socket per run
+    sock/shell.sock            the shell's: rewake screen asks it for a window (screen.md)
     sock/<name>.<epoch>.reply.sock the wrapper's own: Claude Code's receipts for held lines
     sock/space.<id>.sock       a space host's: the worker's raw stream for the shell (space.md)
     control/<name>.<epoch>/    a main's compact or interrupt request and its answer (remote-control.md)
