@@ -35,7 +35,7 @@ Open a document for numbers, commands and names: the map only points.
 - `docs/claude-turns.md` — A Claude Code session's turns through the mod — the outbox and end ids, the hello and its loads, the heartbeat and the live set, readiness and admission, what not holding an end costs.
   sections: The mod's side · The host's side · The live set · Readiness and admission · The start time · What not holding costs
 - `docs/claude.md` — The Claude Code adapter as one mod — loading it, when it does not load, the mod↔host protocol, the peer check, tools, telemetry and the cache's life, control.
-  sections: What the adapter offers · Loading the mod for one run · When the mod does not load · The protocol · The tools · The turn boundary · Telemetry · The cache ttl · Control · What the mod never does
+  sections: What the adapter offers · Loading the mod for one run · When the mod does not load · The protocol · The tools · The turn boundary · Telemetry · The cache ttl · Control · The mirror · What the mod never does
 - `docs/code.md` — Where each part of rewake lives in the tree, package by package; the adapter interface is in rules/adapter-api.md.
 - `docs/delivery-adapters.md` — How each harness carries a notice: Claude Code's socket line, inbound gate and late receipts; pi's extension; the fixture; and where each adapter's turn ends come from.
   sections: Claude Code · pi · The fixture
@@ -49,6 +49,8 @@ Open a document for numbers, commands and names: the map only points.
   sections: Delivery · The notice · Reading (`rewake inbox`)
 - `docs/design.md` — The system as built — scope, processes, the state directory and the session record, rooms, the environment a run gets, the command-line contract, distribution, and the decisions in force.
   sections: Goal · Scope · Design · Launch and signals · Delivery · A session without a wrapper · Interface · Code · Testing · Distribution · Decisions in force
+- `docs/face.md` — rewake's own face for a live session — the mirror model in the session's wrapper, its socket, the dev worker, the shell's face with its switch and hot reload.
+  sections: The model — `internal/core/mirror` · The socket · The dev worker · The face · Hot reload · Checked
 - `docs/flow-endings.md` — The other ends of a message's path — a blocking question, a notify, a session's end — one exchange traced through its files, and where the flow can stall and what the sender sees.
   sections: Act 6. A question, when the sender wants to block · Act 7. A notify, when nothing is owed · Act 8. The session ends · One exchange, as files · Where the flow can stall, and what it says
 - `docs/flow.md` — The whole path of one message, from a launch through send, notice and read to the report, with every process, file and status on the way, and how main starts a worker in a space.
@@ -116,7 +118,7 @@ Open a document for numbers, commands and names: the map only points.
 
 ### docs/roadmap/
 
-- `docs/roadmap/README.md` — The open work and its order — none open now — and the ideas not scheduled.
+- `docs/roadmap/README.md` — The open work and its order — rewake's face after its first slice — and the ideas not scheduled.
   sections: Open, in order · Not scheduled
 
 ### docs/rules/
