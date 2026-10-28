@@ -200,7 +200,7 @@ func briefOpened(home taskbrief.Home, id int) *BriefView {
 func briefViewOf(summary briefSummary) BriefView {
 	view := BriefView{
 		ID: summary.ID, Title: summary.Title, Closed: summary.Closed, Edition: summary.Edition,
-		Done: summary.Done, Total: summary.Total, CommentCount: summary.CommentCount, Bound: []BriefBound{},
+		Done: summary.Done, Total: summary.Total, CommentCount: summary.CommentCount, Bound: []BriefBound{}, Skills: summary.Skills,
 	}
 	for _, bound := range summary.Bound {
 		view.Bound = append(view.Bound, BriefBound{Name: bound.Name, Run: RunState(bound.Run), Kind: BindingKind(bound.Kind)})

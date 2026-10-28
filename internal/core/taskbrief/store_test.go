@@ -27,7 +27,7 @@ func room(t *testing.T) string {
 
 func made(t *testing.T, dir, text string) Brief {
 	t.Helper()
-	brief, err := New(Home{Room: dir}, main, text, "")
+	brief, err := New(Home{Room: dir}, main, text, "", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -94,7 +94,7 @@ func TestAnEditCarriesTheTicksInMainsText(t *testing.T) {
 		t.Fatalf("revision %d, markdown %q", read.Revision, read.Markdown())
 	}
 	text := strings.Replace(read.Markdown(), "## Frontend\n- [x] Run tests\n", "", 1)
-	edited, err := Edit(Home{Room: dir}, brief.ID, main, read.Revision, text)
+	edited, err := Edit(Home{Room: dir}, brief.ID, main, read.Revision, text, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -118,7 +118,7 @@ func TestAnEditNamesTheRevisionItStartedFrom(t *testing.T) {
 		t.Fatal(err)
 	}
 	var stale *StaleRevisionError
-	if _, err := Edit(Home{Room: dir}, brief.ID, main, 1, "- [ ] new\n"); !errors.As(err, &stale) || stale.Current != 3 {
+	if _, err := Edit(Home{Room: dir}, brief.ID, main, 1, "- [ ] new\n", nil); !errors.As(err, &stale) || stale.Current != 3 {
 		t.Fatalf("an edit from revision 1: %v", err)
 	}
 	if read := loaded(t, dir, brief.ID); read.Edition != 1 {
@@ -144,7 +144,7 @@ func TestATickNamesItsEdition(t *testing.T) {
 	if read.Done() != 1 || read.Edition != 1 {
 		t.Fatalf("done %d, edition %d", read.Done(), read.Edition)
 	}
-	if _, err := Edit(Home{Room: dir}, brief.ID, main, read.Revision, "- [ ] one\n- [ ] two\n- [ ] three\n"); err != nil {
+	if _, err := Edit(Home{Room: dir}, brief.ID, main, read.Revision, "- [ ] one\n- [ ] two\n- [ ] three\n", nil); err != nil {
 		t.Fatal(err)
 	}
 	var stale *StaleEditionError
@@ -216,7 +216,7 @@ func TestAClosedBriefIsArchivedAndTakesNothing(t *testing.T) {
 	if _, err := Tick(Home{Room: dir}, brief.ID, worker, 1, 1, true); !errors.As(err, &closed) {
 		t.Fatalf("a tick of a closed brief: %v", err)
 	}
-	if _, err := Edit(Home{Room: dir}, brief.ID, main, 1, "x"); !errors.As(err, &closed) {
+	if _, err := Edit(Home{Room: dir}, brief.ID, main, 1, "x", nil); !errors.As(err, &closed) {
 		t.Fatalf("an edit of a closed brief: %v", err)
 	}
 	open, _, err := List(Home{Room: dir}, false)
@@ -274,7 +274,7 @@ func TestWritesNeedTheLeaseAndRefuseInAView(t *testing.T) {
 	dir := room(t)
 	brief := made(t, dir, "text\n")
 	leave := state.EnterView()
-	if _, err := New(Home{Room: dir}, main, "x", ""); !errors.Is(err, state.ErrViewWrite) {
+	if _, err := New(Home{Room: dir}, main, "x", "", nil); !errors.Is(err, state.ErrViewWrite) {
 		t.Errorf("new in a view: %v", err)
 	}
 	if _, _, err := Comment(Home{Room: dir}, brief.ID, worker, "x"); !errors.Is(err, state.ErrViewWrite) {
@@ -289,7 +289,7 @@ func TestWritesNeedTheLeaseAndRefuseInAView(t *testing.T) {
 		t.Fatal(err)
 	}
 	unleased := buildtest.Established(t, base, "unleased")
-	if _, err := New(Home{Room: unleased}, main, "x", ""); !errors.Is(err, state.ErrNoLease) {
+	if _, err := New(Home{Room: unleased}, main, "x", "", nil); !errors.Is(err, state.ErrNoLease) {
 		t.Errorf("new without the lease: %v", err)
 	}
 }
@@ -297,7 +297,7 @@ func TestWritesNeedTheLeaseAndRefuseInAView(t *testing.T) {
 func TestAMainTextIsChecked(t *testing.T) {
 	dir := room(t)
 	for _, text := range []string{"", "  \n", "\xff", strings.Repeat("a", MaxText+1)} {
-		if _, err := New(Home{Room: dir}, main, text, ""); !errors.Is(err, ErrBadText) {
+		if _, err := New(Home{Room: dir}, main, text, "", nil); !errors.Is(err, ErrBadText) {
 			t.Errorf("text of %d bytes: %v", len(text), err)
 		}
 	}

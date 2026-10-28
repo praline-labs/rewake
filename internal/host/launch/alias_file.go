@@ -95,6 +95,10 @@ func (s *Set) read(path, description string, user bool) {
 		Briefs struct {
 			Dir string `toml:"dir"`
 		} `toml:"briefs"`
+		// Skills bars skills from briefs: the person's or the project's.
+		Skills struct {
+			Never []string `toml:"never"`
+		} `toml:"skills"`
 	}
 	decoder := toml.NewDecoder(bytes.NewReader(raw))
 	// A field rewake does not know is refused, not skipped: a silently
@@ -131,6 +135,12 @@ func (s *Set) read(path, description string, user bool) {
 			return
 		}
 		s.briefsDir = file.Briefs.Dir
+	}
+	for _, name := range file.Skills.Never {
+		if s.skillsNever == nil {
+			s.skillsNever = map[string]string{}
+		}
+		s.skillsNever[name] = path
 	}
 	for name, value := range file.Alias {
 		s.aliases[name] = value

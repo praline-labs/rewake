@@ -25,13 +25,19 @@ import (
 // It goes in the project's folder when the setting names one, in dir when
 // that is given (which then wins), else in the room. A brief outside the room
 // is entered in the index, the project's folder's included, so a move of its
-// folder reads moved and its id stays taken.
-func New(home Home, author Author, text, dir string) (Brief, error) {
+// folder reads moved and its id stays taken. The skills its text names are
+// found through catalog and copied into it as edition 1's snapshot, all
+// checked before anything is written.
+func New(home Home, author Author, text, dir string, catalog Catalog) (Brief, error) {
 	if err := CheckText(text); err != nil {
 		return Brief{}, err
 	}
+	plan, listed, err := planSkills(text, catalog)
+	if err != nil {
+		return Brief{}, err
+	}
 	var made Brief
-	err := state.WithBriefLock(home.Room, func() error {
+	err = state.WithBriefLock(home.Room, func() error {
 		id, err := nextID(home)
 		if err != nil {
 			return err
@@ -41,7 +47,7 @@ func New(home Home, author Author, text, dir string) (Brief, error) {
 			parent = home.Folder
 		}
 		if parent == "" {
-			made, err = build(home, author, text, id, state.BriefsPath(home.Room), openPath(home.Room, id), false)
+			made, err = build(home, author, text, id, state.BriefsPath(home.Room), openPath(home.Room, id), false, plan, listed)
 			return err
 		}
 		return state.WithOutside(home.Room, parent, func() error {
@@ -52,7 +58,7 @@ func New(home Home, author Author, text, dir string) (Brief, error) {
 			if err := state.EnsureOutsideDir(parent); err != nil {
 				return err
 			}
-			if made, err = build(home, author, text, id, parent, final, true); err != nil {
+			if made, err = build(home, author, text, id, parent, final, true, plan, listed); err != nil {
 				return err
 			}
 			idx, err := readIndex(home.Room)
@@ -69,7 +75,7 @@ func New(home Home, author Author, text, dir string) (Brief, error) {
 // build writes brief id into a temporary directory of parent and renames it
 // to final. outside says final lies in a folder of the project, which
 // records the room in the brief.
-func build(home Home, author Author, text string, id int, parent, final string, outside bool) (Brief, error) {
+func build(home Home, author Author, text string, id int, parent, final string, outside bool, plan []planned, listed []byte) (Brief, error) {
 	mkdir, room := state.EnsureSubdir, ""
 	if outside {
 		mkdir, room = state.EnsureOutsideDir, home.roomName()
@@ -78,6 +84,14 @@ func build(home Home, author Author, text string, id int, parent, final string, 
 	tmp := filepath.Join(parent, tmpPrefix+rand.Text())
 	for _, sub := range []string{logDir, textDir} {
 		if err := mkdir(filepath.Join(tmp, sub)); err != nil {
+			return Brief{}, err
+		}
+	}
+	if len(plan) > 0 {
+		if err := mkdir(filepath.Join(tmp, skillsDir)); err != nil {
+			return Brief{}, err
+		}
+		if err := writeSnapshot(plan, listed, snapshotPath(tmp, 1), outside); err != nil {
 			return Brief{}, err
 		}
 	}
@@ -102,18 +116,28 @@ func build(home Home, author Author, text string, id int, parent, final string, 
 
 // Edit replaces the text of an open brief, refused unless revision is still
 // the brief's: neither a tick nor an edit made since main read it is written
-// over. The text is written first and its entry last, so the entry is the
-// commit point.
-func Edit(home Home, id int, author Author, revision int, text string) (Brief, error) {
+// over. The skills the text names are copied again as the new edition's
+// snapshot, then the text is written, and its entry last, so the entry is
+// the commit point of both: an edit cut short leaves the previous edition
+// and its snapshot whole. The older snapshots go only after it.
+func Edit(home Home, id int, author Author, revision int, text string, catalog Catalog) (Brief, error) {
 	if err := CheckText(text); err != nil {
 		return Brief{}, err
 	}
+	plan, listed, err := planSkills(text, catalog)
+	if err != nil {
+		return Brief{}, err
+	}
 	var edited Brief
-	err := changeOpen(home, id, func(path string, brief Brief) error {
+	err = changeOpen(home, id, func(path string, brief Brief) error {
 		if revision != brief.Revision {
 			return &StaleRevisionError{ID: id, Given: revision, Current: brief.Revision}
 		}
 		edition := brief.Edition + 1
+		outside := path != openPath(home.Room, id)
+		if err := stageSnapshot(path, edition, plan, listed, outside); err != nil {
+			return err
+		}
 		if err := state.WriteAtomic(textPath(path, edition), []byte(text)); err != nil {
 			return err
 		}
@@ -122,8 +146,13 @@ func Edit(home Home, id int, author Author, revision int, text string) (Brief, e
 			return err
 		}
 		var err error
-		edited, err = loadAt(path, id)
-		return err
+		if edited, err = loadAt(path, id); err != nil {
+			return err
+		}
+		// Committed: an older snapshot nobody selects now; one this fails to
+		// remove goes at the next edit or the close.
+		_ = dropSnapshots(filepath.Join(path, skillsDir), func(n int) bool { return n < edition })
+		return nil
 	})
 	return edited, err
 }
@@ -218,86 +247,6 @@ func bind(home Home, id int, given Binding) (previous string, err error) {
 		return "", err
 	}
 	return previous, nil
-}
-
-// Close records the brief closed. A brief of the room is moved to the
-// archive, which ends every binding; one in a folder of the project is
-// marked in place, the folder being the project's. A close already done
-// answers already; one cut short between its two steps is finished. A brief
-// whose folder has moved is marked closed in the index and stays there, so
-// its id is not taken again.
-func Close(home Home, id int) (already bool, err error) {
-	dir := home.Room
-	err = state.WithBriefLock(dir, func() error {
-		path, outside, err := find(home, id)
-		var moved *MovedError
-		if errors.As(err, &moved) {
-			already, err = markMoved(dir, id)
-			return err
-		}
-		if err != nil {
-			return err
-		}
-		if outside {
-			return state.WithOutside(dir, path, func() error {
-				brief, err := loadAt(path, id)
-				if err != nil {
-					return err
-				}
-				if brief.IsClosed() {
-					already = true
-					return nil
-				}
-				now := time.Now().UTC()
-				record := brief.Record
-				record.Closed = &now
-				return writeRecord(path, record)
-			})
-		}
-		brief, err := loadAt(path, id)
-		if err != nil {
-			return err
-		}
-		if path != openPath(dir, id) {
-			already = true
-			return nil
-		}
-		if !brief.IsClosed() {
-			now := time.Now().UTC()
-			record := brief.Record
-			record.Closed = &now
-			if err := writeRecord(path, record); err != nil {
-				return err
-			}
-		}
-		if err := state.EnsureSubdir(state.ClosedBriefsPath(dir)); err != nil {
-			return err
-		}
-		if err := state.Rename(path, filepath.Join(state.ClosedBriefsPath(dir), FormatID(id))); err != nil {
-			return err
-		}
-		if err := state.SyncDir(state.ClosedBriefsPath(dir)); err != nil {
-			return err
-		}
-		return state.SyncDir(state.BriefsPath(dir))
-	})
-	return already, err
-}
-
-// markMoved sets the index entry of brief id closed, answering whether it
-// was.
-func markMoved(room string, id int) (already bool, err error) {
-	idx, err := readIndex(room)
-	if err != nil {
-		return false, err
-	}
-	entry := idx.Briefs[FormatID(id)]
-	if entry.Closed {
-		return true, nil
-	}
-	entry.Closed = true
-	idx.Briefs[FormatID(id)] = entry
-	return false, writeIndex(room, idx)
 }
 
 // changeOpen runs change under the lock on brief id as it is, refused when

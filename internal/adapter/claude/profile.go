@@ -9,6 +9,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/core/role"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // The worker profile (docs/worker-profile.md): what a worker of Claude Code
@@ -89,7 +90,11 @@ func workerProfile(request adapter.LaunchRequest, args []string) (profile, error
 	if err := prepareClaudeState(dir, root); err != nil {
 		return profile{}, err
 	}
-	passed, enter, notes, err := runSettings(settings, dir, root, memoryKey(request), request.WorktreeEntry, request.RunDir, request.Executable)
+	briefs := ""
+	if request.RoomDir != "" {
+		briefs = state.BriefsPath(request.RoomDir)
+	}
+	passed, enter, notes, err := runSettings(settings, dir, root, memoryKey(request), request.WorktreeEntry, request.RunDir, request.Executable, briefs)
 	if err != nil {
 		return profile{}, err
 	}

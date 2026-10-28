@@ -107,6 +107,9 @@ type Set struct {
 	// briefsDir is the project's [briefs] dir as written, relative to the
 	// project; empty without one.
 	briefsDir string
+	// skillsNever are the skills a brief may not give, each with the file
+	// that bars it: the user's and the project's lists joined.
+	skillsNever map[string]string
 	// pendingOff is what the project file asked, applied once every file is read.
 	pendingOff []offRequest
 }
@@ -312,4 +315,11 @@ func (s *Set) BriefsDir(working string) string {
 		return filepath.Clean(s.briefsDir)
 	}
 	return filepath.Join(working, s.briefsDir)
+}
+
+// SkillBarred answers the file whose [skills] never names the skill, empty
+// when none does: such a skill is never copied into a brief
+// (docs/briefs.md#skills).
+func (s *Set) SkillBarred(name string) string {
+	return s.skillsNever[name]
 }

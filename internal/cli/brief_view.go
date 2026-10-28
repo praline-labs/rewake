@@ -30,6 +30,8 @@ type briefSummary struct {
 	Total        int        `json:"total"`
 	CommentCount int        `json:"commentCount"`
 	Bound        []boundRun `json:"bound"`
+	// Skills are the names the text's Skills line gives, closed or open.
+	Skills []string `json:"skills,omitempty"`
 }
 
 // boundRun is a run the brief was sent to.
@@ -65,6 +67,11 @@ type briefDetail struct {
 	Text     string           `json:"text"`
 	Items    []taskbrief.Item `json:"items"`
 	Comments []commentView    `json:"comments"`
+	// SkillFiles are the copies of the skills, each with its SKILL.md's path,
+	// what the worker reads; none once the brief is closed.
+	SkillFiles []taskbrief.SkillCopy `json:"skillFiles,omitempty"`
+	// SkillsUnreadable says why the copies could not be read.
+	SkillsUnreadable string `json:"skillsUnreadable,omitempty"`
 	// numbered is the text a worker reads, each item's number after its box.
 	numbered string
 }
@@ -96,7 +103,7 @@ func briefSummaryOf(brief taskbrief.Brief) briefSummary {
 	summary := briefSummary{
 		ID: brief.ID, Title: brief.Title(), Closed: brief.IsClosed(), Created: brief.Created, ClosedAt: brief.Closed,
 		Edition: brief.Edition, Revision: brief.Revision, Done: brief.Done(), Total: len(brief.Items()),
-		CommentCount: len(brief.Comments()), Bound: []boundRun{},
+		CommentCount: len(brief.Comments()), Bound: []boundRun{}, Skills: brief.SkillNames(),
 	}
 	for _, binding := range brief.Bound {
 		run := map[proc.IdentityEvidence]string{proc.IdentityAlive: "running", proc.IdentityEnded: "ended"}[registry.ObserveRun(binding.Epoch)]
@@ -116,6 +123,11 @@ func briefDetailOf(brief taskbrief.Brief) briefDetail {
 	for i, entry := range brief.Comments() {
 		view.Comments = append(view.Comments, commentView{N: i + 1, From: entry.From, At: entry.At, Edition: entry.Edition, Text: entry.Text, Capacity: entry.Capacity})
 	}
+	files, err := brief.Skills()
+	if err != nil {
+		view.SkillsUnreadable = err.Error()
+	}
+	view.SkillFiles = files
 	return view
 }
 
@@ -210,6 +222,7 @@ func (d briefDetail) lines(reader taskbrief.BindingKind, checkout string, full b
 	if checkout != "" {
 		lines = append(lines, checkout)
 	}
+	lines = append(lines, d.skillLines()...)
 	lines = append(lines, "")
 	lines = append(lines, strings.Split(strings.TrimSuffix(d.numbered, "\n"), "\n")...)
 	if !full || len(d.Comments) == 0 {
@@ -275,4 +288,25 @@ func boundNames(summary briefSummary) string {
 		names = append(names, name)
 	}
 	return strings.Join(names, ", ")
+}
+
+// skillLines name the skills main gave with the brief, each with its
+// description and the path of its SKILL.md in the copy: what the worker reads
+// before it starts, since a skill given this way never loads by itself.
+func (d briefDetail) skillLines() []string {
+	if d.SkillsUnreadable != "" {
+		return []string{fmt.Sprintf("Rewake: the skills this brief names could not be read: %s; ask main to edit the brief again, which copies them anew.", d.SkillsUnreadable)}
+	}
+	if len(d.SkillFiles) == 0 {
+		return nil
+	}
+	lines := []string{"Rewake: skills main gave with this brief: read each SKILL.md before you start, and the files beside it as it says; they are copies, read here, not run."}
+	for _, skill := range d.SkillFiles {
+		line := "- " + skill.Name
+		if skill.Description != "" {
+			line += " — " + skill.Description
+		}
+		lines = append(lines, line+" — "+skill.Path)
+	}
+	return lines
 }

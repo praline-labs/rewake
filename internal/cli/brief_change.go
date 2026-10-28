@@ -25,7 +25,7 @@ func briefNew(ctx *Context, call Call, home taskbrief.Home, caller briefRun, arg
 	if err != nil {
 		return err
 	}
-	brief, err := taskbrief.New(home, caller.author, text, where)
+	brief, err := taskbrief.New(home, caller.author, text, where, skillCatalog(ctx, caller))
 	if err != nil {
 		return briefError(call, err)
 	}
@@ -51,7 +51,7 @@ func briefEdit(ctx *Context, call Call, home taskbrief.Home, caller briefRun, ar
 	if err != nil {
 		return err
 	}
-	brief, err := taskbrief.Edit(home, id, caller.author, revision, text)
+	brief, err := taskbrief.Edit(home, id, caller.author, revision, text, skillCatalog(ctx, caller))
 	if err != nil {
 		return briefError(call, err)
 	}

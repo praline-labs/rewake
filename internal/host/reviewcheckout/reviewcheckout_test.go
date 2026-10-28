@@ -45,7 +45,7 @@ func newScene(t *testing.T) scene {
 	}
 	dir := buildtest.Room(t, base, "room")
 	home := taskbrief.Home{Room: dir}
-	if _, err := taskbrief.New(home, main, "# Review me\n\n- [ ] one\n", ""); err != nil {
+	if _, err := taskbrief.New(home, main, "# Review me\n\n- [ ] one\n", "", nil); err != nil {
 		t.Fatal(err)
 	}
 	repo := t.TempDir()

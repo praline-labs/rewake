@@ -29,6 +29,8 @@ type Brief struct {
 	Revision int
 	Log      []Entry
 	items    []Item
+	// path is the brief's folder, where its skills' copies are.
+	path string
 }
 
 // Problem is an entry of the briefs directory that does not read as a brief.
@@ -152,7 +154,7 @@ func findInRoom(dir string, id int) (string, error) {
 func openPath(dir string, id int) string { return filepath.Join(state.BriefsPath(dir), FormatID(id)) }
 
 func loadAt(path string, id int) (Brief, error) {
-	var brief Brief
+	brief := Brief{path: path}
 	if err := readJSON(filepath.Join(path, recordFile), &brief.Record); err != nil {
 		return Brief{}, err
 	}

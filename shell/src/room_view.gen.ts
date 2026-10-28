@@ -148,6 +148,8 @@ export interface BriefView {
   text?: string
   // comments are the comments in order; only on the opened brief.
   comments?: BriefComment[]
+  // skills are the names of the skills the brief gives, from its text's Skills line.
+  skills?: string[]
 }
 
 // BriefBound is a run a brief was sent to.

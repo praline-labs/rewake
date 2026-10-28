@@ -70,7 +70,9 @@ the launch, naming it, and stays as it is.
 ## Skills, plugins and MCP servers
 
 A skill is attached by placing its folder, or a symlink to it, in `skills/`: Claude
-Code loads it as a user skill named as the folder. A plugin is installed with the
+Code loads it as a user skill named as the folder. A skill for one task comes instead with the
+brief main gives: rewake copies it into the brief and the worker reads it by path
+([briefs.md](briefs.md#skills)). A plugin is installed with the
 variable set (`claude plugin install`, or `/plugin` in a worker's pane); `plugins/` is Claude
 Code's own directory. `mcp.json` becomes `--mcp-config`.
 
@@ -117,7 +119,9 @@ beats a template's `launch.context` ([launch-defaults.md](launch-defaults.md)).
 
 The run's
 `permissions.allow` holds `Read(//<root>/**)`, `<root>` the main repository's root as the
-memory names it below, where main keeps the briefs and reviews a worker reads. A worker in a
+memory names it below, where main keeps the briefs and reviews a worker reads, and, for a run
+in a room, `Read(//<room>/briefs/**)`, where a brief kept in the room holds the copies of its
+skills ([briefs.md](briefs.md#skills)). A worker in a
 checkout of its own stopped on auto mode's one-time prompt for a read outside its working
 directories, with nobody at its screen; under the rule the read passes and no prompt shows
 ([research-launch.md](research-launch.md#a-read-outside-the-working-directories)). A `Read`

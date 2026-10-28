@@ -72,3 +72,11 @@ func (agentHarness) WorktreeRefusal(args []string) error {
 }
 
 var _ adapter.WorktreeHarness = agentHarness{}
+
+// SkillFolders: the user's .agent/skills, then the directory's, so a brief's
+// skills are found as a product harness finds them.
+func (agentHarness) SkillFolders(_ func(string) string, home, dir string) []string {
+	return []string{filepath.Join(home, ".agent", "skills"), filepath.Join(dir, ".agent", "skills")}
+}
+
+var _ adapter.SkillCatalog = agentHarness{}

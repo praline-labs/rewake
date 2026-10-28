@@ -420,6 +420,24 @@ default there.
 - What the mod sees of the dialog is in
   [research-claude-mod.md](research-claude-mod.md#a-workers-dialogs-in-auto-mode).
 
+## Where Claude Code reads skills
+
+**[the binary's bundled source, installed 2.1.310, October 28, 2026]** What a brief's skills are
+copied from ([briefs.md](briefs.md#skills)). The loader (`lAr` in that build) reads, in order:
+the managed folder; the user folder, `$CLAUDE_CONFIG_DIR/skills`, else `~/.claude/skills`; then
+`.claude/skills` in the working directory and each parent up to the repository's root (`Gte`,
+which walks the parents, breaks at the directory holding `.git` and never reads the home
+directory itself); then the `--add-dir` folders, synced skills and plugins. A skill is a folder,
+or a link to one, holding `SKILL.md`, named after the folder; `skills/synced/` is Claude Code's
+own sync folder, not a skill. The owner's skills are links into a folder of their own, with no
+links inside them; the largest, `mods`, is 5.0 MB in 1,695 files.
+
+A worker's read of a brief kept in the room is a read outside its working directories: in 2.1.310
+auto mode asks its one-time question there while `.claude.json` lacks
+`hasSeenAutoModeOutsideReadPrompt`, as [above](#a-read-outside-the-working-directories), and the
+run's `Read(//<room>/briefs/**)` rule lets it through. Not probed live on 2.1.310: a fresh,
+logged-in folder needs credentials; the workers' real folder has the flag set already.
+
 ## Claude Code's cross-session inbound gate
 
 **[the binary's bundled source, installed 2.1.280; September 23, 2026]** Every line that

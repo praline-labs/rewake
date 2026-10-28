@@ -205,6 +205,9 @@ type BriefView struct {
 
 	// Comments are the comments in order; only on the opened brief.
 	Comments []BriefComment `json:"comments,omitempty"`
+
+	// Skills are the names of the skills the brief gives, from its text's Skills line.
+	Skills []string `json:"skills,omitempty"`
 }
 
 // BriefBound is a run a brief was sent to.

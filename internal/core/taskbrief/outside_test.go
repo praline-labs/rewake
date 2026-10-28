@@ -22,7 +22,7 @@ func folderHome(t *testing.T) (Home, string) {
 
 func TestABriefInTheProjectsFolderSurvivesAWipedRoom(t *testing.T) {
 	home, folder := folderHome(t)
-	first, err := New(home, main, "# Plan\n- [ ] one\n", "")
+	first, err := New(home, main, "# Plan\n- [ ] one\n", "", nil)
 	if err != nil || first.ID != 1 || first.Room != "room" {
 		t.Fatalf("brief %+v, %v", first, err)
 	}
@@ -46,7 +46,7 @@ func TestABriefInTheProjectsFolderSurvivesAWipedRoom(t *testing.T) {
 	if err != nil || len(briefs) != 1 || len(problems) != 0 || briefs[0].Done() != 1 {
 		t.Fatalf("a wiped room lists %d briefs, %v, %v", len(briefs), problems, err)
 	}
-	next, err := New(wiped, main, "two", "")
+	next, err := New(wiped, main, "two", "", nil)
 	if err != nil || next.ID != 2 {
 		t.Fatalf("the id after a wipe is %d, %v: it must pass brief-1", next.ID, err)
 	}
@@ -55,14 +55,14 @@ func TestABriefInTheProjectsFolderSurvivesAWipedRoom(t *testing.T) {
 func TestADirBriefIsIndexedAndClosedWhereItIs(t *testing.T) {
 	home := Home{Room: room(t)}
 	task := t.TempDir()
-	brief, err := New(home, main, "# Task\n", task)
+	brief, err := New(home, main, "# Task\n", task, nil)
 	if err != nil || brief.ID != 1 {
 		t.Fatalf("brief %+v, %v", brief, err)
 	}
 	if _, err := os.Stat(filepath.Join(task, "brief-1", "brief.json")); err != nil {
 		t.Fatal(err)
 	}
-	if again, err := New(home, main, "# Two\n", task); err != nil || again.ID != 2 {
+	if again, err := New(home, main, "# Two\n", task, nil); err != nil || again.ID != 2 {
 		t.Fatalf("a second brief in one folder: %+v, %v", again, err)
 	}
 	if already, err := Close(home, 1); err != nil || already {
@@ -87,7 +87,7 @@ func TestADirBriefIsIndexedAndClosedWhereItIs(t *testing.T) {
 
 func TestAMovedBriefReadsMovedAndKeepsItsID(t *testing.T) {
 	home, folder := folderHome(t)
-	if _, err := New(home, main, "# A\n- [ ] x\n", ""); err != nil {
+	if _, err := New(home, main, "# A\n- [ ] x\n", "", nil); err != nil {
 		t.Fatal(err)
 	}
 	if err := Bind(home, 1, worker, Work); err != nil {
@@ -113,7 +113,7 @@ func TestAMovedBriefReadsMovedAndKeepsItsID(t *testing.T) {
 	if _, problems, _ := List(home, true); len(problems) != 0 {
 		t.Errorf("a moved brief closed still lists as a problem: %v", problems)
 	}
-	if next, err := New(home, main, "# B\n", ""); err != nil || next.ID != 2 {
+	if next, err := New(home, main, "# B\n", "", nil); err != nil || next.ID != 2 {
 		t.Errorf("the id of a moved brief was taken again: %+v, %v", next, err)
 	}
 }
@@ -121,7 +121,7 @@ func TestAMovedBriefReadsMovedAndKeepsItsID(t *testing.T) {
 func TestAnotherRoomsBriefInASharedFolderIsNotOurs(t *testing.T) {
 	home, folder := folderHome(t)
 	other := Home{Room: buildRoomNamed(t, "other"), Folder: folder}
-	foreign, err := New(other, main, "# Theirs\n", "")
+	foreign, err := New(other, main, "# Theirs\n", "", nil)
 	if err != nil || foreign.ID != 1 {
 		t.Fatalf("%+v, %v", foreign, err)
 	}
@@ -134,7 +134,7 @@ func TestAnotherRoomsBriefInASharedFolderIsNotOurs(t *testing.T) {
 	if _, _, err := Comment(home, 1, worker, "hi"); !errors.Is(err, ErrNotFound) {
 		t.Errorf("a write to another room's brief: %v", err)
 	}
-	if next, err := New(home, main, "# Ours\n", ""); err != nil || next.ID != 2 {
+	if next, err := New(home, main, "# Ours\n", "", nil); err != nil || next.ID != 2 {
 		t.Errorf("a name in the shared folder was taken: %+v, %v", next, err)
 	}
 }
@@ -147,7 +147,7 @@ func TestOnlyAFolderOfTheProjectIsAdmitted(t *testing.T) {
 		"state":    filepath.Join(home.Room, "briefs"),
 		"around":   filepath.Dir(filepath.Dir(filepath.Dir(home.Room))),
 	} {
-		_, err := New(home, main, "x", folder)
+		_, err := New(home, main, "x", folder, nil)
 		if !errors.Is(err, state.ErrOutsideRefused) {
 			t.Errorf("%s: %v", name, err)
 		}
@@ -157,7 +157,7 @@ func TestOnlyAFolderOfTheProjectIsAdmitted(t *testing.T) {
 	if err := os.Symlink(target, link); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := New(home, main, "x", link); !errors.Is(err, state.ErrOutsideRefused) {
+	if _, err := New(home, main, "x", link, nil); !errors.Is(err, state.ErrOutsideRefused) {
 		t.Errorf("a link: %v", err)
 	}
 	if entries, _ := os.ReadDir(target); len(entries) != 0 {
@@ -180,17 +180,17 @@ func TestARoomDoesNotWriteABriefThatReplacedItsOwn(t *testing.T) {
 	folder := t.TempDir()
 	a := Home{Room: buildRoomNamed(t, "a"), Folder: folder}
 	b := Home{Room: buildRoomNamed(t, "b"), Folder: folder}
-	if _, err := New(a, main, "# A", ""); err != nil {
+	if _, err := New(a, main, "# A", "", nil); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.Rename(filepath.Join(folder, "brief-1"), filepath.Join(t.TempDir(), "archived")); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := New(b, main, "# B", ""); err != nil {
+	if _, err := New(b, main, "# B", "", nil); err != nil {
 		t.Fatal(err)
 	}
 	var moved *MovedError
-	if _, err := Edit(a, 1, main, 1, "# overwritten by A"); !errors.As(err, &moved) {
+	if _, err := Edit(a, 1, main, 1, "# overwritten by A", nil); !errors.As(err, &moved) {
 		got, _ := Load(b, 1)
 		t.Fatalf("room A edited room B's brief (%v): room %q text %q", err, got.Room, got.Text)
 	}
@@ -203,7 +203,7 @@ func TestARoomDoesNotWriteABriefThatReplacedItsOwn(t *testing.T) {
 // the admitted folder.
 func TestALinkInsideAnAdmittedFolderTakesNoWrite(t *testing.T) {
 	home, folder := folderHome(t)
-	if _, err := New(home, main, "# A", ""); err != nil {
+	if _, err := New(home, main, "# A", "", nil); err != nil {
 		t.Fatal(err)
 	}
 	text := filepath.Join(folder, "brief-1", "text")
@@ -214,7 +214,7 @@ func TestALinkInsideAnAdmittedFolderTakesNoWrite(t *testing.T) {
 	if err := os.Symlink(elsewhere, text); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := Edit(home, 1, main, 1, "# escaped"); err == nil {
+	if _, err := Edit(home, 1, main, 1, "# escaped", nil); err == nil {
 		raw, _ := os.ReadFile(filepath.Join(elsewhere, "2.md"))
 		t.Fatalf("an edit went through a link out of the folder: %q", raw)
 	}
@@ -238,7 +238,7 @@ func TestAnAdmissionEndsWithItsRoomsLease(t *testing.T) {
 // scan.
 func TestAClosedTombstoneIsNotListed(t *testing.T) {
 	home, folder := folderHome(t)
-	if _, err := New(home, main, "# A", ""); err != nil {
+	if _, err := New(home, main, "# A", "", nil); err != nil {
 		t.Fatal(err)
 	}
 	record := filepath.Join(folder, "brief-1", "brief.json")

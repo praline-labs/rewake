@@ -17,7 +17,7 @@ import (
 // there is kept, and a launch with no run directory has none.
 func TestRunSettingsSetTheStatusLineOfARunWithAMod(t *testing.T) {
 	line := func(settings map[string]any, runDir string) map[string]any {
-		passed, _, _, err := runSettings(settings, t.TempDir(), t.TempDir(), "", false, runDir, "")
+		passed, _, _, err := runSettings(settings, t.TempDir(), t.TempDir(), "", false, runDir, "", "")
 		if err != nil {
 			t.Fatal(err)
 		}

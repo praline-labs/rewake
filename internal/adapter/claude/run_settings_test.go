@@ -23,13 +23,19 @@ func TestRunSettingsWithEntry(t *testing.T) {
 	}
 	root := t.TempDir()
 	read := "Read(/" + filepath.ToSlash(root) + "/**)"
-	passed, enter, notes, err := runSettings(map[string]any{"autoMemoryEnabled": false}, t.TempDir(), root, "opus", true, "/run", "")
+	passed, enter, notes, err := runSettings(map[string]any{"autoMemoryEnabled": false}, t.TempDir(), root, "opus", true, "/run", "", "")
 	if err != nil || !enter || len(notes) != 0 || !slices.Equal(permissions(passed)["allow"].([]any), []any{read, enterTool}) || permissions(passed)["deny"] != nil {
 		t.Fatalf("entry: %s %v %v %v", passed, enter, notes, err)
 	}
-	passed, enter, _, _ = runSettings(map[string]any{}, t.TempDir(), root, "opus", false, "/run", "")
+	passed, enter, _, _ = runSettings(map[string]any{}, t.TempDir(), root, "opus", false, "/run", "", "")
 	if enter || !slices.Equal(permissions(passed)["deny"].([]any), []any{enterTool}) || !slices.Equal(permissions(passed)["allow"].([]any), []any{read}) {
 		t.Fatalf("no entry: %s", passed)
+	}
+	// The room's briefs are read as main's checkout is: a brief's skills
+	// are copied there (docs/briefs.md#skills).
+	passed, _, _, _ = runSettings(map[string]any{}, t.TempDir(), root, "opus", false, "/run", "", "/state/rooms/r/briefs")
+	if !slices.Equal(permissions(passed)["allow"].([]any), []any{read, "Read(//state/rooms/r/briefs/**)"}) {
+		t.Fatalf("briefs: %s", passed)
 	}
 	person := map[string]any{"permissions": map[string]any{"deny": []any{"Agent", enterTool}}}
 	for _, runDir := range []string{"/run", ""} {
@@ -37,7 +43,7 @@ func TestRunSettingsWithEntry(t *testing.T) {
 		if runDir != "" {
 			settings = person
 		}
-		passed, enter, notes, err := runSettings(settings, t.TempDir(), t.TempDir(), "opus", true, runDir, "")
+		passed, enter, notes, err := runSettings(settings, t.TempDir(), t.TempDir(), "opus", true, runDir, "", "")
 		if err != nil || enter || len(notes) != 1 || !strings.HasPrefix(notes[0], "no worktree entry") || !slices.Equal(permissions(passed)["deny"].([]any), []any{enterTool}) {
 			t.Fatalf("%q: %s %v %v %v", runDir, passed, enter, notes, err)
 		}

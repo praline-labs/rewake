@@ -1,5 +1,5 @@
 ---
-description: Briefs — a markdown brief per task that main writes, bound to workers by send --brief, ticked and commented by them, read and commented by a reviewer given it with --review; the records under briefs/, where a brief lives (the room or a folder of the project), the brief commands, the JSON the shell reads, and the worker tools of both harnesses.
+description: Briefs — a markdown brief per task that main writes, bound to workers by send --brief, ticked and commented by them, read and commented by a reviewer given it with --review; the records under briefs/, where a brief lives (the room or a folder of the project), the brief commands, the JSON the shell reads, the skills a brief gives, copied from main's harness, and the worker tools of both harnesses.
 ---
 
 # Briefs
@@ -31,6 +31,7 @@ briefs/.lock                 one flock for every write under briefs/
 briefs/<id>/brief.json       {id, created, bound: [{name, epoch, since, kind: work|review, checkout?, commit?}]}, closed once closed
 briefs/<id>/log/<n>.json     {n, at, from, epoch, kind: edit|tick|untick|comment, edition, item, itemText | text, capacity}
 briefs/<id>/text/<e>.md      the text of edition e, as main wrote it
+briefs/<id>/skills/<e>/      the copies of the skills edition e names, and their skills.json (below)
 briefs/closed/<id>/          a closed brief, moved whole
 briefs/index.json            {briefs: {"<id>": {path, closed?}}}, the briefs kept outside the room
 ```
@@ -142,9 +143,9 @@ The `brief` group of the command table, with `--json` on each, examples parsed a
 
 | Form | Who | Class | What |
 |---|---|---|---|
-| `brief new <text>` or `--file <path>`, `[--dir <path>]` | main | change | a new brief; answers its id and title. Text at most 64 KiB, not empty. Where it goes: [above](#where-a-brief-lives) |
-| `brief edit <id> --rev <n> <text>` or `--file <path>` | main | change | replaces the text whole, refused unless `n` is still the brief's revision; the ticks since the last edit end there |
-| `brief close <id>` | main | change | moves it to `closed/`; every binding ends, and the reviewers' checkouts go unless they hold work |
+| `brief new <text>` or `--file <path>`, `[--dir <path>]` | main | change | a new brief; answers its id and title. Text at most 64 KiB, not empty. Where it goes: [above](#where-a-brief-lives); the skills its `Skills:` line names are copied in ([below](#skills)) |
+| `brief edit <id> --rev <n> <text>` or `--file <path>` | main | change | replaces the text whole, refused unless `n` is still the brief's revision; the ticks since the last edit end there; the named skills are copied again |
+| `brief close <id>` | main | change | moves it to `closed/`; every binding ends, the skills' copies go, and the reviewers' checkouts go unless they hold work |
 | `brief list [--closed]` | main | view | open briefs, or closed ones too: id, title, done of items, comments, who is bound and whether that run lives |
 | `brief show <id> [--markdown]` | main, a bound run | view | a header with the edition and the revision, the bound runs, the text with ticks applied and each item's number, the comments; `--markdown` prints only the text with ticks applied, no numbers, for main to edit |
 | `brief tick <id> <n> --edition <e> [--undo]` | a run bound as `work` | change | ticks or unticks item `n` of edition `e`, refused once main edited since; answers the item's text |
@@ -194,11 +195,15 @@ brief list [--closed] --json  {room, briefs: [summary], unreadable: [{path, why}
 summary                       {id, title, closed, created, closedAt?, edition, revision,
                                done, total, commentCount,
                                bound: [{name, epoch, since, run: running|ended|unknown,
-                                        kind: work|review, checkout?, commit?}]}
+                                        kind: work|review, checkout?, commit?}],
+                               skills?: [name]}
 brief show <id> --json        summary and {text, items: [{n, text, done}],
-                               comments: [{n, from, at, edition, text, capacity?}]}
+                               comments: [{n, from, at, edition, text, capacity?}],
+                               skillFiles?: [{name, description, path}], skillsUnreadable?}
                               n is the comment's place among the brief's comments, 1, 2, 3 …,
                               derived, not the log's number
+                              skills, the names the text's line gives, closed or open;
+                              skillFiles, the copies a worker reads, none once closed
 ```
 
 A comment is markdown and its newlines are kept from the tool's argument through the log to
@@ -254,6 +259,79 @@ its own, detached at that commit:
   send that replaced one) says so and fails nothing: the close, the end and the send are done.
   The module's `ReleaseBrief` and `ReleaseRun` hold the one rule of whose a checkout is.
 
+## Skills
+
+Decided by the owner, October 28, 2026: a worker gets skills from main, per brief, not from a
+skill folder of its own. A brief names its skills; rewake copies them from where main's harness
+reads skills into the brief's folder; the worker given the brief reads them by the paths its
+letter gives; closing the brief takes the copies away. Nothing is loaded into a running harness
+(«если с динамикой не очень, то лучше не делать»). The accepted limit: a skill given so does not
+trigger by its description, it is read because the brief names it, and its scripts are read, not
+run. The workers' own skill folders ([worker-profile.md](worker-profile.md#skills-plugins-and-mcp-servers))
+stay as they are; rewake never writes there.
+
+- **The line.** One line of the text, outside a fenced block: `Skills: mods, mp-tdd`. It is
+  markdown as written, so the shell renders it with no change, and it survives `brief edit`,
+  which starts from `show --markdown`. Refused as a bad text, exit 2: a second such line, a name
+  that is not `[a-z0-9][a-z0-9._-]{0,63}`, a name with `:` — a plugin's skill, which a brief does
+  not give; the hint says to link its folder into main's user skill folder — a name twice, more
+  than 8 (`taskbrief.DeclaredSkills`).
+- **The catalogue is main's harness's.** An adapter that reads skills offers
+  `adapter.SkillCatalog`, the folders in the order its harness looks, the first
+  `<folder>/<name>/SKILL.md` giving the skill. It is asked with main's environment, home and
+  directory: only main makes and edits a brief, so the caller's are main's. Claude Code: the user
+  folder, `$CLAUDE_CONFIG_DIR/skills` or `~/.claude/skills`, then `.claude/skills` from main's
+  directory up to the repository's root, never the home directory
+  ([research-launch.md](research-launch.md#where-claude-code-reads-skills)). pi: `.pi/skills`,
+  `.agents/skills` up to the repository's root, the agent directory's `skills`, `~/.agents/skills`
+  ([research-pi.md](research-pi.md#skills)). The fixture, for the workflow suite:
+  `~/.fixture/skills`. Not offered: managed skills, plugins' skills, pi's names from the front
+  matter and its nested skills, `--add-dir` folders. A harness without the interface gives none.
+- **The never-list.** `[skills] never = ["keychain"]` in the user's
+  `~/.config/rewake/aliases.toml` and in the project's `.rewake/aliases.toml`, the two joined
+  ([user-guide.md](user-guide.md#a-projects-rewake)). A skill missing or barred refuses
+  `brief new` and `edit`, exit 1, naming the folders looked in or the file that bars it; so does
+  an alias file that does not read, since what it bars is then unknown. Nothing is written.
+- **One snapshot per edition.** The skills of edition `e` are `skills/<e>/<name>/`, beside
+  `skills/<e>/skills.json`, `[{name, description, from}]`: the description from `SKILL.md`'s front
+  matter, cut to 1,024 code points, and the folder it was copied from. The current edition — the
+  one the log's last edit commits — selects its snapshot, so a text and its skills change
+  together. Every edit copies the named skills again, which is how a changed skill reaches the
+  brief; a text without the line has none. `brief.json` does not change; a brief made before has
+  no `skills/` and gives none.
+- **The copy.** Each named skill's folder is copied whole through its link, as an installer
+  links it. A file is written new, 0600, flushed, with no executable bit; a link inside the skill
+  to a regular file is copied as that file; any other link — to a folder, broken — and anything
+  neither file nor folder refuses the brief, named. **Bound: 16 MiB and 4,096 entries per
+  skill**, about three times the largest seen (5 MB in 1,695 files); checked when the skill is
+  measured and again while it is copied.
+- **Preflight, then the order.** Before any effect the line is parsed, every skill found, barred
+  or not, walked against the bound and its entries, and `skills.json` encoded against the 64 KiB
+  record bound; a refusal writes nothing. `new` writes `skills/1/` inside its `.tmp-*` build, so
+  the brief is whole or absent. `edit` to edition `e`, under the lock: (a) drop a leftover
+  `skills/<n>` for `n ≥ e` and any `skills/.tmp-*`, never committed and so read by nobody; (b)
+  copy into `skills/.tmp-<random>/` and rename it to `skills/<e>/`; (c) write `text/<e>.md`; (d)
+  publish the edit's entry, the commit point; (e) drop `skills/<n>` for `n < e`. A failure before
+  (d) leaves edition `e-1` with its snapshot whole, though the skill changed since; one in (e)
+  leaves a snapshot nobody selects, dropped at the next edit or the close. A brief kept outside
+  the room gets the same, under `state.WithOutside`.
+- **The letter.** `inbox`, `--owed` and `brief show` to any bound run, the reviewer's included,
+  print after the header: `Rewake: skills main gave with this brief: read each SKILL.md before you
+  start, and the files beside it as it says; they are copies, read here, not run.`, then
+  `- <name> — <description> — <path of its SKILL.md>` per skill, the current edition's. A path read
+  before an edit is gone after it: main sends `--brief` again, as for any edit. A snapshot that
+  does not read prints one line saying so and asking main to edit the brief again. Under `--json`
+  the letter's `brief` object and `show` carry `skillFiles` and `skillsUnreadable`; the summary's
+  `skills` are the names, taken from the text, so a closed brief and the room view still name
+  them.
+- **Reading it.** A Claude Code worker's run `--settings` allows `Read(//<room>/briefs/**)`
+  beside the rule for main's checkout ([worker-profile.md](worker-profile.md#mains-checkout-is-readable)):
+  the room's folder lies outside its working directories, where auto mode's one-time prompt would
+  stop it. A project's `[briefs] dir` under main's checkout is covered by that checkout's rule.
+  pi asks no permission to read.
+- **Closing.** `brief close` removes `skills/` under the lock before it marks or moves the brief;
+  a close cut short is finished by its retry. A moved brief has nothing to remove.
+
 ## The tools
 
 The same three in Claude Code's mod and rewake's pi extension, offered to every run whose
@@ -294,11 +372,18 @@ record from before kinds (`taskbrief/review_test.go`); a project's folder, the w
 reads, the checks before any effect and the rights of the commands (`cli/brief_test.go`); the
 binding of `send --brief` and what `inbox` and `--owed` print (`cli/brief_send_test.go`), and
 `--review` from the send to the show (`cli/brief_review_test.go`), a reviewer's checkout from
-the send to the close (`cli/brief_review_checkout_test.go`, `worktree/review_test.go`); the
+the send to the close (`cli/brief_review_checkout_test.go`, `worktree/review_test.go`); a
+brief's skills — the line, the copy and its bound, refusals that write nothing, an edit cut short
+before its commit, the close (`taskbrief/skills_test.go`), the catalogues' order
+(`adapter/skills_test.go`, each adapter's `skills_test.go`), the never-list
+(`launch/alias_briefs_test.go`), the commands and their `--json` (`cli/brief_skills_test.go`),
+the read rule (`claude/run_settings_test.go`); the
 tools' argv and refused input in the mod's `tests/briefs.test.ts` and pi's `briefs.test.ts`; and
 one workflow scenario, `brief`: main makes a brief, sends it, the fixture worker reads it with
 its task, ticks and comments, a reviewer given it with `--review` is refused a tick and comments,
-and main's `show` sees the tick and both comments with their capacities
+and main's `show` sees the tick and both comments with their capacities; and one, `brief-skill`:
+main makes a brief naming a skill of its fixture, the worker's letter gives the copy's path, the
+file there holds the skill, and the close takes it
 ([testing-cases.md](testing-cases.md#launch-reports-and-what-a-main-waits-on)).
 
 ## Known limits
@@ -312,3 +397,8 @@ and main's `show` sees the tick and both comments with their capacities
 - Briefs in the room live in the state directory: a reboot that clears the temporary directory takes
   them, as it takes mail; a project's `[briefs] dir` keeps them. A `--dir` brief is forgotten with
   the index by such a wipe. Closed ones are not swept.
+- A skill given with a brief does not trigger by its description, and its scripts are read, not
+  run; a skill whose instructions say to run a script beside it asks the worker to run a copy
+  with no executable bit, through its interpreter. A plugin's skill, a managed one and pi's
+  nested or front-matter-named skills are not given. A `--dir` folder outside main's checkout is
+  not in a Claude Code worker's read rule: reading its copies there asks main for permission.

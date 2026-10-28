@@ -278,6 +278,19 @@ tokens it started, the next answer showed `compactions 1` with the context down 
 and the word the focus named was kept. The compaction's letter goes to main's run, which a
 print-mode main has already ended by then — the same trap as a report to it (`docs/traps.md`).
 
+## Skills
+
+**[the pinned 1.4.0 package, `dist/core/package-manager.js:2023-2064`, `dist/core/skills.js:238-240`,
+October 28, 2026]** What a brief's skills are copied from when main is pi
+([briefs.md](briefs.md#skills)). pi reads, in order: the project's `.pi/skills`, only for a
+trusted project, which rewake's `--approve` makes it; `.agents/skills` in the working directory
+and each parent up to the git root; the agent directory's `skills`, `$PI_CODING_AGENT_DIR/skills`
+(rewake's `~/.config/rewake/pi/agent/skills` for a pi it starts), else `~/.pi/agent/skills`; and
+the user's `~/.agents/skills`. It follows links, keeps the first skill of a name it finds, and
+takes the name from `SKILL.md`'s front matter, else the folder; it also finds skills nested deeper.
+A brief names a skill by its folder and looks only one level down. Reading is not gated: pi has no
+permission prompts (`docs/security.md:3`), so a pi worker reads a brief's copies with no rule.
+
 ## The bundled pi
 
 Owner decision, October 19, 2026: pi is part of rewake, pinned, installed and updated with it,

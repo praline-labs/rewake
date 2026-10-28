@@ -116,7 +116,8 @@
         "commentCount": {"type": "integer", "description": "counts the comments."},
         "bound": {"type": "array", "items": {"$ref": "#/$defs/BriefBound"}, "description": "are the runs the brief was sent to."},
         "text": {"type": "string", "description": "is the current text with the ticks applied; only on the opened brief."},
-        "comments": {"type": "array", "items": {"$ref": "#/$defs/BriefComment"}, "description": "are the comments in order; only on the opened brief."}
+        "comments": {"type": "array", "items": {"$ref": "#/$defs/BriefComment"}, "description": "are the comments in order; only on the opened brief."},
+        "skills": {"type": "array", "items": {"type": "string"}, "description": "are the names of the skills the brief gives, from its text's Skills line."}
       },
       "required": ["id", "title", "closed", "edition", "done", "total", "commentCount", "bound"],
       "additionalProperties": false

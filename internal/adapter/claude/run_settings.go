@@ -34,13 +34,14 @@ const enterTool = "EnterWorktree"
 // object: what this run alone gets over the folder's settings.json, which
 // Claude Code reads itself as the user's settings — its memory, under the
 // key memoryKey chose; EnterWorktree, denied unless the run may enter a
-// checkout; and a read of main's checkout (readRule). Flag settings merge
+// checkout; a read of main's checkout (readRule) and of the room's briefs
+// folder, where a brief's skills are copied. Flag settings merge
 // with the user's (probed on 2.1.302), but a deny there is not lifted by an
 // allow here, so the folder's file no longer
 // holds EnterWorktree (defaults version 3). It says whether the run may
 // enter. A worker raised from no template — only a test build's direct
 // launch — has no memory.
-func runSettings(settings map[string]any, folder, root, memoryKey string, enter bool, runDir, executable string) (string, bool, []string, error) {
+func runSettings(settings map[string]any, folder, root, memoryKey string, enter bool, runDir, executable, briefs string) (string, bool, []string, error) {
 	overlay := map[string]any{}
 	if memoryKey != "" && settings["autoMemoryEnabled"] != false {
 		dir, err := memoryDir(folder, root, memoryKey)
@@ -72,6 +73,9 @@ func runSettings(settings map[string]any, folder, root, memoryKey string, enter 
 	}
 	permissions := map[string]any{}
 	allow := []any{readRule(root)}
+	if briefs != "" {
+		allow = append(allow, readRule(briefs))
+	}
 	if enter {
 		allow = append(allow, enterTool)
 	} else {
@@ -91,8 +95,10 @@ func runSettings(settings map[string]any, folder, root, memoryKey string, enter 
 // reads: a worker in a checkout of its own otherwise met auto mode's
 // one-time prompt for a read outside its working directories, with nobody at
 // its screen (October 23, 2026). A Read rule covers Read, Grep and Glob and
-// grants no edit, which --add-dir would (docs/launch.md). The leading slash
-// makes the rule's path absolute, "//home/...".
+// grants no edit, which --add-dir would (docs/launch.md). The room's briefs
+// get the same rule: a brief kept there holds the skills its worker is told
+// to read, outside every working directory (docs/briefs.md#skills). The
+// leading slash makes the rule's path absolute, "//home/...".
 func readRule(root string) string {
 	return "Read(/" + filepath.ToSlash(root) + "/**)"
 }

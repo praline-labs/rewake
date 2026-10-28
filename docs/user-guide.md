@@ -112,6 +112,11 @@ A project can carry its own catalogue beside its code, read from the directory m
   temporary directory is cleared; a folder of the project is not. `rewake brief new --dir <path>`
   puts one brief elsewhere, in a folder that exists. Your own file may not set it
   ([briefs.md](briefs.md#where-a-brief-lives)).
+- **`[skills] never = ["keychain"]`**, in either file, bars those of your skills from briefs. Main
+  gives a worker skills with a brief by a line of its text, `Skills: mods, mp-tdd`: rewake copies
+  each from where main's harness reads your skills into the brief, the worker reads the copies,
+  and closing the brief takes them away. A barred or missing skill refuses the brief
+  ([briefs.md](briefs.md#skills)).
 - **`[aliases] off = ["helper"]`** in that file hides those of your templates in this project
   alone. Hide every template with `role = "write"` and main writes the code itself, with a
   reviewer worker; `rewake workers` says so.
