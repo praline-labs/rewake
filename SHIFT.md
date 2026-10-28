@@ -87,10 +87,12 @@ Open a document for numbers, commands and names: the map only points.
   sections: Claude Code · Other harnesses (for later) · Other Claude Code records
 - `docs/roles.md` — The roles a session runs under, what each is told at launch and owes, and how a session's name is chosen.
   sections: Roles · What a session is told · Names
+- `docs/screen.md` — rewake screen — a picture of a session's window as the person sees it in the shell: who draws it, the request socket, the shadow window, the snapshot of a space host, the PNG and what it refuses to write.
+  sections: Who draws · The request · No shell: the space host · The picture · Checked
 - `docs/session-state.md` — What main sees of its workers: the state header, the session table, activity labels, availability, compaction and departure notices, and where telemetry comes from.
   sections: The state header · The session table · Activity · Availability notices · Compaction notices · Departure notices · Claude Code source · pi source · Persistence and freshness
 - `docs/shell.md` — rewake's shell — its layout and panes, who owns each pseudo-terminal, closing, the raw stream a worker's pane is fed, the space host's emulator, keys, colours, the bar, the strip, the briefs view, and how it ships.
-  sections: Who owns which pty · How a pane is fed: the raw stream · The space host's emulator · What the widget lacks and what the shell does about it · Solid: registering the widget, room for a modal · The prefix and the room · The bar · The strip · The briefs · How rewake starts the shell, and how it ships
+  sections: Who owns which pty · How a pane is fed: the raw stream · The space host's emulator · What the widget lacks and what the shell does about it · Solid: registering the widget, room for a modal · The prefix and the room · The bar · The strip · A picture of a window · The briefs · How rewake starts the shell, and how it ships
 - `docs/space.md` — A space — main starting a worker through a detached space host, the worker's launch, the space record and its states, the listing, closing, kept checkouts and what a restore would read.
   sections: Opening · The worker's launch · The stream to the shell · The record · The listing · Closing · Restore
 - `docs/testing-cases.md` — What each of the 25 workflow scenarios in test/workflow claims — the sessions it starts, what the fixture plays and what it must see — and what none of them proves.
