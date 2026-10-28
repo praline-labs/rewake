@@ -5,6 +5,27 @@ import (
 	"testing"
 )
 
+// A producer answers only a frame inside the bounds and under MaxAnswer.
+func TestMarshalRefusesWhatTheCLIWouldNotRead(t *testing.T) {
+	if _, err := (&Frame{Cols: MaxCols + 1, Rows: 1, Lines: [][]Run{nil}}).Marshal(); err == nil {
+		t.Fatal("a window over 400 columns was marshaled")
+	}
+	big := &Frame{Cols: MaxCols, Rows: MaxRows}
+	for y := 0; y < MaxRows; y++ {
+		line := make([]Run, MaxCols)
+		for x := range line {
+			line[x] = Run{T: strings.Repeat("x", 8), W: 1, Fg: "#112233", Bg: "#445566", A: Bold}
+		}
+		big.Lines = append(big.Lines, line)
+	}
+	if _, err := big.Marshal(); err == nil || !strings.Contains(err.Error(), "as an answer") {
+		t.Fatalf("a window over 4 MiB: %v", err)
+	}
+	if data, err := sample().Marshal(); err != nil || len(data) == 0 {
+		t.Fatalf("an ordinary window: %v", err)
+	}
+}
+
 func TestStandInNamesWhatTheTerminalDidNotReport(t *testing.T) {
 	palette := make([]string, 16)
 	for i := range palette {

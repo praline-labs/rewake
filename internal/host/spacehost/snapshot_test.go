@@ -11,6 +11,22 @@ import (
 	"github.com/praline-labs/rewake/internal/core/screen"
 )
 
+// A client that connects and sends no mode is dropped, not held.
+func TestAClientThatSendsNoModeIsDropped(t *testing.T) {
+	old := modeWithin.Swap(int64(100 * time.Millisecond))
+	t.Cleanup(func() { modeWithin.Store(old) })
+	socket := served(t, `sleep 30`)
+	conn, err := net.Dial("unix", socket)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = conn.Close() }()
+	_ = conn.SetReadDeadline(time.Now().Add(3 * time.Second))
+	if _, err := conn.Read(make([]byte, 1)); err == nil || strings.Contains(err.Error(), "timeout") {
+		t.Fatalf("the silent client was not closed: %v", err)
+	}
+}
+
 // A snapshot is the screen as the emulator holds it, in one line, and asks
 // nothing of the worker's size.
 func TestASnapshotAnswersTheScreenAsOneFrame(t *testing.T) {

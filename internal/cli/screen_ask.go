@@ -18,7 +18,6 @@ import (
 const (
 	screenDial   = 2 * time.Second
 	screenAnswer = 10 * time.Second
-	screenMax    = 4 << 20
 )
 
 // errNoShell is no shell answering at its socket: none runs, or main has no
@@ -68,16 +67,20 @@ func askHost(socket string) (*screen.Frame, error) {
 	if _, err := conn.Write([]byte{'s'}); err != nil {
 		return nil, err
 	}
-	var frame screen.Frame
-	if err := readLine(conn, &frame); err != nil {
+	var answer shellAnswer
+	if err := readLine(conn, &answer); err != nil {
 		return nil, fmt.Errorf("the space host did not answer: %w", err)
 	}
+	if answer.Error != "" {
+		return nil, errors.New(answer.Error)
+	}
+	frame := answer.Frame
 	frame.Source = screen.SourceHost
 	return &frame, nil
 }
 
 func readLine(conn net.Conn, into any) error {
-	line, err := bufio.NewReader(io.LimitReader(conn, screenMax)).ReadBytes('\n')
+	line, err := bufio.NewReader(io.LimitReader(conn, screen.MaxAnswer)).ReadBytes('\n')
 	if err != nil {
 		return err
 	}

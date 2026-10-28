@@ -53,7 +53,9 @@ the cursor's visibility and has its own attribute bits: `shell/src/screen.ts` ta
 from the pane's screen and maps the second. A frame is at most 400 by 200 cells, checked by both
 ends (`Frame.Check`) and by the shell before it writes. The answer is written as the socket takes
 it (a large frame is a partial write, the rest goes on `drain`), and a connection that sends no
-complete request in 5 s is dropped.
+complete request in 5 s is dropped. Both producers, the shell and the space host, answer only a frame
+inside those bounds and under 4 MiB as one line (`Frame.Marshal`, and the same two checks in the shell);
+over either they answer `{"error": "…"}`, which the CLI shows.
 
 **The person's colors.** The frame carries what the terminal reported at start (`askColors`,
 [shell.md](shell.md#what-the-widget-lacks-and-what-the-shell-does-about-it)): `fg` and `bg`, the default foreground and
@@ -71,7 +73,7 @@ OSC 10/11, so a picture taken there names the two. The host path seeds `fg` and 
 
 When nothing listens at `sock/shell.sock` (main runs without a terminal) a worker's pane alone
 comes from its space host: mode `s` of the space socket ([space.md](space.md#the-stream-to-the-shell)),
-which answers one JSON line of the emulator's screen — styled rows, the cursor when visible, the
+which waits 5 s for the mode byte and answers one JSON line of the emulator's screen — styled rows, the cursor when visible, the
 default colors empty, indexed colors as xterm's palette — and closes. It takes no frame and sets
 no size, it reads under the grid's lock and writes after releasing it (`Grid.Snapshot`). The answer
 says `source: host`, and the text line says the pane is alone. Main has no host: refused, exit 1. A
@@ -95,7 +97,7 @@ project does not have, x/image and x/text, and the dependency rule allows no fur
 (about 16 by 33 in a 2000 px shot), at half the size.
 
 `--png <path>` is written by `screen.WritePNG` and refuses (exit 2): a path inside rewake's state
-(the base directory with every room, and `~/.config/rewake`), a path through a symbolic link (its
+(the base directory with every room, the default base `rewake-<uid>` of the temporary directory even when `REWAKE_DIR` names another, `~/.config/rewake`, and the worktree root), a path through a symbolic link (its
 folder must be its real path), a folder that is missing, and an existing file that is not a regular
 one; a regular file is replaced, by a temporary file in the same folder and a rename. Those writes
 are in the table of `internal/infra/state/bypass_table_test.go` with that reason.

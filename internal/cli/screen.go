@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/core/screen"
 	"github.com/praline-labs/rewake/internal/core/space"
+	"github.com/praline-labs/rewake/internal/host/worktree"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -154,7 +156,12 @@ func screenKeep() ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	keep := []string{base}
+	// The default base is kept even when REWAKE_DIR names another: a room
+	// there is still rewake's state.
+	keep := []string{base, filepath.Join(os.TempDir(), "rewake-"+strconv.Itoa(os.Getuid()))}
+	if root, err := worktree.Root(); err == nil {
+		keep = append(keep, root)
+	}
 	if config, err := os.UserConfigDir(); err == nil {
 		keep = append(keep, filepath.Join(config, "rewake"))
 	}

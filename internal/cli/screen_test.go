@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -181,6 +182,26 @@ func TestScreenWritesOnlyWhereItMay(t *testing.T) {
 	}
 	if data, _ := os.ReadFile(existing); !strings.HasPrefix(string(data), "\x89PNG") {
 		t.Fatal("the regular file was not replaced")
+	}
+}
+
+// The places a picture is refused are the base REWAKE_DIR names, the default
+// base beside it, the user's config and the worktree root.
+func TestScreenKeepsTheDefaultBaseAndTheWorktreeRoot(t *testing.T) {
+	screenRoom(t)
+	t.Setenv("REWAKE_WORKTREES", filepath.Join(t.TempDir(), "trees"))
+	keep, err := screenKeep()
+	if err != nil {
+		t.Fatal(err)
+	}
+	have := strings.Join(keep, "\n")
+	for name, want := range map[string]string{
+		"the default base":  filepath.Join(os.TempDir(), "rewake-"+strconv.Itoa(os.Getuid())),
+		"the worktree root": os.Getenv("REWAKE_WORKTREES"),
+	} {
+		if !strings.Contains(have, want) {
+			t.Errorf("%s (%s) is not kept: %v", name, want, keep)
+		}
 	}
 }
 

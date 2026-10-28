@@ -51,6 +51,22 @@ test("the socket answers a line with a frame, and a bad line with why", async ()
           Array.from({ length: 200 }, () => ({ t: "x", w: 1, fg: "#112233", bg: "#445566" })),
         ),
       };
+    // 400x200 cells, each run long in text: inside the cell bounds, over 4 MiB.
+    if (pane === "fat")
+      return {
+        pane,
+        cols: 400,
+        rows: 200,
+        lines: Array.from({ length: 200 }, () =>
+          Array.from({ length: 400 }, () => ({
+            t: "xxxxxxxx",
+            w: 1,
+            fg: "#112233",
+            bg: "#445566",
+            a: 1,
+          })),
+        ),
+      };
     if (pane === "wide") return { pane, cols: 401, rows: 1, lines: [[]] };
     return { pane, cols: 1, rows: 1, lines: [[{ t: "x", w: 1 }]] };
   });
@@ -79,6 +95,7 @@ test("the socket answers a line with a frame, and a bad line with why", async ()
   const big = await ask('{"pane":"big"}');
   expect(big.lines.length).toBe(60);
   expect(big.lines[59].length).toBe(200);
+  expect((await ask('{"pane":"fat"}')).error).toContain("as an answer");
   expect((await ask('{"pane":"wide"}')).error).toContain("over 400x200");
   expect((await ask('{"pane":"gone"}')).error).toContain("no window gone");
   expect((await ask("not json")).error).toContain("JSON");

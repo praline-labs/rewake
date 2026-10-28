@@ -81,6 +81,7 @@ const requestMax = 4096;
 const answerWithin = 5000;
 // The model's bounds (internal/core/screen), held here too so a window the
 // CLI would refuse is not written.
+const answerMax = 4 << 20;
 const maxCols = 400;
 const maxRows = 200;
 
@@ -170,7 +171,12 @@ async function answer(line: string, take: (pane: string) => Promise<Frame>): Pro
       throw new Error(
         `the window is ${frame.cols}x${frame.rows} cells, over ${maxCols}x${maxRows}`,
       );
-    return JSON.stringify(frame);
+    const text = JSON.stringify(frame);
+    if (Buffer.byteLength(text) >= answerMax)
+      throw new Error(
+        `the window is ${Buffer.byteLength(text)} bytes as an answer, over ${answerMax - 1}`,
+      );
+    return text;
   } catch (e) {
     return JSON.stringify({ error: e instanceof Error ? e.message : String(e) });
   }

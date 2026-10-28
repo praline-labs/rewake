@@ -4,6 +4,7 @@
 package screen
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 )
@@ -14,6 +15,10 @@ const (
 	MaxCols = 400
 	MaxRows = 200
 )
+
+// MaxAnswer is the most bytes of a serialized frame, one JSON line, that
+// either producer writes and the CLI reads.
+const MaxAnswer = 4 << 20
 
 // The sources of a frame: the shell's window as the person has it, or the
 // worker's pane alone from its space host when no shell answers.
@@ -115,6 +120,22 @@ func (f *Frame) Check() error {
 		return fmt.Errorf("the cursor %d,%d is outside the screen", c.X, c.Y)
 	}
 	return nil
+}
+
+// Marshal is the frame as the one JSON line a producer answers with, less its
+// newline: refused when it is outside the bounds or longer than MaxAnswer.
+func (f *Frame) Marshal() ([]byte, error) {
+	if err := f.Check(); err != nil {
+		return nil, err
+	}
+	data, err := json.Marshal(f)
+	if err != nil {
+		return nil, err
+	}
+	if len(data) >= MaxAnswer {
+		return nil, fmt.Errorf("the screen is %d bytes as an answer, over %d", len(data), MaxAnswer-1)
+	}
+	return data, nil
 }
 
 // Text is the screen as lines of plain text, each less its trailing blanks.

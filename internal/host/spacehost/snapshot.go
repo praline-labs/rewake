@@ -23,9 +23,10 @@ func (r *relay) snapshot(conn net.Conn) {
 	// palette is not passed to a host, so indexed colors are xterm's.
 	fg, bg := terminal.ParseDefaults(os.Getenv(terminal.DefaultsEnv))
 	frame.Fg, frame.Bg = colorHex(fg), colorHex(bg)
-	data, err := json.Marshal(frame)
+	data, err := frame.Marshal()
 	if err != nil {
-		return
+		// The client reads a line either way; a refusal is one it can show.
+		data, _ = json.Marshal(map[string]string{"error": err.Error()})
 	}
 	_ = conn.SetWriteDeadline(time.Now().Add(clientWrite))
 	_, _ = conn.Write(append(data, '\n'))
