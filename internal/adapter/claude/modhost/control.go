@@ -10,7 +10,9 @@ import (
 )
 
 type command struct {
-	request    control.Request
+	request control.Request
+	// text is a prompt's, which no request of the control directory carries.
+	text       string
 	load       string
 	generation int
 	sent       bool
@@ -53,6 +55,12 @@ func (s *Server) carry(ctx context.Context, request control.Request) control.Ans
 }
 
 func (s *Server) dispatch(ctx context.Context, request control.Request) control.Answer {
+	return s.dispatchText(ctx, request, "")
+}
+
+// dispatchText queues a command for the mod's next heartbeat; a prompt
+// carries its text, and comes only from rewake's face (mirror.go).
+func (s *Server) dispatchText(ctx context.Context, request control.Request, text string) control.Answer {
 	s.mu.Lock()
 	current := s.current
 	if s.closed || current == nil || !current.live {
@@ -63,7 +71,7 @@ func (s *Server) dispatch(ctx context.Context, request control.Request) control.
 		s.mu.Unlock()
 		return s.answerAsk(ctx, request)
 	}
-	if request.Action != control.Compact && request.Action != control.Interrupt {
+	if request.Action != control.Compact && request.Action != control.Interrupt && (request.Action != actionPrompt || text == "") {
 		s.mu.Unlock()
 		return control.Answer{Outcome: control.Refused, Detail: "unknown control action"}
 	}
@@ -76,7 +84,7 @@ func (s *Server) dispatch(ctx context.Context, request control.Request) control.
 		return control.Answer{Outcome: control.Refused, Reason: control.NotSelected}
 	}
 	request.Conversation = thread
-	pending := &command{request: request, load: current.hello.LoadID, generation: current.generation, answer: make(chan control.Answer, 1)}
+	pending := &command{request: request, text: text, load: current.hello.LoadID, generation: current.generation, answer: make(chan control.Answer, 1)}
 	m := &s.management
 	m.requests[request.ID] = pending
 	m.order = append(m.order, request.ID)
@@ -122,7 +130,11 @@ func (s *Server) takeCommand(poll AliveRequest) *ControlCommand {
 	pending.sent = true
 	s.management.queued = nil
 	request := pending.request
-	return &ControlCommand{ID: request.ID, Action: request.Action, From: request.From, Focus: request.Focus, Conversation: request.Conversation}
+	command := &ControlCommand{ID: request.ID, Action: request.Action, From: request.From, Focus: request.Focus, Conversation: request.Conversation}
+	if pending.text != "" {
+		command.Text = &pending.text
+	}
+	return command
 }
 
 func (s *Server) controlReply(w http.ResponseWriter, r *http.Request) {

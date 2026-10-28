@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/core/session"
 	"github.com/praline-labs/rewake/internal/core/space"
 )
@@ -14,7 +15,7 @@ import (
 // and then the shell derives nothing of it: the verdict is rewake's, the
 // model is the name the table shows, and the branch is the one the session
 // works on.
-func sessionRowsOf(records []space.Record, views []sessionView, mainName string, asMain bool) []SessionRow {
+func sessionRowsOf(dir string, records []space.Record, views []sessionView, mainName string, asMain bool) []SessionRow {
 	checkouts := map[string]string{}
 	for _, record := range records {
 		if !record.State.Final() && record.Checkout.Path != "" && record.Checkout.Branch != "" {
@@ -36,6 +37,9 @@ func sessionRowsOf(records []space.Record, views []sessionView, mainName string,
 			row.Branch = ptr(branch)
 		}
 		telemetryInto(&row, view.Telemetry)
+		if asMain {
+			row.Mirror = mirrorOf(dir, view.Name, view.Epoch())
+		}
 		rows = append(rows, row)
 	}
 	return rows
@@ -69,6 +73,16 @@ func telemetryInto(row *SessionRow, t *session.Snapshot) {
 			row.Cache.ExpiresAt = ptr(int(t.CacheLife.ExpiresAt.UnixMilli()))
 		}
 	}
+}
+
+// mirrorOf is the session's mirror socket while its run serves one: the
+// path is the run's own, so a socket there is this run's.
+func mirrorOf(dir, name, epoch string) *string {
+	path := registry.MirrorFor(dir, name, epoch)
+	if info, err := os.Stat(path); err != nil || info.Mode()&os.ModeSocket == 0 {
+		return nil
+	}
+	return &path
 }
 
 func ptr[T any](value T) *T { return &value }

@@ -96,3 +96,15 @@ func removeSocket(path string) {
 	}
 	_ = state.Discard(path)
 }
+
+// current re-reads the session record so delivery sees the latest one. The
+// harness may have moved on — a new conversation, a recreated socket — and the
+// record is where that shows up. A record that is no longer ours is ignored:
+// once the name has changed hands it describes a different session.
+func current(dir, name string, fallback registry.Session) registry.Session {
+	session, err := registry.Load(dir, name)
+	if err != nil || session.Epoch() != fallback.Epoch() {
+		return fallback
+	}
+	return session
+}

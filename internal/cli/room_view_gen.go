@@ -132,6 +132,11 @@ type SessionRow struct {
 
 	// Cache is the prompt cache, where the harness says; absent when unknown.
 	Cache *CacheRow `json:"cache,omitempty"`
+
+	// Mirror is where the session's wrapper serves its conversation to rewake's own face
+	// (docs/face.md), while it does; absent otherwise and unless asMain. The shell builds no path
+	// itself.
+	Mirror *string `json:"mirror,omitempty"`
 }
 
 // Mark is the edge of a session's button in the shell.

@@ -2,6 +2,7 @@ package adapter
 
 import (
 	"github.com/praline-labs/rewake/internal/core/brief"
+	"github.com/praline-labs/rewake/internal/core/mirror"
 	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/core/worktype"
 )
@@ -75,6 +76,11 @@ type LaunchRequest struct {
 	// rewake makes for it mid-session (enter_worktree = true); only an
 	// adapter offering it (WorktreeEntryHarness) is asked.
 	WorktreeEntry bool
+	// Mirror, set by the host for a session rewake's own face draws and nil
+	// otherwise, is the model of its conversation the wrapper serves to the
+	// face (docs/face.md): an adapter offering it (MirrorHarness) feeds it
+	// what its harness says and carries its inputs back; held in memory only.
+	Mirror *mirror.Model
 	// WorkType is the kind of work the worker was raised for, which its
 	// briefing carries (docs/worker-types.md); empty Name for none.
 	WorkType worktype.Type

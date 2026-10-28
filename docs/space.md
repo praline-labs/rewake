@@ -12,13 +12,14 @@ worker is [shell.md](shell.md); the checkout a worker gets is [worktree.md](work
 
 ## Opening
 
-`rewake space open <name> --alias <alias> [--worktree[=<name>] | --no-worktree] [--type <type> | --no-type] -- <harness args>`
+`rewake space open <name> --alias <alias> [--worktree[=<name>] | --no-worktree] [--type <type> | --no-type] [--dev] -- <harness args>`
 is main's way to start a worker. A worker is raised only from a template: `--alias` is
 required, `rewake workers` lists the person's worker aliases, and the alias supplies the
 harness, role, command wrapper, args and applied settings; there is no `--harness` or `--role`,
 and a call with either is refused as an unknown flag. The space owns the name and the room. The
 fields and their precedence are in [launch-defaults.md](launch-defaults.md#the-worker-catalogue),
-worker types in [worker-types.md](worker-types.md).
+worker types in [worker-types.md](worker-types.md). `--dev` raises a dev worker, whose wrapper
+serves its conversation to rewake's face ([face.md](face.md#the-dev-worker)).
 
 Opening is a change, refused unless main's run has `Spaces` live, and refused for a name whose
 session is already alive. It writes the space's record and re-executes rewake as a launcher in a
@@ -93,7 +94,7 @@ between two steps leaves the earlier one whole.
 | `id`, `name` | the space |
 | `state` | below |
 | `main` | the run that opened it: name, epoch (the wrapper's pid, start time and boot) and pid namespace |
-| `worker` | harness id, name, role, worker type, the session id rewake drew before the launch (absent for a harness that takes none), and its run once its wrapper is seen running |
+| `worker` | harness id, name, role, worker type, `dev` for a dev worker, the session id rewake drew before the launch (absent for a harness that takes none), and its run once its wrapper is seen running |
 | `checkout` | path and branch of the worktree the worker's launch made, once its session is seen there; absent for a worker started without one |
 | `host` | the space host's run, as an epoch, recorded before it checks anything |
 | `openedAt`, `closing` | when it opened; why it began to close |

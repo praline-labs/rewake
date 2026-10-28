@@ -229,7 +229,8 @@ wrapper in the shell does the same for main (`terminal.UTF8Locale`), whose worke
   briefs at the bar's end; `1`–`9` a worker, `0` or `m` main, each focused;
   ← → the focus to main or to the chosen worker; `z` zooms the focused program or ends the zoom;
   `b` shows the briefs in the worker's place ([below](#the-briefs)), and while they have the keys
-  goes back to what was chosen and focused before; the prefix again sends Ctrl+\\ to the focused
+  goes back to what was chosen and focused before; `v` flips a dev worker's pane between rewake's
+  face and the native one ([face.md](face.md#the-face)); the prefix again sends Ctrl+\\ to the focused
   program, but not to the briefs; any other key cancels.
 - **The room** comes from one call of rewake's own, polled once a second (`shell/src/room.ts`):
   the hidden `rewake room --json`, whose shape is the schema `internal/cli/room_view.schema.json`.
@@ -326,7 +327,7 @@ write-claude (code) · working · ⎇ wt-fd7596 · <model> low thinking · 23% 2
 ```
 
 - **What it says**: the session and its type, the activity as the label of its verdict, which
-  `rewake list` shows too (`working`, `waiting for a permission`, `waiting at a dialog`, `idle`,
+  `rewake list` shows too, after `dev rewake` or `dev native` on a dev worker's strip (`working`, `waiting for a permission`, `waiting at a dialog`, `idle`,
   `compacting`, with ` (stale)` once it is not current; nothing while it is `unknown`;
   [session-state.md](session-state.md#activity)), the branch, the model and
   effort, with `thinking` after them while the harness says thinking is on — Claude Code's

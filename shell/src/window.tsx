@@ -9,6 +9,8 @@ import { Bar, Hints } from "./bar.tsx";
 import { BriefsStrip, BriefsView, briefOpen } from "./briefs.tsx";
 import { Closing } from "./closing.tsx";
 import type { Seed } from "./colors.ts";
+import { faceShown, modeOf } from "./face/faces.ts";
+import { FaceView } from "./face/view.tsx";
 import { layoutOf } from "./layout.ts";
 import { type PaneTerminal, paneHooks } from "./pane.ts";
 import { briefs, mainPane, type Pane, paneOf, show, workers } from "./panes.ts";
@@ -93,6 +95,7 @@ export function Window(props: { env: Env; view: () => View }) {
         prefix: view().prefix,
         zoomed: view().zoomed,
         workers: workers().length,
+        face: onBriefs() ? undefined : modeOf(focusedPane().id),
       }}
       width={wide() ? lay().main : view().width}
       theme={theme}
@@ -144,6 +147,17 @@ export function Window(props: { env: Env; view: () => View }) {
                       width={inner(pane)}
                       height={height()}
                     />
+                    {/* Over the native face, which stays mounted and fed under it. */}
+                    <Show when={faceShown(pane.id)}>
+                      <FaceView
+                        id={pane.id}
+                        width={inner(pane)}
+                        height={height()}
+                        theme={theme}
+                        live={live}
+                        active={() => live && view().focused === pane.id && !props.env.closing()}
+                      />
+                    </Show>
                   </box>
                   <Strip
                     state={() => stripOf(pane.id)}

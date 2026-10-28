@@ -76,7 +76,7 @@ type Server struct {
 
 // New is a run's mod endpoint, listening once Start binds it.
 func New(cfg Config) *Server {
-	return &Server{
+	s := &Server{
 		management: management{
 			wake: make(chan struct{}, 1), requests: map[string]*command{},
 			observed: newObservations(cfg),
@@ -85,6 +85,11 @@ func New(cfg Config) *Server {
 		cfg:  cfg, known: make(chan struct{}), stop: make(chan struct{}), served: make(chan struct{}),
 		loads: map[string]bool{}, superseded: map[string]bool{}, ends: map[string]*capture{},
 	}
+	// The face's prompts go the way every command to the mod goes.
+	if cfg.Mirror != nil {
+		cfg.Mirror.Take(s.Prompt)
+	}
+	return s
 }
 
 // closeWait bounds how long Close waits for the handlers in flight. One that
@@ -320,6 +325,7 @@ func (s *Server) endpoints() map[string]http.HandlerFunc {
 		PathAskOpen:        s.askOpen,
 		PathAskPoll:        s.askPoll,
 		PathAskSettle:      s.askSettle,
+		PathMirrorEvents:   s.mirrorEvents,
 	}
 }
 

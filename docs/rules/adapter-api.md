@@ -233,6 +233,14 @@ Tests:
 - `internal/cli/space_refusal_test.go` `TestASpaceIsRefusedByTheMissingCapability`
 - `internal/adapter/catalog/offers_test.go` `TestEveryHarnessThatOffersSpacesHasItsRunProveThem`
 
+### Mirror
+
+A harness whose adapter implements `adapter.MirrorHarness` can feed a run's conversation to the
+wrapper's `mirror.Model`, which a launch passes as `LaunchRequest.Mirror` only when the run is
+drawn by rewake's face; nil, the adapter sends nothing of the conversation. The wrapper refuses a
+drawn run on a harness without it before anything starts ([face.md](../face.md)). Claude Code
+implements it ([claude.md](../claude.md#the-mirror)).
+
 ### Conversation names
 
 A space's record keeps its worker's conversation id, so the worker can be found and restored.

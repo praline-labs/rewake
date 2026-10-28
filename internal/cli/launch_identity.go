@@ -31,6 +31,8 @@ type launchIdentity struct {
 	template string
 	// enter says the template lets the worker enter a checkout.
 	enter bool
+	// dev says the space was opened with --dev: rewake's face draws it.
+	dev bool
 	// work is the kind of work the space raised the worker for.
 	work worktype.Type
 }
@@ -108,7 +110,7 @@ func spaceIdentity(value string) (launchIdentity, error) {
 	if !found || part.Spaces {
 		return refuse("its record names no worker's role")
 	}
-	return launchIdentity{name: record.Worker.Name, room: room, part: part, reason: "raised by main with rewake space open as " + part.ID, template: template, enter: enter, work: work}, nil
+	return launchIdentity{name: record.Worker.Name, room: room, part: part, reason: "raised by main with rewake space open as " + part.ID, template: template, enter: enter, work: work, dev: record.Worker.Dev}, nil
 }
 
 // thisRun is this process's run epoch, as its space host records it.

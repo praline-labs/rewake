@@ -40,6 +40,8 @@ type Opening struct {
 	Main, Run string
 	Worker    hostlaunch.Raised
 	Catalog   adapter.Catalog
+	// Dev raises the worker drawn by rewake's own face (docs/face.md).
+	Dev bool
 }
 
 // Opened is a space whose worker registered.
@@ -83,6 +85,9 @@ func Open(o Opening) (Opened, error) {
 		notice = ready.WorkerNotice(o.Worker.Command)
 	}
 	session := o.Name + "-" + h.ID()
+	if _, ok := h.(adapter.MirrorHarness); o.Dev && !ok {
+		return Opened{}, &RequestError{fmt.Sprintf("--dev, yet a %s session cannot be drawn by rewake's own face.", h.Title())}
+	}
 	if !state.ValidName(o.Name) || !state.ValidName(session) {
 		return Opened{}, &RequestError{fmt.Sprintf("%q cannot name a space whose worker is %s: lower-case letters, digits, dot, dash or underscore, the session 32 characters at most.", o.Name, session)}
 	}
@@ -92,7 +97,7 @@ func Open(o Opening) (Opened, error) {
 	record := space.Record{
 		Name:     o.Name,
 		Main:     space.Run{Name: o.Main, Run: o.Run, PIDNamespace: proc.Namespace()},
-		Worker:   space.Worker{Harness: h.ID(), Name: o.Name, Role: o.Worker.Role.ID, Type: o.Worker.Work.Name, Label: o.Worker.Label},
+		Worker:   space.Worker{Harness: h.ID(), Name: o.Name, Role: o.Worker.Role.ID, Type: o.Worker.Work.Name, Label: o.Worker.Label, Dev: o.Dev},
 		OpenedAt: time.Now().UTC(),
 	}
 	var err error

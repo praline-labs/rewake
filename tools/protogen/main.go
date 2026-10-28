@@ -31,8 +31,9 @@ type target struct {
 	schema, ts, goFile, goPackage string
 }
 
-// The schema of the mod's protocol and the one of the room view the shell
-// reads (docs/shell.md), with the files each generates.
+// The schema of the mod's protocol, the one of the room view the shell reads
+// (docs/shell.md) and the mirror's (docs/face.md), with the files each
+// generates.
 const (
 	schemaPath = "internal/adapter/claude/mod/protocol.schema.json"
 	tsPath     = "internal/adapter/claude/mod/protocol.gen.ts"
@@ -42,6 +43,7 @@ const (
 var targets = []target{
 	{schemaPath, tsPath, goPath, "modhost"},
 	{"internal/cli/room_view.schema.json", "shell/src/room_view.gen.ts", "internal/cli/room_view_gen.go", "cli"},
+	{"internal/core/mirror/mirror.schema.json", "shell/src/face/mirror.gen.ts", "internal/core/mirror/mirror_gen.go", "mirror"},
 }
 
 func main() {

@@ -14,6 +14,8 @@ export interface Native {
   ) => Promise<{ skip?: string; tokensBefore?: number; tokensAfter?: number }>;
   abort: (turnId: string) => Promise<void>;
   trace: (text: string) => Promise<unknown>;
+  // submit sends a prompt of rewake's face as the person's (mirror.ts).
+  submit: (text: string) => Promise<unknown>;
 }
 
 type Result = Pick<ControlReply, "outcome"> & Partial<ControlReply>;
@@ -278,6 +280,17 @@ export class Management {
           });
         }
       }
+      return;
+    }
+    if (command.action === "prompt" && command.text) {
+      // Submitted from the clock, outside the heartbeat's dispatch: a
+      // plugin's prompt runs once the session is idle, and a turn may be
+      // going on now.
+      const text = command.text;
+      this.host.after(0, () => {
+        void this.native.submit(text).catch(() => undefined);
+      });
+      await this.reply(command, generation, { outcome: "done" });
       return;
     }
     await this.reply(command, generation, { outcome: "refused", detail: "unknown control action" });

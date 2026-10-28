@@ -19,6 +19,26 @@
       "value": 15,
       "description": "is how long the endpoint holds a mod/alive poll before it answers; the mod sends the next at once."
     },
+    "maxMirrorEventBytes": {
+      "value": 40960,
+      "description": "bounds one mirror/events event serialized: a longer delta is split, a longer settle sent in parts."
+    },
+    "maxMirrorBatchBytes": {
+      "value": 49152,
+      "description": "bounds one mirror/events body, which so always holds at least one event with its envelope, within maxBodyBytes."
+    },
+    "maxMirrorOutboxBytes": {
+      "value": 262144,
+      "description": "bounds the mirror events the mod holds unsent, mirrorMarkerBytes of it kept for lost markers and turn events; past it the oldest deltas go, then the oldest settles, each leaving a lost marker, then the markers collapse into one resync (docs/face.md)."
+    },
+    "mirrorMarkerBytes": {
+      "value": 16384,
+      "description": "is the part of maxMirrorOutboxBytes kept for lost markers and turn events."
+    },
+    "maxMirrorBlockBytes": {
+      "value": 262144,
+      "description": "bounds one text or thinking block the mod puts together for its settle, cut to its head and tail past it as the face's item is."
+    },
     "aliveLapseSeconds": {
       "value": 30,
       "description": "is how long the endpoint waits for the next mod/alive poll, from the last one's arrival or the hello's, before the load's heartbeat lapses and what the mod proved is withdrawn."
@@ -65,6 +85,12 @@
       "path": "mod/control",
       "description": "acknowledges a control request or reports its final outcome.",
       "request": {"$ref": "#/$defs/ControlReply"},
+      "answer": {"$ref": "#/$defs/Done"}
+    },
+    {
+      "path": "mirror/events",
+      "description": "carries the conversation of a session rewake's own face draws, from a load whose hello answer said mirror, to the model the wrapper keeps in memory for the face (docs/face.md); 409 refuses a load or generation that is not the run's current one, and the batch is dropped, never sent again.",
+      "request": {"$ref": "#/$defs/MirrorBatch"},
       "answer": {"$ref": "#/$defs/Done"}
     },
     {
@@ -236,6 +262,57 @@
       "required": ["loadId", "reason"],
       "additionalProperties": false
     },
+    "MirrorBatch": {
+      "type": "object",
+      "description": "is the events of a session rewake's face draws, in the order the mod saw them, at most maxMirrorBatchBytes; one batch in flight, never sent again.",
+      "properties": {
+        "loadId": {"type": "string", "description": "is the load sending, the one its admitted hello named."},
+        "generation": {"type": "integer", "description": "is its heartbeat generation."},
+        "events": {"type": "array", "items": {"$ref": "#/$defs/MirrorEvent"}, "description": "are the events."}
+      },
+      "required": ["loadId", "generation", "events"],
+      "additionalProperties": false
+    },
+    "MirrorEvent": {
+      "type": "object",
+      "description": "is one thing the session showed, in the face's neutral words (docs/face.md): a prompt, a delta of a block then its settle in parts, a tool call's start, input and result, a turn's state, a lost settle or a resync standing for what the outbox dropped.",
+      "properties": {
+        "kind": {"$ref": "#/$defs/MirrorEventKind", "description": "is what the event says."},
+        "id": {"type": "string", "description": "names the item: a prompt's, a block's, a tool call's."},
+        "turn": {"type": "string", "description": "is the harness's turn."},
+        "block": {"$ref": "#/$defs/MirrorBlock", "description": "is what a delta or a settle streams."},
+        "text": {"type": "string", "description": "is a delta's text, a settle's part, a prompt's text, a tool's input or its result."},
+        "origin": {"type": "string", "description": "is who typed a prompt."},
+        "name": {"type": "string", "description": "is a tool's name."},
+        "status": {"$ref": "#/$defs/MirrorEnd", "description": "is how a tool call ended, or refused on a prompt of the face the engine dropped."},
+        "state": {"$ref": "#/$defs/MirrorTurn", "description": "is a turn event's state."},
+        "part": {"type": "integer", "description": "is a settle's part, from 0."},
+        "of": {"type": "integer", "description": "is how many parts the settle has."},
+        "lost": {"type": "integer", "description": "counts the events a resync stands for."}
+      },
+      "required": ["kind"],
+      "additionalProperties": false
+    },
+    "MirrorEventKind": {
+      "type": "string",
+      "description": "is a mirror event's kind.",
+      "enum": ["prompt", "delta", "settle", "tool", "input", "result", "turn", "lost", "resync"]
+    },
+    "MirrorBlock": {
+      "type": "string",
+      "description": "is a block's kind: a reply's text or thinking.",
+      "enum": ["text", "thinking"]
+    },
+    "MirrorEnd": {
+      "type": "string",
+      "description": "is how a tool call ended.",
+      "enum": ["done", "error", "refused"]
+    },
+    "MirrorTurn": {
+      "type": "string",
+      "description": "is the turn's state a turn event says.",
+      "enum": ["working", "idle", "compacting"]
+    },
     "Done": {
       "type": "object",
       "description": "is the answer of an endpoint that did what was asked and has nothing to say.",
@@ -260,7 +337,8 @@
       "description": "is what the run is, for this load.",
       "properties": {
         "role": {"type": "string", "description": "is the run's role, as rewake's role catalogue names it."},
-        "generation": {"type": "integer", "description": "is the load's heartbeat generation, which every mod/alive poll of this hello carries; a retried hello of a live generation gets the same one."}
+        "generation": {"type": "integer", "description": "is the load's heartbeat generation, which every mod/alive poll of this hello carries; a retried hello of a live generation gets the same one."},
+        "mirror": {"type": "boolean", "description": "says rewake's own face draws the session: the load sends its conversation to mirror/events, in memory only (docs/face.md); absent otherwise."}
       },
       "required": ["role", "generation"],
       "additionalProperties": false
@@ -339,10 +417,11 @@
       "description": "is one command for the current heartbeat generation.",
       "properties": {
         "id": {"type": "string", "description": "identifies the request."},
-        "action": {"type": "string", "description": "is compact or interrupt."},
+        "action": {"type": "string", "description": "is compact, interrupt, or prompt from rewake's own face."},
         "from": {"type": "string", "description": "names the requester."},
         "focus": {"type": "string", "description": "is the optional compaction focus."},
-        "conversation": {"type": "string", "description": "names the selected conversation."}
+        "conversation": {"type": "string", "description": "names the selected conversation."},
+        "text": {"type": "string", "description": "is a prompt's text, typed as the person; absent for any other action."}
       },
       "required": ["id", "action", "from", "focus", "conversation"],
       "additionalProperties": false

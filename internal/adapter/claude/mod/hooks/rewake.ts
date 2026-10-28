@@ -20,6 +20,7 @@ import { serveDialogs } from "./dialogs.ts";
 import { serveWorktreeEnter, worktreeEnterTool } from "./enter.ts";
 import { Heartbeat } from "./heartbeat.ts";
 import { Management } from "./management.ts";
+import { Mirror, type MirrorOutbox, serveMirror } from "./mirror.ts";
 import type { Host } from "./outbox.ts";
 import { cut, listed, loadKey, newId, nextDelay, Outbox } from "./outbox.ts";
 import { serveWorktreeStatus, worktreeToolsFor } from "./worktree.ts";
@@ -111,6 +112,9 @@ interface Load {
   // run is the wrapper's answer to this load's hello: undefined until it
   // comes, and when no wrapper answered, which later steps read as "not live".
   run?: HelloAnswer;
+  // mirror is the outbox of the conversation rewake's face draws, made once
+  // the hello answer says mirror (mirror.ts).
+  mirror?: MirrorOutbox;
 }
 
 // hello is sent until it is answered, under the same load id and number: a
@@ -161,6 +165,7 @@ export const register: Register = (on) => {
   // hello of its own.
   const loadId = newId();
   let load: Load | undefined;
+  const mirror = new Mirror(() => load, loadId);
 
   on("session.start", async ($, e, next) => {
     const started = await next(e);
@@ -209,6 +214,11 @@ export const register: Register = (on) => {
           abort: (turnId) => $.turn.abort({ turnId }),
           trace: (text) =>
             $.session.append({ message: { type: "user", content: [{ type: "text", text }] } }),
+          submit: async (text) => {
+            const result = await $.prompt.submit({ text, asUser: true });
+            mirror.submitted(text, result.drop);
+            return result;
+          },
         },
         loadId,
       ),
@@ -253,6 +263,7 @@ export const register: Register = (on) => {
   // agent id, is not the session's turn and is not sent, as its end is not.
   on("turn.start", async ($, e, next) => {
     if (e.agentId === undefined) load?.management.started(e.turnId);
+    if (e.agentId === undefined) mirror.turn(e.turnId, "working");
     const started = await next(e);
     if (load?.run && e.agentId === undefined) {
       try {
@@ -281,7 +292,8 @@ export const register: Register = (on) => {
     if (e.agentId === undefined) load?.asks.ended();
     if (e.agentId === undefined) load?.management.waits();
     if (e.agentId === undefined) load?.management.effortSeen(e.effort);
-    const step = yield* next(e);
+    const step =
+      e.agentId === undefined ? yield* mirror.step(e.turnId, e.index, next(e)) : yield* next(e);
     if (e.agentId === undefined) {
       load?.management.usageSeen(step.usage);
       load?.management.changed();
@@ -297,6 +309,7 @@ export const register: Register = (on) => {
       return done;
     }
     load.asks.ended();
+    mirror.turn(e.turnId, "idle");
     const actor = await load.management.ended(e.turnId, e.reason === "aborted");
     let answer = actor ?? e.answer;
     if (answer === "" && e.reason === "refusal") {
@@ -318,6 +331,9 @@ export const register: Register = (on) => {
 
   // A worker's permission requests and questions, carried to main.
   serveDialogs(on, () => load);
+
+  // The conversation, for a run rewake's own face draws.
+  serveMirror(on, mirror);
 
   // The process's end, told at session.end (closing.ts): /exit, Ctrl+C and
   // Ctrl+D alike.

@@ -28,6 +28,11 @@ const (
 	// PathModControl acknowledges a control request or reports its final outcome. Asked
 	// ControlReply, answered Done.
 	PathModControl = "/v1/mod/control"
+	// PathMirrorEvents carries the conversation of a session rewake's own face draws, from a load
+	// whose hello answer said mirror, to the model the wrapper keeps in memory for the face
+	// (docs/face.md); 409 refuses a load or generation that is not the run's current one, and the
+	// batch is dropped, never sent again. Asked MirrorBatch, answered Done.
+	PathMirrorEvents = "/v1/mirror/events"
 	// PathSessionClosing says the harness has begun to end its process, from main's mod at /exit
 	// and at session.end with an exit reason, before the harness's screen goes or as soon after as
 	// the harness tells; a main in rewake's shell has its closing screen started by it
@@ -70,6 +75,22 @@ const (
 	// AliveHoldSeconds is how long the endpoint holds a mod/alive poll before it answers; the mod
 	// sends the next at once.
 	AliveHoldSeconds = 15
+	// MaxMirrorEventBytes bounds one mirror/events event serialized: a longer delta is split, a
+	// longer settle sent in parts.
+	MaxMirrorEventBytes = 40960
+	// MaxMirrorBatchBytes bounds one mirror/events body, which so always holds at least one event
+	// with its envelope, within maxBodyBytes.
+	MaxMirrorBatchBytes = 49152
+	// MaxMirrorOutboxBytes bounds the mirror events the mod holds unsent, mirrorMarkerBytes of it
+	// kept for lost markers and turn events; past it the oldest deltas go, then the oldest
+	// settles, each leaving a lost marker, then the markers collapse into one resync
+	// (docs/face.md).
+	MaxMirrorOutboxBytes = 262144
+	// MirrorMarkerBytes is the part of maxMirrorOutboxBytes kept for lost markers and turn events.
+	MirrorMarkerBytes = 16384
+	// MaxMirrorBlockBytes bounds one text or thinking block the mod puts together for its settle,
+	// cut to its head and tail past it as the face's item is.
+	MaxMirrorBlockBytes = 262144
 	// AliveLapseSeconds is how long the endpoint waits for the next mod/alive poll, from the last
 	// one's arrival or the hello's, before the load's heartbeat lapses and what the mod proved is
 	// withdrawn.
@@ -256,6 +277,105 @@ type ClosingRequest struct {
 	Reason string `json:"reason"`
 }
 
+// MirrorBatch is the events of a session rewake's face draws, in the order the mod saw them, at
+// most maxMirrorBatchBytes; one batch in flight, never sent again.
+type MirrorBatch struct {
+	// LoadID is the load sending, the one its admitted hello named.
+	LoadID string `json:"loadId"`
+
+	// Generation is its heartbeat generation.
+	Generation int `json:"generation"`
+
+	// Events are the events.
+	Events []MirrorEvent `json:"events"`
+}
+
+// MirrorEvent is one thing the session showed, in the face's neutral words (docs/face.md): a
+// prompt, a delta of a block then its settle in parts, a tool call's start, input and result, a
+// turn's state, a lost settle or a resync standing for what the outbox dropped.
+type MirrorEvent struct {
+	// Kind is what the event says.
+	Kind MirrorEventKind `json:"kind"`
+
+	// ID names the item: a prompt's, a block's, a tool call's.
+	ID *string `json:"id,omitempty"`
+
+	// Turn is the harness's turn.
+	Turn *string `json:"turn,omitempty"`
+
+	// Block is what a delta or a settle streams.
+	Block *MirrorBlock `json:"block,omitempty"`
+
+	// Text is a delta's text, a settle's part, a prompt's text, a tool's input or its result.
+	Text *string `json:"text,omitempty"`
+
+	// Origin is who typed a prompt.
+	Origin *string `json:"origin,omitempty"`
+
+	// Name is a tool's name.
+	Name *string `json:"name,omitempty"`
+
+	// Status is how a tool call ended, or refused on a prompt of the face the engine dropped.
+	Status *MirrorEnd `json:"status,omitempty"`
+
+	// State is a turn event's state.
+	State *MirrorTurn `json:"state,omitempty"`
+
+	// Part is a settle's part, from 0.
+	Part *int `json:"part,omitempty"`
+
+	// Of is how many parts the settle has.
+	Of *int `json:"of,omitempty"`
+
+	// Lost counts the events a resync stands for.
+	Lost *int `json:"lost,omitempty"`
+}
+
+// MirrorEventKind is a mirror event's kind.
+type MirrorEventKind string
+
+// The values of MirrorEventKind.
+const (
+	MirrorEventKindPrompt MirrorEventKind = "prompt"
+	MirrorEventKindDelta  MirrorEventKind = "delta"
+	MirrorEventKindSettle MirrorEventKind = "settle"
+	MirrorEventKindTool   MirrorEventKind = "tool"
+	MirrorEventKindInput  MirrorEventKind = "input"
+	MirrorEventKindResult MirrorEventKind = "result"
+	MirrorEventKindTurn   MirrorEventKind = "turn"
+	MirrorEventKindLost   MirrorEventKind = "lost"
+	MirrorEventKindResync MirrorEventKind = "resync"
+)
+
+// MirrorBlock is a block's kind: a reply's text or thinking.
+type MirrorBlock string
+
+// The values of MirrorBlock.
+const (
+	MirrorBlockText     MirrorBlock = "text"
+	MirrorBlockThinking MirrorBlock = "thinking"
+)
+
+// MirrorEnd is how a tool call ended.
+type MirrorEnd string
+
+// The values of MirrorEnd.
+const (
+	MirrorEndDone    MirrorEnd = "done"
+	MirrorEndError   MirrorEnd = "error"
+	MirrorEndRefused MirrorEnd = "refused"
+)
+
+// MirrorTurn is the turn's state a turn event says.
+type MirrorTurn string
+
+// The values of MirrorTurn.
+const (
+	MirrorTurnWorking    MirrorTurn = "working"
+	MirrorTurnIdle       MirrorTurn = "idle"
+	MirrorTurnCompacting MirrorTurn = "compacting"
+)
+
 // Done is the answer of an endpoint that did what was asked and has nothing to say.
 type Done struct{}
 
@@ -286,6 +406,10 @@ type HelloAnswer struct {
 	// Generation is the load's heartbeat generation, which every mod/alive poll of this hello
 	// carries; a retried hello of a live generation gets the same one.
 	Generation int `json:"generation"`
+
+	// Mirror says rewake's own face draws the session: the load sends its conversation to
+	// mirror/events, in memory only (docs/face.md); absent otherwise.
+	Mirror *bool `json:"mirror,omitempty"`
 }
 
 // AliveRequest is one poll of a load's heartbeat.
@@ -378,7 +502,7 @@ type ControlCommand struct {
 	// ID identifies the request.
 	ID string `json:"id"`
 
-	// Action is compact or interrupt.
+	// Action is compact, interrupt, or prompt from rewake's own face.
 	Action string `json:"action"`
 
 	// From names the requester.
@@ -389,6 +513,9 @@ type ControlCommand struct {
 
 	// Conversation names the selected conversation.
 	Conversation string `json:"conversation"`
+
+	// Text is a prompt's text, typed as the person; absent for any other action.
+	Text *string `json:"text,omitempty"`
 }
 
 // AliveAnswer may carry one command; the next heartbeat never waits for its completion.

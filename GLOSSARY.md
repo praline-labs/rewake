@@ -25,6 +25,19 @@ Means: the terminal screen of a main started at a terminal: main's pane and a wo
 Avoid: host mode
 Where: `shell/`, on OpenTUI and Solid.
 
+## Face
+Variants: faces, native face, rewake face
+Means: what a worker's pane shows: `native`, the harness's own TUI, or `rewake`, the shell's drawing of the session's mirror.
+Where: [docs/face.md](docs/face.md).
+
+## Mirror
+Means: the harness-free model of a session's conversation kept in memory in the session's wrapper and served to the shell's face; it reads no transcript and writes nothing.
+Where: `internal/core/mirror`, [docs/face.md](docs/face.md).
+
+## Dev worker
+Variants: dev workers
+Means: a worker raised with `rewake space open --dev`, whose wrapper serves its mirror, so the shell can draw it with rewake's face.
+
 ## Task
 Variants: tasks
 Means: a letter sent with `rewake send` without a flag; it binds the recipient to a report.

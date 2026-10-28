@@ -5,10 +5,17 @@
 import { RGBA } from "@opentui/core";
 import { createSignal, For, onCleanup } from "solid-js";
 import { ShellRow, selecting, separator } from "./bar.tsx";
+import { type FaceMode, modeOf } from "./face/faces.ts";
 import type { Session, Space, Verdict } from "./room.ts";
 import type { Theme } from "./theme.ts";
 
-export type StripState = { session: string; branch?: string; status?: Session };
+export type StripState = {
+  session: string;
+  branch?: string;
+  status?: Session;
+  // face is the pane's face where its session serves a mirror: the dev mark.
+  face?: FaceMode;
+};
 
 // The room as last read: the spaces not over, and the sessions as main sees
 // them.
@@ -23,7 +30,7 @@ export function stripOf(id: string): StripState {
   const space = spaces().find((s) => s.id === id);
   const session = space?.worker ?? id;
   const status = sessions().get(session);
-  return { session, status, branch: space?.checkout?.branch ?? status?.branch };
+  return { session, status, branch: space?.checkout?.branch ?? status?.branch, face: modeOf(id) };
 }
 
 // mainStrip is main's own: its row of the listing, once the run the listing
@@ -35,7 +42,7 @@ export function mainStrip(): StripState {
 
 type Part = {
   text: string;
-  kind: "name" | "plain" | "context" | "cache";
+  kind: "name" | "plain" | "context" | "cache" | "dev";
   fill?: number;
   cold?: boolean;
 };
@@ -106,6 +113,7 @@ export function stripParts(state: StripState, width: number, now = Date.now()): 
   // In the order shown; the optional ones are left out, 1 then 2 then 3.
   const all: ((Part & { optional?: number }) | undefined)[] = [
     { text: name, kind: "name" },
+    state.face ? { text: `dev ${state.face}`, kind: "dev" } : undefined,
     activity ? { text: activity, kind: "plain" } : undefined,
     state.branch ? { text: `⎇ ${state.branch}`, kind: "plain", optional: 3 } : undefined,
     // Thinking is named only while it is on: off and unknown say nothing.
@@ -171,6 +179,8 @@ export function Strip(props: {
                 <b style={{ fg: props.colour }}>{part.text}</b>
               ) : part.kind === "context" ? (
                 <span style={{ fg: fillColour(part.fill) }}>{part.text}</span>
+              ) : part.kind === "dev" ? (
+                <span style={{ fg: RGBA.fromIndex(5) }}>{part.text}</span>
               ) : part.kind === "cache" ? (
                 <span style={{ fg: part.cold ? props.theme.faint : RGBA.fromIndex(6) }}>
                   {part.text}

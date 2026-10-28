@@ -35,7 +35,12 @@ func (s *Server) hello(w http.ResponseWriter, r *http.Request) {
 		// proves nothing, and nobody is there to take a refusal.
 		panic(http.ErrAbortHandler)
 	}
-	s.answer(w, r, HelloAnswer{Role: s.cfg.Role, Generation: generation})
+	answer := HelloAnswer{Role: s.cfg.Role, Generation: generation}
+	if s.cfg.Mirror != nil {
+		on := true
+		answer.Mirror = &on
+	}
+	s.answer(w, r, answer)
 }
 
 // bind orders hello among the run's loads, writes its record and tells the

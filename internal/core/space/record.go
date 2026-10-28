@@ -119,6 +119,10 @@ type Worker struct {
 	SessionID string `json:"sessionId,omitempty"`
 	// Run is the worker's own run, once its wrapper is started.
 	Run string `json:"run,omitempty"`
+	// Dev says the worker was raised with space open --dev, drawn by
+	// rewake's own face beside its native one (docs/face.md); optional,
+	// absent from older records and from a worker without it.
+	Dev bool `json:"dev,omitempty"`
 }
 
 // Checkout is the worker's working tree.
