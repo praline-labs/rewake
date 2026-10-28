@@ -265,6 +265,22 @@ The structured protocol Claude Code does document is `--print` with
 transport. It runs without the interactive terminal, so a person would lose the screen
 they work in.
 
+**[the bundled source of 2.1.310, read with `strings`, no session started; October 28, 2026]**
+Still no local split. The mods API's "surfaces" (`desktop`, `mobile`, `vscode`) and its
+`session.attach` are a render-tree RPC carried as `control_request` subtypes (`ui_attach`,
+`ui_render`, `ui_press`, `ui_input`, `ui_select`, …) over the SDK's stream-json channel or the
+Remote Control bridge: a client that already has the conversation asks the mods to draw a
+component and sends presses back; it is no mirror of a session. An interactive terminal session
+takes such requests only through the bridge; `--sdk-url` refuses hosts other than the vendor's.
+The VS Code and Desktop apps are SDK hosts that spawn `claude` headless. `--messaging-socket-path`
+is inbound only. The transcript file gets one line per finished content block — no streaming
+text, no permission dialog, no question until answered. What a local program can get from a live
+interactive session is what a mod sees: the `ui.render` sites' props (UserMessage,
+AssistantMessage, ToolUse, ToolResult, ToolGroup, ToolProgress, Spinner, AskUserQuestion, …),
+`$.session.messages()`, the turn events and `tool.check`, pushed out by `$.http.fetch`; not seen:
+streaming deltas (unverified whether `ui.render` fires per delta) and the permission dialog's own
+text.
+
 ## A prompt draft at launch
 
 **[verified live; Claude Code 2.1.280, private HOME, fake API; September 23, 2026]**
