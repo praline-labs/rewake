@@ -1,5 +1,5 @@
 ---
-description: herdr, the terminal manager main may run in: how it finds an agent, its reporting command and its rules, and the live check of rewake's reports.
+description: herdr, the terminal manager main may run in: how it finds an agent, its reporting command and its rules, what makes it drop a report, and the live checks of rewake's reports.
 ---
 
 # Research: herdr
@@ -77,6 +77,66 @@ herdr pane report-agent <pane> --source rewake --agent claude --state idle --seq
 
 So a report with a resume does not hold the pane itself: the state report must have been accepted
 before. `internal/host/herdr` therefore reports state alone until one report of the run is accepted,
-and adds the resume on the next tick; a failed report puts it back to state alone. Not verified: a
-plain report from a shell outside the pane exited 0 yet seemed not to take the pane, which would tie
-holding to the caller's process tree.
+and adds the resume on the next tick; a failed report puts it back to state alone. The plain report
+that exited 0 yet did not take the pane is the next section: a record of the pane, not the caller's
+process.
+
+## What makes herdr drop a report (October 28, 2026, herdr 0.9.5)
+
+A main in rewake's shell in pane `wF:p1` was never held: each state report exited 0 and the pane
+stayed without an agent, and the resume after it failed with `resume_not_accepted`, every five
+seconds. Read in herdr's source at tag `v0.9.5` (`src/app/api/panes.rs`, `handle_pane_report_agent`;
+`src/terminal/state.rs`, `set_hook_authority_at`; `src/platform/unix_common.rs`) and probed live in a
+herdr workspace of the probe's own, closed after:
+
+- **The caller does not matter.** herdr reads the calling process's id from the socket only for its
+  log. A report made from a process of another pane's terminal took a fresh pane: `pane get` showed
+  `claude idle`, then `claude working`.
+- **A recorded exit drops the label.** When herdr sees an agent's process leave a pane's foreground,
+  it records that agent's exit for the pane. From then on a state report from any source but herdr's
+  own integrations whose `--agent` names that agent (`claude`, and `pi` the same) is dropped without
+  an error: the command exits 0, the pane does not change, and a resume in the next report fails with
+  `resume_not_accepted`, since nothing holds the pane. The record has no expiry; it is cleared only
+  when herdr sees that agent's process in the pane's foreground again, or the pane is respawned. In
+  rewake's shell the foreground is `rewake-shell` and the harness runs on the shell's own pty, so
+  herdr never sees it, and the pane stays refused as long as it lives. Reproduced: a process named
+  `claude` ran in the probe pane and exited, and then rewake's own two calls gave exactly `wF:p1`'s
+  answers.
+- **What leaves the record.** herdr matches a process by its name, so neither rewake's launcher nor
+  its shell is taken for the harness: the record comes from the harness itself run plainly in that
+  pane before, as a person may do before starting rewake there. herdr keeps no readable history of a
+  pane, so `wF:p1`'s earlier run is inferred, not seen. The live check of October 27 used a new
+  workspace, which is why its reports were taken.
+- **A label herdr does not know is taken.** In the same refused pane a report as `rewake-claude` held
+  the pane, its resume was accepted, and `pane report-metadata --source rewake --agent rewake-claude
+  --display-agent claude` made herdr show `claude`: `agent list` gave `agent: rewake-claude`,
+  `display_agent: claude`. herdr frees a pane held by a label it does not know once the pane is back
+  at its shell prompt.
+- Other drops in the same function, not met here: a report naming a known agent other than the one
+  herdr detects in the pane, and one from a source other than the owner of the pane's current
+  session.
+
+So rewake reports as `rewake-<harness>` and names the harness through `--display-agent` (main's
+decision, October 28, 2026; [launch.md](launch.md#herdr)): one path that no record of herdr's own
+detection can refuse. A restore after a herdr restart plans a saved resume command whatever its
+agent's name (`src/persist/restore.rs`, read, not tried).
+
+Checked live the same day, in the probe's own workspace, closed after: the pane was first left
+refusing `claude` (a process of that name ran and exited, and a `claude` report was dropped), then a
+main of this change was started in rewake's shell there, with its own `REWAKE_DIR` under `/tmp` and
+the cheapest model. The shim on `HERDR_BIN_PATH` logged, every call exiting 0:
+
+```
+pane report-agent wH:p1 --source rewake --agent rewake-claude --state unknown --seq …
+pane report-metadata wH:p1 --source rewake --agent rewake-claude --display-agent claude --seq …
+pane report-agent wH:p1 --source rewake --agent rewake-claude --state idle --seq … --agent-session-id <id> -- rewake claude --resume <id>
+pane report-agent … --state working … -- rewake claude --resume <id>
+pane report-agent … --state idle … -- rewake claude --resume <id>
+pane release-agent wH:p1 --source rewake --agent rewake-claude --seq …
+```
+
+`herdr agent list` showed one agent in the pane throughout, `rewake-claude` shown as `claude`: idle,
+working through one prompt while Claude Code's spinner title ran, then `done`. herdr's own title rule
+showed no second agent, and `agent explain` found no detected agent there. `session.json` kept
+`agent_resume` as `{"source": "rewake", "agent": "rewake-claude", "argv": ["rewake", "claude",
+"--resume", "<id>"]}`. On `/exit` the pane was cleared within half a second.

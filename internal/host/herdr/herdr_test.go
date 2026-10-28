@@ -133,28 +133,32 @@ func start(r *recorder, build string) func() {
 	})
 }
 
+// The reports go under a name herdr does not know, with the harness's id shown
+// in its place: herdr drops every report naming a known agent it has seen
+// leave the pane (herdr 0.9.5, docs/research-herdr.md).
 func TestARunReportsEachChangeOnceAndReleasesItsPane(t *testing.T) {
 	r := &recorder{}
 	idle := snapshot("idle")
 	idle.Thread = "c1"
 	r.set(idle)
 	stop := start(r, "this-build")
-	r.waitFor(t, 2)
+	r.waitFor(t, 3)
 	time.Sleep(3 * poll)
-	if r.count() != 2 {
+	if r.count() != 3 {
 		t.Fatalf("an unchanged state was reported again: %q", r.calls)
 	}
 	working := snapshot("working")
 	working.Thread = "c1"
 	r.set(working)
-	r.waitFor(t, 3)
+	r.waitFor(t, 4)
 	stop()
 
 	want := [][]string{
-		{"pane", "report-agent", "w1:p1", "--source", "rewake", "--agent", "agent", "--state", "idle", "--seq", "", "--agent-session-id", "c1"},
-		{"pane", "report-agent", "w1:p1", "--source", "rewake", "--agent", "agent", "--state", "idle", "--seq", "", "--agent-session-id", "c1", "--", "rewake", "agent", "--resume", "c1"},
-		{"pane", "report-agent", "w1:p1", "--source", "rewake", "--agent", "agent", "--state", "working", "--seq", "", "--agent-session-id", "c1", "--", "rewake", "agent", "--resume", "c1"},
-		{"pane", "release-agent", "w1:p1", "--source", "rewake", "--agent", "agent", "--seq", ""},
+		{"pane", "report-agent", "w1:p1", "--source", "rewake", "--agent", "rewake-agent", "--state", "idle", "--seq", "", "--agent-session-id", "c1"},
+		{"pane", "report-metadata", "w1:p1", "--source", "rewake", "--agent", "rewake-agent", "--display-agent", "agent", "--seq", ""},
+		{"pane", "report-agent", "w1:p1", "--source", "rewake", "--agent", "rewake-agent", "--state", "idle", "--seq", "", "--agent-session-id", "c1", "--", "rewake", "agent", "--resume", "c1"},
+		{"pane", "report-agent", "w1:p1", "--source", "rewake", "--agent", "rewake-agent", "--state", "working", "--seq", "", "--agent-session-id", "c1", "--", "rewake", "agent", "--resume", "c1"},
+		{"pane", "release-agent", "w1:p1", "--source", "rewake", "--agent", "rewake-agent", "--seq", ""},
 	}
 	if len(r.calls) != len(want) {
 		t.Fatalf("calls %q", r.calls)

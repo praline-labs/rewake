@@ -1,7 +1,8 @@
 // Package herdr reports main's run to herdr, a terminal workspace manager for
 // coding agents, when main runs in one of its panes. herdr finds an agent by
 // its pane's foreground process, which in rewake's shell is the shell, so main
-// says itself which agent it is and what it is doing (docs/launch.md#herdr).
+// says itself which agent it is and what it is doing (docs/launch.md#herdr),
+// under a name of rewake's own with the harness's shown in its place.
 // Workers never report: they run in no pane of herdr's.
 package herdr
 
@@ -24,6 +25,11 @@ const (
 	Source = "rewake"
 	// command is the word that starts rewake from a person's PATH.
 	command = "rewake"
+	// labelPrefix makes the agent's name one herdr does not know: herdr
+	// drops, exiting 0, every report naming a known agent it has seen leave
+	// the pane, until it sees that agent's process there again, which in
+	// rewake's shell it never does (herdr 0.9.5, docs/research-herdr.md).
+	labelPrefix = "rewake-"
 
 	maxResumeArgs  = 64
 	maxResumeBytes = 8 << 10
@@ -104,7 +110,8 @@ func ValidResume(argv []string) bool {
 // Config is one run's reporting.
 type Config struct {
 	Pane Pane
-	// Agent is the name herdr shows, the harness's id.
+	// Agent is the harness's id: herdr shows it, while the reports go under
+	// rewake's own name for it.
 	Agent string
 	// State is the run's telemetry.
 	State func() session.Snapshot
@@ -160,6 +167,9 @@ func Start(parent context.Context, config Config) (stop func()) {
 		// resume_not_accepted from a reporter not yet holding the pane
 		// (herdr 0.9.5, docs/research-herdr.md).
 		held := false
+		// named is whether herdr took the harness's id as the name it
+		// shows; once a run is enough, herdr keeps it for the source.
+		named := false
 		ticker := time.NewTicker(poll)
 		defer ticker.Stop()
 		for {
@@ -179,6 +189,16 @@ func Start(parent context.Context, config Config) (stop func()) {
 					last, held, retry = nil, false, time.Now().Add(retryAfter)
 				}
 			}
+			if held && !named && !time.Now().Before(retry) {
+				attempt, cancelAttempt := context.WithTimeout(ctx, reportTimeout)
+				err := config.Run(attempt, config.Pane.Bin, "pane", "report-metadata", config.Pane.ID,
+					"--source", Source, "--agent", config.label(), "--display-agent", config.Agent,
+					"--seq", strconv.FormatInt(seq.next(), 10))
+				cancelAttempt()
+				if named = err == nil; !named {
+					retry = time.Now().Add(retryAfter)
+				}
+			}
 			select {
 			case <-ctx.Done():
 				return
@@ -195,9 +215,13 @@ func Start(parent context.Context, config Config) (stop func()) {
 		release, cancelRelease := context.WithTimeout(context.WithoutCancel(parent), reportTimeout)
 		defer cancelRelease()
 		_ = config.Run(release, config.Pane.Bin, "pane", "release-agent", config.Pane.ID,
-			"--source", Source, "--agent", config.Agent, "--seq", strconv.FormatInt(seq.next(), 10))
+			"--source", Source, "--agent", config.label(), "--seq", strconv.FormatInt(seq.next(), 10))
 	}
 }
+
+// label is the name the reports go under, the harness's id made one herdr
+// does not know.
+func (c Config) label() string { return labelPrefix + c.Agent }
 
 func (c Config) report(word string) report {
 	snapshot := c.State()
@@ -213,7 +237,7 @@ func (c Config) report(word string) report {
 
 func (c Config) args(r report, seq int64) []string {
 	args := []string{
-		"pane", "report-agent", c.Pane.ID, "--source", Source, "--agent", c.Agent,
+		"pane", "report-agent", c.Pane.ID, "--source", Source, "--agent", c.label(),
 		"--state", r.state, "--seq", strconv.FormatInt(seq, 10),
 	}
 	if r.message != "" {

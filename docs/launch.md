@@ -288,7 +288,13 @@ Workers run in no pane of herdr's: they inherit the variables, and the role keep
 run outside herdr starts nothing, and so does a test binary, since it inherits its session's
 pane.
 
-- **Name and source.** The agent is the harness's id. The source is `rewake`.
+- **Name and source.** The source is `rewake`. The reports name the agent `rewake-<harness id>`, and
+  once a report of the run has been accepted, one `pane report-metadata --display-agent <harness id>`
+  makes herdr show the harness's id. A name herdr knows (`claude`, `pi`) would be dropped without an
+  error in any pane where herdr has seen that harness exit before, as long as the pane lives
+  (herdr 0.9.5, [research-herdr.md](research-herdr.md#what-makes-herdr-drop-a-report-october-28-2026-herdr-095)); the
+  caller's process does not matter, so main's wrapper reports from its own pty. herdr frees a pane
+  held under a name it does not know once the pane is back at its shell prompt.
 - **State.** The state is the activity verdict on the run's telemetry, read four times a second
   ([session-state.md](session-state.md#activity)):
   - idle stays idle; working and compacting are working;
