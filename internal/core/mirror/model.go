@@ -97,8 +97,12 @@ func (m *Model) apply(e Event) {
 		if e.Kind == EventNotice {
 			kind = ItemKindNotice
 		}
+		status := ItemStatusSettled
+		if e.Status == ItemStatusRefused {
+			status = ItemStatusRefused
+		}
 		if m.byID[id] == nil {
-			m.add(&entry{item: Item{ID: id, Turn: word(e.Turn), Kind: kind, Status: ItemStatusSettled, Origin: word(e.Origin)}, text: newClip(textMax, e.Text)})
+			m.add(&entry{item: Item{ID: id, Turn: word(e.Turn), Kind: kind, Status: status, Origin: word(e.Origin)}, text: newClip(textMax, e.Text)})
 		}
 	case EventDelta:
 		m.delta(id, e)

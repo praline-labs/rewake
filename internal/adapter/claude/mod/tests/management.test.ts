@@ -280,3 +280,23 @@ test("the cache is the latest main-loop response's usage; a response without usa
   await run.clock.settle();
   expect(states(run).at(-1)).toMatchObject({ cacheRead: 900, cacheWrite: 50, cacheInput: 50 });
 });
+
+test("a prompt of rewake's face is submitted as the person's from the clock and answered done", async ($, on) => {
+  const run = world(on, {
+    replies: {
+      "/v1/mod/alive": orders(
+        () => run,
+        command("prompt", { from: "face", focus: "", text: "go on" }),
+      ),
+    },
+  });
+  const submitted: any[] = [];
+  on("prompt.submit", (_: any, e: any) => {
+    submitted.push(e);
+    return { text: e.text };
+  });
+  await start($);
+  await run.clock.settle();
+  expect(submitted.map((e) => [e.text, e.origin.asUser])).toEqual([["go on", true]]);
+  expect(results(run).at(-1)).toMatchObject({ id: "request-1", outcome: "done" });
+});

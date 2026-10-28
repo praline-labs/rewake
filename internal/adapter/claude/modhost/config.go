@@ -4,6 +4,7 @@ import (
 	"time"
 
 	asking "github.com/praline-labs/rewake/internal/core/ask"
+	"github.com/praline-labs/rewake/internal/core/mirror"
 )
 
 // Config is what a run's mod endpoint serves.
@@ -51,4 +52,8 @@ type Config struct {
 	// Closing hears the mod say the harness has begun to end its process
 	// (closing.go); nil hears nothing.
 	Closing func()
+	// Mirror is the model of the conversation rewake's own face draws, fed
+	// by mirror/events (mirror.go); nil for a run the face does not draw,
+	// whose load is never asked for its conversation.
+	Mirror *mirror.Model
 }
