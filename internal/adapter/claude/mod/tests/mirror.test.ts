@@ -1,5 +1,6 @@
 import { expect, test } from "claude-code/testing";
-import { fit, jsonSize, MirrorOutbox, pieces } from "../hooks/mirror.ts";
+import { MirrorOutbox } from "../hooks/mirror.ts";
+import { fit, jsonSize, pieces } from "../hooks/sizes.ts";
 import { bounds } from "../protocol.gen.ts";
 import type { Reply } from "./world.ts";
 import { holdMs, start, world } from "./world.ts";

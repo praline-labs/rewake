@@ -118,11 +118,11 @@ Formatting and linting run on every commit, by the pre-commit hook (`lefthook.ym
 the staged TypeScript, `golangci-lint fmt` over the staged Go, then `go build`, `go vet` and
 `golangci-lint run` over the module. `biome.json` sets the owner's style — spaces, indent 2,
 line width 100, double quotes, the recommended rules, imports organized — over the shell, the
-mod and pi's extension, leaving out the generated `protocol.gen.ts` and `room_view.gen.ts`, which stay as
-`tools/protogen` writes them. Its three overrides each name the files they need: the shell's
-`main.tsx` has no accessibility rule (OpenTUI has no accessibility tree or roles), the shell's
-escape-sequence parsers may write control characters in a regular expression, and the mod's
-test doubles may be `any`, standing in for the host's untyped objects.
+mod and pi's extension, leaving out the generated `protocol.gen.ts`, `room_view.gen.ts` and
+`mirror.gen.ts`, which stay as `tools/protogen` writes them. Its three overrides each name the
+files they need: the shell's `main.tsx` has no accessibility rule (OpenTUI has no accessibility
+tree or roles), the shell's escape-sequence parsers may write control characters in a regular
+expression, and the mod's test doubles may be `any`, standing in for the host's untyped objects.
 
 **Landing a step** on `v2` is `go run ./tools/land <branch-or-commit>`, from the main checkout
 on `v2` with a clean tree. It fast-forwards `v2`, or makes a merge commit with the subject

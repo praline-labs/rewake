@@ -25,91 +25,81 @@ export const bounds = {
   // maxClientOps bounds the lines queued for one face: past it, or past maxModelBytes queued,
   // the face is cut off and reconnects for a fresh snapshot.
   maxClientOps: 4096,
-} as const;
+} as const
 
 // Line is one line the wrapper sends: hello first, then begin, one item line per item and end,
 // which make the snapshot, then the changes in the order the model took them; answer replies to
 // an input.
 export interface Line {
   // op is what the line says.
-  op: LineOp;
+  op: LineOp
   // v is the version, on hello.
-  v?: number;
+  v?: number
   // inputs are the inputs the session takes, on hello.
-  inputs?: InputKind[];
+  inputs?: InputKind[]
   // items is how many item lines follow begin.
-  items?: number;
+  items?: number
   // dropped counts the items the model has dropped since the session began, on begin and drop.
-  dropped?: number;
+  dropped?: number
   // item is the whole item of item, add and set.
-  item?: Item;
+  item?: Item
   // id names the item of append and drop, or the input of answer.
-  id?: string;
+  id?: string
   // text is what append adds to the item's text.
-  text?: string;
+  text?: string
   // turn is the turn's state, on begin and turn.
-  turn?: TurnState;
+  turn?: TurnState
   // ok says whether the input was taken, on answer.
-  ok?: boolean;
+  ok?: boolean
   // detail is why an input was refused, on answer.
-  detail?: string;
+  detail?: string
 }
 
 // LineOp is a line's kind.
-export type LineOp =
-  | "hello"
-  | "begin"
-  | "item"
-  | "end"
-  | "add"
-  | "append"
-  | "set"
-  | "turn"
-  | "drop"
-  | "answer";
+export type LineOp = "hello" | "begin" | "item" | "end" | "add" | "append" | "set" | "turn" | "drop" | "answer"
 
 // Item is one entry of the conversation.
 export interface Item {
   // id names the item for the changes that follow.
-  id: string;
+  id: string
   // turn is the harness's turn the item belongs to, when it names one.
-  turn?: string;
+  turn?: string
   // kind is what the item is.
-  kind: ItemKind;
+  kind: ItemKind
   // status is where the item stands.
-  status: ItemStatus;
+  status: ItemStatus
   // text is a prompt's, a reply's, a thinking block's or a notice's text, or a tool's input.
-  text: string;
+  text: string
   // origin is who typed a prompt: person, face, rewake or the harness's own word.
-  origin?: string;
+  origin?: string
   // name is a tool's name.
-  name?: string;
+  name?: string
   // output is a tool's output, or its error.
-  output?: string;
+  output?: string
   // cut says a text or an output was cut to its bound.
-  cut?: boolean;
+  cut?: boolean
 }
 
 // ItemKind is a prompt, a reply's text, thinking, a tool call or a notice of rewake's.
-export type ItemKind = "prompt" | "text" | "thinking" | "tool" | "notice";
+export type ItemKind = "prompt" | "text" | "thinking" | "tool" | "notice"
 
 // ItemStatus is streaming or settled for a text; running, done, error or refused for a tool;
 // gap when part of it was lost on the way and the native face has it whole.
-export type ItemStatus = "streaming" | "settled" | "running" | "done" | "error" | "refused" | "gap";
+export type ItemStatus = "streaming" | "settled" | "running" | "done" | "error" | "refused" | "gap"
 
 // TurnState is the session's turn: idle, working, compacting, unknown after events were lost,
 // or ended with the session.
-export type TurnState = "idle" | "working" | "compacting" | "unknown" | "ended";
+export type TurnState = "idle" | "working" | "compacting" | "unknown" | "ended"
 
 // Input is one line the face sends: an input, answered by a line with its id.
 export interface Input {
   // id is the face's own id of the input.
-  id: string;
+  id: string
   // kind is what the input asks.
-  kind: InputKind;
+  kind: InputKind
   // text is a prompt's text.
-  text: string;
+  text: string
 }
 
 // InputKind is what the face may send: a prompt, typed as the person.
-export type InputKind = "prompt";
+export type InputKind = "prompt"
