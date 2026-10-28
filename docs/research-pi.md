@@ -394,7 +394,7 @@ dependencies.
 
 The same questions as Claude Code's
 ([research-claude-mod.md](research-claude-mod.md#a-mirror-of-a-live-session-for-an-interface-of-rewakes-own-october-28-2026-21310)),
-asked of the bundled pi 1.4.0 after reading its extension API (`docs/extensions.md`, `docs/tui.md`,
+asked of the bundled pi 1.4.0 after reading its extension API (`pi-coding-agent/docs/extensions.md`, `pi-coding-agent/docs/tui.md`,
 `dist/core/extensions/types.d.ts`). One interactive pi ran in a terminal tab of the write
 session's own, in `/tmp/ui-probe-pi-36`, with `-e` naming a probe extension, `--no-session`, the
 workers' agent folder as `PI_CODING_AGENT_DIR` (its settings untouched), an environment cleared to
@@ -459,7 +459,7 @@ ignored `.scratch/ui-probe-pi/` (`probe.ts`, `server.ts`, `launch.sh`, `show.py`
   `ctx.getContextUsage()`.
 - **Not tested.** `setStatus` under pi's own footer, a person answering or pressing Esc during a
   hold, `followUp`, a hold past ten minutes, a run under load, RPC mode, which by its docs
-  (`docs/rpc.md`) gives a child process the same session events as JSON lines.
+  (`pi-coding-agent/docs/rpc.md`) gives a child process the same session events as JSON lines.
 
 | What the interface needs | Claude Code 2.1.310 (a mod) | pi 1.4.0 (an extension) |
 |---|---|---|
