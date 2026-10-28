@@ -114,7 +114,7 @@ Open a document for numbers, commands and names: the map only points.
 
 ### docs/roadmap/
 
-- `docs/roadmap/README.md` — The open work and its order — the owner's looks and logins, and the acceptance of additive fields — and the ideas not scheduled.
+- `docs/roadmap/README.md` — The open work and its order — none open now — and the ideas not scheduled.
   sections: Open, in order · Not scheduled
 
 ### docs/rules/
