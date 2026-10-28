@@ -197,3 +197,53 @@ func TestAFacePastItsBoundIsCutOff(t *testing.T) {
 		t.Fatalf("the model stopped at %d items", len(m.order))
 	}
 }
+
+// held is what the model keeps in memory, read from its items and its
+// settles being put together rather than from its own count.
+func held(m *Model) (items, raw int) {
+	for _, at := range m.order {
+		raw += len(at.text.head) + len(at.text.tail) + len(at.output.head) + len(at.output.tail)
+	}
+	for _, a := range m.parts {
+		raw += len(a.text.head) + len(a.text.tail)
+	}
+	return len(m.order) + len(m.parts), raw
+}
+
+// A stream that never settles, of blocks and of calls, stays within the
+// model's bounds: what is in flight counts, and its oldest goes last.
+func TestWhatNeverSettlesStaysWithinTheBounds(t *testing.T) {
+	m := New()
+	text := strings.Repeat("s", 5000)
+	for i := range 1100 {
+		m.Apply(Event{Kind: EventDelta, ID: "b" + strconv.Itoa(i), Turn: "t", Text: text})
+		m.Apply(Event{Kind: EventTool, ID: "c" + strconv.Itoa(i), Turn: "t"}, Event{Kind: EventInput, ID: "c" + strconv.Itoa(i), Text: text})
+	}
+	if items, raw := held(m); items > MaxModelItems || raw > MaxModelBytes || m.bytes > MaxModelBytes {
+		t.Fatalf("%d items, %d bytes held, %d counted", items, raw, m.bytes)
+	}
+	if itemOf(t, m, "c1099").Status != ItemStatusRunning {
+		t.Fatal("the latest call was dropped before the oldest")
+	}
+}
+
+// Settles whose parts never all come count against the bounds as they are
+// put together, and the oldest goes, its block left a gap.
+func TestSettlesNeverCompletedStayWithinTheBounds(t *testing.T) {
+	m := New()
+	part := strings.Repeat("a", MaxItemBytes)
+	for i := range 125 {
+		id := "b" + strconv.Itoa(i)
+		m.Apply(
+			Event{Kind: EventDelta, ID: id, Turn: "t", Text: "streamed"},
+			Event{Kind: EventSettle, ID: id, Turn: "t", Part: 0, Of: 2, Text: part},
+		)
+	}
+	items, raw := held(m)
+	if items > MaxModelItems || raw > MaxModelBytes || m.bytes > MaxModelBytes || m.bytes < raw {
+		t.Fatalf("%d items, %d bytes held, %d counted", items, raw, m.bytes)
+	}
+	if item := itemOf(t, m, "b124"); item.Status != ItemStatusStreaming {
+		t.Fatalf("the latest block: %s", item.Status)
+	}
+}

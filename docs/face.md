@@ -27,7 +27,10 @@ ended). An item the link lost part of is a `gap`, never shown as settled.
 
 Every bound counts serialized bytes: an item is at most 256 KiB, a text past it keeping its head and
 its latest tail with a cut mark, a tool's input and output 64 KiB each; the model is at most 1000
-items and 4 MiB, the oldest settled items dropped past either and counted.
+items and 4 MiB. Every byte it keeps counts, a block still streaming, a call still running and a
+settle still being put together from its parts alike; past either bound the oldest settled items
+are dropped and counted first, then the oldest settle being put together, its block left a gap, and
+last the oldest items in flight, so a stream that never settles stays within the bounds too.
 
 The adapter hands the model neutral events (`prompt`, `delta`, `settle` in parts, `tool`, `input`,
 `result`, `turn`, `lost`, `resync`). A settle replaces what streamed with the whole block once all

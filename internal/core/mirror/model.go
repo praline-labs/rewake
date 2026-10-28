@@ -27,6 +27,8 @@ type Model struct {
 	dropped int
 	turn    TurnState
 	parts   map[string]*assembly
+	// born numbers the assemblies, so the oldest goes first past a bound.
+	born    int
 	clients map[*client]struct{}
 	inputs  func(context.Context, Input) error
 	// notices numbers rewake's own notices, their ids.
@@ -47,6 +49,8 @@ type assembly struct {
 	next  int
 	of    int
 	text  clip
+	size  int
+	born  int
 }
 
 // itemOverhead is what an item's envelope and words take besides its texts.
@@ -125,10 +129,12 @@ func (m *Model) apply(e Event) {
 	case EventTurn:
 		m.turnTo(e)
 	case EventLost:
-		delete(m.parts, id)
+		m.forget(id)
 		m.gap(m.byID[id])
 	case EventResync:
-		clear(m.parts)
+		for id := range m.parts {
+			m.forget(id)
+		}
 		for _, at := range m.order {
 			m.gap(at)
 		}
@@ -167,20 +173,26 @@ func (m *Model) delta(id string, e Event) {
 func (m *Model) settle(id string, e Event) {
 	a := m.parts[id]
 	if e.Part == 0 {
-		a = &assembly{turn: e.Turn, block: block(e.Block), of: e.Of, text: clip{max: textMax}}
+		m.forget(id)
+		m.born++
+		a = &assembly{turn: e.Turn, block: block(e.Block), of: e.Of, text: clip{max: textMax}, size: itemOverhead, born: m.born}
 		m.parts[id] = a
+		m.bytes += a.size
 	}
 	if a == nil || e.Part != a.next || e.Of != a.of {
-		delete(m.parts, id)
+		m.forget(id)
 		m.gap(m.byID[id])
 		return
 	}
 	a.text.add(e.Text)
+	m.bytes -= a.size
+	a.size = a.text.size() + itemOverhead
+	m.bytes += a.size
 	a.next++
 	if a.next < a.of {
 		return
 	}
-	delete(m.parts, id)
+	m.forget(id)
 	at := m.byID[id]
 	if at == nil {
 		m.add(&entry{item: Item{ID: id, Turn: word(a.turn), Kind: a.block, Status: ItemStatusSettled}, text: a.text})
@@ -196,7 +208,7 @@ func (m *Model) settle(id string, e Event) {
 func (m *Model) turnTo(e Event) {
 	for id, a := range m.parts {
 		if a.turn == e.Turn {
-			delete(m.parts, id)
+			m.forget(id)
 			m.gap(m.byID[id])
 		}
 	}
@@ -247,23 +259,56 @@ func (m *Model) resize(at *entry) {
 	at.size = size
 }
 
-// trim drops the oldest items no longer in flight while the model is past
-// either of its bounds.
+// forget drops a settle being put together, and its bytes.
+func (m *Model) forget(id string) {
+	if a := m.parts[id]; a != nil {
+		m.bytes -= a.size
+		delete(m.parts, id)
+	}
+}
+
+// trim holds the model within its bounds, counting every byte it keeps:
+// items and settles being put together alike. The oldest items no longer in
+// flight go first, then the oldest settles being put together, each leaving
+// its item a gap, and last the oldest items in flight, so a stream that never
+// settles cannot outgrow the bounds either.
 func (m *Model) trim() {
-	for len(m.order) > MaxModelItems || m.bytes > MaxModelBytes {
-		i := slices.IndexFunc(m.order, func(at *entry) bool {
-			return at.item.Status != ItemStatusStreaming && at.item.Status != ItemStatusRunning
-		})
-		if i < 0 {
+	for len(m.order)+len(m.parts) > MaxModelItems || m.bytes > MaxModelBytes {
+		i := slices.IndexFunc(m.order, func(at *entry) bool { return !inFlight(at.item.Status) })
+		switch {
+		case i >= 0:
+			m.drop(i)
+		case len(m.parts) > 0:
+			m.dropOldestAssembly()
+		case len(m.order) > 0:
+			m.drop(0)
+		default:
 			return
 		}
-		at := m.order[i]
-		m.order = slices.Delete(m.order, i, i+1)
-		delete(m.byID, at.item.ID)
-		m.bytes -= at.size
-		m.dropped++
-		m.send(Line{Op: LineOpDrop, ID: &at.item.ID, Dropped: &m.dropped})
 	}
+}
+
+func (m *Model) drop(i int) {
+	at := m.order[i]
+	m.order = slices.Delete(m.order, i, i+1)
+	delete(m.byID, at.item.ID)
+	m.bytes -= at.size
+	m.dropped++
+	m.send(Line{Op: LineOpDrop, ID: &at.item.ID, Dropped: &m.dropped})
+}
+
+// dropOldestAssembly drops the settle put together longest ago; its item, if
+// any, is left a gap with what streamed.
+func (m *Model) dropOldestAssembly() {
+	var oldest *assembly
+	var id string
+	for at, a := range m.parts {
+		if oldest == nil || a.born < oldest.born {
+			oldest, id = a, at
+		}
+	}
+	m.forget(id)
+	m.gap(m.byID[id])
 }
 
 // whole is the item as a line carries it.
