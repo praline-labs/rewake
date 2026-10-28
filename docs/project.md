@@ -99,8 +99,10 @@ Each principle names where it comes from.
   directory, only the onboarding-done mark and trust for the repository main runs in (the
   owner's decision, October 23, 2026). ([design.md](design.md#decisions-in-force),
   [rules/launch.md](rules/launch.md).)
-- **Transcript contents are not read.** ([design.md](design.md#scope),
-  [design.md](design.md#decisions-in-force).)
+- **Transcript files are not read, and nothing of a conversation is kept.** A session drawn by
+  rewake's own interface has its conversation passed from its harness to the person's shell in
+  memory only — never to disk, a letter, a log or the room (the owner's decision, October 28,
+  2026). ([design.md](design.md#scope), [design.md](design.md#decisions-in-force).)
 - **No service runs beside the sessions.** What serves a session lives exactly as long
   as that session and serves only it: there is nothing to start, stop or
   recover, and no state where the sessions exist but a service has died.
@@ -220,7 +222,8 @@ them, is one build of rewake; another build is refused, not mixed in. See [rules
 
 **What it never does.** It never types into anyone's screen; main and the workers it starts
 show only in rewake's shell. It does not edit the person's harness configuration; it
-does not read transcripts; it runs no service of its own beside the sessions.
+does not read transcript files nor keep anything of a conversation; it runs no service of its
+own beside the sessions.
 
 **How the project is checked.** A change lands only when the project's checks pass —
 formatting, static analysis and the tests. An end-to-end suite runs rewake against a
