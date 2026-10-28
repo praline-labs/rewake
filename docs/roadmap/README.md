@@ -1,5 +1,5 @@
 ---
-description: The open work and its order — the owner's looks and logins, and the acceptance of additive fields — and the ideas not scheduled.
+description: The open work and its order — the acceptance of additive fields — and the ideas not scheduled.
 ---
 
 # Roadmap
@@ -10,20 +10,7 @@ what it taught goes into the living documents.
 
 ## Open, in order
 
-1. **The owner's looks and logins** — built and checked under a stand-in terminal, waiting for
-   the owner on a real one:
-   - the shell's rows and band, main's strip with the hints under it and the bar of workers under
-     the worker's pane ([shell.md](../shell.md#the-bar));
-     a terminal that reports no background gets no band;
-   - the strip: its cache part in the owner's room, its type part, a real model for pi's cache
-     life ([shell.md](../shell.md#the-strip));
-   - `/logout` live: read from Claude Code's reason list, not seen, since a real one would sign
-     the owner's account out;
-   - the workers' configuration directory after the owner's `/login`, then main's live check of
-     a first start, the plan and usage, and the `/resume` picker
-     ([worker-profile.md](../worker-profile.md#the-login));
-   - a Claude Code worker raised from a pi main, which needs the same login.
-2. **Acceptance of additive fields** — the cache telemetry, the `status/line` endpoint,
+1. **Acceptance of additive fields** — the cache telemetry, the `status/line` endpoint,
    `worker.type`, `configuredModelName`, `worker.label`, and `thinking` (the telemetry's and
    `StatusLineRequest`'s, October 26, 2026) changed the protocol or the state
    by adding fields; only the dialog fields' acceptance is on record. Whether the others need
@@ -31,6 +18,9 @@ what it taught goes into the living documents.
 
 ## Not scheduled
 
+- Two live checks left from the owner's looks and logins, which the owner accepted on October 28,
+  2026 as he sees them: `/logout` live (it would sign the owner's account out) and a Claude Code
+  worker raised from a pi main.
 - A headless worker as a fallback where no terminal is at hand.
 - A room panel, and panels that are not terminals, with the modal.
 - Conversation reset — `rewake clear` from main — and a conversation marker in `list` and in
