@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "The mirror",
+  "description": "What a session's wrapper serves of its conversation to rewake's own face (docs/face.md): JSON lines on the session's mirror socket, a snapshot of the model then its changes, and the inputs the face sends back. Held in memory only. The wrapper's types and the face's are generated from this file by go run ./tools/protogen, so the two cannot drift.",
+  "x-bounds": {
+    "version": {"value": 1, "description": "is the version of the lines, which hello carries; one build per room makes it a guard, not a negotiation."},
+    "maxItemBytes": {"value": 262144, "description": "bounds one item serialized: a longer text keeps its head and its tail with a cut mark between."},
+    "maxFieldBytes": {"value": 65536, "description": "bounds a tool's input and its output each, cut as a text is."},
+    "maxModelItems": {"value": 1000, "description": "bounds the items the model keeps: past it the oldest settled ones are dropped and counted."},
+    "maxModelBytes": {"value": 4194304, "description": "bounds the model's items together, dropped as maxModelItems."},
+    "maxLineBytes": {"value": 524288, "description": "bounds one line either way; an item always fits one."},
+    "maxClientOps": {"value": 4096, "description": "bounds the lines queued for one face: past it, or past maxModelBytes queued, the face is cut off and reconnects for a fresh snapshot."}
+  },
+  "$defs": {
+    "Line": {
+      "type": "object",
+      "description": "is one line the wrapper sends: hello first, then begin, one item line per item and end, which make the snapshot, then the changes in the order the model took them; answer replies to an input.",
+      "properties": {
+        "op": {"$ref": "#/$defs/LineOp", "description": "is what the line says."},
+        "v": {"type": "integer", "description": "is the version, on hello."},
+        "inputs": {"type": "array", "items": {"$ref": "#/$defs/InputKind"}, "description": "are the inputs the session takes, on hello."},
+        "items": {"type": "integer", "description": "is how many item lines follow begin."},
+        "dropped": {"type": "integer", "description": "counts the items the model has dropped since the session began, on begin and drop."},
+        "item": {"$ref": "#/$defs/Item", "description": "is the whole item of item, add and set."},
+        "id": {"type": "string", "description": "names the item of append and drop, or the input of answer."},
+        "text": {"type": "string", "description": "is what append adds to the item's text."},
+        "turn": {"$ref": "#/$defs/TurnState", "description": "is the turn's state, on begin and turn."},
+        "ok": {"type": "boolean", "description": "says whether the input was taken, on answer."},
+        "detail": {"type": "string", "description": "is why an input was refused, on answer."}
+      },
+      "required": ["op"],
+      "additionalProperties": false
+    },
+    "LineOp": {
+      "type": "string",
+      "description": "is a line's kind.",
+      "enum": ["hello", "begin", "item", "end", "add", "append", "set", "turn", "drop", "answer"]
+    },
+    "Item": {
+      "type": "object",
+      "description": "is one entry of the conversation.",
+      "properties": {
+        "id": {"type": "string", "description": "names the item for the changes that follow."},
+        "turn": {"type": "string", "description": "is the harness's turn the item belongs to, when it names one."},
+        "kind": {"$ref": "#/$defs/ItemKind", "description": "is what the item is."},
+        "status": {"$ref": "#/$defs/ItemStatus", "description": "is where the item stands."},
+        "text": {"type": "string", "description": "is a prompt's, a reply's, a thinking block's or a notice's text, or a tool's input."},
+        "origin": {"type": "string", "description": "is who typed a prompt: person, face, rewake or the harness's own word."},
+        "name": {"type": "string", "description": "is a tool's name."},
+        "output": {"type": "string", "description": "is a tool's output, or its error."},
+        "cut": {"type": "boolean", "description": "says a text or an output was cut to its bound."}
+      },
+      "required": ["id", "kind", "status", "text"],
+      "additionalProperties": false
+    },
+    "ItemKind": {
+      "type": "string",
+      "description": "is a prompt, a reply's text, thinking, a tool call or a notice of rewake's.",
+      "enum": ["prompt", "text", "thinking", "tool", "notice"]
+    },
+    "ItemStatus": {
+      "type": "string",
+      "description": "is streaming or settled for a text; running, done, error or refused for a tool; gap when part of it was lost on the way and the native face has it whole.",
+      "enum": ["streaming", "settled", "running", "done", "error", "refused", "gap"]
+    },
+    "TurnState": {
+      "type": "string",
+      "description": "is the session's turn: idle, working, compacting, unknown after events were lost, or ended with the session.",
+      "enum": ["idle", "working", "compacting", "unknown", "ended"]
+    },
+    "Input": {
+      "type": "object",
+      "description": "is one line the face sends: an input, answered by a line with its id.",
+      "properties": {
+        "id": {"type": "string", "description": "is the face's own id of the input."},
+        "kind": {"$ref": "#/$defs/InputKind", "description": "is what the input asks."},
+        "text": {"type": "string", "description": "is a prompt's text."}
+      },
+      "required": ["id", "kind", "text"],
+      "additionalProperties": false
+    },
+    "InputKind": {
+      "type": "string",
+      "description": "is what the face may send: a prompt, typed as the person.",
+      "enum": ["prompt"]
+    }
+  }
+}
