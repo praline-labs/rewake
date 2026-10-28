@@ -278,8 +278,11 @@ text, no permission dialog, no question until answered. What a local program can
 interactive session is what a mod sees: the `ui.render` sites' props (UserMessage,
 AssistantMessage, ToolUse, ToolResult, ToolGroup, ToolProgress, Spinner, AskUserQuestion, …),
 `$.session.messages()`, the turn events and `tool.check`, pushed out by `$.http.fetch`; not seen:
-streaming deltas (unverified whether `ui.render` fires per delta) and the permission dialog's own
-text.
+the permission dialog's own text. Probed live the same day
+([research-claude-mod.md](research-claude-mod.md#a-mirror-of-a-live-session-for-an-interface-of-rewakes-own-october-28-2026-21310)):
+`ui.render` draws a reply's block once it is settled, so streaming text comes only from
+`turn.step`'s chunks, and `tool.check` held a call ten minutes on long polls and was answered from
+outside.
 
 ## A prompt draft at launch
 
