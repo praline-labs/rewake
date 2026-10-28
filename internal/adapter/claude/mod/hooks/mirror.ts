@@ -193,7 +193,8 @@ export function settles(turn: string, b: Block): MirrorEvent[] {
   }));
 }
 
-// stepBudget bounds what one step's open blocks hold together.
+// stepBudget bounds what one step's open blocks and tool inputs hold
+// together.
 const stepBudget = 4 * bounds.maxMirrorBlockBytes;
 
 // shown is a tool's result as the face draws it.
@@ -308,8 +309,13 @@ export class Mirror {
         tools.set(c.index, { id: c.id, json: "" });
         out.push({ kind: "tool", id: c.id, turn, name: c.name });
       } else if (c.kind === "input") {
+        // A tool's input is held whole until the step stops, so it counts
+        // against the step's bound as a block does.
         const t = tools.get(c.index);
-        if (t && t.json.length < bounds.maxMirrorBlockBytes) t.json += c.json;
+        if (t && t.json.length < bounds.maxMirrorBlockBytes && held + c.json.length <= stepBudget) {
+          t.json += c.json;
+          held += c.json.length;
+        }
       } else if (c.kind === "stop") {
         settle();
       }

@@ -330,9 +330,11 @@ tool call with its input and result (`tool.call` observed through `next`), and t
 reads no transcript file. A hook only appends to an outbox and returns; the `turn.step` generator yields
 every chunk unchanged before queueing it. A sender posts the outbox every 50 ms, one batch of at most
 48 KiB in flight with a 5 s deadline; a failed batch is dropped and counted. Each event is at most
-40 KiB serialized, a block's settle comes in parts within that, and the outbox is held to 256 KiB by
-dropping deltas first, then settles whole as `lost{id}` markers, then collapsing the markers into one
-`resync` that counts what went. The wrapper's model marks what was lost as a gap, never as settled.
+40 KiB serialized, a block's settle comes in parts within that; what a step holds until it stops,
+its open blocks and its tools' inputs together, is at most 1 MiB, each 256 KiB. The outbox is held to
+256 KiB by dropping
+deltas first, then settles whole as `lost{id}` markers, then collapsing the markers into one `resync`
+that counts what went. The wrapper's model marks what was lost as a gap, never as settled.
 Subagents are not mirrored.
 
 The face's prompt is one more control action, `prompt` with its `text`, carried by the `mod/alive`

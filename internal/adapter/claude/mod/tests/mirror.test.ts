@@ -216,3 +216,39 @@ for (const drop of [undefined, "a Stop stands"]) {
     if (drop) expect(prompts[0].text).toContain(drop);
   });
 }
+
+test("a step's open tool inputs count against its bound with its blocks", async ($, on) => {
+  const run = world(on, {
+    replies: { "/v1/hello": [drawn], "/v1/mirror/events": [{ status: 200, text: "{}" }] },
+  });
+  const piece = "x".repeat(1024);
+  const perTool = bounds.maxMirrorBlockBytes / piece.length;
+  on("turn.step", async function* (_: any, e: any) {
+    for (let i = 0; i < 10; i++) yield { kind: "tool", index: i, id: `call-${i}`, name: "Write" };
+    for (let i = 0; i < 10; i++)
+      for (let n = 0; n < perTool; n++) yield { kind: "input", index: i, json: piece };
+    yield { kind: "stop", stopReason: "tool_use", usage: null };
+    return {
+      turnId: e.turnId,
+      index: e.index,
+      answer: "",
+      toolUses: [],
+      stopReason: "tool_use",
+      usage: null,
+    };
+  });
+  await start($);
+  await run.clock.settle();
+  const stream = $.turn.step({
+    turnId: "t",
+    index: 0,
+    model: "test-model",
+    messageCount: 1,
+  } as any);
+  for (let next = await stream.next(); next.done !== true; next = await stream.next()) {}
+  for (let i = 0; i < 20; i++) await run.clock.advance(50);
+  const inputs = mirrored(run).filter((e: any) => e.kind === "input");
+  // Four whole inputs fill the step's 1 MiB; the rest hold nothing.
+  expect(inputs.filter((e: any) => e.text !== "").length).toBe(4);
+  expect(inputs.length).toBe(10);
+});
