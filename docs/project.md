@@ -36,7 +36,9 @@ whenever it runs in a terminal; the room
 is the directory it is started in, with one main per directory; workers are raised only by main,
 later also from the shell; a Claude Code worker runs with rewake's own profile, which turns off
 by default what an unattended worker should not use, and reads a service folder of rewake's where
-the person adds instructions and skills and edits the settings file that holds those defaults.
+the person adds instructions and edits the settings file that holds those defaults; skills reach a
+worker only through a brief, which names them from main's own (the owner's decision, October 28,
+2026).
 
 **Who calls it.** One person starts the main session; main starts the rest. The commands are called by the agents
 themselves, from their own shell or through the tools their harness offers them. So the
