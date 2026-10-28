@@ -36,9 +36,9 @@ October 27, 2026:
 - A resume command's first word is a plain command name on PATH, not a path. No argument may
   hold an apostrophe or a control character, and the whole is at most 64 arguments and 8 KiB.
   A command that breaks these rules fails the report with `invalid_resume_argv`, and the report
-  is not applied. The source must hold the pane first, which a state report in the same call
-  does; otherwise herdr answers `resume_not_accepted`. Resume commands need herdr 0.9.2 or
-  later.
+  is not applied. The source must hold the pane first, by a state report accepted earlier;
+  otherwise herdr answers `resume_not_accepted`. A state report in the same call does not hold
+  it (checked on 0.9.5, below). Resume commands need herdr 0.9.2 or later.
 - A source starting with `herdr:` is reserved for herdr's own integrations.
 - herdr clears a pane whose agent never released it once the pane is back at an idle shell
   prompt, a second or two later; the page calls this a fallback, not a replacement for release.
@@ -61,3 +61,22 @@ herdr.
 - On `/exit`, main's wrapper ran `release-agent`, and herdr cleared the pane within a quarter of
   a second.
 - Restore after a herdr server restart was not tried: it would stop the owner's session.
+
+## A resume in the first report (October 28, 2026, herdr 0.9.5)
+
+A main started with `--resume` knew its conversation by the first tick, so its first report
+carried a resume command, and herdr refused it and every report after it. The pane was never
+held, `pane get` showed no agent and the state `unknown`, and herdr's log had `pane.report_agent`
+failing with `outcome="error"` every five seconds. The same call by hand:
+
+```
+herdr pane report-agent <pane> --source rewake --agent claude --state idle --seq <µs> \
+  --agent-session-id <id> -- rewake claude --resume <id>
+{"error":{"code":"resume_not_accepted","message":"resume_argv requires the reporter to hold the pane; report its state with pane.report_agent first"}}
+```
+
+So a report with a resume does not hold the pane itself: the state report must have been accepted
+before. `internal/host/herdr` therefore reports state alone until one report of the run is accepted,
+and adds the resume on the next tick; a failed report puts it back to state alone. Not verified: a
+plain report from a shell outside the pane exited 0 yet seemed not to take the pane, which would tie
+holding to the caller's process tree.

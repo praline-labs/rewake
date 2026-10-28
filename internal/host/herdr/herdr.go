@@ -30,10 +30,12 @@ const (
 
 	// A report never slows main: one in flight, cut after this.
 	reportTimeout = 2 * time.Second
-	// A failed report is tried again after this, not at every tick.
-	retryAfter = 5 * time.Second
-	poll       = 250 * time.Millisecond
+	poll          = 250 * time.Millisecond
 )
+
+// retryAfter is how long a failed report waits before it is tried again, not
+// at every tick; a variable for the tests.
+var retryAfter = 5 * time.Second
 
 // Pane is the herdr pane a run reports to, from the variables herdr gives
 // every process in it.
@@ -153,19 +155,28 @@ func Start(parent context.Context, config Config) (stop func()) {
 		}
 		var last *report
 		var retry time.Time
+		// held is whether a report of this run has been accepted: only then
+		// does herdr take a resume command, which it refuses with
+		// resume_not_accepted from a reporter not yet holding the pane
+		// (herdr 0.9.5, docs/research-herdr.md).
+		held := false
 		ticker := time.NewTicker(poll)
 		defer ticker.Stop()
 		for {
 			current := config.report(word)
+			if !held {
+				current.resume = nil
+			}
 			if (last == nil || !last.equal(current)) && !time.Now().Before(retry) {
 				reported = true
 				attempt, cancelAttempt := context.WithTimeout(ctx, reportTimeout)
 				err := config.Run(attempt, config.Pane.Bin, config.args(current, seq.next())...)
 				cancelAttempt()
 				if err == nil {
-					last = &current
+					last, held = &current, true
 				} else {
-					last, retry = nil, time.Now().Add(retryAfter)
+					// A failure may mean the hold is gone: state alone first.
+					last, held, retry = nil, false, time.Now().Add(retryAfter)
 				}
 			}
 			select {

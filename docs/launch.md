@@ -308,6 +308,9 @@ pane.
   - A command that breaks herdr's rules (a plain command first, no apostrophe or control
     character, at most 64 arguments and 8 KiB) is left out, not sent: herdr would refuse the
     whole report.
+  - It is not carried until a report of the run has been accepted: herdr refuses a resume from a
+    reporter not yet holding the pane (`resume_not_accepted`, herdr 0.9.5). The first report is state
+    alone, the resume follows on the next tick, and a failed report goes back to state alone.
   - Main's own launch options are not carried.
 - **Release.** When main's run ends, its wrapper releases the pane. herdr's facts, with the version
   they were checked on, are in [research-herdr.md](research-herdr.md).

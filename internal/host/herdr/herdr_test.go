@@ -2,6 +2,7 @@ package herdr
 
 import (
 	"context"
+	"errors"
 	"slices"
 	"strconv"
 	"strings"
@@ -138,18 +139,19 @@ func TestARunReportsEachChangeOnceAndReleasesItsPane(t *testing.T) {
 	idle.Thread = "c1"
 	r.set(idle)
 	stop := start(r, "this-build")
-	r.waitFor(t, 1)
+	r.waitFor(t, 2)
 	time.Sleep(3 * poll)
-	if r.count() != 1 {
+	if r.count() != 2 {
 		t.Fatalf("an unchanged state was reported again: %q", r.calls)
 	}
 	working := snapshot("working")
 	working.Thread = "c1"
 	r.set(working)
-	r.waitFor(t, 2)
+	r.waitFor(t, 3)
 	stop()
 
 	want := [][]string{
+		{"pane", "report-agent", "w1:p1", "--source", "rewake", "--agent", "agent", "--state", "idle", "--seq", "", "--agent-session-id", "c1"},
 		{"pane", "report-agent", "w1:p1", "--source", "rewake", "--agent", "agent", "--state", "idle", "--seq", "", "--agent-session-id", "c1", "--", "rewake", "agent", "--resume", "c1"},
 		{"pane", "report-agent", "w1:p1", "--source", "rewake", "--agent", "agent", "--state", "working", "--seq", "", "--agent-session-id", "c1", "--", "rewake", "agent", "--resume", "c1"},
 		{"pane", "release-agent", "w1:p1", "--source", "rewake", "--agent", "agent", "--seq", ""},
@@ -183,5 +185,88 @@ func TestNoResumeCommandWhenPathFindsAnotherBuild(t *testing.T) {
 	stop()
 	if slices.Contains(r.calls[0], "--") {
 		t.Errorf("a resume command for another build: %q", r.calls[0])
+	}
+}
+
+// herdr 0.9.5 takes a resume command only from a reporter holding the pane, which
+// an accepted state report gives; a resume before that is refused with
+// resume_not_accepted.
+type herdrFake struct {
+	recorder
+	held     bool
+	failures int
+}
+
+func (f *herdrFake) run(ctx context.Context, bin string, args ...string) error {
+	_ = f.recorder.run(ctx, bin, args...)
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.failures > 0 {
+		f.failures--
+		return errors.New("unreachable")
+	}
+	if slices.Contains(args, "--") && !f.held {
+		return errors.New("resume_not_accepted")
+	}
+	f.held = true
+	return nil
+}
+
+func (f *herdrFake) startFake() func() {
+	return Start(context.Background(), Config{
+		Pane: Pane{ID: "w1:p1", Bin: "herdr"}, Agent: "agent", State: f.snapshot, Build: "this-build", Run: f.run,
+		Resume: func(c string) []string { return []string{"agent", "--resume", c} },
+		Probe:  func(context.Context) string { return "this-build" },
+	})
+}
+
+func (f *herdrFake) waitHeldWithResume(t *testing.T) {
+	t.Helper()
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		f.mu.Lock()
+		ok := f.held && len(f.calls) > 0 && slices.Contains(f.calls[len(f.calls)-1], "--")
+		f.mu.Unlock()
+		if ok {
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("never held with its resume reported: %q", f.calls)
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+}
+
+// A run whose first snapshot already has a thread (a --resume launch) reports
+// its state alone first, and the resume follows once the pane is held.
+func TestAThreadKnownAtTheFirstTickHoldsThePaneBeforeItsResume(t *testing.T) {
+	f := &herdrFake{}
+	idle := snapshot("idle")
+	idle.Thread = "c1"
+	f.set(idle)
+	defer f.startFake()()
+	f.waitHeldWithResume(t)
+	if slices.Contains(f.calls[0], "--") {
+		t.Errorf("the first report carried a resume: %q", f.calls[0])
+	}
+}
+
+// A first plain report that fails, then a thread: the retry is state alone too.
+func TestAFailedFirstReportIsRetriedWithoutAResume(t *testing.T) {
+	was := retryAfter
+	retryAfter = 50 * time.Millisecond
+	defer func() { retryAfter = was }()
+	f := &herdrFake{failures: 1}
+	f.set(snapshot("idle"))
+	defer f.startFake()()
+	f.waitFor(t, 1)
+	idle := snapshot("idle")
+	idle.Thread = "c1"
+	f.set(idle)
+	f.waitHeldWithResume(t)
+	for _, call := range f.calls[:2] {
+		if slices.Contains(call, "--") {
+			t.Errorf("a report carried a resume before the pane was held: %q", call)
+		}
 	}
 }
