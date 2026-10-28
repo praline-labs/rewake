@@ -713,3 +713,76 @@ before, and the strip read `Haiku 5.5 medium thinking`.
 
 - Read against the `mods` skill's changelog "2.1.302 → 2.1.310": an `ask` a plugin's `tool.check` makes is marked `plugin` in the verdict (2.1.304; `decider` is gone), so the EnterWorktree check keeps a verdict with `plugin` as the person's policy (`hooks/enter.ts`). After Esc or Stop the engine refuses a mod's own new work — `$.prompt.submit`, `$.command.run`, `$.agent.spawn`, `$.session.send`, a background `$.tool.call` — until the person's next input; the mod calls none of them.
 - Live on 2.1.310: the mod's tests pass; a worker's `worktree_enter` created and entered its checkout with no dialog; a worker's `AskUserQuestion` reached main as a request and `rewake answer` was taken. A worker stopped with Esc — main got `stopped` — was woken by a task through the inbound socket about ten seconds later and answered it: the rule above does not hold the socket's line.
+
+## A mirror of a live session for an interface of rewake's own (October 28, 2026, 2.1.310)
+
+Whether a mod can feed a view of rewake's own while Claude Code keeps running as the terminal
+program ([research-launch.md](research-launch.md#whether-claude-code-has-a-client-server-split-to-sit-between)).
+The `mods` skill was taken from 2.1.310, the installed version. One interactive `claude
+--plugin-dir` ran in a terminal tab of the write session's own, in `/tmp/ui-probe-34`, with the
+workers' service folder as `CLAUDE_CONFIG_DIR` and an environment cleared to HOME, PATH, TERM and
+the machine's proxy variables — without them every request was refused with 403 `Request not
+allowed` and "Please run /login". The cheapest model, low effort, auto mode, two prompts. The
+probe mod posted every event it saw through `$.http.fetch` to a small server on a Unix socket,
+stamped with the module's own `performance.now()`; its source, the server, the launch script, a
+log viewer and the evidence are kept in the ignored `.scratch/ui-probe/` (`mod/hooks/register.ts`,
+`server.ts`, `launch.sh`, `show.py`, `log.jsonl`, `debug.log`, `screens/`). Times are from the
+prompt's `prompt.submit`. **[live]**
+
+- **Streaming.** `ui.render` on `AssistantMessage` fires when a text block is settled, never per
+  delta. A reply of 2024 characters streamed as 195 `turn.step` text chunks from 2.34 to 6.17 s
+  (a median of 9 characters 20 ms apart, the longest gap 75 ms), and no `AssistantMessage` render
+  came in that span. It rendered at 6.23 s, as the next block (a tool call) began, with the 1681
+  characters of whole lines shown so far, and at 6.62 s with all 2024, after the last flush; a
+  four-character reply rendered once with `""` at its start and once whole. Every later render
+  was a redraw with the same text (a scroll, ctrl+o, a reload). `classic.MessageDisplay` lies
+  between the two: five flushes of whole lines 0.7 to 0.9 s apart (491, 393, 433 and 364
+  characters, then a final 343). The props are the block's `text`, markdown, with
+  `isFirstOfReply`, `isSummary` and `onScreen`; thinking is not among them, and reached the mod
+  only as `turn.step` `thinking` chunks, five, all of empty text. `Spinner` rendered on each
+  change of `mode` (`responding`, `thinking`, `tool-input`, `tool-use`) with `word`, `message`
+  and `suffix`, not on its elapsed time or tokens: two renders in the ten minutes of the longest
+  hold. `ToolProgress` never fired: no call offered the run-in-background pill. A live view takes
+  the text from `turn.step` chunks, or `MessageDisplay` for line batches, and the settled block
+  from `AssistantMessage`.
+- **A long permission wait.** A `tool.check` hook on Bash read the engine's verdict with
+  `await next(e)` — `ask`, "Claude requested permissions to use Bash, but you haven't granted it
+  yet.", `approver: "person"` — and held the call on successive 25-second long polls of
+  `$.http.fetch` to the local server: 60.0 s (3 polls) then allow, 180.0 s (8 polls) then deny,
+  600.0 s (24 polls) then allow. No skip, no fetch cut, `next.signal` never aborted. An allowed
+  call ran 0.4 to 0.5 s after the answer; the denied one did not run, the debug log read `ask ->
+  deny by plugin ui-probe`, and the model read "Permission to use Bash denied by plugin ui-probe:
+  <reason>" and went on. The same hold made of `$.clock.sleep(5000)` was cut at its budget: at
+  10.0 s the hook's `.catch` was called with `{kind: "timeout"}` and its deny refused the call,
+  while the hook's loop ran on and was logged as overrunning 5 s later. A `$.clock` wait counts
+  against the 10-second budget; a `$` call such as a fetch does not. Meanwhile the terminal
+  showed the call's row (`● Echo probe-hold-10`, `⎿ $ echo probe-hold-10`) under the spinner
+  (`Perambulating… (9m 54s · ↓ 1.5k tokens)`, `esc to interrupt`), no permission dialog — the
+  hook answers before the engine would draw one — and a free prompt box.
+- **What else a mirror would need.** `UserMessage` carries the prompt's whole `text`, its
+  `origin` (`{kind: "composer"}`) and `isExpanded`; a slash command's echo came first under the
+  `requestId` `placeholder`. In the folded transcript a run of calls, the shell commands with
+  them, is one `ToolGroup` whose `calls` give each call's `tool_use_id`, `tool`, `input` (`{}`
+  while its arguments stream), `isRunning`, `isErrored` and `isInterrupted`, without output.
+  `ToolUse` and `ToolResult` render per call only where the view unfolds them: in the ctrl+o
+  transcript every call did, with its whole `input` and `output` (`{stdout, stderr, interrupted,
+  …}` for Bash, the file for Read, the error text for a refused call). The model's
+  `AskUserQuestion` rendered as a `ToolUse` (`input: {}`, then 0.26 s later the questions) and as
+  the `AskUserQuestion` site with `questions` whole — question, header, options with their
+  descriptions, `multiSelect`; its `ToolResult` carried `answers` keyed by question.
+  `CommandOutput` and `TurnDuration` (`word`, `durationMs`) render too. `$.session.messages()`
+  gave plain `{role, text, toolUses}` rows.
+- **A prompt from the mod.** `$.prompt.submit` inside a `command.run` hook is refused: "called
+  from a command.run hook, it would wait on the turn this hook is holding; submit from a later
+  event". From a `$.clock.after` timer it started a turn 51 ms later, drawn as "Prompt from the
+  ui-probe plugin" above the text even with `asUser`, and the model answered it as a typed
+  prompt. The submitting plugin's own hooks do not see what the submit raises: its
+  `prompt.submit` hook and four `ui.render` calls in that dispatch were skipped as re-entry (the
+  debug log), so the prompt's `UserMessage` never reached it; the reply's `AssistantMessage` did.
+- **Not tested.** `ToolProgress`, a subagent, a person answering or pressing Esc during a hold,
+  a hold past ten minutes, other surfaces, a run under load.
+
+So a view of rewake's own can take the reply as it streams only from `turn.step`, not from the
+render sites; it can hold a permission request at `tool.check` for at least ten minutes and
+answer it from outside, with no dialog in the terminal meanwhile; and it can rebuild the
+transcript's rows from the render props, the calls' output from the unfolded rows or the events.
