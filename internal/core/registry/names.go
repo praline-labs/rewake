@@ -55,3 +55,9 @@ func SocketFor(dir, name, epoch string) string { return state.SocketPath(dir, na
 
 // ControlFor is where a run takes control requests.
 func ControlFor(dir, name, epoch string) string { return state.ControlPath(dir, name, epoch) }
+
+// MirrorFor is where a run serves its conversation to rewake's own face
+// (docs/face.md): the run's own path, as its inbox socket's is.
+func MirrorFor(dir, name, epoch string) string {
+	return state.SocketPath(dir, name, epoch+".mirror")
+}

@@ -59,6 +59,8 @@ type Request struct {
 	// WorktreeEntry says that template lets the worker enter a checkout
 	// (adapter.LaunchRequest.WorktreeEntry).
 	WorktreeEntry bool
+	// Mirror asks for rewake's own face (adapter.LaunchRequest.Mirror).
+	Mirror bool
 	// WorkType is the kind of work the worker was raised for
 	// (adapter.LaunchRequest.WorkType).
 	WorkType worktype.Type
@@ -183,6 +185,12 @@ func Run(ctx context.Context, request Request) (int, error) {
 		}
 	}
 
+	model, stopMirror, err := startMirror(request, name, epoch)
+	if err != nil {
+		return 0, err
+	}
+	defer stopMirror()
+
 	live := newLiveSet(request.Dir, name, epoch)
 	live.workers = &life.workers
 	defer live.stop()
@@ -210,6 +218,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 
 		WorktreeEntry: request.WorktreeEntry,
 		WorkType:      request.WorkType,
+		Mirror:        model,
 	}
 	launchRequest.Env = launch.SessionEnv(launchRequest, request.Harness.EnvNotInherited())
 	if request.Shell {
@@ -376,16 +385,4 @@ func Run(ctx context.Context, request Request) (int, error) {
 	<-served
 
 	return code, nil
-}
-
-// current re-reads the session record so delivery sees the latest one. The
-// harness may have moved on — a new conversation, a recreated socket — and the
-// record is where that shows up. A record that is no longer ours is ignored:
-// once the name has changed hands it describes a different session.
-func current(dir, name string, fallback registry.Session) registry.Session {
-	session, err := registry.Load(dir, name)
-	if err != nil || session.Epoch() != fallback.Epoch() {
-		return fallback
-	}
-	return session
 }

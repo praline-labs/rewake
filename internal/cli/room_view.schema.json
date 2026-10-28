@@ -70,7 +70,8 @@
         "used": {"type": "integer", "description": "is the tokens the context holds."},
         "window": {"type": "integer", "description": "is the limit the conversation is kept to, in tokens."},
         "percent": {"type": "integer", "description": "is how full the context is, in percent of the window."},
-        "cache": {"$ref": "#/$defs/CacheRow", "description": "is the prompt cache, where the harness says; absent when unknown."}
+        "cache": {"$ref": "#/$defs/CacheRow", "description": "is the prompt cache, where the harness says; absent when unknown."},
+        "mirror": {"type": "string", "description": "is where the session's wrapper serves its conversation to rewake's own face (docs/face.md), while it does; absent otherwise and unless asMain. The shell builds no path itself."}
       },
       "required": ["name", "cwd"],
       "additionalProperties": false

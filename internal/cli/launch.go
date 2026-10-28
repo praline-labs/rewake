@@ -105,6 +105,7 @@ func handleLaunch(h adapter.Harness) func(*Context, Call) error {
 			Lease:      lease,
 
 			WorktreeEntry: id.enter,
+			Mirror:        id.dev,
 			WorkType:      id.work,
 		})
 		if checkout != nil {

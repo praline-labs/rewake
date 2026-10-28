@@ -33,6 +33,7 @@ func spaceGroup() Group {
 				{Flag: "--no-worktree", Summary: "open: start the worker without a worktree although its template has worktree = true."},
 				{Flag: "--type", Value: "<type>", Summary: "open: the kind of work the worker is raised for, a type of rewake workers, whose text follows its role's briefing. Wins over the template's type."},
 				{Flag: "--no-type", Summary: "open: raise the worker with no type although its template names one."},
+				{Flag: "--dev", Summary: "open: draw the worker with rewake's own face as well as its harness's, switched in the shell with the prefix then v (docs/face.md); refused on a harness without it."},
 				jsonOption,
 			},
 			Examples: []string{
@@ -42,6 +43,7 @@ func spaceGroup() Group {
 				"rewake space open study --alias claude-general --type analysis",
 				"rewake space open api --alias claude-write --worktree=fix-login -- --permission-mode acceptEdits",
 				"rewake space open docs --alias claude-general --json",
+				"rewake space open face --alias claude-write --dev",
 				"rewake space close api", "rewake space close api --json",
 			},
 			Next: []string{"rewake send <name>-<harness> \"text\""},
