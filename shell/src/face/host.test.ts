@@ -73,7 +73,9 @@ test("a face draws the wrapper's snapshot, and a reload that fails to import kee
   const { host, until } = hosted(url, mirror(dir, "say hi"));
   host.start();
   const drawn = await until((s) => s.link === "live" && s.lines.length > 0);
-  expect(drawn.lines.map((l) => l.text)).toEqual(["› say hi"]);
+  // Every row is filled to the pane, so the layer is opaque.
+  expect(drawn.lines.length).toBe(24);
+  expect(drawn.lines.map((l) => l.text.trimEnd()).filter(Boolean)).toEqual(["› say hi"]);
 
   faceFile(dir, `import "./missing.ts";\n`);
   host.start();

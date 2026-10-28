@@ -103,3 +103,17 @@ export function render(model: FaceModel, width: number, height: number, back = 0
   const end = Math.max(rows.length - back, Math.min(rows.length, height));
   return rows.slice(Math.max(end - height, 0), end);
 }
+
+// fill makes the drawing opaque: height rows, each as wide as the pane, the
+// tail at the bottom. A terminal whose background the shell does not know
+// gives the layer no colour to paint, and the native face under it would show
+// through every cell the face leaves empty.
+export function fill(lines: FaceLine[], width: number, height: number): FaceLine[] {
+  const blank = { text: " ".repeat(width), tone: "text" as const };
+  const pad = (line: FaceLine) => {
+    const room = width - Bun.stringWidth(line.text);
+    return room > 0 ? { ...line, text: line.text + " ".repeat(room) } : line;
+  };
+  const top = Array.from({ length: Math.max(height - lines.length, 0) }, () => blank);
+  return [...top, ...lines.map(pad)];
+}

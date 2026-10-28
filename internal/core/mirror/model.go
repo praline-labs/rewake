@@ -200,9 +200,11 @@ func (m *Model) turnTo(e Event) {
 			m.gap(m.byID[id])
 		}
 	}
+	// A turn that stopped working leaves nothing in flight: a call the engine
+	// refused before any hook saw it never gets its result.
 	if e.State != TurnStateWorking {
 		for _, at := range m.order {
-			if at.item.Status == ItemStatusStreaming && (at.item.Turn == nil || *at.item.Turn == e.Turn) {
+			if inFlight(at.item.Status) && (at.item.Turn == nil || *at.item.Turn == e.Turn) {
 				m.gap(at)
 			}
 		}
@@ -211,9 +213,11 @@ func (m *Model) turnTo(e Event) {
 	m.send(Line{Op: LineOpTurn, Turn: &m.turn})
 }
 
+func inFlight(s ItemStatus) bool { return s == ItemStatusStreaming || s == ItemStatusRunning }
+
 // gap marks an item still in flight as partly lost.
 func (m *Model) gap(at *entry) {
-	if at == nil || (at.item.Status != ItemStatusStreaming && at.item.Status != ItemStatusRunning) {
+	if at == nil || !inFlight(at.item.Status) {
 		return
 	}
 	at.item.Status = ItemStatusGap

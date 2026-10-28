@@ -340,9 +340,11 @@ async function draw(id: string): Promise<Frame> {
     fg: colors?.defaultForeground ?? undefined,
     bg: colors?.defaultBackground ?? undefined,
     palette: colors?.palette,
-    cursor: cursor.visible
-      ? { x: target.shadow.screenX + cursor.x, y: target.shadow.screenY + cursor.y }
-      : undefined,
+    // Under rewake's face the native cursor is covered; the face draws none.
+    cursor:
+      cursor.visible && !faceShown(id)
+        ? { x: target.shadow.screenX + cursor.x, y: target.shadow.screenY + cursor.y }
+        : undefined,
   });
 }
 

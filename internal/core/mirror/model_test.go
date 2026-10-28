@@ -102,6 +102,18 @@ func TestAResyncMarksWhatWasInFlight(t *testing.T) {
 	}
 }
 
+// A call whose result never comes is a gap once its turn ends.
+func TestACallWithoutItsResultIsAGapAtItsTurnsEnd(t *testing.T) {
+	m := New()
+	m.Apply(
+		Event{Kind: EventTool, ID: "call", Turn: "t", Name: "Glob"},
+		Event{Kind: EventTurn, Turn: "t", State: TurnStateIdle},
+	)
+	if got := itemOf(t, m, "call").Status; got != ItemStatusGap {
+		t.Fatalf("the call: %s", got)
+	}
+}
+
 // A tool call carries its input and its end.
 func TestAToolCallCarriesItsInputAndEnd(t *testing.T) {
 	m := New()

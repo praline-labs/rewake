@@ -27,7 +27,9 @@ flicker or switch, and main's window is main's even while the shell shows a work
 widgets follow the live layout (an effect on the workers, the size, the chosen worker and the
 zoom), so each has the size its program draws for; they have no `onData` and no resize hook, so
 nothing of them reaches a program, and nothing of the window is focused, titled or copied. Their
-cost is a second parse of every byte a program writes. Not drawn: the briefs (a request for a
+cost is a second parse of every byte a program writes. A dev worker's pane under rewake's face is
+drawn with the face over it, from the same lines the person sees, and without the native cursor
+([face.md](face.md#the-face)). Not drawn: the briefs (a request for a
 session never shows them), selections, a pending prefix.
 
 The hints say the shadow window's own focus, the named session's keys, not the person's.

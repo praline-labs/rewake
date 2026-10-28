@@ -7,7 +7,7 @@ import type { FromFace, Link, ToFace } from "./messages.ts";
 import type { Line } from "./mirror.gen.ts";
 import { bounds } from "./mirror.gen.ts";
 import { FaceModel } from "./model.ts";
-import { render } from "./render.ts";
+import { fill, render } from "./render.ts";
 
 declare const self: Worker;
 
@@ -29,7 +29,7 @@ let drawTimer: ReturnType<typeof setTimeout> | undefined;
 function draw() {
   drawTimer = undefined;
   try {
-    const lines = render(model, width, height, back);
+    const lines = fill(render(model, width, height, back), width, height);
     post({
       kind: "lines",
       lines,

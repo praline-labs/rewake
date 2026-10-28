@@ -101,3 +101,15 @@ is contained in the shell's thread, and the person can always switch to native w
 
 A stopped face starts again at the next change of its sources, or when the person switches to it.
 Tests: `shell/src/face/host.test.ts`.
+
+## Checked
+
+Live, October 28, 2026 (Claude Code 2.1.310, the shell from its sources under a pty of 200 by 50,
+a scratch state directory and project, a dev worker on the cheapest model): a prompt typed in the
+face ran as the worker's turn, with its Bash call, the call's output and the reply drawn; the
+switch both ways left the worker's pty at 97 by 48; a change to `render.ts` while the shell ran
+was drawn by the next face with nothing restarted, main's process, the shell's and the pty
+unchanged; `rewake screen` took the face. Two findings fixed then: a layer over a terminal whose
+background the shell does not know let the native face show through every blank cell, so every
+row is filled and painted with the default background; and a call the engine refused before any
+hook (a tool not offered) stayed `running` until its turn's end now makes it a gap.

@@ -45,6 +45,10 @@ export function FaceView(props: {
     if (props.live) sizeFace(props.id, props.width, body());
   });
   const faint = props.theme.faint;
+  // A layer over the native face: every cell painted, the terminal's own
+  // background where the shell does not know its colour, or a space would
+  // let the native face show through.
+  const bg = props.theme.background ?? RGBA.defaultBackground();
   let input: InputRenderable | undefined;
   return (
     <box
@@ -55,9 +59,9 @@ export function FaceView(props: {
       height={props.height}
       zIndex={50}
       flexDirection="column"
-      backgroundColor={props.theme.background}
+      backgroundColor={bg}
     >
-      <text height={1} wrapMode="none" fg={faint}>
+      <text height={1} wrapMode="none" fg={faint} bg={bg}>
         {headerOf(face()?.link ?? "connecting", face()?.turn ?? "unknown")}
         <Show when={face()?.error ?? face()?.said}>
           <span style={{ fg: RGBA.fromIndex(1) }}>{` · ${face()?.error ?? face()?.said}`}</span>
@@ -70,6 +74,7 @@ export function FaceView(props: {
               height={1}
               wrapMode="none"
               fg={toneOf(line.tone, props.theme)}
+              bg={bg}
               content={line.text}
             />
           )}
@@ -82,6 +87,7 @@ export function FaceView(props: {
             height={1}
             wrapMode="none"
             fg={props.theme.text}
+            bg={bg}
             content={`❯ ${draftOf(props.id)}`}
           />
         }
