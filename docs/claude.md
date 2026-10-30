@@ -42,7 +42,7 @@ The mod's files are embedded from `internal/adapter/claude/mod/`, each named in 
 of `mod.go`, since a pattern skips the manifest's dot directory: the manifest `rewake`
 (`.claude-plugin/plugin.json`), `hooks/hooks.json`, the one module `hooks/rewake.ts` and the
 files it imports — `outbox.ts`, `heartbeat.ts`, `management.ts`, `asks.ts`, `calls.ts`,
-`dialogs.ts`, `closing.ts`, `worktree.ts`, `briefs.ts`, `enter.ts`, `mirror.ts`, `sizes.ts` — and
+`dialogs.ts`, `closing.ts`, `worktree.ts`, `briefs.ts`, `enter.ts`, `mirror.ts`, `permits.ts`, `sizes.ts` — and
 the generated `protocol.gen.ts`. The run's service
 writes them into `<run dir>/mod` before the harness starts, and the launch passes
 `--plugin-dir <run dir>/mod` to that launch only. Nothing in the person's settings changes (L1);
@@ -335,6 +335,22 @@ its open blocks and its tools' inputs together, is at most 1 MiB, each input 256
 bytes. The outbox is held to 256 KiB by dropping deltas first, then settles whole as `lost{id}`
 markers, then collapsing the markers into one `resync` that counts what went. The wrapper's model
 marks what was lost as a gap, never as settled. Subagents are not mirrored.
+
+Each result of a run the face draws carries its **permit** (`permits.ts`, made only once the
+hello's answer says `mirror`): `tool.check`'s hook reads the verdict of `next(e)` and returns it
+unchanged; every record of a permit, in each hook, goes through `noting`, which loses a record that
+fails, so a fault of the face's bookkeeping never changes, drops or holds up a verdict — seen
+otherwise in review, when a failing record turned main's "Allow once" into the hook's refusal and
+let a call main refused at the engine's dialog through (October 30, 2026; the kit runs the mod as a
+module of its own with its built-ins frozen, so the paths were checked red and green with a throw
+put into `permits.ts` by hand); an allow or a deny names a hook, a rule or the mode, an ask is settled by rewake's
+permission request (`asks.ts`), the person at the dialog (`PermissionRequest` with no answer of
+rewake's), or in auto mode by the classifier — `PermissionDenied`, a refusal's text, else any ask
+answered without a dialog but an edit inside the session's directory (the `cwd` of the classic
+events), which auto mode allows on its own. A refusal's reason carries the classifier's reason and
+the link of the screen's line, cut within the 256 bytes of the model's short field. The permission mode is the `permission_mode` of `SessionStart`, `UserPromptSubmit` and
+`PostToolUse`, sent as a `mode` event when it changes and once the hello is admitted; Claude Code
+2.1.310 sends none with `SessionStart`, so the first prompt's event says it.
 
 The face's prompt is one more control action, `prompt` with its `text`, carried by the `mod/alive`
 poll; the mod runs it as `$.prompt.submit({text, asUser: true})` outside the poll's chain and answers

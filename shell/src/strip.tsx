@@ -1,6 +1,6 @@
 // The strip, the row under a pane, main's and each worker's (docs/shell.md,
 // "The strip"): who the session is, what it does, where it works, its model
-// and how full its context is, from rewake's own records, the same for every
+// and how much of its context it used, from rewake's own records, the same for every
 // harness.
 import { RGBA } from "@opentui/core";
 import { createSignal, For, onCleanup } from "solid-js";
@@ -76,15 +76,18 @@ export function markOf(s: Session | undefined): Mark {
   return s?.verdict?.mark ?? "off";
 }
 
+// windowOf is the context as the strip and the face's rule show it, used of
+// the window: 145k/1M, –/1M before the harness counted it.
+export function windowOf(s: Session | undefined): string | undefined {
+  if (!s?.window) return undefined;
+  return `${s.used === undefined ? "–" : tokens(s.used)}/${tokens(s.window)}`;
+}
+
+// contextOf is the context's part, in the colour of how full it is.
 function contextOf(s: Session): Part | undefined {
-  if (!s.window) return undefined;
-  if (s.used === undefined || s.percent === undefined)
-    return { text: `–/${tokens(s.window)}`, kind: "context" };
-  return {
-    text: `${s.percent}% ${tokens(s.used)}/${tokens(s.window)}`,
-    kind: "context",
-    fill: s.percent,
-  };
+  const text = windowOf(s);
+  if (!text) return undefined;
+  return { text, kind: "context", fill: s.used === undefined ? undefined : s.percent };
 }
 
 // cacheOf is the cache as `rewake list` shows it: the hit percent and, where
@@ -130,7 +133,8 @@ export function stripParts(state: StripState, width: number, now = Date.now()): 
           optional: 1,
         }
       : undefined,
-    s ? contextOf(s) : undefined,
+    // Under rewake's face the context is on the face's input rule too.
+    s && state.face !== "rewake" ? contextOf(s) : undefined,
     cache ? { ...cache, optional: 2 } : undefined,
   ];
   let parts = all.filter((p) => p !== undefined);

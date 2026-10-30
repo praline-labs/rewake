@@ -96,7 +96,7 @@ func (m *Model) snapshotLocked() []Line {
 	}
 	lines := []Line{
 		{Op: LineOpHello, V: ptr(Version), Inputs: inputs},
-		{Op: LineOpBegin, Items: ptr(len(m.order)), Dropped: ptr(m.dropped), Turn: ptr(m.turn)},
+		{Op: LineOpBegin, Items: ptr(len(m.order)), Dropped: ptr(m.dropped), Turn: ptr(m.turn), Mode: m.mode},
 	}
 	for _, at := range m.order {
 		item := at.whole()

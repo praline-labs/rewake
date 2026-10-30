@@ -267,3 +267,54 @@ for (const char of ["x", "界"]) {
     expect(inputs.length).toBe(10);
   });
 }
+
+// A call's result carries how it was let run or refused, and the mode the
+// harness reports reaches the face once, when the hello's answer is in.
+test("a result carries its permit, and the mode goes to the face once as it changes", async ($, on) => {
+  const run = world(on, {
+    replies: { "/v1/hello": [drawn], "/v1/mirror/events": [{ status: 200, text: "{}" }] },
+  });
+  on("tool.check", (_: any, e: any) =>
+    e.tool === "Read"
+      ? { decision: "allow" }
+      : e.tool === "Glob"
+        ? { decision: "deny", rule: "Glob" }
+        : { decision: "ask" },
+  );
+  on("session.cwd", () => ({ value: "/work" }));
+  on("classic.SessionStart", () => ({}));
+  on("classic.PostToolUse", () => ({}));
+  // The test's dialog stands for the person, allowing.
+  on("classic.PermissionRequest", () => ({ decision: { behavior: "allow" } }));
+  on("tool.call", () => ({ result: "ok", text: "ok" }));
+  await $.classic.SessionStart({ source: "startup", permission_mode: "auto" } as any);
+  await start($);
+  await run.clock.settle();
+  await $.tool.call({ tool: "Read", file_path: "/work/a", tool_use_id: "r" } as any);
+  await $.tool.call({ tool: "Glob", pattern: "*", tool_use_id: "g" } as any);
+  await $.tool.call({ tool: "Bash", command: "make", tool_use_id: "b" } as any);
+  await $.classic.PostToolUse({
+    tool_name: "Bash",
+    tool_use_id: "b",
+    permission_mode: "auto",
+  } as any);
+  await $.classic.PostToolUse({
+    tool_name: "Bash",
+    tool_use_id: "z",
+    permission_mode: "plan",
+  } as any);
+  await run.clock.advance(100);
+  const events = mirrored(run);
+  expect(events.filter((e: any) => e.kind === "mode")).toEqual([
+    { kind: "mode", mode: "auto" },
+    { kind: "mode", mode: "plan" },
+  ]);
+  const permits = Object.fromEntries(
+    events.filter((e: any) => e.kind === "result").map((e: any) => [e.id, e.permit]),
+  );
+  expect(permits).toEqual({
+    r: { by: "mode", allowed: true },
+    g: { by: "rule", allowed: false },
+    b: { by: "person", allowed: true },
+  });
+});

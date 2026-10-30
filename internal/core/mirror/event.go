@@ -27,6 +27,11 @@ type Event struct {
 	Part, Of int
 	// Lost counts the events a resync stands for.
 	Lost int
+	// Permit is how a result's call was let run or refused, where the
+	// adapter could tell.
+	Permit *Permit
+	// Mode is the session's permission mode, on a mode event.
+	Mode PermissionMode
 }
 
 // EventKind is what an event says.
@@ -46,6 +51,7 @@ const (
 	EventLost   EventKind = "lost"
 	EventResync EventKind = "resync"
 	EventNotice EventKind = "notice"
+	EventMode   EventKind = "mode"
 )
 
 // shortField bounds an id, a turn, a name or an origin: they are words, and

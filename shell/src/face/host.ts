@@ -4,12 +4,14 @@
 // sources; nothing here touches a pane's pty or the shell's process, so a face
 // that fails to load, throws or hangs costs its own drawing alone.
 import type { FaceLine, FromFace, Link, ToFace } from "./messages.ts";
+import type { PermissionMode } from "./mirror.gen.ts";
 
 export type FaceState = {
   lines: FaceLine[];
   turn: string;
   link: Link | "stopped";
   prompts: boolean;
+  mode?: PermissionMode;
   // error is the face's last failure, shown in its header until it draws again.
   error?: string;
   // said is the answer to the last prompt.
@@ -102,6 +104,7 @@ export class FaceHost {
           turn: message.turn,
           link: message.link,
           prompts: message.prompts,
+          mode: message.mode,
           error: undefined,
         });
       case "error":

@@ -128,6 +128,33 @@ func TestAToolCallCarriesItsInputAndEnd(t *testing.T) {
 	}
 }
 
+// A call's permit comes with its result, and the session's mode is sent as
+// it changes and given to a face that connects later on its begin line.
+func TestAPermitRidesItsResultAndTheModeItsBegin(t *testing.T) {
+	m := New()
+	c := m.subscribe()
+	lines(t, c)
+	reason := "out of scope"
+	m.Apply(
+		Event{Kind: EventMode, Mode: PermissionModeAuto},
+		Event{Kind: EventMode, Mode: PermissionModeAuto},
+		Event{Kind: EventTool, ID: "call", Turn: "t", Name: "Bash"},
+		Event{Kind: EventResult, ID: "call", Text: "denied", Status: ItemStatusRefused, Permit: &Permit{By: PermitByClassifier, Reason: &reason}},
+	)
+	if got := ops(lines(t, c)); got != "mode add set" {
+		t.Fatalf("the changes: %s", got)
+	}
+	if p := itemOf(t, m, "call").Permit; p == nil || p.By != PermitByClassifier || p.Allowed || p.Reason == nil || *p.Reason != reason {
+		t.Fatalf("the call's permit: %+v", p)
+	}
+	if begin := m.Snapshot()[1]; begin.Mode == nil || *begin.Mode != PermissionModeAuto {
+		t.Fatalf("the begin line: %+v", begin)
+	}
+	if begin := New().Snapshot()[1]; begin.Mode != nil {
+		t.Fatalf("a session that has not said its mode: %+v", begin)
+	}
+}
+
 // An item never passes its bound, however long its text grows, and keeps
 // its head and its latest tail.
 func TestAnItemStaysWithinItsBound(t *testing.T) {

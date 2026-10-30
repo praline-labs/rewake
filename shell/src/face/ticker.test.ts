@@ -36,7 +36,8 @@ test("a delta and the timer that change together are painted once, at the tick",
   // The delta lands and the second turns before the tick: nothing paints.
   m.apply({ op: "append", id: "b", text: " b" } as never);
   ticker.change();
-  now = 11_000;
+  // Past the quiet start, when the time shows with no tokens yet.
+  now = 17_000;
   m.apply({ op: "append", id: "b", text: " c" } as never);
   ticker.change();
   expect(paints).toEqual([]);
@@ -45,7 +46,7 @@ test("a delta and the timer that change together are painted once, at the tick",
   expect(paints).toHaveLength(1);
   const [reply, , turn] = paints[0] ?? [];
   expect(reply).toBe("● a b c");
-  expect(turn).toMatch(/^. \p{L}+… \(11s\)$/u);
+  expect(turn).toMatch(/^. \p{L}+… \(17s\)$/u);
 
   // A working turn goes on ticking with no change; an idle one stops.
   run?.();

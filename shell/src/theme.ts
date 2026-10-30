@@ -63,6 +63,10 @@ export type Look = {
   shimmer: string;
   // rule is the grey of the rules around the input and of the title on them.
   rule: string;
+  // plan and edits are the names of plan mode and of accepting edits under
+  // the input; auto mode's is warning's, bypassing permissions error's.
+  plan: string;
+  edits: string;
   // added and removed are the backgrounds of a diff's lines.
   added: string;
   removed: string;
@@ -78,6 +82,8 @@ export const looks: { dark: Look; light: Look } = {
     spinner: "#d77757",
     shimmer: "#eb9f7f",
     rule: "#888888",
+    plan: "#48968c",
+    edits: "#af87ff",
     added: "#225c2b",
     removed: "#7a2936",
   },
@@ -89,6 +95,8 @@ export const looks: { dark: Look; light: Look } = {
     spinner: "#d77757",
     shimmer: "#f59575",
     rule: "#999999",
+    plan: "#006666",
+    edits: "#8700ff",
     added: "#69db7c",
     removed: "#ffa8b4",
   },

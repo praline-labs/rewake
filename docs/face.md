@@ -25,6 +25,17 @@ types (`shell/src/face/mirror.gen.ts`), held by the generator's drift test. The 
 `done`, `error`, `refused`), a `notice` — and the turn's state (idle, working, compacting, unknown,
 ended). An item the link lost part of is a `gap`, never shown as settled.
 
+A call that ended may carry its **permit**, who let it run or refused it, where the session can
+tell: `{by, allowed, reason?}`, `by` one of `rule` (a settings rule decided), `mode` (the permission
+mode or the tool's own check, nobody asked), `classifier` (the mode's own decider: auto mode's
+classifier on Claude Code), `person` (the person at the session's own dialog), `rewake` (rewake's
+permission request, answered by main, by the person through it or by its deadline) and `hook`;
+`reason` is a refusal's text as the session's own screen writes it after the decider's name, a link
+included, within a short field: the face draws it as given and knows no harness's address. The model also holds the session's
+permission **mode** — `default`, `plan`, `edits`, `auto`, `bypass` or `unasked` (never asking,
+refusing instead), absent until the session says it. Both are the session's whatever its role: main
+drawn by the face later carries them as a worker does. (Shape of October 30, 2026, brief 44.)
+
 Every bound counts serialized bytes: an item is at most 256 KiB, a text past it keeping its head and
 its latest tail with a cut mark, a tool's input and output 64 KiB each; the model is at most 1000
 items and 4 MiB. Every byte it keeps counts, a block still streaming, a call still running and a
@@ -33,7 +44,7 @@ are dropped and counted first, then the oldest settle being put together, its bl
 last the oldest items in flight, so a stream that never settles stays within the bounds too.
 
 The adapter hands the model neutral events (`prompt`, `delta`, `settle` in parts, `tool`, `input`,
-`result`, `turn`, `lost`, `resync`). A settle replaces what streamed with the whole block once all
+`result` with its permit, `turn`, `mode`, `lost`, `resync`). A settle replaces what streamed with the whole block once all
 its parts arrived in order; a missing part, a `lost` for the id or the turn's end leaves the item a
 gap with what streamed. A `resync` marks everything in flight as a gap, leaves the turn unknown until
 the next turn event and adds a notice counting what was lost. How Claude Code's mod feeds it, with
@@ -48,9 +59,10 @@ is there, and the shell builds no path itself. Access is the space socket's: any
 user, `sock/` 0700. A harness that does not implement `adapter.MirrorHarness` is refused before
 anything is served.
 
-The stream is JSON lines, each at most 512 KiB. On connect: `hello{v, inputs}`, `begin{items}`,
-one `item` line per item and `end`, taken under the model's lock with the subscription, so no change
-falls between the snapshot and the stream. Then `add`, `append`, `set`, `turn` and `drop`. A face
+The stream is JSON lines, each at most 512 KiB. On connect: `hello{v, inputs}`,
+`begin{items, turn, mode?}`, one `item` line per item and `end`, taken under the model's lock with
+the subscription, so no change falls between the snapshot and the stream. Then `add`, `append`,
+`set`, `turn`, `mode` and `drop`. A face
 sends `{id, kind: "prompt", text}` and is answered `answer{id, ok, detail?}`; any other input is
 refused. A face whose queue passes 4096 lines or 4 MiB past its snapshot is cut off rather than
 given a gap, and reconnects for a fresh snapshot.
@@ -74,10 +86,11 @@ box: an absolute layer starts at the padding's edge, and over the padded box it 
 last column showing (seen live on 2.11.0). Its body is the conversation; under it the input between
 two rules sends a prompt to the session, refused with its reason where the session does not take it;
 the row under the rules says the face's last error, or the link while it is not live. It has no
-header: the strip says the turn's state, and the session's name with its type stands at the right
-end of the input's top rule, `──── w-claude (code) ─`, as Claude Code draws a session's name there,
-cut with `…` on a narrow pane and left out where not a letter of it fits; the strip under a pane
-drawn by the face leaves the name out, a native pane's keeps it. The mouse wheel over the face
+header: the strip says the turn's state, and the input's top rule carries the session's own
+permission mode at its left end and its name with its type, then its context, at the right,
+`── ⏵⏵ auto mode ──── w-claude (code) · 46k/272k ─`, as Claude Code draws a session's name there
+(the look, "Rules"); the strip under a pane drawn by the face leaves the name and the context out,
+a native pane's keeps them. The mouse wheel over the face
 scrolls the conversation as a native pane scrolls (below, "The scroll"), and PgUp and PgDn a page
 less a row; at the bottom the face follows new rows, scrolled up it holds the rows the person put
 there while more arrive below (`shell/src/face/scroll.ts`), and back at the bottom, or after a
@@ -124,6 +137,12 @@ decision, October 30, 2026: first the same look, customised later), as read from
   string), `Search`, `Fetch`, `Web Search`, `server - tool (MCP)` — and the argument a path (under
   the home directory as `~/…`), `pattern: "x", path: "y"`, a quoted query, a subagent's
   description, a skill's name, else the input as `key: value` pairs; a head is at most three rows.
+- **Permit**: under a call auto mode's classifier let run, after its result, a faint `⎿  Allowed by
+  auto mode classifier` (not for a subagent's Agent call; a call folded into a run shows none, as
+  natively); a call it refused shows a faint `⎿  Denied by auto mode classifier ∙ <reason>` in place of its
+  error, the permit's reason as the adapter gave it (on Claude Code the classifier's reason, then
+  `see` and the page explaining auto mode). A rule, the mode, the person, rewake and a hook draw no line: Claude Code 2.1.310
+  draws none for them (its binary holds no "Allowed by PermissionRequest hook" any more).
 - **Result**, under `  ⎿  `: an edit's `Added N lines, removed M lines` and its old lines on dark
   red and new lines on dark green, from the call's input; a write's `Wrote N lines to path` and its
   first ten lines; an error in red, `Error: ` before a text without it, the tool's error tags
@@ -134,8 +153,28 @@ decision, October 30, 2026: first the same look, customised later), as read from
   and back, and a verb rewake picks for the turn (`Mulling… (12s)`) in Claude Code's orange, the
   verb pulsing towards a lighter shade and back every two seconds, the time faint; after it, a faint
   `Brewed for 37s · done 7:01 AM` hung at two columns. A running call's dot, and an open run's,
-  shows and hides every 600 ms.
-- **Rules**: the two around the input in Claude Code's grey for them, not the text's colour. The face times the turn from the changes it
+  shows and hides every 600 ms. While the turn works the faint bracket also holds an arrow and an
+  estimate of what streamed back, then the thinking, `Mulling… (12s · ↓ 1.2k tokens · thinking)`
+  (`shell/src/face/progress.ts`, on the one clock): `↑` while a request is out with nothing back
+  yet — the turn just began, or every call of a step ended — and `↓` while a reply, a thinking block
+  or a call's input streams or a call runs; the turn's items are those that name its turn, so a prompt queued while
+  it works neither ends it nor resets the count; the estimate is the characters of the turn's replies,
+  thinking and calls' inputs over four, the shown count moving towards it every 50 ms by 3 under a
+  gap of 70, by 15% of the gap (8 at least) under 200, by 50 past, at once past 2000, written `622`,
+  `1.2k`. The thinking says `thinking` while a block streams, `still thinking` from 10 s, `thinking
+  more` from 20 s, `thinking some more` from 30 s, `deep in thought` from 45 s, and once the block
+  ends, after it showed two seconds at least, `thought for Ns` for two, never while a call runs.
+  The bracket shows once there are tokens, a thinking or 16 s; what does not fit the row beside
+  the verb goes, the tokens first, then the time, then the thinking, as natively.
+- **Rules**: the two around the input in Claude Code's grey for them, not the text's colour. The
+  top one carries the session's permission mode at its left, `⏵⏵ auto mode`, `⏸ plan mode`,
+  `⏵⏵ accept edits`, `⏵⏵ bypass permissions`, `⏵⏵ don't ask`, in native's colour for it (auto's
+  amber, plan's teal, accept edits' violet, the other two red) and nothing for the default mode or
+  one not yet said; at its right the name, ` · `, the context as `46k/272k` (the strip's figures,
+  `–/272k` before a measure), with at least one cell of rule between. A narrow pane drops the mode
+  first, then the context, then cuts the name with `…`, and leaves it out where not a letter fits.
+  Title, mode and context are the session's own, never a worker's by assumption: main drawn by the
+  face later takes the same rule. The face times the turn from the changes it
   saw, so a face connected mid-turn or reloaded says `Working…` and no time.
 
 A row breaks at spaces, a word cut only when it is wider than the row; what still passes the
@@ -145,7 +184,7 @@ colour and the default one are the person's; the rest are Claude Code's fixed th
 named in `shell/src/theme.ts` by the element each colours, its dark set or, on a terminal whose
 background is light, its light one. What the face cannot repeat, for want of a field the mirror
 does not carry: paths relative to the session's directory, an edit's line numbers and context rows,
-a call's progress, a turn's tokens, syntax colours of a
+a call's progress, syntax colours of a
 code block (a highlighter the face does not have), and ctrl+o's expansion, a key the face does not
 have.
 
@@ -268,3 +307,21 @@ the input's rule and left the strip; a change to `turn.ts` was drawn by the next
 process unchanged. Still differs: the native pane reveals a streaming reply a whole row at a time,
 where the face shows a row as it grows; a running Bash's own time and line count (`· 13s`,
 `(13s · 14 lines)`) and the turn's tokens are not in the mirror.
+
+Live, October 30, 2026 (brief 44; Claude Code 2.1.310, the shell from its sources under a pty of
+200 by 50, a private state directory and project, main and a dev worker in auto mode on the cheapest
+model, the same prompt to main's native pane and to the worker's face: a Read, a Write outside the
+project, an `ls`, a reply): both drew `Read 1 file`, the Write with `⎿  Allowed by auto mode
+classifier` under its result, `Listed 1 directory` and the reply; the working line went
+`(4s · ↓ 18 tokens)`, `(5s · ↑ 36 tokens)` after the calls ended, and `(5s · ↓ 363 tokens)` through a
+reply; the top rule read `── ⏵⏵ auto mode ─…─ w-claude · 19k/272k ─` and the strips lost their
+percent. Found then and fixed: a mode heard before the hello's answer waited for the first event
+after it. Still differs: Claude Code says no mode with its SessionStart, so the rule shows the mode
+from the first prompt's event on, and a change of mode with shift+tab at the next event; auto
+mode's classifier and its fast path give the mod the same verdict, so an ask settled without a
+dialog counts as the classifier's but for an edit inside the session's directory, which may name
+the classifier where it did not answer (a Bash call shows no line either way, folded); the refusal
+line was not seen live, the classifier allowing every call tried, and stands on the binary's text;
+the count leaps where a call's input arrives whole at its step's end, natively streamed; the
+thinking word has no effort suffix and does not shimmer; the write's preview has no line numbers;
+and `rewake screen`'s picture draws `⏵` two cells wide, cutting the mode's last letters there.

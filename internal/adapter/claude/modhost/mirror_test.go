@@ -47,6 +47,21 @@ func TestMirrorEventsReachTheModelOfTheCurrentLoadOnly(t *testing.T) {
 	}
 }
 
+// Claude Code's mode names reach the model in its own words, a name it does
+// not know leaves the mode unsaid, and a result keeps its permit.
+func TestAModeAndAPermitReachTheModelInItsWords(t *testing.T) {
+	for claude, want := range map[string]mirror.PermissionMode{"acceptEdits": mirror.PermissionModeEdits, "bypassPermissions": mirror.PermissionModeBypass, "dontAsk": mirror.PermissionModeUnasked, "auto": mirror.PermissionModeAuto, "someday": ""} {
+		if got := mirrorEvent(MirrorEvent{Kind: MirrorEventKindMode, Mode: &claude}).Mode; got != want {
+			t.Errorf("%s became %q", claude, got)
+		}
+	}
+	id := "call"
+	got := mirrorEvent(MirrorEvent{Kind: MirrorEventKindResult, ID: &id, Permit: &MirrorPermit{By: MirrorPermitByClassifier, Allowed: true}})
+	if got.Permit == nil || got.Permit.By != mirror.PermitByClassifier || !got.Permit.Allowed {
+		t.Fatalf("the permit: %+v", got.Permit)
+	}
+}
+
 // A prompt of the face rides the next heartbeat with its text; its item is the
 // mod's to send, so the host adds none on the mod's answer.
 func TestAFacePromptRidesTheHeartbeat(t *testing.T) {

@@ -3,6 +3,8 @@
 // errors the other. Both ends import these types alone, so a reload of the
 // face never needs the shell to change.
 
+import type { PermissionMode } from "./mirror.gen.ts";
+
 // Tone is a span's colour by its meaning; the shell's thread picks the
 // colour from the person's theme (view.tsx).
 export type Tone = "text" | "faint" | "code" | "accent" | "done" | "error" | "gap";
@@ -44,7 +46,15 @@ export type ToFace =
 export type Link = "connecting" | "live" | "lost";
 
 export type FromFace =
-  | { kind: "lines"; lines: FaceLine[]; turn: string; link: Link; prompts: boolean }
+  // mode is the session's permission mode, which the input's rule shows.
+  | {
+      kind: "lines";
+      lines: FaceLine[];
+      turn: string;
+      link: Link;
+      prompts: boolean;
+      mode?: PermissionMode;
+    }
   | { kind: "error"; text: string }
   | { kind: "answer"; id: string; ok: boolean; detail?: string }
   | { kind: "pong"; n: number };

@@ -26,7 +26,9 @@ type Model struct {
 	bytes   int
 	dropped int
 	turn    TurnState
-	parts   map[string]*assembly
+	// mode is the session's permission mode, nil until the session says it.
+	mode  *PermissionMode
+	parts map[string]*assembly
 	// born numbers the assemblies, so the oldest goes first past a bound.
 	born    int
 	clients map[*client]struct{}
@@ -123,11 +125,17 @@ func (m *Model) apply(e Event) {
 			} else {
 				at.output.set(e.Text)
 				at.item.Status = toolEnd(e.Status)
+				at.item.Permit = permitOf(e.Permit)
 			}
 			m.changed(at)
 		}
 	case EventTurn:
 		m.turnTo(e)
+	case EventMode:
+		if e.Mode != "" && (m.mode == nil || *m.mode != e.Mode) {
+			m.mode = ptr(e.Mode)
+			m.send(Line{Op: LineOpMode, Mode: m.mode})
+		}
 	case EventLost:
 		m.forget(id)
 		m.gap(m.byID[id])
@@ -323,6 +331,18 @@ func (at *entry) whole() Item {
 		item.Cut = ptr(true)
 	}
 	return item
+}
+
+// permitOf is a permit as the model keeps it, its reason a short field.
+func permitOf(p *Permit) *Permit {
+	if p == nil {
+		return nil
+	}
+	out := Permit{By: p.By, Allowed: p.Allowed}
+	if p.Reason != nil {
+		out.Reason = word(*p.Reason)
+	}
+	return &out
 }
 
 func block(kind ItemKind) ItemKind {

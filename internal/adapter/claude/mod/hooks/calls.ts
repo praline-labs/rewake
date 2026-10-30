@@ -5,6 +5,8 @@ export interface CheckEvent {
   tool: string;
   input: unknown;
   tool_use_id?: string;
+  // agentId names the subagent a call is of; a main-loop call has none.
+  agentId?: string;
   ceiling?: unknown;
   // isReadOnly is the tool's word that the call only reads (2.1.304+),
   // absent when it does not say.

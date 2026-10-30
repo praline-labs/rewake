@@ -1,12 +1,22 @@
 // The row under the conversation (docs/face.md, "The look"): while a turn
 // works, a turning glyph and a verb picked for the turn, in Claude Code's
-// orange, the time faint; after it, how long it took and when it ended.
+// orange, then faint its time, its phase's arrow with the tokens streamed
+// back and how its thinking goes, as the width allows; after it, how long it
+// took and when it ended.
 
 import type { FaceLine, Span } from "./messages.ts";
+import { count, type Progress } from "./progress.ts";
+import { widthOf } from "./wrap.ts";
 
 // Clock is what the face knows of the turn's time: when the working turn
-// began, or how long the last one took, each only when the face saw it.
-export type Clock = { now: number; since?: number; worked?: { took: number; at: number } };
+// began, or how long the last one took, each only when the face saw it, and
+// the turn's progress at the moment.
+export type Clock = {
+  now: number;
+  since?: number;
+  worked?: { took: number; at: number };
+  progress?: Progress;
+};
 
 export function duration(ms: number): string {
   const s = Math.max(Math.floor(ms / 1000), 0);
@@ -59,16 +69,58 @@ export function glowAt(now: number): number {
 export const blinkEvery = 600;
 export const blinkOff = (now: number) => Math.floor(now / blinkEvery) % 2 === 1;
 
+// The bracket shows from the first token or thinking word, else after 16 s.
+const quiet = 16_000;
+const sep = " · ";
+
+// progressOf is the bracket after the verb, each part in only where the
+// width leaves it room past the verb, as the terminal program fits it: the
+// thinking word first, then the time, then the tokens; shown in the order
+// time, tokens, thinking.
+function progressOf(verb: string, clock: Clock, width: number): Span[] {
+  const p = clock.progress;
+  const elapsed = clock.since === undefined ? undefined : clock.now - clock.since;
+  const tokens = p?.tokens ?? 0;
+  const shown = p?.thinking !== undefined || tokens > 0 || (elapsed ?? 0) > quiet;
+  // The glyph and its space before the verb, and five cells kept free.
+  const room = width - (widthOf(verb) + 2) - 5;
+  let thinking = p?.thinking && room > widthOf(p.thinking.text) ? p.thinking.text : undefined;
+  if (!thinking && p?.thinking?.kind === "thinking" && room > widthOf("thinking"))
+    thinking = "thinking";
+  const used = thinking ? widthOf(thinking) + sep.length : 0;
+  const timer = elapsed === undefined ? undefined : duration(elapsed);
+  const withTimer = shown && timer !== undefined && room > used + widthOf(timer);
+  const said = `${count(tokens)} tokens`;
+  const withTokens =
+    shown &&
+    tokens > 0 &&
+    room > used + (withTimer && timer ? widthOf(timer) + sep.length : 0) + 2 + widthOf(said);
+  const parts: Span[][] = [];
+  if (withTimer && timer) parts.push([{ text: timer, tone: "faint" }]);
+  if (withTokens) {
+    const arrow = p?.phase === "requesting" ? "↑" : "↓";
+    parts.push([{ text: `${arrow} ${said}`, tone: "faint" }]);
+  }
+  if (thinking) parts.push([{ text: thinking, tone: "faint" }]);
+  if (parts.length === 0) return [];
+  return [
+    { text: " (", tone: "faint" },
+    ...parts.flatMap((part, i) =>
+      i > 0 ? [{ text: sep, tone: "faint" as const }, ...part] : part,
+    ),
+    { text: ")", tone: "faint" },
+  ];
+}
+
 // turnLine is the row under the conversation that says the turn goes on, or
 // how long the last one took.
-export function turnLine(turn: string, clock: Clock): FaceLine | undefined {
+export function turnLine(turn: string, clock: Clock, width = 80): FaceLine | undefined {
   const glyph = { text: `${glyphAt(clock.now)} `, tone: "accent" as const };
   const glow = glowAt(clock.now);
   if (turn === "working") {
-    const verb = clock.since === undefined ? "Working" : pick(doing, clock.since);
-    const spans: Span[] = [glyph, { text: `${verb}…`, tone: "accent", glow }];
-    if (clock.since !== undefined)
-      spans.push({ text: ` (${duration(clock.now - clock.since)})`, tone: "faint" });
+    const verb = `${clock.since === undefined ? "Working" : pick(doing, clock.since)}…`;
+    const spans: Span[] = [glyph, { text: verb, tone: "accent", glow }];
+    spans.push(...progressOf(verb, clock, width));
     return { spans };
   }
   if (turn === "compacting")
