@@ -2,7 +2,17 @@
 // (docs/face.md, "Hot reload"): sizes, keys and pings one way, lines and
 // errors the other. Both ends import these types alone, so a reload of the
 // face never needs the shell to change.
-import type { FaceLine } from "./render.ts";
+
+// Tone is a span's colour by its meaning; the shell's thread picks the
+// colour from the person's palette (view.tsx).
+export type Tone = "text" | "faint" | "code" | "accent" | "done" | "error" | "gap";
+
+// Span is a run of one style within a row.
+export type Span = { text: string; tone?: Tone; bold?: boolean; italic?: boolean };
+
+// FaceLine is one row of the face, its spans left to right; band paints the
+// whole row in the band's background, as a prompt of the person's is.
+export type FaceLine = { spans: Span[]; band?: boolean };
 
 export type ToFace =
   | { kind: "start"; path: string; width: number; height: number }

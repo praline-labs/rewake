@@ -35,6 +35,10 @@ export type Theme = {
   // ones a pane's has: the widget swaps a selected cell's colours, and a
   // pane's text is mostly the default foreground on the default background.
   selection: { bg: string; fg: string };
+  // palette is the sixteen colours as the terminal said them, a hole where
+  // it did not: a colour drawn by its index is the terminal's own on the
+  // screen, but rewake screen knows only what was said.
+  palette: (string | null)[];
 };
 
 const fallback = {
@@ -74,6 +78,7 @@ export function themeOf(colors: TerminalColors | undefined): Theme {
     faintOnIdle: mix(ink(idle), idle, faintShare),
     band: background && mix(background, ink(background), bandShare),
     selection: { bg: selected, fg: background ?? ink(selected) },
+    palette: [...p],
   };
 }
 

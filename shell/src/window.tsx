@@ -140,24 +140,30 @@ export function Window(props: { env: Env; view: () => View }) {
               {(pane) => (
                 <box visible={shown(pane)} flexDirection="column" width={widthOf(pane)}>
                   <box {...padded(pane.id, widthOf(pane))}>
-                    <pane_terminal
-                      id={pane.id}
-                      ref={(t: PaneTerminal) => props.env.workerRef(pane, t)}
-                      transparentBackground={seed.transparent}
-                      width={inner(pane)}
-                      height={height()}
-                    />
-                    {/* Over the native face, which stays mounted and fed under it. */}
-                    <Show when={faceShown(pane.id)}>
-                      <FaceView
+                    {/* The face is laid over a box of the widget's own size: an
+                        absolute layer starts at the padding's edge, and over
+                        the padded box it would leave the widget's last column
+                        showing. */}
+                    <box width={inner(pane)} height={height()}>
+                      <pane_terminal
                         id={pane.id}
+                        ref={(t: PaneTerminal) => props.env.workerRef(pane, t)}
+                        transparentBackground={seed.transparent}
                         width={inner(pane)}
                         height={height()}
-                        theme={theme}
-                        live={live}
-                        active={() => live && view().focused === pane.id && !props.env.closing()}
                       />
-                    </Show>
+                      {/* Over the native face, which stays mounted and fed under it. */}
+                      <Show when={faceShown(pane.id)}>
+                        <FaceView
+                          id={pane.id}
+                          width={inner(pane)}
+                          height={height()}
+                          theme={theme}
+                          live={live}
+                          active={() => live && view().focused === pane.id && !props.env.closing()}
+                        />
+                      </Show>
+                    </box>
                   </box>
                   <Strip
                     state={() => stripOf(pane.id)}

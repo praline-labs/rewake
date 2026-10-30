@@ -7,7 +7,7 @@ import type { FromFace, Link, ToFace } from "./messages.ts";
 import type { Line } from "./mirror.gen.ts";
 import { bounds } from "./mirror.gen.ts";
 import { FaceModel } from "./model.ts";
-import { fill, render } from "./render.ts";
+import { type Clock, fill, render } from "./render.ts";
 
 declare const self: Worker;
 
@@ -25,11 +25,28 @@ let link: Link = "connecting";
 let model = new FaceModel();
 let socket: { write(data: string): number; end(): void } | undefined;
 let drawTimer: ReturnType<typeof setTimeout> | undefined;
+// The turn's time as this face saw it, never from the model: a face that
+// connected mid-turn does not know when it began.
+let since: number | undefined;
+let worked: { took: number; at: number } | undefined;
+
+// turned keeps the clock as the turn changes.
+function turned(from: string, to: string) {
+  if (from === to) return;
+  if (to === "working") {
+    since = Date.now();
+    worked = undefined;
+  } else if (from === "working" && since !== undefined && to === "idle") {
+    worked = { took: Date.now() - since, at: Date.now() };
+    since = undefined;
+  } else since = undefined;
+}
 
 function draw() {
   drawTimer = undefined;
   try {
-    const lines = fill(render(model, width, height, back), width, height);
+    const clock: Clock = { now: Date.now(), since, worked };
+    const lines = fill(render(model, width, height, back, clock), width, height);
     post({
       kind: "lines",
       lines,
@@ -69,6 +86,7 @@ function connect() {
     lost(why);
   };
   model = new FaceModel();
+  since = worked = undefined;
   link = "connecting";
   Bun.connect({
     unix: path,
@@ -93,7 +111,11 @@ function connect() {
                   ok: line.ok === true,
                   detail: line.detail,
                 });
-              else changed = model.apply(line) || changed;
+              else {
+                const was = model.turn;
+                changed = model.apply(line) || changed;
+                if (line.op === "turn") turned(was, model.turn);
+              }
               if (line.op === "end") link = "live";
             }
             at = pending.indexOf("\n");
@@ -114,6 +136,11 @@ function connect() {
     },
   }).catch((err) => end(`the mirror's socket does not open: ${String(err)}`));
 }
+
+// A working turn's time goes on without a change of the model.
+setInterval(() => {
+  if (model.turn === "working" && since !== undefined) soon();
+}, 1000);
 
 self.onmessage = (event: MessageEvent<ToFace>) => {
   const message = event.data;

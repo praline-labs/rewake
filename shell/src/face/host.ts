@@ -3,8 +3,7 @@
 // drew. A reload ends the worker whole and starts it again from the current
 // sources; nothing here touches a pane's pty or the shell's process, so a face
 // that fails to load, throws or hangs costs its own drawing alone.
-import type { FromFace, Link, ToFace } from "./messages.ts";
-import type { FaceLine } from "./render.ts";
+import type { FaceLine, FromFace, Link, ToFace } from "./messages.ts";
 
 export type FaceState = {
   lines: FaceLine[];

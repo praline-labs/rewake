@@ -69,28 +69,55 @@ the pane or the socket. A dev worker opens on rewake's face; the prefix's `v` (C
 flips the shown pane between `rewake` and `native`, and the strip says `dev rewake` or
 `dev native`. The face is a layer over the pane's rectangle: the native widget under it stays
 mounted, sized and fed, so its pty is never resized and its TUI runs on, and the switch costs
-nothing on either side. Its header says the turn's state, or the link while it is not live, and
-the face's last error; its body is the conversation's tail, PgUp and PgDn scroll it; its input line
-sends a prompt to the session, refused with its reason where the session does not take it. A prompt
+nothing on either side. It is laid over a box of the widget's own size inside the pane's padded
+box: an absolute layer starts at the padding's edge, and over the padded box it left the widget's
+last column showing (seen live on 2.11.0). Its body is the conversation's tail, PgUp and PgDn scroll
+it; under it the input between two rules sends a prompt to the session, refused with its reason
+where the session does not take it; the row under the rules says the face's last error, or the
+link while it is not live. It has no header: the strip says the turn's state. A prompt
 waits for its answer only while the answer can come: at most the latest 16, each for 30 s, none past
 the link it went by, a reload or the face's end. Under
 rewake's face the keys go to that input, never to the pty, and Esc does nothing. `rewake screen`
 takes the window as the person sees it: the shadow window draws the face too.
+
+### The look
+
+The face repeats the look of Claude Code's own terminal, for every harness it draws (the owner's
+decision, October 30, 2026: first the same look, customised later), as read from its screen in
+2.1.310: a prompt of the person's is `❯ text` on the band's background across the pane; a reply is
+`● ` and its markdown — bold, italic, inline code, headings bold, list items hanging under their
+marker, a fenced block as written; a letter rewake delivered, which reaches the harness as its
+`<task-notification>`, is the notification's summary after a green `●`; a call is `● Name(main
+argument)` with the name bold — Bash's command, a file tool's path, Grep's and Glob's pattern, a
+fetch's address, a search's query, a subagent's description, else the input as typed — and its
+output under `  ⎿  `, the first three rows and a faint `… +N lines`, Read's as `Read N lines`, an
+error's in red; a running call's dot is faint; thinking is faint and italic after `✻`. Under the
+conversation, `✻ Working… (12s)` while the turn works and a faint `✻ Worked for 37s · done 7:01 AM`
+after it, timed by the face from the turn changes it saw, so a face connected mid-turn or reloaded
+shows no time. A row breaks at spaces, a word cut only when it is wider than the row, and escapes
+and control characters of a tool's output are dropped, since the face's widths do not count them.
+Colours are the theme's (`shell/src/theme.ts`): a palette entry as the terminal said it, else by its
+index — bright blue for code, red for an error and the working line, yellow for a gap. Where the
+native face differs on purpose: it folds runs of calls into `Ran 2 shell commands` and heads a
+Bash call with its description, its letter's second row starts at the edge, its working line names
+a random verb with the tokens, and its fold offers ctrl+o, a key the face does not have.
 
 ## Hot reload
 
 The model lives in the wrapper and the face only draws it, so a face can be replaced at any moment
 and lose nothing: a new one connects and gets the snapshot. The face is a Bun `Worker`
 (`shell/src/face/worker.ts`, with `model.ts` and `render.ts`) that connects to the socket itself,
-keeps its copy of the model and posts plain lines with their tones to the shell's thread, which
-paints them (`host.ts`, `view.tsx`). The shell run from its sources (`shell/rewake-shell` as
+keeps its copy of the model and posts rows of styled spans — a tone, bold, italic, a row on the
+band — to the shell's thread, which paints them in the person's colours (`host.ts`, `view.tsx`);
+the rows are laid out by `render.ts`, with `wrap.ts`, `markdown.ts` and `tools.ts`, and an item is
+laid out again only when what is drawn of it changed. The shell run from its sources (`shell/rewake-shell` as
 `REWAKE_SHELL`, a second build beside the installed one, [install.md](install.md)) watches
 `shell/src/face/` and starts every face again 150 ms after the last change; what reloads is the
 worker's code, while `faces.ts`, `host.ts` and `view.tsx` are the shell's own and change only with a
 new shell. A compiled shell holds the worker as a second entrypoint and watches nothing. A worker,
 not a module re-imported in the shell's thread: a module can neither be unloaded nor stopped when it
 loops, and its timers and sockets would stay; a worker is ended whole. The cost is a thread, a
-socket and a copy of the model (at most 4 MiB) per face, and lines rather than a widget tree.
+socket and a copy of the model (at most 4 MiB) per face, and rows of spans rather than a widget tree.
 
 A reload never restarts or exits the shell and never writes to, resizes or closes a pane's pty,
 main's included: closing the shell ends main and every worker ([shell.md](shell.md)). Each failure
@@ -98,14 +125,14 @@ is contained in the shell's thread, and the person can always switch to native w
 `v`, since the input line is the shell's:
 
 - **fails to load** (a syntax error, a missing import): the worker's `error` event; the face stops,
-  its last lines stay with the error in its header.
+  its last lines stay with the error under them.
 - **throws**: a drawing or a message that throws is caught in the worker and posted as the error,
   the last lines staying; one that escapes ends in the `error` event, as above.
 - **hangs**: no answer to a ping within 2 s; the shell terminates the worker and shows why.
 - **its socket fails**: shown as `lost`, and the worker connects again a second later.
 
 A stopped face starts again at the next change of its sources, or when the person switches to it.
-Tests: `shell/src/face/host.test.ts`.
+Tests: `shell/src/face/host.test.ts`, the look in `render.test.ts` and `view.test.tsx`.
 
 ## Checked
 
@@ -118,3 +145,14 @@ unchanged; `rewake screen` took the face. Two findings fixed then: a layer over 
 background the shell does not know let the native face show through every blank cell, so every
 row is filled and painted with the default background; and a call the engine refused before any
 hook (a tool not offered) stayed `running` until its turn's end now makes it a gap.
+
+Live, October 30, 2026 (Claude Code 2.1.310, the shell from its sources under a pty of 200 by 50
+that answered the colour queries, a private state directory and project, a dev worker on the
+cheapest model): a letter, two Bash calls, a Read, a failing call, a reply with markdown and a
+prompt typed in the face drew as above beside main's native pane; a change to `render.ts` while it
+ran was drawn by the next face with nothing restarted. Found then and fixed: a styled text given to
+a `<text>` as its content drew `[object Object]`, and a span's `attributes` in its style drew no
+bold, so a row is spans with `bold` and `italic`; a colour by its index came out in `rewake screen`
+as the renderer's own, not the person's, so the theme resolves it from the palette the terminal
+said. Still seen: `rewake screen`'s picture draws a `✻` within a longer run two cells wide,
+shifting the rest of that row by one and cutting its last character; the frame's cells are right.
