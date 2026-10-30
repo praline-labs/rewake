@@ -197,6 +197,9 @@ export function render(
 // through every cell the face leaves empty.
 // A row wider than the pane, a mark or a gutter on a pane narrower than it,
 // is cut at the pane's edge: a wide character the edge splits becomes a space.
+// A cell is a grapheme, not a code point: an emoji with its selector or its
+// joined parts is one, as the terminal draws it.
+const graphemes = new Intl.Segmenter();
 export function fill(lines: FaceLine[], width: number, height: number): FaceLine[] {
   const pad = (line: FaceLine): FaceLine => {
     const spans: Span[] = [];
@@ -204,11 +207,11 @@ export function fill(lines: FaceLine[], width: number, height: number): FaceLine
     let cut = false;
     for (const span of line.spans) {
       let text = "";
-      for (const ch of span.text) {
-        cut = used + widthOf(ch) > width;
+      for (const { segment } of graphemes.segment(span.text)) {
+        cut = used + widthOf(segment) > width;
         if (cut) break;
-        text += ch;
-        used += widthOf(ch);
+        text += segment;
+        used += widthOf(segment);
       }
       if (text) spans.push({ ...span, text });
       if (cut) break;

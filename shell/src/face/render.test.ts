@@ -200,6 +200,9 @@ test("a reply's heading, table and quote are drawn as the terminal draws them", 
 test("every row the face draws covers the pane's width, however narrow", () => {
   const m = model(
     { id: "p", kind: "prompt", status: "settled", text: "a prompt\nand 界界 more" },
+    // Second review of 7ddebbb: a cell counted by code point, not by grapheme.
+    { id: "e1", kind: "prompt", status: "settled", text: "❤️ ok" },
+    { id: "e2", kind: "prompt", status: "settled", text: "👨‍👩‍👧‍👦 ok" },
     {
       id: "l",
       kind: "prompt",
@@ -225,7 +228,7 @@ test("every row the face draws covers the pane's width, however narrow", () => {
   );
   for (const turn of ["working", "idle"] as const) {
     m.turn = turn;
-    for (let width = 1; width <= 30; width++) {
+    for (const width of [...Array.from({ length: 30 }, (_, i) => i + 1), 80]) {
       const clock = { now: 9_000, since: 1_000, worked: { took: 8_000, at: 9_000 } };
       const rows = fill(render(m, width, 400, 0, clock), width, 400);
       expect(rows).toHaveLength(400);
