@@ -7,7 +7,8 @@ import type { FromFace, Link, ToFace } from "./messages.ts";
 import type { Line } from "./mirror.gen.ts";
 import { bounds } from "./mirror.gen.ts";
 import { FaceModel } from "./model.ts";
-import { type Clock, fill, render } from "./render.ts";
+import { fill, render } from "./render.ts";
+import type { Clock } from "./turn.ts";
 
 declare const self: Worker;
 

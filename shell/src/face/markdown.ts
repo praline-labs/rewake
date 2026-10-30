@@ -1,8 +1,10 @@
-// A reply's markdown as the face draws it (docs/face.md, "The face"): bold,
-// italic and inline code within a line, headings bold, list items hanging
-// under their marker, a fenced block as it is written. Only what a terminal
-// shows; anything else stays as typed.
+// A reply's markdown as the face draws it (docs/face.md, "The look"): bold,
+// italic and inline code within a line, headings bold with a blank row after,
+// list items hanging under their marker, a quote behind a bar, a table in box
+// lines, a fenced block as it is written. Only what a terminal shows;
+// anything else stays as typed.
 import type { Span } from "./messages.ts";
+import { cellsOf, separator, tableRows } from "./table.ts";
 import { wrapSpans } from "./wrap.ts";
 
 const inline =
@@ -26,16 +28,24 @@ export function spansOfInline(text: string, base: Span = { text: "" }): Span[] {
 }
 
 const fence = /^\s*(```|~~~)/;
-const heading = /^#{1,6}\s+(.*)$/;
+const heading = /^(#{1,6})\s+(.*)$/;
 const item = /^(\s*)([-*+]|\d+[.)])\s+(.*)$/;
+const quote = /^\s*>\s?(.*)$/;
+const tableLine = /^\s*\|.*\|\s*$/;
 
 const indent = (n: number): Span => ({ text: " ".repeat(n) });
 
 // markdownRows lays a text out as rows of at most width columns.
 export function markdownRows(text: string, width: number, base: Span = { text: "" }): Span[][] {
   const rows: Span[][] = [];
+  // A blank row is drawn once however many the text has.
+  const blank = () => {
+    if (rows.length > 0 && rows[rows.length - 1]?.length !== 0) rows.push([]);
+  };
+  const lines = text.split("\n");
   let inCode = false;
-  for (const line of text.split("\n")) {
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i] ?? "";
     if (fence.test(line)) {
       inCode = !inCode;
       continue;
@@ -44,22 +54,50 @@ export function markdownRows(text: string, width: number, base: Span = { text: "
       rows.push(...wrapSpans([{ ...base, text: line }], width));
       continue;
     }
+    if (!line.trim()) {
+      blank();
+      continue;
+    }
     const h = heading.exec(line);
     if (h) {
-      rows.push(...wrapSpans(spansOfInline(h[1] ?? "", { ...base, bold: true }), width));
+      const top = h[1] === "#";
+      const style = { ...base, bold: true, italic: top || base.italic, underline: top };
+      rows.push(...wrapSpans(spansOfInline(h[2] ?? "", style), width));
+      blank();
+      continue;
+    }
+    if (tableLine.test(line) && separator.test(lines[i + 1] ?? "")) {
+      let end = i + 2;
+      while (end < lines.length && tableLine.test(lines[end] ?? "")) end++;
+      const table = lines.slice(i, end);
+      // A table too narrow for even a cell a column stays as typed.
+      if (width >= 6 * cellsOf(line).length + 1) {
+        rows.push(...tableRows(table, width, spansOfInline, base));
+        i = end - 1;
+        continue;
+      }
+    }
+    const q = quote.exec(line);
+    if (q) {
+      const body = wrapSpans(
+        spansOfInline(q[1] ?? "", { ...base, italic: true }),
+        Math.max(width - 2, 1),
+      );
+      for (const row of body) rows.push([{ text: "▎ ", tone: "faint" }, ...row]);
       continue;
     }
     const li = item.exec(line);
     if (li) {
-      const marker = `${li[1] ?? ""}${li[2] === "*" || li[2] === "+" ? "-" : li[2]} `;
+      const marker = `${li[1] ?? ""}${/^\d/.test(li[2] ?? "") ? li[2] : "-"} `;
       const hang = Math.min(Bun.stringWidth(marker), Math.max(width - 1, 0));
       const body = wrapSpans(spansOfInline(li[3] ?? "", base), Math.max(width - hang, 1));
-      body.forEach((row, i) => {
-        rows.push([i === 0 ? { ...base, text: marker } : indent(hang), ...row]);
+      body.forEach((row, n) => {
+        rows.push([n === 0 ? { ...base, text: marker } : indent(hang), ...row]);
       });
       continue;
     }
     rows.push(...wrapSpans(spansOfInline(line, base), width));
   }
+  while (rows.length > 1 && rows[rows.length - 1]?.length === 0) rows.pop();
   return rows;
 }

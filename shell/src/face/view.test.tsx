@@ -40,3 +40,27 @@ test("the face covers every cell of the pane it is laid over", async () => {
   await renderOnce();
   expect(captureCharFrame()).not.toContain("N");
 });
+
+// A diff's mark is data the worker sends and the shell's thread paints: an
+// old line on the look's red, a heading underlined.
+test("a marked span is painted on its mark's colour", async () => {
+  const line = {
+    spans: [
+      { text: "-a", mark: "removed" as const },
+      { text: "H", underline: true },
+    ],
+  };
+  const { renderOnce, captureSpans } = await testRender(
+    () => <FaceRow line={line} theme={theme} />,
+    { width: 4, height: 1 },
+  );
+  await renderOnce();
+  const spans = captureSpans().lines[0]?.spans ?? [];
+  expect(
+    spans
+      .find((s) => s.text === "-a")
+      ?.bg.toInts()
+      .slice(0, 3),
+  ).toEqual([122, 41, 54]);
+  expect(spans.find((s) => s.text.startsWith("H"))?.attributes).toBe(TextAttributes.UNDERLINE);
+});

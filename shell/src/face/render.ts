@@ -2,11 +2,14 @@
 // worker renders, the shell's thread only paints the spans in the person's
 // colours, so a face that changes or breaks never touches the shell's tree.
 
+import { entriesOf, runLines } from "./fold.ts";
 import { markdownRows } from "./markdown.ts";
 import type { FaceLine, Span, Tone } from "./messages.ts";
 import type { Item } from "./mirror.gen.ts";
 import type { FaceModel } from "./model.ts";
-import { headRowsOf, outputRowsOf } from "./tools.ts";
+import { resultOf } from "./results.ts";
+import { headRowsOf } from "./tools.ts";
+import { type Clock, turnLine } from "./turn.ts";
 import { clean, widthOf, wrapSpans } from "./wrap.ts";
 
 // marked puts a mark before the first row and an indent of its width before
@@ -16,26 +19,54 @@ function marked(rows: Span[][], mark: Span, band?: boolean): FaceLine[] {
   return rows.map((row, i) => ({ spans: [i === 0 ? mark : indent, ...row], band }));
 }
 
-const plainRows = (text: string, width: number, base: Span = { text: "" }) =>
-  text.split("\n").flatMap((line) => wrapSpans([{ ...base, text: line }], width));
+// edged puts a mark before the first row and wraps the rest back to the left
+// edge, as the terminal does a prompt and a letter.
+const edged = (text: string, width: number, mark: Span, base: Span, band?: boolean): FaceLine[] =>
+  text
+    .split("\n")
+    .flatMap((line, i) => wrapSpans([...(i === 0 ? [mark] : []), { ...base, text: line }], width))
+    .map((spans) => ({ spans, band }));
 
 // A letter rewake delivered reaches the harness as its notification: the face
-// shows its summary, as a terminal program shows the notice it was given.
+// shows its summary, as a terminal program shows the notice it was given, its
+// dot by how the task it tells of stands.
 const notification = /<task-notification>[\s\S]*?<\/task-notification>/g;
 const summary = /<summary>([\s\S]*?)<\/summary>/;
+const state = /<status>\s*(\w+)\s*<\/status>/;
+const letterTone: Record<string, Tone> = { completed: "done", failed: "error", killed: "gap" };
+
+// A prompt this long shows its head and tail and how many lines between.
+const longPrompt = 10_000;
+const promptEnd = 2_500;
+
+function shortened(text: string): string {
+  if (text.length <= longPrompt) return text;
+  const head = text.slice(0, promptEnd);
+  const tail = text.slice(-promptEnd);
+  const cut = text.slice(promptEnd, -promptEnd).split("\n").length;
+  return `${head}\n… +${cut} lines …\n${tail}`;
+}
 
 function promptLines(item: Item, width: number): FaceLine[] {
   const out: FaceLine[] = [];
   const text = clean(item.text);
   for (const m of text.matchAll(notification)) {
     const said = (summary.exec(m[0])?.[1] ?? m[0]).replace(/\s+/g, " ").trim();
-    out.push(...marked(plainRows(said, width - 2), { text: "● ", tone: "done" }));
+    const tone = letterTone[state.exec(m[0])?.[1] ?? ""];
+    out.push(...edged(said, width, { text: "● ", tone }, { text: "" }));
   }
   const rest = text.replace(notification, "").trim();
   if (rest || out.length === 0) {
     const tone: Tone | undefined = item.status === "refused" ? "error" : undefined;
-    const rows = markdownRows(rest, width - 2, { text: "", tone });
-    out.push(...marked(rows, { text: "❯ ", tone }, true));
+    out.push(
+      ...edged(
+        shortened(rest),
+        width,
+        { text: "❯ ", tone: tone ?? "faint" },
+        { text: "", tone },
+        true,
+      ),
+    );
   }
   return out;
 }
@@ -57,14 +88,14 @@ function toolLines(item: Item, width: number): FaceLine[] {
       out.push(...marked([[{ text: "Running…", tone: "faint" }]], mark));
     return out;
   }
-  const { rows, more } = outputRowsOf(item, width - 5);
-  const tone: Tone | undefined =
-    item.status === "error" || item.status === "refused" ? "error" : undefined;
-  const shown = rows.map((row) => row.map((s) => (tone ? { ...s, tone } : s)));
-  if (shown.length === 0 || (shown.length === 1 && shown[0]?.length === 0))
-    shown.splice(0, shown.length, [{ text: "(No content)", tone: "faint" }]);
-  if (more > 0) shown.push([{ text: `… +${more} lines`, tone: "faint" }]);
-  out.push(...marked(shown, mark));
+  const { rows, more } = resultOf(item, width - 5);
+  if (more > 0) rows.push([{ text: `… +${more} lines`, tone: "faint" }]);
+  out.push(
+    ...marked(
+      rows.flatMap((row) => wrapSpans(row, width - 5)),
+      mark,
+    ),
+  );
   return out;
 }
 
@@ -78,23 +109,22 @@ export function linesOf(item: Item, width: number): FaceLine[] {
     case "text":
       out.push(...marked(markdownRows(clean(item.text) || "…", width - 2), { text: "● " }));
       break;
-    case "thinking": {
-      const base: Span = { text: "", tone: "faint", italic: true };
-      const rows = item.text.trim()
-        ? markdownRows(clean(item.text), width - 2, base)
-        : [[{ ...base, text: "Thinking…" }]];
-      out.push(...marked(rows, { text: "✻ ", tone: "faint" }));
+    case "thinking":
+      // Its text shows only in the terminal's transcript view.
+      for (const spans of wrapSpans([{ text: "∴ Thinking", tone: "faint", italic: true }], width))
+        out.push({ spans });
       break;
-    }
     case "tool":
       out.push(...toolLines(item, width));
       break;
     case "notice":
       out.push(
-        ...marked(plainRows(clean(item.text), width - 2, { text: "", tone: "faint" }), {
-          text: "· ",
-          tone: "faint",
-        }),
+        ...marked(
+          clean(item.text)
+            .split("\n")
+            .flatMap((line) => wrapSpans([{ text: line, tone: "faint" }], width - 2)),
+          { text: "· ", tone: "faint" },
+        ),
       );
       break;
   }
@@ -132,41 +162,6 @@ function cachedLinesOf(item: Item, width: number): FaceLine[] {
   return lines;
 }
 
-// Clock is what the face knows of the turn's time: when the working turn
-// began, or how long the last one took, each only when the face saw it.
-export type Clock = { now: number; since?: number; worked?: { took: number; at: number } };
-
-export function duration(ms: number): string {
-  const s = Math.max(Math.floor(ms / 1000), 0);
-  return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${s % 60}s`;
-}
-
-// timeOf is a moment's local time as a terminal program says it, 7:01 AM.
-export function timeOf(ms: number): string {
-  const d = new Date(ms);
-  const h = d.getHours();
-  return `${h % 12 || 12}:${String(d.getMinutes()).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`;
-}
-
-// turnLine is the row under the conversation that says the turn goes on, or
-// how long the last one took.
-export function turnLine(turn: string, clock: Clock): FaceLine | undefined {
-  const star = { text: "✻ ", tone: "accent" as const };
-  if (turn === "working") {
-    const spans: Span[] = [star, { text: "Working…", tone: "accent" }];
-    if (clock.since !== undefined)
-      spans.push({ text: ` (${duration(clock.now - clock.since)})`, tone: "faint" });
-    return { spans };
-  }
-  if (turn === "compacting") return { spans: [star, { text: "Compacting…", tone: "accent" }] };
-  if (turn === "idle" && clock.worked !== undefined) {
-    const { took, at } = clock.worked;
-    const said = `✻ Worked for ${duration(took)} · done ${timeOf(at)}`;
-    return { spans: [{ text: said, tone: "faint" }] };
-  }
-  return undefined;
-}
-
 const blank = (): FaceLine => ({ spans: [] });
 
 // render is the last height rows of the model, scrolled up by back rows:
@@ -182,10 +177,11 @@ export function render(
   const rows: FaceLine[] = [];
   const status = turnLine(model.turn, clock);
   if (status) rows.push(...(model.items.length > 0 ? [blank()] : []), status);
-  for (let i = model.items.length - 1; i >= 0 && rows.length < want; i--) {
-    const item = model.items[i];
-    if (!item) continue;
-    const lines = cachedLinesOf(item, width);
+  const entries = entriesOf(model.items, model.turn === "working");
+  for (let i = entries.length - 1; i >= 0 && rows.length < want; i--) {
+    const entry = entries[i];
+    if (!entry) continue;
+    const lines = "item" in entry ? cachedLinesOf(entry.item, width) : runLines(entry, width);
     rows.unshift(...(i > 0 ? [blank()] : []), ...lines);
   }
   if (rows.length < want && model.dropped > 0)

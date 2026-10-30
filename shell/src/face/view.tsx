@@ -8,7 +8,7 @@ import { RGBA } from "@opentui/core";
 import { createEffect, For, Show } from "solid-js";
 import type { Theme } from "../theme.ts";
 import { draftOf, faceOf, promptFace, scrollFace, setDraft, sizeFace } from "./faces.ts";
-import type { FaceLine, Span, Tone } from "./messages.ts";
+import type { FaceLine, Tone } from "./messages.ts";
 
 const colour = (c: string) => RGBA.fromHex(c);
 
@@ -19,21 +19,22 @@ const indexed = (i: number, theme: Theme) => {
   return said ? colour(said) : RGBA.fromIndex(i);
 };
 
-// toneOf is a tone in the person's colours: the theme's, or their palette's.
+// toneOf is a tone's colour: the faint and default ones the person's, the
+// others the fixed ones of the look rewake's face repeats.
 const toneOf = (tone: Tone | undefined, theme: Theme): RGBA => {
   switch (tone) {
     case "faint":
       return colour(theme.faint);
     case "code":
-      return indexed(12, theme);
+      return colour(theme.look.code);
     case "accent":
-      return indexed(1, theme);
+      return colour(theme.look.spinner);
     case "done":
-      return colour(theme.worker);
+      return colour(theme.look.success);
     case "error":
-      return indexed(1, theme);
+      return colour(theme.look.error);
     case "gap":
-      return indexed(3, theme);
+      return colour(theme.look.warning);
     default:
       return RGBA.defaultForeground();
   }
@@ -54,9 +55,10 @@ export function FaceRow(props: { line: FaceLine; theme: Theme }) {
           <span
             style={{
               fg: toneOf(span.tone, props.theme),
-              bg: props.line.band ? band : bg,
+              bg: span.mark ? colour(props.theme.look[span.mark]) : props.line.band ? band : bg,
               bold: span.bold,
               italic: span.italic,
+              underline: span.underline,
             }}
           >
             {span.text}

@@ -39,6 +39,51 @@ export type Theme = {
   // it did not: a colour drawn by its index is the terminal's own on the
   // screen, but rewake screen knows only what was said.
   palette: (string | null)[];
+  // look is the fixed colours rewake's face draws with, Claude Code's own
+  // (docs/face.md, "The look"): its dark set, or its light one on a terminal
+  // whose background is light.
+  look: Look;
+};
+
+// Look is the colours of Claude Code's own terminal theme that its screen
+// draws in whatever the terminal's palette, each named by the element it
+// colours there.
+export type Look = {
+  // success is a finished call's dot and a completed letter's.
+  success: string;
+  // error is a failed call's dot and its error text.
+  error: string;
+  // warning is a killed letter's dot, and the face's mark of a gap.
+  warning: string;
+  // code is inline code in a reply.
+  code: string;
+  // spinner is the working line's glyph and verb.
+  spinner: string;
+  // added and removed are the backgrounds of a diff's lines.
+  added: string;
+  removed: string;
+};
+
+// The two sets as Claude Code's dark and light themes define them.
+export const looks: { dark: Look; light: Look } = {
+  dark: {
+    success: "#4eba65",
+    error: "#ff6b80",
+    warning: "#ffc107",
+    code: "#b1b9f9",
+    spinner: "#d77757",
+    added: "#225c2b",
+    removed: "#7a2936",
+  },
+  light: {
+    success: "#2c7a39",
+    error: "#ab2b3f",
+    warning: "#966c1e",
+    code: "#5769f7",
+    spinner: "#d77757",
+    added: "#69db7c",
+    removed: "#ffa8b4",
+  },
 };
 
 const fallback = {
@@ -79,6 +124,7 @@ export function themeOf(colors: TerminalColors | undefined): Theme {
     band: background && mix(background, ink(background), bandShare),
     selection: { bg: selected, fg: background ?? ink(selected) },
     palette: [...p],
+    look: background && ink(background) === "#1c1c1c" ? looks.light : looks.dark,
   };
 }
 

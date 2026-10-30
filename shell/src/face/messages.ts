@@ -4,11 +4,21 @@
 // face never needs the shell to change.
 
 // Tone is a span's colour by its meaning; the shell's thread picks the
-// colour from the person's palette (view.tsx).
+// colour from the person's theme (view.tsx).
 export type Tone = "text" | "faint" | "code" | "accent" | "done" | "error" | "gap";
 
+// Mark is a span's background by its meaning: a diff's added or removed line.
+export type Mark = "added" | "removed";
+
 // Span is a run of one style within a row.
-export type Span = { text: string; tone?: Tone; bold?: boolean; italic?: boolean };
+export type Span = {
+  text: string;
+  tone?: Tone;
+  bold?: boolean;
+  italic?: boolean;
+  underline?: boolean;
+  mark?: Mark;
+};
 
 // FaceLine is one row of the face, its spans left to right; band paints the
 // whole row in the band's background, as a prompt of the person's is.

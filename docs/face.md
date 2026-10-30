@@ -84,32 +84,69 @@ takes the window as the person sees it: the shadow window draws the face too.
 
 The face repeats the look of Claude Code's own terminal, for every harness it draws (the owner's
 decision, October 30, 2026: first the same look, customised later), as read from its screen in
-2.1.310: a prompt of the person's is `❯ text` on the band's background across the pane; a reply is
-`● ` and its markdown — bold, italic, inline code, headings bold, list items hanging under their
-marker, a fenced block as written; a letter rewake delivered, which reaches the harness as its
-`<task-notification>`, is the notification's summary after a green `●`; a call is `● Name(main
-argument)` with the name bold — Bash's command, a file tool's path, Grep's and Glob's pattern, a
-fetch's address, a search's query, a subagent's description, else the input as typed — and its
-output under `  ⎿  `, the first three rows and a faint `… +N lines`, Read's as `Read N lines`, an
-error's in red; a running call's dot is faint; thinking is faint and italic after `✻`. Under the
-conversation, `✻ Working… (12s)` while the turn works and a faint `✻ Worked for 37s · done 7:01 AM`
-after it, timed by the face from the turn changes it saw, so a face connected mid-turn or reloaded
-shows no time. A row breaks at spaces, a word cut only when it is wider than the row, and escapes
-and control characters of a tool's output are dropped, since the face's widths do not count them.
-Colours are the theme's (`shell/src/theme.ts`): a palette entry as the terminal said it, else by its
-index — bright blue for code, red for an error and the working line, yellow for a gap. Where the
-native face differs on purpose: it folds runs of calls into `Ran 2 shell commands` and heads a
-Bash call with its description, its letter's second row starts at the edge, its working line names
-a random verb with the tokens, and its fold offers ctrl+o, a key the face does not have.
+2.1.310 and, for the rules a picture does not show, from an older Claude Code source tree (brief
+40; the screen wins where they differ). The code is rewake's own: `render.ts` lays out the items,
+`tools.ts` a call's head, `results.ts` what is under it, `fold.ts` runs of calls, `markdown.ts` and
+`table.ts` a reply, `turn.ts` the row under the conversation.
+
+- **Prompt**: a faint `❯ ` and the text as typed, no markdown, on the band's background across the
+  pane, a wrapped or second line back at the left edge; over 10 000 characters, its first and last
+  2 500 with `… +N lines …` between.
+- **Letter**: a letter rewake delivered reaches the harness as its `<task-notification>` and shows
+  as the notification's summary after a `●` coloured by its status — green completed, red failed,
+  amber killed, else the text's colour — wrapped back to the edge.
+- **Reply**: `● ` and its markdown hung at two columns: bold, italic, inline code in the theme's
+  blue; a heading bold, the first level also italic and underlined, a blank row after it; blank
+  rows run together; list items `-` or their number, hanging under the marker; a quote behind a
+  faint `▎` in italic; a table in box lines with a rule between every row, the header bold, and
+  when it is too wide each column its longest word and the room left shared out by how much its
+  widest cell exceeds that, the cells wrapped; a fenced block as written.
+- **Thinking**: a faint italic `∴ Thinking`; its text shows in the terminal's transcript view only.
+- **Runs**: consecutive Read, Grep, Glob and Bash calls fold into one faint row hung at two columns,
+  `Searched for 1 pattern, read 2 files, listed 1 directory, ran 2 shell commands`, the numbers
+  bold, a failed call counted too. Bash is read by the first word of each part of its pipeline:
+  `grep`, `find`, `rg`… search, `cat`, `head`, `wc`… read, `ls`, `tree`, `du` list, `echo` and its
+  like count for nothing, any other word makes it a shell command; reads count files, each once.
+  Text, a prompt or another call ends a run; thinking and a notice do not, and show after it;
+  ToolSearch and TodoWrite are not drawn. While a call of the run is running, or the run is the
+  last thing a working turn did, it is open: a faint `●`, the running command's description or
+  what the run is doing (`Reading 1 file…`), and under `⎿` the path, pattern or command of its
+  latest call.
+- **Call**: `● Name(argument)`, the name bold, the dot green when done, red on error, amber on a
+  gap, faint while running. The names are the terminal's — `Update` (`Create` for an empty old
+  string), `Search`, `Fetch`, `Web Search`, `server - tool (MCP)` — and the argument a path (under
+  the home directory as `~/…`), `pattern: "x", path: "y"`, a quoted query, a subagent's
+  description, a skill's name, else the input as `key: value` pairs; a head is at most three rows.
+- **Result**, under `  ⎿  `: an edit's `Added N lines, removed M lines` and its old lines on dark
+  red and new lines on dark green, from the call's input; a write's `Wrote N lines to path` and its
+  first ten lines; an error in red, `Error: ` before a text without it, the tool's error tags
+  dropped, at most ten rows; any other output its first three rows (four when only one more),
+  a line of JSON pretty-printed, then a faint `… +N lines`; an empty one `(No output)` for Bash,
+  `(No content)` for the rest.
+- **Turn**: under the conversation, a glyph that turns a frame a second and a verb rewake picks for
+  the turn (`Mulling… (12s)`) in Claude Code's orange, the time faint; after it, a faint
+  `Brewed for 37s · done 7:01 AM` hung at two columns. The face times the turn from the changes it
+  saw, so a face connected mid-turn or reloaded says `Working…` and no time.
+
+A row breaks at spaces, a word cut only when it is wider than the row, and escapes and control
+characters of a tool's output are dropped, since the face's widths do not count them. The faint
+colour and the default one are the person's; the rest are Claude Code's fixed theme values,
+named in `shell/src/theme.ts` by the element each colours, its dark set or, on a terminal whose
+background is light, its light one. What the face cannot repeat, for want of a field the mirror
+does not carry: paths relative to the session's directory, an edit's line numbers and context rows,
+a call's progress, a turn's tokens, syntax colours of a
+code block (a highlighter the face does not have), and ctrl+o's expansion, a key the face does not
+have.
 
 ## Hot reload
 
 The model lives in the wrapper and the face only draws it, so a face can be replaced at any moment
 and lose nothing: a new one connects and gets the snapshot. The face is a Bun `Worker`
 (`shell/src/face/worker.ts`, with `model.ts` and `render.ts`) that connects to the socket itself,
-keeps its copy of the model and posts rows of styled spans — a tone, bold, italic, a row on the
-band — to the shell's thread, which paints them in the person's colours (`host.ts`, `view.tsx`);
-the rows are laid out by `render.ts`, with `wrap.ts`, `markdown.ts` and `tools.ts`, and an item is
+keeps its copy of the model and posts rows of styled spans — a tone, bold, italic, underlined, a
+diff's mark, a row on the band — to the shell's thread, which paints them in the theme's colours
+(`host.ts`, `view.tsx`, `shell/src/theme.ts`);
+the rows are laid out by `render.ts`, with the modules of "The look", and an item is
 laid out again only when what is drawn of it changed. The shell run from its sources (`shell/rewake-shell` as
 `REWAKE_SHELL`, a second build beside the installed one, [install.md](install.md)) watches
 `shell/src/face/` and starts every face again 150 ms after the last change; what reloads is the
@@ -156,3 +193,14 @@ bold, so a row is spans with `bold` and `italic`; a colour by its index came out
 as the renderer's own, not the person's, so the theme resolves it from the palette the terminal
 said. Still seen: `rewake screen`'s picture draws a `✻` within a longer run two cells wide,
 shifting the rest of that row by one and cutting its last character; the frame's cells are right.
+
+Live, October 30, 2026 (brief 40; Claude Code 2.1.310, the shell from its sources under a pty of
+200 by 50, a private state directory and project, a dev worker and a native one on the cheapest
+model, the same task to both): the letter, the run of a Bash call, two Reads, a Grep the session did not
+offer and a failing Bash folded into `Searched for 1 pattern, read 2 files, ran 2 shell commands` and
+`Read 1 file` as natively; the MCP call, the edit's counts and its red and green lines, the
+reply's heading, list, code block and table drew beside the native pane's; a change to `table.ts`
+was drawn by the next face with nothing restarted. Still differs, for want of mirror fields: paths
+are absolute or `~/…` where the native face makes them relative, an edit has no line numbers or
+context rows; and a code block has no syntax colours, which need a highlighter the face does not
+have.
