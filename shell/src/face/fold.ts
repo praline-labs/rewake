@@ -155,6 +155,11 @@ function hintOf(call: Item): string {
   }
 }
 
+// lostLine marks an item, or a call within a run, that a gap lost on the way.
+export const lostLine: FaceLine = {
+  spans: [{ text: "  [lost on the way — the native face has it]", tone: "gap" }],
+};
+
 const hang = (rows: Span[][], first: Span, rest: Span): FaceLine[] =>
   rows.map((row, i) => ({ spans: [i === 0 ? first : rest, ...row] }));
 
@@ -162,6 +167,11 @@ const hang = (rows: Span[][], first: Span, rest: Span): FaceLine[] =>
 // dot, the running command's description or what it is doing, and what the
 // latest call works on.
 export function runLines(run: { calls: Item[]; open: boolean }, width: number): FaceLine[] {
+  const lines = drawnRun(run, width);
+  return run.calls.some((c) => c.status === "gap") ? [...lines, lostLine] : lines;
+}
+
+function drawnRun(run: { calls: Item[]; open: boolean }, width: number): FaceLine[] {
   const pad = { text: "  " };
   if (!run.open) return hang(wrapSpans(said(run.calls, "done"), width - 2), pad, pad);
   const last = run.calls[run.calls.length - 1];

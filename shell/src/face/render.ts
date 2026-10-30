@@ -2,7 +2,7 @@
 // worker renders, the shell's thread only paints the spans in the person's
 // colours, so a face that changes or breaks never touches the shell's tree.
 
-import { entriesOf, runLines } from "./fold.ts";
+import { entriesOf, lostLine, runLines } from "./fold.ts";
 import { markdownRows } from "./markdown.ts";
 import type { FaceLine, Span, Tone } from "./messages.ts";
 import type { Item } from "./mirror.gen.ts";
@@ -128,8 +128,7 @@ export function linesOf(item: Item, width: number): FaceLine[] {
       );
       break;
   }
-  if (item.status === "gap")
-    out.push({ spans: [{ text: "  [lost on the way — the native face has it]", tone: "gap" }] });
+  if (item.status === "gap") out.push(lostLine);
   if (item.cut)
     out.push({ spans: [{ text: "  [cut — the native face has it whole]", tone: "faint" }] });
   return out;
@@ -196,12 +195,28 @@ export function render(
 // tail at the bottom. A terminal whose background the shell does not know
 // gives the layer no colour to paint, and the native face under it would show
 // through every cell the face leaves empty.
+// A row wider than the pane, a mark or a gutter on a pane narrower than it,
+// is cut at the pane's edge: a wide character the edge splits becomes a space.
 export function fill(lines: FaceLine[], width: number, height: number): FaceLine[] {
   const pad = (line: FaceLine): FaceLine => {
-    const used = line.spans.reduce((n, s) => n + widthOf(s.text), 0);
-    return used < width
-      ? { ...line, spans: [...line.spans, { text: " ".repeat(width - used) }] }
-      : line;
+    const spans: Span[] = [];
+    let used = 0;
+    let cut = false;
+    for (const span of line.spans) {
+      let text = "";
+      for (const ch of span.text) {
+        cut = used + widthOf(ch) > width;
+        if (cut) break;
+        text += ch;
+        used += widthOf(ch);
+      }
+      if (text) spans.push({ ...span, text });
+      if (cut) break;
+    }
+    return {
+      ...line,
+      spans: used < width ? [...spans, { text: " ".repeat(width - used) }] : spans,
+    };
   };
   const top = Array.from({ length: Math.max(height - lines.length, 0) }, blank);
   return [...top, ...lines].map(pad);

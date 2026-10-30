@@ -107,7 +107,7 @@ decision, October 30, 2026: first the same look, customised later), as read from
   bold, a failed call counted too. Bash is read by the first word of each part of its pipeline:
   `grep`, `find`, `rg`… search, `cat`, `head`, `wc`… read, `ls`, `tree`, `du` list, `echo` and its
   like count for nothing, any other word makes it a shell command; reads count files, each once.
-  Text, a prompt or another call ends a run; thinking and a notice do not, and show after it;
+  A call a gap lost leaves its mark under the run's line. Text, a prompt or another call ends a run; thinking and a notice do not, and show after it;
   ToolSearch and TodoWrite are not drawn. While a call of the run is running, or the run is the
   last thing a working turn did, it is open: a faint `●`, the running command's description or
   what the run is doing (`Reading 1 file…`), and under `⎿` the path, pattern or command of its
@@ -128,7 +128,8 @@ decision, October 30, 2026: first the same look, customised later), as read from
   `Brewed for 37s · done 7:01 AM` hung at two columns. The face times the turn from the changes it
   saw, so a face connected mid-turn or reloaded says `Working…` and no time.
 
-A row breaks at spaces, a word cut only when it is wider than the row, and escapes and control
+A row breaks at spaces, a word cut only when it is wider than the row; what still passes the
+pane's edge — a mark or a gutter on a pane narrower than it — is cut there; and escapes and control
 characters of a tool's output are dropped, since the face's widths do not count them. The faint
 colour and the default one are the person's; the rest are Claude Code's fixed theme values,
 named in `shell/src/theme.ts` by the element each colours, its dark set or, on a terminal whose

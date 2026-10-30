@@ -78,7 +78,10 @@ function diff(item: Item, width: number): Span[][] {
         for (const row of wrapSpans([{ text: `${sign}${line}` }], width)) {
           const used = row.reduce((n, s) => n + widthOf(s.text), 0);
           rows.push([
-            { text: `${row.map((s) => s.text).join("")}${" ".repeat(width - used)}`, mark },
+            {
+              text: `${row.map((s) => s.text).join("")}${" ".repeat(Math.max(width - used, 0))}`,
+              mark,
+            },
           ]);
         }
   }

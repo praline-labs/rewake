@@ -141,6 +141,12 @@ test("a run of reads, searches and commands folds into one counted line", () => 
   ]);
   const run = render(m, 80, 100)[0]?.spans.find((s) => s.text === "1");
   expect(run).toEqual({ text: "1", tone: "faint", bold: true });
+  // Review of c617953: a call lost on the way is marked within its run.
+  const lost = model(call("Read", { file_path: "/d1" }, "1\tx", "gap"));
+  expect(text(render(lost, 80, 100))).toEqual([
+    "  Read 1 file",
+    "  [lost on the way — the native face has it]",
+  ]);
   // While the turn works, its last run says what it does and on what.
   m.turn = "working";
   m.items.push(call("Bash", { command: "sleep 5", description: "Wait" }, undefined, "running"));
@@ -189,28 +195,43 @@ test("a reply's heading, table and quote are drawn as the terminal draws them", 
 });
 
 // Seen live on 2.11.0: the native face showed through the pane's last column.
-test("every row the face draws covers the pane's width", () => {
+// Review of c617953: an edit of a wide character at width 6 threw, a quote at
+// width 4 drew rows of 5; every kind of item is drawn at every width down to 1.
+test("every row the face draws covers the pane's width, however narrow", () => {
   const m = model(
-    { id: "p", kind: "prompt", status: "settled", text: "a prompt" },
-    { id: "t", kind: "text", status: "settled", text: "界".repeat(30) },
+    { id: "p", kind: "prompt", status: "settled", text: "a prompt\nand 界界 more" },
     {
-      id: "o",
-      kind: "tool",
-      status: "error",
-      name: "Bash",
-      text: "{}",
-      output: "\x1b[31mred\x1b[0m\tx",
+      id: "l",
+      kind: "prompt",
+      status: "settled",
+      text: "<task-notification><status>failed</status><summary>Rewake: a letter</summary></task-notification>",
     },
+    {
+      id: "t",
+      kind: "text",
+      status: "settled",
+      text: `# Head\n${"界".repeat(30)}\n- item **b** \`c\`\n  1. nested\n> a quote\n---\n\`\`\`\ncode 界\n\`\`\`\n| a | b |\n|---|---|\n| long cell | c |`,
+    },
+    call("Bash", "{}", "\x1b[31mred\x1b[0m\tx", "error"),
     { id: "th", kind: "thinking", status: "settled", text: "hm" },
-    call("Edit", { file_path: "/a/b/c.ts", old_string: "x", new_string: "y" }, "ok"),
+    { id: "n", kind: "notice", status: "settled", text: "a notice 界" },
+    call("Edit", { file_path: "/a/b/c.ts", old_string: "界", new_string: "x" }, "ok"),
+    call("Write", { file_path: "/a/w.ts", content: "one 界\ntwo" }, "ok"),
     call("Probe", { n: 1 }, Array.from({ length: 30 }, (_, i) => `line ${i}`).join("\n")),
-    { id: "x", kind: "text", status: "settled", text: "| a | b |\n|---|---|\n| long cell | c |" },
+    { ...call("Probe", { n: 2 }, "x"), id: "g", status: "gap" },
+    { ...call("Probe", { n: 3 }, "x"), id: "c", cut: true },
+    call("Read", { file_path: "/a/r.ts" }, "1\tx", "gap"),
+    call("Bash", { command: "sleep 9", description: "Wait 界" }, undefined, "running"),
   );
-  for (const width of [9, 10, 16, 23]) {
-    const rows = fill(render(m, width, 30), width, 30);
-    expect(rows).toHaveLength(30);
-    for (const row of rows)
-      expect(Bun.stringWidth(row.spans.map((s) => s.text).join(""))).toBe(width);
+  for (const turn of ["working", "idle"] as const) {
+    m.turn = turn;
+    for (let width = 1; width <= 30; width++) {
+      const clock = { now: 9_000, since: 1_000, worked: { took: 8_000, at: 9_000 } };
+      const rows = fill(render(m, width, 400, 0, clock), width, 400);
+      expect(rows).toHaveLength(400);
+      for (const row of rows)
+        expect(Bun.stringWidth(row.spans.map((s) => s.text).join(""))).toBe(width);
+    }
   }
 });
 
