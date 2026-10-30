@@ -3,14 +3,15 @@
 // mirror socket itself, keeps its copy of the model and posts the lines to
 // draw. Everything it does is caught here and posted as an error, so a face
 // that breaks leaves its last lines on the screen and the shell untouched.
-import type { FromFace, Link, ToFace } from "./messages.ts";
+import type { FaceLine, FromFace, Link, ToFace } from "./messages.ts";
 import type { Line } from "./mirror.gen.ts";
 import { bounds } from "./mirror.gen.ts";
 import { FaceModel } from "./model.ts";
-import { blinked, fill, render, rowsOf } from "./render.ts";
+import { blinked, bodyOf, fill, statusOf } from "./render.ts";
 import { Scroll } from "./scroll.ts";
 import { Ticker } from "./ticker.ts";
 import type { Clock } from "./turn.ts";
+import { Wheel } from "./wheel.ts";
 
 declare const self: Worker;
 
@@ -21,6 +22,10 @@ let path = "";
 let width = 80;
 let height = 24;
 const scroll = new Scroll();
+const wheel = new Wheel();
+// laid is the conversation as last laid out, until it or the width changes:
+// a scroll only cuts it again.
+let laid: { rows: FaceLine[]; whole: boolean } | undefined;
 let link: Link = "connecting";
 let model = new FaceModel();
 let socket: { write(data: string): number; end(): void } | undefined;
@@ -45,15 +50,25 @@ function turned(from: string, to: string) {
 
 const clockAt = (now: number): Clock => ({ now, since, worked });
 
+// body is the conversation's rows, at least the last want of them, laid out
+// again only when they changed or more of them are wanted.
+function body(want: number): FaceLine[] {
+  if (!laid || (!laid.whole && laid.rows.length < want)) laid = bodyOf(model, width, want);
+  return laid.rows;
+}
+
+// rows is what the view cuts from: the conversation and the turn's rows
+// under it, only its tail while the view follows and no scroll asks for all.
+const rows = (clock: Clock, all = scroll.top !== undefined) => {
+  const status = statusOf(model, clock);
+  return [...body(all ? Infinity : height - status.length), ...status];
+};
+
 // draw is one frame of the face at a moment, every row of it from the same
 // clock.
 function draw(now: number) {
   try {
-    const clock = clockAt(now);
-    const shown =
-      scroll.top === undefined
-        ? render(model, width, height, 0, clock)
-        : scroll.view(rowsOf(model, width, clock), height);
+    const shown = scroll.view(rows(clockAt(now)), height);
     const message: FromFace = {
       kind: "lines",
       lines: fill(blinked(shown, now), width, height),
@@ -77,7 +92,19 @@ const moving = () =>
   model.items.some((item) => item.status === "running");
 
 const ticker = new Ticker(draw, moving);
-const soon = () => ticker.change();
+// soon paints a change of the conversation at the next tick.
+const soon = () => {
+  laid = undefined;
+  ticker.change();
+};
+
+// scrolled moves the view and paints it at once: a scroll is the person's
+// hand, not a change of the conversation, so it waits for no tick.
+function scrolled(by: number) {
+  const now = Date.now();
+  scroll.by(by, rows(clockAt(now), true).length, height);
+  draw(now);
+}
 
 function lost(why: string) {
   socket = undefined;
@@ -102,6 +129,7 @@ function connect() {
     lost(why);
   };
   model = new FaceModel();
+  laid = undefined;
   scroll.follow();
   since = worked = undefined;
   link = "connecting";
@@ -170,8 +198,11 @@ self.onmessage = (event: MessageEvent<ToFace>) => {
         height = message.height;
         return soon();
       case "scroll":
-        scroll.by(message.by, rowsOf(model, width, clockAt(Date.now())).length, height);
-        return soon();
+        return scrolled(message.by);
+      case "wheel": {
+        const moved = wheel.rows(message.up ? 1 : -1, message.at);
+        return scrolled(message.up ? moved : -moved);
+      }
       case "prompt": {
         if (!socket)
           return post({

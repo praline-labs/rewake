@@ -76,6 +76,7 @@ export function toggleFace(id: string) {
 export const sizeFace = (id: string, width: number, height: number) =>
   faces.get(id)?.host.size(width, height);
 export const scrollFace = (id: string, by: number) => faces.get(id)?.host.scroll(by);
+export const wheelFace = (id: string, up: boolean) => faces.get(id)?.host.wheel(up);
 export const promptFace = (id: string, text: string) => faces.get(id)?.host.prompt(text) ?? false;
 
 export function reloadFaces() {

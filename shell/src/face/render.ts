@@ -164,24 +164,44 @@ function cachedLinesOf(item: Item, width: number): FaceLine[] {
 
 const blank = (): FaceLine => ({ spans: [] });
 
-// rowsOf is the model's rows from the top, at least its last want of them:
-// only the tail is laid out, so a full model costs what the screen shows.
-export function rowsOf(model: FaceModel, width: number, clock: Clock, want = Infinity): FaceLine[] {
-  const rows: FaceLine[] = [];
+// statusOf is the rows under the conversation that move with the clock: the
+// turn's line after a blank row.
+export function statusOf(model: FaceModel, clock: Clock): FaceLine[] {
   const status = turnLine(model.turn, clock);
-  if (status) rows.push(...(model.items.length > 0 ? [blank()] : []), status);
+  if (!status) return [];
+  return [...(model.items.length > 0 ? [blank()] : []), status];
+}
+
+// bodyOf is the conversation's rows from the top, at least its last want of
+// them, and whether they are all of them: only the tail is laid out, so a
+// full model costs what the screen shows. Nothing in them moves with the
+// clock, so a scroll can cut them again without laying them out.
+export function bodyOf(
+  model: FaceModel,
+  width: number,
+  want = Infinity,
+): { rows: FaceLine[]; whole: boolean } {
+  const rows: FaceLine[] = [];
   const entries = entriesOf(model.items, model.turn === "working");
-  for (let i = entries.length - 1; i >= 0 && rows.length < want; i--) {
+  let i = entries.length - 1;
+  for (; i >= 0 && rows.length < want; i--) {
     const entry = entries[i];
     if (!entry) continue;
     const lines = "item" in entry ? cachedLinesOf(entry.item, width) : runLines(entry, width);
     rows.unshift(...(i > 0 ? [blank()] : []), ...lines);
   }
-  if (rows.length < want && model.dropped > 0)
+  const whole = i < 0;
+  if (whole && model.dropped > 0)
     rows.unshift({
       spans: [{ text: `· ${model.dropped} earlier items left the face's memory`, tone: "faint" }],
     });
-  return rows;
+  return { rows, whole };
+}
+
+// rowsOf is the model's rows from the top, at least its last want of them.
+export function rowsOf(model: FaceModel, width: number, clock: Clock, want = Infinity): FaceLine[] {
+  const status = statusOf(model, clock);
+  return [...bodyOf(model, width, want - status.length).rows, ...status];
 }
 
 // render is the last height rows of the model, scrolled up by back rows.
