@@ -46,7 +46,7 @@ function hosted(url: string, path = "/nowhere.sock", timing = {}) {
 }
 
 // A wrapper's mirror socket serving one snapshot of one prompt, or of the
-// replies given.
+// replies given; send writes a change to the face connected last.
 function mirror(dir: string, text: string, replies: string[] = []) {
   const path = join(dir, "m.sock");
   const items = replies.length
@@ -58,23 +58,26 @@ function mirror(dir: string, text: string, replies: string[] = []) {
     ...items.map((item) => ({ op: "item", item })),
     { op: "end" },
   ];
+  let last: { write(data: string): number } | undefined;
   const server = Bun.listen({
     unix: path,
     socket: {
       open(s) {
+        last = s;
         s.write(lines.map((l) => `${JSON.stringify(l)}\n`).join(""));
       },
       data() {},
     },
   });
   ends.push(() => server.stop(true));
-  return path;
+  const send = (line: object) => last?.write(`${JSON.stringify(line)}\n`);
+  return { path, send };
 }
 
 test("a face draws the wrapper's snapshot, and a reload that fails to import keeps its lines with the error", async () => {
   const dir = scratch();
   const url = faceFile(dir, `import ${JSON.stringify(worker)};\n`);
-  const { host, until } = hosted(url, mirror(dir, "say hi"));
+  const { host, until } = hosted(url, mirror(dir, "say hi").path);
   host.start();
   const drawn = await until((s) => s.link === "live" && s.lines.length > 0);
   // Every row is filled to the pane, so the layer is opaque.
@@ -113,7 +116,7 @@ const shownText = (s: FaceState) =>
 test("a notch of the wheel moves the face one row, from the bottom and on", async () => {
   const dir = scratch();
   const replies = Array.from({ length: 50 }, (_, i) => `line ${i + 1}`);
-  const { host, until } = hosted(worker, mirror(dir, "", replies));
+  const { host, until } = hosted(worker, mirror(dir, "", replies).path);
   host.start();
   const at = (line: string) => until((s) => shownText(s).at(0) === line);
   // Each reply is a row and a blank one: the last 24 rows start at a blank.
@@ -129,6 +132,30 @@ test("a notch of the wheel moves the face one row, from the bottom and on", asyn
   await at("● line 38");
   host.scroll(-100);
   await until((s) => shownText(s).at(1) === "● line 39");
+});
+
+// Seen in review: a change that came after a tick was laid out and painted
+// by a notch before the next tick, ahead of the face's one clock.
+test("a notch cuts the rows the last tick painted; a change after it waits for its tick", async () => {
+  const dir = scratch();
+  const replies = Array.from({ length: 50 }, (_, i) => `line ${i + 1}`);
+  const wrapper = mirror(dir, "", replies);
+  const { host, states, until } = hosted(worker, wrapper.path);
+  host.start();
+  await until((s) => s.link === "live" && shownText(s).at(-1) === "● line 50");
+  // The clock stands once the snapshot is painted: the change starts it, and
+  // its tick comes 50 ms later; the notch comes well before.
+  await Bun.sleep(150);
+  wrapper.send({ op: "append", id: "r48", text: " NEW" });
+  await Bun.sleep(15);
+  const before = states.length;
+  host.wheel(true);
+  const scrolled = await until((s) => shownText(s).at(0) === "● line 38");
+  expect(shownText(scrolled)).toContain("● line 49");
+  expect(states.slice(before, states.indexOf(scrolled) + 1).flatMap(shownText)).not.toContain(
+    "● line 49 NEW",
+  );
+  await until((s) => shownText(s).includes("● line 49 NEW"));
 });
 
 test("a face that throws, as it loads or on a message, is stopped with its error shown", async () => {

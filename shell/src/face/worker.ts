@@ -23,9 +23,15 @@ let width = 80;
 let height = 24;
 const scroll = new Scroll();
 const wheel = new Wheel();
-// laid is the conversation as last laid out, until it or the width changes:
-// a scroll only cuts it again.
-let laid: { rows: FaceLine[]; whole: boolean } | undefined;
+// laid is the conversation's rows as the last tick laid them out, and stale
+// once it or the width changed: only a tick lays them out again.
+let laid: FaceLine[] = [];
+let stale = true;
+// frame is what the last tick committed: every row from the same moment. A
+// scroll cuts only it, so a change of the conversation waits for its tick.
+let frame:
+  | { rows: FaceLine[]; now: number; turn: string; link: Link; prompts: boolean }
+  | undefined;
 let link: Link = "connecting";
 let model = new FaceModel();
 let socket: { write(data: string): number; end(): void } | undefined;
@@ -50,35 +56,37 @@ function turned(from: string, to: string) {
 
 const clockAt = (now: number): Clock => ({ now, since, worked });
 
-// body is the conversation's rows, at least the last want of them, laid out
-// again only when they changed or more of them are wanted.
-function body(want: number): FaceLine[] {
-  if (!laid || (!laid.whole && laid.rows.length < want)) laid = bodyOf(model, width, want);
-  return laid.rows;
-}
-
-// rows is what the view cuts from: the conversation and the turn's rows
-// under it, only its tail while the view follows and no scroll asks for all.
-const rows = (clock: Clock, all = scroll.top !== undefined) => {
-  const status = statusOf(model, clock);
-  return [...body(all ? Infinity : height - status.length), ...status];
-};
-
-// draw is one frame of the face at a moment, every row of it from the same
-// clock.
+// draw is the tick's frame: the whole conversation, laid out again when it
+// changed (the full model costs a few ms), and the turn's rows under it,
+// every row from the same clock.
 function draw(now: number) {
   try {
-    const shown = scroll.view(rows(clockAt(now)), height);
+    if (stale) laid = bodyOf(model, width).rows;
+    stale = false;
+    const rows = [...laid, ...statusOf(model, clockAt(now))];
+    const prompts = model.inputs.includes("prompt");
+    frame = { rows, now, turn: model.turn, link, prompts };
+    paint();
+  } catch (err) {
+    post({ kind: "error", text: `the face's drawing failed: ${String(err)}` });
+  }
+}
+
+// paint posts the view of the committed frame, unless it is what was posted.
+function paint() {
+  if (!frame) return;
+  try {
+    const shown = scroll.view(frame.rows, height);
     const message: FromFace = {
       kind: "lines",
-      lines: fill(blinked(shown, now), width, height),
-      turn: model.turn,
-      link,
-      prompts: model.inputs.includes("prompt"),
+      lines: fill(blinked(shown, frame.now), width, height),
+      turn: frame.turn,
+      link: frame.link,
+      prompts: frame.prompts,
     };
-    const frame = JSON.stringify(message);
-    if (frame === posted) return;
-    posted = frame;
+    const sent = JSON.stringify(message);
+    if (sent === posted) return;
+    posted = sent;
     post(message);
   } catch (err) {
     post({ kind: "error", text: `the face's drawing failed: ${String(err)}` });
@@ -94,16 +102,17 @@ const moving = () =>
 const ticker = new Ticker(draw, moving);
 // soon paints a change of the conversation at the next tick.
 const soon = () => {
-  laid = undefined;
+  stale = true;
   ticker.change();
 };
 
-// scrolled moves the view and paints it at once: a scroll is the person's
-// hand, not a change of the conversation, so it waits for no tick.
+// scrolled moves the view over the committed frame and paints it at once: a
+// scroll is the person's hand, not a change of the conversation, so it waits
+// for no tick and lays nothing out.
 function scrolled(by: number) {
-  const now = Date.now();
-  scroll.by(by, rows(clockAt(now), true).length, height);
-  draw(now);
+  if (!frame) return;
+  scroll.by(by, frame.rows.length, height);
+  paint();
 }
 
 function lost(why: string) {
@@ -129,7 +138,7 @@ function connect() {
     lost(why);
   };
   model = new FaceModel();
-  laid = undefined;
+  stale = true;
   scroll.follow();
   since = worked = undefined;
   link = "connecting";

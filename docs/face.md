@@ -166,11 +166,12 @@ the native one turns every 120 ms beside a pulsing verb and a blinking dot.
 ## The scroll
 
 A scroll is the person's hand, not a change of the conversation, so it waits for no tick: the
-worker moves the view and posts the frame at once, the turn's line and a dot's blink read from that
-moment. It lays nothing out for it: the worker keeps the conversation's rows as last laid out —
-nothing in them moves with the clock; the turn's rows are added under them at each paint — and
-lays them out again only when the conversation or the width changed, so a scroll cuts the rows it
-has. A notch moves as many rows as the native pane moves for it (`shell/src/face/wheel.ts`, from
+worker moves the view over the frame the last tick committed — the whole conversation's rows and
+the turn's under them, with that tick's moment for the blink — and posts it at once. It lays
+nothing out and shows nothing the tick did not: a change that came after the tick waits for the
+next one, scroll or not (found in review: a notch between two ticks painted a delta early). The
+tick lays the whole conversation out again only when it or the width changed, about 2.3 ms at the
+model's bound of 1000 items (12 000 rows), where its tail alone took 0.25 ms. A notch moves as many rows as the native pane moves for it (`shell/src/face/wheel.ts`, from
 the time the shell's thread heard it): one alone; while notches come within 40 ms of each other,
 0.3 more a notch up to six; the first notch against the way the view moved is held and moves
 nothing, as a wheel's bounce, and the next one the new way turns it; a notch back the old way within
