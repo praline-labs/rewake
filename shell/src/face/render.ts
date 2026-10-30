@@ -80,6 +80,24 @@ const dotTone = (item: Item): Tone =>
         ? "gap"
         : "done";
 
+// permitRows is what the terminal program says under a call of how it was
+// let run or refused, where it says anything: only of auto mode's
+// classifier. A refusal's line stands for the error it refused with.
+const classifierDocs = "https://code.claude.com/docs/s/claude-code-auto-mode";
+function permitRows(item: Item): Span[][] | undefined {
+  const p = item.permit;
+  if (p?.by !== "classifier") return undefined;
+  if (p.allowed)
+    return item.status === "done" && item.name !== "Agent"
+      ? [[{ text: "Allowed by auto mode classifier", tone: "faint" }]]
+      : undefined;
+  if (item.status !== "refused" && item.status !== "error") return undefined;
+  const reason = p.reason ? `${p.reason} ∙ ` : "";
+  return [
+    [{ text: `Denied by auto mode classifier ∙ ${reason}see ${classifierDocs}`, tone: "faint" }],
+  ];
+}
+
 function toolLines(item: Item, width: number): FaceLine[] {
   const dot: Span = { text: "● ", tone: dotTone(item), blink: item.status === "running" };
   const out = marked(headRowsOf(item, width - 2), dot);
@@ -89,14 +107,17 @@ function toolLines(item: Item, width: number): FaceLine[] {
       out.push(...marked([[{ text: "Running…", tone: "faint" }]], mark));
     return out;
   }
-  const { rows, more } = resultOf(item, width - 5);
-  if (more > 0) rows.push([{ text: `… +${more} lines`, tone: "faint" }]);
-  out.push(
-    ...marked(
+  const permit = permitRows(item);
+  const under = (rows: Span[][]) =>
+    marked(
       rows.flatMap((row) => wrapSpans(row, width - 5)),
       mark,
-    ),
-  );
+    );
+  if (permit && !item.permit?.allowed) return [...out, ...under(permit)];
+  const { rows, more } = resultOf(item, width - 5);
+  if (more > 0) rows.push([{ text: `… +${more} lines`, tone: "faint" }]);
+  out.push(...under(rows));
+  if (permit) out.push(...under(permit));
   return out;
 }
 
@@ -137,7 +158,7 @@ export function linesOf(item: Item, width: number): FaceLine[] {
 
 // An item is laid out again only when what is drawn of it changed: a stream
 // redraws on every tick of the face's clock, and only its last block grows.
-type Drawn = Pick<Item, "kind" | "status" | "text" | "output" | "name" | "cut"> & {
+type Drawn = Pick<Item, "kind" | "status" | "text" | "output" | "name" | "cut" | "permit"> & {
   width: number;
   lines: FaceLine[];
 };
@@ -153,12 +174,13 @@ function cachedLinesOf(item: Item, width: number): FaceLine[] {
     hit.text === item.text &&
     hit.output === item.output &&
     hit.name === item.name &&
-    hit.cut === item.cut
+    hit.cut === item.cut &&
+    hit.permit === item.permit
   )
     return hit.lines;
   const lines = linesOf(item, width);
-  const { kind, status, text, output, name, cut } = item;
-  laidOut.set(item, { kind, status, text, output, name, cut, width, lines });
+  const { kind, status, text, output, name, cut, permit } = item;
+  laidOut.set(item, { kind, status, text, output, name, cut, permit, width, lines });
   return lines;
 }
 
@@ -166,8 +188,8 @@ const blank = (): FaceLine => ({ spans: [] });
 
 // statusOf is the rows under the conversation that move with the clock: the
 // turn's line after a blank row.
-export function statusOf(model: FaceModel, clock: Clock): FaceLine[] {
-  const status = turnLine(model.turn, clock);
+export function statusOf(model: FaceModel, clock: Clock, width = 80): FaceLine[] {
+  const status = turnLine(model.turn, clock, width);
   if (!status) return [];
   return [...(model.items.length > 0 ? [blank()] : []), status];
 }
@@ -200,7 +222,7 @@ export function bodyOf(
 
 // rowsOf is the model's rows from the top, at least its last want of them.
 export function rowsOf(model: FaceModel, width: number, clock: Clock, want = Infinity): FaceLine[] {
-  const status = statusOf(model, clock);
+  const status = statusOf(model, clock, width);
   return [...bodyOf(model, width, want - status.length).rows, ...status];
 }
 

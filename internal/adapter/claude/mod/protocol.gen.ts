@@ -288,10 +288,28 @@ export interface MirrorEvent {
   of?: number
   // lost counts the events a resync stands for.
   lost?: number
+  // permit is how the call of a result was let run or refused, where the mod could tell.
+  permit?: MirrorPermit
+  // mode is the session's permission mode as Claude Code names it, on a mode event.
+  mode?: string
 }
 
 // MirrorEventKind is a mirror event's kind.
-export type MirrorEventKind = "prompt" | "delta" | "settle" | "tool" | "input" | "result" | "turn" | "lost" | "resync"
+export type MirrorEventKind = "prompt" | "delta" | "settle" | "tool" | "input" | "result" | "turn" | "mode" | "lost" | "resync"
+
+// MirrorPermit is who let a call run or refused it, in the face's words (docs/face.md, Permit).
+export interface MirrorPermit {
+  // by is who settled the call.
+  by: MirrorPermitBy
+  // allowed says the call was let run.
+  allowed: boolean
+  // reason is the decider's short reason for a refusal.
+  reason?: string
+}
+
+// MirrorPermitBy is who settled a call: a settings rule, the mode or the tool's own check, auto
+// mode's classifier, the person at the dialog, rewake's permission request, a hook.
+export type MirrorPermitBy = "rule" | "mode" | "classifier" | "person" | "rewake" | "hook"
 
 // MirrorBlock is a block's kind: a reply's text or thinking.
 export type MirrorBlock = "text" | "thinking"

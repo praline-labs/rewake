@@ -74,7 +74,24 @@ func mirrorEvent(e MirrorEvent) mirror.Event {
 	if e.State != nil {
 		out.State = mirror.TurnState(*e.State)
 	}
+	if e.Permit != nil {
+		out.Permit = &mirror.Permit{By: mirror.PermitBy(e.Permit.By), Allowed: e.Permit.Allowed, Reason: e.Permit.Reason}
+	}
+	if e.Mode != nil {
+		out.Mode = modes[*e.Mode]
+	}
 	return out
+}
+
+// modes names Claude Code's permission modes in the model's words; one the
+// table does not know leaves the mode as it was.
+var modes = map[string]mirror.PermissionMode{
+	"default":           mirror.PermissionModeDefault,
+	"plan":              mirror.PermissionModePlan,
+	"acceptEdits":       mirror.PermissionModeEdits,
+	"auto":              mirror.PermissionModeAuto,
+	"bypassPermissions": mirror.PermissionModeBypass,
+	"dontAsk":           mirror.PermissionModeUnasked,
 }
 
 // Prompt carries a prompt typed in rewake's face to the harness as the

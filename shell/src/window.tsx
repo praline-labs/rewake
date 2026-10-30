@@ -14,7 +14,7 @@ import { FaceView } from "./face/view.tsx";
 import { layoutOf } from "./layout.ts";
 import { type PaneTerminal, paneHooks } from "./pane.ts";
 import { briefs, mainPane, type Pane, paneOf, show, workers } from "./panes.ts";
-import { mainStrip, markOf, nameOf, Strip, stripOf } from "./strip.tsx";
+import { mainStrip, markOf, nameOf, Strip, stripOf, windowOf } from "./strip.tsx";
 import type { Theme } from "./theme.ts";
 
 // View is what decides how the window looks: who has the keys, which worker
@@ -160,6 +160,7 @@ export function Window(props: { env: Env; view: () => View }) {
                           height={height()}
                           theme={theme}
                           title={nameOf(stripOf(pane.id))}
+                          context={windowOf(stripOf(pane.id).status)}
                           live={live}
                           active={() => live && view().focused === pane.id && !props.env.closing()}
                         />

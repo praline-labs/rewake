@@ -23,6 +23,7 @@ import { Management } from "./management.ts";
 import { Mirror, type MirrorOutbox, serveMirror } from "./mirror.ts";
 import type { Host } from "./outbox.ts";
 import { cut, listed, loadKey, newId, nextDelay, Outbox } from "./outbox.ts";
+import { Permits } from "./permits.ts";
 import { serveWorktreeStatus, worktreeToolsFor } from "./worktree.ts";
 
 // The harness's reasons, mapped to the protocol's.
@@ -109,6 +110,10 @@ interface Load {
   heartbeat: Heartbeat;
   management: Management;
   asks: Asks;
+  // permits records how each call was settled, for rewake's face, and
+  // admitted is told the hello was: the face's mode goes before any event.
+  permits: Permits;
+  admitted: () => void;
   // run is the wrapper's answer to this load's hello: undefined until it
   // comes, and when no wrapper answered, which later steps read as "not live".
   run?: HelloAnswer;
@@ -133,6 +138,7 @@ async function hello(load: Load, request: HelloRequest, delay: number, renumbere
       load.management.admit(load.run.generation);
       load.heartbeat.begin(load.run.generation);
       await load.outbox.admit();
+      load.admitted();
       return;
     }
     if (answer.status === 410) {
@@ -223,6 +229,8 @@ export const register: Register = (on) => {
         loadId,
       ),
       asks: new Asks(host, loadId),
+      permits: new Permits(),
+      admitted: () => mirror.admit(),
       // A lapsed generation's chain says the load's latest hello again.
       heartbeat: new Heartbeat(
         host,
@@ -330,7 +338,11 @@ export const register: Register = (on) => {
   });
 
   // A worker's permission requests and questions, carried to main.
-  serveDialogs(on, () => load);
+  serveDialogs(
+    on,
+    () => load,
+    (mode) => mirror.moded(mode),
+  );
 
   // The conversation, for a run rewake's own face draws.
   serveMirror(on, mirror);

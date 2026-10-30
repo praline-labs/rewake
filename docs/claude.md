@@ -42,7 +42,7 @@ The mod's files are embedded from `internal/adapter/claude/mod/`, each named in 
 of `mod.go`, since a pattern skips the manifest's dot directory: the manifest `rewake`
 (`.claude-plugin/plugin.json`), `hooks/hooks.json`, the one module `hooks/rewake.ts` and the
 files it imports — `outbox.ts`, `heartbeat.ts`, `management.ts`, `asks.ts`, `calls.ts`,
-`dialogs.ts`, `closing.ts`, `worktree.ts`, `briefs.ts`, `enter.ts`, `mirror.ts`, `sizes.ts` — and
+`dialogs.ts`, `closing.ts`, `worktree.ts`, `briefs.ts`, `enter.ts`, `mirror.ts`, `permits.ts`, `sizes.ts` — and
 the generated `protocol.gen.ts`. The run's service
 writes them into `<run dir>/mod` before the harness starts, and the launch passes
 `--plugin-dir <run dir>/mod` to that launch only. Nothing in the person's settings changes (L1);
@@ -335,6 +335,16 @@ its open blocks and its tools' inputs together, is at most 1 MiB, each input 256
 bytes. The outbox is held to 256 KiB by dropping deltas first, then settles whole as `lost{id}`
 markers, then collapsing the markers into one `resync` that counts what went. The wrapper's model
 marks what was lost as a gap, never as settled. Subagents are not mirrored.
+
+Each result carries its **permit** (`permits.ts`): `tool.check`'s hook reads the verdict of
+`next(e)` and returns it unchanged, in a `try` so nothing it records can turn a call into a
+refusal; an allow or a deny names a hook, a rule or the mode, an ask is settled by rewake's
+permission request (`asks.ts`), the person at the dialog (`PermissionRequest` with no answer of
+rewake's), or in auto mode by the classifier — `PermissionDenied`, a refusal's text, else any ask
+answered without a dialog but an edit inside the session's directory, which auto mode allows on
+its own. The permission mode is the `permission_mode` of `SessionStart`, `UserPromptSubmit` and
+`PostToolUse`, sent as a `mode` event when it changes and once the hello is admitted; Claude Code
+2.1.310 sends none with `SessionStart`, so the first prompt's event says it.
 
 The face's prompt is one more control action, `prompt` with its `text`, carried by the `mod/alive`
 poll; the mod runs it as `$.prompt.submit({text, asUser: true})` outside the poll's chain and answers

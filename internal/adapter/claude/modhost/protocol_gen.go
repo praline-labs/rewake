@@ -329,6 +329,12 @@ type MirrorEvent struct {
 
 	// Lost counts the events a resync stands for.
 	Lost *int `json:"lost,omitempty"`
+
+	// Permit is how the call of a result was let run or refused, where the mod could tell.
+	Permit *MirrorPermit `json:"permit,omitempty"`
+
+	// Mode is the session's permission mode as Claude Code names it, on a mode event.
+	Mode *string `json:"mode,omitempty"`
 }
 
 // MirrorEventKind is a mirror event's kind.
@@ -343,8 +349,35 @@ const (
 	MirrorEventKindInput  MirrorEventKind = "input"
 	MirrorEventKindResult MirrorEventKind = "result"
 	MirrorEventKindTurn   MirrorEventKind = "turn"
+	MirrorEventKindMode   MirrorEventKind = "mode"
 	MirrorEventKindLost   MirrorEventKind = "lost"
 	MirrorEventKindResync MirrorEventKind = "resync"
+)
+
+// MirrorPermit is who let a call run or refused it, in the face's words (docs/face.md, Permit).
+type MirrorPermit struct {
+	// By is who settled the call.
+	By MirrorPermitBy `json:"by"`
+
+	// Allowed says the call was let run.
+	Allowed bool `json:"allowed"`
+
+	// Reason is the decider's short reason for a refusal.
+	Reason *string `json:"reason,omitempty"`
+}
+
+// MirrorPermitBy is who settled a call: a settings rule, the mode or the tool's own check, auto
+// mode's classifier, the person at the dialog, rewake's permission request, a hook.
+type MirrorPermitBy string
+
+// The values of MirrorPermitBy.
+const (
+	MirrorPermitByRule       MirrorPermitBy = "rule"
+	MirrorPermitByMode       MirrorPermitBy = "mode"
+	MirrorPermitByClassifier MirrorPermitBy = "classifier"
+	MirrorPermitByPerson     MirrorPermitBy = "person"
+	MirrorPermitByRewake     MirrorPermitBy = "rewake"
+	MirrorPermitByHook       MirrorPermitBy = "hook"
 )
 
 // MirrorBlock is a block's kind: a reply's text or thinking.

@@ -4,9 +4,10 @@
 // draw. Everything it does is caught here and posted as an error, so a face
 // that breaks leaves its last lines on the screen and the shell untouched.
 import type { FaceLine, FromFace, Link, ToFace } from "./messages.ts";
-import type { Line } from "./mirror.gen.ts";
+import type { Line, PermissionMode } from "./mirror.gen.ts";
 import { bounds } from "./mirror.gen.ts";
 import { FaceModel } from "./model.ts";
+import { Tracker } from "./progress.ts";
 import { blinked, bodyOf, fill, statusOf } from "./render.ts";
 import { Scroll } from "./scroll.ts";
 import { Ticker } from "./ticker.ts";
@@ -30,7 +31,14 @@ let stale = true;
 // frame is what the last tick committed: every row from the same moment. A
 // scroll cuts only it, so a change of the conversation waits for its tick.
 let frame:
-  | { rows: FaceLine[]; now: number; turn: string; link: Link; prompts: boolean }
+  | {
+      rows: FaceLine[];
+      now: number;
+      turn: string;
+      link: Link;
+      prompts: boolean;
+      mode?: PermissionMode;
+    }
   | undefined;
 let link: Link = "connecting";
 let model = new FaceModel();
@@ -41,6 +49,8 @@ let posted = "";
 // connected mid-turn does not know when it began.
 let since: number | undefined;
 let worked: { took: number; at: number } | undefined;
+// progress follows the working turn from tick to tick.
+const progress = new Tracker();
 
 // turned keeps the clock as the turn changes.
 function turned(from: string, to: string) {
@@ -48,13 +58,19 @@ function turned(from: string, to: string) {
   if (to === "working") {
     since = Date.now();
     worked = undefined;
+    progress.reset(since);
   } else if (from === "working" && since !== undefined && to === "idle") {
     worked = { took: Date.now() - since, at: Date.now() };
     since = undefined;
   } else since = undefined;
 }
 
-const clockAt = (now: number): Clock => ({ now, since, worked });
+const clockAt = (now: number): Clock => ({
+  now,
+  since,
+  worked,
+  progress: model.turn === "working" ? progress.at(model.items, now) : undefined,
+});
 
 // draw is the tick's frame: the whole conversation, laid out again when it
 // changed (the full model costs a few ms), and the turn's rows under it,
@@ -63,9 +79,9 @@ function draw(now: number) {
   try {
     if (stale) laid = bodyOf(model, width).rows;
     stale = false;
-    const rows = [...laid, ...statusOf(model, clockAt(now))];
+    const rows = [...laid, ...statusOf(model, clockAt(now), width)];
     const prompts = model.inputs.includes("prompt");
-    frame = { rows, now, turn: model.turn, link, prompts };
+    frame = { rows, now, turn: model.turn, link, prompts, mode: model.mode };
     paint();
   } catch (err) {
     post({ kind: "error", text: `the face's drawing failed: ${String(err)}` });
@@ -83,6 +99,7 @@ function paint() {
       turn: frame.turn,
       link: frame.link,
       prompts: frame.prompts,
+      mode: frame.mode,
     };
     const sent = JSON.stringify(message);
     if (sent === posted) return;
@@ -141,6 +158,7 @@ function connect() {
   stale = true;
   scroll.follow();
   since = worked = undefined;
+  progress.reset();
   link = "connecting";
   Bun.connect({
     unix: path,

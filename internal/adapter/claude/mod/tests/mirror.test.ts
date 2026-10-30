@@ -1,5 +1,6 @@
 import { expect, test } from "claude-code/testing";
 import { MirrorOutbox } from "../hooks/mirror.ts";
+import { Permits, reasonOf, type Verdict } from "../hooks/permits.ts";
 import { fit, jsonSize, pieces, utf8Size } from "../hooks/sizes.ts";
 import { bounds } from "../protocol.gen.ts";
 import type { Reply } from "./world.ts";
@@ -267,3 +268,114 @@ for (const char of ["x", "界"]) {
     expect(inputs.length).toBe(10);
   });
 }
+
+// A call's result carries how it was let run or refused, and the mode the
+// harness reports reaches the face once, when the hello's answer is in.
+test("a permit tells who let a call run or refused it, as the terminal program tells it", () => {
+  const permits = new Permits();
+  const check = (tool: string, input: object, id: string, verdict: Verdict, cwd?: string) =>
+    permits.checked({ tool, input, tool_use_id: id } as any, verdict, cwd);
+  const ask = { decision: "ask" };
+  check("Read", { file_path: "/work/a" }, "r", { decision: "allow" });
+  check("Glob", { pattern: "*" }, "g", { decision: "deny", rule: "Glob" });
+  check("Bash", { command: "pre" }, "h", { decision: "allow", hook: "pre" });
+  check("Bash", { command: "make" }, "b", ask, "/work");
+  check("Edit", { file_path: "/work/a" }, "e", ask, "/work");
+  check("Edit", { file_path: "/workshop/a" }, "o", ask, "/work");
+  check("WebFetch", { url: "u" }, "w", ask, "/work");
+  check("WebFetch", { url: "v" }, "d", ask, "/work");
+  check("Bash", { command: "rm" }, "p", ask, "/work");
+  check("Bash", { command: "rm -r" }, "q", ask, "/work");
+  check("Bash", { command: "ls" }, "x", ask, "/work");
+  check("Bash", { command: "ls" }, "y", ask, "/work");
+  permits.denied("d", "out of scope");
+  permits.dialog({ tool_name: "Bash", tool_input: { command: "rm" } } as any, "person");
+  permits.answered("x", "rewake", true);
+  permits.answered("y", "rewake", false);
+  const refusal =
+    "Permission for this action was denied by the Claude Code auto mode classifier. Reason: [Scope]. If you have other tasks, go on.";
+  const take = (id: string, ended: object = {}, mode = "auto") => permits.take(id, ended, mode);
+  expect(take("r")).toEqual({ by: "mode", allowed: true });
+  expect(take("g", { refused: "no" })).toEqual({ by: "rule", allowed: false });
+  expect(take("h")).toEqual({ by: "hook", allowed: true });
+  expect(take("b")).toEqual({ by: "classifier", allowed: true });
+  expect(take("e")).toEqual({ by: "mode", allowed: true });
+  expect(take("o")).toEqual({ by: "classifier", allowed: true });
+  expect(take("w", { failed: refusal })).toEqual({
+    by: "classifier",
+    allowed: false,
+    reason: "[Scope]",
+  });
+  expect(take("d", { refused: "denied" })).toEqual({
+    by: "classifier",
+    allowed: false,
+    reason: "out of scope",
+  });
+  expect(take("p")).toEqual({ by: "person", allowed: true });
+  expect(
+    take("q", {
+      failed: "The user doesn't want to proceed with this tool use. The tool use was rejected.",
+    }),
+  ).toEqual({
+    by: "person",
+    allowed: false,
+  });
+  expect(take("x")).toEqual({ by: "rewake", allowed: true });
+  expect(take("y", { refused: "refused" })).toEqual({ by: "rewake", allowed: false });
+  expect(take("r")).toBeUndefined();
+  check("Bash", { command: "make" }, "m", ask, "/work");
+  expect(take("m", {}, "default")).toEqual({ by: "mode", allowed: true });
+  permits.checked({ tool: "Bash", input: {}, tool_use_id: "s", agentId: "a1" } as any, ask);
+  expect(take("s")).toBeUndefined();
+  expect(reasonOf("Permission for this action has been denied. Reason: x")).toEqual({});
+  expect(reasonOf("ok")).toBeUndefined();
+});
+
+test("a result carries its permit, and the mode goes to the face once as it changes", async ($, on) => {
+  const run = world(on, {
+    replies: { "/v1/hello": [drawn], "/v1/mirror/events": [{ status: 200, text: "{}" }] },
+  });
+  on("tool.check", (_: any, e: any) =>
+    e.tool === "Read"
+      ? { decision: "allow" }
+      : e.tool === "Glob"
+        ? { decision: "deny", rule: "Glob" }
+        : { decision: "ask" },
+  );
+  on("session.cwd", () => ({ value: "/work" }));
+  on("classic.SessionStart", () => ({}));
+  on("classic.PostToolUse", () => ({}));
+  // The test's dialog stands for the person, allowing.
+  on("classic.PermissionRequest", () => ({ decision: { behavior: "allow" } }));
+  on("tool.call", () => ({ result: "ok", text: "ok" }));
+  await $.classic.SessionStart({ source: "startup", permission_mode: "auto" } as any);
+  await start($);
+  await run.clock.settle();
+  await $.tool.call({ tool: "Read", file_path: "/work/a", tool_use_id: "r" } as any);
+  await $.tool.call({ tool: "Glob", pattern: "*", tool_use_id: "g" } as any);
+  await $.tool.call({ tool: "Bash", command: "make", tool_use_id: "b" } as any);
+  await $.classic.PostToolUse({
+    tool_name: "Bash",
+    tool_use_id: "b",
+    permission_mode: "auto",
+  } as any);
+  await $.classic.PostToolUse({
+    tool_name: "Bash",
+    tool_use_id: "z",
+    permission_mode: "plan",
+  } as any);
+  await run.clock.advance(100);
+  const events = mirrored(run);
+  expect(events.filter((e: any) => e.kind === "mode")).toEqual([
+    { kind: "mode", mode: "auto" },
+    { kind: "mode", mode: "plan" },
+  ]);
+  const permits = Object.fromEntries(
+    events.filter((e: any) => e.kind === "result").map((e: any) => [e.id, e.permit]),
+  );
+  expect(permits).toEqual({
+    r: { by: "mode", allowed: true },
+    g: { by: "rule", allowed: false },
+    b: { by: "person", allowed: true },
+  });
+});

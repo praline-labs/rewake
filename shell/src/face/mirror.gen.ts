@@ -49,6 +49,9 @@ export interface Line {
   text?: string
   // turn is the turn's state, on begin and turn.
   turn?: TurnState
+  // mode is the session's permission mode, on begin and mode; absent while the session has not
+  // said it.
+  mode?: PermissionMode
   // ok says whether the input was taken, on answer.
   ok?: boolean
   // detail is why an input was refused, on answer.
@@ -56,7 +59,7 @@ export interface Line {
 }
 
 // LineOp is a line's kind.
-export type LineOp = "hello" | "begin" | "item" | "end" | "add" | "append" | "set" | "turn" | "drop" | "answer"
+export type LineOp = "hello" | "begin" | "item" | "end" | "add" | "append" | "set" | "turn" | "mode" | "drop" | "answer"
 
 // Item is one entry of the conversation.
 export interface Item {
@@ -78,6 +81,8 @@ export interface Item {
   output?: string
   // cut says a text or an output was cut to its bound.
   cut?: boolean
+  // permit is how a tool call was let run or refused, once it ended, where the session says.
+  permit?: Permit
 }
 
 // ItemKind is a prompt, a reply's text, thinking, a tool call or a notice of rewake's.
@@ -90,6 +95,27 @@ export type ItemStatus = "streaming" | "settled" | "running" | "done" | "error" 
 // TurnState is the session's turn: idle, working, compacting, unknown after events were lost,
 // or ended with the session.
 export type TurnState = "idle" | "working" | "compacting" | "unknown" | "ended"
+
+// Permit is who let a tool call run or refused it: the outcome of the session's permission
+// check and of whoever it put the call to.
+export interface Permit {
+  // by is who settled the call.
+  by: PermitBy
+  // allowed says the call was let run; false, it was refused.
+  allowed: boolean
+  // reason is the decider's own short reason for a refusal, where it gave one.
+  reason?: string
+}
+
+// PermitBy is who settled a call: a settings rule; the permission mode or the tool's own check,
+// nobody asked; the mode's own decider, a classifier; the person at the session's own dialog;
+// rewake's permission request, answered by main, the person through it or its deadline; a hook.
+export type PermitBy = "rule" | "mode" | "classifier" | "person" | "rewake" | "hook"
+
+// PermissionMode is how the session's calls are permitted: asked as configured, planning only,
+// edits accepted, a classifier deciding, every check bypassed, or never asking and refusing
+// instead.
+export type PermissionMode = "default" | "plan" | "edits" | "auto" | "bypass" | "unasked"
 
 // Input is one line the face sends: an input, answered by a line with its id.
 export interface Input {

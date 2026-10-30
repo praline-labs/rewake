@@ -326,22 +326,22 @@ asked for by the owner on October 26, 2026, reads main's own row of the same lis
 type, so its name stands alone.
 
 ```
-write-claude (code) · working · ⎇ wt-fd7596 · <model> low thinking · 23% 230k/1M · 90% 42m
+write-claude (code) · working · ⎇ wt-fd7596 · <model> low thinking · 230k/1M · 90% 42m
 ```
 
-- **What it says**: the session and its type — on a pane drawn by rewake's face that is on the
-  face's input rule instead ([face.md](face.md#the-face)) — the activity as the label of its verdict, which
+- **What it says**: the session and its type — on a pane drawn by rewake's face that and the
+  context are on the face's input rule instead ([face.md](face.md#the-face)) — the activity as the label of its verdict, which
   `rewake list` shows too, after `dev rewake` or `dev native` on a dev worker's strip (`working`, `waiting for a permission`, `waiting at a dialog`, `idle`,
   `compacting`, with ` (stale)` once it is not current; nothing while it is `unknown`;
   [session-state.md](session-state.md#activity)), the branch, the model and
   effort, with `thinking` after them while the harness says thinking is on — Claude Code's
-  session setting, pi's level for a model with reasoning — and nothing when it is off or not told, the context as filled percent, used and window, and the prompt cache. A value rewake does
+  session setting, pi's level for a model with reasoning — and nothing when it is off or not told, the context as used and window, and the prompt cache. A value rewake does
   not know is left out; a window without a measure reads `–/<window>`. The model reads as the
   harness's display name (`configuredModelName` of the telemetry, less a trailing parenthesis),
   else the template's
   `launch.label`, else the id. The window is the limit the conversation is kept to: Claude Code's
-  launch `--autocompact`, which the host applies over the mod's model window, the percent
-  recomputed against it. The cache is `rewake list`'s Cache cell (`cache` and `cacheLife`): the hit
+  launch `--autocompact`, which the host applies over the mod's model window. The percent left
+  every strip on October 30, 2026 (brief 44, the owner's word): its colour stays on the figures. The cache is `rewake list`'s Cache cell (`cache` and `cacheLife`): the hit
   percent of the last request and the time the cache has left — `90% 42m`, `90% <1m`, `90% —` once
   it expired, `90%` where the harness gives no expiry; left out where it gives no cache. The time is
   counted from `expiresAt` on the shell's own clock every five seconds, so it ticks down between
@@ -362,7 +362,7 @@ write-claude (code) · working · ⎇ wt-fd7596 · <model> low thinking · 23% 2
   stay.
 - **Colours**: the name bold in its program's colour, main's or the workers'; the rest in the terminal's own
   foreground with faint separators; the context in the palette's green, yellow or red from 50% and
-  80%; the cache in the palette's cyan while it is warm, faint once it expired.
+  80% filled; the cache in the palette's cyan while it is warm, faint once it expired.
 - **How fresh**: a Claude Code worker's mod samples after each main-loop step's response, at a
   turn's end and with each heartbeat ([claude.md](claude.md#telemetry)), so the context grows
   through a long turn; pi publishes on its own events. The poll adds up to a second.

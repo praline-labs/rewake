@@ -1,13 +1,15 @@
 // The face's copy of a session's mirror (docs/face.md): the snapshot the
 // wrapper sends on connect, then its changes. The wrapper holds the model to
 // its bounds, so this copy keeps whatever it is sent.
-import type { InputKind, Item, Line, TurnState } from "./mirror.gen.ts";
+import type { InputKind, Item, Line, PermissionMode, TurnState } from "./mirror.gen.ts";
 import { bounds } from "./mirror.gen.ts";
 
 export class FaceModel {
   items: Item[] = [];
   turn: TurnState = "unknown";
   dropped = 0;
+  // mode is the session's permission mode, unknown until it says it.
+  mode: PermissionMode | undefined;
   inputs: InputKind[] = [];
   // ready is a snapshot whole: until its end the face shows what it had.
   ready = false;
@@ -26,6 +28,7 @@ export class FaceModel {
         this.next = [];
         this.turn = line.turn ?? "unknown";
         this.dropped = line.dropped ?? 0;
+        this.mode = line.mode;
         return false;
       case "item":
         if (line.item) this.next?.push(line.item);
@@ -48,6 +51,9 @@ export class FaceModel {
       case "turn":
         this.turn = line.turn ?? "unknown";
         return true;
+      case "mode":
+        this.mode = line.mode;
+        return true;
       case "drop":
         if (line.id !== undefined && this.byId.delete(line.id))
           this.items = this.items.filter((item) => item.id !== line.id);
@@ -60,7 +66,7 @@ export class FaceModel {
 
   private put(item: Item): boolean {
     const at = this.byId.get(item.id);
-    if (at) Object.assign(at, { output: undefined, cut: undefined }, item);
+    if (at) Object.assign(at, { output: undefined, cut: undefined, permit: undefined }, item);
     else {
       this.items.push(item);
       this.byId.set(item.id, item);

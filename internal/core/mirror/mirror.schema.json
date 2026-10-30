@@ -25,6 +25,7 @@
         "id": {"type": "string", "description": "names the item of append and drop, or the input of answer."},
         "text": {"type": "string", "description": "is what append adds to the item's text."},
         "turn": {"$ref": "#/$defs/TurnState", "description": "is the turn's state, on begin and turn."},
+        "mode": {"$ref": "#/$defs/PermissionMode", "description": "is the session's permission mode, on begin and mode; absent while the session has not said it."},
         "ok": {"type": "boolean", "description": "says whether the input was taken, on answer."},
         "detail": {"type": "string", "description": "is why an input was refused, on answer."}
       },
@@ -34,7 +35,7 @@
     "LineOp": {
       "type": "string",
       "description": "is a line's kind.",
-      "enum": ["hello", "begin", "item", "end", "add", "append", "set", "turn", "drop", "answer"]
+      "enum": ["hello", "begin", "item", "end", "add", "append", "set", "turn", "mode", "drop", "answer"]
     },
     "Item": {
       "type": "object",
@@ -48,7 +49,8 @@
         "origin": {"type": "string", "description": "is who typed a prompt: person, face, rewake or the harness's own word."},
         "name": {"type": "string", "description": "is a tool's name."},
         "output": {"type": "string", "description": "is a tool's output, or its error."},
-        "cut": {"type": "boolean", "description": "says a text or an output was cut to its bound."}
+        "cut": {"type": "boolean", "description": "says a text or an output was cut to its bound."},
+        "permit": {"$ref": "#/$defs/Permit", "description": "is how a tool call was let run or refused, once it ended, where the session says."}
       },
       "required": ["id", "kind", "status", "text"],
       "additionalProperties": false
@@ -67,6 +69,27 @@
       "type": "string",
       "description": "is the session's turn: idle, working, compacting, unknown after events were lost, or ended with the session.",
       "enum": ["idle", "working", "compacting", "unknown", "ended"]
+    },
+    "Permit": {
+      "type": "object",
+      "description": "is who let a tool call run or refused it: the outcome of the session's permission check and of whoever it put the call to.",
+      "properties": {
+        "by": {"$ref": "#/$defs/PermitBy", "description": "is who settled the call."},
+        "allowed": {"type": "boolean", "description": "says the call was let run; false, it was refused."},
+        "reason": {"type": "string", "description": "is the decider's own short reason for a refusal, where it gave one."}
+      },
+      "required": ["by", "allowed"],
+      "additionalProperties": false
+    },
+    "PermitBy": {
+      "type": "string",
+      "description": "is who settled a call: a settings rule; the permission mode or the tool's own check, nobody asked; the mode's own decider, a classifier; the person at the session's own dialog; rewake's permission request, answered by main, the person through it or its deadline; a hook.",
+      "enum": ["rule", "mode", "classifier", "person", "rewake", "hook"]
+    },
+    "PermissionMode": {
+      "type": "string",
+      "description": "is how the session's calls are permitted: asked as configured, planning only, edits accepted, a classifier deciding, every check bypassed, or never asking and refusing instead.",
+      "enum": ["default", "plan", "edits", "auto", "bypass", "unasked"]
     },
     "Input": {
       "type": "object",

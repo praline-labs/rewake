@@ -2,7 +2,8 @@ import { expect, test } from "bun:test";
 import { TextAttributes } from "@opentui/core";
 import { testRender } from "@opentui/solid";
 import { themeOf } from "../theme.ts";
-import { FaceRow, FaceView, ruleOf } from "./view.tsx";
+import { ruleOf } from "./rule.ts";
+import { FaceRow, FaceView } from "./view.tsx";
 
 const theme = themeOf(undefined);
 
@@ -76,4 +77,16 @@ test("the input's rule carries the name, cut to a narrow pane", () => {
     expect(Bun.stringWidth(rule)).toBe(width);
     expect(rule.endsWith(" ─") || rule === "─".repeat(width)).toBe(true);
   }
+});
+
+// The mode sits at the rule's left end, the context after the name; a
+// narrow pane drops the mode, then the context, then cuts the name.
+test("the input's rule carries the mode and the context, dropped in turn as the pane narrows", () => {
+  const rule = (width: number) => ruleOf(width, "w", "46k/272k", "auto");
+  expect(rule(40)).toBe(`── ⏵⏵ auto mode ${"─".repeat(9)} w · 46k/272k ─`);
+  expect(rule(30)).toBe("───────────────── w · 46k/272k ─".slice(-30));
+  expect(rule(12)).toBe("────────── w ─".slice(-12));
+  expect(ruleOf(40, "w", "46k/272k", "default")).toBe(`${"─".repeat(25)} w · 46k/272k ─`);
+  for (let width = 0; width <= 50; width++)
+    expect(Bun.stringWidth(ruleOf(width, "名前", "46k/272k", "bypass"))).toBe(width);
 });

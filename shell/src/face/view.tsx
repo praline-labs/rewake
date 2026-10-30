@@ -9,6 +9,8 @@ import { createEffect, For, Index, Show } from "solid-js";
 import { mix, type Theme } from "../theme.ts";
 import { draftOf, faceOf, promptFace, scrollFace, setDraft, sizeFace, wheelFace } from "./faces.ts";
 import type { FaceLine, Span, Tone } from "./messages.ts";
+import type { PermissionMode } from "./mirror.gen.ts";
+import { ruleOf, ruleParts } from "./rule.ts";
 
 const colour = (c: string) => RGBA.fromHex(c);
 
@@ -80,37 +82,31 @@ export function FaceRow(props: { line: FaceLine; theme: Theme }) {
 // the face's error or its link.
 const below = 4;
 
-const graphemes = new Intl.Segmenter();
-
-// ruleOf is the input's top rule with the session's name at its right end, as
-// the terminal program draws its own, `──── name ─`: cut with … where the
-// pane is too narrow for it, left out where not even a letter of it fits.
-export function ruleOf(width: number, title?: string): string {
-  const bare = "─".repeat(Math.max(width, 0));
-  // Two cells of the rule before it, a space, the name, a space and a cell
-  // of the rule after it.
-  const room = width - 5;
-  if (!title || room < 2) return bare;
-  let name = title;
-  if (Bun.stringWidth(name) > room) {
-    name = "";
-    for (const { segment } of graphemes.segment(title)) {
-      if (Bun.stringWidth(name + segment) > room - 1) break;
-      name += segment;
-    }
-    name += "…";
+// modeColour is a permission mode's colour as the terminal program draws
+// its name under the input.
+const modeColour = (mode: PermissionMode | undefined, theme: Theme): RGBA => {
+  switch (mode) {
+    case "plan":
+      return colour(theme.look.plan);
+    case "edits":
+      return colour(theme.look.edits);
+    case "bypass":
+    case "unasked":
+      return colour(theme.look.error);
+    default:
+      return colour(theme.look.warning);
   }
-  const tail = ` ${name} ─`;
-  return "─".repeat(width - Bun.stringWidth(tail)) + tail;
-}
+};
 
 export function FaceView(props: {
   id: string;
   width: number;
   height: number;
   theme: Theme;
-  // title is the session's name, drawn on the input's top rule.
+  // title is the session's name and context its window, `46k/272k`, drawn
+  // on the input's top rule with the mode the face was told.
   title?: string;
+  context?: string;
   // live is the person's window: only it takes keys and sizes the face.
   live: boolean;
   active: () => boolean;
@@ -166,13 +162,15 @@ export function FaceView(props: {
           {(line) => <FaceRow line={line()} theme={props.theme} />}
         </Index>
       </box>
-      <text
-        height={1}
-        wrapMode="none"
-        fg={ruled}
-        bg={bg}
-        content={ruleOf(props.width, props.title)}
-      />
+      <text height={1} wrapMode="none" fg={ruled} bg={bg}>
+        <For each={ruleParts(props.width, props.title, props.context, face()?.mode)}>
+          {(part) => (
+            <span style={{ fg: part.mode ? modeColour(part.mode, props.theme) : ruled, bg }}>
+              {part.text}
+            </span>
+          )}
+        </For>
+      </text>
       <box height={1} flexDirection="row">
         <text
           width={2}

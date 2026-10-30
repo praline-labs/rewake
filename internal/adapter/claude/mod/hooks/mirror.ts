@@ -10,6 +10,7 @@ import type { HelloAnswer, MirrorBatch, MirrorEvent } from "../protocol.gen.ts";
 import { bounds, paths } from "../protocol.gen.ts";
 import type { Host } from "./outbox.ts";
 import { newId } from "./outbox.ts";
+import type { Permits } from "./permits.ts";
 import { fit, jsonSize, pieces, utf8Size } from "./sizes.ts";
 
 // Room for an event's own fields: a text of an event stays within this.
@@ -169,6 +170,7 @@ interface MirrorLoad {
   host: Host;
   run?: HelloAnswer;
   mirror?: MirrorOutbox;
+  permits?: Permits;
 }
 
 // A block being put together for its settle.
@@ -205,6 +207,12 @@ const shown = (value: unknown) =>
 // Mirror is what the hooks of the session's own conversation tell the face;
 // each does nothing until the load's hello answer says mirror.
 export class Mirror {
+  // mode is the permission mode the harness last reported, said the one the
+  // face was sent: a mode heard before the hello's answer goes with the
+  // load's first event.
+  private mode?: string;
+  private said?: string;
+
   constructor(
     private current: () => MirrorLoad | undefined,
     private loadId: string,
@@ -217,7 +225,23 @@ export class Mirror {
       const run = this.current()?.run;
       return run ? { loadId: this.loadId, generation: run.generation } : undefined;
     });
+    if (this.mode !== undefined && this.mode !== this.said) {
+      this.said = this.mode;
+      load.mirror.push({ kind: "mode", mode: this.mode });
+    }
     return load.mirror;
+  }
+
+  // admit sends a mode heard before the hello's answer, once it came.
+  admit() {
+    this.outbox();
+  }
+
+  // moded takes the permission mode a classic event reports.
+  moded(mode: string | undefined) {
+    if (!mode) return;
+    this.mode = mode;
+    this.outbox();
   }
 
   prompt(text: string, origin: string, turn?: string) {
@@ -248,18 +272,28 @@ export class Mirror {
   ) {
     const out = this.outbox();
     if (out === undefined) return;
+    const failed = result.isError ? shown(result.result) : undefined;
+    const permit = this.current()?.permits?.take(id, { refused: result.deny, failed }, this.mode);
+    const permitted = permit ? { permit } : {};
     if (result.deny !== undefined) {
-      out.push({ kind: "result", id, status: "refused", text: fit(result.deny, textBudget) });
-    } else if (result.isError) {
+      out.push({
+        kind: "result",
+        id,
+        status: "refused",
+        text: fit(result.deny, textBudget),
+        ...permitted,
+      });
+    } else if (failed !== undefined) {
       out.push({
         kind: "result",
         id,
         status: "error",
-        text: fit(shown(result.result), textBudget),
+        text: fit(failed, textBudget),
+        ...permitted,
       });
     } else {
       const text = fit(result.text ?? shown(result.result), textBudget);
-      out.push({ kind: "result", id, status: "done", text });
+      out.push({ kind: "result", id, status: "done", text, ...permitted });
     }
   }
 

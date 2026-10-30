@@ -288,7 +288,9 @@
         "state": {"$ref": "#/$defs/MirrorTurn", "description": "is a turn event's state."},
         "part": {"type": "integer", "description": "is a settle's part, from 0."},
         "of": {"type": "integer", "description": "is how many parts the settle has."},
-        "lost": {"type": "integer", "description": "counts the events a resync stands for."}
+        "lost": {"type": "integer", "description": "counts the events a resync stands for."},
+        "permit": {"$ref": "#/$defs/MirrorPermit", "description": "is how the call of a result was let run or refused, where the mod could tell."},
+        "mode": {"type": "string", "description": "is the session's permission mode as Claude Code names it, on a mode event."}
       },
       "required": ["kind"],
       "additionalProperties": false
@@ -296,7 +298,23 @@
     "MirrorEventKind": {
       "type": "string",
       "description": "is a mirror event's kind.",
-      "enum": ["prompt", "delta", "settle", "tool", "input", "result", "turn", "lost", "resync"]
+      "enum": ["prompt", "delta", "settle", "tool", "input", "result", "turn", "mode", "lost", "resync"]
+    },
+    "MirrorPermit": {
+      "type": "object",
+      "description": "is who let a call run or refused it, in the face's words (docs/face.md, Permit).",
+      "properties": {
+        "by": {"$ref": "#/$defs/MirrorPermitBy", "description": "is who settled the call."},
+        "allowed": {"type": "boolean", "description": "says the call was let run."},
+        "reason": {"type": "string", "description": "is the decider's short reason for a refusal."}
+      },
+      "required": ["by", "allowed"],
+      "additionalProperties": false
+    },
+    "MirrorPermitBy": {
+      "type": "string",
+      "description": "is who settled a call: a settings rule, the mode or the tool's own check, auto mode's classifier, the person at the dialog, rewake's permission request, a hook.",
+      "enum": ["rule", "mode", "classifier", "person", "rewake", "hook"]
     },
     "MirrorBlock": {
       "type": "string",

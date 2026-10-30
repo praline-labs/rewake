@@ -251,3 +251,38 @@ test("the turn's line says it works, and how long the last one took", () => {
   );
   expect(turnLine("idle", { now: 0 })).toBeUndefined();
 });
+
+// Under a call the classifier let run the terminal program says so; a call
+// it refused shows its reason in place of the error; any other permit shows
+// nothing of itself.
+test("a call auto mode's classifier settled says so under it", () => {
+  const call = (over: Partial<Item>): Item => ({
+    id: "c",
+    kind: "tool",
+    name: "WebFetch",
+    status: "done",
+    text: '{"url":"https://example.com"}',
+    output: "fetched",
+    ...over,
+  });
+  const rows = (item: Item) => text(linesOf(item, 200));
+  expect(rows(call({ permit: { by: "classifier", allowed: true } })).at(-1)).toBe(
+    "  ⎿  Allowed by auto mode classifier",
+  );
+  expect(
+    rows(call({ name: "Agent", permit: { by: "classifier", allowed: true } })).join("\n"),
+  ).not.toContain("Allowed by");
+  expect(rows(call({ permit: { by: "rule", allowed: true } })).join("\n")).not.toContain(
+    "Allowed by",
+  );
+  const denied = rows(
+    call({
+      status: "refused",
+      output: "Permission for this action was denied. Reason: [Scope].",
+      permit: { by: "classifier", allowed: false, reason: "[Scope]" },
+    }),
+  );
+  expect(denied.slice(1)).toEqual([
+    "  ⎿  Denied by auto mode classifier ∙ [Scope] ∙ see https://code.claude.com/docs/s/claude-code-auto-mode",
+  ]);
+});

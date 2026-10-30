@@ -55,6 +55,10 @@ type Line struct {
 	// Turn is the turn's state, on begin and turn.
 	Turn *TurnState `json:"turn,omitempty"`
 
+	// Mode is the session's permission mode, on begin and mode; absent while the session has not
+	// said it.
+	Mode *PermissionMode `json:"mode,omitempty"`
+
 	// Ok says whether the input was taken, on answer.
 	Ok *bool `json:"ok,omitempty"`
 
@@ -75,6 +79,7 @@ const (
 	LineOpAppend LineOp = "append"
 	LineOpSet    LineOp = "set"
 	LineOpTurn   LineOp = "turn"
+	LineOpMode   LineOp = "mode"
 	LineOpDrop   LineOp = "drop"
 	LineOpAnswer LineOp = "answer"
 )
@@ -107,6 +112,9 @@ type Item struct {
 
 	// Cut says a text or an output was cut to its bound.
 	Cut *bool `json:"cut,omitempty"`
+
+	// Permit is how a tool call was let run or refused, once it ended, where the session says.
+	Permit *Permit `json:"permit,omitempty"`
 }
 
 // ItemKind is a prompt, a reply's text, thinking, a tool call or a notice of rewake's.
@@ -147,6 +155,49 @@ const (
 	TurnStateCompacting TurnState = "compacting"
 	TurnStateUnknown    TurnState = "unknown"
 	TurnStateEnded      TurnState = "ended"
+)
+
+// Permit is who let a tool call run or refused it: the outcome of the session's permission
+// check and of whoever it put the call to.
+type Permit struct {
+	// By is who settled the call.
+	By PermitBy `json:"by"`
+
+	// Allowed says the call was let run; false, it was refused.
+	Allowed bool `json:"allowed"`
+
+	// Reason is the decider's own short reason for a refusal, where it gave one.
+	Reason *string `json:"reason,omitempty"`
+}
+
+// PermitBy is who settled a call: a settings rule; the permission mode or the tool's own check,
+// nobody asked; the mode's own decider, a classifier; the person at the session's own dialog;
+// rewake's permission request, answered by main, the person through it or its deadline; a hook.
+type PermitBy string
+
+// The values of PermitBy.
+const (
+	PermitByRule       PermitBy = "rule"
+	PermitByMode       PermitBy = "mode"
+	PermitByClassifier PermitBy = "classifier"
+	PermitByPerson     PermitBy = "person"
+	PermitByRewake     PermitBy = "rewake"
+	PermitByHook       PermitBy = "hook"
+)
+
+// PermissionMode is how the session's calls are permitted: asked as configured, planning only,
+// edits accepted, a classifier deciding, every check bypassed, or never asking and refusing
+// instead.
+type PermissionMode string
+
+// The values of PermissionMode.
+const (
+	PermissionModeDefault PermissionMode = "default"
+	PermissionModePlan    PermissionMode = "plan"
+	PermissionModeEdits   PermissionMode = "edits"
+	PermissionModeAuto    PermissionMode = "auto"
+	PermissionModeBypass  PermissionMode = "bypass"
+	PermissionModeUnasked PermissionMode = "unasked"
 )
 
 // Input is one line the face sends: an input, answered by a line with its id.
