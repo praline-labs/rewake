@@ -33,6 +33,9 @@ export type ToFace =
   | { kind: "start"; path: string; width: number; height: number }
   | { kind: "size"; width: number; height: number }
   | { kind: "scroll"; by: number }
+  // wheel is one notch of the mouse wheel and when it came: the face turns
+  // notches into rows by how fast they come.
+  | { kind: "wheel"; up: boolean; at: number }
   | { kind: "prompt"; id: string; text: string }
   | { kind: "ping"; n: number };
 

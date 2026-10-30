@@ -145,6 +145,10 @@ export class FaceHost {
     this.send({ kind: "scroll", by });
   }
 
+  wheel(up: boolean) {
+    this.send({ kind: "wheel", up, at: Date.now() });
+  }
+
   // prompt says false when no face runs to take it.
   prompt(text: string): boolean {
     if (!this.worker) return false;

@@ -7,7 +7,7 @@ import type { InputRenderable } from "@opentui/core";
 import { RGBA } from "@opentui/core";
 import { createEffect, For, Index, Show } from "solid-js";
 import { mix, type Theme } from "../theme.ts";
-import { draftOf, faceOf, promptFace, scrollFace, setDraft, sizeFace } from "./faces.ts";
+import { draftOf, faceOf, promptFace, scrollFace, setDraft, sizeFace, wheelFace } from "./faces.ts";
 import type { FaceLine, Span, Tone } from "./messages.ts";
 
 const colour = (c: string) => RGBA.fromHex(c);
@@ -79,10 +79,6 @@ export function FaceRow(props: { line: FaceLine; theme: Theme }) {
 // The rows below the conversation: a rule, the input, a rule, and the row for
 // the face's error or its link.
 const below = 4;
-
-// A wheel's notch moves the face as many rows as it scrolls a native pane's
-// own scrollback.
-const wheelRows = 3;
 
 const graphemes = new Intl.Segmenter();
 
@@ -160,7 +156,7 @@ export function FaceView(props: {
         event.stopPropagation();
         const direction = event.scroll?.direction;
         if (!props.live || (direction !== "up" && direction !== "down")) return;
-        scrollFace(props.id, direction === "up" ? wheelRows : -wheelRows);
+        wheelFace(props.id, direction === "up");
       }}
     >
       {/* Rows are updated in place: the face posts a frame on every tick

@@ -78,10 +78,10 @@ header: the strip says the turn's state, and the session's name with its type st
 end of the input's top rule, `──── w-claude (code) ─`, as Claude Code draws a session's name there,
 cut with `…` on a narrow pane and left out where not a letter of it fits; the strip under a pane
 drawn by the face leaves the name out, a native pane's keeps it. The mouse wheel over the face
-scrolls the conversation three rows a notch, as the shell scrolls a native pane's own scrollback,
-and PgUp and PgDn a page less a row; at the bottom the face follows new rows, scrolled up it holds
-the rows the person put there while more arrive below (`shell/src/face/scroll.ts`), and back at the
-bottom, or after a prompt it sent, it follows again. The wheel never reaches the pty. A prompt
+scrolls the conversation as a native pane scrolls (below, "The scroll"), and PgUp and PgDn a page
+less a row; at the bottom the face follows new rows, scrolled up it holds the rows the person put
+there while more arrive below (`shell/src/face/scroll.ts`), and back at the bottom, or after a
+prompt it sent, it follows again. The wheel never reaches the pty. A prompt
 waits for its answer only while the answer can come: at most the latest 16, each for 30 s, none past
 the link it went by, a reload or the face's end. Under
 rewake's face the keys go to that input, never to the pty, and Esc does nothing. `rewake screen`
@@ -152,15 +152,42 @@ have.
 ## One clock
 
 Everything the face shows moves on one clock, as the terminal program's own animation frame does
-(`shell/src/face/ticker.ts`): a change from the mirror, a scroll or a resize only marks the face to
-draw, and the next tick, every 50 ms, lays it out with the glyph, the verb's glow, a running dot's
-blink and the turn's time all read from that tick's one moment; a tick that draws what was posted
-last posts nothing, and the clock stops while nothing changes or moves. Seen live before it
+(`shell/src/face/ticker.ts`): a change from the mirror or a resize only marks the face to draw,
+and the next tick, every 50 ms, lays it out with the glyph, the verb's glow, a running dot's blink
+and the turn's time all read from that tick's one moment; a tick that draws what was posted last
+posts nothing, and the clock stops while nothing changes or moves. A scroll alone is painted at
+once (below, "The scroll"). Seen live before it
 (October 30, 2026, brief 41, the face beside a native pane on the same task, every paint logged):
 a change painted 33 ms after it came and a separate one-second timer painted the time, its phase
 the worker's start, while the glyph turned on the wall clock's second and the time on the turn's,
 so a delta's paint showed one moved and not the other; and the glyph turned once a second where
 the native one turns every 120 ms beside a pulsing verb and a blinking dot.
+
+## The scroll
+
+A scroll is the person's hand, not a change of the conversation, so it waits for no tick: the
+worker moves the view over the frame the last tick committed — the whole conversation's rows and
+the turn's under them, with that tick's moment for the blink — and posts it at once. It lays
+nothing out and shows nothing the tick did not: a change that came after the tick waits for the
+next one, scroll or not (found in review: a notch between two ticks painted a delta early). The
+tick lays the whole conversation out again only when it or the width changed, about 2.3 ms at the
+model's bound of 1000 items (12 000 rows), where its tail alone took 0.25 ms. A notch moves as many rows as the native pane moves for it (`shell/src/face/wheel.ts`, from
+the time the shell's thread heard it): one alone; while notches come within 40 ms of each other,
+0.3 more a notch up to six; the first notch against the way the view moved is held and moves
+nothing, as a wheel's bounce, and the next one the new way turns it; a notch back the old way within
+200 ms marks the wheel's own stream, which ramps faster, up to 15 a notch, and decays with time.
+This is Claude Code's fullscreen window curve at its base of one row, as 2.1.310 has it; a
+Windows Terminal, an xterm.js terminal or a set `CLAUDE_CODE_SCROLL_SPEED` give its native pane
+another base or curve, which the face does not follow.
+
+Measured live before it (October 30, 2026, brief 42; Claude Code 2.1.310, the shell from its
+sources under a pty of 200 by 50, one dev worker's 250-row reply, its two faces in turn, SGR wheel
+events written to the pty and each paint timed): the face moved 3 rows a notch at any speed and
+painted 55 ms after a notch, on the next tick of a clock that had stopped, a fast stream in jumps of
+15 to 18 rows every 50 ms; the native pane moved one row a notch alone, 19 for ten notches 10 ms
+apart and 67 for twenty 4 ms apart, a first notch back held, and painted 3 ms after a notch, then
+at the renderer's own frames, every 16 ms. After it the face moved the same rows for the same
+streams (1 a notch alone, 19, 67, a first notch back held) and painted 2 to 4 ms after a notch.
 
 ## Hot reload
 
@@ -194,7 +221,8 @@ is contained in the shell's thread, and the person can always switch to native w
 
 A stopped face starts again at the next change of its sources, or when the person switches to it.
 Tests: `shell/src/face/host.test.ts`, the look in `render.test.ts` and `view.test.tsx`, the clock
-in `ticker.test.ts`, the scroll in `scroll.test.ts`.
+in `ticker.test.ts`, the scroll in `scroll.test.ts`, a notch's rows in `wheel.test.ts` and through
+the worker in `host.test.ts`.
 
 ## Checked
 
