@@ -7,12 +7,13 @@
 import type { Register } from "claude-code";
 import type { AskKind } from "../protocol.gen.ts";
 import { type Asks, allowOnce, allowSession, refuseCall } from "./asks.ts";
-import type { Permits } from "./permits.ts";
+import { noting, type Permits } from "./permits.ts";
 
 // Dialogs is what the hooks read of the current load.
 interface Dialogs {
   asks: Asks;
-  // permits records how each call was settled, for rewake's face.
+  // permits records how each call was settled, for rewake's face: only in
+  // a run the face draws.
   permits?: Permits;
   management: { waits(message?: string): void; holds(kind: AskKind): () => void };
   // run is set once the wrapper admitted the load.
@@ -40,25 +41,31 @@ export function serveDialogs(
   // notification of such a dialog is not another dialog. The state names
   // what each asks while it is held (management.holds).
   let held = 0;
+  // directory is the session's as the classic events report it, where auto
+  // mode allows an edit without its classifier.
+  let directory: string | undefined;
   // The permission mode the harness reports with its classic events, which an
   // ask is carried to main in at the check only where the person would be
   // asked (asks.ts). A call's end also ends its dialog carried to main.
   on("classic.SessionStart", async ($, e, next) => {
     const load = current();
     if (load && e.permission_mode) load.asks.mode = e.permission_mode;
-    moded(e.permission_mode);
+    directory = e.cwd || directory;
+    noting(() => moded(e.permission_mode));
     return next(e);
   });
   on("classic.UserPromptSubmit", async ($, e, next) => {
     const load = current();
     if (load && e.permission_mode) load.asks.mode = e.permission_mode;
-    moded(e.permission_mode);
+    directory = e.cwd || directory;
+    noting(() => moded(e.permission_mode));
     return next(e);
   });
   on("classic.PostToolUse", async ($, e, next) => {
     const load = current();
     if (load && e.permission_mode) load.asks.mode = e.permission_mode;
-    moded(e.permission_mode);
+    directory = e.cwd || directory;
+    noting(() => moded(e.permission_mode));
     load?.asks.ended(e.tool_use_id);
     load?.management.waits();
     return next(e);
@@ -71,7 +78,9 @@ export function serveDialogs(
   on("classic.PermissionDenied", async ($, e, next) => {
     // Auto mode's classifier refused the call.
     const reason = (e as { reason?: unknown }).reason;
-    current()?.permits?.denied(e.tool_use_id, typeof reason === "string" ? reason : undefined);
+    noting(() =>
+      current()?.permits?.denied(e.tool_use_id, typeof reason === "string" ? reason : undefined),
+    );
     current()?.asks.ended(e.tool_use_id);
     current()?.management.waits();
     return next(e);
@@ -82,21 +91,12 @@ export function serveDialogs(
   // main too; an exact call allowed for the session passes without asking.
   // An ask the check does not carry is recorded for the dialog that follows.
   // A failure of the bridge refuses the call: nothing has run.
-  // Every verdict is recorded for the face's line under the call; the
-  // recording never throws, or the hook's .catch would refuse the call.
+  // Every verdict is recorded for the face's line under the call, through
+  // noting: a record that fails neither changes nor holds up a verdict.
   on("tool.check", async ($, e, next) => {
     const verdict = await next(e);
     const load = current();
-    if (load?.permits) {
-      // Only auto mode's fast path for edits needs the session's directory.
-      const cwd =
-        load.asks.mode === "auto" && verdict.decision === "ask"
-          ? await $.session.cwd().catch(() => undefined)
-          : undefined;
-      try {
-        load.permits.checked(e, verdict, cwd);
-      } catch {}
-    }
+    noting(() => load?.permits?.checked(e, verdict, directory));
     if (verdict.decision !== "ask" || !load) return verdict;
     if (!load.asks.asking(e)) {
       load.asks.checked(e);
@@ -105,7 +105,7 @@ export function serveDialogs(
     const cwd = await $.session.cwd();
     const key = load.asks.key(cwd, e);
     if (load.asks.allows(key)) {
-      load.permits?.answered(e.tool_use_id, "rewake", true);
+      noting(() => load.permits?.answered(e.tool_use_id, "rewake", true));
       return { decision: "allow", reason: "allowed for this session through rewake" };
     }
     const question = load.asks.permission(cwd, e, key);
@@ -119,7 +119,7 @@ export function serveDialogs(
     } catch {
       decided = load.asks.refused(question);
     }
-    load.permits?.answered(e.tool_use_id, "rewake", decided.decision === "allow");
+    noting(() => load.permits?.answered(e.tool_use_id, "rewake", decided.decision === "allow"));
     return decided;
   }).catch(($, e, next) => ({
     decision: "deny",
@@ -160,8 +160,11 @@ export function serveDialogs(
     const release = load.asks.worker() ? load.management.holds("permission") : () => {};
     try {
       const decision = await load.asks.dialog(await $.session.cwd(), e, next.signal);
-      if (decision) load.permits?.dialog(e, "rewake", decision.behavior === "allow");
-      else load.permits?.dialog(e, "person");
+      noting(() =>
+        decision
+          ? load.permits?.dialog(e, "rewake", decision.behavior === "allow")
+          : load.permits?.dialog(e, "person"),
+      );
       return decision ? { decision } : next(e);
     } finally {
       held--;

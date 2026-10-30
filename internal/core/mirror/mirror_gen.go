@@ -166,7 +166,8 @@ type Permit struct {
 	// Allowed says the call was let run; false, it was refused.
 	Allowed bool `json:"allowed"`
 
-	// Reason is the decider's own short reason for a refusal, where it gave one.
+	// Reason is a refusal's text as the session's screen writes it after the decider's name, a
+	// link included, within a short field; the face draws it as given.
 	Reason *string `json:"reason,omitempty"`
 }
 

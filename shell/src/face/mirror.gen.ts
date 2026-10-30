@@ -103,7 +103,8 @@ export interface Permit {
   by: PermitBy
   // allowed says the call was let run; false, it was refused.
   allowed: boolean
-  // reason is the decider's own short reason for a refusal, where it gave one.
+  // reason is a refusal's text as the session's screen writes it after the decider's name, a
+  // link included, within a short field; the face draws it as given.
   reason?: string
 }
 

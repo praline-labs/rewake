@@ -110,9 +110,10 @@ interface Load {
   heartbeat: Heartbeat;
   management: Management;
   asks: Asks;
-  // permits records how each call was settled, for rewake's face, and
-  // admitted is told the hello was: the face's mode goes before any event.
-  permits: Permits;
+  // permits records how each call was settled, for rewake's face, made
+  // once the hello's answer says the face draws the run; admitted is told
+  // the hello was: the face's mode goes before any event.
+  permits?: Permits;
   admitted: () => void;
   // run is the wrapper's answer to this load's hello: undefined until it
   // comes, and when no wrapper answered, which later steps read as "not live".
@@ -135,6 +136,7 @@ async function hello(load: Load, request: HelloRequest, delay: number, renumbere
     if (answer.ok) {
       load.run = JSON.parse(answer.text) as HelloAnswer;
       load.asks.role = load.run.role;
+      if (load.run.mirror) load.permits ??= new Permits();
       load.management.admit(load.run.generation);
       load.heartbeat.begin(load.run.generation);
       await load.outbox.admit();
@@ -229,7 +231,6 @@ export const register: Register = (on) => {
         loadId,
       ),
       asks: new Asks(host, loadId),
-      permits: new Permits(),
       admitted: () => mirror.admit(),
       // A lapsed generation's chain says the load's latest hello again.
       heartbeat: new Heartbeat(

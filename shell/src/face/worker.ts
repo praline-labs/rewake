@@ -58,7 +58,7 @@ function turned(from: string, to: string) {
   if (to === "working") {
     since = Date.now();
     worked = undefined;
-    progress.reset(since);
+    progress.reset(since, model.items);
   } else if (from === "working" && since !== undefined && to === "idle") {
     worked = { took: Date.now() - since, at: Date.now() };
     since = undefined;

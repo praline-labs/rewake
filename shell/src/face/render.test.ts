@@ -279,10 +279,11 @@ test("a call auto mode's classifier settled says so under it", () => {
     call({
       status: "refused",
       output: "Permission for this action was denied. Reason: [Scope].",
-      permit: { by: "classifier", allowed: false, reason: "[Scope]" },
+      permit: { by: "classifier", allowed: false, reason: "[Scope] ∙ see the mode's page" },
     }),
   );
+  // The face draws the refusal's text as the adapter gave it, in place of the error.
   expect(denied.slice(1)).toEqual([
-    "  ⎿  Denied by auto mode classifier ∙ [Scope] ∙ see https://code.claude.com/docs/s/claude-code-auto-mode",
+    "  ⎿  Denied by auto mode classifier ∙ [Scope] ∙ see the mode's page",
   ]);
 });

@@ -6,11 +6,11 @@
 // settle heals, then the oldest other events, each leaving a lost marker,
 // and when the markers fill their reserve they collapse into one resync.
 import type { Register, TurnStepChunk } from "claude-code";
-import type { HelloAnswer, MirrorBatch, MirrorEvent } from "../protocol.gen.ts";
+import type { HelloAnswer, MirrorBatch, MirrorEvent, MirrorPermit } from "../protocol.gen.ts";
 import { bounds, paths } from "../protocol.gen.ts";
 import type { Host } from "./outbox.ts";
 import { newId } from "./outbox.ts";
-import type { Permits } from "./permits.ts";
+import { noting, type Permits } from "./permits.ts";
 import { fit, jsonSize, pieces, utf8Size } from "./sizes.ts";
 
 // Room for an event's own fields: a text of an event stays within this.
@@ -273,7 +273,10 @@ export class Mirror {
     const out = this.outbox();
     if (out === undefined) return;
     const failed = result.isError ? shown(result.result) : undefined;
-    const permit = this.current()?.permits?.take(id, { refused: result.deny, failed }, this.mode);
+    let permit: MirrorPermit | undefined;
+    noting(() => {
+      permit = this.current()?.permits?.take(id, { refused: result.deny, failed }, this.mode);
+    });
     const permitted = permit ? { permit } : {};
     if (result.deny !== undefined) {
       out.push({

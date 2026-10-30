@@ -76,7 +76,7 @@
       "properties": {
         "by": {"$ref": "#/$defs/PermitBy", "description": "is who settled the call."},
         "allowed": {"type": "boolean", "description": "says the call was let run; false, it was refused."},
-        "reason": {"type": "string", "description": "is the decider's own short reason for a refusal, where it gave one."}
+        "reason": {"type": "string", "description": "is a refusal's text as the session's screen writes it after the decider's name, a link included, within a short field; the face draws it as given."}
       },
       "required": ["by", "allowed"],
       "additionalProperties": false

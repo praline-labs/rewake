@@ -362,7 +362,8 @@ type MirrorPermit struct {
 	// Allowed says the call was let run.
 	Allowed bool `json:"allowed"`
 
-	// Reason is the decider's short reason for a refusal.
+	// Reason is a refusal's text as the session's screen writes it after the decider's name, a
+	// link included, within a short field.
 	Reason *string `json:"reason,omitempty"`
 }
 

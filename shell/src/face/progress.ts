@@ -1,5 +1,5 @@
 // What the working line tells of a turn's progress (docs/face.md, "The
-// look"), as Claude Code's own spinner does: the phase its arrow shows, an
+// look"), as the terminal program's own spinner does: the phase its arrow shows, an
 // estimate of what streamed back and how the thinking goes. All of it is
 // derived from the model on the face's clock; the session sends none of it.
 
@@ -15,18 +15,29 @@ export type Thinking = { kind: "thinking" | "thought"; text: string };
 
 export type Progress = { phase: Phase; tokens: number; thinking?: Thinking };
 
-// turnOf is the items of the turn going on: those after its prompt.
-function turnOf(items: Item[]): Item[] {
+// own is an item a turn streamed back: no prompt, no notice.
+const own = (item: Item) => item.kind !== "prompt" && item.kind !== "notice";
+
+// turnOf is what the turn going on streamed back, known by the turn its
+// items name, so a prompt queued while it runs leaves it whole; before is the
+// turn that was latest as this one began, none of it this turn's. Items that
+// name no turn count from the last prompt.
+function turnOf(items: Item[], before?: string): Item[] {
+  const latest = items.findLast(own);
+  if (latest?.turn !== undefined)
+    return latest.turn === before
+      ? []
+      : items.filter((item) => own(item) && item.turn === latest.turn);
   let i = items.length;
   while (i > 0 && items[i - 1]?.kind !== "prompt") i--;
-  return items.slice(i).filter((item) => item.kind !== "notice");
+  return items.slice(i).filter(own);
 }
 
 // phaseOf is the turn's phase. A call whose input has not come is being
 // written; one with its input runs; a step that settled waits for its
 // calls; once every call has ended the next request is out.
-export function phaseOf(items: Item[]): Phase {
-  const turn = turnOf(items);
+export function phaseOf(items: Item[], before?: string): Phase {
+  const turn = turnOf(items, before);
   const running = turn.findLast((item) => item.kind === "tool" && item.status === "running");
   if (running) return running.text === "" ? "tool-input" : "tool-use";
   const last = turn.at(-1);
@@ -39,9 +50,9 @@ export function phaseOf(items: Item[]): Phase {
 // lengthOf is what streamed back in the turn, counted as the terminal
 // program counts it: the characters of its replies, its thinking and its
 // calls' inputs.
-export function lengthOf(items: Item[]): number {
+export function lengthOf(items: Item[], before?: string): number {
   let n = 0;
-  for (const item of turnOf(items)) if (item.kind !== "prompt") n += item.text.length;
+  for (const item of turnOf(items, before)) n += item.text.length;
   return n;
 }
 
@@ -63,24 +74,27 @@ function thinkingWord(ms: number): string {
   return "thinking";
 }
 
-// Tracker keeps what the line needs between ticks: the shown length and the
-// thinking's moments. It is reset when a turn begins, and with no moment
-// when the face connects: a turn it joined shows what streamed at once.
+// Tracker keeps what the line needs between ticks: the shown length, the
+// thinking's moments and the turn latest before this one. It is reset when a
+// turn begins, with the items then, and with neither when the face connects:
+// a turn it joined shows what streamed at once.
 export class Tracker {
   private shown = 0;
   private last: number | undefined;
   private since: number | undefined;
   private ended: { at: number; took: number } | undefined;
+  private before: string | undefined;
 
-  reset(now?: number) {
+  reset(now?: number, items: Item[] = []) {
     this.shown = 0;
     this.last = now;
     this.since = this.ended = undefined;
+    this.before = items.findLast(own)?.turn;
   }
 
   at(items: Item[], now: number): Progress {
-    const phase = phaseOf(items);
-    const length = lengthOf(items);
+    const phase = phaseOf(items, this.before);
+    const length = lengthOf(items, this.before);
     if (this.last === undefined || Math.abs(length - this.shown) > leap) {
       this.shown = length;
       this.last = now;
@@ -113,7 +127,9 @@ export class Tracker {
     const from = this.ended.at + Math.max(0, held - this.ended.took);
     if (now < from) {
       // Still the thinking word, unless a call runs.
-      const calling = turnOf(items).some((i) => i.kind === "tool" && i.status === "running");
+      const calling = turnOf(items, this.before).some(
+        (i) => i.kind === "tool" && i.status === "running",
+      );
       return calling ? undefined : { kind: "thinking", text: "thinking" };
     }
     if (now < from + held)

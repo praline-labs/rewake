@@ -82,8 +82,8 @@ const dotTone = (item: Item): Tone =>
 
 // permitRows is what the terminal program says under a call of how it was
 // let run or refused, where it says anything: only of auto mode's
-// classifier. A refusal's line stands for the error it refused with.
-const classifierDocs = "https://code.claude.com/docs/s/claude-code-auto-mode";
+// classifier. A refusal's line stands for the error it refused with, its
+// text the session's own, as the adapter gave it.
 function permitRows(item: Item): Span[][] | undefined {
   const p = item.permit;
   if (p?.by !== "classifier") return undefined;
@@ -92,10 +92,10 @@ function permitRows(item: Item): Span[][] | undefined {
       ? [[{ text: "Allowed by auto mode classifier", tone: "faint" }]]
       : undefined;
   if (item.status !== "refused" && item.status !== "error") return undefined;
-  const reason = p.reason ? `${p.reason} ∙ ` : "";
-  return [
-    [{ text: `Denied by auto mode classifier ∙ ${reason}see ${classifierDocs}`, tone: "faint" }],
-  ];
+  const text = p.reason
+    ? `Denied by auto mode classifier ∙ ${p.reason}`
+    : "Denied by auto mode classifier";
+  return [[{ text, tone: "faint" }]];
 }
 
 function toolLines(item: Item, width: number): FaceLine[] {

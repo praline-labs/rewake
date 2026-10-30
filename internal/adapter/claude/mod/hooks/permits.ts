@@ -5,6 +5,7 @@
 // here changes a verdict, and nothing throws into them.
 import type { MirrorPermit } from "../protocol.gen.ts";
 import { type CheckEvent, callKey, type DialogEvent } from "./calls.ts";
+import { pieces, utf8Size } from "./sizes.ts";
 
 // Verdict is what the check's next(e) came to, as far as the permit reads it.
 export interface Verdict {
@@ -37,6 +38,19 @@ const classifierRefused = [
 ];
 const reasonEnd = ". If you have other tasks";
 
+// A refusal of the classifier as the terminal program writes it after its
+// name: the reason, then where auto mode is explained (2.1.310), within the
+// 256 bytes the face's model keeps of a short field. The face draws it as
+// given and knows no harness's address.
+const refusalLink = "see https://code.claude.com/docs/s/claude-code-auto-mode";
+const shortField = 256;
+function refusalText(reason: string | undefined): string {
+  if (!reason) return refusalLink;
+  const tail = ` ∙ ${refusalLink}`;
+  const [head = "", ...rest] = pieces(reason, shortField - utf8Size(tail) - utf8Size("…"));
+  return (rest.length > 0 ? `${head}…` : head) + tail;
+}
+
 // What the engine tells the model of a call the person or a hook refused at
 // its dialog (2.1.310): the call never ran, though it ends as a failure.
 const dialogRefused = [
@@ -54,6 +68,15 @@ export function reasonOf(text: string): { reason?: string } | undefined {
     return end > 0 ? { reason: rest.slice(0, end) } : {};
   }
   return second && text.startsWith(second) ? {} : undefined;
+}
+
+// noting runs a record of a permit, and loses the record if it fails: a
+// call's verdict is decided before and without it, and a hook that throws
+// would turn into its .catch's refusal or skip what follows it.
+export function noting(record: () => void) {
+  try {
+    record();
+  } catch {}
 }
 
 // The tools whose edits inside the session's directory auto mode allows
@@ -145,7 +168,7 @@ export class Permits {
     if (rejected) return { by: "person", allowed };
     if (classifier || seen.denied !== undefined) {
       const reason = classifier?.reason ?? (seen.denied || undefined);
-      return { by: "classifier", allowed: false, ...(reason ? { reason } : {}) };
+      return { by: "classifier", allowed: false, reason: refusalText(reason) };
     }
     if (mode === "auto" && allowed && !seen.edit) return { by: "classifier", allowed };
     return { by: "mode", allowed };

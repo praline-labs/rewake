@@ -30,7 +30,8 @@ tell: `{by, allowed, reason?}`, `by` one of `rule` (a settings rule decided), `m
 mode or the tool's own check, nobody asked), `classifier` (the mode's own decider: auto mode's
 classifier on Claude Code), `person` (the person at the session's own dialog), `rewake` (rewake's
 permission request, answered by main, by the person through it or by its deadline) and `hook`;
-`reason` is the decider's short reason for a refusal. The model also holds the session's
+`reason` is a refusal's text as the session's own screen writes it after the decider's name, a link
+included, within a short field: the face draws it as given and knows no harness's address. The model also holds the session's
 permission **mode** — `default`, `plan`, `edits`, `auto`, `bypass` or `unasked` (never asking,
 refusing instead), absent until the session says it. Both are the session's whatever its role: main
 drawn by the face later carries them as a worker does. (Shape of October 30, 2026, brief 44.)
@@ -138,9 +139,9 @@ decision, October 30, 2026: first the same look, customised later), as read from
   description, a skill's name, else the input as `key: value` pairs; a head is at most three rows.
 - **Permit**: under a call auto mode's classifier let run, after its result, a faint `⎿  Allowed by
   auto mode classifier` (not for a subagent's Agent call; a call folded into a run shows none, as
-  natively); a call it refused shows a faint `⎿  Denied by auto mode classifier ∙ <reason> ∙ see
-  https://code.claude.com/docs/s/claude-code-auto-mode` in place of its error, the reason where the
-  refusal gave one. A rule, the mode, the person, rewake and a hook draw no line: Claude Code 2.1.310
+  natively); a call it refused shows a faint `⎿  Denied by auto mode classifier ∙ <reason>` in place of its
+  error, the permit's reason as the adapter gave it (on Claude Code the classifier's reason, then
+  `see` and the page explaining auto mode). A rule, the mode, the person, rewake and a hook draw no line: Claude Code 2.1.310
   draws none for them (its binary holds no "Allowed by PermissionRequest hook" any more).
 - **Result**, under `  ⎿  `: an edit's `Added N lines, removed M lines` and its old lines on dark
   red and new lines on dark green, from the call's input; a write's `Wrote N lines to path` and its
@@ -156,7 +157,8 @@ decision, October 30, 2026: first the same look, customised later), as read from
   estimate of what streamed back, then the thinking, `Mulling… (12s · ↓ 1.2k tokens · thinking)`
   (`shell/src/face/progress.ts`, on the one clock): `↑` while a request is out with nothing back
   yet — the turn just began, or every call of a step ended — and `↓` while a reply, a thinking block
-  or a call's input streams or a call runs; the estimate is the characters of the turn's replies,
+  or a call's input streams or a call runs; the turn's items are those that name its turn, so a prompt queued while
+  it works neither ends it nor resets the count; the estimate is the characters of the turn's replies,
   thinking and calls' inputs over four, the shown count moving towards it every 50 ms by 3 under a
   gap of 70, by 15% of the gap (8 at least) under 200, by 50 past, at once past 2000, written `622`,
   `1.2k`. The thinking says `thinking` while a block streams, `still thinking` from 10 s, `thinking

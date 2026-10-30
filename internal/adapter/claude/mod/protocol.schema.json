@@ -306,7 +306,7 @@
       "properties": {
         "by": {"$ref": "#/$defs/MirrorPermitBy", "description": "is who settled the call."},
         "allowed": {"type": "boolean", "description": "says the call was let run."},
-        "reason": {"type": "string", "description": "is the decider's short reason for a refusal."}
+        "reason": {"type": "string", "description": "is a refusal's text as the session's screen writes it after the decider's name, a link included, within a short field."}
       },
       "required": ["by", "allowed"],
       "additionalProperties": false

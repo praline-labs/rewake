@@ -36,6 +36,38 @@ test("the phase is requesting until something streams back, and again after the 
   expect(phaseOf([prompt, call("done"), { ...prompt, id: "p2" }])).toBe("requesting");
 });
 
+// A prompt queued while the turn works is no new turn: the phase and the
+// count stay the turn's, known by the turn its items name; a new turn starts
+// both over.
+test("a prompt queued during a turn leaves its phase and count, a new turn starts them over", () => {
+  const t = new Tracker();
+  const asked: Item = { ...prompt, turn: "t1" };
+  const reply: Item = {
+    id: "r",
+    turn: "t1",
+    kind: "text",
+    status: "settled",
+    text: "x".repeat(4000),
+  };
+  const call: Item = {
+    id: "c",
+    turn: "t1",
+    kind: "tool",
+    name: "Bash",
+    status: "running",
+    text: "{}",
+  };
+  const queued: Item = { id: "q", kind: "prompt", status: "settled", text: "and then" };
+  t.reset(0, []);
+  expect(t.at([asked, reply, call], 0)).toMatchObject({ phase: "tool-use", tokens: 1001 });
+  expect(t.at([asked, reply, call, queued], 50)).toMatchObject({ phase: "tool-use", tokens: 1001 });
+  const items = [asked, reply, { ...call, status: "done" as const }, queued];
+  t.reset(100, items);
+  expect(t.at(items, 100)).toMatchObject({ phase: "requesting", tokens: 0 });
+  const next: Item = { id: "n", turn: "t2", kind: "text", status: "streaming", text: "yy" };
+  expect(t.at([...items, next], 150)).toMatchObject({ phase: "responding" });
+});
+
 // The count moves towards what streamed back on the 50 ms clock, as the
 // terminal program's does, and leaps a long way behind.
 test("the estimate is a quarter of what streamed back, smoothed tick by tick", () => {

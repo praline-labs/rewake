@@ -303,7 +303,8 @@ export interface MirrorPermit {
   by: MirrorPermitBy
   // allowed says the call was let run.
   allowed: boolean
-  // reason is the decider's short reason for a refusal.
+  // reason is a refusal's text as the session's screen writes it after the decider's name, a
+  // link included, within a short field.
   reason?: string
 }
 
