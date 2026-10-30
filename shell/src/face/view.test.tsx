@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { TextAttributes } from "@opentui/core";
 import { testRender } from "@opentui/solid";
 import { themeOf } from "../theme.ts";
-import { FaceRow, FaceView } from "./view.tsx";
+import { FaceRow, FaceView, ruleOf } from "./view.tsx";
 
 const theme = themeOf(undefined);
 
@@ -63,4 +63,17 @@ test("a marked span is painted on its mark's colour", async () => {
       .slice(0, 3),
   ).toEqual([122, 41, 54]);
   expect(spans.find((s) => s.text.startsWith("H"))?.attributes).toBe(TextAttributes.UNDERLINE);
+});
+
+// The session's name sits at the right end of the input's top rule, as the
+// terminal program draws its own, and fits any pane.
+test("the input's rule carries the name, cut to a narrow pane", () => {
+  expect(ruleOf(20, "w-claude (code)")).toBe("── w-claude (code) ─");
+  expect(ruleOf(12, "w-claude (code)")).toBe("── w-clau… ─");
+  expect(ruleOf(30)).toBe("─".repeat(30));
+  for (let width = 0; width <= 30; width++) {
+    const rule = ruleOf(width, "名前-claude (code)");
+    expect(Bun.stringWidth(rule)).toBe(width);
+    expect(rule.endsWith(" ─") || rule === "─".repeat(width)).toBe(true);
+  }
 });

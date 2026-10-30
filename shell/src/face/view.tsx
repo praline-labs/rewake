@@ -5,10 +5,10 @@
 
 import type { InputRenderable } from "@opentui/core";
 import { RGBA } from "@opentui/core";
-import { createEffect, For, Show } from "solid-js";
-import type { Theme } from "../theme.ts";
+import { createEffect, For, Index, Show } from "solid-js";
+import { mix, type Theme } from "../theme.ts";
 import { draftOf, faceOf, promptFace, scrollFace, setDraft, sizeFace } from "./faces.ts";
-import type { FaceLine, Tone } from "./messages.ts";
+import type { FaceLine, Span, Tone } from "./messages.ts";
 
 const colour = (c: string) => RGBA.fromHex(c);
 
@@ -40,6 +40,13 @@ const toneOf = (tone: Tone | undefined, theme: Theme): RGBA => {
   }
 };
 
+// fgOf is a span's colour: its tone's, the working verb's moved towards its
+// lighter shade by its glow.
+const fgOf = (span: Span, theme: Theme): RGBA =>
+  span.glow && span.tone === "accent"
+    ? colour(mix(theme.look.spinner, theme.look.shimmer, span.glow))
+    : toneOf(span.tone, theme);
+
 const backgroundOf = (theme: Theme) =>
   theme.background ? colour(theme.background) : RGBA.defaultBackground();
 
@@ -54,7 +61,7 @@ export function FaceRow(props: { line: FaceLine; theme: Theme }) {
         {(span) => (
           <span
             style={{
-              fg: toneOf(span.tone, props.theme),
+              fg: fgOf(span, props.theme),
               bg: span.mark ? colour(props.theme.look[span.mark]) : props.line.band ? band : bg,
               bold: span.bold,
               italic: span.italic,
@@ -73,11 +80,41 @@ export function FaceRow(props: { line: FaceLine; theme: Theme }) {
 // the face's error or its link.
 const below = 4;
 
+// A wheel's notch moves the face as many rows as it scrolls a native pane's
+// own scrollback.
+const wheelRows = 3;
+
+const graphemes = new Intl.Segmenter();
+
+// ruleOf is the input's top rule with the session's name at its right end, as
+// the terminal program draws its own, `──── name ─`: cut with … where the
+// pane is too narrow for it, left out where not even a letter of it fits.
+export function ruleOf(width: number, title?: string): string {
+  const bare = "─".repeat(Math.max(width, 0));
+  // Two cells of the rule before it, a space, the name, a space and a cell
+  // of the rule after it.
+  const room = width - 5;
+  if (!title || room < 2) return bare;
+  let name = title;
+  if (Bun.stringWidth(name) > room) {
+    name = "";
+    for (const { segment } of graphemes.segment(title)) {
+      if (Bun.stringWidth(name + segment) > room - 1) break;
+      name += segment;
+    }
+    name += "…";
+  }
+  const tail = ` ${name} ─`;
+  return "─".repeat(width - Bun.stringWidth(tail)) + tail;
+}
+
 export function FaceView(props: {
   id: string;
   width: number;
   height: number;
   theme: Theme;
+  // title is the session's name, drawn on the input's top rule.
+  title?: string;
   // live is the person's window: only it takes keys and sizes the face.
   live: boolean;
   active: () => boolean;
@@ -88,11 +125,11 @@ export function FaceView(props: {
     if (props.live) sizeFace(props.id, props.width, body());
   });
   const faint = colour(props.theme.faint);
+  const ruled = colour(props.theme.look.rule);
   // A layer over the native face: every cell painted, the terminal's own
   // background where the shell does not know its colour, or a space would
   // let the native face show through.
   const bg = backgroundOf(props.theme);
-  const rule = () => "─".repeat(props.width);
   const status = () => {
     const f = face();
     const failed = f?.error ?? f?.said;
@@ -113,13 +150,33 @@ export function FaceView(props: {
       zIndex={50}
       flexDirection="column"
       backgroundColor={bg}
+      onMouseScroll={(event: {
+        scroll?: { direction: string };
+        preventDefault(): void;
+        stopPropagation(): void;
+      }) => {
+        // The wheel scrolls the conversation and never reaches the pty.
+        event.preventDefault();
+        event.stopPropagation();
+        const direction = event.scroll?.direction;
+        if (!props.live || (direction !== "up" && direction !== "down")) return;
+        scrollFace(props.id, direction === "up" ? wheelRows : -wheelRows);
+      }}
     >
+      {/* Rows are updated in place: the face posts a frame on every tick
+          that changes it. */}
       <box height={body()} flexDirection="column">
-        <For each={face()?.lines ?? []}>
-          {(line) => <FaceRow line={line} theme={props.theme} />}
-        </For>
+        <Index each={face()?.lines ?? []}>
+          {(line) => <FaceRow line={line()} theme={props.theme} />}
+        </Index>
       </box>
-      <text height={1} wrapMode="none" fg={faint} bg={bg} content={rule()} />
+      <text
+        height={1}
+        wrapMode="none"
+        fg={ruled}
+        bg={bg}
+        content={ruleOf(props.width, props.title)}
+      />
       <box height={1} flexDirection="row">
         <text
           width={2}
@@ -173,7 +230,7 @@ export function FaceView(props: {
           />
         </Show>
       </box>
-      <text height={1} wrapMode="none" fg={faint} bg={bg} content={rule()} />
+      <text height={1} wrapMode="none" fg={ruled} bg={bg} content={ruleOf(props.width)} />
       <text height={1} wrapMode="none" fg={status().fg} bg={bg} content={row(status().text)} />
     </box>
   );

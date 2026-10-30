@@ -102,17 +102,23 @@ export function cacheOf(s: Session, now: number): Part | undefined {
   return { text, kind: "cache", cold };
 }
 
+// nameOf is who the session is, with its type after it.
+export function nameOf(state: StripState): string {
+  const type = state.status?.type;
+  return type ? `${state.session} (${type})` : state.session;
+}
+
 // stripParts is the line for a width: the name, activity and context always,
 // the model, then the cache, then the branch left out while the line is too
 // long, and the rest cut at the width.
 export function stripParts(state: StripState, width: number, now = Date.now()): Part[] {
   const s = state.status;
-  const name = s?.type ? `${state.session} (${s.type})` : state.session;
   const activity = s && activityOf(s);
   const cache = s && cacheOf(s, now);
   // In the order shown; the optional ones are left out, 1 then 2 then 3.
   const all: ((Part & { optional?: number }) | undefined)[] = [
-    { text: name, kind: "name" },
+    // Under rewake's face the name is on the face's input rule instead.
+    state.face === "rewake" ? undefined : { text: nameOf(state), kind: "name" },
     state.face ? { text: `dev ${state.face}`, kind: "dev" } : undefined,
     activity ? { text: activity, kind: "plain" } : undefined,
     state.branch ? { text: `⎇ ${state.branch}`, kind: "plain", optional: 3 } : undefined,

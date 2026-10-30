@@ -9,7 +9,7 @@ import type { Item } from "./mirror.gen.ts";
 import type { FaceModel } from "./model.ts";
 import { resultOf } from "./results.ts";
 import { headRowsOf } from "./tools.ts";
-import { type Clock, turnLine } from "./turn.ts";
+import { blinkOff, type Clock, turnLine } from "./turn.ts";
 import { clean, widthOf, wrapSpans } from "./wrap.ts";
 
 // marked puts a mark before the first row and an indent of its width before
@@ -81,7 +81,8 @@ const dotTone = (item: Item): Tone =>
         : "done";
 
 function toolLines(item: Item, width: number): FaceLine[] {
-  const out = marked(headRowsOf(item, width - 2), { text: "● ", tone: dotTone(item) });
+  const dot: Span = { text: "● ", tone: dotTone(item), blink: item.status === "running" };
+  const out = marked(headRowsOf(item, width - 2), dot);
   const mark = { text: "  ⎿  " };
   if (item.output === undefined) {
     if (item.status === "running")
@@ -135,7 +136,7 @@ export function linesOf(item: Item, width: number): FaceLine[] {
 }
 
 // An item is laid out again only when what is drawn of it changed: a stream
-// redraws thirty times a second, and only its last block grows.
+// redraws on every tick of the face's clock, and only its last block grows.
 type Drawn = Pick<Item, "kind" | "status" | "text" | "output" | "name" | "cut"> & {
   width: number;
   lines: FaceLine[];
@@ -163,16 +164,9 @@ function cachedLinesOf(item: Item, width: number): FaceLine[] {
 
 const blank = (): FaceLine => ({ spans: [] });
 
-// render is the last height rows of the model, scrolled up by back rows:
+// rowsOf is the model's rows from the top, at least its last want of them:
 // only the tail is laid out, so a full model costs what the screen shows.
-export function render(
-  model: FaceModel,
-  width: number,
-  height: number,
-  back = 0,
-  clock: Clock = { now: 0 },
-): FaceLine[] {
-  const want = height + back;
+export function rowsOf(model: FaceModel, width: number, clock: Clock, want = Infinity): FaceLine[] {
   const rows: FaceLine[] = [];
   const status = turnLine(model.turn, clock);
   if (status) rows.push(...(model.items.length > 0 ? [blank()] : []), status);
@@ -187,8 +181,34 @@ export function render(
     rows.unshift({
       spans: [{ text: `· ${model.dropped} earlier items left the face's memory`, tone: "faint" }],
     });
+  return rows;
+}
+
+// render is the last height rows of the model, scrolled up by back rows.
+export function render(
+  model: FaceModel,
+  width: number,
+  height: number,
+  back = 0,
+  clock: Clock = { now: 0 },
+): FaceLine[] {
+  const rows = rowsOf(model, width, clock, height + back);
   const end = Math.max(rows.length - back, Math.min(rows.length, height));
   return rows.slice(Math.max(end - height, 0), end);
+}
+
+// blinked is the rows at a moment: a running call's dot hidden in the half of
+// its blink that is off, the cell kept.
+export function blinked(lines: FaceLine[], now: number): FaceLine[] {
+  if (!blinkOff(now)) return lines;
+  return lines.map((line) =>
+    line.spans.some((s) => s.blink)
+      ? {
+          ...line,
+          spans: line.spans.map((s) => (s.blink ? { ...s, text: " ".repeat(widthOf(s.text)) } : s)),
+        }
+      : line,
+  );
 }
 
 // fill makes the drawing opaque: height rows, each as wide as the pane, the

@@ -36,25 +36,43 @@ const did = ["Worked", "Brewed", "Mulled", "Pondered", "Tinkered", "Crafted", "C
 const pick = (verbs: string[], at: number) =>
   verbs[Math.floor(at / 1000) % verbs.length] ?? verbs[0];
 
-// The glyph turns a frame a second, as often as the face redraws a working
-// turn.
-const frames = ["·", "✢", "*", "✶", "✻", "✽"];
+// The glyph turns a frame every 120 ms, there and back, and the verb's colour
+// pulses towards a lighter shade and back every two seconds, as the terminal
+// program draws them; both, and the time, are read from the clock's one now,
+// so they move in the same paint.
+const glyphs = ["·", "✢", "*", "✶", "✻", "✽"];
+const frames = [...glyphs, ...[...glyphs].reverse()];
+export const glyphEvery = 120;
+const pulse = 2000;
+// The glow moves in steps, so the face posts a frame when it changes, not at
+// every tick.
+const glowSteps = 8;
+
+export const glyphAt = (now: number) => frames[Math.floor(now / glyphEvery) % frames.length];
+
+export function glowAt(now: number): number {
+  const wave = 0.5 - 0.5 * Math.cos((2 * Math.PI * (now % pulse)) / pulse);
+  return Math.round(wave * glowSteps) / glowSteps;
+}
+
+// blinkEvery is how long a running call's dot shows and then hides.
+export const blinkEvery = 600;
+export const blinkOff = (now: number) => Math.floor(now / blinkEvery) % 2 === 1;
 
 // turnLine is the row under the conversation that says the turn goes on, or
 // how long the last one took.
 export function turnLine(turn: string, clock: Clock): FaceLine | undefined {
-  const glyph = {
-    text: `${frames[Math.floor(clock.now / 1000) % frames.length]} `,
-    tone: "accent" as const,
-  };
+  const glyph = { text: `${glyphAt(clock.now)} `, tone: "accent" as const };
+  const glow = glowAt(clock.now);
   if (turn === "working") {
     const verb = clock.since === undefined ? "Working" : pick(doing, clock.since);
-    const spans: Span[] = [glyph, { text: `${verb}…`, tone: "accent" }];
+    const spans: Span[] = [glyph, { text: `${verb}…`, tone: "accent", glow }];
     if (clock.since !== undefined)
       spans.push({ text: ` (${duration(clock.now - clock.since)})`, tone: "faint" });
     return { spans };
   }
-  if (turn === "compacting") return { spans: [glyph, { text: "Compacting…", tone: "accent" }] };
+  if (turn === "compacting")
+    return { spans: [glyph, { text: "Compacting…", tone: "accent", glow }] };
   if (turn === "idle" && clock.worked !== undefined) {
     const { took, at } = clock.worked;
     const said = `${pick(did, at)} for ${duration(took)} · done ${timeOf(at)}`;

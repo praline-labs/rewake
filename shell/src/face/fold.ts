@@ -180,7 +180,7 @@ function drawnRun(run: { calls: Item[]; open: boolean }, width: number): FaceLin
   const head: Span[] = description
     ? [{ text: `${clean(description).replace(/\s+/g, " ").trim()}…` }]
     : [...said(run.calls, "doing").map((s) => ({ ...s, tone: undefined })), { text: "…" }];
-  const out = hang(wrapSpans(head, width - 2), { text: "● ", tone: "faint" }, pad);
+  const out = hang(wrapSpans(head, width - 2), { text: "● ", tone: "faint", blink: true }, pad);
   if (last) {
     const hint = wrapSpans([{ text: hintOf(last), tone: "faint" }], width - 5)[0] ?? [];
     out.push({ spans: [{ text: "  ⎿  " }, ...hint] });

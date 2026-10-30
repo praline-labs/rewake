@@ -7,25 +7,25 @@ import type { FromFace, Link, ToFace } from "./messages.ts";
 import type { Line } from "./mirror.gen.ts";
 import { bounds } from "./mirror.gen.ts";
 import { FaceModel } from "./model.ts";
-import { fill, render } from "./render.ts";
+import { blinked, fill, render, rowsOf } from "./render.ts";
+import { Scroll } from "./scroll.ts";
+import { Ticker } from "./ticker.ts";
 import type { Clock } from "./turn.ts";
 
 declare const self: Worker;
 
 const post = (message: FromFace) => self.postMessage(message);
-// A redraw waits this long for more changes: a stream of deltas is drawn at
-// most thirty times a second.
-const settle = 33;
 const reconnectAfter = 1000;
 
 let path = "";
 let width = 80;
 let height = 24;
-let back = 0;
+const scroll = new Scroll();
 let link: Link = "connecting";
 let model = new FaceModel();
 let socket: { write(data: string): number; end(): void } | undefined;
-let drawTimer: ReturnType<typeof setTimeout> | undefined;
+// The frame last posted: a tick that draws the same posts nothing.
+let posted = "";
 // The turn's time as this face saw it, never from the model: a face that
 // connected mid-turn does not know when it began.
 let since: number | undefined;
@@ -43,26 +43,41 @@ function turned(from: string, to: string) {
   } else since = undefined;
 }
 
-function draw() {
-  drawTimer = undefined;
+const clockAt = (now: number): Clock => ({ now, since, worked });
+
+// draw is one frame of the face at a moment, every row of it from the same
+// clock.
+function draw(now: number) {
   try {
-    const clock: Clock = { now: Date.now(), since, worked };
-    const lines = fill(render(model, width, height, back, clock), width, height);
-    post({
+    const clock = clockAt(now);
+    const shown =
+      scroll.top === undefined
+        ? render(model, width, height, 0, clock)
+        : scroll.view(rowsOf(model, width, clock), height);
+    const message: FromFace = {
       kind: "lines",
-      lines,
+      lines: fill(blinked(shown, now), width, height),
       turn: model.turn,
       link,
       prompts: model.inputs.includes("prompt"),
-    });
+    };
+    const frame = JSON.stringify(message);
+    if (frame === posted) return;
+    posted = frame;
+    post(message);
   } catch (err) {
     post({ kind: "error", text: `the face's drawing failed: ${String(err)}` });
   }
 }
 
-function soon() {
-  drawTimer ??= setTimeout(draw, settle);
-}
+// What moves with time alone: a working turn's line, a running call's dot.
+const moving = () =>
+  model.turn === "working" ||
+  model.turn === "compacting" ||
+  model.items.some((item) => item.status === "running");
+
+const ticker = new Ticker(draw, moving);
+const soon = () => ticker.change();
 
 function lost(why: string) {
   socket = undefined;
@@ -87,6 +102,7 @@ function connect() {
     lost(why);
   };
   model = new FaceModel();
+  scroll.follow();
   since = worked = undefined;
   link = "connecting";
   Bun.connect({
@@ -138,11 +154,6 @@ function connect() {
   }).catch((err) => end(`the mirror's socket does not open: ${String(err)}`));
 }
 
-// A working turn's time goes on without a change of the model.
-setInterval(() => {
-  if (model.turn === "working" && since !== undefined) soon();
-}, 1000);
-
 self.onmessage = (event: MessageEvent<ToFace>) => {
   const message = event.data;
   try {
@@ -159,7 +170,7 @@ self.onmessage = (event: MessageEvent<ToFace>) => {
         height = message.height;
         return soon();
       case "scroll":
-        back = Math.max(0, back + message.by);
+        scroll.by(message.by, rowsOf(model, width, clockAt(Date.now())).length, height);
         return soon();
       case "prompt": {
         if (!socket)
@@ -170,7 +181,7 @@ self.onmessage = (event: MessageEvent<ToFace>) => {
             detail: "the mirror is not connected",
           });
         socket.write(`${JSON.stringify({ id: message.id, kind: "prompt", text: message.text })}\n`);
-        back = 0;
+        scroll.follow();
         return soon();
       }
       case "ping":

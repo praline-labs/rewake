@@ -18,6 +18,11 @@ export type Span = {
   italic?: boolean;
   underline?: boolean;
   mark?: Mark;
+  // glow is how far an accent moves towards its lighter shade, 0 to 1: the
+  // working verb's pulse.
+  glow?: number;
+  // blink is a running call's dot, shown and hidden on the face's clock.
+  blink?: boolean;
 };
 
 // FaceLine is one row of the face, its spans left to right; band paints the

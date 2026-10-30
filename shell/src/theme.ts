@@ -57,8 +57,12 @@ export type Look = {
   warning: string;
   // code is inline code in a reply.
   code: string;
-  // spinner is the working line's glyph and verb.
+  // spinner is the working line's glyph and verb, and shimmer the lighter
+  // shade its verb pulses towards.
   spinner: string;
+  shimmer: string;
+  // rule is the grey of the rules around the input and of the title on them.
+  rule: string;
   // added and removed are the backgrounds of a diff's lines.
   added: string;
   removed: string;
@@ -72,6 +76,8 @@ export const looks: { dark: Look; light: Look } = {
     warning: "#ffc107",
     code: "#b1b9f9",
     spinner: "#d77757",
+    shimmer: "#eb9f7f",
+    rule: "#888888",
     added: "#225c2b",
     removed: "#7a2936",
   },
@@ -81,6 +87,8 @@ export const looks: { dark: Look; light: Look } = {
     warning: "#966c1e",
     code: "#5769f7",
     spinner: "#d77757",
+    shimmer: "#f59575",
+    rule: "#999999",
     added: "#69db7c",
     removed: "#ffa8b4",
   },
@@ -134,7 +142,7 @@ function channels(hex: string): number[] {
 }
 
 // mix is a moved share of the way from a to b.
-function mix(a: string, b: string, share: number): string {
+export function mix(a: string, b: string, share: number): string {
   const [x, y] = [channels(a), channels(b)];
   return `#${x
     .map((c, i) =>

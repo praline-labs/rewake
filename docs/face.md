@@ -71,10 +71,17 @@ flips the shown pane between `rewake` and `native`, and the strip says `dev rewa
 mounted, sized and fed, so its pty is never resized and its TUI runs on, and the switch costs
 nothing on either side. It is laid over a box of the widget's own size inside the pane's padded
 box: an absolute layer starts at the padding's edge, and over the padded box it left the widget's
-last column showing (seen live on 2.11.0). Its body is the conversation's tail, PgUp and PgDn scroll
-it; under it the input between two rules sends a prompt to the session, refused with its reason
-where the session does not take it; the row under the rules says the face's last error, or the
-link while it is not live. It has no header: the strip says the turn's state. A prompt
+last column showing (seen live on 2.11.0). Its body is the conversation; under it the input between
+two rules sends a prompt to the session, refused with its reason where the session does not take it;
+the row under the rules says the face's last error, or the link while it is not live. It has no
+header: the strip says the turn's state, and the session's name with its type stands at the right
+end of the input's top rule, `──── w-claude (code) ─`, as Claude Code draws a session's name there,
+cut with `…` on a narrow pane and left out where not a letter of it fits; the strip under a pane
+drawn by the face leaves the name out, a native pane's keeps it. The mouse wheel over the face
+scrolls the conversation three rows a notch, as the shell scrolls a native pane's own scrollback,
+and PgUp and PgDn a page less a row; at the bottom the face follows new rows, scrolled up it holds
+the rows the person put there while more arrive below (`shell/src/face/scroll.ts`), and back at the
+bottom, or after a prompt it sent, it follows again. The wheel never reaches the pty. A prompt
 waits for its answer only while the answer can come: at most the latest 16, each for 30 s, none past
 the link it went by, a reload or the face's end. Under
 rewake's face the keys go to that input, never to the pty, and Esc does nothing. `rewake screen`
@@ -123,9 +130,12 @@ decision, October 30, 2026: first the same look, customised later), as read from
   dropped, at most ten rows; any other output its first three rows (four when only one more),
   a line of JSON pretty-printed, then a faint `… +N lines`; an empty one `(No output)` for Bash,
   `(No content)` for the rest.
-- **Turn**: under the conversation, a glyph that turns a frame a second and a verb rewake picks for
-  the turn (`Mulling… (12s)`) in Claude Code's orange, the time faint; after it, a faint
-  `Brewed for 37s · done 7:01 AM` hung at two columns. The face times the turn from the changes it
+- **Turn**: under the conversation, a glyph that turns a frame every 120 ms, through its six frames
+  and back, and a verb rewake picks for the turn (`Mulling… (12s)`) in Claude Code's orange, the
+  verb pulsing towards a lighter shade and back every two seconds, the time faint; after it, a faint
+  `Brewed for 37s · done 7:01 AM` hung at two columns. A running call's dot, and an open run's,
+  shows and hides every 600 ms.
+- **Rules**: the two around the input in Claude Code's grey for them, not the text's colour. The face times the turn from the changes it
   saw, so a face connected mid-turn or reloaded says `Working…` and no time.
 
 A row breaks at spaces, a word cut only when it is wider than the row; what still passes the
@@ -138,6 +148,19 @@ does not carry: paths relative to the session's directory, an edit's line number
 a call's progress, a turn's tokens, syntax colours of a
 code block (a highlighter the face does not have), and ctrl+o's expansion, a key the face does not
 have.
+
+## One clock
+
+Everything the face shows moves on one clock, as the terminal program's own animation frame does
+(`shell/src/face/ticker.ts`): a change from the mirror, a scroll or a resize only marks the face to
+draw, and the next tick, every 50 ms, lays it out with the glyph, the verb's glow, a running dot's
+blink and the turn's time all read from that tick's one moment; a tick that draws what was posted
+last posts nothing, and the clock stops while nothing changes or moves. Seen live before it
+(October 30, 2026, brief 41, the face beside a native pane on the same task, every paint logged):
+a change painted 33 ms after it came and a separate one-second timer painted the time, its phase
+the worker's start, while the glyph turned on the wall clock's second and the time on the turn's,
+so a delta's paint showed one moved and not the other; and the glyph turned once a second where
+the native one turns every 120 ms beside a pulsing verb and a blinking dot.
 
 ## Hot reload
 
@@ -170,7 +193,8 @@ is contained in the shell's thread, and the person can always switch to native w
 - **its socket fails**: shown as `lost`, and the worker connects again a second later.
 
 A stopped face starts again at the next change of its sources, or when the person switches to it.
-Tests: `shell/src/face/host.test.ts`, the look in `render.test.ts` and `view.test.tsx`.
+Tests: `shell/src/face/host.test.ts`, the look in `render.test.ts` and `view.test.tsx`, the clock
+in `ticker.test.ts`, the scroll in `scroll.test.ts`.
 
 ## Checked
 
@@ -205,3 +229,14 @@ was drawn by the next face with nothing restarted. Still differs, for want of mi
 are absolute or `~/…` where the native face makes them relative, an edit has no line numbers or
 context rows; and a code block has no syntax colours, which need a highlighter the face does not
 have.
+
+Live, October 30, 2026 (brief 41; Claude Code 2.1.310, the shell from its sources under a pty of
+200 by 50, a private state directory and project, a dev worker on the cheapest model beside main's
+native pane, the same task to both: a 15-second Bash, then a long reply): every paint of the face
+fell on the 50 ms grid, the glyph and the time moving in the same frames as the text, at native's
+cadence; three notches of the wheel while a reply streamed held the rows shown until it ended, PgUp
+and PgDn moved a page, and the wheel back to the bottom followed the stream again; the name stood on
+the input's rule and left the strip; a change to `turn.ts` was drawn by the next face with the shell's
+process unchanged. Still differs: the native pane reveals a streaming reply a whole row at a time,
+where the face shows a row as it grows; a running Bash's own time and line count (`· 13s`,
+`(13s · 14 lines)`) and the turn's tokens are not in the mirror.
