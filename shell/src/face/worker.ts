@@ -3,13 +3,16 @@
 // mirror socket itself, keeps its copy of the model and posts the lines to
 // draw. Everything it does is caught here and posted as an error, so a face
 // that breaks leaves its last lines on the screen and the shell untouched.
-import type { FaceLine, FromFace, Link, ToFace } from "./messages.ts";
+import type { FaceLine, FromFace, Link, Pointing, ToFace } from "./messages.ts";
 import type { Line, PermissionMode } from "./mirror.gen.ts";
 import { bounds } from "./mirror.gen.ts";
 import { FaceModel } from "./model.ts";
+import { partOf } from "./parts.ts";
+import { Pointer, pointAt, rowAt, type View } from "./pointer.ts";
 import { Tracker } from "./progress.ts";
 import { blinked, bodyOf, fill, statusOf } from "./render.ts";
 import { Scroll } from "./scroll.ts";
+import { copyOf, highlighted, lit } from "./select.ts";
 import { Ticker } from "./ticker.ts";
 import type { Clock } from "./turn.ts";
 import { Wheel } from "./wheel.ts";
@@ -24,6 +27,7 @@ let width = 80;
 let height = 24;
 const scroll = new Scroll();
 const wheel = new Wheel();
+const pointer = new Pointer();
 // laid is the conversation's rows as the last tick laid them out, and stale
 // once it or the width changed: only a tick lays them out again.
 let laid: FaceLine[] = [];
@@ -88,14 +92,30 @@ function draw(now: number) {
   }
 }
 
-// paint posts the view of the committed frame, unless it is what was posted.
+// viewOf is where the committed frame's rows stand in the face.
+const viewOf = (): View => {
+  const total = frame?.rows.length ?? 0;
+  return {
+    top: scroll.start(total, height),
+    shown: Math.min(total, height),
+    height,
+    width,
+  };
+};
+
+// paint posts the view of the committed frame, unless it is what was posted:
+// the selection marked, and the part the pointer is over lit.
 function paint() {
   if (!frame) return;
   try {
     const shown = scroll.view(frame.rows, height);
+    const view = viewOf();
+    const over = pointer.over && rowAt(pointer.over.y, view);
+    const part = over === undefined ? undefined : frame.rows[over]?.part;
+    const marked = lit(highlighted(shown, view.top, pointer.selection), part);
     const message: FromFace = {
       kind: "lines",
-      lines: fill(blinked(shown, frame.now), width, height),
+      lines: fill(blinked(marked, frame.now), width, height),
       turn: frame.turn,
       link: frame.link,
       prompts: frame.prompts,
@@ -132,6 +152,75 @@ function scrolled(by: number) {
   paint();
 }
 
+// A drag past the view's top or bottom scrolls it on a clock of its own,
+// two rows every 50 ms for at most ten seconds, as the native pane does, the
+// selection's end on the edge's row.
+const edgeRows = 2;
+const edgeEvery = 50;
+const edgeTicks = 200;
+let edge: { timer: ReturnType<typeof setInterval>; ticks: number } | undefined;
+let dragged = { x: 0, y: 0 };
+
+function stopEdge() {
+  clearInterval(edge?.timer);
+  edge = undefined;
+}
+
+function followEdge() {
+  const away = dragged.y < 0 ? 1 : dragged.y >= height ? -1 : 0;
+  if (away === 0) return stopEdge();
+  if (edge) return;
+  edge = {
+    ticks: 0,
+    timer: setInterval(() => {
+      if (!frame || !edge || ++edge.ticks > edgeTicks) return stopEdge();
+      const way = dragged.y < 0 ? 1 : dragged.y >= height ? -1 : 0;
+      if (way === 0) return stopEdge();
+      scroll.by(way * edgeRows, frame.rows.length, height);
+      pointer.drag(pointAt(dragged.x, dragged.y, viewOf()), dragged.x, dragged.y);
+      paint();
+    }, edgeEvery),
+  };
+}
+
+// pointed takes the person's hand: a release copies the selection it made,
+// or the part a click was on.
+function pointed(type: Pointing, x: number, y: number, focused: boolean) {
+  if (!frame) return;
+  const at = pointAt(x, y, viewOf());
+  switch (type) {
+    case "down":
+      stopEdge();
+      pointer.down(at, x, y, focused);
+      break;
+    case "drag":
+      dragged = { x, y };
+      if (pointer.drag(at, x, y)) followEdge();
+      break;
+    case "up": {
+      stopEdge();
+      const gesture = pointer.up();
+      if (gesture && "selected" in gesture) {
+        const text = copyOf(frame.rows, gesture.selected);
+        if (text.trim()) post({ kind: "copy", text, what: "selection" });
+      } else if (gesture) {
+        const key = frame.rows[gesture.clicked.row]?.part;
+        const part = key === undefined ? undefined : partOf(model.items, key);
+        if (part) post({ kind: "copy", text: part.text, what: part.what });
+      }
+      pointer.move(x, y);
+      break;
+    }
+    case "move":
+      pointer.move(x, y);
+      break;
+    case "out":
+      pointer.over = undefined;
+      break;
+  }
+  paint();
+}
+
 function lost(why: string) {
   socket = undefined;
   link = "lost";
@@ -157,6 +246,7 @@ function connect() {
   model = new FaceModel();
   stale = true;
   scroll.follow();
+  pointer.clear();
   since = worked = undefined;
   progress.reset();
   link = "connecting";
@@ -242,6 +332,12 @@ self.onmessage = (event: MessageEvent<ToFace>) => {
         scroll.follow();
         return soon();
       }
+      case "mouse":
+        return pointed(message.type, message.x, message.y, message.focused);
+      case "unselect":
+        if (!pointer.selection) return;
+        pointer.clear();
+        return paint();
       case "ping":
         return post({ kind: "pong", n: message.n });
     }

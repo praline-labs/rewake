@@ -12,7 +12,7 @@ import { createEffect, createSignal } from "solid-js";
 import { takeBriefs } from "./briefs.tsx";
 import { askColors, seedOf } from "./colors.ts";
 import { endMain, tailText, watchTerminal } from "./ending.ts";
-import { endFaces, faceShown, takeMirrors, toggleFace } from "./face/faces.ts";
+import { copyWith, endFaces, faceShown, takeMirrors, toggleFace } from "./face/faces.ts";
 import { type Command, isSuspend, prefixHandler } from "./keys.ts";
 import { closingLayer } from "./lifting.ts";
 import { type PaneTerminal, paneHooks } from "./pane.ts";
@@ -363,6 +363,8 @@ renderer.on("selection", (selection: { getSelectedText?: () => string } | null) 
   const text = selection?.getSelectedText?.() ?? "";
   if (text) renderer.copyToClipboardOSC52(text);
 });
+// A face's copy takes the same path: the person's terminal, by OSC 52.
+copyWith((text) => renderer.copyToClipboardOSC52(text));
 await render(() => <App />, renderer);
 stopRoom = pollRoom(
   rewake,

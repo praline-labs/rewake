@@ -3,7 +3,7 @@
 // drew. A reload ends the worker whole and starts it again from the current
 // sources; nothing here touches a pane's pty or the shell's process, so a face
 // that fails to load, throws or hangs costs its own drawing alone.
-import type { FaceLine, FromFace, Link, ToFace } from "./messages.ts";
+import type { FaceLine, FromFace, Link, Pointing, ToFace } from "./messages.ts";
 import type { PermissionMode } from "./mirror.gen.ts";
 
 export type FaceState = {
@@ -16,6 +16,8 @@ export type FaceState = {
   error?: string;
   // said is the answer to the last prompt.
   said?: string;
+  // copied says, for a few seconds, what the last copy sent to the clipboard.
+  copied?: { text: string; ok: boolean };
 };
 
 export type FaceOptions = {
@@ -25,6 +27,10 @@ export type FaceOptions = {
   pingEvery?: number;
   pongWithin?: number;
   promptsExpireAfter?: number;
+  // copy puts a text on the person's clipboard through the terminal, and
+  // says whether it could.
+  copy?: (text: string) => boolean;
+  copiedFor?: number;
 };
 
 let ids = 0;
@@ -36,6 +42,8 @@ let ids = 0;
 const maxPrompts = 16;
 const shownChars = 40;
 const expireAfter = 30_000;
+// A copy is said as long as the terminal program says one sent by OSC 52.
+const copiedFor = 4000;
 
 export class FaceHost {
   state: FaceState = { lines: [], turn: "unknown", link: "connecting", prompts: false };
@@ -47,6 +55,7 @@ export class FaceHost {
   private pingedAt = 0;
   private timer: ReturnType<typeof setInterval> | undefined;
   private sent = new Map<string, { text: string; at: number }>();
+  private copiedTimer: ReturnType<typeof setTimeout> | undefined;
 
   constructor(private readonly options: FaceOptions) {}
 
@@ -109,6 +118,8 @@ export class FaceHost {
         });
       case "error":
         return this.set({ error: message.text });
+      case "copy":
+        return this.copied(message.text, message.what);
       case "answer": {
         const text = this.sent.get(message.id)?.text;
         this.sent.delete(message.id);
@@ -122,6 +133,22 @@ export class FaceHost {
         this.ponged = Math.max(this.ponged, message.n);
         return;
     }
+  }
+
+  // copied sends a copy to the clipboard, the shell's only path there, and
+  // says so as the terminal program says it.
+  private copied(text: string, what: string) {
+    const ok = this.options.copy?.(text) ?? false;
+    const n = text.length;
+    const said = ok
+      ? `sent ${what === "selection" ? `${n} chars` : `${what} (${n} chars)`} via OSC 52 · check terminal clipboard settings if paste fails`
+      : "not copied: the terminal takes no OSC 52";
+    const copied = { text: said, ok };
+    clearTimeout(this.copiedTimer);
+    this.copiedTimer = setTimeout(() => {
+      if (this.state.copied === copied) this.set({ copied: undefined });
+    }, this.options.copiedFor ?? copiedFor);
+    this.set({ copied });
   }
 
   private failed(text: string) {
@@ -150,6 +177,14 @@ export class FaceHost {
 
   wheel(up: boolean) {
     this.send({ kind: "wheel", up, at: Date.now() });
+  }
+
+  mouse(type: Pointing, x: number, y: number, focused: boolean) {
+    this.send({ kind: "mouse", type, x, y, focused });
+  }
+
+  unselect() {
+    this.send({ kind: "unselect" });
   }
 
   // prompt says false when no face runs to take it.
@@ -181,6 +216,7 @@ export class FaceHost {
   // it.
   end() {
     this.sent.clear();
+    clearTimeout(this.copiedTimer);
     clearInterval(this.timer);
     this.timer = undefined;
     const worker = this.worker;

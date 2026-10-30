@@ -199,7 +199,8 @@ wrapper in the shell does the same for main (`terminal.UTF8Locale`), whose worke
 - **Mouse.** The widget forwards the wheel, clicks and drags in the program's mode, and scrolls its
   own scrollback when the program takes no mouse. OpenTUI's own selection takes the drag, so the
   shell keeps a pane `selectable` only while its program has no mouse tracking on (9/1000/1002/1003,
-  read in the same scanner) and copies a finished selection through OSC 52.
+  read in the same scanner) and copies a finished selection through OSC 52. Over rewake's face the
+  face takes the mouse itself and none of it reaches the pane's widget ([face.md](face.md#copying)).
 - **Keys.** OpenTUI pushes kitty flags 5 on the person's terminal, parses every key and the widget
   re-encodes it in the focused program's current mode. Key releases reach a program only if the
   terminal sends them. A space host answers a worker's `CSI ? u` from the flags it follows:

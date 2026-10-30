@@ -94,10 +94,11 @@ a native pane's keeps them. The mouse wheel over the face
 scrolls the conversation as a native pane scrolls (below, "The scroll"), and PgUp and PgDn a page
 less a row; at the bottom the face follows new rows, scrolled up it holds the rows the person put
 there while more arrive below (`shell/src/face/scroll.ts`), and back at the bottom, or after a
-prompt it sent, it follows again. The wheel never reaches the pty. A prompt
+prompt it sent, it follows again. A drag selects and a click copies a part (below, "Copying"). The
+wheel and the mouse never reach the pty. A prompt
 waits for its answer only while the answer can come: at most the latest 16, each for 30 s, none past
 the link it went by, a reload or the face's end. Under
-rewake's face the keys go to that input, never to the pty, and Esc does nothing. `rewake screen`
+rewake's face the keys go to that input, never to the pty, and Esc only drops a selection. `rewake screen`
 takes the window as the person sees it: the shadow window draws the face too.
 
 ### The look
@@ -228,6 +229,52 @@ apart and 67 for twenty 4 ms apart, a first notch back held, and painted 3 ms af
 at the renderer's own frames, every 16 ms. After it the face moved the same rows for the same
 streams (1 a notch alone, 19, 67, a first notch back held) and painted 2 to 4 ms after a notch.
 
+## Copying
+
+The face takes the mouse itself, whichever session it draws: its layer is the topmost under the
+pointer, a mouse event bubbles only to its parents and the pane's widget is not one, and every
+`<text>` of the face is not `selectable`, so OpenTUI's own selection never starts over it
+(`view.tsx`). The shell's thread passes the left button and the bare pointer to the worker
+(`pointFace`), which keeps the gesture (`shell/src/face/pointer.ts`) and posts what to copy; the
+shell sends it by `renderer.copyToClipboardOSC52` and nowhere else, and says it under the input
+for four seconds in the terminal program's words and colour, `sent 437 chars via OSC 52 · check
+terminal clipboard settings if paste fails`, `sent the code block (18 chars) …` for a part, or
+`not copied: the terminal takes no OSC 52`.
+
+- **A click or a drag.** A press and its release with the pointer on the press's screen cell all
+  the while is a click; a drag event to any other cell makes it a selection from the press's cell,
+  and its release copies the selection. A click copies only on a face that was focused when it was
+  pressed, so the click that focuses a face copies nothing. A press drops the selection there was,
+  and so does a key or Esc; a finished selection stays drawn, as natively.
+- **A selection copies text, not drawing** (`shell/src/face/select.ts`). A span may be a `gutter`:
+  a row's mark (`●`, `⎿`, `❯`), its indent and a hanging indent, a list's continuation indent, a
+  quote's `▎`, a diff's sign and the padding of its band, a table's lines and its cells' padding. A
+  gutter is neither highlighted nor copied, and a row of drawing alone, a table's rule, adds no
+  line. A row broken to fit the pane carries `join`, the text the break swallowed, and is copied
+  onto the row above with it, so a wrapped paragraph copies as the line it was. A table's row is
+  copied by its cells, each wrapped cell whole, a tab between them. Each line loses its trailing
+  blanks. The selection is held in the conversation's rows, so it stays on its text while the view
+  scrolls or more arrives.
+- **A drag past the body's top or bottom** scrolls the view two rows every 50 ms, for at most ten
+  seconds, with the selection's end on the edge's row, native's rule and numbers. The pointer
+  cannot go above the terminal's first row, so where the face's body starts there, as natively in
+  a fullscreen pane, scrolling up while selecting is the wheel's.
+- **A click copies the part it is on** (`shell/src/face/parts.ts`): every row names its part, and
+  the text is taken from the model when the click comes. A reply's row copies the reply's markdown
+  source; a code block's, its code alone; a call's head, its input as the head shows it (Bash's
+  command, a file's path, a pattern, a URL, a query, a skill) or else the input as given; a folded
+  run's line, its calls' inputs one a line; an open run's `⎿` row, its latest call's; an output's
+  rows, the call's output; an edit's red rows its old lines and green rows its new ones; a write's
+  preview, the file's lines.
+- **The part under the pointer is lit**: its rows are drawn on the band's colour, the prompt's,
+  in place, so nothing moves; the light goes when the pointer leaves the face or a button is
+  pressed.
+
+Native's rules read for this (the terminal program's `noSelect` gutters, its soft-wrap join, its
+drag-to-scroll and its copy notice) are its own; nothing of its code is copied. Still differs: no
+double or triple click selecting a word or a line, no keyboard extension of a selection and no copy
+key, and a selection over a table copies its whole rows.
+
 ## Hot reload
 
 The model lives in the wrapper and the face only draws it, so a face can be replaced at any moment
@@ -261,7 +308,9 @@ is contained in the shell's thread, and the person can always switch to native w
 A stopped face starts again at the next change of its sources, or when the person switches to it.
 Tests: `shell/src/face/host.test.ts`, the look in `render.test.ts` and `view.test.tsx`, the clock
 in `ticker.test.ts`, the scroll in `scroll.test.ts`, a notch's rows in `wheel.test.ts` and through
-the worker in `host.test.ts`.
+the worker in `host.test.ts`, copying in `select.test.ts` (a selection over gutters, a wrapped
+line, a diff and a table; what a click on each part copies; a click told from a drag), through the
+worker in `host.test.ts`, and the pty under the face hearing no mouse in `view.test.tsx`.
 
 ## Checked
 
@@ -325,3 +374,15 @@ line was not seen live, the classifier allowing every call tried, and stands on 
 the count leaps where a call's input arrives whole at its step's end, natively streamed; the
 thinking word has no effort suffix and does not shimmer; the write's preview has no line numbers;
 and `rewake screen`'s picture draws `⏵` two cells wide, cutting the mode's last letters there.
+
+Live, October 30, 2026 (brief 45; Claude Code 2.1.310, the shell from its sources under a pty of
+200 by 50, a private state directory and project, main and a dev worker on the cheapest model, SGR
+mouse events written to the pty and the OSC 52 it wrote decoded): a drag over a wrapped paragraph
+copied it as one line of 437 characters, with the notice under the input; over an edit, its head,
+counts and the old and new lines without signs or padding; over a table, its rows as tab-separated
+cells, each wrapped cell whole; a drag held below the body scrolled to the end and copied all it
+passed. A click copied a code block's code, a reply's markdown source, a folded run's command, an
+edit's path, its old and its new lines and a write's file lines; the pointer over a code block lit
+its rows alone; main's native pane beside it showed no selection. A copied code block
+pasted into the face's input arrived as `make allmake test`: the input is one line and drops a
+paste's newline.

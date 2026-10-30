@@ -70,18 +70,18 @@ function diff(item: Item, width: number): Span[][] {
     const e = edit as Record<string, unknown> | undefined;
     const old = typeof e?.old_string === "string" ? e.old_string : "";
     const now = typeof e?.new_string === "string" ? e.new_string : "";
+    // The sign and the padding are drawing: a selection copies the line.
     for (const [sign, mark, text] of [
       ["-", "removed", old],
       ["+", "added", now],
     ] as const)
       for (const line of lines(clean(text)))
-        for (const row of wrapSpans([{ text: `${sign}${line}` }], width)) {
+        for (const row of wrapSpans([{ text: sign, gutter: true }, { text: line }], width)) {
           const used = row.reduce((n, s) => n + widthOf(s.text), 0);
+          const pad = " ".repeat(Math.max(width - used, 0));
           rows.push([
-            {
-              text: `${row.map((s) => s.text).join("")}${" ".repeat(Math.max(width - used, 0))}`,
-              mark,
-            },
+            ...row.map((s) => ({ ...s, mark })),
+            ...(pad ? [{ text: pad, mark, gutter: true }] : []),
           ]);
         }
   }

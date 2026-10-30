@@ -70,6 +70,10 @@ export type Look = {
   // added and removed are the backgrounds of a diff's lines.
   added: string;
   removed: string;
+  // selection is the background of a selection over the conversation, and
+  // suggestion the words saying a copy went to the clipboard.
+  selection: string;
+  suggestion: string;
 };
 
 // The two sets as Claude Code's dark and light themes define them.
@@ -86,6 +90,8 @@ export const looks: { dark: Look; light: Look } = {
     edits: "#af87ff",
     added: "#225c2b",
     removed: "#7a2936",
+    selection: "#264f78",
+    suggestion: "#b1b9f9",
   },
   light: {
     success: "#2c7a39",
@@ -99,6 +105,8 @@ export const looks: { dark: Look; light: Look } = {
     edits: "#8700ff",
     added: "#69db7c",
     removed: "#ffa8b4",
+    selection: "#b4d5ff",
+    suggestion: "#5769f7",
   },
 };
 

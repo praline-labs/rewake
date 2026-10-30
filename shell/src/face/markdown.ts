@@ -33,7 +33,23 @@ const item = /^(\s*)([-*+]|\d+[.)])\s+(.*)$/;
 const quote = /^\s*>\s?(.*)$/;
 const tableLine = /^\s*\|.*\|\s*$/;
 
-const indent = (n: number): Span => ({ text: " ".repeat(n) });
+const indent = (n: number): Span => ({ text: " ".repeat(n), gutter: true });
+
+// codeBlocks is a reply's fenced blocks, each its code alone, in the order
+// markdownRows counts them.
+export function codeBlocks(text: string): string[] {
+  const blocks: string[][] = [];
+  let open: string[] | undefined;
+  for (const line of text.split("\n")) {
+    if (!fence.test(line)) open?.push(line);
+    else if (open) open = undefined;
+    else {
+      open = [];
+      blocks.push(open);
+    }
+  }
+  return blocks.map((lines) => lines.join("\n"));
+}
 
 // markdownRows lays a text out as rows of at most width columns.
 export function markdownRows(text: string, width: number, base: Span = { text: "" }): Span[][] {
@@ -44,14 +60,17 @@ export function markdownRows(text: string, width: number, base: Span = { text: "
   };
   const lines = text.split("\n");
   let inCode = false;
+  // code counts the fenced blocks, each one's rows marked with its number.
+  let code = -1;
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i] ?? "";
     if (fence.test(line)) {
       inCode = !inCode;
+      if (inCode) code++;
       continue;
     }
     if (inCode) {
-      rows.push(...wrapSpans([{ ...base, text: line }], width));
+      rows.push(...wrapSpans([{ ...base, text: line, code }], width));
       continue;
     }
     if (!line.trim()) {
@@ -83,7 +102,7 @@ export function markdownRows(text: string, width: number, base: Span = { text: "
         spansOfInline(q[1] ?? "", { ...base, italic: true }),
         Math.max(width - 2, 1),
       );
-      for (const row of body) rows.push([{ text: "▎ ", tone: "faint" }, ...row]);
+      for (const row of body) rows.push([{ text: "▎ ", tone: "faint", gutter: true }, ...row]);
       continue;
     }
     const li = item.exec(line);

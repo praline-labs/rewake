@@ -38,15 +38,20 @@ function cellsOf(spans: Span[]): Cells {
   return cells;
 }
 
-function spansOf(cells: Cells, from: number, to: number, spans: Span[]): Span[] {
+// spansOf is a row's spans; a row that goes on from the one above joins it
+// with what the break swallowed, any other keeps the first span's join.
+function spansOf(cells: Cells, from: number, to: number, spans: Span[], join?: string): Span[] {
   const out: Span[] = [];
   for (let i = from; i < to; i++) {
-    const span = spans[cells.at[i] ?? 0];
+    const { join: _, ...span } = spans[cells.at[i] ?? 0] ?? { text: "" };
     const last = out[out.length - 1];
     const ch = cells.ch[i] ?? "";
     if (last && cells.at[i - 1] === cells.at[i] && i > from) last.text += ch;
     else out.push({ ...span, text: ch });
   }
+  const first = out[0];
+  const kept = join ?? (from === 0 ? spans[cells.at[0] ?? 0]?.join : undefined);
+  if (first && kept !== undefined) first.join = kept;
   return out;
 }
 
@@ -58,6 +63,8 @@ export function wrapSpans(spans: Span[], width: number): Span[][] {
   const n = cells.ch.length;
   const rows: Span[][] = [];
   let start = 0;
+  // join is what the last break swallowed, for the row after it.
+  let join: string | undefined;
   while (start < n) {
     let used = 0;
     let end = start;
@@ -69,7 +76,7 @@ export function wrapSpans(spans: Span[], width: number): Span[][] {
       end++;
     }
     if (end === n) {
-      rows.push(spansOf(cells, start, end, spans));
+      rows.push(spansOf(cells, start, end, spans, join));
       break;
     }
     // A cut lands mid-word unless what follows is a space or a space fits.
@@ -86,8 +93,9 @@ export function wrapSpans(spans: Span[], width: number): Span[][] {
     }
     let trim = end;
     while (trim > start && cells.ch[trim - 1] === " ") trim--;
-    rows.push(spansOf(cells, start, trim, spans));
+    rows.push(spansOf(cells, start, trim, spans, join));
     while (next < n && cells.ch[next] === " ") next++;
+    join = cells.ch.slice(trim, next).join("");
     start = next;
   }
   if (rows.length === 0) rows.push([]);

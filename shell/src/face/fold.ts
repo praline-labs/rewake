@@ -6,6 +6,7 @@
 
 import type { FaceLine, Span } from "./messages.ts";
 import type { Item } from "./mirror.gen.ts";
+import { partKey } from "./select.ts";
 import { field, hidden, inputOf, shortPath } from "./tools.ts";
 import { clean, wrapSpans } from "./wrap.ts";
 
@@ -161,7 +162,9 @@ export const lostLine: FaceLine = {
 };
 
 const hang = (rows: Span[][], first: Span, rest: Span): FaceLine[] =>
-  rows.map((row, i) => ({ spans: [i === 0 ? first : rest, ...row] }));
+  rows.map((row, i) => ({
+    spans: [i === 0 ? { ...first, gutter: true } : { ...rest, gutter: true }, ...row],
+  }));
 
 // runLines is a run's rows: a finished run one faint line, an open one its
 // dot, the running command's description or what it is doing, and what the
@@ -171,19 +174,30 @@ export function runLines(run: { calls: Item[]; open: boolean }, width: number): 
   return run.calls.some((c) => c.status === "gap") ? [...lines, lostLine] : lines;
 }
 
+// A click on a run's line copies its calls' inputs (parts.ts).
+const parted = (lines: FaceLine[], calls: Item[]) => {
+  const first = calls[0];
+  return first ? lines.map((line) => ({ ...line, part: partKey("run", first) })) : lines;
+};
+
 function drawnRun(run: { calls: Item[]; open: boolean }, width: number): FaceLine[] {
   const pad = { text: "  " };
-  if (!run.open) return hang(wrapSpans(said(run.calls, "done"), width - 2), pad, pad);
+  if (!run.open)
+    return parted(hang(wrapSpans(said(run.calls, "done"), width - 2), pad, pad), run.calls);
   const last = run.calls[run.calls.length - 1];
   const running = [...run.calls].reverse().find((c) => c.status === "running" && c.name === "Bash");
   const description = running && field(inputOf(running), "description");
   const head: Span[] = description
     ? [{ text: `${clean(description).replace(/\s+/g, " ").trim()}…` }]
     : [...said(run.calls, "doing").map((s) => ({ ...s, tone: undefined })), { text: "…" }];
-  const out = hang(wrapSpans(head, width - 2), { text: "● ", tone: "faint", blink: true }, pad);
+  const out = parted(
+    hang(wrapSpans(head, width - 2), { text: "● ", tone: "faint", blink: true }, pad),
+    run.calls,
+  );
   if (last) {
     const hint = wrapSpans([{ text: hintOf(last), tone: "faint" }], width - 5)[0] ?? [];
-    out.push({ spans: [{ text: "  ⎿  " }, ...hint] });
+    // A click on it copies what the latest call works on (parts.ts).
+    out.push({ spans: [{ text: "  ⎿  ", gutter: true }, ...hint], part: partKey("input", last) });
   }
   return out;
 }

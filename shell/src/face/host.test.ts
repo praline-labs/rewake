@@ -242,3 +242,54 @@ test("prompts that get no answer are bounded, expire, and go with their link, a 
   host.end();
   expect(waiting().length).toBe(0);
 });
+
+// The face's worker selects and picks parts, and the shell's thread copies:
+// what crosses between them is the text alone, sent to the clipboard once.
+test("a drag over the face copies the selection's text and a click the part's source", async () => {
+  const dir = scratch();
+  const url = faceFile(dir, `import ${JSON.stringify(worker)};\n`);
+  const copies: string[] = [];
+  const wrapper = mirror(dir, "", ["first **reply**", "second"]);
+  const { host, until } = hosted(url, wrapper.path, {
+    copy: (text: string) => copies.push(text) > 0,
+  });
+  host.start();
+  const drawn = await until((s) => s.lines.some((l) => l.spans.some((sp) => sp.text === "second")));
+  const rowOf = (text: string) =>
+    drawn.lines.findIndex((l) =>
+      l.spans
+        .map((s) => s.text)
+        .join("")
+        .startsWith(text),
+    );
+  const first = rowOf("● first");
+
+  host.mouse("down", 2, first, true);
+  host.mouse("drag", 9, first, true);
+  const selected = await until((s) => s.lines[first]?.spans.some((sp) => sp.selected) ?? false);
+  expect(selected.lines[first]?.spans.filter((s) => s.selected).map((s) => s.text)).toEqual([
+    "first ",
+    "re",
+  ]);
+  host.mouse("up", 9, first, true);
+  await until((s) => s.copied !== undefined);
+  expect(copies).toEqual(["first re"]);
+  expect(host.state.copied?.text).toBe(
+    "sent 8 chars via OSC 52 · check terminal clipboard settings if paste fails",
+  );
+
+  // A click on the other reply copies it as written, and drops the selection.
+  const second = rowOf("● second");
+  host.mouse("down", 4, second, true);
+  host.mouse("up", 4, second, true);
+  await until(() => copies.length === 2);
+  expect(copies[1]).toBe("second");
+  await until((s) => !s.lines[first]?.spans.some((sp) => sp.selected));
+  expect(host.state.copied?.text).toContain("sent the reply (6 chars) via OSC 52");
+  // The pointer over a reply lights its rows, and leaving the face puts them out.
+  host.mouse("move", 4, first, false);
+  await until((s) => s.lines[first]?.lit === true);
+  expect(host.state.lines[second]?.lit).toBeUndefined();
+  host.mouse("out", -1, -1, false);
+  await until((s) => !s.lines[first]?.lit);
+});

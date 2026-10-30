@@ -8,15 +8,17 @@ import type { FaceLine, Span, Tone } from "./messages.ts";
 import type { Item } from "./mirror.gen.ts";
 import type { FaceModel } from "./model.ts";
 import { resultOf } from "./results.ts";
+import { type PartKind, partKey } from "./select.ts";
 import { headRowsOf } from "./tools.ts";
 import { blinkOff, type Clock, turnLine } from "./turn.ts";
 import { clean, widthOf, wrapSpans } from "./wrap.ts";
 
 // marked puts a mark before the first row and an indent of its width before
-// the others.
+// the others, both drawing, not text.
 function marked(rows: Span[][], mark: Span, band?: boolean): FaceLine[] {
-  const indent = { text: " ".repeat(widthOf(mark.text)) };
-  return rows.map((row, i) => ({ spans: [i === 0 ? mark : indent, ...row], band }));
+  const indent = { text: " ".repeat(widthOf(mark.text)), gutter: true };
+  const first = { ...mark, gutter: true };
+  return rows.map((row, i) => ({ spans: [i === 0 ? first : indent, ...row], band }));
 }
 
 // edged puts a mark before the first row and wraps the rest back to the left
@@ -24,8 +26,30 @@ function marked(rows: Span[][], mark: Span, band?: boolean): FaceLine[] {
 const edged = (text: string, width: number, mark: Span, base: Span, band?: boolean): FaceLine[] =>
   text
     .split("\n")
-    .flatMap((line, i) => wrapSpans([...(i === 0 ? [mark] : []), { ...base, text: line }], width))
+    .flatMap((line, i) =>
+      wrapSpans([...(i === 0 ? [{ ...mark, gutter: true }] : []), { ...base, text: line }], width),
+    )
     .map((spans) => ({ spans, band }));
+
+// parted names the part a click on each row copies: kind gives it by the
+// row, none for a row of no part.
+const parted = (
+  lines: FaceLine[],
+  item: Item,
+  kind: (line: FaceLine) => PartKind | undefined,
+): FaceLine[] =>
+  lines.map((line) => {
+    const k = kind(line);
+    return k ? { ...line, part: partKey(k, item) } : line;
+  });
+
+// resultPart is what a row under a call copies: an edit's old or new lines
+// by its mark, a written file's lines, else the call's output.
+function resultPart(item: Item, line: FaceLine): PartKind {
+  if (item.status === "done" && item.name === "Write") return "content";
+  const mark = line.spans.find((s) => s.mark)?.mark;
+  return mark === "removed" ? "old" : mark === "added" ? "new" : "output";
+}
 
 // A letter rewake delivered reaches the harness as its notification: the face
 // shows its summary, as a terminal program shows the notice it was given, its
@@ -100,7 +124,7 @@ function permitRows(item: Item): Span[][] | undefined {
 
 function toolLines(item: Item, width: number): FaceLine[] {
   const dot: Span = { text: "● ", tone: dotTone(item), blink: item.status === "running" };
-  const out = marked(headRowsOf(item, width - 2), dot);
+  const out = parted(marked(headRowsOf(item, width - 2), dot), item, () => "input");
   const mark = { text: "  ⎿  " };
   if (item.output === undefined) {
     if (item.status === "running")
@@ -116,7 +140,7 @@ function toolLines(item: Item, width: number): FaceLine[] {
   if (permit && !item.permit?.allowed) return [...out, ...under(permit)];
   const { rows, more } = resultOf(item, width - 5);
   if (more > 0) rows.push([{ text: `… +${more} lines`, tone: "faint" }]);
-  out.push(...under(rows));
+  out.push(...parted(under(rows), item, (line) => resultPart(item, line)));
   if (permit) out.push(...under(permit));
   return out;
 }
@@ -129,7 +153,16 @@ export function linesOf(item: Item, width: number): FaceLine[] {
       out.push(...promptLines(item, width));
       break;
     case "text":
-      out.push(...marked(markdownRows(clean(item.text) || "…", width - 2), { text: "● " }));
+      out.push(
+        ...parted(
+          marked(markdownRows(clean(item.text) || "…", width - 2), { text: "● " }),
+          item,
+          (line) => {
+            const code = line.spans.find((s) => s.code !== undefined)?.code;
+            return code === undefined ? "reply" : `code${code}`;
+          },
+        ),
+      );
       break;
     case "thinking":
       // Its text shows only in the terminal's transcript view.
@@ -280,7 +313,7 @@ export function fill(lines: FaceLine[], width: number, height: number): FaceLine
     }
     return {
       ...line,
-      spans: used < width ? [...spans, { text: " ".repeat(width - used) }] : spans,
+      spans: used < width ? [...spans, { text: " ".repeat(width - used), gutter: true }] : spans,
     };
   };
   const top = Array.from({ length: Math.max(height - lines.length, 0) }, blank);

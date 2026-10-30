@@ -90,3 +90,50 @@ test("the input's rule carries the mode and the context, dropped in turn as the 
   for (let width = 0; width <= 50; width++)
     expect(Bun.stringWidth(ruleOf(width, "名前", "46k/272k", "bypass"))).toBe(width);
 });
+
+// The owner's rule: the mouse over the face never reaches the pane's pty. A
+// stand-in for the pane's widget under the layer hears nothing of a press, a
+// drag, a release or the wheel over the conversation, and no selection of
+// the renderer's own starts there.
+test("the mouse over the face never reaches the pane under it", async () => {
+  const heard: string[] = [];
+  const hear = (what: string) => () => heard.push(what);
+  const { renderOnce, mockMouse, renderer } = await testRender(
+    () => (
+      <box width={20} height={8}>
+        <box
+          position="absolute"
+          width={20}
+          height={8}
+          onMouseDown={hear("down")}
+          onMouseDrag={hear("drag")}
+          onMouseUp={hear("up")}
+          onMouseMove={hear("move")}
+          onMouseScroll={hear("scroll")}
+        />
+        <FaceView id="none" width={20} height={8} theme={theme} live={true} active={() => true} />
+      </box>
+    ),
+    { width: 20, height: 8 },
+  );
+  await renderOnce();
+  await mockMouse.moveTo(3, 1);
+  await mockMouse.drag(2, 1, 9, 3);
+  await mockMouse.click(4, 2);
+  await mockMouse.scroll(4, 2, "up");
+  expect(heard).toEqual([]);
+  expect(renderer.getSelection()).toBeNull();
+});
+
+// A drag over the face's rows is the face's selection, never the renderer's,
+// whose copy would take the drawing, gutters and all.
+test("a drag over a row of the face starts no selection of the renderer's", async () => {
+  const line = { spans: [{ text: "● ", gutter: true }, { text: "some reply" }] };
+  const { renderOnce, mockMouse, renderer } = await testRender(
+    () => <FaceRow line={line} theme={theme} />,
+    { width: 12, height: 1 },
+  );
+  await renderOnce();
+  await mockMouse.drag(0, 0, 8, 0);
+  expect(renderer.getSelection()).toBeNull();
+});

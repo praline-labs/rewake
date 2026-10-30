@@ -6,6 +6,7 @@
 import { existsSync, watch } from "node:fs";
 import { createSignal } from "solid-js";
 import { FaceHost, type FaceState } from "./host.ts";
+import type { Pointing } from "./messages.ts";
 
 export type FaceMode = "rewake" | "native";
 
@@ -23,6 +24,12 @@ const workerUrl = compiled ? "./face/worker.ts" : new URL("./worker.ts", import.
 const sources = new URL(".", import.meta.url).pathname;
 const reloadAfter = 150;
 let watching = false;
+// copier is the shell's one path to the person's clipboard, the terminal's
+// OSC 52 (main.tsx); no face has another.
+let copier: (text: string) => boolean = () => false;
+export const copyWith = (copy: (text: string) => boolean) => {
+  copier = copy;
+};
 
 const put = <T>(map: Map<string, T>, id: string, value: T | undefined) => {
   const next = new Map(map);
@@ -56,6 +63,7 @@ export function takeMirrors(mirrors: [string, string | undefined][]) {
       path,
       url: workerUrl,
       onState: (s) => setStates((m) => put(m, id, s)),
+      copy: (text) => copier(text),
     });
     faces.set(id, { host, path });
     host.start();
@@ -77,6 +85,9 @@ export const sizeFace = (id: string, width: number, height: number) =>
   faces.get(id)?.host.size(width, height);
 export const scrollFace = (id: string, by: number) => faces.get(id)?.host.scroll(by);
 export const wheelFace = (id: string, up: boolean) => faces.get(id)?.host.wheel(up);
+export const pointFace = (id: string, type: Pointing, x: number, y: number, focused: boolean) =>
+  faces.get(id)?.host.mouse(type, x, y, focused);
+export const unselectFace = (id: string) => faces.get(id)?.host.unselect();
 export const promptFace = (id: string, text: string) => faces.get(id)?.host.prompt(text) ?? false;
 
 export function reloadFaces() {

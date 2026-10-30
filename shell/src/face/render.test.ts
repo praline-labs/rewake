@@ -156,7 +156,7 @@ test("a run of reads, searches and commands folds into one counted line", () => 
 test("a prompt and a letter wrap back to the edge, a letter's dot by its status", () => {
   const prompt: Item = { id: "p", kind: "prompt", status: "settled", text: "aaa bbb ccc" };
   expect(text(linesOf(prompt, 9))).toEqual(["❯ aaa bbb", "ccc"]);
-  expect(linesOf(prompt, 9)[0]?.spans[0]).toEqual({ text: "❯ ", tone: "faint" });
+  expect(linesOf(prompt, 9)[0]?.spans[0]).toEqual({ text: "❯ ", tone: "faint", gutter: true });
   const letter = (status: string): Item => ({
     id: "l",
     kind: "prompt",

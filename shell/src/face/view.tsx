@@ -3,12 +3,22 @@
 // a row for what went wrong. The input is the shell's own, so the person can
 // always switch back with the prefix's v, whatever the face did.
 
-import type { InputRenderable } from "@opentui/core";
+import type { BoxRenderable, InputRenderable } from "@opentui/core";
 import { RGBA } from "@opentui/core";
-import { createEffect, For, Index, Show } from "solid-js";
+import { createEffect, For, Index, onCleanup, Show } from "solid-js";
 import { mix, type Theme } from "../theme.ts";
-import { draftOf, faceOf, promptFace, scrollFace, setDraft, sizeFace, wheelFace } from "./faces.ts";
-import type { FaceLine, Span, Tone } from "./messages.ts";
+import {
+  draftOf,
+  faceOf,
+  pointFace,
+  promptFace,
+  scrollFace,
+  setDraft,
+  sizeFace,
+  unselectFace,
+  wheelFace,
+} from "./faces.ts";
+import type { FaceLine, Pointing, Span, Tone } from "./messages.ts";
 import type { PermissionMode } from "./mirror.gen.ts";
 import { ruleOf, ruleParts } from "./rule.ts";
 
@@ -53,18 +63,32 @@ const backgroundOf = (theme: Theme) =>
   theme.background ? colour(theme.background) : RGBA.defaultBackground();
 
 // FaceRow is one row the face's worker drew, its spans in the person's
-// colours, each cell on the row's own background.
+// colours, each cell on the row's own background: the band for a prompt and
+// for the part the pointer is over, the selection's for a selected cell.
+// OpenTUI's own selection is off: the face's worker selects its text.
 export function FaceRow(props: { line: FaceLine; theme: Theme }) {
   const bg = backgroundOf(props.theme);
   const band = props.theme.band ? colour(props.theme.band) : bg;
+  const lit = colour(props.theme.band ?? props.theme.idle);
+  const selected = colour(props.theme.look.selection);
+  const under = (span: Span) =>
+    span.selected
+      ? selected
+      : span.mark
+        ? colour(props.theme.look[span.mark])
+        : props.line.lit
+          ? lit
+          : props.line.band
+            ? band
+            : bg;
   return (
-    <text height={1} wrapMode="none" bg={bg}>
+    <text height={1} wrapMode="none" bg={bg} selectable={false}>
       <For each={props.line.spans}>
         {(span) => (
           <span
             style={{
               fg: fgOf(span, props.theme),
-              bg: span.mark ? colour(props.theme.look[span.mark]) : props.line.band ? band : bg,
+              bg: under(span),
               bold: span.bold,
               italic: span.italic,
               underline: span.underline,
@@ -124,6 +148,11 @@ export function FaceView(props: {
   const bg = backgroundOf(props.theme);
   const status = () => {
     const f = face();
+    if (f?.copied)
+      return {
+        text: f.copied.text,
+        fg: f.copied.ok ? colour(props.theme.look.suggestion) : indexed(1, props.theme),
+      };
     const failed = f?.error ?? f?.said;
     if (failed) return { text: failed, fg: indexed(1, props.theme) };
     const link = f?.link ?? "connecting";
@@ -132,6 +161,22 @@ export function FaceView(props: {
   };
   const row = (text: string) => text + " ".repeat(Math.max(props.width - Bun.stringWidth(text), 0));
   let input: InputRenderable | undefined;
+  let rows: BoxRenderable | undefined;
+  // pointed passes the left button and the bare pointer over the
+  // conversation to the face's worker, in the conversation's cells: a press
+  // on the rules or the input is theirs, while a drag goes on past any edge.
+  // Nothing here reaches the pane's pty: the layer is what the pointer hits.
+  const pointed = (type: Pointing) => (event: { x: number; y: number; button: number }) => {
+    if (!props.live || !rows) return;
+    if ((type === "down" || type === "drag" || type === "up") && event.button !== 0) return;
+    const x = event.x - rows.x;
+    const y = event.y - rows.y;
+    const inside = x >= 0 && x < props.width && y >= 0 && y < props.height;
+    if (type === "down" && y >= body()) return;
+    if (type === "out" && inside) return;
+    pointFace(props.id, type, x, y, props.active());
+  };
+  onCleanup(() => pointFace(props.id, "out", -1, -1, false));
   return (
     <box
       position="absolute"
@@ -154,15 +199,26 @@ export function FaceView(props: {
         if (!props.live || (direction !== "up" && direction !== "down")) return;
         wheelFace(props.id, direction === "up");
       }}
+      onMouseDown={pointed("down")}
+      onMouseDrag={pointed("drag")}
+      onMouseUp={pointed("up")}
+      onMouseMove={pointed("move")}
+      onMouseOut={pointed("out")}
     >
       {/* Rows are updated in place: the face posts a frame on every tick
           that changes it. */}
-      <box height={body()} flexDirection="column">
+      <box
+        height={body()}
+        flexDirection="column"
+        ref={(r: BoxRenderable) => {
+          rows = r;
+        }}
+      >
         <Index each={face()?.lines ?? []}>
           {(line) => <FaceRow line={line()} theme={props.theme} />}
         </Index>
       </box>
-      <text height={1} wrapMode="none" fg={ruled} bg={bg}>
+      <text height={1} wrapMode="none" fg={ruled} bg={bg} selectable={false}>
         <For each={ruleParts(props.width, props.title, props.context, face()?.mode)}>
           {(part) => (
             <span style={{ fg: part.mode ? modeColour(part.mode, props.theme) : ruled, bg }}>
@@ -179,6 +235,7 @@ export function FaceView(props: {
           fg={RGBA.defaultForeground()}
           bg={bg}
           content="❯ "
+          selectable={false}
         />
         <Show
           when={props.live}
@@ -207,6 +264,8 @@ export function FaceView(props: {
             }}
             placeholder={face()?.prompts ? "" : "this session takes no prompts here"}
             onInput={(text: string) => {
+              // A key drops the selection, as the terminal program's does.
+              unselectFace(props.id);
               setDraft(props.id, text);
             }}
             onSubmit={
@@ -218,14 +277,29 @@ export function FaceView(props: {
               }) as never
             }
             onKeyDown={(key: { name: string }) => {
+              if (key.name === "escape") unselectFace(props.id);
               if (key.name === "pageup") scrollFace(props.id, body() - 1);
               if (key.name === "pagedown") scrollFace(props.id, -(body() - 1));
             }}
           />
         </Show>
       </box>
-      <text height={1} wrapMode="none" fg={ruled} bg={bg} content={ruleOf(props.width)} />
-      <text height={1} wrapMode="none" fg={status().fg} bg={bg} content={row(status().text)} />
+      <text
+        height={1}
+        wrapMode="none"
+        fg={ruled}
+        bg={bg}
+        content={ruleOf(props.width)}
+        selectable={false}
+      />
+      <text
+        height={1}
+        wrapMode="none"
+        fg={status().fg}
+        bg={bg}
+        content={row(status().text)}
+        selectable={false}
+      />
     </box>
   );
 }

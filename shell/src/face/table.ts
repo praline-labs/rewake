@@ -65,7 +65,7 @@ export function tableRows(
   const columns = head.length;
   const cells = [head, ...body].map((row, r) =>
     Array.from({ length: columns }, (_, c) =>
-      inline(row[c] ?? "", r === 0 ? { ...base, bold: true } : base),
+      inline(row[c] ?? "", r === 0 ? { ...base, bold: true, cell: c } : { ...base, cell: c }),
     ),
   );
   const column = (c: number, measure: (cell: Span[]) => number) =>
@@ -84,7 +84,11 @@ export function tableRows(
   const room = Math.max(width - 3 * columns - 1 - margin, columns * minColumn);
   const widths = widthsOf(ideal, least, room);
   const rule = (left: string, mid: string, right: string): Span[] => [
-    { ...base, text: `${left}${widths.map((w) => "─".repeat(w + 2)).join(mid)}${right}` },
+    {
+      ...base,
+      text: `${left}${widths.map((w) => "─".repeat(w + 2)).join(mid)}${right}`,
+      gutter: true,
+    },
   ];
   const rows: Span[][] = [rule("┌", "┬", "┐")];
   cells.forEach((row, r) => {
@@ -92,14 +96,16 @@ export function tableRows(
     const wrapped = row.map((cell, c) => wrapSpans(cell, widths[c] ?? 1));
     const height = Math.max(...wrapped.map((w) => w.length));
     for (let i = 0; i < height; i++) {
-      const out: Span[] = [{ ...base, text: "│" }];
+      // The lines and the cells' padding are drawing; a cell's text is
+      // copied by its column (select.ts).
+      const out: Span[] = [{ ...base, text: "│", gutter: true }];
       wrapped.forEach((cell, c) => {
         const part = cell[i] ?? [];
         const free = Math.max((widths[c] ?? 1) - spanWidth(part), 0);
         const before =
           aligns[c] === "right" ? free : aligns[c] === "center" ? Math.floor(free / 2) : 0;
-        out.push({ ...base, text: ` ${" ".repeat(before)}` }, ...part);
-        out.push({ ...base, text: `${" ".repeat(free - before)} │` });
+        out.push({ ...base, text: ` ${" ".repeat(before)}`, gutter: true }, ...part);
+        out.push({ ...base, text: `${" ".repeat(free - before)} │`, gutter: true });
       });
       rows.push(out);
     }

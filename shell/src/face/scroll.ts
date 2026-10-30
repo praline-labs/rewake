@@ -19,12 +19,18 @@ export class Scroll {
     this.top = undefined;
   }
 
+  // start is the first row shown out of total in a view height rows tall.
+  start(total: number, height: number): number {
+    const bottom = Math.max(total - height, 0);
+    return this.top !== undefined && this.top < bottom ? this.top : bottom;
+  }
+
   // view is the rows shown out of all of them: the tail while following, the
   // held ones otherwise, the bottom once fewer rows than that are left.
   view<T>(all: T[], height: number): T[] {
-    const bottom = Math.max(all.length - height, 0);
-    if (this.top !== undefined && this.top >= bottom) this.top = undefined;
-    const from = this.top ?? bottom;
+    if (this.top !== undefined && this.top >= Math.max(all.length - height, 0))
+      this.top = undefined;
+    const from = this.start(all.length, height);
     return all.slice(from, from + height);
   }
 }
