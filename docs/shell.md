@@ -269,11 +269,14 @@ and the bar under the worker's.
   near-white text, whichever reads; the others sit on a grey with that colour as the text: the
   person's palette entry 2, and 8 for the grey, each with a fallback of its own
   (`shell/src/theme.ts`). In the wide layout, while main has the focus, the worker shown beside it
-  is underlined: filled is where the keys go, underlined is shown beside it without them. A zoom
-  shows `zoomed` at the right end. The bar ends with a `briefs` button after the workers', two
-  columns apart, chosen like a worker's: filled in the terminal's foreground, bold, while the briefs
-  have the keys, underlined while they show beside main, otherwise in the same grey with the
-  terminal's foreground, since it names no program; a click on it shows them.
+  is underlined: filled is where the keys go, underlined is shown beside it without them. The
+  `briefs` button stands at the bar's right end (the owner's word, October 30, 2026), the workers'
+  at its left, and a zoom shows `zoomed` just before it. It is chosen like a worker's: filled in the
+  terminal's foreground, bold, while the briefs have the keys, underlined while they show beside
+  main, otherwise in the same grey with the terminal's foreground, since it names no program; a
+  click on it shows them. Where the buttons do not all fit, the workers' row is cut a cell before
+  `zoomed` and `briefs`, which stay whole: no button lies over another, and the prefix's digits
+  still reach a worker the cut hid.
 - **The activity edge.** The owner asked on October 27, 2026 to see in the navigation which
   workers work, without the row moving when a mark goes, on the edge of the navigation's button,
   and the same day, having seen it live, set what it says: «если мигает, значит воркер встал по
@@ -302,7 +305,7 @@ and the bar under the worker's.
 
 - **Inset and alignment.** A row keeps the panes' column of padding on both sides, and its content
   starts at the left of what is inside, in the column of the programs' own text. Nothing is
-  centred; only `zoomed` keeps the right end.
+  centred; only the bar's `zoomed` and `briefs` keep the right end.
 - **Air.** A row is drawn on a band, the terminal's background moved 6% towards the ink that reads
   on it (`#282828` gives `#343434`), across its whole width, padding included: wide, each column's
   strip and the row under it read as one band of two rows; narrow, the strip, the hints and the bar

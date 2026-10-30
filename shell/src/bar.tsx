@@ -3,7 +3,7 @@
 // the prefix reaches it; and the hints for the current focus. Both, and the
 // strips, are the shell's own rows, drawn alike by ShellRow.
 import { RGBA, TextAttributes } from "@opentui/core";
-import { createEffect, createMemo, createSignal, For, type JSX, onCleanup, Show } from "solid-js";
+import { createEffect, createMemo, createSignal, For, type JSX, onCleanup } from "solid-js";
 import { type Context, fitHints, hintsFor, separator } from "./hints.ts";
 import type { Mark } from "./strip.tsx";
 import { ink, inkOr, type Theme } from "./theme.ts";
@@ -91,23 +91,39 @@ export function Bar(props: {
     const marked = props.chosen === props.briefs ? TextAttributes.UNDERLINE : 0;
     return { bg: props.theme.idle, fg: RGBA.defaultForeground(), attributes: marked };
   };
+  // The workers' buttons from the left, the briefs' at the right edge (the
+  // owner's word, October 30, 2026): where they do not all fit, the workers'
+  // row is cut a cell before the right end, so the briefs button stays whole
+  // and no button lies over another; the prefix's digits reach a cut worker.
   return (
     <ShellRow theme={props.theme}>
-      <For each={props.tabs}>
-        {(t) => (
-          <text
-            height={1}
-            marginRight={1}
-            flexShrink={0}
-            {...style(t)}
-            {...selecting(props.theme)}
-            onMouseDown={() => props.pick(t.id)}
-          >
-            <span style={{ bg: edge(t, style(t).bg) }}> </span>
-            {`${t.label} `}
-          </text>
-        )}
-      </For>
+      <box flexDirection="row" flexGrow={1} flexShrink={1} overflow="hidden">
+        <For each={props.tabs}>
+          {(t) => (
+            <text
+              height={1}
+              marginRight={1}
+              flexShrink={0}
+              wrapMode="none"
+              {...style(t)}
+              {...selecting(props.theme)}
+              onMouseDown={() => props.pick(t.id)}
+            >
+              <span style={{ bg: edge(t, style(t).bg) }}> </span>
+              {`${t.label} `}
+            </text>
+          )}
+        </For>
+      </box>
+      <text
+        height={1}
+        width={props.zoomed ? 6 : 0}
+        marginLeft={props.zoomed ? 1 : 0}
+        flexShrink={0}
+        fg={RGBA.defaultForeground()}
+        {...selecting(props.theme)}
+        content={props.zoomed ? "zoomed" : ""}
+      />
       <text
         height={1}
         marginLeft={1}
@@ -117,16 +133,6 @@ export function Bar(props: {
         content=" briefs "
         onMouseDown={() => props.pick(props.briefs)}
       />
-      <box flexGrow={1} />
-      <Show when={props.zoomed}>
-        <text
-          height={1}
-          flexShrink={0}
-          fg={RGBA.defaultForeground()}
-          {...selecting(props.theme)}
-          content="zoomed"
-        />
-      </Show>
     </ShellRow>
   );
 }
