@@ -349,6 +349,13 @@ write-claude (code) · working · <model> low · 230k/1M · 90% 42m · 5h 37% ·
 - **The person's own status line** is off in every Claude Code run rewake starts
   ([claude.md](claude.md#the-cache-ttl)): the strip says what it said.
 
+Seen live on October 31, 2026 (Claude Code 2.1.310, pi 1.4.0, a private room): a Claude Code
+worker's top row went from the project to `/tmp/rw60/worktrees/repo-6a8dae/wt-bfe5d6 · ⎇ wt-bfe5d6`
+on its `worktree_enter`, and to `…/repo-6a8dae/wt-bfe5d6 · ⎇ wt-bfe5d6` at 46 columns; main's hint
+line ended `· ⧗ 1`, the worker's `· brief 1 2/3`, a pi worker's rule `brief 2 1/2`. At 46 columns
+the strip had dropped the model and the limits and kept the context and the cache, the pi rule
+kept its brief, and Claude Code's hint line was cut to `· bri`, our tail first.
+
 ## The strip
 
 The row under each pane, main's and every worker's, a shell's row, is one line drawn by the shell
