@@ -71,15 +71,17 @@ test("the strip shows the verdict's label and the button its mark, deriving neit
   expect(markOf(undefined)).toBe("off");
 });
 
-test("a pane under rewake's face leaves its name and context to the face's rule; a native one keeps them", () => {
+// The face's input rule carries the run's work now (brief 60): every pane's
+// strip names the session and its context, drawn by the face or not.
+test("every pane's strip names the session and its context, under rewake's face too", () => {
   const status = { ...base, type: "code" };
   const texts = (face?: "rewake" | "native") =>
     stripParts({ session: "w", status, face }, 200, now).map((p) => p.text);
-  expect(texts("rewake")[0]).toBe("dev rewake");
-  expect(texts("rewake")).not.toContain("23k/100k");
-  expect(texts("native")[0]).toBe("w (code)");
-  expect(texts("native")).toContain("23k/100k");
+  for (const face of ["rewake", "native", undefined] as const) {
+    expect(texts(face)[0]).toBe("w (code)");
+    expect(texts(face)).toContain("23k/100k");
+  }
+  expect(texts("rewake")[1]).toBe("dev rewake");
   // No pane's strip says the percent of the window.
-  expect(texts(undefined)).toContain("23k/100k");
   expect(texts(undefined).join(" ")).not.toContain("23%");
 });

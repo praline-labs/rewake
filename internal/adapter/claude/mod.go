@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io/fs"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -34,16 +33,8 @@ const pluginDirFlag = "--plugin-dir"
 // the mod reads it.
 const modSocketEnv = "REWAKE_MOD_SOCKET"
 
-// modWindowEnv names the window the launch limited the conversation to, in
-// tokens, 0 for none: the mod's band shows the figure the strip shows, which
-// is measured against that limit rather than the model's own window.
-const modWindowEnv = "REWAKE_CONTEXT_WINDOW"
-
-// modEnv is the environment the mod reads: its socket and the launch's window.
-func modEnv(env []string, socket string, args []string) []string {
-	env = withEnv(env, modSocketEnv, socket)
-	return withEnv(env, modWindowEnv, strconv.FormatInt(windowTokens(flagValue(args, autocompactFlag)), 10))
-}
+// modEnv is the environment the mod reads: its socket.
+func modEnv(env []string, socket string) []string { return withEnv(env, modSocketEnv, socket) }
 
 // modSuffix ends every mod socket, the hashed form's included.
 const modSuffix = ".mod.sock"

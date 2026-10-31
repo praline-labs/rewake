@@ -366,7 +366,8 @@
       "description": "is one poll of a load's heartbeat.",
       "properties": {
         "loadId": {"type": "string", "description": "is the load polling, the one its admitted hello named."},
-        "generation": {"type": "integer", "description": "is the heartbeat generation the hello answered."}
+        "generation": {"type": "integer", "description": "is the heartbeat generation the hello answered."},
+        "work": {"type": "string", "description": "is the room work the load shows at the input, empty for none: a poll whose work is not the run's is answered at once, and one without it at the hold's end."}
       },
       "required": ["loadId", "generation"],
       "additionalProperties": false
@@ -448,7 +449,8 @@
       "type": "object",
       "description": "may carry one command; the next heartbeat never waits for its completion.",
       "properties": {
-        "control": {"$ref": "#/$defs/ControlCommand", "description": "is the command dispatched once to this generation."}
+        "control": {"$ref": "#/$defs/ControlCommand", "description": "is the command dispatched once to this generation."},
+        "work": {"type": "string", "description": "is the run's room work for the hint under the input (internal/core/work): its briefs with their ticks and the reports it waits on, empty for none; absent where the host reads none."}
       },
       "required": [],
       "additionalProperties": false

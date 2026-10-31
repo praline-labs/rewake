@@ -22,6 +22,8 @@ export class Heartbeat {
     private readonly loadId: string,
     // again says the load's hello once more, for a generation that lapsed.
     private readonly again: () => void,
+    // shown is the room work the load shows, which each poll names.
+    private readonly shown: () => string | undefined,
     private readonly received?: (answer: AliveAnswer, generation: number) => void,
   ) {}
 
@@ -46,7 +48,7 @@ export class Heartbeat {
     if (this.superseded || generation !== this.newest) {
       return;
     }
-    const request: AliveRequest = { loadId: this.loadId, generation };
+    const request: AliveRequest = { loadId: this.loadId, generation, work: this.shown() };
     let status = 0;
     let text = "";
     try {

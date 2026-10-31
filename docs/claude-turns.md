@@ -102,9 +102,10 @@ Every id the mod makes is 24 characters, so an end sent under a later load's id 
 its cut measured.
 
 **The heartbeat.** An admitted hello answers the load's heartbeat `generation`, and the load
-starts a timer chain for it (`heartbeat.ts`): each callback sends `mod/alive` with the load id
-and that generation and, when it is answered, schedules the next. The host holds each poll up to
-`aliveHoldSeconds`. One chain runs per load at a time, and a reload cancels it with the old copy.
+starts a timer chain for it (`heartbeat.ts`): each callback sends `mod/alive` with the load id,
+that generation and the room work the load shows and, when it is answered, schedules the next. The
+host holds each poll up to `aliveHoldSeconds`, less when the run's work is not what the poll shows
+([claude.md](claude.md#the-band)). One chain runs per load at a time, and a reload cancels it with the old copy.
 
 | Answer | What the chain does |
 |---|---|

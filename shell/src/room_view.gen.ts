@@ -102,6 +102,10 @@ export interface SessionRow {
   // limits are the account's rate-limit windows of five hours and seven days, as the harness
   // reported them last; absent where it reports none.
   limits?: LimitRow[]
+  // work is the run's room work as its input shows it (internal/core/work): the open briefs
+  // bound to it with their ticks, `brief 57 3/6`, and the reports it waits on, `⧗ 3`; absent
+  // when there is none and unless asMain.
+  work?: string
   // mirror is where the session's wrapper serves its conversation to rewake's own face
   // (docs/face.md), while it does; absent otherwise and unless asMain. The shell builds no path
   // itself.

@@ -33,6 +33,7 @@ internal/core/worktype/                       the kinds of work a worker is rais
 internal/core/session/                        optional, epoch-scoped observations of a harness (telemetry): the Observer every adapter reports to, which merges them into the snapshot, and the activity verdict on it
 internal/core/screen/                         a window as cells for `rewake screen`: the frame, its text, its PNG with the embedded font, the picture's file with its refusals
 internal/core/space/                          the record of each space a main opens: its states, its steps, the kept checkouts' reminder
+internal/core/work/                           a run's room work as its input shows it: the open briefs bound to it with their ticks and the reports it waits on
 internal/adapter/                             the adapter API: the Harness interface, the catalogue value, launch plans, version gates, flags, defaults, settings
 internal/adapter/catalog/                     the one constructor of the catalogue, which cmd/rewake builds and hands to the CLI
 internal/adapter/claude/                      launch arguments, environment, socket delivery, the mod embedded from its mod/ directory and written per run

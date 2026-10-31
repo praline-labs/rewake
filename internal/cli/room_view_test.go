@@ -82,7 +82,7 @@ func TestTheRoomViewCarriesWhatOnlyMainReadsToMainsShell(t *testing.T) {
 		t.Fatalf("without a proof: %+v", bare)
 	}
 	for _, row := range bare.Sessions {
-		if row.Verdict != nil || row.Own != nil {
+		if row.Verdict != nil || row.Own != nil || row.Work != nil {
 			t.Errorf("%s carries telemetry to a caller that proved nothing: %+v", row.Name, row)
 		}
 	}
@@ -97,11 +97,11 @@ func TestTheRoomViewCarriesWhatOnlyMainReadsToMainsShell(t *testing.T) {
 	for _, row := range view.Sessions {
 		switch row.Name {
 		case "lead":
-			if row.Own == nil || !*row.Own {
+			if row.Own == nil || !*row.Own || row.Work != nil {
 				t.Errorf("main's own row is not marked: %+v", row)
 			}
 		case "worker":
-			if row.Verdict == nil || row.Verdict.Label != "working" || row.Verdict.Mark != MarkSteady || row.Model == nil || row.Percent == nil || *row.Percent != 42 {
+			if row.Verdict == nil || row.Verdict.Label != "working" || row.Verdict.Mark != MarkSteady || row.Model == nil || row.Percent == nil || *row.Percent != 42 || row.Work == nil || *row.Work != "brief 1 0/1" {
 				t.Errorf("the worker's row: %+v", row)
 			}
 		}

@@ -76,8 +76,8 @@ export function markOf(s: Session | undefined): Mark {
   return s?.verdict?.mark ?? "off";
 }
 
-// windowOf is the context as the strip and the face's rule show it, used of
-// the window: 145k/1M, –/1M before the harness counted it.
+// windowOf is the context as the strip shows it, used of the window: 145k/1M,
+// –/1M before the harness counted it.
 export function windowOf(s: Session | undefined): string | undefined {
   if (!s?.window) return undefined;
   return `${s.used === undefined ? "–" : tokens(s.used)}/${tokens(s.window)}`;
@@ -120,8 +120,7 @@ export function stripParts(state: StripState, width: number, now = Date.now()): 
   const cache = s && cacheOf(s, now);
   // In the order shown; the optional ones are left out, 1 then 2 then 3.
   const all: ((Part & { optional?: number }) | undefined)[] = [
-    // Under rewake's face the name is on the face's input rule instead.
-    state.face === "rewake" ? undefined : { text: nameOf(state), kind: "name" },
+    { text: nameOf(state), kind: "name" },
     state.face ? { text: `dev ${state.face}`, kind: "dev" } : undefined,
     activity ? { text: activity, kind: "plain" } : undefined,
     state.branch ? { text: `⎇ ${state.branch}`, kind: "plain", optional: 3 } : undefined,
@@ -133,8 +132,7 @@ export function stripParts(state: StripState, width: number, now = Date.now()): 
           optional: 1,
         }
       : undefined,
-    // Under rewake's face the context is on the face's input rule too.
-    s && state.face !== "rewake" ? contextOf(s) : undefined,
+    s ? contextOf(s) : undefined,
     cache ? { ...cache, optional: 2 } : undefined,
   ];
   let parts = all.filter((p) => p !== undefined);

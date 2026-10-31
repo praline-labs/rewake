@@ -33,13 +33,13 @@ func TestARowNamesWhereTheSessionWorksNowAndTheAccountsLimits(t *testing.T) {
 		return sessionView{Telemetry: telemetry, Session: registry.Session{Name: "api-claude", CWD: checkout}}
 	}
 
-	started := sessionRowsOf(root, records, []sessionView{view(nil)}, "", false)[0]
+	started := sessionRowsOf(root, records, []sessionView{view(nil)}, "", nil)[0]
 	if started.Path != checkout || started.Branch == nil || *started.Branch != "fix" || started.Limits != nil {
 		t.Fatalf("where it started: %+v", started)
 	}
 
 	limits := []session.RateLimit{{Kind: "five_hour", Percent: 37, ResetsAt: &at}, {Kind: "seven_day", Percent: 9}, {Kind: "seven_day_opus", Percent: 50}}
-	row := sessionRowsOf(root, records, []sessionView{view(&session.Snapshot{Cwd: &moved, RateLimits: limits})}, "", true)[0]
+	row := sessionRowsOf(root, records, []sessionView{view(&session.Snapshot{Cwd: &moved, RateLimits: limits})}, "", func(string, string) string { return "" })[0]
 	if row.Cwd != checkout || row.Path != moved || row.Branch == nil || *row.Branch != "elsewhere" {
 		t.Fatalf("after a move: %+v", row)
 	}

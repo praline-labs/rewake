@@ -8,6 +8,8 @@ import (
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/core/session"
 	"github.com/praline-labs/rewake/internal/core/space"
+	"github.com/praline-labs/rewake/internal/core/taskbrief"
+	"github.com/praline-labs/rewake/internal/core/work"
 )
 
 // sessionRowsOf are the sessions as the strip draws them. The telemetry is
@@ -15,7 +17,9 @@ import (
 // and then the shell derives nothing of it: the verdict is rewake's, the
 // model is the name the table shows, and the path and its branch are where
 // the session works now.
-func sessionRowsOf(dir string, records []space.Record, views []sessionView, mainName string, asMain bool) []SessionRow {
+// workOf, nil unless asMain, is a run's room work.
+func sessionRowsOf(dir string, records []space.Record, views []sessionView, mainName string, workOf func(name, epoch string) string) []SessionRow {
+	asMain := workOf != nil
 	checkouts := map[string]space.Checkout{}
 	for _, record := range records {
 		if !record.State.Final() && record.Checkout.Path != "" && record.Checkout.Branch != "" {
@@ -44,10 +48,25 @@ func sessionRowsOf(dir string, records []space.Record, views []sessionView, main
 		telemetryInto(&row, view.Telemetry)
 		if asMain {
 			row.Mirror = mirrorOf(dir, view.Name, view.Epoch())
+			if work := workOf(view.Name, view.Epoch()); work != "" {
+				row.Work = &work
+			}
 		}
 		rows = append(rows, row)
 	}
 	return rows
+}
+
+// workReader is the runs' work, with the open briefs listed once for every
+// row; a list that does not read leaves the briefs out of every run's work.
+func workReader(home taskbrief.Home) func(name, epoch string) string {
+	open, _, err := taskbrief.List(home, false)
+	if err != nil {
+		open = nil
+	}
+	return func(name, epoch string) string {
+		return work.Line(open, name, epoch, work.Awaited(home.Room, name, epoch))
+	}
 }
 
 // telemetryInto fills the part of a row that comes from the session's

@@ -453,6 +453,10 @@ type AliveRequest struct {
 
 	// Generation is the heartbeat generation the hello answered.
 	Generation int `json:"generation"`
+
+	// Work is the room work the load shows at the input, empty for none: a poll whose work is not
+	// the run's is answered at once, and one without it at the hold's end.
+	Work *string `json:"work,omitempty"`
 }
 
 // EndedRequest names the other runs whose ends the harness's store keeps.
@@ -556,6 +560,11 @@ type ControlCommand struct {
 type AliveAnswer struct {
 	// Control is the command dispatched once to this generation.
 	Control *ControlCommand `json:"control,omitempty"`
+
+	// Work is the run's room work for the hint under the input (internal/core/work): its briefs
+	// with their ticks and the reports it waits on, empty for none; absent where the host reads
+	// none.
+	Work *string `json:"work,omitempty"`
 }
 
 // StateRequest is a complete current observation, without transcript content.

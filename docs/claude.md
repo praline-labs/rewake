@@ -114,7 +114,7 @@ another status with a refusal:
 |---|---|---|---|
 | `hello` | every load, at `session.start` | the session id, the harness version, the load's id and number; answered with the run's role, whether it hosts spaces, whether the face draws it (`mirror`), the heartbeat's generation | [the live set](claude-turns.md#the-live-set) |
 | `turn/start`, `turn/end` | every role's mod, for its own conversation | a turn's start; its end under an end id, retried until its receipt | [claude-turns.md](claude-turns.md) |
-| `mod/alive` | every admitted load, in a loop | the heartbeat; it also carries at most one control command to the mod | [the live set](claude-turns.md#the-live-set), [control](#control) |
+| `mod/alive` | every admitted load, in a loop | the heartbeat; it also carries at most one control command to the mod, and the run's room work for [the band](#the-band) | [the live set](claude-turns.md#the-live-set), [control](#control) |
 | `mod/ended` | every admitted load, once | the epochs of other runs whose ends the store keeps; answered with those rewake proves ended | [the outbox](claude-turns.md#the-mods-side) |
 | `mod/state` | every admitted load | native state samples | [telemetry](#telemetry) |
 | `mod/control` | every admitted load | a control command's acknowledgement and final outcome | [control](#control) |
@@ -357,19 +357,23 @@ drops it, as it does after Esc or Stop until the person's next input.
 ## The band
 
 Every Claude Code session rewake runs — main and every worker, whether or not the face draws it —
-keeps its native interface and gets the session's rewake name (`REWAKE_SESSION`), ` · ` and the context
-as `46k/272k` (`–/272k` before a count) added to the hint line under the native input
-(`hooks/band.ts`, a `ui.render` hook on `PromptHint` that sets the `tail` prop): native's own text and
-pills stay as they are, and the tail follows them dim, so it reads
-`⏵⏵ auto mode on (shift+tab to cycle) · main-claude · 20k/1M`. It is the line under the input, as close
-as a mod can draw to it, and shows idle and working alike. The mode is not drawn: native's footer shows
-it. A narrow row cuts ours first, the engine's own rule — the tail goes before native's text is touched.
-It is information only: no button, nothing to answer.
+keeps its native interface and gets the run's room work added to the hint line under the native
+input (`hooks/band.ts`, a `ui.render` hook on `PromptHint` that sets the `tail` prop): the open briefs
+it was given with their ticks, `brief 57 3/6`, and the reports it waits on, `⧗ 3` (`rewake inbox
+--awaited`'s count), joined by ` · ` (`internal/core/work`, the same text the face's input rule
+carries); nothing when there is none. Native's own text and pills stay as they are, and the tail
+follows them dim, so it reads `⏵⏵ auto mode on (shift+tab to cycle) · brief 57 3/6`. It is the line
+under the input, as close as a mod can draw to it, and shows idle and working alike. The mode is not
+drawn: native's footer shows it. A narrow row cuts ours first, the engine's own rule — the tail goes
+before native's text is touched — so nothing is only there: the briefs view and `rewake brief show`,
+`rewake inbox --awaited` say the same, and the name and context are on the shell's strip
+([shell.md](shell.md#the-strip)). It is information only: no button, nothing to answer.
 
-Its facts are kept from other events, so the render hook waits for nothing: the context from
-`$.session.usage()`, measured against the window the launch limited the session to (`--autocompact`,
-named in `REWAKE_CONTEXT_WINDOW`, 0 for none) where that is below the model's, as the strip's is — a
-default worker reads `46k/272k`, an uncapped main its model's window — and sampled at `session.start`, after each main-loop step and at `session.measure`.
+The work comes with the heartbeat, so the render hook waits for nothing: every `mod/alive` answer
+carries the run's `work` as the host reads it (`modhost.Config.Work`, which the wrapper fills from
+the room's briefs and mail), and every poll names the `work` the band shows; the host answers a poll
+whose work is not the run's at once, and rereads it every 2 s while it holds one, so a tick or a
+report shows within about that. A poll that names no work, an older load's, is held as before.
 A change asks one redraw. A run without rewake's mod is untouched, and so is a surface that does not
 draw the site (VS Code, `-p`). A hook that fails is dropped by the engine with its part, and nothing of
 the band touches a verdict, a prompt or the hello.
@@ -393,6 +397,6 @@ the report; a drawn run's conversation goes to its own wrapper in memory and now
 ([the mirror](#the-mirror)). It sets no status line — the launch does — sends no
 settings, and
 does no heavy work in a hook: the hooks worker is shared and a mod that stalls it is unloaded. It
-draws nothing of the workers but the name and context on the hint line under the input
+draws nothing of the workers but the run's own work on the hint line under the input
 ([the band](#the-band)): rewake's shell draws them, on the person's terminal
 ([shell.md](shell.md)), and the mod knows nothing of who draws the screen.

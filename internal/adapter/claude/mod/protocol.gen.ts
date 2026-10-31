@@ -358,6 +358,9 @@ export interface AliveRequest {
   loadId: string
   // generation is the heartbeat generation the hello answered.
   generation: number
+  // work is the room work the load shows at the input, empty for none: a poll whose work is not
+  // the run's is answered at once, and one without it at the hold's end.
+  work?: string
 }
 
 // EndedRequest names the other runs whose ends the harness's store keeps.
@@ -439,6 +442,10 @@ export interface ControlCommand {
 export interface AliveAnswer {
   // control is the command dispatched once to this generation.
   control?: ControlCommand
+  // work is the run's room work for the hint under the input (internal/core/work): its briefs
+  // with their ticks and the reports it waits on, empty for none; absent where the host reads
+  // none.
+  work?: string
 }
 
 // StateRequest is a complete current observation, without transcript content.

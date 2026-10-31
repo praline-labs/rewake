@@ -330,8 +330,8 @@ type, so its name stands alone.
 write-claude (code) · working · ⎇ wt-fd7596 · <model> low thinking · 230k/1M · 90% 42m
 ```
 
-- **What it says**: the session and its type — on a pane drawn by rewake's face that and the
-  context are on the face's input rule instead ([face.md](face.md#the-face)) — the activity as the label of its verdict, which
+- **What it says**: the session and its type, on a pane drawn by rewake's face as on a native one,
+  the activity as the label of its verdict, which
   `rewake list` shows too, after `dev rewake` or `dev native` on a dev worker's strip (`working`, `waiting for a permission`, `waiting at a dialog`, `idle`,
   `compacting`, with ` (stale)` once it is not current; nothing while it is `unknown`;
   [session-state.md](session-state.md#activity)), the branch, the model and

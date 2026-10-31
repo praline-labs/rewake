@@ -23,6 +23,7 @@ import (
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/core/space"
+	"github.com/praline-labs/rewake/internal/core/work"
 	"github.com/praline-labs/rewake/internal/core/worktype"
 	"github.com/praline-labs/rewake/internal/host/delivery"
 	"github.com/praline-labs/rewake/internal/host/launch"
@@ -219,6 +220,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 		WorktreeEntry: request.WorktreeEntry,
 		WorkType:      request.WorkType,
 		Mirror:        model,
+		Work:          func() string { return work.Of(launch.QuietBriefHome(request.Dir), name, epoch) },
 	}
 	launchRequest.Env = launch.SessionEnv(launchRequest, request.Harness.EnvNotInherited())
 	if request.Shell {
