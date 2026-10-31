@@ -93,6 +93,25 @@ test("the input's rule carries the mode, dropped before the work as the pane nar
     expect(Bun.stringWidth(ruleOf(width, "brief 名前 1/2", "bypass"))).toBe(width);
 });
 
+// The owner, October 31, 2026: the session's name stands at the rule's
+// right end again, after the work; a narrow pane drops the work, then cuts
+// the name.
+test("the input's rule ends with the session's name, after the work", () => {
+  expect(ruleOf(30, "brief 61 1/3", undefined, "review-pi")).toBe(
+    `${"─".repeat(3)} brief 61 1/3 · review-pi ─`,
+  );
+  expect(ruleOf(20, undefined, undefined, "review-pi")).toBe(`${"─".repeat(8)} review-pi ─`);
+  expect(ruleOf(20, "brief 61 1/3", undefined, "review-pi")).toBe(`${"─".repeat(8)} review-pi ─`);
+  expect(ruleOf(10, "brief 61 1/3", undefined, "review-pi")).toBe("── revi… ─");
+  expect(ruleOf(44, "⧗ 3", "auto", "review-pi")).toBe(
+    `── ⏵⏵ auto mode ${"─".repeat(10)} ⧗ 3 · review-pi ─`,
+  );
+  for (let width = 0; width <= 50; width++) {
+    const rule = ruleOf(width, "brief 名前 1/2", "bypass", "名前-pi");
+    expect(Bun.stringWidth(rule)).toBe(width);
+  }
+});
+
 // The owner's rule: the mouse over the face never reaches the pane's pty. A
 // stand-in for the pane's widget under the layer hears nothing of a press, a
 // drag, a release or the wheel over the conversation, and no selection of

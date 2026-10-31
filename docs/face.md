@@ -111,9 +111,9 @@ two rules sends a prompt to the session, refused with its reason where the sessi
 the row under the rules says the face's last error, or the link while it is not live (below, "The
 input"). It has no
 header: the strip says the turn's state, and the input's top rule carries the session's own
-permission mode at its left end and the run's room work at the right,
-`── ⏵⏵ auto mode ──── brief 57 3/6 ─`, as Claude Code's hint line ends with it (the look, "Rules");
-the name and the context are on the strip under the pane, drawn by the face or not. The mouse wheel over the face
+permission mode at its left end and at the right the run's room work, as Claude Code's hint line
+ends with it, then the session's name, `── ⏵⏵ auto mode ──── brief 57 3/6 · review-pi ─` (the look,
+"Rules"); the name and the context are on the strip under the pane too, drawn by the face or not. The mouse wheel over the face
 scrolls the conversation as a native pane scrolls (below, "The scroll"), and PgUp and PgDn a page
 less a row; at the bottom the face follows new rows, scrolled up it holds the rows the person put
 there while more arrive below (`face/src/scroll.ts`), and back at the bottom, or after a
@@ -259,9 +259,10 @@ decision, October 30, 2026: first the same look, customised later), as read from
   amber, plan's teal, accept edits' violet, the other two red) and nothing for the default mode or
   one not yet said; at its right the run's room work, the room view's `work`
   (`internal/core/work`): its open briefs with their ticks, `brief 57 3/6`, and the reports it waits
-  on, `⧗ 3`, the same text Claude Code's hint line ends with ([claude.md](claude.md#the-band)), with at
-  least one cell of rule between; a bare rule when there is none. A narrow pane drops the mode first,
-  then cuts the work with `…`, and leaves it out where not a letter fits. Mode and work are the
+  on, `⧗ 3`, the same text Claude Code's hint line ends with ([claude.md](claude.md#the-band)), then
+  ` · ` and rewake's name of the session, `── brief 61 1/3 · review-pi ─`, or `── review-pi ─` with no
+  work (the owner, October 31, 2026); at least one cell of rule between. A narrow pane drops the
+  mode first, then the work, then cuts the name with `…`, and leaves it out where not a letter fits. Mode and work are the
   session's own, never a worker's by assumption: main drawn by the face later takes the same rule. The turn's time is the model's
   (see "The socket"), so a face connected mid-turn or reloaded after one says the same as one
   that watched it. The conversation always keeps one blank row above the input's top rule, so

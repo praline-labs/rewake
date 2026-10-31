@@ -1,9 +1,9 @@
 // The input's top rule (docs/face.md, "The look"): the session's permission
 // mode at its left end, as the terminal program names it under its input,
-// and the run's room work at the right, `── brief 57 3/6 ─`, as Claude Code's
-// hint line ends with it (internal/core/work). A narrow pane drops the mode
-// first, then cuts the work with …; whatever its role, a session's rule is
-// drawn the same.
+// and at the right the run's room work, as Claude Code's hint line ends with
+// it (internal/core/work), then the session's name, `── brief 61 1/3 ·
+// review-pi ─`. A narrow pane drops the mode first, then the work, then cuts
+// the name with …; whatever its role, a session's rule is drawn the same.
 
 import type { PermissionMode } from "../../../face/src/mirror.gen.ts";
 
@@ -36,29 +36,41 @@ function cut(text: string, room: number): string {
   return `${kept.trimEnd()}…`;
 }
 
-// ruleParts is the rule cells wide: `── mode ` at its left, ` work ─` at its
-// right, at least a cell of the rule between them and two before the work
-// alone. Without the room for both the mode goes; then the work is cut.
-export function ruleParts(cells: number, work?: string, mode?: PermissionMode): RulePart[] {
+// tail is a text at the rule's right end, ` text ─`.
+const tail = (text?: string) => (text ? ` ${text} ─` : "");
+
+// ruleParts is the rule cells wide: `── mode ` at its left, ` work · name ─`
+// at its right, at least a cell of the rule between them and two before the
+// right alone. Without the room for both the mode goes; then the work; then
+// the name, or the work where no name is given, is cut.
+export function ruleParts(
+  cells: number,
+  work?: string,
+  mode?: PermissionMode,
+  name?: string,
+): RulePart[] {
   const label = mode ? modeNames[mode] : undefined;
-  const right = work ? ` ${work} ─` : "";
+  const right = tail([work, name].filter(Boolean).join(" · "));
   if (label) {
     const fill = cells - width(`── ${label} `) - width(right);
     if (fill >= 1)
       return [{ text: "── " }, { text: label, mode }, { text: ` ${line(fill)}${right}` }];
   }
   if (cells - width(right) >= 2) return [{ text: line(cells - width(right)) + right }];
-  // Two cells of the rule before the work, a space, the work, a space and a
+  if (name && work && cells - width(tail(name)) >= 2)
+    return [{ text: line(cells - width(tail(name))) + tail(name) }];
+  // Two cells of the rule before the text, a space, the text, a space and a
   // cell of the rule after it.
+  const last = name ?? work;
   const room = cells - 5;
-  if (!work || room < 2) return [{ text: line(cells) }];
-  const tail = ` ${cut(work, room)} ─`;
-  return [{ text: line(cells - width(tail)) + tail }];
+  if (!last || room < 2) return [{ text: line(cells) }];
+  const kept = tail(cut(last, room));
+  return [{ text: line(cells - width(kept)) + kept }];
 }
 
 // ruleOf is the rule's text alone.
-export const ruleOf = (cells: number, work?: string, mode?: PermissionMode) =>
-  ruleParts(cells, work, mode)
+export const ruleOf = (cells: number, work?: string, mode?: PermissionMode, name?: string) =>
+  ruleParts(cells, work, mode, name)
     .map((p) => p.text)
     .join("");
 

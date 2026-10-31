@@ -118,6 +118,8 @@ export function FaceView(props: {
   // work is the run's room work, `brief 57 3/6` or `⧗ 3`, drawn on the
   // input's top rule with the mode the face was told.
   work?: string;
+  // name is rewake's name of the pane's session, at the rule's right end.
+  name?: string;
   // live is the person's window: only it takes keys and sizes the face.
   live: boolean;
   active: () => boolean;
@@ -207,7 +209,10 @@ export function FaceView(props: {
       </box>
       <text height={1} wrapMode="none" fg={ruled} bg={bg} selectable={false}>
         <For
-          each={withMore(ruleParts(props.width, props.work, face()?.mode), inputOf(props.id).above)}
+          each={withMore(
+            ruleParts(props.width, props.work, face()?.mode, props.name),
+            inputOf(props.id).above,
+          )}
         >
           {(part) => (
             <span style={{ fg: part.mode ? modeColour(part.mode, props.theme) : ruled, bg }}>

@@ -328,7 +328,7 @@ strip under it, and its room work at its input. The program has two rows less.
 ```
 ~/.rewake2-worktrees/rewake-44a66b/wt-5928f6 · ⎇ brief60-pane-facts         the top row
   … the session's own screen, native or drawn by rewake's face …
-  ── ⏵⏵ auto mode ──────────────── brief 57 3/6 ─                             the face's input rule
+  ── ⏵⏵ auto mode ──── brief 57 3/6 · write-claude ─                          the face's input rule
   ⏵⏵ auto mode on (shift+tab to cycle) · brief 57 3/6                         or Claude Code's hint line
 write-claude (code) · working · <model> low · 90% 42m                  230k/1M   the strip
 ```
@@ -343,9 +343,9 @@ write-claude (code) · working · <model> low · 90% 42m                  230k/1
   place, take the row into their own height, so their strip stands where a pane's does.
 - **At the input**: the run's room work, the room view's `work` (`internal/core/work`): its open
   briefs with their ticks, `brief 57 3/6`, and the reports it waits on, `⧗ 3`; nothing when there is
-  none. On the face's input rule ([face.md](face.md#the-look)) and at the end of Claude Code's hint
-  line ([claude.md](claude.md#the-band)), the same text. A narrow row cuts it first, so it is never
-  the only place: the briefs view, `rewake brief show` and `rewake inbox --awaited` say the same.
+  none. On the face's input rule ([face.md](face.md#the-look)), before the session's name, and at the
+  end of Claude Code's hint line ([claude.md](claude.md#the-band)), the same text. A narrow row cuts
+  it first, so it is never the only place: the briefs view, `rewake brief show` and `rewake inbox --awaited` say the same.
 - **The person's own status line** is off in every Claude Code run rewake starts
   ([claude.md](claude.md#the-cache-ttl)): the strip says what it said.
 
