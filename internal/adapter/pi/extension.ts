@@ -3,6 +3,8 @@ import { createConnection, type Socket } from "node:net";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { briefTools } from "./briefs.ts";
 import { management, type State } from "./management.ts";
+import { facePrompt, Mirror, serveMirror } from "./mirror.ts";
+import { type MirrorEvent, Outbox } from "./outbox.ts";
 import { worktreeTools } from "./worktree.ts";
 
 export type Frame = {
@@ -29,6 +31,9 @@ export type Frame = {
   open?: boolean;
   tokensBefore?: number;
   tokensAfter?: number;
+  // mirror, in hello's answer, says rewake's face draws this run.
+  mirror?: boolean;
+  events?: MirrorEvent[];
 };
 type Waiter = {
   resolve: (frame: Frame) => void;
@@ -69,6 +74,18 @@ export default function (pi: ExtensionAPI) {
       });
     },
   );
+  // The face's mirror waits in its outbox while the link is down.
+  const outbox = new Outbox({
+    ready: () => mirror.on && !!current?.ready,
+    post: async (events) => {
+      const link = current;
+      if (!link?.ready) return false;
+      return !!(await ask(link, { op: "mirror", thread: link.thread, events })).ok;
+    },
+    after: (ms, run) => setTimeout(run, ms).unref(),
+  });
+  const mirror = new Mirror(outbox);
+  serveMirror(pi, mirror);
 
   function warn(message: string) {
     if (context?.hasUI) context.ui.notify(`rewake: ${message}`, "warning");
@@ -144,6 +161,10 @@ export default function (pi: ExtensionAPI) {
     }
     if (frame.op === "state") {
       respond({ ok: true, state: managed.sample() });
+      return;
+    }
+    if (frame.op === "prompt") {
+      respond(facePrompt(pi, mirror, context.isIdle(), managed.busy(), frame.text));
       return;
     }
     if (frame.op === "control") {
@@ -252,6 +273,8 @@ export default function (pi: ExtensionAPI) {
         }
         link.ready = true;
         delay = 250;
+        mirror.on = reply.mirror === true;
+        outbox.kick();
       } catch {
         close(link);
         warn("mail connection unavailable; reconnecting while this session runs");

@@ -10,15 +10,14 @@ what it taught goes into the living documents.
 
 ## Open, in order
 
-rewake's face ([face.md](../face.md)), after its first slice — a dev worker on Claude Code, read
-with a prompt back, the switch and hot reload:
+rewake's face ([face.md](../face.md)), after its first slice — a dev worker on Claude Code and every
+pi worker, read with a prompt back, the switch and hot reload:
 
 1. Asks in the face, answered there through the run's ask broker.
-2. pi: the extension's mirror, its ops on the line link, steer while streaming.
-3. Abort from the face, compaction notices, `dev = true` in a template with `--no-dev`,
+2. Abort from the face, compaction notices, `dev = true` in a template with `--no-dev`,
    `rewake list`'s Type cell `code, dev`, `rewake screen --face native|rewake`.
-4. A workflow scenario of a dev worker on the fixture harness, once the fixture mirrors.
-5. Later, each its own decision: subagents in the face, main as a drawn session.
+3. A workflow scenario of a dev worker on the fixture harness, once the fixture mirrors.
+4. Later, each its own decision: subagents in the face, main as a drawn session.
 
 ## Not scheduled
 

@@ -88,6 +88,10 @@ func Open(o Opening) (Opened, error) {
 	if _, ok := h.(adapter.MirrorHarness); o.Dev && !ok {
 		return Opened{}, &RequestError{fmt.Sprintf("--dev, yet a %s session cannot be drawn by rewake's own face.", h.Title())}
 	}
+	dev := o.Dev
+	if _, faced := h.(adapter.FacedWorkersHarness); faced {
+		dev = true
+	}
 	if !state.ValidName(o.Name) || !state.ValidName(session) {
 		return Opened{}, &RequestError{fmt.Sprintf("%q cannot name a space whose worker is %s: lower-case letters, digits, dot, dash or underscore, the session 32 characters at most.", o.Name, session)}
 	}
@@ -97,7 +101,7 @@ func Open(o Opening) (Opened, error) {
 	record := space.Record{
 		Name:     o.Name,
 		Main:     space.Run{Name: o.Main, Run: o.Run, PIDNamespace: proc.Namespace()},
-		Worker:   space.Worker{Harness: h.ID(), Name: o.Name, Role: o.Worker.Role.ID, Type: o.Worker.Work.Name, Label: o.Worker.Label, Dev: o.Dev},
+		Worker:   space.Worker{Harness: h.ID(), Name: o.Name, Role: o.Worker.Role.ID, Type: o.Worker.Work.Name, Label: o.Worker.Label, Dev: dev},
 		OpenedAt: time.Now().UTC(),
 	}
 	var err error

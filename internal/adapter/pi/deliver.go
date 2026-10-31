@@ -35,6 +35,7 @@ func (r *run) Deliver(ctx context.Context, message mail.Message) mail.Result {
 	if !answer.OK {
 		return mail.Result{State: mail.Failed, Detail: "the extension refused the notice: " + answer.Error}
 	}
+	r.mirrorLetter(message)
 	via := "pi"
 	if answer.Steered {
 		via += ", steered into the running turn"

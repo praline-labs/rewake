@@ -86,6 +86,10 @@ func (harness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, error)
 	run := newRun(file, request.Socket, request.Epoch)
 	run.controlDir = request.ControlDir
 	run.hostsSpaces, run.onClosing = request.Role.Spaces, request.Closing
+	if request.Mirror != nil {
+		run.mirror = request.Mirror
+		run.mirror.Take(run.prompt)
+	}
 	command, args := request.Invocation(ID, args)
 	return adapter.LaunchPlan{
 		Command: command, Args: args, Env: env, Notes: notes,

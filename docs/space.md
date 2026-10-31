@@ -19,7 +19,7 @@ harness, role, command wrapper, args and applied settings; there is no `--harnes
 and a call with either is refused as an unknown flag. The space owns the name and the room. The
 fields and their precedence are in [launch-defaults.md](launch-defaults.md#the-worker-catalogue),
 worker types in [worker-types.md](worker-types.md). `--dev` raises a dev worker, whose wrapper
-serves its conversation to rewake's face ([face.md](face.md#the-dev-worker)).
+serves its conversation to rewake's face ([face.md](face.md#the-dev-worker)); a pi worker is one without it.
 
 Opening is a change, refused unless main's run has `Spaces` live, and refused for a name whose
 session is already alive. It writes the space's record and re-executes rewake as a launcher in a

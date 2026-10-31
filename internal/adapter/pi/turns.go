@@ -31,7 +31,7 @@ func (r *run) serve(l *link) {
 	}
 	// Put hello's acknowledgment on the wire before publishing live Wake:
 	// delivery can start as soon as the live callback records the capability.
-	l.answer(hello, frame{OK: true})
+	l.answer(hello, frame{OK: true, Mirror: r.mirror != nil})
 	if !r.change(l, hello) {
 		return
 	}
@@ -68,6 +68,10 @@ func (r *run) handle(l *link, request frame) {
 		// Capture belongs to the reader; publication must not block answers to a
 		// wake the host sends while it handles this end.
 		go func() { defer r.leave(); l.answer(request, r.publish(l, completion)) }()
+	case "mirror":
+		reply := r.mirrored(request)
+		r.leave()
+		l.answer(request, reply)
 	case "closing":
 		// pi quits: the shell's closing screen and the workers' close start
 		// now rather than at the process's end (docs/shell.md).
