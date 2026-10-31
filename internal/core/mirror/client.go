@@ -94,10 +94,17 @@ func (m *Model) snapshotLocked() []Line {
 	if m.inputs != nil {
 		inputs = append(inputs, m.takes...)
 	}
-	lines := []Line{
-		{Op: LineOpHello, V: ptr(Version), Inputs: inputs},
-		{Op: LineOpBegin, Items: ptr(len(m.order)), Dropped: ptr(m.dropped), Turn: ptr(m.turn), Mode: m.mode},
+	begin := Line{Op: LineOpBegin, Items: ptr(len(m.order)), Dropped: ptr(m.dropped), Turn: ptr(m.turn), Mode: m.mode}
+	switch {
+	case m.turn == TurnStateWorking && m.since > 0:
+		begin.Since = ptr(m.since)
+	case m.turn == TurnStateIdle && m.worked != nil:
+		begin.Took, begin.At = ptr(m.worked.took), ptr(m.worked.at)
+		if m.worked.stopped {
+			begin.Stopped = ptr(true)
+		}
 	}
+	lines := []Line{{Op: LineOpHello, V: ptr(Version), Inputs: inputs}, begin}
 	for _, at := range m.order {
 		item := at.whole()
 		lines = append(lines, Line{Op: LineOpItem, Item: &item})

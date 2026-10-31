@@ -262,11 +262,12 @@ function cachedLinesOf(item: Item, width: number): FaceLine[] {
 const blank = (): FaceLine => ({ spans: [] });
 
 // statusOf is the rows under the conversation that move with the clock: the
-// turn's line after a blank row.
+// turn's line after a blank row; with no line, the blank row alone, so the
+// conversation never sits on the input.
 export function statusOf(model: FaceModel, clock: Clock, width = 80): FaceLine[] {
   const status = turnLine(model.turn, clock, width);
-  if (!status) return [];
-  return [...(model.items.length > 0 ? [blank()] : []), status];
+  if (model.items.length === 0) return status ? [status] : [];
+  return status ? [blank(), status] : [blank()];
 }
 
 // bodyOf is the conversation's rows from the top, at least its last want of

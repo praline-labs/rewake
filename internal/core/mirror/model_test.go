@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 )
 
 // lines decodes what a face's queue holds.
@@ -293,5 +294,34 @@ func TestATurnEndedByAnInterruptSaysSo(t *testing.T) {
 	}
 	if len(got) != 4 || got[0] || !got[1] || got[2] || got[3] {
 		t.Fatalf("stopped on the turn lines: %v", got)
+	}
+}
+
+// The model times the turn itself, so a face that connects after the turn
+// is told how long it took and when it ended, and one that connects during
+// it, when it began.
+func TestTheModelTimesTheTurnForAFaceThatCameLate(t *testing.T) {
+	m := New()
+	at := time.UnixMilli(1_000_000)
+	m.now = func() time.Time { return at }
+	c := m.subscribe()
+	lines(t, c)
+	m.Apply(Event{Kind: EventTurn, Turn: "t1", State: TurnStateWorking})
+	at = at.Add(69 * time.Second)
+	if got := lines(t, m.subscribe())[1]; got.Since == nil || *got.Since != 1_000_000 {
+		t.Fatalf("begin mid-turn: since %v", got.Since)
+	}
+	m.Apply(Event{Kind: EventTurn, Turn: "t1", State: TurnStateIdle, Status: ItemStatusError})
+	turn := lines(t, c)
+	if end := turn[len(turn)-1]; end.Took == nil || *end.Took != 69_000 || end.At == nil || *end.At != 1_069_000 {
+		t.Fatalf("turn line: %+v", end)
+	}
+	begin := lines(t, m.subscribe())[1]
+	if begin.Took == nil || *begin.Took != 69_000 || *begin.At != 1_069_000 || begin.Stopped == nil || !*begin.Stopped || begin.Since != nil {
+		t.Fatalf("begin after the turn: %+v", begin)
+	}
+	m.Apply(Event{Kind: EventTurn, Turn: "t2", State: TurnStateWorking})
+	if begin := lines(t, m.subscribe())[1]; begin.Took != nil || begin.At != nil || begin.Since == nil {
+		t.Fatalf("begin of a new turn keeps the old end: %+v", begin)
 	}
 }

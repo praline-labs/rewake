@@ -16,6 +16,7 @@ import (
 	"slices"
 	"strconv"
 	"sync"
+	"time"
 )
 
 // Model is one session's conversation as the face draws it.
@@ -37,6 +38,19 @@ type Model struct {
 	takes []InputKind
 	// notices numbers rewake's own notices, their ids.
 	notices int
+	// since is when the working turn began, in Unix milliseconds, 0 when none
+	// works; worked is the last turn that worked, until the next one begins.
+	since  int
+	worked *worked
+	// now is the clock the turn's times are read from.
+	now func() time.Time
+}
+
+// worked is a turn that ended: how long it worked, when it ended and whether
+// an interrupt ended it.
+type worked struct {
+	took, at int
+	stopped  bool
 }
 
 // entry is an item with its texts kept within their bounds.
@@ -62,7 +76,7 @@ const itemOverhead = 4 * shortField
 
 // New is an empty model, its turn idle.
 func New() *Model {
-	return &Model{byID: map[string]*entry{}, parts: map[string]*assembly{}, clients: map[*client]struct{}{}, turn: TurnStateIdle}
+	return &Model{byID: map[string]*entry{}, parts: map[string]*assembly{}, clients: map[*client]struct{}{}, turn: TurnStateIdle, now: time.Now}
 }
 
 // ErrNoInputs refuses an input of a session that takes none.
@@ -155,7 +169,7 @@ func (m *Model) apply(e Event) {
 		for _, at := range m.order {
 			m.gap(at)
 		}
-		m.turn = TurnStateUnknown
+		m.turn, m.since = TurnStateUnknown, 0
 		m.send(Line{Op: LineOpTurn, Turn: &m.turn})
 		if e.Lost > 0 {
 			m.notices++
@@ -238,11 +252,24 @@ func (m *Model) turnTo(e Event) {
 			}
 		}
 	}
+	line := Line{Op: LineOpTurn, Turn: &e.State}
+	now := int(m.now().UnixMilli())
+	switch {
+	case e.State == TurnStateWorking:
+		if m.turn != TurnStateWorking {
+			m.since, m.worked = now, nil
+		}
+		line.Since = ptr(m.since)
+	case e.State == TurnStateIdle && m.turn == TurnStateWorking && m.since > 0:
+		m.worked = &worked{took: now - m.since, at: now, stopped: e.Status == ItemStatusError}
+		m.since = 0
+		line.Took, line.At = ptr(m.worked.took), ptr(m.worked.at)
+	default:
+		m.since = 0
+	}
 	m.turn = e.State
-	line := Line{Op: LineOpTurn, Turn: &m.turn}
 	if e.State == TurnStateIdle && e.Status == ItemStatusError {
-		stopped := true
-		line.Stopped = &stopped
+		line.Stopped = ptr(true)
 	}
 	m.send(line)
 }

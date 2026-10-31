@@ -37,9 +37,10 @@ test("the face draws the tail of the model, marks a gap, and scrolls back", () =
     "  2",
     "  3",
     "  [lost on the way — the native face has it]",
+    "",
   ]);
-  expect(text(render(m, 40, 2))).toEqual(["  3", "  [lost on the way — the native face has it]"]);
-  expect(text(render(m, 40, 2, 3))).toEqual(["", "● 1"]);
+  expect(text(render(m, 40, 2))).toEqual(["  [lost on the way — the native face has it]", ""]);
+  expect(text(render(m, 40, 2, 3))).toEqual(["● 1", "  2"]);
 });
 
 // Seen live on 2.11.0: a reply broke inside a word ("fil" / "es").
@@ -149,6 +150,7 @@ test("a run of reads, searches and commands folds into one counted line", () => 
     "● done",
     "",
     "  Read 1 file",
+    "",
   ]);
   const run = render(m, 80, 100)[0]?.spans.find((s) => s.text === "1");
   expect(run).toEqual({ text: "1", tone: "faint", bold: true });
@@ -157,6 +159,7 @@ test("a run of reads, searches and commands folds into one counted line", () => 
   expect(text(render(lost, 80, 100))).toEqual([
     "  Read 1 file",
     "  [lost on the way — the native face has it]",
+    "",
   ]);
   // While the turn works, its last run says what it does and on what.
   m.turn = "working";
@@ -287,6 +290,7 @@ test("thinking sits where it came, between two folded runs", () => {
     "  Ran 1 shell command",
     "",
     "  ⎿  Error: aborted",
+    "",
   ]);
 });
 
@@ -374,4 +378,37 @@ test("a thinking block with text shows it faint and italic, a long one folds", (
   const folded = text(linesOf(long, 40));
   expect(folded).toHaveLength(11);
   expect(folded[10]).toMatch(/^ {2}… \+\d+ lines$/);
+});
+
+// Brief 55: the turn's times are the wrapper model's, so a face that
+// connects after a turn, or during one, draws what one that watched did, and
+// the conversation keeps a blank row above the input with no Done line.
+test("a face that connects after a turn draws its Done, one mid-turn its start", () => {
+  const snapshot = (begin: object) => {
+    const m = new FaceModel();
+    m.apply({ op: "begin", items: 0, ...begin } as never);
+    m.apply({ op: "end" } as never);
+    m.apply({ op: "add", item: { id: "t", kind: "text", status: "settled", text: "hi" } } as never);
+    return m;
+  };
+  const at = new Date(2026, 9, 31, 20, 43).getTime();
+  const done = snapshot({ turn: "idle", took: 69_000, at });
+  expect(text(render(done, 80, 10, 0, { now: 0, worked: done.worked }))).toEqual([
+    "● hi",
+    "",
+    "  Done in 1m 9s · 8:43 PM",
+  ]);
+  const stopped = snapshot({ turn: "idle", took: 10_000, at, stopped: true });
+  expect(stopped.worked?.stopped).toBe(true);
+  const working = snapshot({ turn: "working", since: 5_000 });
+  expect(working.since).toBe(5_000);
+  expect(working.worked).toBeUndefined();
+  working.apply({ op: "turn", turn: "idle", took: 3_000, at: 8_000 } as never);
+  expect(working.worked).toEqual({ took: 3_000, at: 8_000, stopped: false });
+  expect(working.since).toBeUndefined();
+  working.apply({ op: "turn", turn: "working", since: 9_000 } as never);
+  expect(working.worked).toBeUndefined();
+  expect(working.since).toBe(9_000);
+  // Never ended with a Done: a blank row still stands above the input.
+  expect(text(render(snapshot({ turn: "idle" }), 80, 10))).toEqual(["● hi", ""]);
 });

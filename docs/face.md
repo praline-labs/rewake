@@ -62,10 +62,20 @@ user, `sock/` 0700. A harness that does not implement `adapter.MirrorHarness` is
 anything is served.
 
 The stream is JSON lines, each at most 512 KiB. On connect: `hello{v, inputs}`,
-`begin{items, turn, mode?}`, one `item` line per item and `end`, taken under the model's lock with
+`begin{items, turn, mode?, since?, took?, at?, stopped?}`, one `item` line per item and `end`, taken under the model's lock with
 the subscription, so no change falls between the snapshot and the stream. Then `add`, `append`,
 `set`, `turn` (to idle with `stopped: true` when an interrupt ended the turn: the adapter's idle
-turn event carries status `error`, pi's `agent_settled` with `aborted`), `mode` and `drop`. A face
+turn event carries status `error`, pi's `agent_settled` with `aborted`), `mode` and `drop`.
+
+**The turn's times are the model's** (brief 55, October 31, 2026), so a face that connects or reloads
+after a turn draws `Done in 1m 9s · 8:43 AM` as one that watched it. The model stamps them with its
+own clock when a turn event moves the turn, in Unix milliseconds: `since`, on `begin` and on `turn`
+while the turn is `working`, is when it began (a repeated `working` keeps it; a `resync` or a
+compaction clears it); `took` (how long it worked, ms) and `at` (when it ended) ride `turn` to
+`idle` from `working`, and `begin` while the last turn that worked is the latest thing to have
+happened, with `stopped` as on `turn`. A turn that begins forgets them. The face keeps no clock of
+its own for a turn: it draws `since`, `took` and `at` as given (wrapper and face share a machine).
+Nothing else changes; the schema's `version` stays, one build per room being its guard. A face
 sends `{id, kind: "prompt", text}`, or `{id, kind: "interrupt", text: ""}` for the person's Esc, and
 is answered `answer{id, ok, detail?}`; hello's `inputs` lists the kinds the session takes (pi's
 both, Claude Code's the prompt alone), and any other input is refused. A face whose queue passes 4096 lines or 4 MiB past its snapshot is cut off rather than
@@ -203,8 +213,10 @@ decision, October 30, 2026: first the same look, customised later), as read from
   `–/272k` before a measure), with at least one cell of rule between. A narrow pane drops the mode
   first, then the context, then cuts the name with `…`, and leaves it out where not a letter fits.
   Title, mode and context are the session's own, never a worker's by assumption: main drawn by the
-  face later takes the same rule. The face times the turn from the changes it
-  saw, so a face connected mid-turn or reloaded says `Working…` and no time.
+  face later takes the same rule. The turn's time is the model's
+  (see "The socket"), so a face connected mid-turn or reloaded after one says the same as one
+  that watched it. The conversation always keeps one blank row above the input's top rule, the
+  `Done` line or not, so a reply never sits on the input.
 
 A row breaks at spaces, a word cut only when it is wider than the row; what still passes the
 pane's edge — a mark or a gutter on a pane narrower than it — is cut there; and escapes and control

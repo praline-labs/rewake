@@ -9,6 +9,11 @@ export class FaceModel {
   turn: TurnState = "unknown";
   // stopped says the last turn line ended the turn by an interrupt.
   stopped = false;
+  // since is when the working turn began and worked how the last one ended,
+  // both as the wrapper's model timed them (Unix ms), so a face that came
+  // after the turn draws what one that watched it does.
+  since: number | undefined;
+  worked: { took: number; at: number; stopped: boolean } | undefined;
   dropped = 0;
   // mode is the session's permission mode, unknown until it says it.
   mode: PermissionMode | undefined;
@@ -30,7 +35,9 @@ export class FaceModel {
         this.next = [];
         this.turn = line.turn ?? "unknown";
         this.dropped = line.dropped ?? 0;
+        this.stopped = line.stopped === true;
         this.mode = line.mode;
+        this.timed(line);
         return false;
       case "item":
         if (line.item) this.next?.push(line.item);
@@ -53,6 +60,7 @@ export class FaceModel {
       case "turn":
         this.turn = line.turn ?? "unknown";
         this.stopped = line.stopped === true;
+        this.timed(line);
         return true;
       case "mode":
         this.mode = line.mode;
@@ -65,6 +73,17 @@ export class FaceModel {
       default:
         return false;
     }
+  }
+
+  // timed takes the turn's times off a begin or a turn line. A turn that
+  // begins forgets how the last ended; the end of one that did not work is
+  // not a Done, and leaves the last as it was.
+  private timed(line: Line) {
+    this.since = this.turn === "working" ? line.since : undefined;
+    if (this.turn === "working") this.worked = undefined;
+    else if (line.took !== undefined && line.at !== undefined)
+      this.worked = { took: line.took, at: line.at, stopped: line.stopped === true };
+    else if (line.op === "begin") this.worked = undefined;
   }
 
   private put(item: Item): boolean {

@@ -20,20 +20,20 @@ test("the face follows new rows at the bottom and holds them scrolled up", () =>
   more(2, 10);
   const scroll = new Scroll();
   const shown = () => text(scroll.view(rowsOf(m, 20, clock), 3));
-  expect(shown()).toEqual(["  8", "  9", "  10"]);
+  expect(shown()).toEqual(["  9", "  10", ""]);
   more(11, 12);
-  expect(shown()).toEqual(["  10", "  11", "  12"]);
+  expect(shown()).toEqual(["  11", "  12", ""]);
 
   scroll.by(4, rowsOf(m, 20, clock).length, 3);
-  expect(shown()).toEqual(["  6", "  7", "  8"]);
+  expect(shown()).toEqual(["  7", "  8", "  9"]);
   more(13, 20);
-  expect(shown()).toEqual(["  6", "  7", "  8"]);
+  expect(shown()).toEqual(["  7", "  8", "  9"]);
 
   // Down past the bottom follows again, and goes on following.
   scroll.by(-100, rowsOf(m, 20, clock).length, 3);
   expect(scroll.top).toBeUndefined();
   more(21, 21);
-  expect(shown()).toEqual(["  19", "  20", "  21"]);
+  expect(shown()).toEqual(["  20", "  21", ""]);
   // Up past the top stops at the first row.
   scroll.by(100, rowsOf(m, 20, clock).length, 3);
   expect(shown()).toEqual(["● 1", "  2", "  3"]);

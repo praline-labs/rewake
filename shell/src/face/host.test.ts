@@ -124,19 +124,19 @@ test("a notch of the wheel moves the face one row, from the bottom and on", asyn
   const { host, until } = hosted(worker, mirror(dir, "", replies).path);
   host.start();
   const at = (line: string) => until((s) => shownText(s).at(0) === line);
-  // Each reply is a row and a blank one: the last 24 rows start at a blank.
-  await until((s) => s.link === "live" && shownText(s).at(-1) === "● line 50");
-  expect(shownText(host.state).slice(0, 2)).toEqual(["", "● line 39"]);
-  host.wheel(true);
-  await at("● line 38");
+  // Each reply is a row and a blank one, the last with its blank: the last 24 rows start at a reply.
+  await until((s) => s.link === "live" && shownText(s).at(-2) === "● line 50");
+  expect(shownText(host.state).slice(0, 2)).toEqual(["● line 39", ""]);
   host.wheel(true);
   await at("");
+  host.wheel(true);
+  await at("● line 38");
   // Down: the first notch back is held, as natively, the next one moves.
   host.wheel(false);
   host.wheel(false);
-  await at("● line 38");
+  await at("");
   host.scroll(-100);
-  await until((s) => shownText(s).at(1) === "● line 39");
+  await until((s) => shownText(s).at(0) === "● line 39");
 });
 
 // Seen in review: a change that came after a tick was laid out and painted
@@ -147,7 +147,7 @@ test("a notch cuts the rows the last tick painted; a change after it waits for i
   const wrapper = mirror(dir, "", replies);
   const { host, states, until } = hosted(worker, wrapper.path);
   host.start();
-  await until((s) => s.link === "live" && shownText(s).at(-1) === "● line 50");
+  await until((s) => s.link === "live" && shownText(s).at(-2) === "● line 50");
   // The clock stands once the snapshot is painted: the change starts it, and
   // its tick comes 50 ms later; the notch comes well before.
   await Bun.sleep(150);
@@ -155,7 +155,7 @@ test("a notch cuts the rows the last tick painted; a change after it waits for i
   await Bun.sleep(15);
   const before = states.length;
   host.wheel(true);
-  const scrolled = await until((s) => shownText(s).at(0) === "● line 38");
+  const scrolled = await until((s) => shownText(s).at(0) === "");
   expect(shownText(scrolled)).toContain("● line 49");
   expect(states.slice(before, states.indexOf(scrolled) + 1).flatMap(shownText)).not.toContain(
     "● line 49 NEW",

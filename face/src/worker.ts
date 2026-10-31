@@ -56,30 +56,19 @@ let model = new FaceModel();
 let socket: { write(data: string): number; end(): void } | undefined;
 // The frame last posted: a tick that draws the same posts nothing.
 let posted = "";
-// The turn's time as this face saw it, never from the model: a face that
-// connected mid-turn does not know when it began.
-let since: number | undefined;
-let worked: { took: number; at: number; stopped: boolean } | undefined;
 // progress follows the working turn from tick to tick.
 const progress = new Tracker();
 
-// turned keeps the clock as the turn changes.
+// turned follows the working turn's progress from the turn's start, which
+// the model carries.
 function turned(from: string, to: string) {
-  if (from === to) return;
-  if (to === "working") {
-    since = Date.now();
-    worked = undefined;
-    progress.reset(since, model.items);
-  } else if (from === "working" && since !== undefined && to === "idle") {
-    worked = { took: Date.now() - since, at: Date.now(), stopped: model.stopped };
-    since = undefined;
-  } else since = undefined;
+  if (from !== to && to === "working") progress.reset(model.since ?? Date.now(), model.items);
 }
 
 const clockAt = (now: number): Clock => ({
   now,
-  since,
-  worked,
+  since: model.since,
+  worked: model.worked,
   progress: model.turn === "working" ? progress.at(model.items, now) : undefined,
 });
 
@@ -271,7 +260,6 @@ function connect() {
   scroll.follow();
   pointer.clear();
   unflash();
-  since = worked = undefined;
   progress.reset();
   link = "connecting";
   Bun.connect({
@@ -302,7 +290,11 @@ function connect() {
                 changed = model.apply(line) || changed;
                 if (line.op === "turn") turned(was, model.turn);
               }
-              if (line.op === "end") link = "live";
+              if (line.op === "end") {
+                link = "live";
+                if (model.turn === "working")
+                  progress.reset(model.since ?? Date.now(), model.items);
+              }
             }
             at = pending.indexOf("\n");
           }

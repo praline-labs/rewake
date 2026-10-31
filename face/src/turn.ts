@@ -9,7 +9,7 @@ import { count, type Progress } from "./progress.ts";
 import { widthOf } from "./wrap.ts";
 
 // Clock is what the face knows of the turn's time: when the working turn
-// began, or how long the last one took, each only when the face saw it, and
+// began, or how long the last one took, as the mirror timed them, and
 // the turn's progress at the moment.
 export type Clock = {
   now: number;
