@@ -75,6 +75,12 @@ type Sample struct {
 	// Waiting is WaitingPermission or WaitingQuestion while a request
 	// carries a dialog to main, empty for none.
 	Waiting string
+	// Cwd is the directory the session runs in now, empty where the
+	// harness does not tell it.
+	Cwd string
+	// RateLimits are the account's windows, none where the harness reports
+	// none.
+	RateLimits []RateLimit
 }
 
 // Context is the context's fill as a sample tells it; a negative count, a
@@ -151,6 +157,13 @@ func (o *Observer) Sample(sample Sample) {
 	}
 	if sample.Waiting == WaitingPermission || sample.Waiting == WaitingQuestion {
 		snapshot.Waiting = sample.Waiting
+	}
+	if sample.Cwd != "" {
+		cwd := sample.Cwd
+		snapshot.Cwd = &cwd
+	}
+	if len(sample.RateLimits) > 0 {
+		snapshot.RateLimits = append([]RateLimit{}, sample.RateLimits...)
 	}
 	o.mu.Lock()
 	defer o.mu.Unlock()

@@ -485,6 +485,23 @@ export interface StateRequest {
   // waiting is what a dialog the session waits at on its screen asks while the mod holds it —
   // a permission, or the model's own question — absent when none.
   waiting?: AskKind
+  // cwd is the directory the session runs in now, the harness's own working directory, which a
+  // worktree entry moves; absent when unknown.
+  cwd?: string
+  // rateLimits are the account's rate-limit windows the last response reported, absent or empty
+  // off a subscription or before the first reading.
+  rateLimits?: RateLimit[]
+}
+
+// RateLimit is one rate-limit window of the account, as the harness reported it.
+export interface RateLimit {
+  // kind is the window: five_hour, seven_day, or another the harness names.
+  kind: string
+  // percent is how much of the window is used, in whole percent.
+  percent: number
+  // resetsAt is when the window resets, in seconds since the epoch, absent when the harness
+  // does not say.
+  resetsAt?: number
 }
 
 // ControlReply is an initial or final result for a dispatched command.

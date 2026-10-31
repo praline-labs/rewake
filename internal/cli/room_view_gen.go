@@ -104,8 +104,13 @@ type SessionRow struct {
 	// Cwd is the directory the session started in.
 	Cwd string `json:"cwd"`
 
-	// Branch is the branch the session works on: its space's own checkout, else what is checked
-	// out where it started, a detached head as its short commit; absent outside a repository.
+	// Path is the directory the session works in now, for the pane's top row: where its harness
+	// says it runs (a worktree entry moves it), else where it started.
+	Path string `json:"path"`
+
+	// Branch is the branch checked out at path: its space's own checkout while it works there,
+	// else what is checked out at path, a detached head as its short commit; absent outside a
+	// repository.
 	Branch *string `json:"branch,omitempty"`
 
 	// Verdict is what rewake judged the session does; absent while the room view carries no
@@ -132,6 +137,10 @@ type SessionRow struct {
 
 	// Cache is the prompt cache, where the harness says; absent when unknown.
 	Cache *CacheRow `json:"cache,omitempty"`
+
+	// Limits are the account's rate-limit windows of five hours and seven days, as the harness
+	// reported them last; absent where it reports none.
+	Limits []LimitRow `json:"limits,omitempty"`
 
 	// Mirror is where the session's wrapper serves its conversation to rewake's own face
 	// (docs/face.md), while it does; absent otherwise and unless asMain. The shell builds no path
@@ -176,6 +185,18 @@ type CacheRow struct {
 
 	// ExpiresAt is when the cache expires, in epoch milliseconds, where the harness says.
 	ExpiresAt *int `json:"expiresAt,omitempty"`
+}
+
+// LimitRow is one rate-limit window of the account as the strip shows it.
+type LimitRow struct {
+	// Window is the window as the strip names it: 5h or 7d.
+	Window string `json:"window"`
+
+	// Percent is the whole percent of the window used.
+	Percent int `json:"percent"`
+
+	// ResetsAt is when the window resets, in epoch milliseconds, where the harness says.
+	ResetsAt *int `json:"resetsAt,omitempty"`
 }
 
 // BriefView is a brief; in the list without text and comments, which only the opened brief

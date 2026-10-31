@@ -28,6 +28,10 @@ export function world(
   on: any,
   given: {
     usage?: () => unknown;
+    // limits are the account's windows the harness reports, cwd where the
+    // session runs now.
+    limits?: () => unknown[];
+    cwd?: () => string;
     replies?: Record<string, Reply[]>;
     store?: Record<string, unknown>;
     env?: Record<string, string>;
@@ -89,9 +93,12 @@ export function world(
   on("session.usage", () => ({
     value: {
       context: given.usage?.() ?? { window: 100000, tokens: 25000, percent: 25 },
-      rateLimits: [],
+      rateLimits: given.limits?.() ?? [],
     },
   }));
+  // Other tests stand in for the directory themselves.
+  const cwd = given.cwd;
+  if (cwd) on("session.cwd", () => ({ value: cwd() }));
   on("session.model", () => ({ value: "test-model" }));
   on("session.version", () => ({ value: { version: "2.1.296", base: "2.1.296" } }));
   on("turn.start", (_: any, e: any) => ({ turnId: e.turnId }));

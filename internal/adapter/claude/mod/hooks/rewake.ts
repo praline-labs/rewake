@@ -229,6 +229,7 @@ export const register: Register = (on) => {
         {
           id: () => $.session.id(),
           model: () => $.session.model(),
+          cwd: () => $.session.cwd(),
           usage: () => $.session.usage(),
           compact: (focus) => $.session.compact({ instructions: focus || undefined }),
           abort: (turnId) => $.turn.abort({ turnId }),

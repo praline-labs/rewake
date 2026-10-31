@@ -233,8 +233,13 @@ the launch's `--effort`, marked as the launch's (`reasoningEffortSource`), or un
 ([research](research-claude-mod.md#effort)). A worker's sample names what a dialog it holds for main asks
 (`waiting`: `permission` or `question`), and a dialog it waits at that nobody is asked about,
 which the host tells main of once
-([permission-requests.md](permission-requests.md#a-dialog-nobody-is-asked-about)). Rate limits
-are not reported. A lapse makes every field stale until a new generation supplies a sample.
+([permission-requests.md](permission-requests.md#a-dialog-nobody-is-asked-about)). Every sample
+carries the session's directory now (`cwd`, `$.session.cwd()`: a worktree entry moves it, a `cd`
+in Bash does not) and the account's rate-limit windows as `$.session.usage()` reports them
+(`rateLimits`: `kind`, `percent` rounded, `resetsAt` in epoch seconds); the host keeps
+`Snapshot.Cwd` and `Snapshot.RateLimits`, dropping a window without a kind or outside 0–100, and
+the room view gives the shell the pane's path and its `5h`/`7d` windows
+([shell.md](shell.md#the-strip)). A lapse makes every field stale until a new generation supplies a sample.
 
 **The prompt cache** is the usage the API reported for the latest main-loop `turn.step` response
 (`usage.cache_read_input_tokens`, `cache_creation_input_tokens`, `input_tokens`): the mod sends

@@ -1,14 +1,25 @@
 // Native state and control stay outside the heartbeat's awaited chain: a
 // compaction may take minutes while the load must keep renewing its lease.
 
-import type { AskKind, ControlCommand, ControlReply, StateRequest } from "../protocol.gen.ts";
+import type {
+  AskKind,
+  ControlCommand,
+  ControlReply,
+  RateLimit,
+  StateRequest,
+} from "../protocol.gen.ts";
 import { paths } from "../protocol.gen.ts";
 import type { Host } from "./outbox.ts";
 
 export interface Native {
   id: () => Promise<string>;
   model: () => Promise<string>;
-  usage: () => Promise<{ context: { tokens?: number; window: number; percent?: number } }>;
+  // cwd is the directory the session runs in now: a worktree entry moves it.
+  cwd: () => Promise<string>;
+  usage: () => Promise<{
+    context: { tokens?: number; window: number; percent?: number };
+    rateLimits?: { kind: string; percentUsed: number; resetsAt?: string }[];
+  }>;
   compact: (
     focus: string,
   ) => Promise<{ skip?: string; tokensBefore?: number; tokensAfter?: number }>;
@@ -156,14 +167,23 @@ export class Management {
       .then(async () => {
         if (state.generation !== this.generation) return;
         let context: { tokens?: number; window?: number; percent?: number } = {};
+        let rateLimits: RateLimit[] | undefined;
         let model: string | undefined;
+        let cwd: string | undefined;
         try {
-          context = (await this.native.usage()).context;
+          const usage = await this.native.usage();
+          context = usage.context;
+          rateLimits = limitsOf(usage.rateLimits);
         } catch {
           /* unknown */
         }
         try {
           model = await this.native.model();
+        } catch {
+          /* unknown */
+        }
+        try {
+          cwd = (await this.native.cwd()) || undefined;
         } catch {
           /* unknown */
         }
@@ -175,6 +195,8 @@ export class Management {
           tokens: context.tokens,
           window: context.window,
           percent: context.percent,
+          cwd,
+          rateLimits,
           ...state,
         };
         await this.host.post(paths.modState, request);
@@ -311,4 +333,18 @@ export class Management {
       /* The host reports a missing acknowledgement as unknown. */
     }
   }
+}
+
+// limitsOf is the account's windows as the host takes them: whole percent,
+// the reset in epoch seconds; none off a subscription.
+export function limitsOf(
+  windows: { kind: string; percentUsed: number; resetsAt?: string }[] | undefined,
+): RateLimit[] | undefined {
+  if (!windows?.length) return undefined;
+  return windows.map(({ kind, percentUsed, resetsAt }) => {
+    const limit: RateLimit = { kind, percent: Math.round(percentUsed) };
+    const at = resetsAt ? Date.parse(resetsAt) : Number.NaN;
+    if (Number.isFinite(at)) limit.resetsAt = Math.floor(at / 1000);
+    return limit;
+  });
 }

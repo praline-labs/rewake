@@ -251,3 +251,31 @@ func TestAHeldDialogsKindLastsWhileSamplesNameIt(t *testing.T) {
 		}
 	}
 }
+
+// A sample's directory and the account's windows reach the snapshot; a
+// window without a kind or past a whole percent is no window, and a newer
+// sample without them says the session no longer knows them.
+func TestASampleCarriesTheDirectoryAndTheAccountsWindows(t *testing.T) {
+	server, socket := serving(t)
+	postValue(t, socket, PathHello, HelloRequest{LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
+	sample := testState()
+	cwd, resets := "/work/wt", 1_790_000_000
+	sample.Cwd = &cwd
+	sample.RateLimits = []RateLimit{{Kind: "five_hour", Percent: 37, ResetsAt: &resets}, {Kind: "seven_day", Percent: 9}, {Kind: "", Percent: 5}, {Kind: "odd", Percent: 101}}
+	postValue(t, socket, PathModState, sample)
+	got := server.SessionState()
+	if got.Cwd == nil || *got.Cwd != cwd || len(got.RateLimits) != 2 {
+		t.Fatalf("the sample: %+v", got)
+	}
+	if five := got.RateLimits[0]; five.Kind != "five_hour" || five.Percent != 37 || five.ResetsAt == nil || five.ResetsAt.Unix() != int64(resets) {
+		t.Fatalf("the five hours: %+v", five)
+	}
+	if seven := got.RateLimits[1]; seven.Kind != "seven_day" || seven.ResetsAt != nil {
+		t.Fatalf("the seven days: %+v", seven)
+	}
+	sample.Sequence, sample.Cwd, sample.RateLimits = 2, nil, nil
+	postValue(t, socket, PathModState, sample)
+	if got := server.SessionState(); got.Cwd != nil || got.RateLimits != nil {
+		t.Fatalf("a sample without them: %+v", got)
+	}
+}

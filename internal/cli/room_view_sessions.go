@@ -13,27 +13,32 @@ import (
 // sessionRowsOf are the sessions as the strip draws them. The telemetry is
 // there only when the views carry it (the caller proved to be main's shell),
 // and then the shell derives nothing of it: the verdict is rewake's, the
-// model is the name the table shows, and the branch is the one the session
-// works on.
+// model is the name the table shows, and the path and its branch are where
+// the session works now.
 func sessionRowsOf(dir string, records []space.Record, views []sessionView, mainName string, asMain bool) []SessionRow {
-	checkouts := map[string]string{}
+	checkouts := map[string]space.Checkout{}
 	for _, record := range records {
 		if !record.State.Final() && record.Checkout.Path != "" && record.Checkout.Branch != "" {
-			checkouts[record.Worker.Name+"-"+record.Worker.Harness] = record.Checkout.Branch
+			checkouts[record.Worker.Name+"-"+record.Worker.Harness] = record.Checkout
 		}
 	}
 	rows := []SessionRow{}
 	for _, view := range views {
-		row := SessionRow{Name: view.Name, Cwd: view.CWD}
+		row := SessionRow{Name: view.Name, Cwd: view.CWD, Path: view.CWD}
+		if t := view.Telemetry; t != nil && t.Cwd != nil {
+			row.Path = *t.Cwd
+		}
 		if asMain && view.Name == mainName {
 			row.Own = ptr(true)
 		}
 		if view.Type != "" {
 			row.Type = ptr(view.Type)
 		}
-		if branch, ok := checkouts[view.Name]; ok {
-			row.Branch = ptr(branch)
-		} else if branch := branchAt(view.CWD); branch != "" {
+		// The space's record names its checkout's branch; a session that
+		// moved elsewhere is read where it is.
+		if checkout, ok := checkouts[view.Name]; ok && filepath.Clean(checkout.Path) == filepath.Clean(row.Path) {
+			row.Branch = ptr(checkout.Branch)
+		} else if branch := branchAt(row.Path); branch != "" {
 			row.Branch = ptr(branch)
 		}
 		telemetryInto(&row, view.Telemetry)
@@ -67,6 +72,15 @@ func telemetryInto(row *SessionRow, t *session.Snapshot) {
 		row.Window = ptr(int(*t.ContextWindow))
 	}
 	row.Percent = t.FilledPercent
+	for _, limit := range t.RateLimits {
+		if window, ok := limitWindows[limit.Kind]; ok {
+			shown := LimitRow{Window: window, Percent: limit.Percent}
+			if limit.ResetsAt != nil {
+				shown.ResetsAt = ptr(int(limit.ResetsAt.UnixMilli()))
+			}
+			row.Limits = append(row.Limits, shown)
+		}
+	}
 	if t.Cache != nil {
 		row.Cache = &CacheRow{Hit: t.Cache.HitPercent}
 		if t.CacheLife != nil && t.CacheLife.ExpiresAt != nil {
@@ -74,6 +88,10 @@ func telemetryInto(row *SessionRow, t *session.Snapshot) {
 		}
 	}
 }
+
+// limitWindows are the windows the strip shows, by the harness's kind, and
+// as it names them; another kind is not shown.
+var limitWindows = map[string]string{"five_hour": "5h", "seven_day": "7d"}
 
 // mirrorOf is the session's mirror socket while its run serves one: the
 // path is the run's own, so a socket there is this run's.

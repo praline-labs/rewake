@@ -5,6 +5,7 @@ import { cacheOf, markOf, stripParts } from "./strip.tsx";
 const base: Session = {
   name: "w",
   cwd: "/p",
+  path: "/p",
   model: "Model",
   effort: "low",
   window: 100_000,

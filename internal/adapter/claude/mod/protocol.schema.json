@@ -475,9 +475,22 @@
         "request": {"type": "string", "description": "names the latest completed compaction request, empty for native compaction."},
         "from": {"type": "string", "description": "names its requester, empty for native compaction."},
         "dialog": {"type": "string", "description": "is what the harness said of a dialog the session waits at on its screen that the mod carries to nobody, absent when none; the host tells main once per dialog."},
-        "waiting": {"$ref": "#/$defs/AskKind", "description": "is what a dialog the session waits at on its screen asks while the mod holds it — a permission, or the model's own question — absent when none."}
+        "waiting": {"$ref": "#/$defs/AskKind", "description": "is what a dialog the session waits at on its screen asks while the mod holds it — a permission, or the model's own question — absent when none."},
+        "cwd": {"type": "string", "description": "is the directory the session runs in now, the harness's own working directory, which a worktree entry moves; absent when unknown."},
+        "rateLimits": {"type": "array", "items": {"$ref": "#/$defs/RateLimit"}, "description": "are the account's rate-limit windows the last response reported, absent or empty off a subscription or before the first reading."}
       },
       "required": ["loadId", "generation", "sequence", "conversation", "activity", "compacting", "compactions", "request", "from"],
+      "additionalProperties": false
+    },
+    "RateLimit": {
+      "type": "object",
+      "description": "is one rate-limit window of the account, as the harness reported it.",
+      "properties": {
+        "kind": {"type": "string", "description": "is the window: five_hour, seven_day, or another the harness names."},
+        "percent": {"type": "integer", "description": "is how much of the window is used, in whole percent."},
+        "resetsAt": {"type": "integer", "description": "is when the window resets, in seconds since the epoch, absent when the harness does not say."}
+      },
+      "required": ["kind", "percent"],
       "additionalProperties": false
     },
     "ControlReply": {

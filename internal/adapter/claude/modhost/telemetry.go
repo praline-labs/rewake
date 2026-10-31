@@ -2,6 +2,7 @@ package modhost
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/praline-labs/rewake/internal/core/session"
 )
@@ -110,18 +111,40 @@ func (s *Server) observeLocked(sample StateRequest) {
 	if sample.Waiting != nil {
 		waiting = string(*sample.Waiting)
 	}
+	cwd := ""
+	if sample.Cwd != nil {
+		cwd = *sample.Cwd
+	}
 	compacting := sample.Compacting
 	var cache *session.Cache
 	if sample.CacheRead != nil && sample.CacheWrite != nil && sample.CacheInput != nil {
 		cache = session.NewCache(int64(*sample.CacheRead), int64(*sample.CacheWrite), int64(*sample.CacheInput))
 	}
 	observed.view.Sample(session.Sample{
-		Thread: sample.Conversation, Activity: sample.Activity, Compacting: &compacting, Cache: cache,
+		Thread: sample.Conversation, Activity: sample.Activity, Compacting: &compacting, Cache: cache, Cwd: cwd,
 		Context:  &session.Context{Used: tokenCount(sample.Tokens), Window: tokenCount(sample.Window), Percent: sample.Percent},
 		Settings: &session.Settings{Model: sample.Model},
-		Dialog:   dialog, Waiting: waiting,
+		Dialog:   dialog, Waiting: waiting, RateLimits: limitsOf(sample.RateLimits),
 	})
 	observed.thread, observed.sequence, observed.generation = sample.Conversation, sample.Sequence, sample.Generation
+}
+
+// limitsOf is the account's windows as the session's snapshot keeps them;
+// a window without a kind or outside 0–100 percent is not one.
+func limitsOf(windows []RateLimit) []session.RateLimit {
+	var limits []session.RateLimit
+	for _, window := range windows {
+		if window.Kind == "" || window.Percent < 0 || window.Percent > 100 {
+			continue
+		}
+		limit := session.RateLimit{Kind: window.Kind, Percent: window.Percent}
+		if window.ResetsAt != nil && *window.ResetsAt > 0 {
+			at := time.Unix(int64(*window.ResetsAt), 0)
+			limit.ResetsAt = &at
+		}
+		limits = append(limits, limit)
+	}
+	return limits
 }
 
 func tokenCount(value *int) *int64 {
