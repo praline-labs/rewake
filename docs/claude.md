@@ -361,35 +361,33 @@ drops it, as it does after Esc or Stop until the person's next input.
 ## The band
 
 Every Claude Code session rewake runs — main and every worker, whether or not the face draws it —
-keeps its native interface and gets one row above the native input (`hooks/band.ts`, a `ui.render` hook
-on `AbovePrompt`): the permission mode at its left in the terminal program's own name and colour
-(`⏵⏵ auto mode`, `⏸ plan mode`, `⏵⏵ accept edits`, `⏵⏵ bypass permissions`, `⏵⏵ don't ask`, nothing
-for the default), and at its right the session's rewake name (`REWAKE_SESSION`), ` · ` and the context
-as `46k/272k` (`–/272k` before a count), in the theme's dim colour. It is the line the face draws as the
-input's rule ([face.md](face.md#the-look)) with the same cuts — a narrow row drops the mode, then the
-context, then cuts the name with `…` — so a native pane and a face pane tell the same
-(`rowOf` repeats `shell/src/face/rule.ts`; the two are kept by hand, as the mod imports nothing of
-the shell). It is information only: no button, nothing to answer.
+keeps its native interface and gets the session's rewake name (`REWAKE_SESSION`), ` · ` and the context
+as `46k/272k` (`–/272k` before a count) added to the hint line under the native input
+(`hooks/band.ts`, a `ui.render` hook on `PromptHint` that sets the `tail` prop): native's own text and
+pills stay as they are, and the tail follows them dim, so it reads
+`⏵⏵ auto mode on (shift+tab to cycle) · main-claude · 20k/1M`. It is the line under the input, as close
+as a mod can draw to it, and shows idle and working alike. The mode is not drawn: native's footer shows
+it. A narrow row cuts ours first, the engine's own rule — the tail goes before native's text is touched.
+It is information only: no button, nothing to answer.
 
-Its facts are kept from other events, so the render hook waits for nothing: the mode from the
-`permission_mode` of the classic events (the mirror's source: `UserPromptSubmit`, `PostToolUse`), so a
-session shows none before its first prompt and a shift+tab shows at the next event — the `SessionMode`
-site's `modes` was empty in all three modes tried on 2.1.310 (October 31, 2026), and no other event
-or call names the live mode; the context from
+Its facts are kept from other events, so the render hook waits for nothing: the context from
 `$.session.usage()`, measured against the window the launch limited the session to (`--autocompact`,
 named in `REWAKE_CONTEXT_WINDOW`, 0 for none) where that is below the model's, as the strip's is — a
 default worker reads `46k/272k`, an uncapped main its model's window — and sampled at `session.start`, after each main-loop step and at `session.measure`.
-A change of either asks one redraw. A run without rewake's mod is untouched, and so is a surface that
-does not draw the site (VS Code, `-p`); the person can fold the band, and it yields to a survey. A
-hook that fails is dropped by the engine with its part, and nothing of the band touches a verdict, a
-prompt or the hello.
+A change asks one redraw. A run without rewake's mod is untouched, and so is a surface that does not
+draw the site (VS Code, `-p`). A hook that fails is dropped by the engine with its part, and nothing of
+the band touches a verdict, a prompt or the hello.
 
-Live, October 31, 2026 (brief 47; Claude Code 2.1.310, the shell from its sources under a pty of 200 by 50,
-a private state directory and project, main on the cheapest model): the band read `⏵⏵ auto mode … main-claude ·
-20k/1M` after the first prompt (before it, `main-claude · –/1M`: no mode yet, and the count not yet taken);
-after shift+tab and a prompt each, nothing for the manual mode, `⏵⏵ accept edits` and `⏸ plan mode`, the
-plan dialog hiding the band while it was up. Resized to 60 columns it read `⏸ plan mode … main-claude · 23k/1M`,
-to 24 columns `main-claude` alone, the mode and then the context dropped.
+Why this site (brief 48, October 31, 2026; Claude Code 2.1.310, the shell from its sources under a pty,
+a private state directory and project, the cheapest model). Brief 47 drew a row on `AbovePrompt`
+with the mode and the name; there the engine's own token count (`374230 tokens`) and tips sit between
+the row and the input's rule, so it read one row off, and the mode repeated the footer. Tried live:
+`SessionMode` (adding a label to `modes`) drew it right-aligned on a row of its own above the hint
+line, not on it, and its `modes` was empty in all permission modes, so the native label was not there
+to sit beside; `PromptHint`'s `tail` drew on the hint line itself, directly after native's text, kept
+the pills, and followed the working state (`main-claude · 20k/1M` after `⏵⏵ auto mode on (shift+tab to
+cycle) ·` at 200 columns, 100 mid-turn). At 60 columns native's line was cut to `… · main-claude ·…`
+and at 40 to `⏵⏵ auto mode on (shift+tab to`, our part gone first, native's text the last to be cut.
 
 ## What the mod never does
 
@@ -399,6 +397,6 @@ the report; a drawn run's conversation goes to its own wrapper in memory and now
 ([the mirror](#the-mirror)). It sets no status line — the launch does — sends no
 settings, and
 does no heavy work in a hook: the hooks worker is shared and a mod that stalls it is unloaded. It
-draws nothing of the workers but the band above the input
+draws nothing of the workers but the name and context on the hint line under the input
 ([the band](#the-band)): rewake's shell draws them, on the person's terminal
 ([shell.md](shell.md)), and the mod knows nothing of who draws the screen.
