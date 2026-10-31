@@ -108,11 +108,17 @@ export class Band {
   private mode?: string;
   private tokens?: number;
   private window?: number;
+  private limit = 0;
   private redraw: () => void = () => {};
 
   // begin makes the band live for a rewake run: name is the session's.
-  begin(name: string | undefined, redraw: () => void) {
+  // limit is the window the launch limited the conversation to, in tokens, 0
+  // for none: the figure shown is measured against it where it is below the
+  // model's window, as the strip's is (observer.go).
+  begin(name: string | undefined, redraw: () => void, limit?: string) {
     this.name = name || undefined;
+    const held = Number(limit);
+    this.limit = Number.isFinite(held) && held > 0 ? held : 0;
     this.redraw = redraw;
     this.redraw();
   }
@@ -130,6 +136,7 @@ export class Band {
 
   // measured takes the context the harness counted.
   measured(tokens: number | undefined, window: number | undefined) {
+    if (this.limit > 0 && (!window || this.limit < window)) window = this.limit;
     if (tokens === this.tokens && window === this.window) return;
     this.tokens = tokens;
     this.window = window;

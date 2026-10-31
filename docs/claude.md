@@ -376,7 +376,9 @@ Its facts are kept from other events, so the render hook waits for nothing: the 
 session shows none before its first prompt and a shift+tab shows at the next event — the `SessionMode`
 site's `modes` was empty in all three modes tried on 2.1.310 (October 31, 2026), and no other event
 or call names the live mode; the context from
-`$.session.usage()`, sampled at `session.start`, after each main-loop step and at `session.measure`.
+`$.session.usage()`, measured against the window the launch limited the session to (`--autocompact`,
+named in `REWAKE_CONTEXT_WINDOW`, 0 for none) where that is below the model's, as the strip's is — a
+default worker reads `46k/272k`, an uncapped main its model's window — and sampled at `session.start`, after each main-loop step and at `session.measure`.
 A change of either asks one redraw. A run without rewake's mod is untouched, and so is a surface that
 does not draw the site (VS Code, `-p`); the person can fold the band, and it yields to a survey. A
 hook that fails is dropped by the engine with its part, and nothing of the band touches a verdict, a

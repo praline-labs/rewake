@@ -129,3 +129,21 @@ test("a usage the harness refuses leaves the band without a context, not broken"
   await start($);
   expect(await drawn($)).toBe(" ".repeat(50) + "api-claude");
 });
+
+test("the context is measured against the window the launch limited the session to, not the model's", async ($, on) => {
+  standIn(on, {
+    env: { ...env, REWAKE_CONTEXT_WINDOW: "272000" },
+    usage: () => ({ window: 1_000_000, tokens: 46000, percent: 5 }),
+  });
+  await start($);
+  expect(await drawn($)).toBe(`${" ".repeat(39)}api-claude · 46k/272k`);
+});
+
+test("a limit above the model's window, or none, leaves the model's", async ($, on) => {
+  standIn(on, {
+    env: { ...env, REWAKE_CONTEXT_WINDOW: "0" },
+    usage: () => ({ window: 1_000_000, tokens: 46000, percent: 5 }),
+  });
+  await start($);
+  expect(await drawn($)).toBe(`${" ".repeat(41)}api-claude · 46k/1M`);
+});

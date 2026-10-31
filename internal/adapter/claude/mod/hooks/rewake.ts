@@ -185,7 +185,11 @@ export const register: Register = (on) => {
       return started;
     }
     try {
-      band.begin(await $.env.get("REWAKE_SESSION"), () => $.ui.invalidate("ui.render"));
+      band.begin(
+        await $.env.get("REWAKE_SESSION"),
+        () => $.ui.invalidate("ui.render"),
+        await $.env.get("REWAKE_CONTEXT_WINDOW"),
+      );
       await sample(() => $.session.usage(), band);
     } catch {
       // No band; the session is drawn as it is.
