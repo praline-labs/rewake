@@ -500,8 +500,9 @@ events on (`internal/adapter/pi/mirror.go`). The extension's side is `mirror.ts`
   own, kept through pi's retries) and says `working`; `agent_settled` says `idle`. A
   `message_update`'s `text_*`/`thinking_*` are a block's `delta`s and its `settle`, the block's id
   `<run>.<loop>.<turnIndex>.<contentIndex>`: each `agent_start` of a run, a retry's or a
-  continuation's, starts pi's `turnIndex` from 0 again, so the loop counts them; `thinking_start` opens the block, so an empty one (a
-  signature only) shows too. `toolcall_start` is the `tool`, its `toolcall_delta`s its `input`,
+  continuation's, starts pi's `turnIndex` from 0 again, so the loop counts them; a thinking block is sent only once it streams text or ends with
+  some, so an empty one, a signature only as most providers send, shows nothing, as on Claude Code
+  (October 31, 2026, brief 49: before, each step drew an empty `∴ Thinking`). `toolcall_start` is the `tool`, its `toolcall_delta`s its `input`,
   sent at most every 100 ms, `toolcall_end` and `tool_execution_start` the whole input;
   `tool_execution_end` is the `result` with its content's text. An assistant `message_end` with
   `stopReason: "error"` adds pi's `errorMessage` as a `notice`. A call with a `parentToolCallId`

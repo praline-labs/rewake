@@ -133,8 +133,6 @@ test("a turn streams its prompt, thinking, reply and calls in the face's words",
   expect(events.map((e) => [e.kind, e.id, e.text ?? e.state ?? e.name])).toEqual([
     ["prompt", events[0].id, "look"],
     ["turn", undefined, "working"],
-    ["delta", `${run}.0.1.0`, ""],
-    ["settle", `${run}.0.1.0`, ""],
     ["delta", `${run}.0.1.1`, "Hi"],
     ["settle", `${run}.0.1.1`, "Hi there"],
     ["tool", "c1", "Read"],
@@ -147,9 +145,40 @@ test("a turn streams its prompt, thinking, reply and calls in the face's words",
   ]);
   expect(events[0].origin).toBe("person");
   expect(events[0].turn).toBeUndefined();
-  expect(events[3]).toMatchObject({ block: "thinking", part: 0, of: 1, turn: run });
-  expect(events[11].status).toBe("done");
+  expect(events[3]).toMatchObject({ block: "text", part: 0, of: 1, turn: run });
+  expect(events[9].status).toBe("done");
   expect(events.at(-1)?.turn).toBe(run);
+});
+
+// Seen live (October 31, 2026, brief 49): at minimal thinking every step of
+// pi's opened an empty thinking block, a signature only, and the face drew a
+// `∴ Thinking` row for each where the Claude Code worker's drew none.
+test("a thinking block shows only when it has something in it", () => {
+  const { events, emit } = mirrored();
+  emit("agent_start", {});
+  emit("turn_start", { turnIndex: 0 });
+  const thinking = (type: string, contentIndex: number, more = {}) =>
+    emit("message_update", update({ type, contentIndex, ...more }));
+  // Empty: nothing at all, nor a whitespace-only end.
+  thinking("thinking_start", 0);
+  thinking("thinking_end", 0, { content: "" });
+  thinking("thinking_start", 1);
+  thinking("thinking_end", 1, { content: " \n" });
+  // Streamed: its deltas and its settle; summed up at its end only: the settle.
+  thinking("thinking_start", 2);
+  thinking("thinking_delta", 2, { delta: "hmm" });
+  thinking("thinking_end", 2, { content: "hmm" });
+  thinking("thinking_start", 3);
+  thinking("thinking_end", 3, { content: "a summary" });
+  emit("agent_settled", { aborted: false });
+  const run = events[0].turn;
+  expect(events.map((e) => [e.kind, e.id, e.text ?? e.state])).toEqual([
+    ["turn", undefined, "working"],
+    ["delta", `${run}.0.0.2`, "hmm"],
+    ["settle", `${run}.0.0.2`, "hmm"],
+    ["settle", `${run}.0.0.3`, "a summary"],
+    ["turn", undefined, "idle"],
+  ]);
 });
 
 test("a call a hook blocked ends refused, one pi's checks refused or an abort ends an error", () => {

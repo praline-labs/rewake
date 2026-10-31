@@ -107,5 +107,6 @@ of its own); SGR mouse events written to the pty and its screen replayed from th
   end, a drag over a table copied as tab-separated cells, a prompt typed in the face.
 - **Differences, none of them a defect of the face**: each pi step's thinking block, empty at
   minimal thinking, draws a `∴ Thinking` row where the Claude Code worker at low effort drew none
-  (the face draws a thinking block whichever harness sent it); pi's rule carries no mode, pi having
-  none; pi's strip shows no limit window.
+  (the face draws a thinking block whichever harness sent it), so pi's extension now sends no empty
+  thinking block ([research-pi.md](research-pi.md#the-face-of-a-pi-worker)); pi's rule carries no
+  mode, pi having none; pi's strip shows no limit window.
