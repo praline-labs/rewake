@@ -50,7 +50,7 @@ Open a document for numbers, commands and names: the map only points.
 - `docs/design.md` — The system as built — scope, processes, the state directory and the session record, rooms, the environment a run gets, the command-line contract, distribution, and the decisions in force.
   sections: Goal · Scope · Design · Launch and signals · Delivery · A session without a wrapper · Interface · Code · Testing · Distribution · Decisions in force
 - `docs/face.md` — rewake's own face for a live session — the mirror model in the session's wrapper, its socket, the dev worker, the shell's face with its switch and hot reload.
-  sections: The model — `internal/core/mirror` · The socket · The dev worker · The face · One clock · The scroll · Hot reload · Checked
+  sections: The model — `internal/core/mirror` · The socket · The dev worker · The face · One clock · The scroll · Copying · Hot reload · Checked
 - `docs/flow-endings.md` — The other ends of a message's path — a blocking question, a notify, a session's end — one exchange traced through its files, and where the flow can stall and what the sender sees.
   sections: Act 6. A question, when the sender wants to block · Act 7. A notify, when nothing is owed · Act 8. The session ends · One exchange, as files · Where the flow can stall, and what it says
 - `docs/flow.md` — The whole path of one message, from a launch through send, notice and read to the report, with every process, file and status on the way, and how main starts a worker in a space.
