@@ -110,7 +110,8 @@ run's allow, so each run's `--settings` denies it unless its template enters (be
 The run's `--settings` is a JSON object of what this run alone gets, merged by Claude
 Code over the folder's settings: the worker's memory and `EnterWorktree`, allowed for a
 template with `enter_worktree = true`, denied for every other run, and, for a run with a mod,
-rewake's `statusLine` ([claude.md](claude.md#the-cache-ttl)). `--settings` is single-use — a
+rewake's `statusLine`, which prints nothing, so the person's own line is off in the run
+([claude.md](claude.md#the-cache-ttl)). `--settings` is single-use — a
 second one replaces the first, not merges — so the profile owns it: a worker's `--settings`
 or `--setting-sources` after `--` is refused, naming the profile. An `env` value in the
 user settings beats both `--autocompact` and the process environment, and `env` in

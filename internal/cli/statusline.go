@@ -37,7 +37,7 @@ func statuslineCommand(catalog adapter.Catalog) *Command {
 			"rewake statusline",
 		},
 		Notes: []string{
-			"Reads the harness's JSON on stdin, prints the person's own status line, the one their settings name for the session's project, and always exits 0: a status line must not break the pane.",
+			"Reads the harness's JSON on stdin, prints nothing, so the person's own status line, which the run's shadows, is off in the run, and always exits 0: a status line must not break the pane.",
 		},
 		Access: viewForm,
 		Handler: func(ctx *Context, _ Call) error {

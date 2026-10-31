@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"net"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 
@@ -15,45 +14,23 @@ import (
 
 // The status line's contract (docs/claude.md#the-cache-ttl): the command a
 // run's --settings installs, and what `rewake statusline` takes from Claude
-// Code's JSON on stdin and tells the run's host. Running the line — the
-// person's own command beside it — is statusline.go.
+// Code's JSON on stdin and tells the run's host. Running the line is
+// statusline.go.
 
 // statusLineRefresh is how often Claude Code runs the command beside its own
 // events; the expiry it reports is absolute, so a slow timer loses nothing.
 const statusLineRefresh = 30
 
-// refreshOf is the refreshInterval of a statusLine object: the person's, as
-// written, or empty where it has none or one Claude Code would not run
-// (under a second, or not a number). The settings are read with numbers kept
-// as json.Number, and a value of another type is Claude Code's to judge: it
-// must not lose the person the command.
-func refreshOf(line map[string]any) json.Number {
-	every, ok := line["refreshInterval"].(json.Number)
-	if !ok {
-		return ""
-	}
-	if seconds, err := every.Float64(); err != nil || seconds < 1 {
-		return ""
-	}
-	return every
-}
-
-// statusLineSetting is the run's statusLine: rewake's command, which runs the
-// person's own (statusline.go), so it keeps that line's refreshInterval — how
-// often the command runs beside the harness's events — or rewake's own where
-// the line has none. Claude Code merges the key field by field, so the
-// person's padding stands (docs/research.md, "How --settings meets a
-// configured status line").
-func statusLineSetting(executable string, every json.Number) map[string]any {
-	line := map[string]any{
+// statusLineSetting is the run's statusLine: rewake's command, which prints
+// nothing, so the person's own line, which it shadows, is off in the run.
+// Claude Code merges the key field by field, so the person's padding stands
+// (docs/research.md, "How --settings meets a configured status line").
+func statusLineSetting(executable string) map[string]any {
+	return map[string]any{
 		"type":            "command",
 		"command":         shellQuote(executable) + " statusline",
 		"refreshInterval": statusLineRefresh,
 	}
-	if every != "" {
-		line["refreshInterval"] = every
-	}
-	return line
 }
 
 // shellQuote makes a path one word of the status line's shell command.
@@ -69,7 +46,7 @@ type promptCache struct {
 
 // lineInput is what rewake reads of Claude Code's status line input: the
 // cache's lifetime, the effort, the model's name and whether it thinks, which
-// go to the host, and the project, which the person's own line is found by.
+// go to the host.
 type lineInput struct {
 	PromptCache *promptCache `json:"prompt_cache"`
 	Effort      struct {
@@ -81,9 +58,6 @@ type lineInput struct {
 	Thinking struct {
 		Enabled *bool `json:"enabled"`
 	} `json:"thinking"`
-	Workspace struct {
-		ProjectDir string `json:"project_dir"`
-	} `json:"workspace"`
 }
 
 // parseLineInput reads the input; one that does not parse tells nothing.
@@ -122,20 +96,6 @@ func effortText(level any) string {
 		return strconv.FormatFloat(level, 'f', -1, 64)
 	}
 	return ""
-}
-
-// projectDir is the session's project directory: the status line input's
-// workspace.project_dir, else CLAUDE_PROJECT_DIR, which Claude Code sets for
-// the command, else the directory the command runs in.
-func (in lineInput) projectDir() string {
-	if dir := in.Workspace.ProjectDir; dir != "" {
-		return dir
-	}
-	if dir := os.Getenv("CLAUDE_PROJECT_DIR"); dir != "" {
-		return dir
-	}
-	dir, _ := os.Getwd()
-	return dir
 }
 
 func postLine(ctx context.Context, socket string, body modhost.StatusLineRequest) {

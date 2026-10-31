@@ -58,8 +58,7 @@ func runSettings(settings map[string]any, folder, root, memoryKey string, enter 
 	// (statusline.go); it needs the run's host, which a launch with no run
 	// directory has no mod for.
 	if executable := orSelf(executable); executable != "" && runDir != "" {
-		line, _ := settings["statusLine"].(map[string]any)
-		overlay["statusLine"] = statusLineSetting(executable, refreshOf(line))
+		overlay["statusLine"] = statusLineSetting(executable)
 	}
 	var notes []string
 	switch {
@@ -112,30 +111,24 @@ func deniedIn(settings map[string]any) []any {
 
 // mainSettings is the one --settings main's launch passes: the status line
 // alone, so the host hears the model's name, its thinking, the cache's life
-// and a changed effort as a worker's does (docs/claude.md#the-cache-ttl). It
-// reads only the statusLine of the person's own settings (ownStatusLine), for
-// its interval. None where the
-// launch has no run directory for the mod, under --command, whose wrapper
-// decides the configuration, where the person passes a --settings of their
-// own, which a second would replace, or a --setting-sources, whose layers
-// rewake's line would not keep to when it finds the person's.
+// and a changed effort as a worker's does, and the person's own line is off
+// in the run (docs/claude.md#the-cache-ttl). None where the launch has no run
+// directory for the mod, under --command, whose wrapper decides the
+// configuration, or where the person passes a --settings of their own, which
+// a second would replace.
 func mainSettings(request adapter.LaunchRequest, args []string) profile {
 	switch {
 	case request.RunDir == "", request.Command != "":
 		return profile{}
 	}
-	for _, flag := range []string{settingsFlag, settingSourcesFlag} {
-		if adapter.HasFlag(args, flag) {
-			return profile{notes: []string{"no status line of rewake's: the launch passes its own " + flag + ", so main's row shows the model's id and no cache life"}}
-		}
+	if adapter.HasFlag(args, settingsFlag) {
+		return profile{notes: []string{"no status line of rewake's: the launch passes its own " + settingsFlag + ", so main's row shows the model's id and no cache life, and the person's own status line stays"}}
 	}
 	executable := orSelf(request.Executable)
 	if executable == "" {
 		return profile{}
 	}
-	cwd, _ := os.Getwd()
-	own := ownStatusLine(os.Getenv(configDirEnv), cwd)
-	data, err := json.Marshal(map[string]any{"statusLine": statusLineSetting(executable, own.Refresh)})
+	data, err := json.Marshal(map[string]any{"statusLine": statusLineSetting(executable)})
 	if err != nil {
 		return profile{}
 	}

@@ -260,29 +260,20 @@ installation a native compaction is not counted
 The mod cannot read how long the prompt cache lives; Claude Code's status-line input carries it
 as `prompt_cache` (`warm`, `ttl` of `5m` or `1h`, `expires_at` in epoch seconds, …) once a
 request was made (read from the strings of 2.1.302). Every run with a mod therefore sets
-`statusLine` in its `--settings` — `'<rewake>' statusline`, `refreshInterval` 30 or the person's
-own — which beats every settings file but a managed one: a worker's in its overlay, main's in a
-`--settings` of that key alone. Main has none where its launch
-passes a `--settings` of its own, which a second would replace, or a `--setting-sources`, whose
-layers rewake's reading of the person's line would not keep to — the launch says so in a note —
-and none under `--command`. Claude Code merges the key field by field, so the person's `padding`
-stands. The hidden `rewake statusline` reads that input, posts `ttl`, `expiresAt` and `warm`, the
-effort, the model's name and `thinking.enabled` to the run's host at `status/line`, and prints
-what the person's own `statusLine` command prints, run with the same input, or nothing, always
-exiting 0. The person's line is the one Claude Code would draw without rewake's, reading only
-`statusLine` of each file: the user's `settings.json` (`$CLAUDE_CONFIG_DIR`'s — the workers'
-folder for a worker — else `~/.claude`'s), then the project's `.claude/settings.json`, then its
-`.claude/settings.local.json` — at the repository's root, the main checkout's for a linked
-worktree, as Claude Code keeps it since 2.1.310 — each later file's keys over the earlier's; the
-project is the input's `workspace.project_dir`. A managed `statusLine` outranks rewake's, which then
-does not run. The expiry is absolute, so a slow timer loses nothing; the command runs after
-each response too.
-
-The post (2 s) and the person's command (5 s) run side by side with deadlines of their own; the
-person's command runs in a process group of its own with its output in a pipe rewake reads,
-killed whole at the deadline, so it cannot keep the harness's output open, and
-`REWAKE_STATUSLINE_PASSTHROUGH` in its environment makes a `rewake statusline` it calls print and
-post nothing. The stdin read is bounded in time (3 s) as well as size.
+`statusLine` in its `--settings` — `'<rewake>' statusline`, `refreshInterval` 30 — which beats every
+settings file but a managed one: a worker's in its overlay, main's in a `--settings` of that key
+alone. Main has none where its launch passes a `--settings` of its own, which a second would
+replace — the launch says so in a note, and the person's own line then stays — and none under
+`--command`. Claude Code merges the key field by field, so the person's `padding` stands. The hidden
+`rewake statusline` reads that input, posts `ttl`, `expiresAt` and `warm`, the effort, the model's
+name and `thinking.enabled` to the run's host at `status/line` (bounded at 2 s), and prints nothing,
+always exiting 0. So the person's own status line is off in every Claude Code session rewake runs,
+main and workers, and untouched outside rewake: what it would repeat — the model, the context, the
+cache's life, the account's limits — is in rewake's strip under the pane (the owner's decision,
+October 31, 2026, brief 60; [shell.md](shell.md#the-strip)). A managed `statusLine` outranks
+rewake's, which then does not run. The expiry is absolute, so a slow timer loses nothing; the
+command runs after each response too. The stdin read is bounded in time (3 s) as well as size.
+Checked live: [research-launch.md](research-launch.md#a-runs-status-line-turns-off-the-persons).
 
 The host keeps the last in `Snapshot.CacheLife` (`cacheLife`: `ttl`, `expiresAt`, `warm`), beside
 `Cache`; `rewake list` shows the Cache cell as `90% 42m` (`—` once expired, `<1m`), the remaining
