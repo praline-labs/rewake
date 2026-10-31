@@ -330,7 +330,7 @@ strip under it, and its room work at its input. The program has two rows less.
   … the session's own screen, native or drawn by rewake's face …
   ── ⏵⏵ auto mode ──────────────── brief 57 3/6 ─                             the face's input rule
   ⏵⏵ auto mode on (shift+tab to cycle) · brief 57 3/6                         or Claude Code's hint line
-write-claude (code) · working · <model> low · 230k/1M · 90% 42m · 5h 37% · 7d 9%   the strip
+write-claude (code) · working · <model> low · 90% 42m                  230k/1M   the strip
 ```
 
 - **The top row** (`shell/src/path.tsx`): the room view's `path`, the directory the session works in
@@ -361,10 +361,12 @@ kept its brief, and Claude Code's hint line was cut to `· bri`, our tail first.
 The row under each pane, main's and every worker's, a shell's row, is one line drawn by the shell
 (`shell/src/strip.tsx`), the same for every harness. Main's strip,
 asked for by the owner on October 26, 2026, reads main's own row of the same listing; main has no
-type, so its name stands alone.
+type, so its name stands alone. The context stands at the strip's right edge, the rest from the
+left, and the account's limits are on main's strip alone (the owner, October 31, 2026).
 
 ```
-write-claude (code) · working · <model> low thinking · 230k/1M · 90% 42m · 5h 37% · 7d 9%
+write-claude (code) · working · <model> low thinking · 90% 42m                          230k/1M
+main · working · <model> high · 90% 42m · 5h 37% · 7d 9%                               674k/1M
 ```
 
 - **What it says**: the session and its type, on a pane drawn by rewake's face as on a native one,
@@ -373,7 +375,7 @@ write-claude (code) · working · <model> low thinking · 230k/1M · 90% 42m · 
   `compacting`, with ` (stale)` once it is not current; nothing while it is `unknown`;
   [session-state.md](session-state.md#activity)), the model and
   effort, with `thinking` after them while the harness says thinking is on — Claude Code's
-  session setting, pi's level for a model with reasoning — and nothing when it is off or not told, the context as used and window, and the prompt cache. A value rewake does
+  session setting, pi's level for a model with reasoning — and nothing when it is off or not told, the prompt cache, and at the right edge the context as used and window. A value rewake does
   not know is left out; a window without a measure reads `–/<window>`. The model reads as the
   harness's display name (`configuredModelName` of the telemetry, less a trailing parenthesis),
   else the template's
@@ -383,10 +385,11 @@ write-claude (code) · working · <model> low thinking · 230k/1M · 90% 42m · 
   percent of the last request and the time the cache has left — `90% 42m`, `90% <1m`, `90% —` once
   it expired, `90%` where the harness gives no expiry; left out where it gives no cache. The time is
   counted from `expiresAt` on the shell's own clock every five seconds, so it ticks down between
-  polls. The account's limits follow, `5h 37%` and `7d 9%`, the room view's `limits`: the share used
-  of the five-hour and seven-day windows Claude Code's mod reads from `$.session.usage()`
-  ([claude.md](claude.md#telemetry)); left out where the harness reports none, as off a
-  subscription, and on pi, which reports none.
+  polls. On main's strip alone the account's limits follow, `5h 37%` and `7d 9%`, main's `limits` in
+  the room view: the share used of the five-hour and seven-day windows Claude Code's mod reads from
+  `$.session.usage()` ([claude.md](claude.md#telemetry)); one account's, so a worker's strip does
+  not repeat them; left out where the harness reports none, as off a subscription, and on pi,
+  which reports none.
 - **Where it comes from**: telemetry is shown only to a verified main, and the shell is main's
   terminal and no session, so it proves itself by the process tree: it passes `--wrapper <pid>`,
   the pid of main's wrapper, and the command takes it only for the `servicePid` of a main
@@ -398,9 +401,10 @@ write-claude (code) · working · <model> low thinking · 230k/1M · 90% 42m · 
   session works in its space's checkout (made by its launch, or entered); otherwise the branch
   checked out at its `path`, read from `HEAD` by the command itself on each call (no process, so no
   cache), a detached head as its first seven characters.
-- **Narrow**: the line fits the pane. Too long, it leaves out the model and effort, then the seven
-  days' limit, then the five hours', then the cache; what still does not fit is cut with `…`. The
-  name, the activity and the context stay.
+- **Narrow**: the line fits the pane, the context kept whole at the right edge at least a
+  separator's width from the rest. Too long, it leaves out the model and effort, then the seven
+  days' limit, then the five hours', then the cache; what still does not fit on the left is cut with
+  `…`. The name, the activity and the context stay; only a strip narrower than the context cuts it.
 - **Colours**: the name bold in its program's colour, main's or the workers'; the rest in the terminal's own
   foreground with faint separators; the context and each limit in the palette's green, yellow or
   red from 50% and 80% used; the cache in the palette's cyan while it is warm, faint once it expired.
