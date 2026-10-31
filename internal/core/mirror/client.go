@@ -92,7 +92,7 @@ func (m *Model) Snapshot() []Line {
 func (m *Model) snapshotLocked() []Line {
 	inputs := []InputKind{}
 	if m.inputs != nil {
-		inputs = append(inputs, InputKindPrompt)
+		inputs = append(inputs, m.takes...)
 	}
 	lines := []Line{
 		{Op: LineOpHello, V: ptr(Version), Inputs: inputs},

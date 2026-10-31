@@ -62,7 +62,7 @@ export class FaceHost {
   private ponged = 0;
   private pingedAt = 0;
   private timer: ReturnType<typeof setInterval> | undefined;
-  private sent = new Map<string, { text: string; at: number }>();
+  private sent = new Map<string, { text: string; at: number; verb?: string }>();
   private copiedTimer: ReturnType<typeof setTimeout> | undefined;
 
   constructor(private readonly options: FaceOptions) {}
@@ -141,12 +141,13 @@ export class FaceHost {
       case "copy":
         return this.copied(message.text, message.what);
       case "answer": {
-        const text = this.sent.get(message.id)?.text;
+        const sent = this.sent.get(message.id);
         this.sent.delete(message.id);
+        const text = sent?.text;
         return this.set({
           said: message.ok
             ? undefined
-            : `not sent: ${message.detail ?? "refused"}${text ? ` (${text})` : ""}`,
+            : `${sent?.verb ?? "not sent"}: ${message.detail ?? "refused"}${text ? ` (${text})` : ""}`,
         });
       }
       case "pong":
@@ -207,19 +208,33 @@ export class FaceHost {
     this.send({ kind: "unselect" });
   }
 
+  // escape is the person's Esc: the face drops its selection, or interrupts
+  // the working turn, whose refusal shows as a prompt's does.
+  escape() {
+    if (!this.worker) return;
+    const id = `e${++ids}`;
+    this.keep(id, { text: "", at: Date.now(), verb: "not interrupted" });
+    this.send({ kind: "escape", id });
+  }
+
   // prompt says false when no face runs to take it.
   prompt(text: string): boolean {
     if (!this.worker) return false;
     const id = `p${++ids}`;
+    this.keep(id, { text: text.slice(0, shownChars), at: Date.now() });
+    this.set({ said: undefined });
+    this.send({ kind: "prompt", id, text });
+    return true;
+  }
+
+  // keep waits for an input's answer, the latest few only.
+  private keep(id: string, input: { text: string; at: number; verb?: string }) {
     this.expire();
-    this.sent.set(id, { text: text.slice(0, shownChars), at: Date.now() });
+    this.sent.set(id, input);
     for (const old of this.sent.keys()) {
       if (this.sent.size <= maxPrompts) break;
       this.sent.delete(old);
     }
-    this.set({ said: undefined });
-    this.send({ kind: "prompt", id, text });
-    return true;
   }
 
   // expire forgets the prompts whose answer can no longer come.

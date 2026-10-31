@@ -11,6 +11,7 @@ import type { PermissionMode } from "../../../face/src/mirror.gen.ts";
 import { mix, type Theme } from "../theme.ts";
 import {
   draftOf,
+  escapeFace,
   faceOf,
   pointFace,
   promptFace,
@@ -272,7 +273,7 @@ export function FaceView(props: {
               }) as never
             }
             onKeyDown={(key: { name: string }) => {
-              if (key.name === "escape") unselectFace(props.id);
+              if (key.name === "escape") escapeFace(props.id);
               if (key.name === "pageup") scrollFace(props.id, body() - 1);
               if (key.name === "pagedown") scrollFace(props.id, -(body() - 1));
             }}

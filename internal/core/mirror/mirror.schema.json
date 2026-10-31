@@ -62,7 +62,7 @@
     },
     "ItemStatus": {
       "type": "string",
-      "description": "is streaming or settled for a text; running, done, error or refused for a tool; gap when part of it was lost on the way and the native face has it whole.",
+      "description": "is streaming or settled for a text; running, done, error or refused for a tool; error also for a notice telling a failure or an interrupt, drawn as one; gap when part of it was lost on the way and the native face has it whole.",
       "enum": ["streaming", "settled", "running", "done", "error", "refused", "gap"]
     },
     "TurnState": {
@@ -93,19 +93,19 @@
     },
     "Input": {
       "type": "object",
-      "description": "is one line the face sends: an input, answered by a line with its id.",
+      "description": "is one line the face sends: an input, answered by a line with its id. A face sends only the kinds hello listed.",
       "properties": {
         "id": {"type": "string", "description": "is the face's own id of the input."},
         "kind": {"$ref": "#/$defs/InputKind", "description": "is what the input asks."},
-        "text": {"type": "string", "description": "is a prompt's text."}
+        "text": {"type": "string", "description": "is a prompt's text; empty for an interrupt."}
       },
       "required": ["id", "kind", "text"],
       "additionalProperties": false
     },
     "InputKind": {
       "type": "string",
-      "description": "is what the face may send: a prompt, typed as the person.",
-      "enum": ["prompt"]
+      "description": "is what the face may send: a prompt, typed as the person; an interrupt, the person's Esc stopping the turn that works, as the harness's own Esc does.",
+      "enum": ["prompt", "interrupt"]
     }
   }
 }

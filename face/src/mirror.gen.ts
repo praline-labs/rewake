@@ -89,7 +89,8 @@ export interface Item {
 export type ItemKind = "prompt" | "text" | "thinking" | "tool" | "notice"
 
 // ItemStatus is streaming or settled for a text; running, done, error or refused for a tool;
-// gap when part of it was lost on the way and the native face has it whole.
+// error also for a notice telling a failure or an interrupt, drawn as one; gap when part of it
+// was lost on the way and the native face has it whole.
 export type ItemStatus = "streaming" | "settled" | "running" | "done" | "error" | "refused" | "gap"
 
 // TurnState is the session's turn: idle, working, compacting, unknown after events were lost,
@@ -118,15 +119,17 @@ export type PermitBy = "rule" | "mode" | "classifier" | "person" | "rewake" | "h
 // instead.
 export type PermissionMode = "default" | "plan" | "edits" | "auto" | "bypass" | "unasked"
 
-// Input is one line the face sends: an input, answered by a line with its id.
+// Input is one line the face sends: an input, answered by a line with its id. A face sends only
+// the kinds hello listed.
 export interface Input {
   // id is the face's own id of the input.
   id: string
   // kind is what the input asks.
   kind: InputKind
-  // text is a prompt's text.
+  // text is a prompt's text; empty for an interrupt.
   text: string
 }
 
-// InputKind is what the face may send: a prompt, typed as the person.
-export type InputKind = "prompt"
+// InputKind is what the face may send: a prompt, typed as the person; an interrupt, the
+// person's Esc stopping the turn that works, as the harness's own Esc does.
+export type InputKind = "prompt" | "interrupt"

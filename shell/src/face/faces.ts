@@ -101,6 +101,7 @@ export const wheelFace = (id: string, up: boolean) => faces.get(id)?.host.wheel(
 export const pointFace = (id: string, type: Pointing, x: number, y: number, focused: boolean) =>
   faces.get(id)?.host.mouse(type, x, y, focused);
 export const unselectFace = (id: string) => faces.get(id)?.host.unselect();
+export const escapeFace = (id: string) => faces.get(id)?.host.escape();
 export const promptFace = (id: string, text: string) => faces.get(id)?.host.prompt(text) ?? false;
 
 // checkFace starts the face this shell runs and waits for its answer to a

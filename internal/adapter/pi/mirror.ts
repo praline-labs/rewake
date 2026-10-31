@@ -11,6 +11,14 @@ import { facedTool, resultText } from "./toolmap.ts";
 
 type Sink = { push: (event: MirrorEvent) => void };
 
+// An assistant message's end as pi gives it; only what is read here.
+type Ended = {
+  role?: string;
+  stopReason?: string;
+  errorMessage?: string;
+  content?: { type?: string; text?: string; thinking?: string }[];
+};
+
 // A streamed piece of a reply as pi-ai gives it; only what is read here.
 type Streamed = {
   type: string;
@@ -51,6 +59,11 @@ export class Mirror {
   // thought are the thinking blocks of the run that streamed text: only they
   // reach the face before their end.
   private thought = new Set<string>();
+  // open are the blocks streaming, by their index in the message, and
+  // waiting the calls whose input streamed and that have not run: an
+  // aborted or failed message ends them as pi's own screen does.
+  private open = new Map<string, number>();
+  private waiting = new Set<string>();
 
   constructor(
     private sink: Sink,
@@ -99,6 +112,8 @@ export class Mirror {
     this.reached.clear();
     this.sentAt.clear();
     this.thought.clear();
+    this.open.clear();
+    this.waiting.clear();
     if (run) this.push({ kind: "turn", turn: run, state: "idle" });
   }
 
@@ -135,18 +150,23 @@ export class Mirror {
         for (const text of pieces(e.delta ?? "", textBudget))
           if (text !== "") {
             if (block === "thinking") this.thought.add(id);
+            this.open.set(id, e.contentIndex ?? 0);
             this.push({ kind: "delta", id, turn, block, text });
           }
         return;
       }
-      case "text_end":
-        this.settle(this.blockId(e.contentIndex), "text", e.content ?? "");
+      case "text_end": {
+        const id = this.blockId(e.contentIndex);
+        this.open.delete(id);
+        this.settle(id, "text", e.content ?? "");
         return;
+      }
       case "thinking_end": {
         // A block with nothing in it, a signature only as most providers
         // send, shows nothing, as the Claude Code worker's face shows none:
         // a thinking row is drawn only for something to show.
         const id = this.blockId(e.contentIndex);
+        this.open.delete(id);
         const content = e.content ?? "";
         const streamed = this.thought.delete(id);
         if (streamed || content.trim() !== "") this.settle(id, "thinking", content);
@@ -157,6 +177,7 @@ export class Mirror {
         const call = e.partial?.content?.[e.contentIndex ?? -1];
         if (call?.type !== "toolCall" || !call.id || !call.name) return;
         if (e.type === "toolcall_start") {
+          this.waiting.add(call.id);
           this.push({ kind: "tool", id: call.id, turn, name: facedTool(call.name, {}).name });
           return;
         }
@@ -173,20 +194,39 @@ export class Mirror {
     }
   }
 
-  // ended takes an assistant message's end: a failure pi shows in its own
-  // words is a notice of the face.
-  ended(message: { role?: string; stopReason?: string; errorMessage?: string }) {
-    if (message.role !== "assistant" || message.stopReason !== "error" || !message.errorMessage)
-      return;
+  // ended takes an assistant message's end. One pi stopped (the person's Esc)
+  // or that failed ends as pi's own screen ends it: what streamed stays,
+  // each call it asked for ends with the reason, and a message with no call
+  // says it in red, "Operation aborted" or "Error: " and pi's error.
+  ended(message: Ended) {
+    if (message.role !== "assistant") return;
+    const stop = message.stopReason;
+    if (stop !== "aborted" && stop !== "error") return;
+    const content = message.content ?? [];
+    for (const [id, index] of this.open) {
+      const block = content[index];
+      if (block?.type === "text") this.settle(id, "text", block.text ?? "");
+      else if (block?.type === "thinking") this.settle(id, "thinking", block.thinking ?? "");
+    }
+    this.open.clear();
+    this.thought.clear();
+    const reason = stop === "aborted" ? "Operation aborted" : message.errorMessage || "Error";
+    for (const id of this.waiting)
+      this.push({ kind: "result", id, status: "error", text: fit(reason, textBudget) });
+    this.waiting.clear();
+    if (content.some((block) => block.type === "toolCall")) return;
+    const text = stop === "aborted" ? reason : `Error: ${message.errorMessage || "Unknown error"}`;
     this.push({
       kind: "notice",
       id: randomUUID(),
       turn: this.run,
-      text: fit(message.errorMessage, textBudget),
+      status: "error",
+      text: fit(text, textBudget),
     });
   }
 
   toolStarted(id: string, name: string, args: unknown) {
+    this.waiting.delete(id);
     this.push({ kind: "tool", id, turn: this.run, name: facedTool(name, {}).name });
     this.toolInput(id, name, args);
   }
@@ -310,5 +350,25 @@ export function facePrompt(
     return { ok: true, steered: !idle };
   } catch {
     return { error: "pi did not take the prompt" };
+  }
+}
+
+// faceInterrupt stops pi's run on the person's Esc in the face. In pi's own
+// screen ctx.abort() is its Esc while it works: the run stops and a message
+// queued to steer it goes back to pi's editor. Nothing else ever calls it from
+// the face, and an idle pi is left alone.
+export function faceInterrupt(
+  mirror: Mirror,
+  ctx: { isIdle: () => boolean; abort: () => void },
+  compacting: boolean,
+): { ok?: boolean; error?: string } {
+  if (!mirror.on) return { error: "rewake's face does not draw this session" };
+  if (compacting) return { error: "pi is compacting its context" };
+  if (ctx.isIdle()) return { error: "pi is not working" };
+  try {
+    ctx.abort();
+    return { ok: true };
+  } catch {
+    return { error: "pi did not take the interrupt" };
   }
 }

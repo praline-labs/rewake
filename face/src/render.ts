@@ -191,6 +191,12 @@ export function linesOf(item: Item, width: number): FaceLine[] {
       out.push(...toolLines(item, width));
       break;
     case "notice":
+      // A failure or an interrupt the session told, in red under what it
+      // stopped, as the terminal program draws its own.
+      if (item.status === "error") {
+        out.push(...hung(clean(item.text), width, { text: "  ⎿  " }, { text: "", tone: "error" }));
+        break;
+      }
       out.push(
         ...marked(
           clean(item.text)

@@ -66,10 +66,11 @@ func TestTheMirrorReachesTheModelOfARunTheFaceDraws(t *testing.T) {
 		{Kind: "mode", Text: "auto"},
 		{Kind: "delta", ID: "b1", Turn: "t", Block: "text", Text: "Hel"},
 		{Kind: "settle", ID: "b1", Turn: "t", Block: "text", Of: 1, Text: "Hello"},
+		{Kind: "notice", ID: "n1", Turn: "t", Status: "error", Text: "Operation aborted"},
 		{Kind: "turn", Turn: "t", State: "idle"},
 	}})
 	got := items(model)
-	if len(got) != 2 || got[0].Status != mirror.ItemStatusRefused || got[0].Permit == nil || got[0].Permit.By != mirror.PermitByHook || got[0].Text != `{"command":"ls"}` || got[1].Text != "Hello" || got[1].Status != mirror.ItemStatusSettled {
+	if len(got) != 3 || got[2].Kind != mirror.ItemKindNotice || got[2].Status != mirror.ItemStatusError || got[0].Status != mirror.ItemStatusRefused || got[0].Permit == nil || got[0].Permit.By != mirror.PermitByHook || got[0].Text != `{"command":"ls"}` || got[1].Text != "Hello" || got[1].Status != mirror.ItemStatusSettled {
 		t.Fatalf("the model holds %+v", got)
 	}
 	for _, line := range model.Snapshot() {
@@ -88,11 +89,15 @@ func TestTheMirrorReachesTheModelOfARunTheFaceDraws(t *testing.T) {
 	}
 }
 
-// The face's prompt goes to the extension with its text and comes back with
-// pi's answer; a refusal carries the extension's reason.
-func TestAFacePromptReachesTheExtension(t *testing.T) {
+// The face's prompt goes to the extension with its text, and its Esc as an
+// interrupt, each coming back with pi's answer; a refusal carries the
+// extension's reason.
+func TestAFacePromptAndEscReachTheExtension(t *testing.T) {
 	model := mirror.New()
-	rig := newRig(t, func(r *run) { r.mirror = model; model.Take(r.prompt) })
+	rig := newRig(t, func(r *run) {
+		r.mirror = model
+		model.Take(r.input, mirror.InputKindPrompt, mirror.InputKindInterrupt)
+	})
 	if err := model.Input(t.Context(), mirror.Input{Kind: mirror.InputKindPrompt, Text: "early"}); err == nil {
 		t.Fatal("a prompt before the extension connected was taken")
 	}
@@ -115,6 +120,13 @@ func TestAFacePromptReachesTheExtension(t *testing.T) {
 	defer cancel()
 	if err := model.Input(ctx, mirror.Input{Kind: mirror.InputKindPrompt, Text: "busy"}); err == nil || !strings.Contains(err.Error(), "compacting") {
 		t.Fatalf("a refused prompt: %v", err)
+	}
+	receive(t, prompts)
+	if err := model.Input(t.Context(), mirror.Input{Kind: mirror.InputKindInterrupt}); err != nil {
+		t.Fatal(err)
+	}
+	if got := receive(t, prompts); got.Op != "interrupt" || got.Thread != "conversation" || got.Text != "" {
+		t.Fatalf("the interrupt on the wire: %+v", got)
 	}
 }
 
