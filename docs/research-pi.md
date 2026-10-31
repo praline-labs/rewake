@@ -554,7 +554,7 @@ events on (`internal/adapter/pi/mirror.go`). The extension's side is `mirror.ts`
   goes back into pi's own editor, which the face does not show. pi's Esc is one key while it works,
   with text in the editor or none; a second Esc on an empty editor while idle opens its tree or fork
   selector by `doubleEscapeAction`, which the face does not take. Nothing else calls it.
-- **The thinking level** (read October 31, 2026, pi 1.4.0, `docs/keybindings.md`,
+- **The thinking level** (read October 31, 2026, pi 1.4.0, `pi-coding-agent/docs/keybindings.md`,
   `core/agent-session.js`, `modes/interactive/interactive-mode.js`,
   `modes/interactive/components/footer.js`, `theme/dark.json` and `light.json`,
   `core/extensions/types.d.ts`; brief 62). pi has no permission mode; what shift+tab switches is the
