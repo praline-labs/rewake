@@ -55,6 +55,9 @@ type Line struct {
 	// Turn is the turn's state, on begin and turn.
 	Turn *TurnState `json:"turn,omitempty"`
 
+	// Stopped says the turn went idle because it was interrupted, on turn.
+	Stopped *bool `json:"stopped,omitempty"`
+
 	// Mode is the session's permission mode, on begin and mode; absent while the session has not
 	// said it.
 	Mode *PermissionMode `json:"mode,omitempty"`

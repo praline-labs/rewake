@@ -106,7 +106,9 @@ export class Mirror {
     this.step = index;
   }
 
-  settled() {
+  // settled ends the run; an aborted one (the person's Esc) says so in the
+  // turn's end, a fact the face draws, not a notice it would have to guess.
+  settled(aborted = false) {
     const run = this.run;
     this.run = undefined;
     this.reached.clear();
@@ -114,7 +116,13 @@ export class Mirror {
     this.thought.clear();
     this.open.clear();
     this.waiting.clear();
-    if (run) this.push({ kind: "turn", turn: run, state: "idle" });
+    if (run)
+      this.push({
+        kind: "turn",
+        turn: run,
+        state: "idle",
+        ...(aborted ? { status: "error" } : {}),
+      });
   }
 
   private blockId(index: number | undefined) {
@@ -327,7 +335,7 @@ export function serveMirror(pi: ExtensionAPI, mirror: Mirror) {
   );
   pi.on(
     "agent_settled",
-    observing(() => mirror.settled()),
+    observing((event: { aborted?: boolean }) => mirror.settled(event.aborted === true)),
   );
 }
 

@@ -25,6 +25,7 @@
         "id": {"type": "string", "description": "names the item of append and drop, or the input of answer."},
         "text": {"type": "string", "description": "is what append adds to the item's text."},
         "turn": {"$ref": "#/$defs/TurnState", "description": "is the turn's state, on begin and turn."},
+        "stopped": {"type": "boolean", "description": "says the turn went idle because it was interrupted, on turn."},
         "mode": {"$ref": "#/$defs/PermissionMode", "description": "is the session's permission mode, on begin and mode; absent while the session has not said it."},
         "ok": {"type": "boolean", "description": "says whether the input was taken, on answer."},
         "detail": {"type": "string", "description": "is why an input was refused, on answer."}

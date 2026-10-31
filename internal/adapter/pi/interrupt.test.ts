@@ -71,7 +71,7 @@ test("a reply stopped mid-stream keeps what streamed and says Operation aborted 
     ["settle", `${run}.0.0.0`, "", "hmm"],
     ["settle", `${run}.0.0.1`, "", "Half a sentence"],
     ["notice", events[5].id ?? "", "error", "Operation aborted"],
-    ["turn", "", "idle", ""],
+    ["turn", "", "error", ""],
   ]);
 });
 
@@ -114,4 +114,26 @@ test("calls an aborted or failed message asked for end with its reason, a runnin
     ["result", "asked", "error", "Operation aborted"],
     ["notice", ended[2].id, "error", "Error: This operation was aborted"],
   ]);
+});
+
+// Review of b1f3f12: an Esc during a running call ends with the call's error
+// and no notice; the stop is the turn's end saying so, not a guess from what
+// was drawn. An ordinary tool error does not stop the turn.
+test("a turn's end says it was stopped only when pi settled aborted", () => {
+  const ended = (aborted: boolean) => {
+    const { events, emit } = mirrored();
+    emit("agent_start", {});
+    emit("turn_start", { turnIndex: 0 });
+    emit("tool_execution_start", { toolCallId: "c1", toolName: "bash", args: { command: "x" } });
+    emit("tool_execution_end", {
+      toolCallId: "c1",
+      result: { content: [{ type: "text", text: "boom" }] },
+      isError: true,
+      durationMs: 1,
+    });
+    emit("agent_settled", { aborted });
+    return events.at(-1);
+  };
+  expect(ended(true)).toMatchObject({ kind: "turn", state: "idle", status: "error" });
+  expect(ended(false)).toEqual({ kind: "turn", turn: expect.any(String), state: "idle" });
 });

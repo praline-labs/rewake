@@ -49,6 +49,8 @@ export interface Line {
   text?: string
   // turn is the turn's state, on begin and turn.
   turn?: TurnState
+  // stopped says the turn went idle because it was interrupted, on turn.
+  stopped?: boolean
   // mode is the session's permission mode, on begin and mode; absent while the session has not
   // said it.
   mode?: PermissionMode

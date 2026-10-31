@@ -342,3 +342,14 @@ test("a notice of an interrupt is red under its mark, another faint", () => {
   expect(text(said)).toEqual(["· lost"]);
   expect(said[0]?.spans[1]?.tone).toBe("faint");
 });
+
+// Review of b1f3f12: the end line says "Stopped" from the turn line's own fact.
+test("the model keeps whether the last turn line ended the turn by an interrupt", () => {
+  const m = model();
+  m.apply({ op: "turn", turn: "working" });
+  expect(m.stopped).toBe(false);
+  m.apply({ op: "turn", turn: "idle", stopped: true });
+  expect(m.stopped).toBe(true);
+  m.apply({ op: "turn", turn: "working" });
+  expect(m.stopped).toBe(false);
+});

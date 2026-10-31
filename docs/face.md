@@ -64,7 +64,8 @@ anything is served.
 The stream is JSON lines, each at most 512 KiB. On connect: `hello{v, inputs}`,
 `begin{items, turn, mode?}`, one `item` line per item and `end`, taken under the model's lock with
 the subscription, so no change falls between the snapshot and the stream. Then `add`, `append`,
-`set`, `turn`, `mode` and `drop`. A face
+`set`, `turn` (to idle with `stopped: true` when an interrupt ended the turn: the adapter's idle
+turn event carries status `error`, pi's `agent_settled` with `aborted`), `mode` and `drop`. A face
 sends `{id, kind: "prompt", text}`, or `{id, kind: "interrupt", text: ""}` for the person's Esc, and
 is answered `answer{id, ok, detail?}`; hello's `inputs` lists the kinds the session takes (pi's
 both, Claude Code's the prompt alone), and any other input is refused. A face whose queue passes 4096 lines or 4 MiB past its snapshot is cut off rather than
@@ -174,7 +175,8 @@ decision, October 30, 2026: first the same look, customised later), as read from
   a call runs (the call's name as its head is drawn), `Waiting…` while a request is out with
   nothing back, then the faint bracket `(12s · ↓ 340 tokens)`; after the turn, a faint
   `Done in 31s · 7:52 AM` hung at two columns, or `Stopped after 10s · 7:52 AM` when the turn ended
-  on a failure or an interrupt the session told (its red notice). The glyph set in use is `arc`
+  by an interrupt (the turn line's `stopped`, not a guess from the conversation: a call stopped
+  mid-run ends with its error and no notice). The glyph set in use is `arc`
   in `face/src/turn.ts`; two others stay beside it, unused, for a switch: the dot orbit
   `⠁ ⠂ ⠄ ⡀ ⢀ ⠠ ⠐ ⠈` and the pulse `· • ● •`. A running call's dot, and an open run's,
   shows and hides every 600 ms. The bracket also holds an arrow and an

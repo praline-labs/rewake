@@ -274,3 +274,24 @@ func TestSettlesNeverCompletedStayWithinTheBounds(t *testing.T) {
 		t.Fatalf("the latest block: %s", item.Status)
 	}
 }
+
+// An idle turn event with an error status is a turn an interrupt ended, and
+// the face is told so on the turn line; an ordinary end says nothing.
+func TestATurnEndedByAnInterruptSaysSo(t *testing.T) {
+	m := New()
+	c := m.subscribe()
+	lines(t, c)
+	m.Apply(
+		Event{Kind: EventTurn, Turn: "t1", State: TurnStateWorking},
+		Event{Kind: EventTurn, Turn: "t1", State: TurnStateIdle, Status: ItemStatusError},
+		Event{Kind: EventTurn, Turn: "t2", State: TurnStateWorking},
+		Event{Kind: EventTurn, Turn: "t2", State: TurnStateIdle},
+	)
+	var got []bool
+	for _, l := range lines(t, c) {
+		got = append(got, l.Stopped != nil && *l.Stopped)
+	}
+	if len(got) != 4 || got[0] || !got[1] || got[2] || got[3] {
+		t.Fatalf("stopped on the turn lines: %v", got)
+	}
+}

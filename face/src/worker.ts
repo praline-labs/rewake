@@ -71,10 +71,7 @@ function turned(from: string, to: string) {
     worked = undefined;
     progress.reset(since, model.items);
   } else if (from === "working" && since !== undefined && to === "idle") {
-    // A turn that ends on a failure or an interrupt the session told stopped.
-    const last = model.items.at(-1);
-    const stopped = last?.kind === "notice" && last.status === "error";
-    worked = { took: Date.now() - since, at: Date.now(), stopped };
+    worked = { took: Date.now() - since, at: Date.now(), stopped: model.stopped };
     since = undefined;
   } else since = undefined;
 }

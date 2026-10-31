@@ -7,6 +7,8 @@ import { bounds } from "./mirror.gen.ts";
 export class FaceModel {
   items: Item[] = [];
   turn: TurnState = "unknown";
+  // stopped says the last turn line ended the turn by an interrupt.
+  stopped = false;
   dropped = 0;
   // mode is the session's permission mode, unknown until it says it.
   mode: PermissionMode | undefined;
@@ -50,6 +52,7 @@ export class FaceModel {
       }
       case "turn":
         this.turn = line.turn ?? "unknown";
+        this.stopped = line.stopped === true;
         return true;
       case "mode":
         this.mode = line.mode;

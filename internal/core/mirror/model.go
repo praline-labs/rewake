@@ -239,7 +239,12 @@ func (m *Model) turnTo(e Event) {
 		}
 	}
 	m.turn = e.State
-	m.send(Line{Op: LineOpTurn, Turn: &m.turn})
+	line := Line{Op: LineOpTurn, Turn: &m.turn}
+	if e.State == TurnStateIdle && e.Status == ItemStatusError {
+		stopped := true
+		line.Stopped = &stopped
+	}
+	m.send(line)
 }
 
 func inFlight(s ItemStatus) bool { return s == ItemStatusStreaming || s == ItemStatusRunning }
