@@ -42,7 +42,7 @@ export type Span = {
 // FaceLine is one row of the face, its spans left to right; band paints the
 // whole row in the band's background, as a prompt of the person's is. part
 // names what a click on the row copies (select.ts), and lit is a row of the
-// part the pointer is over.
+// part a click just copied.
 export type FaceLine = { spans: Span[]; band?: boolean; part?: string; lit?: boolean };
 
 export type ToFace =
@@ -61,9 +61,9 @@ export type ToFace =
   | { kind: "unselect" }
   | { kind: "ping"; n: number };
 
-// Pointing is what the pointer did: pressed, dragged and let go of the left
-// button, moved with none, or left the face.
-export type Pointing = "down" | "drag" | "up" | "move" | "out";
+// Pointing is what the pointer did with the left button: pressed, dragged
+// and let go of it.
+export type Pointing = "down" | "drag" | "up";
 
 // link is the face's socket to the wrapper: connecting, live with a whole
 // snapshot, or lost and connecting again.

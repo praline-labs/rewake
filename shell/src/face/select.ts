@@ -128,8 +128,8 @@ export function highlighted(rows: FaceLine[], top: number, s: Selection | undefi
   });
 }
 
-// lit is the rows shown with those of one part marked, the part the pointer
-// is over.
+// lit is the rows shown with those of one part marked, the part a click
+// just copied.
 export const lit = (rows: FaceLine[], part: string | undefined): FaceLine[] =>
   part === undefined
     ? rows

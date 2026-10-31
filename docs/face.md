@@ -267,16 +267,17 @@ terminal clipboard settings if paste fails`, `sent the code block (18 chars) …
   a fullscreen pane, scrolling up while selecting is the wheel's.
 - **A click copies the part it is on** (`shell/src/face/parts.ts`): every row names its part, and
   the text is taken from the model when the click comes. A click takes the row it was pressed on,
-  the row the light shows, so a click off the conversation's rows — the blank above a short one —
+  so a click off the conversation's rows — the blank above a short one —
   copies nothing, though a drag from there starts at its first row. A reply's row copies the
   reply's markdown source; a code block's, its code alone; a call's head, its input as the head shows it (Bash's
   command, a file's path, a pattern, a URL, a query, a skill) or else the input as given; a folded
   run's line, its calls' inputs one a line; an open run's `⎿` row, its latest call's; an output's
   rows, the call's output; an edit's red rows its old lines and green rows its new ones; a write's
   preview, the file's lines.
-- **The part under the pointer is lit**: its rows are drawn on the band's colour, the prompt's,
-  in place, so nothing moves; the light goes when the pointer leaves the face or a button is
-  pressed.
+- **Nothing lights as the pointer moves** (the owner's word, October 31, 2026: a light over the
+  whole reply under the pointer got in the way); the shell passes the face no bare pointer. A
+  click that copies a part lights its rows on the band's colour, the prompt's, in place, so
+  nothing moves, for one second, with the notice under the input; a press puts it out.
 
 Native's rules read for this (the terminal program's `noSelect` gutters, its soft-wrap join, its
 drag-to-scroll and its copy notice) are its own; nothing of its code is copied. Still differs: no
@@ -314,86 +315,17 @@ is contained in the shell's thread, and the person can always switch to native w
 - **its socket fails**: shown as `lost`, and the worker connects again a second later.
 
 A stopped face starts again at the next change of its sources, or when the person switches to it.
-Tests: `shell/src/face/host.test.ts`, the look in `render.test.ts` and `view.test.tsx`, the clock
+A new face, a reload's or a lost link's, follows the bottom with no selection: the scroll is the
+worker's and is not carried across, so a change under `shell/src/face/` while the person reads up
+puts the view back at the bottom (seen live, October 31, 2026, brief 49). Tests: `shell/src/face/host.test.ts`, the look in `render.test.ts` and `view.test.tsx`, the clock
 in `ticker.test.ts`, the scroll in `scroll.test.ts`, a notch's rows in `wheel.test.ts` and through
 the worker in `host.test.ts`, copying in `select.test.ts` (a selection over gutters, a wrapped
 line, a diff and a table; what a click on each part copies; a click told from a drag), through the
-worker in `host.test.ts`, and the pty under the face hearing no mouse in `view.test.tsx`.
+worker in `host.test.ts` with the light after a click and none on a move, and the pty under the
+face hearing no mouse in `view.test.tsx`, the wheel included over a real pane's widget fed as pi's
+normal screen and as a fullscreen program's.
 
 ## Checked
 
-Live, October 28, 2026 (Claude Code 2.1.310, the shell from its sources under a pty of 200 by 50,
-a scratch state directory and project, a dev worker on the cheapest model): a prompt typed in the
-face ran as the worker's turn, with its Bash call, the call's output and the reply drawn; the
-switch both ways left the worker's pty at 97 by 48; a change to `render.ts` while the shell ran
-was drawn by the next face with nothing restarted, main's process, the shell's and the pty
-unchanged; `rewake screen` took the face. Two findings fixed then: a layer over a terminal whose
-background the shell does not know let the native face show through every blank cell, so every
-row is filled and painted with the default background; and a call the engine refused before any
-hook (a tool not offered) stayed `running` until its turn's end now makes it a gap.
-
-Live, October 30, 2026 (Claude Code 2.1.310, the shell from its sources under a pty of 200 by 50
-that answered the colour queries, a private state directory and project, a dev worker on the
-cheapest model): a letter, two Bash calls, a Read, a failing call, a reply with markdown and a
-prompt typed in the face drew as above beside main's native pane; a change to `render.ts` while it
-ran was drawn by the next face with nothing restarted. Found then and fixed: a styled text given to
-a `<text>` as its content drew `[object Object]`, and a span's `attributes` in its style drew no
-bold, so a row is spans with `bold` and `italic`; a colour by its index came out in `rewake screen`
-as the renderer's own, not the person's, so the theme resolves it from the palette the terminal
-said. Still seen: `rewake screen`'s picture draws a `✻` within a longer run two cells wide,
-shifting the rest of that row by one and cutting its last character; the frame's cells are right.
-
-Live, October 30, 2026 (brief 40; Claude Code 2.1.310, the shell from its sources under a pty of
-200 by 50, a private state directory and project, a dev worker and a native one on the cheapest
-model, the same task to both): the letter, the run of a Bash call, two Reads, a Grep the session did not
-offer and a failing Bash folded into `Searched for 1 pattern, read 2 files, ran 2 shell commands` and
-`Read 1 file` as natively; the MCP call, the edit's counts and its red and green lines, the
-reply's heading, list, code block and table drew beside the native pane's; a change to `table.ts`
-was drawn by the next face with nothing restarted. Still differs, for want of mirror fields: paths
-are absolute or `~/…` where the native face makes them relative, an edit has no line numbers or
-context rows; and a code block has no syntax colours, which need a highlighter the face does not
-have.
-
-Live, October 30, 2026 (brief 41; Claude Code 2.1.310, the shell from its sources under a pty of
-200 by 50, a private state directory and project, a dev worker on the cheapest model beside main's
-native pane, the same task to both: a 15-second Bash, then a long reply): every paint of the face
-fell on the 50 ms grid, the glyph and the time moving in the same frames as the text, at native's
-cadence; three notches of the wheel while a reply streamed held the rows shown until it ended, PgUp
-and PgDn moved a page, and the wheel back to the bottom followed the stream again; the name stood on
-the input's rule and left the strip; a change to `turn.ts` was drawn by the next face with the shell's
-process unchanged. Still differs: the native pane reveals a streaming reply a whole row at a time,
-where the face shows a row as it grows; a running Bash's own time and line count (`· 13s`,
-`(13s · 14 lines)`) and the turn's tokens are not in the mirror.
-
-Live, October 30, 2026 (brief 44; Claude Code 2.1.310, the shell from its sources under a pty of
-200 by 50, a private state directory and project, main and a dev worker in auto mode on the cheapest
-model, the same prompt to main's native pane and to the worker's face: a Read, a Write outside the
-project, an `ls`, a reply): both drew `Read 1 file`, the Write with `⎿  Allowed by auto mode
-classifier` under its result, `Listed 1 directory` and the reply; the working line went
-`(4s · ↓ 18 tokens)`, `(5s · ↑ 36 tokens)` after the calls ended, and `(5s · ↓ 363 tokens)` through a
-reply; the top rule read `── ⏵⏵ auto mode ─…─ w-claude · 19k/272k ─` and the strips lost their
-percent. Found then and fixed: a mode heard before the hello's answer waited for the first event
-after it. Still differs: Claude Code says no mode with its SessionStart, so the rule shows the mode
-from the first prompt's event on, and a change of mode with shift+tab at the next event; auto
-mode's classifier and its fast path give the mod the same verdict, so an ask settled without a
-dialog counts as the classifier's but for an edit inside the session's directory, which may name
-the classifier where it did not answer (a Bash call shows no line either way, folded); the refusal
-line was not seen live, the classifier allowing every call tried, and stands on the binary's text;
-the count leaps where a call's input arrives whole at its step's end, natively streamed; the
-thinking word has no effort suffix and does not shimmer; the write's preview has no line numbers;
-and `rewake screen`'s picture draws `⏵` two cells wide, cutting the mode's last letters there.
-
-Live, October 30, 2026 (brief 45; Claude Code 2.1.310, the shell from its sources under a pty of
-200 by 50, a private state directory and project, main and a dev worker on the cheapest model, SGR
-mouse events written to the pty and the OSC 52 it wrote decoded): a drag over a wrapped paragraph
-copied it as one line of 437 characters, with the notice under the input; over an edit, its head,
-counts and the old and new lines without signs or padding; over a table, its rows as tab-separated
-cells, each wrapped cell whole; a drag held below the body scrolled to the end and copied all it
-passed. A click copied a code block's code, a reply's markdown source, a folded run's command, an
-edit's path, its old and its new lines and a write's file lines; the pointer over a code block lit
-its rows alone; main's native pane beside it showed no selection. A copied code block
-pasted into the face's input arrived as `make allmake test`: the input is one line and drops a
-paste's newline.
-
-Live, October 31, 2026 (brief 46): a pi worker drawn by the face, its turn and letter, beside pi's own
-TUI, and what still differs from Claude Code's look, in [research-pi.md](research-pi.md#the-face-of-a-pi-worker).
+The face's live checks, dated, each with its setup and what it found, are
+[research-face.md](research-face.md).

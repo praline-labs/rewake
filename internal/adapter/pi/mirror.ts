@@ -48,6 +48,9 @@ export class Mirror {
   private reached = new Set<string>();
   private faced: string[] = [];
   private sentAt = new Map<string, number>();
+  // thought are the thinking blocks of the run that streamed text: only they
+  // reach the face before their end.
+  private thought = new Set<string>();
 
   constructor(
     private sink: Sink,
@@ -95,6 +98,7 @@ export class Mirror {
     this.run = undefined;
     this.reached.clear();
     this.sentAt.clear();
+    this.thought.clear();
     if (run) this.push({ kind: "turn", turn: run, state: "idle" });
   }
 
@@ -124,32 +128,30 @@ export class Mirror {
   streamed(e: Streamed) {
     const turn = this.run;
     switch (e.type) {
-      case "thinking_start":
-        // Most providers stream no thinking text: the block shows all the same.
-        this.push({
-          kind: "delta",
-          id: this.blockId(e.contentIndex),
-          turn,
-          block: "thinking",
-          text: "",
-        });
-        return;
       case "text_delta":
       case "thinking_delta": {
         const block = e.type === "text_delta" ? "text" : "thinking";
+        const id = this.blockId(e.contentIndex);
         for (const text of pieces(e.delta ?? "", textBudget))
-          if (text !== "")
-            this.push({ kind: "delta", id: this.blockId(e.contentIndex), turn, block, text });
+          if (text !== "") {
+            if (block === "thinking") this.thought.add(id);
+            this.push({ kind: "delta", id, turn, block, text });
+          }
         return;
       }
       case "text_end":
-      case "thinking_end":
-        this.settle(
-          this.blockId(e.contentIndex),
-          e.type === "text_end" ? "text" : "thinking",
-          e.content ?? "",
-        );
+        this.settle(this.blockId(e.contentIndex), "text", e.content ?? "");
         return;
+      case "thinking_end": {
+        // A block with nothing in it, a signature only as most providers
+        // send, shows nothing, as the Claude Code worker's face shows none:
+        // a thinking row is drawn only for something to show.
+        const id = this.blockId(e.contentIndex);
+        const content = e.content ?? "";
+        const streamed = this.thought.delete(id);
+        if (streamed || content.trim() !== "") this.settle(id, "thinking", content);
+        return;
+      }
       case "toolcall_start":
       case "toolcall_delta": {
         const call = e.partial?.content?.[e.contentIndex ?? -1];
