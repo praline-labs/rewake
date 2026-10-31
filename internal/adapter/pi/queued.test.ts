@@ -36,24 +36,38 @@ function running() {
 }
 
 // pi takes a steered prompt after the tool batch, its user message beginning
-// then: the face hears it taken, the same texts one at a time, and a text an
-// input handler changed on its way as the oldest waiting.
+// then: the face hears it taken, the same texts one at a time.
 test("a steered prompt waits queued until pi takes it", () => {
   const pi = running();
   pi.steer("a");
   pi.steer("a");
-  pi.steer("/tpl x");
   const prompts = pi.events.filter((e) => e.kind === "prompt");
-  expect(prompts.map((e) => e.status)).toEqual(["queued", "queued", "queued"]);
+  expect(prompts.map((e) => e.status)).toEqual(["queued", "queued"]);
   pi.user("a");
   expect(pi.taken()).toEqual([["a", "taken"]]);
   pi.user("a");
-  pi.queue(false);
-  pi.user("the template, expanded");
   expect(pi.taken()).toEqual([
     ["a", "taken"],
     ["a", "taken"],
-    ["/tpl x", "taken"],
+  ]);
+});
+
+// Review of 8e94ba1: an input handler consumed one prompt and transformed the
+// next, and the transformed message was said to be the consumed prompt, the
+// oldest. A message of no queued text is none of them: both are given back
+// once pi's queue is found empty, and neither is said taken.
+test("a message of no queued text is said to be no queued prompt", () => {
+  const pi = running();
+  pi.steer("handled");
+  pi.steer("/tpl x");
+  pi.user("the template, expanded");
+  expect(pi.taken()).toEqual([]);
+  pi.queue(false);
+  pi.emit("message_start", { message: { role: "assistant" } });
+  pi.emit("message_start", { message: { role: "assistant" } });
+  expect(pi.taken()).toEqual([
+    ["handled", "refused"],
+    ["/tpl x", "refused"],
   ]);
 });
 

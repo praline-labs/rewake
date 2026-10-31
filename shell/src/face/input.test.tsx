@@ -3,6 +3,7 @@
 // paste comes whole, a large one behind pi's marker.
 import { expect, test } from "bun:test";
 import { testRender } from "@opentui/solid";
+import { createSignal } from "solid-js";
 import { themeOf } from "../theme.ts";
 import { draftOf, inputOf, inputRowsOf, setDraft } from "./faces.ts";
 import { FaceInput } from "./input.tsx";
@@ -213,18 +214,125 @@ test("a paste keeps its lines, a large one shown as pi's marker and sent whole",
   renderer.destroy();
 });
 
+// Review of 8e94ba1: a Backspace after the marker sent `[paste #1 +40 lines`
+// as typed. pi's editor holds a marker as one piece: the cursor steps over
+// it, Backspace takes it whole, and so does a word's delete that reaches it.
+test("a paste's marker moves and deletes whole, as in pi's editor", async () => {
+  const sent: string[] = [];
+  const shown = (live: boolean) => (
+    <box width={40} height={10}>
+      <FaceInput
+        id="whole"
+        width={40}
+        height={30}
+        theme={theme}
+        live={live}
+        active={() => live}
+        page={() => 10}
+        prompt={(_, text) => sent.push(text) > 0}
+      />
+    </box>
+  );
+  const { renderOnce, mockInput, renderer } = await testRender(() => shown(true), {
+    width: 40,
+    height: 10,
+  });
+  await renderOnce();
+  const long = Array.from({ length: 40 }, (_, i) => `line ${i}`).join("\n");
+  await mockInput.pasteBracketedText(long);
+  mockInput.pressBackspace();
+  await renderOnce();
+  expect(draftOf("whole")).toBe("");
+  mockInput.pressEnter();
+  await renderOnce();
+  expect(sent).toEqual([]);
+  // After a line of its own: Left steps over it, a key there types before it.
+  await mockInput.typeText("a");
+  mockInput.pressEnter({ meta: true });
+  await mockInput.pasteBracketedText(long);
+  await mockInput.typeText("b");
+  mockInput.pressArrow("left");
+  mockInput.pressArrow("left");
+  await mockInput.typeText("c");
+  await renderOnce();
+  expect(draftOf("whole")).toBe("a\nc[paste #2 +40 lines]b");
+  // A word's delete from after it takes it whole.
+  mockInput.pressArrow("right");
+  mockInput.pressKey("w", { ctrl: true });
+  await renderOnce();
+  expect(draftOf("whole")).toBe("a\ncb");
+  mockInput.pressArrow("right");
+  await mockInput.typeText(" ");
+  await mockInput.pasteBracketedText(long);
+  await renderOnce();
+  renderer.destroy();
+  // A draft put back as the face is shown again keeps its marker whole.
+  const again = await testRender(() => shown(true), { width: 40, height: 10 });
+  await again.renderOnce();
+  again.mockInput.pressBackspace();
+  await again.renderOnce();
+  expect(draftOf("whole")).toBe("a\ncb ");
+  await again.mockInput.pasteBracketedText(long);
+  await again.renderOnce();
+  again.renderer.destroy();
+  // Shown once more, the marker put back is sent as its paste.
+  const last = await testRender(() => shown(true), { width: 40, height: 10 });
+  await last.renderOnce();
+  last.mockInput.pressEnter();
+  await last.renderOnce();
+  expect(sent).toEqual([`a\ncb ${long}`]);
+  last.renderer.destroy();
+});
+
+// Review of 8e94ba1: a pane made lower kept the input at the old pane's
+// bound, 12 rows where 6 were the new.
+test("a pane made lower lowers the input's bound", async () => {
+  const [height, setHeight] = createSignal(40);
+  setDraft("lower", Array.from({ length: 15 }, (_, i) => `line ${i}`).join("\n"));
+  const t = await testRender(
+    () => (
+      <FaceView
+        id="lower"
+        width={40}
+        height={height()}
+        theme={theme}
+        live={true}
+        active={() => true}
+      />
+    ),
+    { width: 40, height: 40 },
+  );
+  for (let i = 0; i < 4; i++) await t.renderOnce();
+  expect(inputRowsOf("lower")).toBe(12);
+  setHeight(20);
+  t.resize(40, 20);
+  for (let i = 0; i < 4; i++) await t.renderOnce();
+  expect(inputRowsOf("lower")).toBe(6);
+  expect(inputOf("lower").above + inputOf("lower").under).toBe(9);
+  t.renderer.destroy();
+});
+
 test("pi's paste rules: line ends, tabs, control characters and the large paste's marker", () => {
   expect(cleaned("a\r\nb\rc\td\x07\x1b")).toBe("a\nb\nc    d");
   const p = new Pastes();
-  expect(p.take("short\ntext")).toBe("short\ntext");
-  expect(p.take("x".repeat(1001))).toBe("[paste #1 1001 chars]");
-  expect(p.take("1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11")).toBe("[paste #2 +11 lines]");
-  // A marker the person typed for a paste never made stays as typed.
-  expect(p.expand("[paste #2 +11 lines] and [paste #9 +3 lines]")).toBe(
-    "1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11 and [paste #9 +3 lines]",
+  expect(p.take("short\ntext")).toEqual({ text: "short\ntext" });
+  expect(p.take("x".repeat(1001))).toEqual({ text: "[paste #1 1001 chars]", id: 1 });
+  expect(p.take("1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11")).toEqual({
+    text: "[paste #2 +11 lines]",
+    id: 2,
+  });
+  // A marker the person typed for a paste never made, or one of a paste
+  // whose marker was deleted, stays as typed.
+  const text = "[paste #2 +11 lines] and [paste #9 +3 lines] [paste #1 1001 chars]";
+  expect(p.markers(text).map((m) => [m.id, m.start, m.end])).toEqual([
+    [2, 0, 20],
+    [1, 45, 66],
+  ]);
+  expect(p.expand(text, new Set([2]))).toBe(
+    "1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11 and [paste #9 +3 lines] [paste #1 1001 chars]",
   );
   p.clear();
-  expect(p.take("y".repeat(1001))).toBe("[paste #1 1001 chars]");
+  expect(p.take("y".repeat(1001)).text).toBe("[paste #1 1001 chars]");
   expect(rowsFor(10)).toBe(5);
   expect(rowsFor(40)).toBe(12);
 });

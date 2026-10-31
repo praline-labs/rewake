@@ -31,7 +31,7 @@ import {
   unfoldFace,
   unselectFace,
 } from "./faces.ts";
-import { cleaned, Pastes, rowsFor } from "./paste.ts";
+import { cleaned, type Paste, Pastes, rowsFor } from "./paste.ts";
 
 // pi's keys over OpenTUI's own, which already move by words (alt or ctrl
 // with an arrow, alt+b, alt+f), delete by words (ctrl+w, alt+Backspace,
@@ -103,7 +103,15 @@ export function FaceInput(props: {
     measure();
     afterFrame();
   };
-  createEffect(on(() => props.width, afterFrame, { defer: true }));
+  // A pane made narrower wraps the text again, one made lower lowers the
+  // bound: measured now and once the frame laid the text out.
+  createEffect(
+    on(
+      () => [props.width, props.height],
+      () => changed(),
+      { defer: true },
+    ),
+  );
   // Another window of the pane shows the draft scrolled as the person's,
   // once a frame laid out its rows: a scroll past them is clamped before.
   let shadow: TextRenderable | undefined;
@@ -116,6 +124,47 @@ export function FaceInput(props: {
     scroll();
     renderer.once("frame", scroll);
   });
+  // A large paste's marker is one piece of the text, as in pi's editor: the
+  // cursor steps over it and Backspace or Delete takes it whole, as a virtual
+  // extmark of the textarea; an edit that cuts into it, a word's or a line's
+  // delete, takes the rest of it, so no marker goes half.
+  let pasteType = 0;
+  const mark = (start: number, paste: Paste) =>
+    area?.extmarks.create({
+      start,
+      end: start + paste.text.length,
+      virtual: true,
+      typeId: pasteType,
+      data: paste,
+    });
+  const marks = () => area?.extmarks.getAllForTypeId(pasteType) ?? [];
+  let repairing = false;
+  const repair = () => {
+    if (!area || repairing) return;
+    repairing = true;
+    for (const m of marks()) {
+      const left = area.plainText.slice(m.start, m.end);
+      if (left === (m.data as Paste).text) continue;
+      area.extmarks.delete(m.id);
+      const from = area.editBuffer.offsetToPosition(m.start);
+      const to = area.editBuffer.offsetToPosition(m.end);
+      if (from && to && m.end > m.start)
+        area.editBuffer.deleteRange(from.row, from.col, to.row, to.col);
+    }
+    repairing = false;
+  };
+  // stepBack is Left from a marker's end: to its start, where pi's editor
+  // puts the cursor, not the character before it, where the textarea does.
+  const stepBack = () => {
+    if (!area || area.hasSelection()) return false;
+    const at = area.cursorOffset;
+    const m = marks().find((m) => m.end === at && m.start < at);
+    const to = m && area.editBuffer.offsetToPosition(m.start);
+    if (!to) return false;
+    area.editBuffer.setCursor(to.row, to.col);
+    area.requestRender();
+    return true;
+  };
   const send = () => {
     if (!area) return;
     const value = area.plainText;
@@ -128,7 +177,8 @@ export function FaceInput(props: {
       return;
     }
     const pastes = pastesOf(props.id);
-    const full = pastes.expand(value).trim();
+    const live = new Set(marks().map((m) => (m.data as Paste).id ?? 0));
+    const full = pastes.expand(value, live).trim();
     if (!full || !(props.prompt ?? promptFace)(props.id, full)) return;
     pastes.clear();
     area.setText("");
@@ -138,7 +188,10 @@ export function FaceInput(props: {
   const pasted = (event: PasteEvent) => {
     event.preventDefault();
     const raw = cleaned(stripAnsiSequences(decodePasteBytes(event.bytes)));
-    if (raw) area?.insertText(pastesOf(props.id).take(raw));
+    if (!raw || !area) return;
+    const paste = pastesOf(props.id).take(raw);
+    area.insertText(paste.text);
+    if (paste.id !== undefined) mark(area.cursorOffset - paste.text.length, paste);
   };
   return (
     <Show
@@ -170,7 +223,12 @@ export function FaceInput(props: {
         focused={props.active()}
         ref={(r: TextareaRenderable) => {
           area = r;
+          pasteType = r.extmarks.getTypeId("paste") ?? r.extmarks.registerType("paste");
           r.setText(draftOf(props.id));
+          // A draft put back keeps its markers whole.
+          const pastes = pastesOf(props.id);
+          for (const m of pastes.markers(r.plainText))
+            mark(m.start, { text: r.plainText.slice(m.start, m.end), id: m.id });
           r.gotoBufferEnd();
           afterFrame();
         }}
@@ -178,6 +236,7 @@ export function FaceInput(props: {
         onContentChange={() => {
           // A key drops the selection, as the terminal program's does.
           unselectFace(props.id);
+          repair();
           setDraft(props.id, area?.plainText ?? "");
           changed();
         }}
@@ -187,6 +246,10 @@ export function FaceInput(props: {
         onKeyDown={(key: KeyEvent) => {
           // A move of the cursor may scroll the text and says no change.
           afterFrame();
+          if (key.name === "left" && !key.shift && !key.ctrl && !key.meta && stepBack()) {
+            key.preventDefault();
+            return;
+          }
           if (key.name === "escape") escapeFace(props.id);
           if (key.name === "o" && key.ctrl) unfoldFace(props.id);
           if (key.name === "pageup") scrollFace(props.id, props.page());

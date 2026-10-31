@@ -137,7 +137,8 @@ The input is pi's editor, as read in the bundled pi-tui 1.4.0's `components/edit
 grows a row as its text wraps or holds a new line, the conversation above giving the room, to 30%
 of the pane's rows and at least 5, pi's `maxVisibleLines` of its terminal; past that it scrolls
 inside, the top rule saying ` ↑ 3 more ` in the middle of its longest run of rule and the bottom one
-` ↓ 2 more `, as pi's borders do; a sent prompt leaves it one row again. Enter sends the text
+` ↓ 2 more `, as pi's borders do; a sent prompt leaves it one row again, and a pane made lower or
+narrower measures it again at once. Enter sends the text
 trimmed; shift+Enter, alt+Enter and ctrl+j start a line, and so does Enter after a `\`, pi's way
 for a terminal that sends shift+Enter as Enter (shift+Enter needs the kitty keyboard protocol,
 which OpenTUI asks the terminal for). The arrows move by the drawn rows, Home and End and ctrl+a
@@ -147,7 +148,11 @@ ctrl+- undoes: OpenTUI's own keys where they are pi's. pi's history on Up at the
 kill ring and its completion are not repeated. A bracketed paste arrives whole: line ends made
 `\n`, a tab four spaces, every other control character dropped, as pi cleans one; a paste of more
 than ten lines or 1000 characters shows as pi's marker, `[paste #1 +40 lines]` or `[paste #1 1200
-chars]`, and is sent whole in its place; a marker for no paste of this input is sent as typed. The
+chars]`, and is sent whole in its place; a marker for no paste of this input is sent as typed.
+A marker is one piece of the text, as in pi's editor (a virtual extmark of OpenTUI's textarea): the
+cursor steps over it, Left from its end to its start, Backspace and Delete take it whole, and an
+edit that cuts into it, a word's or a line's delete, takes the rest of it, so no damaged marker is
+sent (review of 8e94ba1, seen sending `[paste #1 +40 lines`). The
 draft and its pastes stay with the pane while the face is switched away. Every window of the pane
 draws the input as tall as the person's.
 
@@ -168,8 +173,10 @@ decision, October 30, 2026: first the same look, customised later), as read from
   into the run after the current tool batch — is drawn as pi's screen draws it under its chat, a
   faint `Steering: <text>` row above the turn's line, its whitespace run together and cut with `…`
   to the row, until the session takes it; then it is drawn where it was taken, as any prompt. One
-  given back (pi's alt+up, its Esc) is the prompt refused, in place; while it waits it ends no run
-  of calls.- **Interrupt**: an `error` notice, the session's own words for a stop or a failure, in red behind
+  given back (pi's alt+up, its Esc) is the prompt refused, in place, and so is one whose text the
+  session changed on its way, which no message it took can be told to be; while it waits it ends no
+  run of calls.
+- **Interrupt**: an `error` notice, the session's own words for a stop or a failure, in red behind
   `  ⎿  ` under what it stopped, hung under its text; another notice is faint behind `· `.
 - **Letter**: a letter rewake delivered reaches the harness as its `<task-notification>` and shows
   as the notification's summary after a `●` coloured by its status — green completed, red failed,

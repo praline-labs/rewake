@@ -21,28 +21,40 @@ export const cleaned = (text: string) =>
 const largeLines = 10;
 const largeChars = 1000;
 
+// marker finds pi's paste markers in a text.
+const marker = /\[paste #(\d+)( (\+\d+ lines|\d+ chars))?\]/g;
+
+// Paste is what a paste puts in the input: its text, or a large one's
+// marker and the paste it stands for.
+export type Paste = { text: string; id?: number };
+
 export class Pastes {
   private n = 0;
   private kept = new Map<number, string>();
 
   // take is what a paste puts in the input: itself, or a large one's marker.
-  take(text: string): string {
+  take(text: string): Paste {
     const lines = text.split("\n").length;
-    if (lines <= largeLines && text.length <= largeChars) return text;
+    if (lines <= largeLines && text.length <= largeChars) return { text };
     const id = ++this.n;
     this.kept.set(id, text);
-    return lines > largeLines
-      ? `[paste #${id} +${lines} lines]`
-      : `[paste #${id} ${text.length} chars]`;
+    const shown = lines > largeLines ? `+${lines} lines` : `${text.length} chars`;
+    return { text: `[paste #${id} ${shown}]`, id };
   }
 
-  // expand is the input's text with each marker it still holds as what was
-  // pasted; a marker typed or left after its paste was forgotten stays.
-  expand(text: string): string {
-    if (this.kept.size === 0) return text;
-    return text.replace(
-      /\[paste #(\d+)( (\+\d+ lines|\d+ chars))?\]/g,
-      (marker, id: string) => this.kept.get(Number(id)) ?? marker,
+  // markers are the markers in a text whose paste is kept, where each stands.
+  markers(text: string): { id: number; start: number; end: number }[] {
+    if (this.kept.size === 0) return [];
+    return [...text.matchAll(marker)]
+      .map((m) => ({ id: Number(m[1]), start: m.index, end: m.index + m[0].length }))
+      .filter((m) => this.kept.has(m.id));
+  }
+
+  // expand is the input's text with each marker of the ids still in it as
+  // what was pasted; a marker typed, or one of a paste deleted, stays.
+  expand(text: string, live: Set<number>): string {
+    return text.replace(marker, (shown, id: string) =>
+      live.has(Number(id)) ? (this.kept.get(Number(id)) ?? shown) : shown,
     );
   }
 

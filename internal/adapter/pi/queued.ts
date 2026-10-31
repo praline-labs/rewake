@@ -2,7 +2,8 @@
 // steered into a working run waits in pi's queue until pi takes it after the
 // run's current tool batch, its user message beginning then, or until pi
 // gives it back — Esc puts the queue back into pi's editor, alt+up takes it
-// there without stopping the run — or an input handler took it whole. The
+// there without stopping the run — or an input handler took it whole or
+// changed its text, which no message can then be told to be. The
 // face shows it waiting, as pi's own screen does under its chat, until the
 // take settles it where pi took it.
 
@@ -41,15 +42,13 @@ export class Queue {
   }
 
   // took is a user message pi began while prompts wait: pi took the one of
-  // its text, the first of them where two are the same; when none is, an
-  // input handler or a template changed the text on its way to the queue,
-  // and pi takes its queue in order, so it is the oldest.
+  // its text, the first of them where two are the same. A message of no
+  // waiting text is none of them: an input handler may have taken one prompt
+  // whole and changed the next, so the oldest is no evidence; what waits is
+  // given back once pi's queue is found empty, or as the run ends.
   took(text: string) {
-    if (this.waiting.length === 0) return;
-    const at = Math.max(
-      this.waiting.findIndex((w) => w.text === text),
-      0,
-    );
+    const at = this.waiting.findIndex((w) => w.text === text);
+    if (at < 0) return;
     const [taken] = this.waiting.splice(at, 1);
     if (taken) this.push({ kind: "taken", id: taken.id });
   }

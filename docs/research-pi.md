@@ -530,11 +530,13 @@ events on (`internal/adapter/pi/mirror.go`). The extension's side is `mirror.ts`
   (`queue_update` reaches the session's own listeners only), and the queue holds the text after
   the input handlers and a prompt template changed it; `ctx.hasPendingMessages()` says whether
   anything waits. So the extension (`queued.ts`) sends a steered prompt `queued` and says `taken`
-  as a user message begins: the queued prompt of the message's text, the first of the same texts,
-  else the oldest, as pi takes its queue in order. One still queued when pi's queue is found
+  as a user message begins: the queued prompt of the message's text, the first of the same texts.
+  A message of no queued text is nobody's: an input handler may have consumed one prompt and
+  transformed the next, so the oldest is no evidence (review of 8e94ba1). One still queued when pi's queue is found
   empty at two of its events running (`turn_start`, `message_start`: the first may come between
   `input` and the queue) is given back, `taken` `refused`, and so is all that is left as the run
-  settles, before its idle turn. A prompt an input handler took whole shows refused too. At most 32
+  settles, before its idle turn. A prompt an input handler took whole, or one whose text it or a
+  template changed, shows refused too. At most 32
   are followed; an older one stays queued and ends a gap with the run.
 - **The editor** (read October 31, 2026, pi-tui 1.4.0, `components/editor.js` and
   `keybindings.js`, brief 57), which the face's input repeats ([face.md](face.md), "The input"):
