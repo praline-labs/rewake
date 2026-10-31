@@ -117,6 +117,14 @@ export function highlighted(rows: FaceLine[], top: number, s: Selection | undefi
     const [from, to] = range;
     const spans: Span[] = [];
     let at = -1;
+    // A blank row has no text cell to mark: the selection that holds its place
+    // lights one cell there, as a blank row between paragraphs is lit natively.
+    if (!drawingOnly(line) && !line.spans.some((span) => isText(span) && span.text !== "")) {
+      const edge = line.spans.reduce((w, span) => w + widthOf(span.text), 0);
+      return from <= edge && edge <= to
+        ? { ...line, spans: [...line.spans, { text: " ", selected: true }] }
+        : line;
+    }
     for (const p of pieces(line.spans)) {
       const selected = isText(p.span) && p.col >= from && p.col <= to;
       const last = spans[spans.length - 1];

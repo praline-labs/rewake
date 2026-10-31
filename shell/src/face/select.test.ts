@@ -69,6 +69,23 @@ test("a highlight marks the text it covers and leaves the gutter as drawn", () =
   ]);
 });
 
+test("a selection lights the blank rows inside it and copies them", () => {
+  const rows = linesOf(reply("one\n\ntwo\n\n```\na\n\nb\n```"), 20);
+  expect(drawn(rows)).toEqual(["● one", "  ", "  two", "  ", "  a", "  ", "  b"]);
+  const lit = highlighted(rows, 0, all(rows));
+  // Every row, a blank one included, holds a lit cell.
+  expect(lit.map((l) => l.spans.some((s) => s.selected))).toEqual(rows.map(() => true));
+  expect(copyOf(rows, all(rows))).toBe("one\n\ntwo\n\na\n\nb");
+  // A selection that ends before a blank row does not light it.
+  const part = highlighted(rows, 0, { anchor: { row: 0, col: 0 }, focus: { row: 0, col: 9 } });
+  expect(part[1]?.spans.some((s) => s.selected)).toBe(false);
+  // Across two items the blank row between them is lit and copied.
+  const body = bodyOf(model(reply("one"), reply("two")), 20).rows;
+  expect(drawn(body)).toEqual(["● one", "", "● two"]);
+  expect(highlighted(body, 0, all(body))[1]?.spans.some((s) => s.selected)).toBe(true);
+  expect(copyOf(body, all(body))).toBe("one\n\ntwo");
+});
+
 const model = (...items: Item[]) => {
   const m = new FaceModel();
   m.apply({ op: "begin", items: items.length, turn: "idle" });

@@ -21,15 +21,34 @@ function marked(rows: Span[][], mark: Span, band?: boolean): FaceLine[] {
   return rows.map((row, i) => ({ spans: [i === 0 ? first : indent, ...row], band }));
 }
 
-// edged puts a mark before the first row and wraps the rest back to the left
-// edge, as the terminal does a prompt and a letter.
-const edged = (text: string, width: number, mark: Span, base: Span, band?: boolean): FaceLine[] =>
-  text
+// hung puts a mark before the first row and hangs every other row, a wrapped
+// one or one after a newline, under the text at the mark's width.
+const hung = (text: string, width: number, mark: Span, base: Span, band?: boolean): FaceLine[] =>
+  marked(
+    text
+      .split("\n")
+      .flatMap((line) => wrapSpans([{ ...base, text: line }], width - widthOf(mark.text))),
+    mark,
+    band,
+  );
+
+// letterRows draws a letter's summary as rewake's notice carries it: its first
+// line after the dot, each `↳` preview on its own row under it, the rows hung
+// under their text.
+function letterRows(said: string, width: number, tone?: Tone): FaceLine[] {
+  const [head = "", ...previews] = said
     .split("\n")
-    .flatMap((line, i) =>
-      wrapSpans([...(i === 0 ? [{ ...mark, gutter: true }] : []), { ...base, text: line }], width),
-    )
-    .map((spans) => ({ spans, band }));
+    .map((line) => line.replace(/\s+/g, " ").trim())
+    .filter((line) => line !== "");
+  return [
+    ...hung(head, width, { text: "● ", tone }, { text: "" }),
+    ...previews.flatMap((line) =>
+      line.startsWith("↳")
+        ? hung(line.slice(1).trim(), width, { text: "  ↳ " }, { text: "" })
+        : hung(line, width, { text: "  " }, { text: "" }),
+    ),
+  ];
+}
 
 // parted names the part a click on each row copies: kind gives it by the
 // row, none for a row of no part.
@@ -75,15 +94,14 @@ function promptLines(item: Item, width: number): FaceLine[] {
   const out: FaceLine[] = [];
   const text = clean(item.text);
   for (const m of text.matchAll(notification)) {
-    const said = (summary.exec(m[0])?.[1] ?? m[0]).replace(/\s+/g, " ").trim();
-    const tone = letterTone[state.exec(m[0])?.[1] ?? ""];
-    out.push(...edged(said, width, { text: "● ", tone }, { text: "" }));
+    const said = summary.exec(m[0])?.[1] ?? m[0];
+    out.push(...letterRows(said, width, letterTone[state.exec(m[0])?.[1] ?? ""]));
   }
   const rest = text.replace(notification, "").trim();
   if (rest || out.length === 0) {
     const tone: Tone | undefined = item.status === "refused" ? "error" : undefined;
     out.push(
-      ...edged(
+      ...hung(
         shortened(rest),
         width,
         { text: "❯ ", tone: tone ?? "faint" },

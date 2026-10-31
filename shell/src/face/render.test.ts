@@ -64,9 +64,18 @@ test("a letter rewake delivered shows its summary, not the notification", () => 
   };
   const lines = linesOf(letter, 80);
   expect(text(lines)).toEqual([
-    "● Rewake: main task, 1 new message ↳ Do it (a preview only: run rewake inbox)",
+    "● Rewake: main task, 1 new message",
+    "  ↳ Do it (a preview only: run rewake inbox)",
   ]);
   expect(lines[0]?.band).toBeUndefined();
+  // Narrow, every wrapped row hangs under its text, the preview's under its own.
+  expect(text(linesOf(letter, 24))).toEqual([
+    "● Rewake: main task, 1",
+    "  new message",
+    "  ↳ Do it (a preview",
+    "    only: run rewake",
+    "    inbox)",
+  ]);
 });
 
 const call = (name: string, input: object | string, output?: string, status = "done"): Item => ({
@@ -153,9 +162,11 @@ test("a run of reads, searches and commands folds into one counted line", () => 
   expect(text(render(m, 80, 4))).toEqual(["● Wait…", "  ⎿  $ sleep 5", "", "· Working…"]);
 });
 
-test("a prompt and a letter wrap back to the edge, a letter's dot by its status", () => {
+test("a prompt and a letter wrap under their text, a letter's dot by its status", () => {
   const prompt: Item = { id: "p", kind: "prompt", status: "settled", text: "aaa bbb ccc" };
-  expect(text(linesOf(prompt, 9))).toEqual(["❯ aaa bbb", "ccc"]);
+  expect(text(linesOf(prompt, 9))).toEqual(["❯ aaa bbb", "  ccc"]);
+  const two: Item = { ...prompt, text: "aaa bbb ccc\nddd" };
+  expect(text(linesOf(two, 9))).toEqual(["❯ aaa bbb", "  ccc", "  ddd"]);
   expect(linesOf(prompt, 9)[0]?.spans[0]).toEqual({ text: "❯ ", tone: "faint", gutter: true });
   const letter = (status: string): Item => ({
     id: "l",
@@ -167,7 +178,7 @@ test("a prompt and a letter wrap back to the edge, a letter's dot by its status"
   expect(linesOf(letter("killed"), 9)[0]?.spans[0]?.tone).toBe("gap");
   expect(linesOf(letter("running"), 9)[0]?.spans[0]?.tone).toBeUndefined();
   const long: Item = { ...prompt, text: `${"a\n".repeat(6000)}` };
-  expect(text(linesOf(long, 20))).toContain("… +3500 lines …");
+  expect(text(linesOf(long, 20))).toContain("  … +3500 lines …");
 });
 
 test("a reply's heading, table and quote are drawn as the terminal draws them", () => {
