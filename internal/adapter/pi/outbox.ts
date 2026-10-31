@@ -42,8 +42,6 @@ export const bounds = {
   markers: 16384,
   // A reply's block, cut to its head and tail past it as the face's item is.
   block: 262144,
-  // A tool's input and its output, as the face's item keeps each.
-  field: 65536,
 };
 
 // textBudget is room for an event's text, its other fields aside.
@@ -130,6 +128,13 @@ export class Outbox {
 
   push(event: MirrorEvent) {
     const size = Buffer.byteLength(JSON.stringify(event));
+    // Every text is fitted within an event before it comes here; one that
+    // still is not would pass the batch's cap, so its item stands as lost.
+    if (size > bounds.event) {
+      this.lost++;
+      if (event.id !== undefined) this.push({ kind: "lost", id: event.id });
+      return;
+    }
     const marker = isMarker(event);
     if (event.kind === "input")
       this.unqueue((q) => q.event.kind === "input" && q.event.id === event.id);

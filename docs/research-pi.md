@@ -499,7 +499,8 @@ events on (`internal/adapter/pi/mirror.go`). The extension's side is `mirror.ts`
   prompt steered into a working run carries the run. `agent_start` begins a run (an id of its
   own, kept through pi's retries) and says `working`; `agent_settled` says `idle`. A
   `message_update`'s `text_*`/`thinking_*` are a block's `delta`s and its `settle`, the block's id
-  `<run>.<turnIndex>.<contentIndex>`; `thinking_start` opens the block, so an empty one (a
+  `<run>.<loop>.<turnIndex>.<contentIndex>`: each `agent_start` of a run, a retry's or a
+  continuation's, starts pi's `turnIndex` from 0 again, so the loop counts them; `thinking_start` opens the block, so an empty one (a
   signature only) shows too. `toolcall_start` is the `tool`, its `toolcall_delta`s its `input`,
   sent at most every 100 ms, `toolcall_end` and `tool_execution_start` the whole input;
   `tool_execution_end` is the `result` with its content's text. An assistant `message_end` with
@@ -517,7 +518,8 @@ events on (`internal/adapter/pi/mirror.go`). The extension's side is `mirror.ts`
   pi works, and answers at once: pi's own errors come later, on its screen.
 - **The outbox** keeps the mod's caps, counted in UTF-8 bytes of JSON: batches every 50 ms, one
   in flight, a 5 s deadline; an event 40 KiB, a batch 48 KiB, the outbox 256 KiB with 16 KiB
-  kept for markers, a block 256 KiB with its head and tail, a field 64 KiB. Past them deltas go
+  kept for markers, a block 256 KiB settled in parts, a call's input or output cut to its head and tail with a
+  mark within one event, an event that still passes its cap lost. Past them deltas go
   first, then whole items behind a `lost`; a failed or late batch is counted and a `resync` sent.
   Nothing waits for it, and a throw in the mirror is dropped: pi's work is never held.
 

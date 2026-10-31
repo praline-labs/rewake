@@ -133,10 +133,10 @@ test("a turn streams its prompt, thinking, reply and calls in the face's words",
   expect(events.map((e) => [e.kind, e.id, e.text ?? e.state ?? e.name])).toEqual([
     ["prompt", events[0].id, "look"],
     ["turn", undefined, "working"],
-    ["delta", `${run}.1.0`, ""],
-    ["settle", `${run}.1.0`, ""],
-    ["delta", `${run}.1.1`, "Hi"],
-    ["settle", `${run}.1.1`, "Hi there"],
+    ["delta", `${run}.0.1.0`, ""],
+    ["settle", `${run}.0.1.0`, ""],
+    ["delta", `${run}.0.1.1`, "Hi"],
+    ["settle", `${run}.0.1.1`, "Hi there"],
     ["tool", "c1", "Read"],
     ["input", "c1", '{"file_path":"a"}'],
     ["input", "c1", '{"file_path":"a"}'],
@@ -267,4 +267,54 @@ test("the outbox stays within its bound: deltas go first, then whole items behin
   expect(box.bytes).toBeLessThanOrEqual(bounds.outbox);
   for (let i = 0; i < 20; i++) box.push({ kind: "settle", id: `s${i}`, part: 0, of: 1, text });
   expect(box.bytes).toBeLessThanOrEqual(bounds.outbox);
+});
+
+test("each run pi starts within a turn has blocks of its own, a retry's never settling over an earlier step", () => {
+  const { events, emit } = mirrored();
+  emit("agent_start", {});
+  emit("turn_start", { turnIndex: 0 });
+  emit("message_update", update({ type: "text_end", contentIndex: 0, content: "first" }));
+  // A retryable failure starts pi's loop again, its turns counted from 0.
+  emit("agent_start", {});
+  emit("turn_start", { turnIndex: 0 });
+  emit("message_update", update({ type: "text_end", contentIndex: 0, content: "retried" }));
+  emit("agent_settled", { aborted: false });
+  const settles = events.filter((e) => e.kind === "settle");
+  expect(settles.map((e) => e.text)).toEqual(["first", "retried"]);
+  expect(settles[0].id).not.toBe(settles[1].id);
+  expect(new Set(events.map((e) => e.turn)).size).toBe(1);
+});
+
+test("a long call's input and output stay within an event, and every batch within its cap", () => {
+  const { events, emit } = mirrored();
+  emit("agent_start", {});
+  const content = "x".repeat(60000);
+  emit("tool_execution_start", {
+    toolCallId: "w",
+    toolName: "write",
+    args: { path: "a", content },
+  });
+  emit("tool_execution_end", {
+    toolCallId: "w",
+    result: { content: [{ type: "text", text: "é".repeat(60000) }] },
+    isError: false,
+    durationMs: 1,
+  });
+  for (const e of events)
+    expect(Buffer.byteLength(JSON.stringify(e))).toBeLessThanOrEqual(bounds.event);
+  const { c, posted, answers, fire } = carrier();
+  const box = new Outbox(c);
+  for (const e of events) box.push(e);
+  // An event past the bound is never sent: its item is lost instead.
+  box.push({ kind: "result", id: "big", status: "done", text: "y".repeat(bounds.batch) });
+  for (let i = 0; i < 10; i++) {
+    fire();
+    answers.splice(0).map((answer) => answer(true));
+  }
+  expect(posted.length).toBeGreaterThan(1);
+  for (const batch of posted)
+    expect(Buffer.byteLength(JSON.stringify(batch))).toBeLessThanOrEqual(bounds.batch);
+  const sent = posted.flat();
+  expect(sent.some((e) => e.id === "big" && e.kind === "result")).toBe(false);
+  expect(sent).toContainEqual({ kind: "lost", id: "big" });
 });

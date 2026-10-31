@@ -37,8 +37,11 @@ const origins: Record<string, string> = {
 export class Mirror {
   // on is the hello's answer: rewake's face draws this run.
   on = false;
-  // run names the agent run going on, the face's turn; step is pi's turn in it.
+  // run names the agent run going on, the face's turn; pass counts pi's
+  // loops in it, a retry or a continuation starting its turns again from 0,
+  // and step is pi's turn in that loop.
   private run?: string;
+  private pass = 0;
   private step = 0;
   // reached are the calls this extension's tool_call hook saw: pi's own
   // checks passed, so one that ends without running was refused by a hook.
@@ -73,9 +76,13 @@ export class Mirror {
   }
 
   started() {
-    if (this.run) return;
-    this.run = randomUUID();
     this.step = 0;
+    if (this.run) {
+      this.pass++;
+      return;
+    }
+    this.run = randomUUID();
+    this.pass = 0;
     this.push({ kind: "turn", turn: this.run, state: "working" });
   }
 
@@ -92,7 +99,7 @@ export class Mirror {
   }
 
   private blockId(index: number | undefined) {
-    return `${this.run ?? "run"}.${this.step}.${index ?? 0}`;
+    return `${this.run ?? "run"}.${this.pass}.${this.step}.${index ?? 0}`;
   }
 
   private settle(id: string, block: "text" | "thinking", text: string) {
@@ -111,7 +118,7 @@ export class Mirror {
 
   private toolInput(id: string, name: string, args: unknown) {
     const faced = facedTool(name, args);
-    this.push({ kind: "input", id, text: fit(JSON.stringify(faced.input), bounds.field) });
+    this.push({ kind: "input", id, text: fit(JSON.stringify(faced.input), textBudget) });
   }
 
   streamed(e: Streamed) {
@@ -187,7 +194,7 @@ export class Mirror {
   }
 
   toolEnded(id: string, result: unknown, isError: boolean, ran: boolean, aborted: boolean) {
-    const text = fit(resultText(result), bounds.field);
+    const text = fit(resultText(result), textBudget);
     if (!isError) return this.push({ kind: "result", id, status: "done", text });
     // A call pi's checks let through that never ran was blocked by a hook.
     if (!ran && !aborted && this.reached.has(id))
