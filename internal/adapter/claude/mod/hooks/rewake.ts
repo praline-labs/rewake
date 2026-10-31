@@ -355,10 +355,7 @@ export const register: Register = (on) => {
   serveDialogs(
     on,
     () => load,
-    (mode) => {
-      mirror.moded(mode);
-      band.moded(mode);
-    },
+    (mode) => mirror.moded(mode),
   );
   serveBand(on, band);
 
