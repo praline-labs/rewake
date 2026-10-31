@@ -14,6 +14,7 @@ import { FaceView } from "./face/view.tsx";
 import { layoutOf } from "./layout.ts";
 import { type PaneTerminal, paneHooks } from "./pane.ts";
 import { briefs, mainPane, type Pane, paneOf, show, workers } from "./panes.ts";
+import { PathRow } from "./path.tsx";
 import { mainStrip, markOf, Strip, stripOf } from "./strip.tsx";
 import type { Theme } from "./theme.ts";
 
@@ -109,6 +110,12 @@ export function Window(props: { env: Env; view: () => View }) {
       <box flexDirection="column" width="100%" height="100%" visible={!props.env.closing()}>
         <box flexDirection="row" height={rowHeight()}>
           <box flexDirection="column" visible={shown(mainPane)} width={widthOf(mainPane)}>
+            <PathRow
+              state={mainStrip}
+              width={widthOf(mainPane)}
+              theme={theme}
+              pick={() => paneHooks.pressed("main")}
+            />
             <box {...padded(mainPane.id, widthOf(mainPane))}>
               <pane_terminal
                 id="main"
@@ -139,6 +146,12 @@ export function Window(props: { env: Env; view: () => View }) {
             <For each={workers()}>
               {(pane) => (
                 <box visible={shown(pane)} flexDirection="column" width={widthOf(pane)}>
+                  <PathRow
+                    state={() => stripOf(pane.id)}
+                    width={widthOf(pane)}
+                    theme={theme}
+                    pick={() => paneHooks.pressed(pane.id)}
+                  />
                   <box {...padded(pane.id, widthOf(pane))}>
                     {/* The face is laid over a box of the widget's own size: an
                         absolute layer starts at the padding's edge, and over
@@ -178,13 +191,15 @@ export function Window(props: { env: Env; view: () => View }) {
             </For>
             <Show when={briefsShown() && !props.env.closing()}>
               <box flexDirection="column" width={lay().worker}>
-                <box {...padded(briefs, lay().worker)}>
+                {/* The briefs have no top row: they take its place, so their
+                    strip stands where a pane's does. */}
+                <box {...padded(briefs, lay().worker)} height={height() + 1}>
                   <BriefsView
                     rewake={props.env.rewake}
                     room={props.env.room}
                     theme={theme}
                     width={Math.max(lay().worker - 2, 1)}
-                    height={height()}
+                    height={height() + 1}
                     active={onBriefs}
                     choose={() => paneHooks.pressed(briefs)}
                   />

@@ -319,22 +319,52 @@ and the bar under the worker's.
 - **Selection.** A selection over these rows is one colour, a pane's (`selectionBg`/`selectionFg`,
   the stand-in grey where the terminal said no foreground), not each part in its own colour.
 
+## The pane
+
+Each fact around a pane is in one place, alike for Claude Code and pi (the owner, October 31, 2026,
+brief 60): where the session works on the row above the pane, who it is and how it stands on the
+strip under it, and its room work at its input. The program has two rows less.
+
+```
+~/.rewake2-worktrees/rewake-44a66b/wt-5928f6 · ⎇ brief60-pane-facts         the top row
+  … the session's own screen, native or drawn by rewake's face …
+  ── ⏵⏵ auto mode ──────────────── brief 57 3/6 ─                             the face's input rule
+  ⏵⏵ auto mode on (shift+tab to cycle) · brief 57 3/6                         or Claude Code's hint line
+write-claude (code) · working · <model> low · 230k/1M · 90% 42m · 5h 37% · 7d 9%   the strip
+```
+
+- **The top row** (`shell/src/path.tsx`): the room view's `path`, the directory the session works in
+  now, with the person's home as `~`, then ` · ⎇ ` and the branch checked out there. Claude Code's
+  mod sends `$.session.cwd()` with every sample ([claude.md](claude.md#telemetry)), which a worktree
+  entry moves and a `cd` in Bash does not; pi's directory is the one it started in, its record's
+  `cwd`. A worker whose row is not read yet shows its space's checkout. Too long, the path loses whole
+  directories from its start, `…/worktrees/wt-3836d0`, then letters of its last; too narrow for both,
+  the branch stays, cut at its end. A press on it chooses the pane. The briefs, shown in a worker's
+  place, take the row into their own height, so their strip stands where a pane's does.
+- **At the input**: the run's room work, the room view's `work` (`internal/core/work`): its open
+  briefs with their ticks, `brief 57 3/6`, and the reports it waits on, `⧗ 3`; nothing when there is
+  none. On the face's input rule ([face.md](face.md#the-look)) and at the end of Claude Code's hint
+  line ([claude.md](claude.md#the-band)), the same text. A narrow row cuts it first, so it is never
+  the only place: the briefs view, `rewake brief show` and `rewake inbox --awaited` say the same.
+- **The person's own status line** is off in every Claude Code run rewake starts
+  ([claude.md](claude.md#the-cache-ttl)): the strip says what it said.
+
 ## The strip
 
 The row under each pane, main's and every worker's, a shell's row, is one line drawn by the shell
-(`shell/src/strip.tsx`), the same for every harness; the program has one row less. Main's strip,
+(`shell/src/strip.tsx`), the same for every harness. Main's strip,
 asked for by the owner on October 26, 2026, reads main's own row of the same listing; main has no
 type, so its name stands alone.
 
 ```
-write-claude (code) · working · ⎇ wt-fd7596 · <model> low thinking · 230k/1M · 90% 42m
+write-claude (code) · working · <model> low thinking · 230k/1M · 90% 42m · 5h 37% · 7d 9%
 ```
 
 - **What it says**: the session and its type, on a pane drawn by rewake's face as on a native one,
   the activity as the label of its verdict, which
   `rewake list` shows too, after `dev rewake` or `dev native` on a dev worker's strip (`working`, `waiting for a permission`, `waiting at a dialog`, `idle`,
   `compacting`, with ` (stale)` once it is not current; nothing while it is `unknown`;
-  [session-state.md](session-state.md#activity)), the branch, the model and
+  [session-state.md](session-state.md#activity)), the model and
   effort, with `thinking` after them while the harness says thinking is on — Claude Code's
   session setting, pi's level for a model with reasoning — and nothing when it is off or not told, the context as used and window, and the prompt cache. A value rewake does
   not know is left out; a window without a measure reads `–/<window>`. The model reads as the
@@ -346,7 +376,10 @@ write-claude (code) · working · ⎇ wt-fd7596 · <model> low thinking · 230k/
   percent of the last request and the time the cache has left — `90% 42m`, `90% <1m`, `90% —` once
   it expired, `90%` where the harness gives no expiry; left out where it gives no cache. The time is
   counted from `expiresAt` on the shell's own clock every five seconds, so it ticks down between
-  polls.
+  polls. The account's limits follow, `5h 37%` and `7d 9%`, the room view's `limits`: the share used
+  of the five-hour and seven-day windows Claude Code's mod reads from `$.session.usage()`
+  ([claude.md](claude.md#telemetry)); left out where the harness reports none, as off a
+  subscription, and on pi, which reports none.
 - **Where it comes from**: telemetry is shown only to a verified main, and the shell is main's
   terminal and no session, so it proves itself by the process tree: it passes `--wrapper <pid>`,
   the pid of main's wrapper, and the command takes it only for the `servicePid` of a main
@@ -354,16 +387,16 @@ write-claude (code) · working · ⎇ wt-fd7596 · <model> low thinking · 230k/
   (`asMain` in the view). Then the view carries the sessions' telemetry and marks main's own row
   `own`, which is main's strip; without the proof — before main's record is found — the sessions
   come bare and the strip reads `main` alone, and the next call proves it.
-- **The branch** is in the view: the space record's `checkout.branch` for a worker in a checkout
-  of its own (made by its launch, or entered); otherwise the branch checked out where the session
-  started, read from `HEAD` by the command itself on each call (no process, so no cache), a
-  detached head as its first seven characters.
-- **Narrow**: the line fits the pane. Too long, it leaves out the model and effort, then the cache,
-  then the branch; what still does not fit is cut with `…`. The name, the activity and the context
-  stay.
+- **The branch**, on the top row, is in the view: the space record's `checkout.branch` while the
+  session works in its space's checkout (made by its launch, or entered); otherwise the branch
+  checked out at its `path`, read from `HEAD` by the command itself on each call (no process, so no
+  cache), a detached head as its first seven characters.
+- **Narrow**: the line fits the pane. Too long, it leaves out the model and effort, then the seven
+  days' limit, then the five hours', then the cache; what still does not fit is cut with `…`. The
+  name, the activity and the context stay.
 - **Colours**: the name bold in its program's colour, main's or the workers'; the rest in the terminal's own
-  foreground with faint separators; the context in the palette's green, yellow or red from 50% and
-  80% filled; the cache in the palette's cyan while it is warm, faint once it expired.
+  foreground with faint separators; the context and each limit in the palette's green, yellow or
+  red from 50% and 80% used; the cache in the palette's cyan while it is warm, faint once it expired.
 - **How fresh**: a Claude Code worker's mod samples after each main-loop step's response, at a
   turn's end and with each heartbeat ([claude.md](claude.md#telemetry)), so the context grows
   through a long turn; pi publishes on its own events. The poll adds up to a second.

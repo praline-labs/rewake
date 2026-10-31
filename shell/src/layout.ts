@@ -1,15 +1,16 @@
 // The screen's measures (docs/shell.md, "The bar"): wide, main's column and
-// the worker's side by side, each ending with its status and the hints or the
-// bar, so both end on the bottom row; narrow, the shown pane's column ends
-// with its status, and the hints and, while workers exist, the bar take the
-// bottom lines across the whole width.
+// the worker's side by side, each a pane between its top row and its status
+// and ending with the hints or the bar, so both end on the bottom row;
+// narrow, the shown pane's column is its top row, the pane and its status,
+// and the hints and, while workers exist, the bar take the bottom lines
+// across the whole width.
 export type Layout = {
   wide: boolean;
   // main and worker are the widths of the columns.
   main: number;
   worker: number;
   rowHeight: number;
-  // height is a pane's, the strip's row under it taken off.
+  // height is a pane's, its top row and the strip's row under it taken off.
   height: number;
 };
 
@@ -27,6 +28,6 @@ export function layoutOf(
     main: wide ? width - 1 - right : width,
     worker: wide ? right : width,
     rowHeight,
-    height: Math.max(rowHeight - (wide ? 2 : 1), 1),
+    height: Math.max(rowHeight - (wide ? 3 : 2), 1),
   };
 }
