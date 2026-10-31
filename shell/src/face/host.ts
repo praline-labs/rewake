@@ -12,7 +12,7 @@ import {
   type ToFace,
 } from "../../../face/src/messages.ts";
 import type { PermissionMode } from "../../../face/src/mirror.gen.ts";
-import { faultOf } from "./check.ts";
+import { taken } from "./check.ts";
 
 export type FaceState = {
   lines: FaceLine[];
@@ -91,12 +91,14 @@ export class FaceHost {
     worker.addEventListener("messageerror", () => {
       if (this.worker === worker) this.failed("the face sent what does not read");
     });
-    // What the face posts is held to the contract before anything reads it.
+    // What the face posts is held to the contract, and only the shell's own
+    // copy of it is read.
     worker.addEventListener("message", (event: MessageEvent<unknown>) => {
       if (this.worker !== worker) return;
-      const fault = faultOf(event.data);
-      if (fault) return this.failed(`the face sent what the contract does not allow: ${fault}`);
-      this.heard(event.data as FromFace);
+      const got = taken(event.data);
+      if ("fault" in got)
+        return this.failed(`the face sent what the contract does not allow: ${got.fault}`);
+      this.heard(got.message);
     });
     this.pinged = this.ponged = 0;
     this.pingedAt = Date.now();

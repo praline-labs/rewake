@@ -314,8 +314,10 @@ contract between it and the shell is `face/src/messages.ts`, the shell importing
 and a face of another contract says so under the input and draws nothing. The shell holds every
 message a face posts to the contract (`shell/src/face/check.ts`: the kinds, each field's type, the
 tones and marks it knows, the sizes of strings, the ranges of numbers, at most 2000 rows of 4096
-spans) and stops a face that sends anything else as one that threw, so no face makes the shell's
-thread throw. The face takes no lease or lock and writes nothing; one build per room is the Go
+spans) and stops a face that sends anything else as one that threw; what it keeps is its own copy,
+built from the fields it checked, since a structured clone keeps an array's own extra properties
+(a list with its own `slice` threw in Solid's `Index`; found in review). So no face makes the
+shell's thread throw. The face takes no lease or lock and writes nothing; one build per room is the Go
 image's ([rules/state.md](rules/state.md#the-builds-identity)).
 
 Which copy runs, read once from the shell's own environment when it starts:

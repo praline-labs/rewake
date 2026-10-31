@@ -7,6 +7,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { FaceHost, type FaceState } from "./host.ts";
 
+// Solid's client build, whose Index takes a copy of a list on its update as
+// the shell's renderer does; a test resolves solid-js to its server build.
+const client = "solid-js/dist/solid.js";
+const { createRoot, createSignal, indexArray }: typeof import("solid-js") = await import(client);
+
 const worker = new URL("../../../face/src/worker.ts", import.meta.url).pathname;
 const dirs: string[] = [];
 const ends: (() => void)[] = [];
@@ -344,4 +349,38 @@ self.onmessage = (e) => real({ data: e.data.kind === "start" ? { ...e.data, cont
   await Bun.sleep(200);
   expect(host.state.lines).toEqual([]);
   expect(host.state.link).toBe("connecting");
+});
+
+test("rows and spans a face sends reach the shell only as its own copies", async () => {
+  const dir = scratch();
+  // A structured clone keeps an array's own properties: a row list and a
+  // span list each carrying a `slice` of their own, which Solid's Index calls.
+  const url = faceFile(
+    dir,
+    `self.onmessage = (e) => {
+  if (e.data.kind !== "start") return;
+  const spans = Object.assign([{ text: "x", extra: 1 }], { slice: 0 });
+  const lines = Object.assign([{ spans, extra: 2 }], { slice: 0 });
+  self.postMessage({ kind: "lines", lines, turn: "idle", link: "live", prompts: false, extra: 3 });
+};\n`,
+  );
+  const { host, until } = hosted(url);
+  host.start();
+  const drawn = await until((s) => s.link === "live");
+  // Drawn as FaceView draws rows and a row's spans, with Index, which takes a
+  // copy of a list on its update.
+  createRoot((dispose) => {
+    ends.push(dispose);
+    for (const list of [drawn.lines, drawn.lines[0]?.spans ?? []]) {
+      const [items, setItems] = createSignal<unknown[]>([]);
+      const mapped = indexArray(items, () => null);
+      mapped();
+      setItems(list);
+      mapped();
+    }
+  });
+  expect(drawn.lines).toEqual([{ spans: [{ text: "x" }] }]);
+  expect(Object.keys(drawn.lines)).toEqual(["0"]);
+  expect(Object.keys(drawn.lines[0]?.spans ?? {})).toEqual(["0"]);
+  expect(host.running).toBe(true);
 });

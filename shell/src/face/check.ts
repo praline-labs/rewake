@@ -1,9 +1,13 @@
 // The shell's hold on what a face posts (docs/face.md, "Hot reload"): the
 // face is code of its own (face/), REWAKE_FACE may run one from another
 // checkout, and what it posts reaches the shell's thread and view.tsx. A
-// message is let through only as the contract shapes it, within bounds, so
-// no face can make the shell's thread throw; anything else stops the face as
-// one that threw.
+// message is let through only as the contract shapes it, within bounds, and
+// only as a copy the shell builds from the fields it checked: what a face
+// sent itself never reaches the shell's tree, since a structured clone keeps
+// an array's own extra properties (a `slice` of its own threw in Solid's
+// Index; found in review). Anything else stops the face as one that threw.
+import type { FaceLine, FromFace, Link, Mark, Span, Tone } from "../../../face/src/messages.ts";
+import type { PermissionMode } from "../../../face/src/mirror.gen.ts";
 
 // The bounds are far past what a face draws — a frame is the pane's rows —
 // and keep a broken one from handing the shell's thread unbounded work.
@@ -15,76 +19,144 @@ const maxName = 4096;
 const maxCopy = 4 * 1024 * 1024;
 const maxCount = 1_000_000;
 
-const tones = new Set(["text", "faint", "code", "accent", "done", "error", "gap"]);
-const marks = new Set(["added", "removed"]);
-const links = new Set(["connecting", "live", "lost"]);
-const modes = new Set(["default", "plan", "edits", "auto", "bypass", "unasked"]);
+const tones = new Set<unknown>(["text", "faint", "code", "accent", "done", "error", "gap"]);
+const marks = new Set<unknown>(["added", "removed"]);
+const links = new Set<unknown>(["connecting", "live", "lost"]);
+const modes = new Set<unknown>(["default", "plan", "edits", "auto", "bypass", "unasked"]);
 
 type Fields = Record<string, unknown>;
 
+// Fault is what the contract does not allow, thrown from deep in a message
+// and caught once in taken.
+class Fault extends Error {}
+
 const isObject = (v: unknown): v is Fields =>
   typeof v === "object" && v !== null && !Array.isArray(v);
+const need = (ok: boolean, what: string) => {
+  if (!ok) throw new Fault(what);
+};
 const text = (v: unknown, max: number) => typeof v === "string" && v.length <= max;
-const maybe = (v: unknown, ok: (v: unknown) => boolean) => v === undefined || ok(v);
-const flag = (v: unknown) => maybe(v, (x) => typeof x === "boolean");
 const count = (v: unknown) =>
-  maybe(v, (x) => Number.isInteger(x) && (x as number) >= 0 && (x as number) <= maxCount);
+  Number.isInteger(v) && (v as number) >= 0 && (v as number) <= maxCount;
 
-function spanFault(s: unknown): string | undefined {
-  if (!isObject(s)) return "a span that is no object";
-  if (!text(s.text, maxText)) return "a span's text";
-  if (!maybe(s.tone, (v) => tones.has(v as string))) return "a span's tone";
-  if (!maybe(s.mark, (v) => marks.has(v as string))) return "a span's mark";
-  if (!maybe(s.glow, (v) => typeof v === "number" && v >= 0 && v <= 1)) return "a span's glow";
-  for (const key of ["bold", "italic", "underline", "blink", "gutter", "selected"] as const)
-    if (!flag(s[key])) return `a span's ${key}`;
-  if (!maybe(s.join, (v) => text(v, maxName))) return "a span's join";
-  if (!count(s.cell) || !count(s.code)) return "a span's cell or code";
-  return undefined;
+// listOf reads an array by its indexes alone, into a new one.
+function listOf<T>(v: unknown, max: number, what: string, item: (v: unknown) => T): T[] {
+  need(Array.isArray(v) && v.length <= max, what);
+  const from = v as unknown[];
+  const out: T[] = [];
+  for (let i = 0; i < from.length; i++) out.push(item(from[i]));
+  return out;
 }
 
-function lineFault(l: unknown): string | undefined {
-  if (!isObject(l)) return "a row that is no object";
-  if (!Array.isArray(l.spans) || l.spans.length > maxSpans) return "a row's spans";
-  for (const s of l.spans) {
-    const fault = spanFault(s);
-    if (fault) return fault;
+const flags = ["bold", "italic", "underline", "blink", "gutter", "selected"] as const;
+
+function spanOf(s: unknown): Span {
+  need(isObject(s), "a span that is no object");
+  const f = s as Fields;
+  need(text(f.text, maxText), "a span's text");
+  const span: Span = { text: f.text as string };
+  if (f.tone !== undefined) {
+    need(tones.has(f.tone), "a span's tone");
+    span.tone = f.tone as Tone;
   }
-  if (!flag(l.band) || !flag(l.lit)) return "a row's band or light";
-  if (!maybe(l.part, (v) => text(v, maxName))) return "a row's part";
-  return undefined;
+  if (f.mark !== undefined) {
+    need(marks.has(f.mark), "a span's mark");
+    span.mark = f.mark as Mark;
+  }
+  if (f.glow !== undefined) {
+    need(typeof f.glow === "number" && f.glow >= 0 && f.glow <= 1, "a span's glow");
+    span.glow = f.glow as number;
+  }
+  for (const key of flags) {
+    if (f[key] === undefined) continue;
+    need(typeof f[key] === "boolean", `a span's ${key}`);
+    span[key] = f[key] as boolean;
+  }
+  if (f.join !== undefined) {
+    need(text(f.join, maxName), "a span's join");
+    span.join = f.join as string;
+  }
+  for (const key of ["cell", "code"] as const) {
+    if (f[key] === undefined) continue;
+    need(count(f[key]), "a span's cell or code");
+    span[key] = f[key] as number;
+  }
+  return span;
 }
 
-// faultOf names what in a message from a face the contract does not allow,
-// or nothing when it is one the shell may take.
-export function faultOf(m: unknown): string | undefined {
-  if (!isObject(m)) return "a message that is no object";
-  switch (m.kind) {
+function lineOf(l: unknown): FaceLine {
+  need(isObject(l), "a row that is no object");
+  const f = l as Fields;
+  const line: FaceLine = { spans: listOf(f.spans, maxSpans, "a row's spans", spanOf) };
+  for (const key of ["band", "lit"] as const) {
+    if (f[key] === undefined) continue;
+    need(typeof f[key] === "boolean", "a row's band or light");
+    line[key] = f[key] as boolean;
+  }
+  if (f.part !== undefined) {
+    need(text(f.part, maxName), "a row's part");
+    line.part = f.part as string;
+  }
+  return line;
+}
+
+function messageOf(m: unknown): FromFace {
+  need(isObject(m), "a message that is no object");
+  const f = m as Fields;
+  switch (f.kind) {
     case "lines": {
-      if (!Array.isArray(m.lines) || m.lines.length > maxRows) return "its rows";
-      for (const l of m.lines) {
-        const fault = lineFault(l);
-        if (fault) return fault;
-      }
-      if (!text(m.turn, maxName)) return "its turn";
-      if (!links.has(m.link as string)) return "its link";
-      if (typeof m.prompts !== "boolean") return "its prompts";
-      if (!maybe(m.mode, (v) => modes.has(v as string))) return "its mode";
-      return undefined;
+      const lines = listOf(f.lines, maxRows, "its rows", lineOf);
+      need(text(f.turn, maxName), "its turn");
+      need(links.has(f.link), "its link");
+      need(typeof f.prompts === "boolean", "its prompts");
+      need(f.mode === undefined || modes.has(f.mode), "its mode");
+      const message: FromFace = {
+        kind: "lines",
+        lines,
+        turn: f.turn as string,
+        link: f.link as Link,
+        prompts: f.prompts as boolean,
+      };
+      if (f.mode !== undefined) message.mode = f.mode as PermissionMode;
+      return message;
     }
     case "error":
-      return text(m.text, maxText) ? undefined : "an error's text";
+      need(text(f.text, maxText), "an error's text");
+      return { kind: "error", text: f.text as string };
     case "copy":
-      return text(m.text, maxCopy) && text(m.what, maxName) ? undefined : "a copy";
-    case "answer":
-      return text(m.id, maxName) &&
-        typeof m.ok === "boolean" &&
-        maybe(m.detail, (v) => text(v, maxText))
-        ? undefined
-        : "an answer";
+      need(text(f.text, maxCopy) && text(f.what, maxName), "a copy");
+      return { kind: "copy", text: f.text as string, what: f.what as string };
+    case "answer": {
+      need(
+        text(f.id, maxName) &&
+          typeof f.ok === "boolean" &&
+          (f.detail === undefined || text(f.detail, maxText)),
+        "an answer",
+      );
+      const answer: FromFace = { kind: "answer", id: f.id as string, ok: f.ok as boolean };
+      if (f.detail !== undefined) answer.detail = f.detail as string;
+      return answer;
+    }
     case "pong":
-      return Number.isSafeInteger(m.n) && (m.n as number) >= 0 ? undefined : "a pong";
+      need(Number.isSafeInteger(f.n) && (f.n as number) >= 0, "a pong");
+      return { kind: "pong", n: f.n as number };
     default:
-      return "a message of no kind the shell knows";
+      throw new Fault("a message of no kind the shell knows");
   }
 }
+
+// taken is a message from a face as the shell's own copy, built from the
+// fields the contract names, or the fault that stops the face.
+export function taken(m: unknown): { message: FromFace } | { fault: string } {
+  try {
+    return { message: messageOf(m) };
+  } catch (err) {
+    if (err instanceof Fault) return { fault: err.message };
+    throw err;
+  }
+}
+
+export const faultOf = (m: unknown): string | undefined => {
+  const t = taken(m);
+  return "fault" in t ? t.fault : undefined;
+};
