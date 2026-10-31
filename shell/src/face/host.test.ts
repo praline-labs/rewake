@@ -52,14 +52,22 @@ function hosted(url: string, path = "/nowhere.sock", timing = {}) {
 
 // A wrapper's mirror socket serving one snapshot of one prompt, or of the
 // replies given; send writes a change to the face connected last.
-function mirror(dir: string, text: string, replies: string[] = []) {
+function mirror(
+  dir: string,
+  text: string,
+  replies: string[] = [],
+  begin: object = {},
+  own: object[] = [],
+) {
   const path = join(dir, "m.sock");
-  const items = replies.length
-    ? replies.map((text, i) => ({ id: `r${i}`, kind: "text", status: "settled", text }))
-    : [{ id: "p", kind: "prompt", status: "settled", text }];
+  const items = own.length
+    ? own
+    : replies.length
+      ? replies.map((text, i) => ({ id: `r${i}`, kind: "text", status: "settled", text }))
+      : [{ id: "p", kind: "prompt", status: "settled", text }];
   const lines = [
     { op: "hello", v: 1, inputs: ["prompt"] },
-    { op: "begin", items: items.length, dropped: 0, turn: "idle" },
+    { op: "begin", items: items.length, dropped: 0, turn: "idle", ...begin },
     ...items.map((item) => ({ op: "item", item })),
     { op: "end" },
   ];
@@ -161,6 +169,18 @@ test("a notch cuts the rows the last tick painted; a change after it waits for i
     "● line 49 NEW",
   );
   await until((s) => shownText(s).includes("● line 49 NEW"));
+});
+
+// Review of fceb120: a face that connects mid-turn counted the turn in its
+// snapshot as the one before, and said Waiting… with no tokens to the end.
+test("a face that connects mid-turn shows the phase and the tokens of the turn it joined", async () => {
+  const dir = scratch();
+  const reply = { id: "r", turn: "t1", kind: "text", status: "streaming", text: "x".repeat(400) };
+  const wrapper = mirror(dir, "", [], { turn: "working", since: Date.now() - 20_000 }, [reply]);
+  const { host, until } = hosted(worker, wrapper.path);
+  host.start();
+  const line = (s: FaceState) => shownText(s).find((l) => l.includes("Writing…")) ?? "";
+  await until((s) => line(s).includes("Writing…") && line(s).includes("tokens"));
 });
 
 test("a face that throws, as it loads or on a message, is stopped with its error shown", async () => {

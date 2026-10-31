@@ -290,11 +290,7 @@ function connect() {
                 changed = model.apply(line) || changed;
                 if (line.op === "turn") turned(was, model.turn);
               }
-              if (line.op === "end") {
-                link = "live";
-                if (model.turn === "working")
-                  progress.reset(model.since ?? Date.now(), model.items);
-              }
+              if (line.op === "end") link = "live";
             }
             at = pending.indexOf("\n");
           }
