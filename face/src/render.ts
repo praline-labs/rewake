@@ -271,6 +271,16 @@ export function statusOf(model: FaceModel, clock: Clock, width = 80): FaceLine[]
   return status ? [...queued, blank(), status, blank()] : [...queued, blank()];
 }
 
+// pinned is a frame's rows: the conversation from the pane's top and the
+// rows that move with the clock at its bottom, the gap between them blank,
+// so the turn's line stays just above the input whatever the conversation's
+// length, as Claude Code keeps its own (the owner, October 31, 2026); a
+// conversation that fills the pane leaves no gap.
+export function pinned(body: FaceLine[], status: FaceLine[], height: number): FaceLine[] {
+  const gap = Math.max(height - body.length - status.length, 0);
+  return [...body, ...Array.from({ length: gap }, blank), ...status];
+}
+
 // bodyOf is the conversation's rows from the top, at least its last want of
 // them, and whether they are all of them: only the tail is laid out, so a
 // full model costs what the screen shows. Nothing in them moves with the

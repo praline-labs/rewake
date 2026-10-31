@@ -267,7 +267,11 @@ decision, October 30, 2026: first the same look, customised later), as read from
   that watched it. The conversation always keeps one blank row above the input's top rule, so
   a reply never sits on the input: under the turn's line too, the working one, `Done` or
   `Stopped`, as Claude Code draws it (the owner, October 31, 2026: the conversation, the turn's
-  line, a blank row, the rule).
+  line, a blank row, the rule). The turn's line, with the prompts waiting over it, is pinned to
+  the pane's bottom, just above that blank row, whatever the conversation's length: a short
+  conversation still starts at the top, and the rows between it and the turn's line stay empty
+  (`pinned` in `face/src/render.ts`; the owner, October 31, 2026: pinned to the bottom, as Claude
+  Code keeps it).
 
 A row breaks at spaces, a word cut only when it is wider than the row; what still passes the
 pane's edge — a mark or a gutter on a pane narrower than it — is cut there; and escapes and control

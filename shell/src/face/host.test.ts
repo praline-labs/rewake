@@ -92,6 +92,22 @@ test("a notch cuts the rows the last tick painted; a change after it waits for i
   await until((s) => shownText(s).includes("● line 49 NEW"));
 });
 
+// The owner, October 31, 2026: the turn's line is pinned to the pane's
+// bottom, over the blank row above the input, under a short conversation too.
+test("a face keeps the turn's line at its bottom under a short conversation", async () => {
+  const dir = scratch();
+  const wrapper = mirror(dir, "say hi", [], { took: 31_000, at: Date.now() });
+  const { host, until } = hosted(worker, wrapper.path);
+  host.start();
+  const drawn = await until((s) => shownText(s).some((l) => l.startsWith("Done in 31s")));
+  const text = shownText(drawn);
+  expect(text).toHaveLength(24);
+  expect(text[0]).toBe("❯ say hi");
+  expect(text.slice(1, 22).every((l) => l === "")).toBe(true);
+  expect(text[22]).toStartWith("Done in 31s");
+  expect(text[23]).toBe("");
+});
+
 // Review of fceb120: a face that connects mid-turn counted the turn in its
 // snapshot as the one before, and said Waiting… with no tokens to the end.
 test("a face that connects mid-turn shows the phase and the tokens of the turn it joined", async () => {

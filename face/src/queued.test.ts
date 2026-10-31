@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import type { FaceLine } from "./messages.ts";
 import type { Item } from "./mirror.gen.ts";
 import { FaceModel } from "./model.ts";
-import { fill, render } from "./render.ts";
+import { bodyOf, fill, pinned, render, statusOf } from "./render.ts";
 
 const text = (lines: FaceLine[]) =>
   lines.map((l) =>
@@ -70,4 +70,27 @@ test("a conversation shorter than the pane is drawn from its top", () => {
   const rows = fill([{ spans: [{ text: "❯ hi" }] }], 6, 3);
   expect(text(rows)).toEqual(["❯ hi", "", ""]);
   expect(rows.every((r) => r.spans.map((s) => s.text).join("").length === 6)).toBe(true);
+});
+
+// The owner, October 31, 2026: the turn's line is pinned to the bottom, as
+// Claude Code keeps its own: on a short conversation it stands just above the
+// blank row over the input, the gap above it empty; a long one leaves none.
+test("the turn's line stays at the pane's bottom under a short conversation", () => {
+  const m = new FaceModel();
+  m.apply({ op: "begin", items: 0, turn: "idle", since: 0, took: 31000, at: 0 });
+  m.apply({ op: "end" });
+  m.apply({ op: "add", item: { id: "p", kind: "prompt", status: "done", turn: "t", text: "hi" } });
+  const clock = { now: 0, worked: m.worked };
+  const frame = (height: number) =>
+    text(pinned(bodyOf(m, 40).rows, statusOf(m, clock, 40), height));
+  const short = frame(8);
+  expect(short).toHaveLength(8);
+  expect(short[0]).toBe("❯ hi");
+  expect(short.slice(1, 6)).toEqual(["", "", "", "", ""]);
+  expect(short[6]).toStartWith("  Done in 31s");
+  expect(short[7]).toBe("");
+  const tall = frame(2);
+  expect(tall).toHaveLength(4);
+  expect(tall.slice(0, 2)).toEqual(["❯ hi", ""]);
+  expect(tall[2]).toStartWith("  Done in 31s");
 });

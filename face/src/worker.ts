@@ -19,7 +19,7 @@ import { FaceModel } from "./model.ts";
 import { partOf } from "./parts.ts";
 import { Flash, Pointer, pointAt, type View } from "./pointer.ts";
 import { Tracker } from "./progress.ts";
-import { blinked, bodyOf, fill, statusOf } from "./render.ts";
+import { blinked, bodyOf, fill, pinned, statusOf } from "./render.ts";
 import { Scroll } from "./scroll.ts";
 import { copyOf, highlighted, lit } from "./select.ts";
 import { Ticker } from "./ticker.ts";
@@ -82,15 +82,15 @@ const clockAt = (now: number): Clock => ({
 });
 
 // draw is the tick's frame: the whole conversation, laid out again when it
-// changed (the full model costs a few ms), and the turn's rows under it,
-// every row from the same clock.
+// changed (the full model costs a few ms), and the turn's rows pinned under
+// it at the pane's bottom, every row from the same clock.
 function draw(now: number) {
   try {
     if (stale) laid = bodyOf(model, width, Infinity, unfold).rows;
     stale = false;
     if (anchor) scroll.top = topFor(laid, anchor) ?? scroll.top;
     anchor = undefined;
-    const rows = [...laid, ...statusOf(model, clockAt(now), width)];
+    const rows = pinned(laid, statusOf(model, clockAt(now), width), height);
     const prompts = model.inputs.includes("prompt");
     frame = { rows, now, turn: model.turn, link, prompts, mode: model.mode };
     paint();
