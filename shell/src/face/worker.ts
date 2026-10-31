@@ -191,7 +191,7 @@ function pointed(type: Pointing, x: number, y: number, focused: boolean) {
   switch (type) {
     case "down":
       stopEdge();
-      pointer.down(at, x, y, focused);
+      pointer.down(viewOf(), x, y, focused);
       break;
     case "drag":
       dragged = { x, y };
@@ -204,7 +204,7 @@ function pointed(type: Pointing, x: number, y: number, focused: boolean) {
         const text = copyOf(frame.rows, gesture.selected);
         if (text.trim()) post({ kind: "copy", text, what: "selection" });
       } else if (gesture) {
-        const key = frame.rows[gesture.clicked.row]?.part;
+        const key = frame.rows[gesture.clicked]?.part;
         const part = key === undefined ? undefined : partOf(model.items, key);
         if (part) post({ kind: "copy", text: part.text, what: part.what });
       }

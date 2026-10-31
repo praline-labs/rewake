@@ -286,6 +286,16 @@ test("a drag over the face copies the selection's text and a click the part's so
   expect(copies[1]).toBe("second");
   await until((s) => !s.lines[first]?.spans.some((sp) => sp.selected));
   expect(host.state.copied?.text).toContain("sent the reply (6 chars) via OSC 52");
+  // The blank above the short conversation is no part: nothing lit, nothing
+  // copied by a click there.
+  expect(first).toBeGreaterThan(0);
+  host.mouse("move", 4, 0, true);
+  host.mouse("down", 4, 0, true);
+  host.mouse("up", 4, 0, true);
+  host.mouse("down", 4, second, true);
+  host.mouse("up", 4, second, true);
+  await until(() => copies.at(-1) === "second" && copies.length > 2);
+  expect(copies.slice(2)).toEqual(["second"]);
   // The pointer over a reply lights its rows, and leaving the face puts them out.
   host.mouse("move", 4, first, false);
   await until((s) => s.lines[first]?.lit === true);

@@ -26,24 +26,30 @@ export function pointAt(x: number, y: number, view: View): Point {
   return { row: view.top + n, col: Math.min(Math.max(x, 0), Math.max(view.width - 1, 0)) };
 }
 
-export type Gesture = { selected: Selection } | { clicked: Point } | undefined;
+// A click names the conversation's row it was on, the row the pointer lit.
+export type Gesture = { selected: Selection } | { clicked: number } | undefined;
 
 export class Pointer {
   selection: Selection | undefined;
   // over is the pointer with no button pressed, to light the part under it.
   over: { x: number; y: number } | undefined;
-  private pressed: { at: Point; x: number; y: number; focused: boolean } | undefined;
+  private pressed:
+    | { at: Point; row: number | undefined; x: number; y: number; focused: boolean }
+    | undefined;
   private dragging = false;
 
   get busy() {
     return this.pressed !== undefined;
   }
 
-  down(at: Point, x: number, y: number, focused: boolean) {
+  // down presses on a point of the view: a drag selects from the cell under
+  // it, the nearest row's past the rows shown, while a click is only on a row
+  // shown, as the light is.
+  down(view: View, x: number, y: number, focused: boolean) {
     this.selection = undefined;
     this.over = undefined;
     this.dragging = false;
-    this.pressed = { at, x, y, focused };
+    this.pressed = { at: pointAt(x, y, view), row: rowAt(y, view), x, y, focused };
   }
 
   // drag moves the selection's end; it says whether there is one.
@@ -55,7 +61,7 @@ export class Pointer {
     return true;
   }
 
-  // up ends the press: a selection to copy, a click on a cell of a focused
+  // up ends the press: a selection to copy, a click on a row of a focused
   // face, or nothing.
   up(): Gesture {
     const p = this.pressed;
@@ -65,7 +71,7 @@ export class Pointer {
       this.dragging = false;
       return this.selection && { selected: this.selection };
     }
-    return p.focused ? { clicked: p.at } : undefined;
+    return p.focused && p.row !== undefined ? { clicked: p.row } : undefined;
   }
 
   move(x: number, y: number) {

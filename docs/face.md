@@ -260,8 +260,10 @@ terminal clipboard settings if paste fails`, `sent the code block (18 chars) …
   cannot go above the terminal's first row, so where the face's body starts there, as natively in
   a fullscreen pane, scrolling up while selecting is the wheel's.
 - **A click copies the part it is on** (`shell/src/face/parts.ts`): every row names its part, and
-  the text is taken from the model when the click comes. A reply's row copies the reply's markdown
-  source; a code block's, its code alone; a call's head, its input as the head shows it (Bash's
+  the text is taken from the model when the click comes. A click takes the row it was pressed on,
+  the row the light shows, so a click off the conversation's rows — the blank above a short one —
+  copies nothing, though a drag from there starts at its first row. A reply's row copies the
+  reply's markdown source; a code block's, its code alone; a call's head, its input as the head shows it (Bash's
   command, a file's path, a pattern, a URL, a query, a skill) or else the input as given; a folded
   run's line, its calls' inputs one a line; an open run's `⎿` row, its latest call's; an output's
   rows, the call's output; an edit's red rows its old lines and green rows its new ones; a write's
