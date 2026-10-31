@@ -59,7 +59,7 @@ let posted = "";
 // The turn's time as this face saw it, never from the model: a face that
 // connected mid-turn does not know when it began.
 let since: number | undefined;
-let worked: { took: number; at: number } | undefined;
+let worked: { took: number; at: number; stopped: boolean } | undefined;
 // progress follows the working turn from tick to tick.
 const progress = new Tracker();
 
@@ -71,7 +71,10 @@ function turned(from: string, to: string) {
     worked = undefined;
     progress.reset(since, model.items);
   } else if (from === "working" && since !== undefined && to === "idle") {
-    worked = { took: Date.now() - since, at: Date.now() };
+    // A turn that ends on a failure or an interrupt the session told stopped.
+    const last = model.items.at(-1);
+    const stopped = last?.kind === "notice" && last.status === "error";
+    worked = { took: Date.now() - since, at: Date.now(), stopped };
     since = undefined;
   } else since = undefined;
 }

@@ -140,9 +140,11 @@ test("a run of reads, searches and commands folds into one counted line", () => 
     call("Bash", { command: "cat a | wc -l" }, "1"),
   );
   expect(text(render(m, 80, 100))).toEqual([
-    "  Searched for 1 pattern, read 1 file, listed 1 directory, ran 1 shell command",
+    "  Read 1 file",
     "",
     "∴ Thinking",
+    "",
+    "  Searched for 1 pattern, listed 1 directory, ran 1 shell command",
     "",
     "● done",
     "",
@@ -159,7 +161,7 @@ test("a run of reads, searches and commands folds into one counted line", () => 
   // While the turn works, its last run says what it does and on what.
   m.turn = "working";
   m.items.push(call("Bash", { command: "sleep 5", description: "Wait" }, undefined, "running"));
-  expect(text(render(m, 80, 4))).toEqual(["● Wait…", "  ⎿  $ sleep 5", "", "· Working…"]);
+  expect(text(render(m, 80, 4))).toEqual(["● Wait…", "  ⎿  $ sleep 5", "", "◜ Working…"]);
 });
 
 test("a prompt and a letter wrap under their text, a letter's dot by its status", () => {
@@ -252,16 +254,40 @@ test("every row the face draws covers the pane's width, however narrow", () => {
 
 test("the turn's line says it works, and how long the last one took", () => {
   const said = (line: FaceLine | undefined) => text(line ? [line] : []);
-  expect(said(turnLine("working", { now: 75_000, since: 3_000 }))[0]).toMatch(
-    /^. \p{L}+… \(1m 12s\)$/u,
+  const progress = { phase: "tool-use", tokens: 0, tool: "Bash" } as const;
+  expect(said(turnLine("working", { now: 75_000, since: 3_000, progress }))[0]).toMatch(
+    /^. Running Bash… \(1m 12s\)$/u,
   );
   // A face that came mid-turn does not know its start, nor how long it took.
   expect(said(turnLine("working", { now: 75_000 }))[0]).toMatch(/^. Working…$/);
   const at = new Date(2026, 9, 30, 19, 5).getTime();
-  expect(said(turnLine("idle", { now: 0, worked: { took: 37_400, at } }))[0]).toMatch(
-    /^ {2}\p{L}+ for 37s · done 7:05 PM$/u,
+  expect(said(turnLine("idle", { now: 0, worked: { took: 37_400, at } }))[0]).toBe(
+    "  Done in 37s · 7:05 PM",
+  );
+  expect(said(turnLine("idle", { now: 0, worked: { took: 10_000, at, stopped: true } }))[0]).toBe(
+    "  Stopped after 10s · 7:05 PM",
   );
   expect(turnLine("idle", { now: 0 })).toBeUndefined();
+});
+
+// Brief 53: a thinking block that came before later calls of a run sat after
+// them; it ends the run and sits where it came.
+test("thinking sits where it came, between two folded runs", () => {
+  const m = model(
+    call("Read", { file_path: "/a" }),
+    { id: "th", kind: "thinking", status: "settled", text: "hm" },
+    call("Bash", { command: "make" }, "", "error"),
+    { id: "n", kind: "notice", status: "error", text: "Error: aborted" },
+  );
+  expect(text(render(m, 60, 100))).toEqual([
+    "  Read 1 file",
+    "",
+    "∴ Thinking",
+    "",
+    "  Ran 1 shell command",
+    "",
+    "  ⎿  Error: aborted",
+  ]);
 });
 
 // Under a call the classifier let run the terminal program says so; a call

@@ -1,8 +1,8 @@
 // Runs of reads, searches, listings and commands folded into one line, as
 // Claude Code's terminal folds them (docs/face.md, "The look"): "Searched for
 // 1 pattern, read 2 files, ran 1 shell command", the numbers bold. Text, a
-// prompt or another tool ends a run; thinking and notices do not, and show
-// after it.
+// prompt, thinking or another tool ends a run, so each sits where it came; a
+// notice does not, and shows after it.
 
 import type { FaceLine, Span } from "./messages.ts";
 import type { Item } from "./mirror.gen.ts";
@@ -77,7 +77,7 @@ export function entriesOf(items: Item[], working: boolean): Entry[] {
       run ??= { calls: [], open: false };
       run.calls.push(item);
       if (item.status === "running") run.open = true;
-    } else if (run && (item.kind === "thinking" || item.kind === "notice")) {
+    } else if (run && item.kind === "notice") {
       held.push(item);
     } else {
       close();

@@ -144,7 +144,7 @@ decision, October 30, 2026: first the same look, customised later), as read from
   bold, a failed call counted too. Bash is read by the first word of each part of its pipeline:
   `grep`, `find`, `rg`… search, `cat`, `head`, `wc`… read, `ls`, `tree`, `du` list, `echo` and its
   like count for nothing, any other word makes it a shell command; reads count files, each once.
-  A call a gap lost leaves its mark under the run's line. Text, a prompt or another call ends a run; thinking and a notice do not, and show after it;
+  A call a gap lost leaves its mark under the run's line. Text, a prompt, thinking or another call ends a run, so each sits where it came; a notice does not, and shows after it;
   ToolSearch and TodoWrite are not drawn. While a call of the run is running, or the run is the
   last thing a working turn did, it is open: a faint `●`, the running command's description or
   what the run is doing (`Reading 1 file…`), and under `⎿` the path, pattern or command of its
@@ -166,23 +166,27 @@ decision, October 30, 2026: first the same look, customised later), as read from
   dropped, at most ten rows; any other output its first three rows (four when only one more),
   a line of JSON pretty-printed, then a faint `… +N lines`; an empty one `(No output)` for Bash,
   `(No content)` for the rest.
-- **Turn**: under the conversation, a glyph that turns a frame every 120 ms, through its six frames
-  and back, and a verb rewake picks for the turn (`Mulling… (12s)`) in Claude Code's orange, the
-  verb pulsing towards a lighter shade and back every two seconds, the time faint; after it, a faint
-  `Brewed for 37s · done 7:01 AM` hung at two columns. A running call's dot, and an open run's,
-  shows and hides every 600 ms. While the turn works the faint bracket also holds an arrow and an
-  estimate of what streamed back, then the thinking, `Mulling… (12s · ↓ 1.2k tokens · thinking)`
-  (`face/src/progress.ts`, on the one clock): `↑` while a request is out with nothing back
-  yet — the turn just began, or every call of a step ended — and `↓` while a reply, a thinking block
-  or a call's input streams or a call runs; the turn's items are those that name its turn, so a prompt queued while
-  it works neither ends it nor resets the count; the estimate is the characters of the turn's replies,
-  thinking and calls' inputs over four, the shown count moving towards it every 50 ms by 3 under a
-  gap of 70, by 15% of the gap (8 at least) under 200, by 50 past, at once past 2000, written `622`,
-  `1.2k`. The thinking says `thinking` while a block streams, `still thinking` from 10 s, `thinking
-  more` from 20 s, `thinking some more` from 30 s, `deep in thought` from 45 s, and once the block
-  ends, after it showed two seconds at least, `thought for Ns` for two, never while a call runs.
-  The bracket shows once there are tokens, a thinking or 16 s; what does not fit the row beside
-  the verb goes, the tokens first, then the time, then the thinking, as natively.
+- **Turn**: under the conversation, rewake's own line, not Claude Code's (the owner's decision,
+  October 31, 2026, brief 53): an arc `◜ ◝ ◞ ◟` that turns a frame every 120 ms in the terminal's
+  bright green (the `accent` tone, the person's palette colour 10, so the shell draws it), and
+  beside it what the turn does by its phase, in plain words, no verb picked at random:
+  `Thinking…` while a thinking block streams, `Writing…` while the reply does, `Running Bash…` while
+  a call runs (the call's name as its head is drawn), `Waiting…` while a request is out with
+  nothing back, then the faint bracket `(12s · ↓ 340 tokens)`; after the turn, a faint
+  `Done in 31s · 7:52 AM` hung at two columns, or `Stopped after 10s · 7:52 AM` when the turn ended
+  on a failure or an interrupt the session told (its red notice). The glyph set in use is `arc`
+  in `face/src/turn.ts`; two others stay beside it, unused, for a switch: the dot orbit
+  `⠁ ⠂ ⠄ ⡀ ⢀ ⠠ ⠐ ⠈` and the pulse `· • ● •`. A running call's dot, and an open run's,
+  shows and hides every 600 ms. The bracket also holds an arrow and an
+  estimate of what streamed back (`face/src/progress.ts`, on the one clock): `↑` while a request
+  is out with nothing back yet — the turn just began, or every call of a step ended — and `↓`
+  while a reply, a thinking block or a call's input streams or a call runs; the turn's items are
+  those that name its turn, so a prompt queued while it works neither ends it nor resets the
+  count; the estimate is the characters of the turn's replies, thinking and calls' inputs over
+  four, the shown count moving towards it every 50 ms by 3 under a gap of 70, by 15% of the gap
+  (8 at least) under 200, by 50 past, at once past 2000, written `622`, `1.2k`. The bracket
+  shows once there are tokens or 16 s; what does not fit the row beside the text goes, the tokens
+  first, then the time.
 - **Rules**: the two around the input in Claude Code's grey for them, not the text's colour. The
   top one carries the session's permission mode at its left, `⏵⏵ auto mode`, `⏸ plan mode`,
   `⏵⏵ accept edits`, `⏵⏵ bypass permissions`, `⏵⏵ don't ask`, in native's colour for it (auto's
@@ -209,7 +213,7 @@ have.
 
 Everything the face shows moves on one clock, as the terminal program's own animation frame does
 (`face/src/ticker.ts`): a change from the mirror or a resize only marks the face to draw,
-and the next tick, every 50 ms, lays it out with the glyph, the verb's glow, a running dot's blink
+and the next tick, every 50 ms, lays it out with the glyph, a running dot's blink
 and the turn's time all read from that tick's one moment; a tick that draws what was posted last
 posts nothing, and the clock stops while nothing changes or moves. A scroll alone is painted at
 once (below, "The scroll"). Seen live before it
@@ -217,7 +221,7 @@ once (below, "The scroll"). Seen live before it
 a change painted 33 ms after it came and a separate one-second timer painted the time, its phase
 the worker's start, while the glyph turned on the wall clock's second and the time on the turn's,
 so a delta's paint showed one moved and not the other; and the glyph turned once a second where
-the native one turns every 120 ms beside a pulsing verb and a blinking dot.
+the native one turns every 120 ms beside a blinking dot.
 
 ## The scroll
 

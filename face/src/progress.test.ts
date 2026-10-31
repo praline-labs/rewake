@@ -88,37 +88,36 @@ test("the estimate is a quarter of what streamed back, smoothed tick by tick", (
   expect(count(1234)).toBe("1.2k");
 });
 
-// The bracket shows once there are tokens or thinking, else after 16 s, and
-// a narrow line drops the tokens before the time.
-test("the working line shows its time, tokens and thinking as the width allows", () => {
-  expect(said(10_000, { phase: "requesting", tokens: 0 })).toMatch(/^. \p{L}+…$/u);
+// The bracket shows once there are tokens, else after 16 s, and a narrow line
+// drops the tokens before the time.
+test("the working line shows its time and tokens as the width allows", () => {
+  expect(said(10_000, { phase: "requesting", tokens: 0 })).toMatch(/^. Waiting…$/u);
   expect(said(17_000, { phase: "requesting", tokens: 0 })).toMatch(/… \(17s\)$/);
   expect(said(2_000, { phase: "responding", tokens: 38 })).toMatch(/… \(2s · ↓ 38 tokens\)$/);
   expect(said(2_000, { phase: "requesting", tokens: 38 })).toMatch(/\(2s · ↑ 38 tokens\)$/);
-  expect(
-    said(2_000, {
-      phase: "thinking",
-      tokens: 38,
-      thinking: { kind: "thinking", text: "thinking" },
-    }),
-  ).toMatch(/\(2s · ↓ 38 tokens · thinking\)$/);
   expect(said(2_000, { phase: "responding", tokens: 38 }, 28)).toMatch(/… \(2s\)$/);
-  expect(said(2_000, { phase: "responding", tokens: 38 }, 16)).toMatch(/^. \p{L}+…$/u);
+  expect(said(2_000, { phase: "responding", tokens: 38 }, 16)).toMatch(/^. Writing…$/u);
 });
 
-// Thinking says so while it streams, then how long it took for two seconds
-// once it has shown for two.
-test("a thinking block's word turns into how long it took", () => {
+// The text follows the phase; a running call is named as the face heads it.
+test("the working text is by the phase, a running call by its name", () => {
+  const words = (progress: Parameters<typeof said>[1]) => said(0, progress).slice(2);
+  expect(words({ phase: "thinking", tokens: 0 })).toBe("Thinking…");
+  expect(words({ phase: "responding", tokens: 0 })).toBe("Writing…");
+  expect(words({ phase: "requesting", tokens: 0 })).toBe("Waiting…");
+  expect(words({ phase: "tool-use", tokens: 0, tool: "Bash" })).toBe("Running Bash…");
+  expect(words({ phase: "tool-input", tokens: 0, tool: "Bash" })).toBe("Running Bash…");
   const t = new Tracker();
   t.reset(0);
-  const thinking: Item = { id: "t", kind: "thinking", status: "streaming", text: "h" };
-  const after: Item[] = [
-    prompt,
-    { ...thinking, status: "settled" },
-    { id: "r", kind: "text", status: "streaming", text: "x" },
-  ];
-  expect(t.at([prompt, thinking], 0).thinking?.text).toBe("thinking");
-  expect(t.at([prompt, thinking], 12_000).thinking?.text).toBe("still thinking");
-  expect(t.at(after, 12_500).thinking?.text).toBe("thought for 13s");
-  expect(t.at(after, 14_600).thinking).toBeUndefined();
+  const call: Item = { id: "c", kind: "tool", name: "Grep", status: "running", text: "{}" };
+  expect(t.at([prompt, call], 0).tool).toBe("Search");
+  expect(t.at([prompt, { ...call, status: "done" }], 0).tool).toBeUndefined();
+});
+
+// The glyph turns through the arc on the clock's one now, in the accent tone.
+test("the glyph is the arc, turning every 120 ms", () => {
+  const glyph = (now: number) => turnLine("working", { now, since: 0 })?.spans[0];
+  expect(glyph(0)).toEqual({ text: "◜ ", tone: "accent" });
+  expect(glyph(120)?.text).toBe("◝ ");
+  expect(glyph(480)?.text).toBe("◜ ");
 });

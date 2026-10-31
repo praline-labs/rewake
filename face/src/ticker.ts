@@ -1,6 +1,6 @@
 // The face's one clock (docs/face.md, "One clock"): a change only marks the
 // face dirty, and the next tick paints everything the face shows at once —
-// the stream's text, a call's start and end, the glyph, the verb's glow, a
+// the stream's text, a call's start and end, the glyph, a
 // running dot's blink and the turn's time, all from that tick's one now. Seen
 // live before it: each painted on its own moment, the glyph on the wall
 // clock's second, the time on the turn's, a delta 33 ms after it came.

@@ -8,7 +8,7 @@ import { RGBA } from "@opentui/core";
 import { createEffect, For, Index, Show } from "solid-js";
 import type { FaceLine, Pointing, Span, Tone } from "../../../face/src/messages.ts";
 import type { PermissionMode } from "../../../face/src/mirror.gen.ts";
-import { mix, type Theme } from "../theme.ts";
+import type { Theme } from "../theme.ts";
 import {
   draftOf,
   escapeFace,
@@ -32,8 +32,11 @@ const indexed = (i: number, theme: Theme) => {
   return said ? colour(said) : RGBA.fromIndex(i);
 };
 
-// toneOf is a tone's colour: the faint and default ones the person's, the
-// others the fixed ones of the look rewake's face repeats.
+// brightGreen is the palette's bright green, the working line's colour.
+const brightGreen = 10;
+
+// toneOf is a tone's colour: the faint, accent and default ones the person's,
+// the others the fixed ones of the look rewake's face repeats.
 const toneOf = (tone: Tone | undefined, theme: Theme): RGBA => {
   switch (tone) {
     case "faint":
@@ -41,7 +44,7 @@ const toneOf = (tone: Tone | undefined, theme: Theme): RGBA => {
     case "code":
       return colour(theme.look.code);
     case "accent":
-      return colour(theme.look.spinner);
+      return indexed(brightGreen, theme);
     case "done":
       return colour(theme.look.success);
     case "error":
@@ -52,13 +55,6 @@ const toneOf = (tone: Tone | undefined, theme: Theme): RGBA => {
       return RGBA.defaultForeground();
   }
 };
-
-// fgOf is a span's colour: its tone's, the working verb's moved towards its
-// lighter shade by its glow.
-const fgOf = (span: Span, theme: Theme): RGBA =>
-  span.glow && span.tone === "accent"
-    ? colour(mix(theme.look.spinner, theme.look.shimmer, span.glow))
-    : toneOf(span.tone, theme);
 
 const backgroundOf = (theme: Theme) =>
   theme.background ? colour(theme.background) : RGBA.defaultBackground();
@@ -88,7 +84,7 @@ export function FaceRow(props: { line: FaceLine; theme: Theme }) {
         {(span) => (
           <span
             style={{
-              fg: fgOf(span, props.theme),
+              fg: toneOf(span.tone, props.theme),
               bg: under(span),
               bold: span.bold,
               italic: span.italic,

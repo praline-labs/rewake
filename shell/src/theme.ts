@@ -57,10 +57,6 @@ export type Look = {
   warning: string;
   // code is inline code in a reply.
   code: string;
-  // spinner is the working line's glyph and verb, and shimmer the lighter
-  // shade its verb pulses towards.
-  spinner: string;
-  shimmer: string;
   // rule is the grey of the rules around the input and of the title on them.
   rule: string;
   // plan and edits are the names of plan mode and of accepting edits under
@@ -83,8 +79,6 @@ export const looks: { dark: Look; light: Look } = {
     error: "#ff6b80",
     warning: "#ffc107",
     code: "#b1b9f9",
-    spinner: "#d77757",
-    shimmer: "#eb9f7f",
     rule: "#888888",
     plan: "#48968c",
     edits: "#af87ff",
@@ -98,8 +92,6 @@ export const looks: { dark: Look; light: Look } = {
     error: "#ab2b3f",
     warning: "#966c1e",
     code: "#5769f7",
-    spinner: "#d77757",
-    shimmer: "#f59575",
     rule: "#999999",
     plan: "#006666",
     edits: "#8700ff",

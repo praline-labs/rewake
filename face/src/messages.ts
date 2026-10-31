@@ -26,8 +26,8 @@ export type Span = {
   italic?: boolean;
   underline?: boolean;
   mark?: Mark;
-  // glow is how far an accent moves towards its lighter shade, 0 to 1: the
-  // working verb's pulse.
+  // glow was the working verb's pulse towards a lighter shade, 0 to 1: kept
+  // in the contract, which the shell holds, and no longer drawn or sent.
   glow?: number;
   // blink is a running call's dot, shown and hidden on the face's clock.
   blink?: boolean;
