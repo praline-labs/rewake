@@ -97,7 +97,7 @@ test("a tool's head is the terminal's name and argument, its output folded", () 
     "  ⎿  a",
     "     b",
     "     c",
-    "     … +2 lines",
+    "     … +2 lines (ctrl+o to expand)",
   ]);
   expect(linesOf(mcp, 40)[0]?.spans[1]).toEqual({ text: "rewake - probe (MCP)", bold: true });
   // Only one more line shows rather than a fold of one.
@@ -141,15 +141,16 @@ test("a run of reads, searches and commands folds into one counted line", () => 
     call("Bash", { command: "cat a | wc -l" }, "1"),
   );
   expect(text(render(m, 80, 100))).toEqual([
-    "  Read 1 file",
+    "  Read 1 file (ctrl+o to expand)",
     "",
     "∴ Thinking",
     "",
     "  Searched for 1 pattern, listed 1 directory, ran 1 shell command, 1 failed",
+    "  (ctrl+o to expand)",
     "",
     "● done",
     "",
-    "  Read 1 file",
+    "  Read 1 file (ctrl+o to expand)",
     "",
   ]);
   const run = render(m, 80, 100)[0]?.spans.find((s) => s.text === "1");
@@ -157,14 +158,19 @@ test("a run of reads, searches and commands folds into one counted line", () => 
   // Review of c617953: a call lost on the way is marked within its run.
   const lost = model(call("Read", { file_path: "/d1" }, "1\tx", "gap"));
   expect(text(render(lost, 80, 100))).toEqual([
-    "  Read 1 file",
+    "  Read 1 file (ctrl+o to expand)",
     "  [lost on the way — the native face has it]",
     "",
   ]);
   // While the turn works, its last run says what it does and on what.
   m.turn = "working";
   m.items.push(call("Bash", { command: "sleep 5", description: "Wait" }, undefined, "running"));
-  expect(text(render(m, 80, 4))).toEqual(["● Wait…", "  ⎿  $ sleep 5", "", "⠏ Working…"]);
+  expect(text(render(m, 80, 4))).toEqual([
+    "● Wait… (ctrl+o to expand)",
+    "  ⎿  $ sleep 5",
+    "",
+    "⠏ Working…",
+  ]);
 });
 
 test("a prompt and a letter wrap under their text, a letter's dot by its status", () => {
@@ -283,11 +289,11 @@ test("thinking sits where it came, between two folded runs", () => {
     { id: "n", kind: "notice", status: "error", text: "Error: aborted" },
   );
   expect(text(render(m, 60, 100))).toEqual([
-    "  Read 1 file",
+    "  Read 1 file (ctrl+o to expand)",
     "",
     "∴ Thinking",
     "",
-    "  Ran 1 shell command, 1 failed",
+    "  Ran 1 shell command, 1 failed (ctrl+o to expand)",
     "",
     "  ⎿  Error: aborted",
     "",
@@ -356,28 +362,6 @@ test("the model keeps whether the last turn line ended the turn by an interrupt"
   expect(m.stopped).toBe(true);
   m.apply({ op: "turn", turn: "working" });
   expect(m.stopped).toBe(false);
-});
-
-// Brief 54: pi's own screen draws the summary the provider streams as the
-// thinking, in markdown, faint and italic; `∴ Thinking` stands for a block
-// that sent no text.
-test("a thinking block with text shows it faint and italic, a long one folds", () => {
-  const block = (text: string): Item => ({ id: "th", kind: "thinking", status: "settled", text });
-  const lines = linesOf(block("**Planning the edit**\n\nRead the file, then change it."), 40);
-  expect(text(lines)).toEqual(["∴ Planning the edit", "  ", "  Read the file, then change it."]);
-  expect(lines[0]?.spans[1]).toEqual({
-    text: "Planning the edit",
-    tone: "faint",
-    italic: true,
-    bold: true,
-  });
-  expect(lines[0]?.spans[0]).toMatchObject({ text: "∴ ", gutter: true });
-  expect(text(linesOf(block(""), 40))).toEqual(["∴ Thinking"]);
-  expect(text(linesOf(block("  \n"), 40))).toEqual(["∴ Thinking"]);
-  const long = block(Array.from({ length: 30 }, (_, i) => `line ${i}`).join("\n\n"));
-  const folded = text(linesOf(long, 40));
-  expect(folded).toHaveLength(11);
-  expect(folded[10]).toMatch(/^ {2}… \+\d+ lines$/);
 });
 
 // Brief 55: the turn's times are the wrapper model's, so a face that

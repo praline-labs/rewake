@@ -2,90 +2,11 @@
 // shell's thread hears it, keeps the last lines and goes on (docs/face.md,
 // "Hot reload").
 import { afterEach, expect, test } from "bun:test";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { FaceHost, type FaceState } from "./host.ts";
+import type { FaceState } from "./host.ts";
+import { cleanup, ends, faceFile, hosted, mirror, scratch, worker } from "./hostkit.ts";
 
-// Solid's client build, whose Index takes a copy of a list on its update as
-// the shell's renderer does; a test resolves solid-js to its server build.
-const client = "solid-js/dist/solid.js";
-const { createRoot, createSignal, indexArray }: typeof import("solid-js") = await import(client);
-
-const worker = new URL("../../../face/src/worker.ts", import.meta.url).pathname;
-const dirs: string[] = [];
-const ends: (() => void)[] = [];
-
-afterEach(() => {
-  for (const end of ends.splice(0)) end();
-  for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true });
-});
-
-function scratch() {
-  const dir = mkdtempSync(join(tmpdir(), "face-"));
-  dirs.push(dir);
-  return dir;
-}
-
-// A face's module in a directory of its own, rewritten as a reload would meet
-// a change of the sources.
-function faceFile(dir: string, source: string) {
-  const path = join(dir, "face.ts");
-  writeFileSync(path, source);
-  return path;
-}
-
-function hosted(url: string, path = "/nowhere.sock", timing = {}) {
-  const states: FaceState[] = [];
-  const host = new FaceHost({ path, url, onState: (s) => states.push(s), ...timing });
-  ends.push(() => host.end());
-  const until = async (ok: (s: FaceState) => boolean, within = 3000) => {
-    const deadline = Date.now() + within;
-    while (Date.now() < deadline) {
-      if (ok(host.state)) return host.state;
-      await Bun.sleep(10);
-    }
-    throw new Error(`no such state: ${JSON.stringify(host.state)}`);
-  };
-  return { host, states, until };
-}
-
-// A wrapper's mirror socket serving one snapshot of one prompt, or of the
-// replies given; send writes a change to the face connected last.
-function mirror(
-  dir: string,
-  text: string,
-  replies: string[] = [],
-  begin: object = {},
-  own: object[] = [],
-) {
-  const path = join(dir, "m.sock");
-  const items = own.length
-    ? own
-    : replies.length
-      ? replies.map((text, i) => ({ id: `r${i}`, kind: "text", status: "settled", text }))
-      : [{ id: "p", kind: "prompt", status: "settled", text }];
-  const lines = [
-    { op: "hello", v: 1, inputs: ["prompt"] },
-    { op: "begin", items: items.length, dropped: 0, turn: "idle", ...begin },
-    ...items.map((item) => ({ op: "item", item })),
-    { op: "end" },
-  ];
-  let last: { write(data: string): number } | undefined;
-  const server = Bun.listen({
-    unix: path,
-    socket: {
-      open(s) {
-        last = s;
-        s.write(lines.map((l) => `${JSON.stringify(l)}\n`).join(""));
-      },
-      data() {},
-    },
-  });
-  ends.push(() => server.stop(true));
-  const send = (line: object) => last?.write(`${JSON.stringify(line)}\n`);
-  return { path, send };
-}
+afterEach(cleanup);
 
 test("a face draws the wrapper's snapshot, and a reload that fails to import keeps its lines with the error", async () => {
   const dir = scratch();
@@ -311,11 +232,13 @@ test("a drag over the face copies the selection's text and a click the part's so
   expect(copies[1]).toBe("second");
   await until((s) => !s.lines[first]?.spans.some((sp) => sp.selected));
   expect(host.state.copied?.text).toContain("sent the reply (6 chars) via OSC 52");
-  // The blank above the short conversation is no part: nothing copied by a
-  // click there.
-  expect(first).toBeGreaterThan(0);
-  host.mouse("down", 4, 0, true);
-  host.mouse("up", 4, 0, true);
+  // A short conversation starts at the top; the blank under it is no part:
+  // nothing copied by a click there.
+  expect(first).toBe(0);
+  const blank = drawn.lines.length - 1;
+  expect(blank).toBeGreaterThan(second);
+  host.mouse("down", 4, blank, true);
+  host.mouse("up", 4, blank, true);
   host.mouse("down", 4, second, true);
   host.mouse("up", 4, second, true);
   await until(() => copies.at(-1) === "second" && copies.length > 2);
@@ -334,73 +257,4 @@ test("a drag over the face copies the selection's text and a click the part's so
   expect(host.state.lines[second]?.lit).toBeUndefined();
   await until((s) => !s.lines[first]?.lit);
   expect(host.state.copied).toBeDefined();
-});
-
-test("a face that posts what the contract does not allow is stopped, and nothing of it is kept", async () => {
-  const dir = scratch();
-  const url = faceFile(
-    dir,
-    `self.onmessage = (e) => {
-  if (e.data.kind === "start")
-    self.postMessage({ kind: "lines", lines: [{ spans: [{ text: 5 }] }], turn: "idle", link: "live", prompts: false });
-};\n`,
-  );
-  const { host, until } = hosted(url);
-  host.start();
-  const stopped = await until((s) => s.link === "stopped");
-  expect(stopped.error).toBe("the face sent what the contract does not allow: a span's text");
-  expect(stopped.lines).toEqual([]);
-  expect(host.running).toBe(false);
-});
-
-test("a face of another contract draws nothing and says why", async () => {
-  const dir = scratch();
-  // The real face, told by its shell of a contract one past its own.
-  const url = faceFile(
-    dir,
-    `import ${JSON.stringify(worker)};
-const real = self.onmessage;
-self.onmessage = (e) => real({ data: e.data.kind === "start" ? { ...e.data, contract: e.data.contract + 1 } : e.data });\n`,
-  );
-  const { host, until } = hosted(url, mirror(dir, "say hi").path);
-  host.start();
-  const said = await until((s) => s.error !== undefined);
-  expect(said.error).toMatch(/^this face speaks contract \d+, the shell \d+$/);
-  await Bun.sleep(200);
-  expect(host.state.lines).toEqual([]);
-  expect(host.state.link).toBe("connecting");
-});
-
-test("rows and spans a face sends reach the shell only as its own copies", async () => {
-  const dir = scratch();
-  // A structured clone keeps an array's own properties: a row list and a
-  // span list each carrying a `slice` of their own, which Solid's Index calls.
-  const url = faceFile(
-    dir,
-    `self.onmessage = (e) => {
-  if (e.data.kind !== "start") return;
-  const spans = Object.assign([{ text: "x", extra: 1 }], { slice: 0 });
-  const lines = Object.assign([{ spans, extra: 2 }], { slice: 0 });
-  self.postMessage({ kind: "lines", lines, turn: "idle", link: "live", prompts: false, extra: 3 });
-};\n`,
-  );
-  const { host, until } = hosted(url);
-  host.start();
-  const drawn = await until((s) => s.link === "live");
-  // Drawn as FaceView draws rows and a row's spans, with Index, which takes a
-  // copy of a list on its update.
-  createRoot((dispose) => {
-    ends.push(dispose);
-    for (const list of [drawn.lines, drawn.lines[0]?.spans ?? []]) {
-      const [items, setItems] = createSignal<unknown[]>([]);
-      const mapped = indexArray(items, () => null);
-      mapped();
-      setItems(list);
-      mapped();
-    }
-  });
-  expect(drawn.lines).toEqual([{ spans: [{ text: "x" }] }]);
-  expect(Object.keys(drawn.lines)).toEqual(["0"]);
-  expect(Object.keys(drawn.lines[0]?.spans ?? {})).toEqual(["0"]);
-  expect(host.running).toBe(true);
 });

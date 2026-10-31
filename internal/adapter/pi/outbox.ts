@@ -17,14 +17,15 @@ export type MirrorEvent = {
     | "turn"
     | "notice"
     | "lost"
-    | "resync";
+    | "resync"
+    | "taken";
   id?: string;
   turn?: string;
   block?: "text" | "thinking";
   text?: string;
   origin?: string;
   name?: string;
-  status?: "done" | "error" | "refused";
+  status?: "done" | "error" | "refused" | "queued";
   state?: "working" | "idle";
   part?: number;
   of?: number;

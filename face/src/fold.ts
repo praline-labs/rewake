@@ -180,13 +180,15 @@ const hang = (rows: Span[][], first: Span, rest: Span): FaceLine[] =>
 // runLines is a run's rows: a finished run one faint line, an open one its
 // dot, the running command's description or what it is doing, and what the
 // latest call works on. A run the person opened shows its line alone, its
-// calls drawn under it (render.ts), each with its own mark of a loss.
+// calls drawn under it (render.ts), each with its own mark of a loss. hint
+// follows the line: how to open it, or to fold it back.
 export function runLines(
   run: { calls: Item[]; open: boolean },
   width: number,
   opened = false,
+  hint?: string,
 ): FaceLine[] {
-  const lines = drawnRun(run, width, opened);
+  const lines = drawnRun(run, width, opened, hint);
   return !opened && run.calls.some((c) => c.status === "gap") ? [...lines, lostLine] : lines;
 }
 
@@ -200,10 +202,13 @@ function drawnRun(
   run: { calls: Item[]; open: boolean },
   width: number,
   opened: boolean,
+  hint?: string,
 ): FaceLine[] {
   const pad = { text: "  " };
+  const hinted = (spans: Span[]): Span[] =>
+    hint ? [...spans, { text: ` ${hint}`, tone: "faint" }] : spans;
   if (!run.open)
-    return parted(hang(wrapSpans(said(run.calls, "done"), width - 2), pad, pad), run.calls);
+    return parted(hang(wrapSpans(hinted(said(run.calls, "done")), width - 2), pad, pad), run.calls);
   const last = run.calls[run.calls.length - 1];
   const running = [...run.calls].reverse().find((c) => c.status === "running" && c.name === "Bash");
   const description = running && field(inputOf(running), "description");
@@ -218,7 +223,7 @@ function drawnRun(
       ];
   // The dot is red once a call of the run failed, as the terminal program's.
   const dot: Span = { text: "● ", tone: run.calls.some(failed) ? "error" : "faint", blink: true };
-  const out = parted(hang(wrapSpans(head, width - 2), dot, pad), run.calls);
+  const out = parted(hang(wrapSpans(hinted(head), width - 2), dot, pad), run.calls);
   if (last && !opened) {
     const hint = wrapSpans([{ text: hintOf(last), tone: "faint" }], width - 5)[0] ?? [];
     // A click on it copies what the latest call works on (parts.ts).

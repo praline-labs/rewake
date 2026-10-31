@@ -1,6 +1,7 @@
 // The face's mirror of a pi session, run by go test (worktree_tool_test.go).
 import { expect, test } from "bun:test";
-import { facePrompt, Mirror, serveMirror } from "./mirror.ts";
+import { facePrompt } from "./faced.ts";
+import { Mirror, serveMirror } from "./mirror.ts";
 import { bounds, type Carrier, type MirrorEvent, Outbox } from "./outbox.ts";
 import { facedTool, resultText } from "./toolmap.ts";
 

@@ -66,9 +66,16 @@ function permitRows(item: Item): Span[][] | undefined {
 // cutRow is the faint row that counts the lines a folded part leaves out, or
 // the lines an opened one shows past its fold; a click on it opens or closes
 // the part. Where everything is open nothing is counted.
+// It says how: ctrl+o opens everything, as the terminal program says on its
+// own cut rows, and a click folds back what a click opened.
 function cutRow(more: number, open: boolean, view: Opened): Span[] | undefined {
   if (more <= 0 || (open && view.all)) return undefined;
-  return [{ text: `… ${open ? "−" : "+"}${more} lines`, tone: "faint" }];
+  return [
+    {
+      text: open ? `… −${more} lines (click to fold)` : `… +${more} lines (ctrl+o to expand)`,
+      tone: "faint",
+    },
+  ];
 }
 
 function toolLines(item: Item, width: number, view: Opened): FaceLine[] {
@@ -219,22 +226,46 @@ function cachedLinesOf(item: Item, width: number, view: Opened): FaceLine[] {
 const blank = (): FaceLine => ({ spans: [] });
 
 // runRows is a run's rows: its line, and once opened each call under it as
-// a call alone is drawn.
+// a call alone is drawn. The line says how to open it, as the terminal
+// program's folded group does, and how to fold back what a click opened.
 function runRows(run: { calls: Item[]; open: boolean }, width: number, view: Opened): FaceLine[] {
   const first = run.calls[0];
   const open = first !== undefined && view.open(partKey("fold", first));
-  const lines = runLines(run, width, open);
+  const hint = view.all ? undefined : open ? "(click to fold)" : "(ctrl+o to expand)";
+  const lines = runLines(run, width, open, hint);
   if (!open) return lines;
   return [...lines, ...run.calls.flatMap((call) => [blank(), ...cachedLinesOf(call, width, view)])];
 }
 
+// steeringRows are the prompts the session holds and has not taken, a faint
+// row each cut to the pane with …, as pi's screen shows what it queued under
+// its chat: `Steering: text`.
+export function steeringRows(items: Item[], width: number): FaceLine[] {
+  return items
+    .filter((item) => item.kind === "prompt" && item.status === "queued")
+    .map((item) => {
+      let text = `Steering: ${clean(item.text).replace(/\s+/g, " ").trim()}`;
+      if (widthOf(text) > width) {
+        let kept = "";
+        for (const { segment } of graphemes.segment(text)) {
+          if (widthOf(kept + segment) > width - 1) break;
+          kept += segment;
+        }
+        text = `${kept}…`;
+      }
+      return { spans: [{ text, tone: "faint" as const }] };
+    });
+}
+
 // statusOf is the rows under the conversation that move with the clock: the
-// turn's line after a blank row; with no line, the blank row alone, so the
-// conversation never sits on the input.
+// prompts waiting, then the turn's line, each after a blank row; with no
+// line, the blank row alone, so the conversation never sits on the input.
 export function statusOf(model: FaceModel, clock: Clock, width = 80): FaceLine[] {
   const status = turnLine(model.turn, clock, width);
-  if (model.items.length === 0) return status ? [status] : [];
-  return status ? [blank(), status] : [blank()];
+  const waiting = steeringRows(model.items, width);
+  const queued = waiting.length > 0 ? [blank(), ...waiting] : [];
+  if (model.items.length === waiting.length && waiting.length === 0) return status ? [status] : [];
+  return status ? [...queued, blank(), status] : [...queued, blank()];
 }
 
 // bodyOf is the conversation's rows from the top, at least its last want of
@@ -298,8 +329,9 @@ export function blinked(lines: FaceLine[], now: number): FaceLine[] {
   );
 }
 
-// fill makes the drawing opaque: height rows, each as wide as the pane, the
-// tail at the bottom. A terminal whose background the shell does not know
+// fill makes the drawing opaque: height rows, each as wide as the pane, a
+// conversation shorter than the pane from its top, as the terminal programs
+// start one (the owner's word, October 31, 2026). A terminal whose background the shell does not know
 // gives the layer no colour to paint, and the native face under it would show
 // through every cell the face leaves empty.
 // A row wider than the pane, a mark or a gutter on a pane narrower than it,
@@ -328,6 +360,6 @@ export function fill(lines: FaceLine[], width: number, height: number): FaceLine
       spans: used < width ? [...spans, { text: " ".repeat(width - used), gutter: true }] : spans,
     };
   };
-  const top = Array.from({ length: Math.max(height - lines.length, 0) }, blank);
-  return [...top, ...lines].map(pad);
+  const under = Array.from({ length: Math.max(height - lines.length, 0) }, blank);
+  return [...lines, ...under].map(pad);
 }

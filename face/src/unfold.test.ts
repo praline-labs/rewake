@@ -41,9 +41,11 @@ const run = model(
 // output whole, with nothing left to count.
 test("everything opened shows each call of a run and every output whole", () => {
   const view = new Unfold();
+  // Brief 57: what is folded says how to open it, as the terminal program's
+  // folded rows do.
   expect(text(bodyOf(run, 40, Infinity, view).rows)).toEqual([
     "  Read 1 file, ran 1 shell command, 1",
-    "  failed",
+    "  failed (ctrl+o to expand)",
     "",
     "● done",
     "",
@@ -51,12 +53,13 @@ test("everything opened shows each call of a run and every output whole", () => 
     "  ⎿  line 1",
     "     line 2",
     "     line 3",
-    "     … +5 lines",
+    "     … +5 lines (ctrl+o to expand)",
   ]);
   // The failed calls are counted in red, as the terminal program counts them.
-  expect(bodyOf(run, 80, Infinity, view).rows[0]?.spans.slice(-2)).toEqual([
+  expect(bodyOf(run, 80, Infinity, view).rows[0]?.spans.slice(-3)).toEqual([
     { text: "1", tone: "error", bold: true },
     { text: " failed", tone: "error" },
+    { text: " (ctrl+o to expand)", tone: "faint" },
   ]);
   view.every(true);
   expect(text(bodyOf(run, 40, Infinity, view).rows)).toEqual([
@@ -84,7 +87,8 @@ test("a click opens or closes one part against what the key opened", () => {
   const view = new Unfold();
   view.toggle("more o");
   const opened = text(bodyOf(run, 40, Infinity, view).rows);
-  expect(opened.slice(-2)).toEqual(["     line 8", "     … −5 lines"]);
+  // What a click opened says how to fold it back.
+  expect(opened.slice(-2)).toEqual(["     line 8", "     … −5 lines (click to fold)"]);
   expect(bodyOf(run, 40, Infinity, view).rows.at(-1)?.part).toBe("more o");
   view.toggle("fold r");
   expect(text(bodyOf(run, 40, Infinity, view).rows)[3]).toBe("● Read(/a)");
@@ -92,7 +96,7 @@ test("a click opens or closes one part against what the key opened", () => {
   view.toggle("more o");
   expect(text(bodyOf(run, 40, Infinity, view).rows).slice(-2)).toEqual([
     "     line 3",
-    "     … +5 lines",
+    "     … +5 lines (ctrl+o to expand)",
   ]);
   // The key again forgets the clicks.
   view.every(false);
@@ -115,7 +119,7 @@ test("the row a click opens stays where it stood in the view", () => {
   expect(text(after.slice(top, (top ?? 0) + 3))).toEqual([
     "     line 7",
     "     line 8",
-    "     … −5 lines",
+    "     … −5 lines (click to fold)",
   ]);
   // A part gone leaves the view where it was.
   expect(topFor(after, { key: "more gone", k: 0, y: 0 })).toBeUndefined();

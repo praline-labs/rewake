@@ -3,26 +3,16 @@
 // a row for what went wrong. The input is the shell's own, so the person can
 // always switch back with the prefix's v, whatever the face did.
 
-import type { BoxRenderable, InputRenderable } from "@opentui/core";
+import type { BoxRenderable } from "@opentui/core";
 import { RGBA } from "@opentui/core";
-import { createEffect, For, Index, Show } from "solid-js";
+import { createEffect, For, Index } from "solid-js";
 import type { FaceLine, Pointing, Span, Tone } from "../../../face/src/messages.ts";
 import type { PermissionMode } from "../../../face/src/mirror.gen.ts";
 import type { Theme } from "../theme.ts";
-import {
-  draftOf,
-  escapeFace,
-  faceOf,
-  pointFace,
-  promptFace,
-  scrollFace,
-  setDraft,
-  sizeFace,
-  unfoldFace,
-  unselectFace,
-  wheelFace,
-} from "./faces.ts";
-import { ruleOf, ruleParts } from "./rule.ts";
+import { faceOf, inputOf, inputRowsOf, pointFace, sizeFace, wheelFace } from "./faces.ts";
+import { FaceInput } from "./input.tsx";
+import { moreRule } from "./paste.ts";
+import { ruleParts, withMore } from "./rule.ts";
 
 const colour = (c: string) => RGBA.fromHex(c);
 
@@ -100,9 +90,9 @@ export function FaceRow(props: { line: FaceLine; theme: Theme }) {
   );
 }
 
-// The rows below the conversation: a rule, the input, a rule, and the row for
-// the face's error or its link.
-const below = 4;
+// The rows below the conversation but the input's own: a rule above it, a
+// rule under it, and the row for the face's error or its link.
+const below = 3;
 
 // modeColour is a permission mode's colour as the terminal program draws
 // its name under the input.
@@ -134,7 +124,7 @@ export function FaceView(props: {
   active: () => boolean;
 }) {
   const face = () => faceOf(props.id);
-  const body = () => Math.max(props.height - below, 1);
+  const body = () => Math.max(props.height - below - inputRowsOf(props.id), 1);
   createEffect(() => {
     if (props.live) sizeFace(props.id, props.width, body());
   });
@@ -164,7 +154,6 @@ export function FaceView(props: {
     return { text: link === "connecting" ? "connecting…" : `the face is ${link}`, fg: faint };
   };
   const row = (text: string) => text + " ".repeat(Math.max(props.width - Bun.stringWidth(text), 0));
-  let input: InputRenderable | undefined;
   let rows: BoxRenderable | undefined;
   // pointed passes the left button over the conversation to the face's
   // worker, in the conversation's cells: a press on the rules or the input is
@@ -218,7 +207,12 @@ export function FaceView(props: {
         </Index>
       </box>
       <text height={1} wrapMode="none" fg={ruled} bg={bg} selectable={false}>
-        <For each={ruleParts(props.width, props.title, props.context, face()?.mode)}>
+        <For
+          each={withMore(
+            ruleParts(props.width, props.title, props.context, face()?.mode),
+            inputOf(props.id).above,
+          )}
+        >
           {(part) => (
             <span style={{ fg: part.mode ? modeColour(part.mode, props.theme) : ruled, bg }}>
               {part.text}
@@ -226,7 +220,7 @@ export function FaceView(props: {
           )}
         </For>
       </text>
-      <box height={1} flexDirection="row">
+      <box height={inputRowsOf(props.id)} flexDirection="row">
         <text
           width={2}
           height={1}
@@ -236,60 +230,22 @@ export function FaceView(props: {
           content="❯ "
           selectable={false}
         />
-        <Show
-          when={props.live}
-          fallback={
-            <text
-              height={1}
-              flexGrow={1}
-              wrapMode="none"
-              fg={RGBA.defaultForeground()}
-              bg={bg}
-              content={row(draftOf(props.id)).slice(0, Math.max(props.width - 2, 0))}
-            />
-          }
-        >
-          <input
-            width={Math.max(props.width - 2, 1)}
-            backgroundColor={bg}
-            focusedBackgroundColor={bg}
-            textColor={RGBA.defaultForeground()}
-            focusedTextColor={RGBA.defaultForeground()}
-            placeholderColor={faint}
-            focused={props.active()}
-            ref={(r: InputRenderable) => {
-              input = r;
-              r.value = draftOf(props.id);
-            }}
-            placeholder={face()?.prompts ? "" : "this session takes no prompts here"}
-            onInput={(text: string) => {
-              // A key drops the selection, as the terminal program's does.
-              unselectFace(props.id);
-              setDraft(props.id, text);
-            }}
-            onSubmit={
-              (() => {
-                const text = input?.value ?? "";
-                if (!text.trim() || !promptFace(props.id, text)) return;
-                setDraft(props.id, "");
-                if (input) input.value = "";
-              }) as never
-            }
-            onKeyDown={(key: { name: string; ctrl?: boolean }) => {
-              if (key.name === "escape") escapeFace(props.id);
-              if (key.name === "o" && key.ctrl) unfoldFace(props.id);
-              if (key.name === "pageup") scrollFace(props.id, body() - 1);
-              if (key.name === "pagedown") scrollFace(props.id, -(body() - 1));
-            }}
-          />
-        </Show>
+        <FaceInput
+          id={props.id}
+          width={props.width}
+          height={props.height}
+          theme={props.theme}
+          live={props.live}
+          active={props.active}
+          page={() => body() - 1}
+        />
       </box>
       <text
         height={1}
         wrapMode="none"
         fg={ruled}
         bg={bg}
-        content={ruleOf(props.width)}
+        content={moreRule(props.width, "↓", inputOf(props.id).under)}
         selectable={false}
       />
       <text

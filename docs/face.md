@@ -21,7 +21,8 @@ worker's: `LaunchRequest.Mirror` turns them on, and a dev worker is only the fir
 
 One schema, `mirror.schema.json`; `tools/protogen` writes its Go types and the shell's TypeScript
 types (`face/src/mirror.gen.ts`), held by the generator's drift test. The model holds
-**items** — a `prompt` with its `origin` (person, face, …), a `text` or `thinking` block
+**items** — a `prompt` with its `origin` (person, face, …), `queued` while the session holds it
+and has not taken it into its conversation, `refused` when it gave it back untaken, a `text` or `thinking` block
 (`streaming`, then `settled`), a `tool` call with its name, input, output and end (`running`,
 `done`, `error`, `refused`), a `notice`, `error` when it tells a failure or an interrupt — and the turn's state (idle, working, compacting, unknown,
 ended). An item the link lost part of is a `gap`, never shown as settled.
@@ -45,7 +46,11 @@ are dropped and counted first, then the oldest settle being put together, its bl
 last the oldest items in flight, so a stream that never settles stays within the bounds too.
 
 The adapter hands the model neutral events (`prompt`, `delta`, `settle` in parts, `tool`, `input`,
-`result` with its permit, `turn`, `mode`, `lost`, `resync`). A settle replaces what streamed with the whole block once all
+`result` with its permit, `turn`, `mode`, `taken`, `lost`, `resync`). `taken` settles a queued
+prompt where the session took it: the model moves it to the end of the conversation, sent to a face
+as a `drop` and an `add`, its bytes and the dropped count unchanged; with status `refused` it stays
+where it was, given back. A `taken` for a prompt no longer queued — dropped by the bounds, a gap
+after the turn's end — does nothing, so nothing comes back. A settle replaces what streamed with the whole block once all
 its parts arrived in order; a missing part, a `lost` for the id or the turn's end leaves the item a
 gap with what streamed. A `resync` marks everything in flight as a gap, leaves the turn unknown until
 the next turn event and adds a notice counting what was lost. How Claude Code's mod feeds it, with
@@ -103,7 +108,8 @@ nothing on either side. It is laid over a box of the widget's own size inside th
 box: an absolute layer starts at the padding's edge, and over the padded box it left the widget's
 last column showing (seen live on 2.11.0). Its body is the conversation; under it the input between
 two rules sends a prompt to the session, refused with its reason where the session does not take it;
-the row under the rules says the face's last error, or the link while it is not live. It has no
+the row under the rules says the face's last error, or the link while it is not live (below, "The
+input"). It has no
 header: the strip says the turn's state, and the input's top rule carries the session's own
 permission mode at its left end and its name with its type, then its context, at the right,
 `── ⏵⏵ auto mode ──── w-claude (code) · 46k/272k ─`, as Claude Code draws a session's name there
@@ -124,6 +130,27 @@ refusal said under the input (`not interrupted: …`). Esc while idle, or to a s
 interrupt (a Claude Code dev worker), does nothing. `rewake screen`
 takes the window as the person sees it: the shadow window draws the face too.
 
+### The input
+
+The input is pi's editor, as read in the bundled pi-tui 1.4.0's `components/editor.js` (October 31,
+2026, brief 57; `shell/src/face/input.tsx` and `paste.ts`), whatever session the face draws. It
+grows a row as its text wraps or holds a new line, the conversation above giving the room, to 30%
+of the pane's rows and at least 5, pi's `maxVisibleLines` of its terminal; past that it scrolls
+inside, the top rule saying ` ↑ 3 more ` in the middle of its longest run of rule and the bottom one
+` ↓ 2 more `, as pi's borders do; a sent prompt leaves it one row again. Enter sends the text
+trimmed; shift+Enter, alt+Enter and ctrl+j start a line, and so does Enter after a `\`, pi's way
+for a terminal that sends shift+Enter as Enter (shift+Enter needs the kitty keyboard protocol,
+which OpenTUI asks the terminal for). The arrows move by the drawn rows, Home and End and ctrl+a
+and ctrl+e to the line's ends, alt or ctrl with an arrow and alt+b and alt+f by words, ctrl+w,
+alt+Backspace, alt+d and alt+Delete delete words, ctrl+u and ctrl+k to the line's ends, and
+ctrl+- undoes: OpenTUI's own keys where they are pi's. pi's history on Up at the first row, its
+kill ring and its completion are not repeated. A bracketed paste arrives whole: line ends made
+`\n`, a tab four spaces, every other control character dropped, as pi cleans one; a paste of more
+than ten lines or 1000 characters shows as pi's marker, `[paste #1 +40 lines]` or `[paste #1 1200
+chars]`, and is sent whole in its place; a marker for no paste of this input is sent as typed. The
+draft and its pastes stay with the pane while the face is switched away. Every window of the pane
+draws the input as tall as the person's.
+
 ### The look
 
 The face repeats the look of Claude Code's own terminal, for every harness it draws (the owner's
@@ -137,7 +164,12 @@ decision, October 30, 2026: first the same look, customised later), as read from
   pane, a wrapped or second line hung under the text (the owner's word, October 31, 2026: better
   than native, which wraps back to the edge); over 10 000 characters, its first and last
   2 500 with `… +N lines …` between.
-- **Interrupt**: an `error` notice, the session's own words for a stop or a failure, in red behind
+- **Queued**: a prompt the session holds while it works — sent to a working pi, which steers it
+  into the run after the current tool batch — is drawn as pi's screen draws it under its chat, a
+  faint `Steering: <text>` row above the turn's line, its whitespace run together and cut with `…`
+  to the row, until the session takes it; then it is drawn where it was taken, as any prompt. One
+  given back (pi's alt+up, its Esc) is the prompt refused, in place; while it waits it ends no run
+  of calls.- **Interrupt**: an `error` notice, the session's own words for a stop or a failure, in red behind
   `  ⎿  ` under what it stopped, hung under its text; another notice is faint behind `· `.
 - **Letter**: a letter rewake delivered reaches the harness as its `<task-notification>` and shows
   as the notification's summary after a `●` coloured by its status — green completed, red failed,
@@ -167,7 +199,9 @@ decision, October 30, 2026: first the same look, customised later), as read from
   ToolSearch and TodoWrite are not drawn. While a call of the run is running, or the run is the
   last thing a working turn did, it is open: a faint `●`, the running command's description or
   what the run is doing (`Reading 1 file…`), and under `⎿` the path, pattern or command of its
-  latest call.
+  latest call. A folded run's line ends with a faint `(ctrl+o to expand)`, an opened one's with
+  `(click to fold)`, and neither while everything is open (below, "Unfolding"; the owner after
+  brief 56 found it unclear what opens and how back).
 - **Call**: `● Name(argument)`, the name bold, the dot green when done, red on error, amber on a
   gap, faint while running. The names are the terminal's — `Update` (`Create` for an empty old
   string), `Search`, `Fetch`, `Web Search`, `server - tool (MCP)` — and the argument a path (under
@@ -183,7 +217,8 @@ decision, October 30, 2026: first the same look, customised later), as read from
   red and new lines on dark green, from the call's input; a write's `Wrote N lines to path` and its
   first ten lines; an error in red, `Error: ` before a text without it, the tool's error tags
   dropped, at most ten rows; any other output its first three rows (four when only one more),
-  a line of JSON pretty-printed, then a faint `… +N lines`; an empty one `(No output)` for Bash,
+  a line of JSON pretty-printed, then a faint `… +N lines (ctrl+o to expand)`, Claude Code's words
+  (pi's own say `... (N more lines, ctrl+o to expand)`); an empty one `(No output)` for Bash,
   `(No content)` for the rest.
 - **Turn**: under the conversation, rewake's own line, not Claude Code's (the owner's decision,
   October 31, 2026, brief 53): four dots running clockwise round a braille cell `⠏ ⠛ ⠹ ⢸ ⣰ ⣤ ⣆ ⡇` (clockwise by the owner's word, October 31, 2026) that turns a frame every 120 ms in the terminal's
@@ -247,11 +282,12 @@ everything, and the row under the rules says `Showing detailed transcript · ctr
 while it is open; a click on a run's line or on a `… +N lines` row opens that one alone, and
 under ctrl+o closes it. An opened run draws its line, then each call as a call alone is drawn,
 its error under it; an opened output or thinking block shows every row the model kept, the cut
-mark of the mirror's 64 KiB bound where it cut, then `… −N lines`, a click on which folds it
+mark of the mirror's 64 KiB bound where it cut, then `… −N lines (click to fold)`, a click on which folds it
 again; under ctrl+o nothing is counted. The row clicked stays on the screen row it was on,
 whatever opened above it (an anchor: the part's key and the row's place in it), where the rows
-above it can fill the view to there: a conversation shorter than the pane is drawn at its bottom,
-and once opened past the pane's height it shows from its first row. ctrl+o on a view scrolled up
+above it can fill the view to there. A conversation starts at the pane's top and grows down (the
+owner, October 31, 2026), so on a short one the rows above a click do not move, and once one fills
+the pane it follows its bottom. ctrl+o on a view scrolled up
 keeps its first row of a part where it was. The shell keeps ctrl+o's state for
 each face and sends `unfold` again after a reload's `start`; the parts a click opened are the
 worker's and go with it, or with a new snapshot. The key never reaches the pty.
@@ -331,7 +367,7 @@ terminal clipboard settings if paste fails`, `sent the code block (18 chars) …
   a fullscreen pane, scrolling up while selecting is the wheel's.
 - **A click copies the part it is on** (`face/src/parts.ts`): every row names its part, and
   the text is taken from the model when the click comes. A click takes the row it was pressed on,
-  so a click off the conversation's rows — the blank above a short one —
+  so a click off the conversation's rows — the blank under a short one —
   copies nothing, though a drag from there starts at its first row. A reply's row copies the
   reply's markdown source; a code block's, its code alone; a call's head, its input as the head shows it (Bash's
   command, a file's path, a pattern, a URL, a query, a skill) or else the input as given; an open
@@ -418,10 +454,12 @@ is contained in the shell's thread, and the person can always switch to native w
 A stopped face starts again at the next change of its sources, or when the person switches to it.
 A new face, a reload's or a lost link's, follows the bottom with no selection: the scroll is the
 worker's and is not carried across, so a change under `face/src/` while the person reads up
-puts the view back at the bottom (seen live, October 31, 2026, brief 49). Tests: `shell/src/face/host.test.ts`, the contract in `check.test.ts` and through the worker in `host.test.ts`, the look in `face/src/render.test.ts` and `view.test.tsx`, the clock
+puts the view back at the bottom (seen live, October 31, 2026, brief 49). Tests: `shell/src/face/host.test.ts`, the contract in `check.test.ts` and through the worker in `contract.test.ts`, the look in `face/src/render.test.ts`, `thinking.test.ts` and `view.test.tsx`, the clock
 in `ticker.test.ts`, the scroll in `scroll.test.ts`, a notch's rows in `wheel.test.ts` and through
 the worker in `host.test.ts`, Esc's paths through the worker in `escape.test.ts`, unfolding in
-`face/src/unfold.test.ts` and ctrl+o kept across a reload in `shell/src/face/unfold.test.ts`, the
+`face/src/unfold.test.ts` and ctrl+o kept across a reload in `shell/src/face/unfold.test.ts`, the input's growth, keys and
+pastes in `shell/src/face/input.test.tsx`, a queued prompt in `face/src/queued.test.ts`,
+`internal/core/mirror/queued_test.go` and pi's side in `internal/adapter/pi/queued.test.ts`, the
 retry line in `progress.test.ts`, copying in `select.test.ts` (a selection over gutters, a wrapped
 line, a diff and a table; what a click on each part copies; a click told from a drag), through the
 worker in `host.test.ts` with the light after a click and none on a move, and the pty under the

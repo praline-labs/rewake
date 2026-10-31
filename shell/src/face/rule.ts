@@ -72,3 +72,25 @@ export const ruleOf = (cells: number, title?: string, context?: string, mode?: P
   ruleParts(cells, title, context, mode)
     .map((p) => p.text)
     .join("");
+
+// withMore is the rule with ` ↑ 3 more ` in the middle of its longest run
+// of the rule, as pi's editor says what its text hides above it; the rule
+// as it was where that run is too short for it.
+export function withMore(parts: RulePart[], hidden: number): RulePart[] {
+  if (hidden <= 0) return parts;
+  const label = ` ↑ ${hidden} more `;
+  let best: { at: number; start: number; length: number } | undefined;
+  parts.forEach((part, at) => {
+    if (part.mode) return;
+    for (const run of part.text.matchAll(/─+/g)) {
+      const length = run[0].length;
+      if (!best || length > best.length) best = { at, start: run.index, length };
+    }
+  });
+  if (!best || best.length < width(label) + 2) return parts;
+  const { at, start, length } = best;
+  const left = start + Math.floor((length - width(label)) / 2);
+  const text = parts[at]?.text ?? "";
+  const next = text.slice(0, left) + label + text.slice(left + width(label));
+  return parts.map((part, i) => (i === at ? { ...part, text: next } : part));
+}

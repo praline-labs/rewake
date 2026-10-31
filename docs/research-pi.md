@@ -519,6 +519,32 @@ events on (`internal/adapter/pi/mirror.go`). The extension's side is `mirror.ts`
 - **The prompt back.** The face's prompt reaches the host's model, which asks the extension
   `prompt`; it calls `pi.sendUserMessage(text)` while idle, with `deliverAs: "steer"` while
   pi works, and answers at once: pi's own errors come later, on its screen.
+- **Queued** (read October 31, 2026, pi 1.4.0, `core/agent-session.js`, `modes/interactive/
+  interactive-mode.js` `updatePendingMessagesDisplay`, brief 57). A message steered into a working
+  run waits in pi's steering queue until the next safe point after the tool batch; pi's screen
+  draws each under its chat as a dim `Steering: <text>` (`Follow-up: <text>` for alt+Enter's
+  follow-up queue), then `↳ alt+up to edit all queued messages`. pi takes one by removing its text
+  from the queue as its user message's `message_start` comes, before the extensions hear it; Esc
+  (`restoreQueuedMessagesToEditor({abort: true})`) and alt+up (the same without the abort, the run
+  going on) put the queue back into pi's editor. An extension hears no change of the queue
+  (`queue_update` reaches the session's own listeners only), and the queue holds the text after
+  the input handlers and a prompt template changed it; `ctx.hasPendingMessages()` says whether
+  anything waits. So the extension (`queued.ts`) sends a steered prompt `queued` and says `taken`
+  as a user message begins: the queued prompt of the message's text, the first of the same texts,
+  else the oldest, as pi takes its queue in order. One still queued when pi's queue is found
+  empty at two of its events running (`turn_start`, `message_start`: the first may come between
+  `input` and the queue) is given back, `taken` `refused`, and so is all that is left as the run
+  settles, before its idle turn. A prompt an input handler took whole shows refused too. At most 32
+  are followed; an older one stays queued and ends a gap with the run.
+- **The editor** (read October 31, 2026, pi-tui 1.4.0, `components/editor.js` and
+  `keybindings.js`, brief 57), which the face's input repeats ([face.md](face.md), "The input"):
+  it shows at most `max(5, floor(rows × 0.3))` rows of its terminal and scrolls inside, its
+  borders reading `─── ↑ N more ───` and `↓ N more`; Enter submits, shift+Enter and ctrl+j (and
+  `\x1b\r`, alt+Enter, in the editor itself) start a line, as does Enter after a `\`; a paste is
+  cleaned (`\r\n` and `\r` to `\n`, a tab four spaces, control characters but `\n` dropped) and
+  one of more than 10 lines or 1000 characters is stored behind `[paste #N +L lines]` or
+  `[paste #N C chars]`, put back on submit, the text trimmed. While pi works, alt+Enter at the
+  app's level queues a follow-up rather than a new line.
 - **Esc.** The face's Esc reaches the extension as the wire's `interrupt` while pi works, and it
   calls `ctx.abort()`, which in pi's interactive mode is its own Esc while it works
   (`interactive-mode.js`, the `abort` of the extensions' context and `defaultEditor.onEscape`, both

@@ -50,6 +50,7 @@ var mirrorKinds = map[string]mirror.EventKind{
 	"prompt": mirror.EventPrompt, "delta": mirror.EventDelta, "settle": mirror.EventSettle,
 	"tool": mirror.EventTool, "input": mirror.EventInput, "result": mirror.EventResult,
 	"turn": mirror.EventTurn, "notice": mirror.EventNotice, "lost": mirror.EventLost, "resync": mirror.EventResync,
+	"taken": mirror.EventTaken,
 }
 
 // mirrored hands a batch of the conversation to the model the face draws.

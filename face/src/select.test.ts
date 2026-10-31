@@ -130,8 +130,8 @@ test("a click copies the whole part it is on", () => {
   };
   const shown = reply("ok");
   // A run's line and a cut row open and close rather than copy (unfold.ts).
-  expect(keyOf([bash, shown], "  Ran 1 shell command")).toBe("fold b");
-  expect(clicked([bash, shown], "  Ran 1 shell command")).toBeUndefined();
+  expect(keyOf([bash, shown], "  Ran 1 shell command (ctrl+o to expand)")).toBe("fold b");
+  expect(clicked([bash, shown], "  Ran 1 shell command (ctrl+o to expand)")).toBeUndefined();
   // Brief 56: a thinking summary's rows copy its text, as written.
   const thought: Item = { id: "th", kind: "thinking", status: "settled", text: "**Plan** it" };
   expect(clicked([thought], "∴ Plan it")).toEqual({ text: "**Plan** it", what: "the thinking" });
@@ -154,7 +154,7 @@ test("a click copies the whole part it is on", () => {
     text: JSON.stringify({ q: 1 }),
     output: "a\nb\nc\nd\ne\nf",
   };
-  expect(keyOf([mcp], "     … +3 lines")).toBe("more m");
+  expect(keyOf([mcp], "     … +3 lines (ctrl+o to expand)")).toBe("more m");
   expect(clicked([mcp], "  ⎿  a")).toEqual({
     text: "a\nb\nc\nd\ne\nf",
     what: "the call's output",
@@ -174,25 +174,25 @@ test("a click copies the whole part it is on", () => {
 test("a click is told from a drag by the cell the pointer leaves", () => {
   const p = new Pointer();
   const view = { top: 10, shown: 5, height: 8, width: 20 };
-  p.down(view, 4, 4, true);
-  expect(p.drag(pointAt(4, 4, view), 4, 4)).toBe(false);
+  p.down(view, 4, 1, true);
+  expect(p.drag(pointAt(4, 1, view), 4, 1)).toBe(false);
   expect(p.up()).toEqual({ clicked: 11 });
-  p.down(view, 4, 4, true);
-  expect(p.drag(pointAt(5, 4, view), 5, 4)).toBe(true);
-  expect(p.drag(pointAt(4, 4, view), 4, 4)).toBe(true);
+  p.down(view, 4, 1, true);
+  expect(p.drag(pointAt(5, 1, view), 5, 1)).toBe(true);
+  expect(p.drag(pointAt(4, 1, view), 4, 1)).toBe(true);
   expect(p.up()).toEqual({
     selected: { anchor: { row: 11, col: 4 }, focus: { row: 11, col: 4 } },
   });
   // A click on a face not yet focused only focuses it.
-  p.down(view, 4, 4, false);
+  p.down(view, 4, 1, false);
   expect(p.up()).toBeUndefined();
-  // A click on the blank above a short conversation is on no row, though a
-  // drag from there starts at its first.
-  p.down(view, 4, 1, true);
+  // A short conversation is drawn from the view's top: a click on the blank
+  // under it is on no row, though a drag from there starts at its last.
+  p.down(view, 4, 6, true);
   expect(p.up()).toBeUndefined();
   // Past the view's edges a drag reaches the first row's start or the last
-  // row's end; above a short conversation, its first row.
+  // row's end; under a short conversation, its last row's end.
   expect(pointAt(3, -2, view)).toEqual({ row: 10, col: 0 });
   expect(pointAt(3, 9, view)).toEqual({ row: 14, col: 20 });
-  expect(pointAt(3, 1, view)).toEqual({ row: 10, col: 0 });
+  expect(pointAt(3, 6, view)).toEqual({ row: 14, col: 20 });
 });

@@ -20,7 +20,7 @@ func TestTheWorktreeToolKeepsItsContract(t *testing.T) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
-	command := exec.CommandContext(ctx, bun, "test", "./worktree.test.ts", "./management.test.ts", "./briefs.test.ts", "./mirror.test.ts", "./interrupt.test.ts")
+	command := exec.CommandContext(ctx, bun, "test", "./worktree.test.ts", "./management.test.ts", "./briefs.test.ts", "./mirror.test.ts", "./interrupt.test.ts", "./queued.test.ts")
 	command.Env = withoutRewakeEnv()
 	out, err := command.CombinedOutput()
 	if err != nil || !strings.Contains(string(out), " 0 fail") {

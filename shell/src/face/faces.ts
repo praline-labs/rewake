@@ -7,7 +7,7 @@
 // watched by nothing.
 import { existsSync, watch } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { createSignal } from "solid-js";
+import { createSignal, untrack } from "solid-js";
 import type { FromFace, Pointing, ToFace } from "../../../face/src/messages.ts";
 import { faultOf } from "./check.ts";
 import { FaceHost, type FaceState } from "./host.ts";
@@ -20,6 +20,7 @@ const faces = new Map<string, Face>();
 const [states, setStates] = createSignal(new Map<string, FaceState>());
 const [modes, setModes] = createSignal(new Map<string, FaceMode>());
 const [drafts, setDrafts] = createSignal(new Map<string, string>());
+const [inputs, setInputs] = createSignal(new Map<string, InputView>());
 
 // A compiled shell holds the face as a second entrypoint, named from the
 // bundle's root (build.ts); from the sources it is the checkout's face/.
@@ -59,6 +60,19 @@ export const modeOf = (id: string): FaceMode | undefined =>
 export const faceShown = (id: string) => modeOf(id) === "rewake";
 export const draftOf = (id: string) => drafts().get(id) ?? "";
 export const setDraft = (id: string, text: string) => setDrafts((m) => put(m, id, text));
+// InputView is the input as the person's window lays it out: its rows, and
+// how many rows of its text are hidden above and under them. Every window of
+// the pane draws the input so.
+export type InputView = { rows: number; above: number; under: number };
+const oneRow: InputView = { rows: 1, above: 0, under: 0 };
+export const inputOf = (id: string) => inputs().get(id) ?? oneRow;
+export const inputRowsOf = (id: string) => inputOf(id).rows;
+export const setInput = (id: string, view: InputView) => {
+  // Read untracked: an effect that sets it does not depend on it.
+  const was = untrack(() => inputOf(id));
+  if (was.rows !== view.rows || was.above !== view.above || was.under !== view.under)
+    setInputs((m) => put(m, id, view));
+};
 
 // takeMirrors gives each pane its session's mirror socket as the room reads
 // it; a face starts for a new socket and ends with its pane or its socket.
