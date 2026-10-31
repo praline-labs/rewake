@@ -323,6 +323,18 @@ function connect() {
   }).catch((err) => end(`the mirror's socket does not open: ${String(err)}`));
 }
 
+// escaped is the person's Esc: a selection goes first, as the terminal
+// program's does; then a working turn stops, as the harness's own Esc stops
+// it, where the session takes an interrupt. An idle session hears nothing.
+function escaped(id: string) {
+  if (pointer.selection) {
+    pointer.clear();
+    return paint();
+  }
+  if (model.turn !== "working" || !model.inputs.includes("interrupt") || !socket) return;
+  socket.write(`${JSON.stringify({ id, kind: "interrupt", text: "" })}\n`);
+}
+
 self.onmessage = (event: MessageEvent<ToFace>) => {
   const message = event.data;
   try {
@@ -368,6 +380,8 @@ self.onmessage = (event: MessageEvent<ToFace>) => {
         if (!pointer.selection) return;
         pointer.clear();
         return paint();
+      case "escape":
+        return escaped(message.id);
       case "ping":
         return post({ kind: "pong", n: message.n });
     }

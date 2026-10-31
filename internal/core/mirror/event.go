@@ -19,7 +19,8 @@ type Event struct {
 	Origin string
 	// Name is a tool's name.
 	Name string
-	// Status is how a tool call ended: done, error or refused.
+	// Status is how a tool call ended: done, error or refused; error on a
+	// notice telling a failure or an interrupt; refused on a prompt.
 	Status ItemStatus
 	// State is the turn's new state.
 	State TurnState

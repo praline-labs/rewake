@@ -3,7 +3,7 @@ import { createConnection, type Socket } from "node:net";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { briefTools } from "./briefs.ts";
 import { management, type State } from "./management.ts";
-import { facePrompt, Mirror, serveMirror } from "./mirror.ts";
+import { faceInterrupt, facePrompt, Mirror, serveMirror } from "./mirror.ts";
 import { type MirrorEvent, Outbox } from "./outbox.ts";
 import { worktreeTools } from "./worktree.ts";
 
@@ -165,6 +165,10 @@ export default function (pi: ExtensionAPI) {
     }
     if (frame.op === "prompt") {
       respond(facePrompt(pi, mirror, context.isIdle(), managed.busy(), frame.text));
+      return;
+    }
+    if (frame.op === "interrupt") {
+      respond(faceInterrupt(mirror, context, managed.busy()));
       return;
     }
     if (frame.op === "control") {

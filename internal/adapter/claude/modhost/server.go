@@ -16,6 +16,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	asking "github.com/praline-labs/rewake/internal/core/ask"
+	"github.com/praline-labs/rewake/internal/core/mirror"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
@@ -87,7 +88,7 @@ func New(cfg Config) *Server {
 	}
 	// The face's prompts go the way every command to the mod goes.
 	if cfg.Mirror != nil {
-		cfg.Mirror.Take(s.Prompt)
+		cfg.Mirror.Take(s.Prompt, mirror.InputKindPrompt)
 	}
 	return s
 }

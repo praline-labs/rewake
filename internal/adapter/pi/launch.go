@@ -8,6 +8,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/core/brief"
+	"github.com/praline-labs/rewake/internal/core/mirror"
 	"github.com/praline-labs/rewake/internal/core/role"
 )
 
@@ -88,7 +89,7 @@ func (harness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, error)
 	run.hostsSpaces, run.onClosing = request.Role.Spaces, request.Closing
 	if request.Mirror != nil {
 		run.mirror = request.Mirror
-		run.mirror.Take(run.prompt)
+		run.mirror.Take(run.input, mirror.InputKindPrompt, mirror.InputKindInterrupt)
 	}
 	command, args := request.Invocation(ID, args)
 	return adapter.LaunchPlan{

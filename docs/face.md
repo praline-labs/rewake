@@ -23,7 +23,7 @@ One schema, `mirror.schema.json`; `tools/protogen` writes its Go types and the s
 types (`face/src/mirror.gen.ts`), held by the generator's drift test. The model holds
 **items** — a `prompt` with its `origin` (person, face, …), a `text` or `thinking` block
 (`streaming`, then `settled`), a `tool` call with its name, input, output and end (`running`,
-`done`, `error`, `refused`), a `notice` — and the turn's state (idle, working, compacting, unknown,
+`done`, `error`, `refused`), a `notice`, `error` when it tells a failure or an interrupt — and the turn's state (idle, working, compacting, unknown,
 ended). An item the link lost part of is a `gap`, never shown as settled.
 
 A call that ended may carry its **permit**, who let it run or refused it, where the session can
@@ -65,8 +65,9 @@ The stream is JSON lines, each at most 512 KiB. On connect: `hello{v, inputs}`,
 `begin{items, turn, mode?}`, one `item` line per item and `end`, taken under the model's lock with
 the subscription, so no change falls between the snapshot and the stream. Then `add`, `append`,
 `set`, `turn`, `mode` and `drop`. A face
-sends `{id, kind: "prompt", text}` and is answered `answer{id, ok, detail?}`; any other input is
-refused. A face whose queue passes 4096 lines or 4 MiB past its snapshot is cut off rather than
+sends `{id, kind: "prompt", text}`, or `{id, kind: "interrupt", text: ""}` for the person's Esc, and
+is answered `answer{id, ok, detail?}`; hello's `inputs` lists the kinds the session takes (pi's
+both, Claude Code's the prompt alone), and any other input is refused. A face whose queue passes 4096 lines or 4 MiB past its snapshot is cut off rather than
 given a gap, and reconnects for a fresh snapshot.
 
 ## The dev worker
@@ -104,7 +105,11 @@ prompt it sent, it follows again. A drag selects and a click copies a part (belo
 wheel and the mouse never reach the pty. A prompt
 waits for its answer only while the answer can come: at most the latest 16, each for 30 s, none past
 the link it went by, a reload or the face's end. Under
-rewake's face the keys go to that input, never to the pty, and Esc only drops a selection. `rewake screen`
+rewake's face the keys go to that input, never to the pty. Esc drops a selection; with none, while
+the turn works, it interrupts it where the session takes an interrupt, whatever the input holds, as
+pi's own Esc stops its run: the face sends `interrupt` and the harness stops as on its own Esc, a
+refusal said under the input (`not interrupted: …`). Esc while idle, or to a session that takes no
+interrupt (a Claude Code dev worker), does nothing. `rewake screen`
 takes the window as the person sees it: the shadow window draws the face too.
 
 ### The look
@@ -120,6 +125,8 @@ decision, October 30, 2026: first the same look, customised later), as read from
   pane, a wrapped or second line hung under the text (the owner's word, October 31, 2026: better
   than native, which wraps back to the edge); over 10 000 characters, its first and last
   2 500 with `… +N lines …` between.
+- **Interrupt**: an `error` notice, the session's own words for a stop or a failure, in red behind
+  `  ⎿  ` under what it stopped, hung under its text; another notice is faint behind `· `.
 - **Letter**: a letter rewake delivered reaches the harness as its `<task-notification>` and shows
   as the notification's summary after a `●` coloured by its status — green completed, red failed,
   amber killed, else the text's colour. The notice's first line follows the dot, each `↳` preview
@@ -358,7 +365,7 @@ A new face, a reload's or a lost link's, follows the bottom with no selection: t
 worker's and is not carried across, so a change under `face/src/` while the person reads up
 puts the view back at the bottom (seen live, October 31, 2026, brief 49). Tests: `shell/src/face/host.test.ts`, the contract in `check.test.ts` and through the worker in `host.test.ts`, the look in `face/src/render.test.ts` and `view.test.tsx`, the clock
 in `ticker.test.ts`, the scroll in `scroll.test.ts`, a notch's rows in `wheel.test.ts` and through
-the worker in `host.test.ts`, copying in `select.test.ts` (a selection over gutters, a wrapped
+the worker in `host.test.ts`, Esc's paths through the worker in `escape.test.ts`, copying in `select.test.ts` (a selection over gutters, a wrapped
 line, a diff and a table; what a click on each part copies; a click told from a drag), through the
 worker in `host.test.ts` with the light after a click and none on a move, and the pty under the
 face hearing no mouse in `view.test.tsx`, the wheel included over a real pane's widget fed as pi's

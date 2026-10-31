@@ -130,7 +130,8 @@ const (
 )
 
 // ItemStatus is streaming or settled for a text; running, done, error or refused for a tool;
-// gap when part of it was lost on the way and the native face has it whole.
+// error also for a notice telling a failure or an interrupt, drawn as one; gap when part of it
+// was lost on the way and the native face has it whole.
 type ItemStatus string
 
 // The values of ItemStatus.
@@ -201,7 +202,8 @@ const (
 	PermissionModeUnasked PermissionMode = "unasked"
 )
 
-// Input is one line the face sends: an input, answered by a line with its id.
+// Input is one line the face sends: an input, answered by a line with its id. A face sends only
+// the kinds hello listed.
 type Input struct {
 	// ID is the face's own id of the input.
 	ID string `json:"id"`
@@ -209,14 +211,16 @@ type Input struct {
 	// Kind is what the input asks.
 	Kind InputKind `json:"kind"`
 
-	// Text is a prompt's text.
+	// Text is a prompt's text; empty for an interrupt.
 	Text string `json:"text"`
 }
 
-// InputKind is what the face may send: a prompt, typed as the person.
+// InputKind is what the face may send: a prompt, typed as the person; an interrupt, the
+// person's Esc stopping the turn that works, as the harness's own Esc does.
 type InputKind string
 
 // The values of InputKind.
 const (
-	InputKindPrompt InputKind = "prompt"
+	InputKindPrompt    InputKind = "prompt"
+	InputKindInterrupt InputKind = "interrupt"
 )

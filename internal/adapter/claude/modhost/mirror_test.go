@@ -69,7 +69,7 @@ func TestAFacePromptRidesTheHeartbeat(t *testing.T) {
 	_, socket := servingWith(t, func(server *Server) {
 		// As New takes the face's prompts of a run it is given a model.
 		server.cfg.Mirror = model
-		model.Take(server.Prompt)
+		model.Take(server.Prompt, mirror.InputKindPrompt)
 		server.cfg.Hold = 10 * time.Millisecond
 	})
 	postValue(t, socket, PathHello, HelloRequest{LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})

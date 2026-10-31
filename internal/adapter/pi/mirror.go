@@ -82,20 +82,25 @@ func (r *run) mirrored(request frame) frame {
 
 var turnStates = map[string]mirror.TurnState{"working": mirror.TurnStateWorking, "idle": mirror.TurnStateIdle}
 
-// prompt carries a prompt typed in rewake's face to pi as the person's; the
-// extension mirrors it once pi hears it as its input.
-func (r *run) prompt(ctx context.Context, input mirror.Input) error {
+// input carries an input of rewake's face to pi: a prompt typed there as
+// the person's, which the extension mirrors once pi hears it as its input,
+// or the person's Esc, which stops the run as pi's own Esc does.
+func (r *run) input(ctx context.Context, input mirror.Input) error {
 	l, thread := r.connection()
 	if l == nil {
 		return errors.New("pi's extension is not connected")
 	}
-	answer, err := l.ask(ctx, frame{Op: "prompt", Thread: thread, Text: input.Text})
+	request := frame{Op: "prompt", Thread: thread, Text: input.Text}
+	if input.Kind == mirror.InputKindInterrupt {
+		request = frame{Op: "interrupt", Thread: thread}
+	}
+	answer, err := l.ask(ctx, request)
 	if err != nil {
 		return fmt.Errorf("pi's extension did not answer: %w", err)
 	}
 	if !answer.OK {
 		if answer.Error == "" {
-			return errors.New("pi's extension refused the prompt")
+			return fmt.Errorf("pi's extension refused the %s", request.Op)
 		}
 		return errors.New(answer.Error)
 	}

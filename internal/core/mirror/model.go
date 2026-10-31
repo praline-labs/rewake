@@ -33,6 +33,8 @@ type Model struct {
 	born    int
 	clients map[*client]struct{}
 	inputs  func(context.Context, Input) error
+	// takes are the kinds of input the session takes, which hello lists.
+	takes []InputKind
 	// notices numbers rewake's own notices, their ids.
 	notices int
 }
@@ -66,21 +68,27 @@ func New() *Model {
 // ErrNoInputs refuses an input of a session that takes none.
 var ErrNoInputs = errors.New("this session takes no input from the face")
 
-// Take names what carries the face's inputs to the harness; until it is
-// called, every input is refused.
-func (m *Model) Take(inputs func(context.Context, Input) error) {
+// ErrNotTaken refuses an input of a kind the session does not take.
+var ErrNotTaken = errors.New("this session does not take that input from the face")
+
+// Take names what carries the face's inputs to the harness and the kinds it
+// takes; until it is called, every input is refused.
+func (m *Model) Take(inputs func(context.Context, Input) error, kinds ...InputKind) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.inputs = inputs
+	m.inputs, m.takes = inputs, slices.Clone(kinds)
 }
 
 // Input carries one input of the face to the harness.
 func (m *Model) Input(ctx context.Context, input Input) error {
 	m.mu.Lock()
-	inputs := m.inputs
+	inputs, takes := m.inputs, m.takes
 	m.mu.Unlock()
 	if inputs == nil {
 		return ErrNoInputs
+	}
+	if !slices.Contains(takes, input.Kind) {
+		return ErrNotTaken
 	}
 	return inputs(ctx, input)
 }
@@ -103,9 +111,10 @@ func (m *Model) apply(e Event) {
 		if e.Kind == EventNotice {
 			kind = ItemKindNotice
 		}
+		// A refused prompt, or a notice telling a failure or an interrupt.
 		status := ItemStatusSettled
-		if e.Status == ItemStatusRefused {
-			status = ItemStatusRefused
+		if e.Status == ItemStatusRefused || e.Status == ItemStatusError {
+			status = e.Status
 		}
 		if m.byID[id] == nil {
 			m.add(&entry{item: Item{ID: id, Turn: word(e.Turn), Kind: kind, Status: status, Origin: word(e.Origin)}, text: newClip(textMax, e.Text)})

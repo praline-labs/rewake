@@ -125,7 +125,7 @@ func (s *Server) read(conn net.Conn, c *client) {
 		var input Input
 		decoder := json.NewDecoder(bytes.NewReader(scanner.Bytes()))
 		decoder.DisallowUnknownFields()
-		if err := decoder.Decode(&input); err != nil || input.Kind != InputKindPrompt || input.ID == "" {
+		if err := decoder.Decode(&input); err != nil || (input.Kind != InputKindPrompt && input.Kind != InputKindInterrupt) || input.ID == "" {
 			c.push(encode(answer(input.ID, errors.New("not an input of the face"))))
 			continue
 		}

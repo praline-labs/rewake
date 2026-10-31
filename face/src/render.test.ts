@@ -229,6 +229,7 @@ test("every row the face draws covers the pane's width, however narrow", () => {
     call("Bash", "{}", "\x1b[31mred\x1b[0m\tx", "error"),
     { id: "th", kind: "thinking", status: "settled", text: "hm" },
     { id: "n", kind: "notice", status: "settled", text: "a notice 界" },
+    { id: "x", kind: "notice", status: "error", text: "Operation aborted 界" },
     call("Edit", { file_path: "/a/b/c.ts", old_string: "界", new_string: "x" }, "ok"),
     call("Write", { file_path: "/a/w.ts", content: "one 界\ntwo" }, "ok"),
     call("Probe", { n: 1 }, Array.from({ length: 30 }, (_, i) => `line ${i}`).join("\n")),
@@ -297,4 +298,21 @@ test("a call auto mode's classifier settled says so under it", () => {
   expect(denied.slice(1)).toEqual([
     "  ⎿  Denied by auto mode classifier ∙ [Scope] ∙ see the mode's page",
   ]);
+});
+
+// An interrupt or a failure the session told is a red line under what it
+// stopped, as the terminal program draws one; another notice stays faint.
+test("a notice of an interrupt is red under its mark, another faint", () => {
+  const aborted = linesOf(
+    { id: "x", kind: "notice", status: "error", text: "Operation aborted" },
+    80,
+  );
+  expect(text(aborted)).toEqual(["  ⎿  Operation aborted"]);
+  expect(aborted[0]?.spans.map((s) => [s.gutter ?? false, s.tone])).toEqual([
+    [true, undefined],
+    [false, "error"],
+  ]);
+  const said = linesOf({ id: "n", kind: "notice", status: "settled", text: "lost" }, 80);
+  expect(text(said)).toEqual(["· lost"]);
+  expect(said[0]?.spans[1]?.tone).toBe("faint");
 });

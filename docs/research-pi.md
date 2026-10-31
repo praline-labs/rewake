@@ -228,6 +228,7 @@ harness pid and rechecks its process start time before accepting the first frame
 | Extension to host | `hello` | `protocol: 2`, `thread`, initial `state`; success makes Wake, TurnBoundary and Telemetry live, plus Control when its directory exists and Spaces on a main's run; the answer's `mirror: true` (October 31, 2026, optional) says rewake's face draws the run |
 | Extension to host | `mirror` | `thread`, `events`: a batch of the face's neutral events ([below](#the-face-of-a-pi-worker)); answer `ok`, or `error` for a run the face does not draw (October 31, 2026) |
 | Host to extension | `prompt` | `thread`, `text`: a prompt typed in rewake's face; answer `ok` and whether it was `steered`, or `error` while compacting, for an empty text or a run not drawn (October 31, 2026) |
+| Host to extension | `interrupt` | `thread`: the person's Esc in rewake's face; the extension calls `ctx.abort()` and answers `ok`, or `error` while pi is idle or compacting or for a run not drawn; an older extension answers `unknown host operation` (October 31, 2026) |
 | Extension to host | `closing` | `thread`; sent at `session_shutdown` whose `reason` is `"quit"`, before the link closes, waited for at most one second; a main's run in rewake's shell calls `LaunchRequest.Closing` (October 24, 2026) |
 | Host to extension | `wake` | `thread`, `notice`; answer says `ok` and whether it was `steered`, or `pending` while compacting |
 | Extension to host | `turn-start` | `thread`, `turn`; acknowledgment precedes model work |
@@ -505,7 +506,8 @@ events on (`internal/adapter/pi/mirror.go`). The extension's side is `mirror.ts`
   (October 31, 2026, brief 49: before, each step drew an empty `∴ Thinking`). `toolcall_start` is the `tool`, its `toolcall_delta`s its `input`,
   sent at most every 100 ms, `toolcall_end` and `tool_execution_start` the whole input;
   `tool_execution_end` is the `result` with its content's text. An assistant `message_end` with
-  `stopReason: "error"` adds pi's `errorMessage` as a `notice`. A call with a `parentToolCallId`
+  `stopReason: "error"` or `"aborted"` ends as pi's screen ends it (below, "An aborted or failed
+  message"). A call with a `parentToolCallId`
   is left out. pi has no permission mode: no `mode` event is sent.
 - **Refused by a hook.** A call ends `refused`, permit `{by: "hook", allowed: false, reason}`,
   when `tool_execution_end` has `isError` and no `durationMs` (the tool never ran), rewake's own
@@ -517,6 +519,19 @@ events on (`internal/adapter/pi/mirror.go`). The extension's side is `mirror.ts`
 - **The prompt back.** The face's prompt reaches the host's model, which asks the extension
   `prompt`; it calls `pi.sendUserMessage(text)` while idle, with `deliverAs: "steer"` while
   pi works, and answers at once: pi's own errors come later, on its screen.
+- **Esc.** The face's Esc reaches the extension as the wire's `interrupt` while pi works, and it
+  calls `ctx.abort()`, which in pi's interactive mode is its own Esc while it works
+  (`interactive-mode.js`, the `abort` of the extensions' context and `defaultEditor.onEscape`, both
+  `restoreQueuedMessagesToEditor({abort: true})`): the run stops, and a message queued to steer it
+  goes back into pi's own editor, which the face does not show. pi's Esc is one key while it works,
+  with text in the editor or none; a second Esc on an empty editor while idle opens its tree or fork
+  selector by `doubleEscapeAction`, which the face does not take. Nothing else calls it.
+- **An aborted or failed message** ends as pi's screen ends it (`interactive-mode.js`,
+  `message_end`; `components/assistant-message.js`, read on 1.4.0): a block that was streaming
+  settles with what the message holds, never a gap; every call it asked for that never ran ends
+  `error` with `Operation aborted`, or pi's error for a failure; one with no call adds a `notice` of
+  status `error`, `Operation aborted` or `Error: ` and pi's error, which the face draws in red. A
+  running call ends with its tool's own error, bash's `Command aborted` after its output.
 - **The outbox** keeps the mod's caps, counted in UTF-8 bytes of JSON: batches every 50 ms, one
   in flight, a 5 s deadline; an event 40 KiB, a batch 48 KiB, the outbox 256 KiB with 16 KiB
   kept for markers, a block 256 KiB settled in parts, a call's input or output cut to its head and tail with a
@@ -548,3 +563,15 @@ differs from Claude Code: an empty thinking block is drawn as `∴ Thinking` whe
 the provider's summary, as the face draws Claude Code's; pi's header, its footer's cost and token
 counts are not drawn; an edit shows the model's fragments with no line numbers where pi's own
 screen shows the file's lines numbered, as the face does for Claude Code's.
+
+**[live]** October 31, 2026, this build, a private `REWAKE_DIR` and project under `/tmp`, the shell
+from its sources under a pty of 200 by 50, a pi main and a pi worker on the cheapest model at minimal
+thinking. pi's own Esc in main's native pane, 7.7 s into `sleep 60; echo finished`, drew `$ sleep 60;
+echo finished (timeout 70s)`, `Command aborted`, `Took 7.7s` and `Error: This operation was aborted`
+in red, the last from an empty assistant message that ended `error`, as the probe of October 28 saw. The same prompt typed in the worker's face, then Esc:
+the run stopped within 4 s, and pi's own view of the worker (the prefix's `v`) drew those four lines
+as main's had; the face drew `Ran 1 shell command` and, in red, `⎿  Error: This operation was
+aborted`, then the turn's end. Esc while a reply streamed: pi's view kept the text and drew
+`Operation aborted`; the face kept the reply whole, no gap mark, and `⎿  Operation aborted` in red.
+Esc while idle changed nothing on the screen. Still differs: a bash call folded into a run shows no
+`Command aborted` of its own, as the face folds a failed call; pi's time under the call is not drawn.

@@ -14,8 +14,9 @@ rewake's face ([face.md](../face.md)), after its first slice — a dev worker on
 pi worker, read with a prompt back, the switch and hot reload:
 
 1. Asks in the face, answered there through the run's ask broker.
-2. Abort from the face, compaction notices, `dev = true` in a template with `--no-dev`,
-   `rewake list`'s Type cell `code, dev`, `rewake screen --face native|rewake`.
+2. Abort from the face on a Claude Code dev worker (pi's Esc is in), compaction notices,
+   `dev = true` in a template with `--no-dev`, `rewake list`'s Type cell `code, dev`,
+   `rewake screen --face native|rewake`.
 3. A workflow scenario of a dev worker on the fixture harness, once the fixture mirrors.
 4. Later, each its own decision: subagents in the face, main as a drawn session.
 

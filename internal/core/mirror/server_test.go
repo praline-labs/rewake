@@ -62,7 +62,7 @@ func TestAFaceGetsTheSnapshotThenChangesAndSendsAPrompt(t *testing.T) {
 	m.Take(func(_ context.Context, input Input) error {
 		taken <- input.Text
 		return nil
-	})
+	}, InputKindPrompt)
 	conn, err := net.Dial("unix", serving(t, m))
 	if err != nil {
 		t.Fatal(err)
@@ -71,7 +71,7 @@ func TestAFaceGetsTheSnapshotThenChangesAndSendsAPrompt(t *testing.T) {
 	_ = conn.SetDeadline(time.Now().Add(10 * time.Second))
 	reader := bufio.NewReader(conn)
 	hello := next(t, reader)
-	if hello.Op != LineOpHello || *hello.V != Version || len(hello.Inputs) != 1 {
+	if hello.Op != LineOpHello || *hello.V != Version || len(hello.Inputs) != 1 || hello.Inputs[0] != InputKindPrompt {
 		t.Fatalf("hello: %+v", hello)
 	}
 	if begin := next(t, reader); begin.Op != LineOpBegin || *begin.Items != 1 {
@@ -101,5 +101,12 @@ func TestAFaceGetsTheSnapshotThenChangesAndSendsAPrompt(t *testing.T) {
 	}
 	if answer := next(t, reader); *answer.Ok || answer.Detail == nil {
 		t.Fatalf("an unknown input was taken: %+v", answer)
+	}
+	// An interrupt of a session that takes only prompts never reaches it.
+	if _, err := conn.Write([]byte(`{"id":"i3","kind":"interrupt","text":""}` + "\n")); err != nil {
+		t.Fatal(err)
+	}
+	if answer := next(t, reader); *answer.Ok || *answer.Detail != ErrNotTaken.Error() {
+		t.Fatalf("an input the session does not take: %+v", answer)
 	}
 }
