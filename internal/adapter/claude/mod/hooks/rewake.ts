@@ -14,6 +14,7 @@ import type {
 } from "../protocol.gen.ts";
 import { paths } from "../protocol.gen.ts";
 import { Asks } from "./asks.ts";
+import { Band, sample, serveBand } from "./band.ts";
 import { briefToolsFor, serveBriefs } from "./briefs.ts";
 import { exitReasons, tellClosing } from "./closing.ts";
 import { serveDialogs } from "./dialogs.ts";
@@ -174,6 +175,7 @@ export const register: Register = (on) => {
   const loadId = newId();
   let load: Load | undefined;
   const mirror = new Mirror(() => load, loadId);
+  const band = new Band();
 
   on("session.start", async ($, e, next) => {
     const started = await next(e);
@@ -181,6 +183,12 @@ export const register: Register = (on) => {
     if (!socket) {
       // Loaded outside a rewake run: nobody to report to.
       return started;
+    }
+    try {
+      band.begin(await $.env.get("REWAKE_SESSION"), () => $.ui.invalidate("ui.render"));
+      await sample(() => $.session.usage(), band);
+    } catch {
+      // No band; the session is drawn as it is.
     }
     if (await $.env.get("REWAKE_EXECUTABLE")) {
       const role = await $.env.get("REWAKE_ROLE");
@@ -306,6 +314,7 @@ export const register: Register = (on) => {
     if (e.agentId === undefined) {
       load?.management.usageSeen(step.usage);
       load?.management.changed();
+      await sample(() => $.session.usage(), band);
     }
     return step;
   });
@@ -342,8 +351,12 @@ export const register: Register = (on) => {
   serveDialogs(
     on,
     () => load,
-    (mode) => mirror.moded(mode),
+    (mode) => {
+      mirror.moded(mode);
+      band.moded(mode);
+    },
   );
+  serveBand(on, band);
 
   // The conversation, for a run rewake's own face draws.
   serveMirror(on, mirror);
@@ -362,6 +375,7 @@ export const register: Register = (on) => {
   on("session.measure", async ($, e, next) => {
     const measured = await next(e);
     load?.management.changed();
+    await sample(() => $.session.usage(), band);
     return measured;
   });
 
