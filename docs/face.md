@@ -147,12 +147,12 @@ alt+Backspace, alt+d and alt+Delete delete words, ctrl+u and ctrl+k to the line'
 ctrl+- undoes: OpenTUI's own keys where they are pi's. pi's history on Up at the first row, its
 kill ring and its completion are not repeated. A bracketed paste arrives whole: line ends made
 `\n`, a tab four spaces, every other control character dropped, as pi cleans one; a paste of more
-than ten lines or 1000 characters shows as pi's marker, `[paste #1 +40 lines]` or `[paste #1 1200
-chars]`, and is sent whole in its place; a marker for no paste of this input is sent as typed.
+than two newlines or 800 characters shows masked as Claude Code masks one, `[Pasted text #1 +39
+lines]` or `[Pasted text #1]` with no newline, and is sent whole in its place (owner, 2026-10-31); a marker for no paste of this input is sent as typed.
 A marker is one piece of the text, as in pi's editor (a virtual extmark of OpenTUI's textarea): the
 cursor steps over it, Left from its end to its start, Backspace and Delete take it whole, and an
 edit that cuts into it, a word's or a line's delete, takes the rest of it, so no damaged marker is
-sent (review of 8e94ba1, seen sending `[paste #1 +40 lines`). The
+sent (review of 8e94ba1, seen sending `[Pasted text #1 +39 lines`). The
 draft and its pastes stay with the pane while the face is switched away. Every window of the pane
 draws the input as tall as the person's.
 

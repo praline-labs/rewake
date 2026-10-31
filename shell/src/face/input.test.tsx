@@ -178,8 +178,8 @@ test("Enter sends the text, and pi's new-line keys start a line", async () => {
 });
 
 // A bracketed paste arrives whole, its newlines and blank lines kept; one
-// past pi's size is a marker in the input and the paste itself when sent.
-test("a paste keeps its lines, a large one shown as pi's marker and sent whole", async () => {
+// past Claude Code's size is a marker in the input and the paste itself when sent.
+test("a paste keeps its lines, a large one shown as Claude Code's marker and sent whole", async () => {
   const sent: string[] = [];
   const { renderOnce, captureCharFrame, mockInput, renderer } = await testRender(
     () => (
@@ -206,15 +206,15 @@ test("a paste keeps its lines, a large one shown as pi's marker and sent whole",
   await mockInput.typeText(" ");
   await mockInput.pasteBracketedText(long);
   await renderOnce();
-  expect(draftOf("paste")).toBe("a\n\n    b [paste #1 +40 lines]");
-  expect(frame(captureCharFrame)[2]?.trimEnd()).toBe("    b [paste #1 +40 lines]");
+  expect(draftOf("paste")).toBe("a\n\n    b [Pasted text #1 +39 lines]");
+  expect(frame(captureCharFrame)[2]?.trimEnd()).toBe("    b [Pasted text #1 +39 lines]");
   mockInput.pressEnter();
   await renderOnce();
   expect(sent).toEqual([`a\n\n    b ${long}`]);
   renderer.destroy();
 });
 
-// Review of 8e94ba1: a Backspace after the marker sent `[paste #1 +40 lines`
+// Review of 8e94ba1: a Backspace after the marker sent `[Pasted text #1 +39 lines`
 // as typed. pi's editor holds a marker as one piece: the cursor steps over
 // it, Backspace takes it whole, and so does a word's delete that reaches it.
 test("a paste's marker moves and deletes whole, as in pi's editor", async () => {
@@ -255,7 +255,7 @@ test("a paste's marker moves and deletes whole, as in pi's editor", async () => 
   mockInput.pressArrow("left");
   await mockInput.typeText("c");
   await renderOnce();
-  expect(draftOf("whole")).toBe("a\nc[paste #2 +40 lines]b");
+  expect(draftOf("whole")).toBe("a\nc[Pasted text #2 +39 lines]b");
   // A word's delete from after it takes it whole.
   mockInput.pressArrow("right");
   mockInput.pressKey("w", { ctrl: true });
@@ -312,27 +312,29 @@ test("a pane made lower lowers the input's bound", async () => {
   t.renderer.destroy();
 });
 
-test("pi's paste rules: line ends, tabs, control characters and the large paste's marker", () => {
+test("paste rules: line ends, tabs, control characters and the large paste's marker", () => {
   expect(cleaned("a\r\nb\rc\td\x07\x1b")).toBe("a\nb\nc    d");
   const p = new Pastes();
-  expect(p.take("short\ntext")).toEqual({ text: "short\ntext" });
-  expect(p.take("x".repeat(1001))).toEqual({ text: "[paste #1 1001 chars]", id: 1 });
-  expect(p.take("1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11")).toEqual({
-    text: "[paste #2 +11 lines]",
-    id: 2,
+  expect(p.take("short\ntext\nof\nthree")).toEqual({
+    text: "[Pasted text #1 +3 lines]",
+    id: 1,
   });
+  expect(p.take("a\nb\nc")).toEqual({ text: "a\nb\nc" });
+  expect(p.take("x".repeat(800))).toEqual({ text: "x".repeat(800) });
+  expect(p.take("x".repeat(801))).toEqual({ text: "[Pasted text #2]", id: 2 });
+  expect(p.take(`${"x".repeat(801)}\ny`)).toEqual({ text: "[Pasted text #3 +1 lines]", id: 3 });
   // A marker the person typed for a paste never made, or one of a paste
   // whose marker was deleted, stays as typed.
-  const text = "[paste #2 +11 lines] and [paste #9 +3 lines] [paste #1 1001 chars]";
+  const text = "[Pasted text #1 +3 lines] and [Pasted text #9 +3 lines] [Pasted text #2]";
   expect(p.markers(text).map((m) => [m.id, m.start, m.end])).toEqual([
-    [2, 0, 20],
-    [1, 45, 66],
+    [1, 0, 25],
+    [2, 56, 72],
   ]);
-  expect(p.expand(text, new Set([2]))).toBe(
-    "1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11 and [paste #9 +3 lines] [paste #1 1001 chars]",
+  expect(p.expand(text, new Set([1]))).toBe(
+    "short\ntext\nof\nthree and [Pasted text #9 +3 lines] [Pasted text #2]",
   );
   p.clear();
-  expect(p.take("y".repeat(1001)).text).toBe("[paste #1 1001 chars]");
+  expect(p.take("y".repeat(801)).text).toBe("[Pasted text #1]");
   expect(rowsFor(10)).toBe(5);
   expect(rowsFor(40)).toBe(12);
 });

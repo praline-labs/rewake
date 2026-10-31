@@ -1,7 +1,8 @@
 // The face's input as pi's editor behaves (docs/face.md, "The input"), as
-// read in the bundled pi-tui 1.4.0's editor.js: how many rows it grows to,
-// how a paste is cleaned, and a large paste kept whole behind a marker the
-// input shows in its place, `[paste #1 +40 lines]`, put back when it is sent.
+// read in the bundled pi-tui 1.4.0's editor.js: how many rows it grows to
+// and how a paste is cleaned. A large paste is kept whole behind a marker the
+// input shows in its place, as Claude Code masks one, `[Pasted text #1 +39
+// lines]`, put back when it is sent.
 
 // rowsFor is how many rows the input grows to before it scrolls inside: 30%
 // of the pane's rows, at least 5, as pi's editor takes 30% of its terminal.
@@ -17,12 +18,13 @@ export const cleaned = (text: string) =>
     // biome-ignore lint/suspicious/noControlCharactersInRegex: a paste's control characters are dropped.
     .replace(/[\u0000-\u0009\u000b-\u001f\u007f]/g, "");
 
-// A paste past either is large: kept whole, a marker shown in its place.
-const largeLines = 10;
-const largeChars = 1000;
+// A paste past either is large: kept whole, a marker shown in its place. The
+// lines are counted as newlines, as Claude Code counts a paste's.
+const largeNewlines = 2;
+const largeChars = 800;
 
-// marker finds pi's paste markers in a text.
-const marker = /\[paste #(\d+)( (\+\d+ lines|\d+ chars))?\]/g;
+// marker finds the paste markers in a text.
+const marker = /\[Pasted text #(\d+)( \+\d+ lines)?\]/g;
 
 // Paste is what a paste puts in the input: its text, or a large one's
 // marker and the paste it stands for.
@@ -34,12 +36,12 @@ export class Pastes {
 
   // take is what a paste puts in the input: itself, or a large one's marker.
   take(text: string): Paste {
-    const lines = text.split("\n").length;
-    if (lines <= largeLines && text.length <= largeChars) return { text };
+    const newlines = text.split("\n").length - 1;
+    if (newlines <= largeNewlines && text.length <= largeChars) return { text };
     const id = ++this.n;
     this.kept.set(id, text);
-    const shown = lines > largeLines ? `+${lines} lines` : `${text.length} chars`;
-    return { text: `[paste #${id} ${shown}]`, id };
+    const lines = newlines > 0 ? ` +${newlines} lines` : "";
+    return { text: `[Pasted text #${id}${lines}]`, id };
   }
 
   // markers are the markers in a text whose paste is kept, where each stands.
