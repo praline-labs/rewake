@@ -51,6 +51,7 @@ import { type Frame, frameOf, listenScreen } from "./screen.ts";
 import { connectWorker, type MainRun, mainEnv, type Source, startMain } from "./sources.ts";
 import { showSessions, stripOf } from "./strip.tsx";
 import { themeOf } from "./theme.ts";
+import { outerTitle } from "./title.ts";
 import { type Env, type View, Window } from "./window.tsx";
 
 const args = process.argv.slice(2);
@@ -113,7 +114,8 @@ function feed(pane: Pane, data: Uint8Array) {
     if (seen.copy !== undefined) renderer.copyToClipboardOSC52(seen.copy);
     if (seen.title !== undefined) {
       pane.title = seen.title;
-      if (focused() === pane.id) renderer.setTerminalTitle(seen.title);
+      const out = outerTitle(pane === mainPane, seen.title);
+      if (out !== undefined) renderer.setTerminalTitle(out);
     }
     // While the program tracks the mouse a drag is the program's, not a
     // selection of OpenTUI's.
@@ -188,7 +190,8 @@ createEffect(() => {
   // pane under rewake's face leaves the keys to the face's input.
   const face = faceShown(id);
   setTimeout(() => (face ? pane?.term?.blur() : pane?.term?.focus()), 0);
-  if (pane?.title) renderer.setTerminalTitle(pane.title);
+  const out = outerTitle(true, mainPane.title);
+  if (out !== undefined) renderer.setTerminalTitle(out);
 });
 
 function run(c: Command) {

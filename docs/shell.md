@@ -171,7 +171,7 @@ wrapper in the shell does the same for main (`terminal.UTF8Locale`), whose worke
 
 - **OSC 52, title.** The widget swallows them. The shell scans the bytes before `write()` — a
   stateful scanner, since a sequence can split across reads — and calls
-  `renderer.copyToClipboardOSC52` and `setTerminalTitle` (the focused pane's). A program that
+  `renderer.copyToClipboardOSC52` and `setTerminalTitle` (main's pane's only: a worker's title stays on its pane, so the outer terminal's title, which a host such as herdr shows, never reads as a worker's whichever pane has the focus). A program that
   copies through the machine's clipboard sends no OSC 52, and inside the shell such a copy never
   reaches the person's terminal: pi 1.3.0 in fullscreen on WSL without `WT_SESSION` copies with
   PowerShell. The shell starts main with `PI_CLIPBOARD_OSC52=1` unless the person set it, pi's own
