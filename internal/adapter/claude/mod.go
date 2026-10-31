@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/fs"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -23,7 +24,7 @@ import (
 // dot, and the manifest's directory is one, while the tests and the schema
 // are no part of what a run loads.
 //
-//go:embed mod/.claude-plugin/plugin.json mod/hooks/hooks.json mod/hooks/rewake.ts mod/hooks/outbox.ts mod/hooks/heartbeat.ts mod/hooks/management.ts mod/hooks/asks.ts mod/hooks/calls.ts mod/hooks/dialogs.ts mod/hooks/closing.ts mod/hooks/worktree.ts mod/hooks/briefs.ts mod/hooks/enter.ts mod/hooks/mirror.ts mod/hooks/permits.ts mod/hooks/sizes.ts mod/protocol.gen.ts
+//go:embed mod/.claude-plugin/plugin.json mod/hooks/hooks.json mod/hooks/rewake.ts mod/hooks/outbox.ts mod/hooks/heartbeat.ts mod/hooks/management.ts mod/hooks/asks.ts mod/hooks/calls.ts mod/hooks/dialogs.ts mod/hooks/closing.ts mod/hooks/worktree.ts mod/hooks/briefs.ts mod/hooks/enter.ts mod/hooks/mirror.ts mod/hooks/permits.ts mod/hooks/sizes.ts mod/hooks/band.ts mod/protocol.gen.ts
 var modFiles embed.FS
 
 // pluginDirFlag loads a plugin from a directory for one launch.
@@ -32,6 +33,17 @@ const pluginDirFlag = "--plugin-dir"
 // modSocketEnv names the run's mod socket in the harness's environment, where
 // the mod reads it.
 const modSocketEnv = "REWAKE_MOD_SOCKET"
+
+// modWindowEnv names the window the launch limited the conversation to, in
+// tokens, 0 for none: the mod's band shows the figure the strip shows, which
+// is measured against that limit rather than the model's own window.
+const modWindowEnv = "REWAKE_CONTEXT_WINDOW"
+
+// modEnv is the environment the mod reads: its socket and the launch's window.
+func modEnv(env []string, socket string, args []string) []string {
+	env = withEnv(env, modSocketEnv, socket)
+	return withEnv(env, modWindowEnv, strconv.FormatInt(windowTokens(flagValue(args, autocompactFlag)), 10))
+}
 
 // modSuffix ends every mod socket, the hashed form's included.
 const modSuffix = ".mod.sock"
