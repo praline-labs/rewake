@@ -1,9 +1,15 @@
 // What the shell's thread and a face's worker say to each other
 // (docs/face.md, "Hot reload"): sizes, keys and pings one way, lines and
-// errors the other. Both ends import these types alone, so a reload of the
+// errors the other. The face is code of its own (face/), and the shell
+// imports these types and the contract's number alone, so a reload of the
 // face never needs the shell to change.
 
 import type { PermissionMode } from "./mirror.gen.ts";
+
+// contract is the version of these messages, raised with any change of
+// them: start carries the shell's, and a face that speaks another draws
+// nothing. The shell holds what a face sends to it (shell/src/face/check.ts).
+export const contract = 1;
 
 // Tone is a span's colour by its meaning; the shell's thread picks the
 // colour from the person's theme (view.tsx).
@@ -46,7 +52,7 @@ export type Span = {
 export type FaceLine = { spans: Span[]; band?: boolean; part?: string; lit?: boolean };
 
 export type ToFace =
-  | { kind: "start"; path: string; width: number; height: number }
+  | { kind: "start"; contract: number; path: string; width: number; height: number }
   | { kind: "size"; width: number; height: number }
   | { kind: "scroll"; by: number }
   // wheel is one notch of the mouse wheel and when it came: the face turns

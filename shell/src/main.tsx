@@ -5,6 +5,8 @@
 // bar under its status, and the bar switches the whole window.
 // Started by rewake --shell as
 //   rewake-shell --room <room> -- <main's command line>
+// and by the release gate as rewake-shell --face-check, which starts the face
+// it carries and says whether it answers.
 
 import { createCliRenderer } from "@opentui/core";
 import { render, testRender, useTerminalDimensions } from "@opentui/solid";
@@ -12,7 +14,15 @@ import { createEffect, createSignal } from "solid-js";
 import { takeBriefs } from "./briefs.tsx";
 import { askColors, seedOf } from "./colors.ts";
 import { endMain, tailText, watchTerminal } from "./ending.ts";
-import { copyWith, endFaces, faceShown, takeMirrors, toggleFace } from "./face/faces.ts";
+import {
+  checkFace,
+  copyWith,
+  endFaces,
+  faceShown,
+  takeMirrors,
+  toggleFace,
+  workerUrl,
+} from "./face/faces.ts";
 import { type Command, isSuspend, prefixHandler } from "./keys.ts";
 import { closingLayer } from "./lifting.ts";
 import { type PaneTerminal, paneHooks } from "./pane.ts";
@@ -44,6 +54,11 @@ import { themeOf } from "./theme.ts";
 import { type Env, type View, Window } from "./window.tsx";
 
 const args = process.argv.slice(2);
+if (args[0] === "--face-check") {
+  const why = await checkFace();
+  process.stdout.write(why ? `${why}\n` : `the face answers: ${workerUrl}\n`);
+  process.exit(why ? 1 : 0);
+}
 const split = args.indexOf("--");
 const room = args[args.indexOf("--room") + 1] ?? "default";
 const command = args.slice(split + 1);

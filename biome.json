@@ -11,11 +11,12 @@
     "includes": [
       "shell/src/**/*.{ts,tsx}",
       "shell/build.ts",
+      "face/src/**/*.ts",
       "internal/adapter/claude/mod/**/*.ts",
       "internal/adapter/pi/**/*.ts",
       "!internal/adapter/claude/mod/protocol.gen.ts",
       "!shell/src/room_view.gen.ts",
-      "!shell/src/face/mirror.gen.ts",
+      "!face/src/mirror.gen.ts",
       "!**/node_modules",
       "!archive",
       "!.scratch",

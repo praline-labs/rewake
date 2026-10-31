@@ -3,8 +3,16 @@
 // drew. A reload ends the worker whole and starts it again from the current
 // sources; nothing here touches a pane's pty or the shell's process, so a face
 // that fails to load, throws or hangs costs its own drawing alone.
-import type { FaceLine, FromFace, Link, Pointing, ToFace } from "./messages.ts";
-import type { PermissionMode } from "./mirror.gen.ts";
+import {
+  contract,
+  type FaceLine,
+  type FromFace,
+  type Link,
+  type Pointing,
+  type ToFace,
+} from "../../../face/src/messages.ts";
+import type { PermissionMode } from "../../../face/src/mirror.gen.ts";
+import { taken } from "./check.ts";
 
 export type FaceState = {
   lines: FaceLine[];
@@ -83,8 +91,14 @@ export class FaceHost {
     worker.addEventListener("messageerror", () => {
       if (this.worker === worker) this.failed("the face sent what does not read");
     });
-    worker.addEventListener("message", (event: MessageEvent<FromFace>) => {
-      if (this.worker === worker) this.heard(event.data);
+    // What the face posts is held to the contract, and only the shell's own
+    // copy of it is read.
+    worker.addEventListener("message", (event: MessageEvent<unknown>) => {
+      if (this.worker !== worker) return;
+      const got = taken(event.data);
+      if ("fault" in got)
+        return this.failed(`the face sent what the contract does not allow: ${got.fault}`);
+      this.heard(got.message);
     });
     this.pinged = this.ponged = 0;
     this.pingedAt = Date.now();
@@ -100,7 +114,13 @@ export class FaceHost {
       }
     }, every);
     this.set({ link: "connecting", error: undefined });
-    this.send({ kind: "start", path: this.options.path, width: this.width, height: this.height });
+    this.send({
+      kind: "start",
+      contract,
+      path: this.options.path,
+      width: this.width,
+      height: this.height,
+    });
   }
 
   private heard(message: FromFace) {

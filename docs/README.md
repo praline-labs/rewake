@@ -59,7 +59,7 @@ A person using rewake reads [user-guide.md](user-guide.md) alone. An agent worki
   and review"), `roadmap/<step>.md`, named by the step's entry: what will be built, not yet true.
   When the step lands, what it settled goes into the living documents and the page leaves the
   roadmap. Open now, at the path its brief named: [face-plugin.md](face-plugin.md), the face as
-  a package of its own.
+  code of its own built into rewake.
 - **The project's goal** — [project.md](project.md), changed only by the owner's decision; the
   project's words in `GLOSSARY.md`; how the project is built and its checks in `AGENTS.md`.
 

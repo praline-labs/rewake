@@ -46,15 +46,33 @@ func (l *lander) checks(ctx context.Context) []string {
 		dir: l.root, name: "go", env: []string{"REWAKE_WORKFLOW=1"}, limit: workflowLimit,
 		args: []string{"test", "-count=1", "-timeout", "10m", "-v", "./test/workflow/..."},
 	})
-	if r := l.git(ctx, "diff", "--quiet", l.old, "HEAD", "--", "shell/"); r.err == nil && r.code == 0 {
-		l.say("skip  shell    shell/ unchanged")
-	} else {
-		shell := filepath.Join(l.root, "shell")
-		check("shell",
-			command{dir: shell, name: "bun", args: []string{"install", "--frozen-lockfile"}, limit: shellLimit},
-			command{dir: shell, name: "bun", args: []string{"run", "check"}, limit: shellLimit})
+	// The shell imports the face's contract and builds the face into itself,
+	// so a change of face/ checks both.
+	face := l.changed(ctx, "face/")
+	for _, part := range []struct {
+		name, unchanged string
+		changed         bool
+	}{
+		{"shell", "shell/ and face/ unchanged", face || l.changed(ctx, "shell/")},
+		{"face", "face/ unchanged", face},
+	} {
+		if !part.changed {
+			l.say("skip  %-8s %s", part.name, part.unchanged)
+			continue
+		}
+		dir := filepath.Join(l.root, part.name)
+		check(part.name,
+			command{dir: dir, name: "bun", args: []string{"install", "--frozen-lockfile"}, limit: shellLimit},
+			command{dir: dir, name: "bun", args: []string{"run", "check"}, limit: shellLimit})
 	}
 	return failed
+}
+
+// changed says whether a path of the tree differs between the old v2 and the
+// new; a diff that cannot be told counts as a change, so it is checked.
+func (l *lander) changed(ctx context.Context, path string) bool {
+	r := l.git(ctx, "diff", "--quiet", l.old, "HEAD", "--", path)
+	return r.err != nil || r.code != 0
 }
 
 // failLine is a line of go test's output that names what failed.

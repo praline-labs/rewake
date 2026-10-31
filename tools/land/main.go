@@ -80,7 +80,9 @@ Run from the main checkout with v2 checked out and a clean tree. The steps:
                 ./... is in the process list
       workflow  REWAKE_WORKFLOW=1 go test -count=1 -timeout 10m -v ./test/workflow/...
       shell     bun install --frozen-lockfile && bun run check in shell/,
-                only when shell/ changed between the old v2 and the new
+                only when shell/ or face/ changed between the old v2 and
+                the new
+      face      the same in face/, only when face/ changed
   - on green: git push origin v2, then go build of cmd/rewake into
     <install>/rewake.next, renamed over <install>/rewake; the room runs it
     once the owner restarts it;

@@ -106,7 +106,8 @@ The checks, in order:
   - npm installs the release from a registry this process serves on the
     loopback interface: this machine's build alone, and its command runs,
     the pinned pi beside it runs under node, and the shell beside the binary
-    starts and draws its main's output; each other build alone for its cpu;
+    starts and draws its main's output, and its own face starts and
+    answers; each other build alone for its cpu;
     none with --omit=optional, and the command then fails naming the
     reinstall;
   - the shim's own tests, go test ./scripts.

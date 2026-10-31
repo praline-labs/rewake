@@ -6,6 +6,7 @@
 // `bun install --os=linux --cpu='*'` first; without it the build has none to
 // put inside.
 
+import { resolve } from "node:path";
 import solidPlugin from "@opentui/solid/bun-plugin";
 
 const [target, outfile] = process.argv.slice(2);
@@ -15,9 +16,15 @@ if (!target || !outfile) {
 }
 
 const result = await Bun.build({
-  // The face runs as a worker of its own (src/face/faces.ts), so it is an
-  // entrypoint beside the shell's.
-  entrypoints: [`${import.meta.dir}/src/main.tsx`, `${import.meta.dir}/src/face/worker.ts`],
+  // The face is code of its own (face/) and runs as a worker of its own
+  // (src/face/faces.ts), so it is an entrypoint beside the shell's. The two
+  // are named in the bundle from their common directory, the repository's
+  // root, which faces.ts repeats; a path left with its `..` named the face
+  // otherwise, and only `rewake-shell --face-check` showed it.
+  entrypoints: [
+    `${import.meta.dir}/src/main.tsx`,
+    resolve(import.meta.dir, "../face/src/worker.ts"),
+  ],
   // The shell runs in the person's directory: a bunfig.toml, .env, tsconfig
   // or package.json there must not reach it, as they would by default — a
   // preload named in one stopped the spike's executable.

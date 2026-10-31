@@ -141,7 +141,7 @@ func TestAFastForwardLandsPushesAndInstalls(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(r.install, "rewake.next")); !os.IsNotExist(err) {
 		t.Errorf("rewake.next was left beside the build: %v", err)
 	}
-	for _, want := range []string{"fast-forward", "ok    race", "ok    workflow", "skip  shell", "pushed v2", "log: "} {
+	for _, want := range []string{"fast-forward", "ok    race", "ok    workflow", "skip  shell", "skip  face", "pushed v2", "log: "} {
 		if !strings.Contains(out, want) {
 			t.Errorf("output lacks %q:\n%s", want, out)
 		}
@@ -198,6 +198,22 @@ func TestADivergedBranchNeedsASubject(t *testing.T) {
 	}
 	if !slices.Contains(r.calls, "bun run check") {
 		t.Errorf("shell/ changed and the shell was not checked: %v", r.calls)
+	}
+}
+
+// The shell builds the face and imports its contract: a change of face/
+// alone checks both.
+func TestAChangeOfTheFaceChecksTheShellToo(t *testing.T) {
+	r := newRepo(t)
+	r.branchOff("work", "face/src/worker.ts", "2\n")
+	code, out := r.land("work")
+	if code != exitDone {
+		t.Fatalf("exit %d\n%s", code, out)
+	}
+	for _, want := range []string{"ok    shell", "ok    face"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("output lacks %q:\n%s", want, out)
+		}
 	}
 }
 

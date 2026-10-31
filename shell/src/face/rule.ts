@@ -5,7 +5,7 @@
 // the context, then cuts the name with …; whatever its role, a session's
 // rule is drawn the same.
 
-import type { PermissionMode } from "./mirror.gen.ts";
+import type { PermissionMode } from "../../../face/src/mirror.gen.ts";
 
 // RulePart is a run of the rule's text, in the rule's colour unless it
 // names the mode, drawn in that mode's colour.

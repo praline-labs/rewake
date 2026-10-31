@@ -43,7 +43,7 @@ const (
 var targets = []target{
 	{schemaPath, tsPath, goPath, "modhost"},
 	{"internal/cli/room_view.schema.json", "shell/src/room_view.gen.ts", "internal/cli/room_view_gen.go", "cli"},
-	{"internal/core/mirror/mirror.schema.json", "shell/src/face/mirror.gen.ts", "internal/core/mirror/mirror_gen.go", "mirror"},
+	{"internal/core/mirror/mirror.schema.json", "face/src/mirror.gen.ts", "internal/core/mirror/mirror_gen.go", "mirror"},
 }
 
 func main() {

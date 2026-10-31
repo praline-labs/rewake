@@ -70,13 +70,15 @@ func execute(ctx context.Context, limit time.Duration, dir, name string, args ..
 }
 
 // childEnv is this process's environment without rewake's session variables,
-// which a test or a built rewake would otherwise take for its own session.
+// which a test or a built rewake would otherwise take for its own session,
+// and without REWAKE_FACE, which would check another face than the installed
+// shell's own.
 func childEnv() []string {
 	var env []string
 	for _, entry := range os.Environ() {
 		name, _, _ := strings.Cut(entry, "=")
 		switch name {
-		case "REWAKE_SESSION", "REWAKE_EPOCH", "REWAKE_DIR", "REWAKE_ROOM", "GIT_OPTIONAL_LOCKS":
+		case "REWAKE_SESSION", "REWAKE_EPOCH", "REWAKE_DIR", "REWAKE_ROOM", "REWAKE_FACE", "GIT_OPTIONAL_LOCKS":
 			continue
 		}
 		env = append(env, entry)

@@ -478,6 +478,9 @@ outlives a worker being chosen over it, as a worker's screen does.
   default) and puts `bin/rewake-shell` into each platform package beside the Go binary: about
   99 MB, 49.5 MB packed, for x64 and arm64 alike. rewake finds it next to its own executable;
   `REWAKE_SHELL` names another — an edited copy run from source with `bun`, which
-  `shell/rewake-shell` does (`bun install` in `shell/` once). The compiled shell reads no
+  `shell/rewake-shell` does (`bun install` in `shell/` once). rewake's face, code of its own in
+  `face/`, is compiled into the shell as its second entrypoint; `rewake-shell --face-check` starts
+  it and says whether it answers, and the release gate runs it on the installed shell
+  ([face.md](face.md#the-faces-own-code)). The compiled shell reads no
   `bunfig.toml`, `.env`, `tsconfig.json` or `package.json` of the directory it starts in: a preload
   named in one stopped it in a first build.
