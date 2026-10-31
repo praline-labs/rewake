@@ -242,6 +242,12 @@ from the role and the harness are in [roles.md](roles.md).
 - Inherited Claude Code markers are stripped (list in research): otherwise `rewake claude`
   launched from inside another session would inherit that session's socket and have transcript
   saving disabled.
+- The proxy variables (`http_proxy`, `https_proxy`, `all_proxy`, `no_proxy`, either case) are
+  inherited as they are, into main and into every worker: this machine reaches the network only
+  through its proxy, and the owner's decision of October 31, 2026 is that main, its workers and
+  the tests all go through it. `launch.SessionEnv`, pi's `launch.go` and the space host's
+  `WorkerEnv` drop only names of their own (read October 31, 2026), and a Claude Code worker
+  launched through the space host had all eight that day.
 
 None of the variable names contain `KEY`, `SECRET`, or `TOKEN`: a harness may strip those from the
 agent's command environment.

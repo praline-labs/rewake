@@ -7,6 +7,7 @@
 import { randomUUID } from "node:crypto";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { bounds, fit, type MirrorEvent, pieces, textBudget } from "./outbox.ts";
+import { Queue, textOf } from "./queued.ts";
 import { facedTool, resultText } from "./toolmap.ts";
 
 type Sink = { push: (event: MirrorEvent) => void };
@@ -68,6 +69,8 @@ export class Mirror {
   // started again since a message did not fail, which it tells no extension.
   private failed?: string;
   private retries = 0;
+  // queue follows the prompts pi holds until it takes them.
+  readonly queue = new Queue((event) => this.push(event));
 
   constructor(
     private sink: Sink,
@@ -90,9 +93,20 @@ export class Mirror {
       this.faced.shift();
       origin = "face";
     }
-    // A prompt steered into the run going on is that run's.
+    // A prompt steered into the run going on is that run's, and waits in
+    // pi's queue until pi takes it.
     const turn = steering ? this.run : undefined;
-    this.push({ kind: "prompt", id: randomUUID(), turn, origin, text: fit(text, textBudget) });
+    const id = randomUUID();
+    const status = steering ? "queued" : undefined;
+    this.push({ kind: "prompt", id, turn, origin, status, text: fit(text, textBudget) });
+    if (steering) this.queue.add(id, text);
+  }
+
+  // began is a message pi began: a user message while prompts wait is one
+  // pi took from its queue; every message holds the rest against it.
+  began(message: { role?: string; content?: unknown }, pending: boolean) {
+    if (message.role === "user") this.queue.took(textOf(message.content));
+    this.queue.check(pending);
   }
 
   started() {
@@ -116,6 +130,7 @@ export class Mirror {
   // turn's end, a fact the face draws, not a notice it would have to guess.
   settled(aborted = false) {
     const run = this.run;
+    this.queue.settled();
     // Retries that all failed end as pi's screen ends them.
     if (run && !aborted && this.retries > 0 && this.failed !== undefined)
       this.notice(`Error: Retry failed after ${this.retries} attempts: ${this.failed}`);
@@ -276,11 +291,17 @@ export class Mirror {
   }
 }
 
+type Observed = {
+  signal?: AbortSignal;
+  isIdle: () => boolean;
+  hasPendingMessages?: () => boolean;
+};
+
 // observing runs a handler as an observer: whatever it throws is dropped, and
 // it returns nothing, so pi's event goes on as it came.
 const observing =
-  <E>(handle: (event: E, ctx: { signal?: AbortSignal; isIdle: () => boolean }) => void) =>
-  (event: E, ctx: { signal?: AbortSignal; isIdle: () => boolean }) => {
+  <E>(handle: (event: E, ctx: Observed) => void) =>
+  (event: E, ctx: Observed) => {
     try {
       handle(event, ctx);
     } catch {}
@@ -302,7 +323,16 @@ export function serveMirror(pi: ExtensionAPI, mirror: Mirror) {
   );
   pi.on(
     "turn_start",
-    observing((e: { turnIndex: number }) => mirror.stepped(e.turnIndex)),
+    observing((e: { turnIndex: number }, ctx) => {
+      mirror.stepped(e.turnIndex);
+      mirror.queue.check(ctx.hasPendingMessages?.() ?? true);
+    }),
+  );
+  pi.on(
+    "message_start",
+    observing((e: { message: { role?: string; content?: unknown } }, ctx) =>
+      mirror.began(e.message, ctx.hasPendingMessages?.() ?? true),
+    ),
   );
   pi.on(
     "message_update",
@@ -354,46 +384,4 @@ export function serveMirror(pi: ExtensionAPI, mirror: Mirror) {
     "agent_settled",
     observing((event: { aborted?: boolean }) => mirror.settled(event.aborted === true)),
   );
-}
-
-// facePrompt hands a prompt typed in the face to pi as the person's: a turn
-// while pi is idle, steered into the run going on while it works, as pi's
-// own editor queues one. pi takes it in or shows its own error.
-export function facePrompt(
-  pi: ExtensionAPI,
-  mirror: Mirror,
-  idle: boolean,
-  compacting: boolean,
-  text: unknown,
-): { ok?: boolean; steered?: boolean; error?: string } {
-  if (!mirror.on) return { error: "rewake's face does not draw this session" };
-  if (typeof text !== "string" || text.trim() === "") return { error: "a prompt needs a text" };
-  if (compacting) return { error: "pi is compacting its context; send it again once that is done" };
-  try {
-    mirror.sent(text);
-    pi.sendUserMessage(text, idle ? undefined : { deliverAs: "steer" });
-    return { ok: true, steered: !idle };
-  } catch {
-    return { error: "pi did not take the prompt" };
-  }
-}
-
-// faceInterrupt stops pi's run on the person's Esc in the face. In pi's own
-// screen ctx.abort() is its Esc while it works: the run stops and a message
-// queued to steer it goes back to pi's editor. Nothing else ever calls it from
-// the face, and an idle pi is left alone.
-export function faceInterrupt(
-  mirror: Mirror,
-  ctx: { isIdle: () => boolean; abort: () => void },
-  compacting: boolean,
-): { ok?: boolean; error?: string } {
-  if (!mirror.on) return { error: "rewake's face does not draw this session" };
-  if (compacting) return { error: "pi is compacting its context" };
-  if (ctx.isIdle()) return { error: "pi is not working" };
-  try {
-    ctx.abort();
-    return { ok: true };
-  } catch {
-    return { error: "pi did not take the interrupt" };
-  }
 }

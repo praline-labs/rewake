@@ -126,6 +126,19 @@ machine needs a restart; the test fails in about a minute and says so.
 
 *October 21, 2026.*
 
+### A harness probe without the machine's proxy ran past its minute
+
+`TestWorktreeEnterKeepsThePersonsPolicy` turned red on `v2` and every branch alike: `claude ran
+past 1m0s and was killed`, its output only the probe's `Prompt dropped by a hook`. The probe's
+environment was built from nothing (HOME, CLAUDE_CONFIG_DIR, PATH), and this machine reaches the
+network only through a proxy: with no proxy variables Claude Code did not exit after the dropped
+prompt. With them it passes in 3 s; with them cleared from the test's environment it hangs its
+minute again, every time. A stuck `ip addr` in `rtnl_dumpit` the same hour, which looked like the
+trap above, was not the cause: the probe passed beside it. Every environment a test builds from
+nothing carries the proxy (`internal/infra/proxyenv`), and a launch inherits it.
+
+*October 31, 2026.*
+
 ### `/proc` does not see the real pids, and that means neither an old build nor death
 
 A managed shell has a different pid namespace: reading `/proc/<pid>/exe` gave

@@ -20,8 +20,9 @@ type Event struct {
 	// Name is a tool's name.
 	Name string
 	// Status is how a tool call ended: done, error or refused; error on a
-	// notice telling a failure or an interrupt; refused on a prompt; error on
-	// a turn event that ended the turn by an interrupt.
+	// notice telling a failure or an interrupt; refused or queued on a prompt,
+	// refused on a taken that gives a queued prompt back; error on a turn
+	// event that ended the turn by an interrupt.
 	Status ItemStatus
 	// State is the turn's new state.
 	State TurnState
@@ -54,6 +55,9 @@ const (
 	EventResync EventKind = "resync"
 	EventNotice EventKind = "notice"
 	EventMode   EventKind = "mode"
+	// EventTaken says the session took a queued prompt into its
+	// conversation, or with Status refused gave it back untaken.
+	EventTaken EventKind = "taken"
 )
 
 // shortField bounds an id, a turn, a name or an origin: they are words, and

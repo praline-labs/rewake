@@ -2,8 +2,9 @@ import { randomUUID } from "node:crypto";
 import { createConnection, type Socket } from "node:net";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { briefTools } from "./briefs.ts";
+import { faceInterrupt, facePrompt } from "./faced.ts";
 import { management, type State } from "./management.ts";
-import { faceInterrupt, facePrompt, Mirror, serveMirror } from "./mirror.ts";
+import { Mirror, serveMirror } from "./mirror.ts";
 import { type MirrorEvent, Outbox } from "./outbox.ts";
 import { worktreeTools } from "./worktree.ts";
 

@@ -66,8 +66,8 @@
     },
     "ItemStatus": {
       "type": "string",
-      "description": "is streaming or settled for a text; running, done, error or refused for a tool; error also for a notice telling a failure or an interrupt, drawn as one; gap when part of it was lost on the way and the native face has it whole.",
-      "enum": ["streaming", "settled", "running", "done", "error", "refused", "gap"]
+      "description": "is streaming or settled for a text; running, done, error or refused for a tool; error also for a notice telling a failure or an interrupt, drawn as one; queued for a prompt the session holds and has not taken yet, refused for one it gave back untaken; gap when part of it was lost on the way and the native face has it whole.",
+      "enum": ["streaming", "settled", "running", "done", "error", "refused", "gap", "queued"]
     },
     "TurnState": {
       "type": "string",

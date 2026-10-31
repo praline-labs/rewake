@@ -15,11 +15,11 @@ import (
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
-//go:embed extension.ts management.ts worktree.ts briefs.ts mirror.ts outbox.ts toolmap.ts
+//go:embed extension.ts management.ts worktree.ts briefs.ts mirror.ts faced.ts queued.ts outbox.ts toolmap.ts
 var extensions embed.FS
 
 // modules are the extension's files, written beside it for each run.
-var modules = []string{"extension.ts", "management.ts", "worktree.ts", "briefs.ts", "mirror.ts", "outbox.ts", "toolmap.ts"}
+var modules = []string{"extension.ts", "management.ts", "worktree.ts", "briefs.ts", "mirror.ts", "faced.ts", "queued.ts", "outbox.ts", "toolmap.ts"}
 
 type run struct {
 	file, socket, controlDir string

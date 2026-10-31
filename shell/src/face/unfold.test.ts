@@ -66,7 +66,7 @@ test("ctrl+o opens everything, and a reloaded face opens it again", async () => 
   const { host, until } = session();
   host.size(40, 30);
   host.start();
-  await until((s) => has(s, "     … +9 lines"));
+  await until((s) => has(s, "     … +9 lines (ctrl+o to expand)"));
   host.unfold();
   expect(host.state.expanded).toBe(true);
   await until((s) => has(s, "     line 12"));
@@ -74,7 +74,7 @@ test("ctrl+o opens everything, and a reloaded face opens it again", async () => 
   await until((s) => has(s, "     line 12"));
   host.unfold();
   expect(host.state.expanded).toBe(false);
-  await until((s) => has(s, "     … +9 lines"));
+  await until((s) => has(s, "     … +9 lines (ctrl+o to expand)"));
 });
 
 // Review of 288cd7f: a selection is held by the rows' places, so rows opened
@@ -116,7 +116,7 @@ test("a face of another contract, reloaded opened, stays refused", async () => {
   const { host, until } = session([probe], url);
   host.size(40, 30);
   host.start();
-  await until((s) => has(s, "     … +9 lines"));
+  await until((s) => has(s, "     … +9 lines (ctrl+o to expand)"));
   host.unfold();
   const good = await until((s) => has(s, "     line 12"));
   // The real face, told by its shell of a contract one past its own.

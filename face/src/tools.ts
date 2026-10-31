@@ -46,7 +46,10 @@ export function shortPath(path: string): string {
 // draws as its own panel.
 const unseen = new Set(["ToolSearch", "TodoWrite"]);
 
-export const hidden = (item: Item) => item.kind === "tool" && unseen.has(item.name ?? "");
+// A prompt the session holds is drawn under the conversation until it takes
+// it (render.ts, statusOf), not where it was sent.
+export const hidden = (item: Item) =>
+  (item.kind === "tool" && unseen.has(item.name ?? "")) || item.status === "queued";
 
 // nameOf is the name the terminal heads a call with.
 export function nameOf(item: Item): string {

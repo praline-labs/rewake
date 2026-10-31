@@ -1,1 +1,6 @@
 preload = ["@opentui/solid/preload"]
+
+# bun test reads only its own section: without the preload here the tests ran
+# Solid's server build, where no effect runs and nothing drawn updates.
+[test]
+preload = ["@opentui/solid/preload"]

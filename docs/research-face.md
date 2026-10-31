@@ -135,3 +135,28 @@ screen --text`.
   `⎿  Error: fetch failed` for each of four attempts, then `⎿  Error: Retry failed after 3 attempts:
   fetch failed` and the turn's end after 14 s; pi's own view (the prefix's `v`) drew the same five
   error lines.
+
+## The input as pi's editor, a queued prompt, the conversation from the top (October 31, 2026, brief 57)
+
+pi 1.4.0, this change's build in a private state directory and project under `/tmp`, the shell from
+its sources under a pty of 200 by 50, a pi main and a pi worker on the cheapest model the workers'
+agent folder takes at minimal thinking; keys and SGR mouse events written to the pty, pictures by
+`rewake screen --text`.
+
+- **Growth.** A prompt longer than the pane wrapped the input to 3 rows, the conversation giving
+  them; sent, the input was one row again. Past the bound (14 rows on that pane) the top rule read
+  `↑ 4 more` with the text scrolled to its end; Up to the first line showed lines 1–14 and
+  `↓ 4 more` on the bottom rule.
+- **Keys.** shift+Enter (sent as `CSI 13;2u`), ctrl+j, a blank line and `\`+Enter made one prompt of
+  six lines, sent by Enter as six lines.
+- **Paste.** A paste with blank lines and a tab came with its lines and the tab as four spaces; a
+  40-line paste showed `[paste #1 +40 lines]` and went whole: the model counted 40 lines.
+- **Queued.** A prompt sent while the worker ran a command showed `Steering: Also say the word
+  second after that.` above `⣆ Running Bash…`; once pi took it, it was drawn after
+  `Ran 1 shell command (ctrl+o to expand)`, where pi's own view (the prefix's `v`) drew it.
+- **From the top.** A short conversation started on the pane's first row, `❯ …`, `● ok`,
+  `Done in 1s`, and followed the bottom once it filled the pane.
+- **Hints.** `seq 1 12` drew `Ran 1 shell command (ctrl+o to expand)`; a click on it gave
+  `Ran 1 shell command (click to fold)` and the call's three rows with `… +9 lines (ctrl+o to
+  expand)`; a click on that drew the twelve lines and `… −9 lines (click to fold)`, and another
+  folded it back to `… +9 lines (ctrl+o to expand)`.

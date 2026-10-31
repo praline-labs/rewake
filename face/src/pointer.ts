@@ -7,24 +7,22 @@
 import type { Point, Selection } from "./select.ts";
 
 // View is where the conversation's rows stand in the face: the first shown,
-// how many, in a view of height rows width columns wide, the shown rows at
-// its bottom when there are fewer.
+// how many, in a view of height rows width columns wide, the shown rows from
+// its top when there are fewer.
 export type View = { top: number; shown: number; height: number; width: number };
 
 // rowAt is the conversation's row on a row of the view, none off its rows.
 export function rowAt(y: number, view: View): number | undefined {
-  const n = y - (view.height - view.shown);
-  return n >= 0 && n < view.shown && y < view.height ? view.top + n : undefined;
+  return y >= 0 && y < view.shown && y < view.height ? view.top + y : undefined;
 }
 
 // pointAt is the cell under a point, past the rows shown their first cell or
 // their last: a drag above the view takes the first row from its start, one
 // below it the last row to its end.
 export function pointAt(x: number, y: number, view: View): Point {
-  const n = y - (view.height - view.shown);
-  if (view.shown === 0 || n < 0) return { row: view.top, col: 0 };
-  if (n >= view.shown) return { row: view.top + view.shown - 1, col: view.width };
-  return { row: view.top + n, col: Math.min(Math.max(x, 0), Math.max(view.width - 1, 0)) };
+  if (view.shown === 0 || y < 0) return { row: view.top, col: 0 };
+  if (y >= view.shown) return { row: view.top + view.shown - 1, col: view.width };
+  return { row: view.top + y, col: Math.min(Math.max(x, 0), Math.max(view.width - 1, 0)) };
 }
 
 // A click names the conversation's row it was on.

@@ -3,7 +3,8 @@
 // so (dist/modes/interactive/interactive-mode.js, message_end, and
 // components/assistant-message.js, read on 1.4.0), and the face draws it the same.
 import { expect, test } from "bun:test";
-import { faceInterrupt, Mirror, serveMirror } from "./mirror.ts";
+import { faceInterrupt } from "./faced.ts";
+import { Mirror, serveMirror } from "./mirror.ts";
 import type { MirrorEvent } from "./outbox.ts";
 
 function mirrored() {

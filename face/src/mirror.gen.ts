@@ -100,9 +100,10 @@ export interface Item {
 export type ItemKind = "prompt" | "text" | "thinking" | "tool" | "notice"
 
 // ItemStatus is streaming or settled for a text; running, done, error or refused for a tool;
-// error also for a notice telling a failure or an interrupt, drawn as one; gap when part of it
-// was lost on the way and the native face has it whole.
-export type ItemStatus = "streaming" | "settled" | "running" | "done" | "error" | "refused" | "gap"
+// error also for a notice telling a failure or an interrupt, drawn as one; queued for a prompt
+// the session holds and has not taken yet, refused for one it gave back untaken; gap when part
+// of it was lost on the way and the native face has it whole.
+export type ItemStatus = "streaming" | "settled" | "running" | "done" | "error" | "refused" | "gap" | "queued"
 
 // TurnState is the session's turn: idle, working, compacting, unknown after events were lost,
 // or ended with the session.
