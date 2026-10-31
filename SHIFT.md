@@ -35,7 +35,7 @@ Open a document for numbers, commands and names: the map only points.
 - `docs/claude-turns.md` — A Claude Code session's turns through the mod — the outbox and end ids, the hello and its loads, the heartbeat and the live set, readiness and admission, what not holding an end costs.
   sections: The mod's side · The host's side · The live set · Readiness and admission · The start time · What not holding costs
 - `docs/claude.md` — The Claude Code adapter as one mod — loading it, when it does not load, the mod↔host protocol, the peer check, tools, telemetry and the cache's life, control.
-  sections: What the adapter offers · Loading the mod for one run · When the mod does not load · The protocol · The tools · The turn boundary · Telemetry · The cache ttl · Control · The mirror · What the mod never does
+  sections: What the adapter offers · Loading the mod for one run · When the mod does not load · The protocol · The tools · The turn boundary · Telemetry · The cache ttl · Control · The mirror · The band · What the mod never does
 - `docs/code.md` — Where each part of rewake lives in the tree, package by package; the adapter interface is in rules/adapter-api.md.
 - `docs/delivery-adapters.md` — How each harness carries a notice: Claude Code's socket line, inbound gate and late receipts; pi's extension; the fixture; and where each adapter's turn ends come from.
   sections: Claude Code · pi · The fixture
