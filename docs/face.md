@@ -117,11 +117,14 @@ decision, October 30, 2026: first the same look, customised later), as read from
 `table.ts` a reply, `turn.ts` the row under the conversation.
 
 - **Prompt**: a faint `❯ ` and the text as typed, no markdown, on the band's background across the
-  pane, a wrapped or second line back at the left edge; over 10 000 characters, its first and last
+  pane, a wrapped or second line hung under the text (the owner's word, October 31, 2026: better
+  than native, which wraps back to the edge); over 10 000 characters, its first and last
   2 500 with `… +N lines …` between.
 - **Letter**: a letter rewake delivered reaches the harness as its `<task-notification>` and shows
   as the notification's summary after a `●` coloured by its status — green completed, red failed,
-  amber killed, else the text's colour — wrapped back to the edge.
+  amber killed, else the text's colour. The notice's first line follows the dot, each `↳` preview
+  after its newline sits on its own row under it, and every wrapped row hangs under its text
+  (native wraps all back to the edge; the owner chose this, October 31, 2026).
 - **Reply**: `● ` and its markdown hung at two columns: bold, italic, inline code in the theme's
   blue; a heading bold, the first level also italic and underlined, a blank row after it; blank
   rows run together; list items `-` or their number, hanging under the marker; a quote behind a
@@ -259,7 +262,9 @@ terminal clipboard settings if paste fails`, `sent the code block (18 chars) …
   line. A row broken to fit the pane carries `join`, the text the break swallowed, and is copied
   onto the row above with it, so a wrapped paragraph copies as the line it was. A table's row is
   copied by its cells, each wrapped cell whole, a tab between them. Each line loses its trailing
-  blanks. The selection is held in the conversation's rows, so it stays on its text while the view
+  blanks. A blank row inside the selection — between paragraphs, list items, items, in a code
+  block — is lit with one cell and copied as an empty line, as natively (the owner, October 31,
+  2026). The selection is held in the conversation's rows, so it stays on its text while the view
   scrolls or more arrives.
 - **A drag past the body's top or bottom** scrolls the view two rows every 50 ms, for at most ten
   seconds, with the selection's end on the edge's row, native's rule and numbers. The pointer
