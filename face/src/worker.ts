@@ -180,10 +180,12 @@ function pin(row: number) {
 }
 
 // unfolded opens or closes everything; a view scrolled up keeps the first
-// row of a part it shows where it was, one at the bottom stays there.
+// row of a part it shows where it was, one at the bottom stays there. A
+// selection is held by the rows' places, which this moves: it is dropped.
 function unfolded(all: boolean) {
   if (all === unfold.all) return;
   unfold.every(all);
+  pointer.clear();
   if (frame && scroll.top !== undefined) {
     const { top, shown } = viewOf();
     const row = frame.rows.findIndex((r, i) => i >= top && i < top + shown && r.part);
@@ -217,6 +219,7 @@ function pointed(type: Pointing, x: number, y: number, focused: boolean) {
       } else if (gesture) {
         const key = frame.rows[gesture.clicked]?.part;
         if (key !== undefined && toggles(key)) {
+          pointer.clear();
           unfold.toggle(key);
           pin(gesture.clicked);
           soon();
@@ -326,17 +329,25 @@ function escaped(id: string) {
   socket.write(`${JSON.stringify({ id, kind: "interrupt", text: "" })}\n`);
 }
 
+// refused is a start of another contract: the face stays as it was told
+// then, drawing nothing, so the shell keeps its last frame and the error; it
+// answers only pings.
+let refused = false;
+
 self.onmessage = (event: MessageEvent<ToFace>) => {
   const message = event.data;
+  if (refused && message.kind !== "ping") return;
   try {
     switch (message.kind) {
       case "start":
         // A shell of another contract would misread what this face posts.
-        if (message.contract !== contract)
+        if (message.contract !== contract) {
+          refused = true;
           return post({
             kind: "error",
             text: `this face speaks contract ${contract}, the shell ${message.contract}`,
           });
+        }
         path = message.path;
         width = message.width;
         height = message.height;

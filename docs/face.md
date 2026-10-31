@@ -312,7 +312,8 @@ terminal clipboard settings if paste fails`, `sent the code block (18 chars) …
   the while is a click; a drag event to any other cell makes it a selection from the press's cell,
   and its release copies the selection. A click copies only on a face that was focused when it was
   pressed, so the click that focuses a face copies nothing. A press drops the selection there was,
-  and so does a key or Esc; a finished selection stays drawn, as natively.
+  and so does a key, Esc, or ctrl+o: a selection is held by the rows' places, which opening or
+  folding moves (review of 288cd7f); a finished selection stays drawn, as natively.
 - **A selection copies text, not drawing** (`face/src/select.ts`). A span may be a `gutter`:
   a row's mark (`●`, `⎿`, `❯`), its indent and a hanging indent, a list's continuation indent, a
   quote's `▎`, a diff's sign and the padding of its band, a table's lines and its cells' padding. A
@@ -370,7 +371,9 @@ into the shell (the owner, October 31, 2026: a plugin in code of its own, then �
 публиковать ее? а просто встроить в rewake?»). It imports no package, only Bun's runtime. The
 contract between it and the shell is `face/src/messages.ts`, the shell importing its types and
 `contract`, the number of its shape, raised with any change of it; `start` carries the shell's,
-and a face of another contract says so under the input and draws nothing. The shell holds every
+and a face of another contract says so under the input and draws nothing, and stays so: it answers
+pings and takes nothing else the shell sends, its ctrl+o and its size included, so the shell keeps
+the last frame and the error (review of 288cd7f). The shell holds every
 message a face posts to the contract (`shell/src/face/check.ts`: the kinds, each field's type, the
 tones and marks it knows, the sizes of strings, the ranges of numbers, at most 2000 rows of 4096
 spans) and stops a face that sends anything else as one that threw; what it keeps is its own copy,
