@@ -4,7 +4,7 @@ import { testRender } from "@opentui/solid";
 import "../pane.ts";
 import type { PaneTerminal } from "../pane.ts";
 import { themeOf } from "../theme.ts";
-import { ruleOf } from "./rule.ts";
+import { ruleOf, ruleParts } from "./rule.ts";
 import { FaceRow, FaceView } from "./view.tsx";
 
 const theme = themeOf(undefined);
@@ -93,21 +93,27 @@ test("the input's rule carries the mode, dropped before the work as the pane nar
     expect(Bun.stringWidth(ruleOf(width, "brief 名前 1/2", "bypass"))).toBe(width);
 });
 
-// The owner, October 31, 2026: the session's name stands at the rule's
-// right end again, after the work; a narrow pane drops the work, then cuts
-// the name.
-test("the input's rule ends with the session's name, after the work", () => {
-  expect(ruleOf(30, "brief 61 1/3", undefined, "review-pi")).toBe(
-    `${"─".repeat(3)} brief 61 1/3 · review-pi ─`,
+// The owner, October 31, 2026: pi's thinking level stands where Claude Code
+// shows its mode, in pi's words, with the key that moves it; the right end is
+// the room work alone. A narrow pane drops the hint, then the level, then
+// cuts the work.
+test("the input's rule carries pi's thinking level at its left and the work alone at its right", () => {
+  expect(ruleOf(60, "brief 61 1/3", undefined, "high")).toBe(
+    `── ◆ high (shift+tab to cycle) ${"─".repeat(14)} brief 61 1/3 ─`,
   );
-  expect(ruleOf(20, undefined, undefined, "review-pi")).toBe(`${"─".repeat(8)} review-pi ─`);
-  expect(ruleOf(20, "brief 61 1/3", undefined, "review-pi")).toBe(`${"─".repeat(8)} review-pi ─`);
-  expect(ruleOf(10, "brief 61 1/3", undefined, "review-pi")).toBe("── revi… ─");
-  expect(ruleOf(44, "⧗ 3", "auto", "review-pi")).toBe(
-    `── ⏵⏵ auto mode ${"─".repeat(10)} ⧗ 3 · review-pi ─`,
+  expect(ruleOf(40, undefined, undefined, "off")).toBe(`── ◆ thinking off (shift+tab to cycle) ─`);
+  expect(ruleOf(30, "brief 61 1/3", undefined, "high")).toBe(
+    `── ◆ high ${"─".repeat(5)} brief 61 1/3 ─`,
   );
-  for (let width = 0; width <= 50; width++) {
-    const rule = ruleOf(width, "brief 名前 1/2", "bypass", "名前-pi");
+  expect(ruleOf(20, "brief 61 1/3", undefined, "high")).toBe(`${"─".repeat(5)} brief 61 1/3 ─`);
+  expect(ruleOf(10, "brief 61 1/3", undefined, "high")).toBe("── brie… ─");
+  expect(ruleOf(20)).toBe("─".repeat(20));
+  // The mode wins where a session says both.
+  expect(ruleOf(30, undefined, "auto", "high")).toBe(`── ⏵⏵ auto mode ${"─".repeat(14)}`);
+  const parts = ruleParts(60, "⧗ 2", undefined, "xhigh");
+  expect(parts.find((p) => p.level)).toEqual({ text: "◆ xhigh", level: "xhigh" });
+  for (let width = 0; width <= 60; width++) {
+    const rule = ruleOf(width, "brief 名前 1/2", undefined, "minimal");
     expect(Bun.stringWidth(rule)).toBe(width);
   }
 });

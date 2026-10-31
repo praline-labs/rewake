@@ -9,7 +9,7 @@ import type { PermissionMode } from "./mirror.gen.ts";
 // contract is the version of these messages, raised with any change of
 // them: start carries the shell's, and a face that speaks another draws
 // nothing. The shell holds what a face sends to it (shell/src/face/check.ts).
-export const contract = 3;
+export const contract = 4;
 
 // Tone is a span's colour by its meaning; the shell's thread picks the
 // colour from the person's theme (view.tsx).
@@ -72,6 +72,9 @@ export type ToFace =
   // unfold opens everything the face folds, or closes it again: the
   // person's ctrl+o, kept by the shell across a reload.
   | { kind: "unfold"; all: boolean }
+  // thinking is the person's shift+tab: the session's thinking level moves
+  // on where the session takes it, the answer coming back under its id.
+  | { kind: "thinking"; id: string }
   | { kind: "ping"; n: number };
 
 // Pointing is what the pointer did with the left button: pressed, dragged
@@ -83,7 +86,9 @@ export type Pointing = "down" | "drag" | "up";
 export type Link = "connecting" | "live" | "lost";
 
 export type FromFace =
-  // mode is the session's permission mode, which the input's rule shows.
+  // mode is the session's permission mode, which the input's rule shows;
+  // cycles says the session takes shift+tab for its thinking level, which the
+  // rule then shows.
   | {
       kind: "lines";
       lines: FaceLine[];
@@ -91,6 +96,7 @@ export type FromFace =
       link: Link;
       prompts: boolean;
       mode?: PermissionMode;
+      cycles?: boolean;
     }
   | { kind: "error"; text: string }
   // copy is text for the person's clipboard: a selection, or the part a

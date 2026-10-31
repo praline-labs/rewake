@@ -89,14 +89,14 @@ func TestTheMirrorReachesTheModelOfARunTheFaceDraws(t *testing.T) {
 	}
 }
 
-// The face's prompt goes to the extension with its text, and its Esc as an
-// interrupt, each coming back with pi's answer; a refusal carries the
-// extension's reason.
-func TestAFacePromptAndEscReachTheExtension(t *testing.T) {
+// The face's prompt goes to the extension with its text, its Esc as an
+// interrupt and its shift+tab as thinking, each coming back with pi's
+// answer; a refusal carries the extension's reason.
+func TestAFacePromptEscAndShiftTabReachTheExtension(t *testing.T) {
 	model := mirror.New()
 	rig := newRig(t, func(r *run) {
 		r.mirror = model
-		model.Take(r.input, mirror.InputKindPrompt, mirror.InputKindInterrupt)
+		model.Take(r.input, mirror.InputKindPrompt, mirror.InputKindInterrupt, mirror.InputKindThinking)
 	})
 	if err := model.Input(t.Context(), mirror.Input{Kind: mirror.InputKindPrompt, Text: "early"}); err == nil {
 		t.Fatal("a prompt before the extension connected was taken")
@@ -127,6 +127,12 @@ func TestAFacePromptAndEscReachTheExtension(t *testing.T) {
 	}
 	if got := receive(t, prompts); got.Op != "interrupt" || got.Thread != "conversation" || got.Text != "" {
 		t.Fatalf("the interrupt on the wire: %+v", got)
+	}
+	if err := model.Input(t.Context(), mirror.Input{Kind: mirror.InputKindThinking}); err != nil {
+		t.Fatal(err)
+	}
+	if got := receive(t, prompts); got.Op != "thinking" || got.Thread != "conversation" || got.Text != "" {
+		t.Fatalf("the shift+tab on the wire: %+v", got)
 	}
 }
 

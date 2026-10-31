@@ -13,7 +13,7 @@ import {
   type Pointing,
   type ToFace,
 } from "./messages.ts";
-import type { Line, PermissionMode } from "./mirror.gen.ts";
+import type { InputKind, Line } from "./mirror.gen.ts";
 import { bounds } from "./mirror.gen.ts";
 import { FaceModel } from "./model.ts";
 import { partOf } from "./parts.ts";
@@ -42,18 +42,11 @@ const pointer = new Pointer();
 // once it or the width changed: only a tick lays them out again.
 let laid: FaceLine[] = [];
 let stale = true;
-// frame is what the last tick committed: every row from the same moment. A
-// scroll cuts only it, so a change of the conversation waits for its tick.
-let frame:
-  | {
-      rows: FaceLine[];
-      now: number;
-      turn: string;
-      link: Link;
-      prompts: boolean;
-      mode?: PermissionMode;
-    }
-  | undefined;
+// frame is what the last tick committed: every row from the same moment, and
+// what the rows are posted with. A scroll cuts only it, so a change of the
+// conversation waits for its tick.
+type Said = Omit<Extract<FromFace, { kind: "lines" }>, "kind" | "lines">;
+let frame: ({ rows: FaceLine[]; now: number } & Said) | undefined;
 let link: Link = "connecting";
 let model = new FaceModel();
 let socket: { write(data: string): number; end(): void } | undefined;
@@ -92,7 +85,8 @@ function draw(now: number) {
     anchor = undefined;
     const rows = pinned(laid, statusOf(model, clockAt(now), width), height);
     const prompts = model.inputs.includes("prompt");
-    frame = { rows, now, turn: model.turn, link, prompts, mode: model.mode };
+    const cycles = model.inputs.includes("thinking") || undefined;
+    frame = { rows, now, turn: model.turn, link, prompts, mode: model.mode, cycles };
     paint();
   } catch (err) {
     post({ kind: "error", text: `the face's drawing failed: ${String(err)}` });
@@ -118,17 +112,12 @@ const flash = new Flash(() => paint());
 function paint() {
   if (!frame) return;
   try {
-    const shown = scroll.view(frame.rows, height);
+    const { rows, now, ...said } = frame;
+    const shown = scroll.view(rows, height);
     const view = viewOf();
     const marked = lit(highlighted(shown, view.top, pointer.selection), flash.part);
-    const message: FromFace = {
-      kind: "lines",
-      lines: fill(blinked(marked, frame.now), width, height),
-      turn: frame.turn,
-      link: frame.link,
-      prompts: frame.prompts,
-      mode: frame.mode,
-    };
+    const lines = fill(blinked(marked, now), width, height);
+    const message: FromFace = { kind: "lines", lines, ...said };
     const sent = JSON.stringify(message);
     if (sent === posted) return;
     posted = sent;
@@ -317,6 +306,11 @@ function connect() {
   }).catch((err) => end(`the mirror's socket does not open: ${String(err)}`));
 }
 
+// asked sends the session an input with no text, where it takes that kind.
+function asked(id: string, kind: InputKind) {
+  if (model.inputs.includes(kind)) socket?.write(`${JSON.stringify({ id, kind, text: "" })}\n`);
+}
+
 // escaped is the person's Esc: a selection goes first, as the terminal
 // program's does; then a working turn stops, as the harness's own Esc stops
 // it, where the session takes an interrupt. An idle session hears nothing.
@@ -325,8 +319,7 @@ function escaped(id: string) {
     pointer.clear();
     return paint();
   }
-  if (model.turn !== "working" || !model.inputs.includes("interrupt") || !socket) return;
-  socket.write(`${JSON.stringify({ id, kind: "interrupt", text: "" })}\n`);
+  if (model.turn === "working") asked(id, "interrupt");
 }
 
 // refused is a start of another contract: the face stays as it was told
@@ -386,6 +379,9 @@ self.onmessage = (event: MessageEvent<ToFace>) => {
         return escaped(message.id);
       case "unfold":
         return unfolded(message.all);
+      // shift+tab moves the thinking level on, as the harness's own key does.
+      case "thinking":
+        return asked(message.id, "thinking");
       case "ping":
         return post({ kind: "pong", n: message.n });
     }

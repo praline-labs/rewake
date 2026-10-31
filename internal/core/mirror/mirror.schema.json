@@ -101,15 +101,15 @@
       "properties": {
         "id": {"type": "string", "description": "is the face's own id of the input."},
         "kind": {"$ref": "#/$defs/InputKind", "description": "is what the input asks."},
-        "text": {"type": "string", "description": "is a prompt's text; empty for an interrupt."}
+        "text": {"type": "string", "description": "is a prompt's text; empty for an interrupt and for thinking."}
       },
       "required": ["id", "kind", "text"],
       "additionalProperties": false
     },
     "InputKind": {
       "type": "string",
-      "description": "is what the face may send: a prompt, typed as the person; an interrupt, the person's Esc stopping the turn that works, as the harness's own Esc does.",
-      "enum": ["prompt", "interrupt"]
+      "description": "is what the face may send: a prompt, typed as the person; an interrupt, the person's Esc stopping the turn that works, as the harness's own Esc does; thinking, the person's shift+tab moving the session's thinking level to the next, as the harness's own key does.",
+      "enum": ["prompt", "interrupt", "thinking"]
     }
   }
 }

@@ -2,6 +2,7 @@
 // selection first; else it interrupts the session's working turn, where the
 // session takes an interrupt, as the harness's own Esc does; an idle session,
 // or one that takes none, hears nothing.
+// Their shift+tab moves the thinking level on where the session takes that.
 import { afterEach, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -110,4 +111,28 @@ test("Esc drops a selection first, and only the next one interrupts", async () =
   host.prompt("next");
   await until(() => heard.length === 2);
   expect(heard.map((h) => h.kind)).toEqual(["interrupt", "prompt"]);
+});
+
+test("shift+tab reaches a session that takes it, which the rule is told, and says a refusal", async () => {
+  const { host, heard, until } = session("idle", ["prompt", "interrupt", "thinking"]);
+  host.start();
+  expect((await until(drawn)).cycles).toBe(true);
+  host.thinking();
+  await until(() => heard.length === 1);
+  expect(heard[0]).toMatchObject({ kind: "thinking", text: "" });
+
+  const refused = session("idle", ["thinking"], "Current model does not support thinking");
+  refused.host.start();
+  await refused.until(drawn);
+  refused.host.thinking();
+  const said = await refused.until((s) => s.said !== undefined);
+  expect(said.said).toBe("not changed: Current model does not support thinking");
+
+  const other = session("idle", ["prompt"]);
+  other.host.start();
+  expect((await other.until(drawn)).cycles).toBeUndefined();
+  other.host.thinking();
+  other.host.prompt("next");
+  await other.until(() => other.heard.length > 0);
+  expect(other.heard.map((h) => h.kind)).toEqual(["prompt"]);
 });

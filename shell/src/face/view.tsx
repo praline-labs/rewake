@@ -12,7 +12,7 @@ import type { Theme } from "../theme.ts";
 import { faceOf, inputOf, inputRowsOf, pointFace, sizeFace, wheelFace } from "./faces.ts";
 import { FaceInput } from "./input.tsx";
 import { moreRule } from "./paste.ts";
-import { ruleParts, withMore } from "./rule.ts";
+import { type RulePart, ruleParts, withMore } from "./rule.ts";
 
 const colour = (c: string) => RGBA.fromHex(c);
 
@@ -110,6 +110,14 @@ const modeColour = (mode: PermissionMode | undefined, theme: Theme): RGBA => {
   }
 };
 
+// partColour is a part of the rule in its own colour: a mode's, or a
+// thinking level's as pi colours it; the rule's grey for the rest.
+const partColour = (part: RulePart, theme: Theme): RGBA | undefined => {
+  if (part.mode) return modeColour(part.mode, theme);
+  const level = part.level && theme.look.thinking[part.level];
+  return level ? colour(level) : undefined;
+};
+
 export function FaceView(props: {
   id: string;
   width: number;
@@ -118,8 +126,9 @@ export function FaceView(props: {
   // work is the run's room work, `brief 57 3/6` or `⧗ 3`, drawn on the
   // input's top rule with the mode the face was told.
   work?: string;
-  // name is rewake's name of the pane's session, at the rule's right end.
-  name?: string;
+  // level is the session's thinking level, the room view's effort, drawn at
+  // the rule's left where the face says shift+tab moves it.
+  level?: string;
   // live is the person's window: only it takes keys and sizes the face.
   live: boolean;
   active: () => boolean;
@@ -210,14 +219,17 @@ export function FaceView(props: {
       <text height={1} wrapMode="none" fg={ruled} bg={bg} selectable={false}>
         <For
           each={withMore(
-            ruleParts(props.width, props.work, face()?.mode, props.name),
+            ruleParts(
+              props.width,
+              props.work,
+              face()?.mode,
+              face()?.cycles ? props.level : undefined,
+            ),
             inputOf(props.id).above,
           )}
         >
           {(part) => (
-            <span style={{ fg: part.mode ? modeColour(part.mode, props.theme) : ruled, bg }}>
-              {part.text}
-            </span>
+            <span style={{ fg: partColour(part, props.theme) ?? ruled, bg }}>{part.text}</span>
           )}
         </For>
       </text>

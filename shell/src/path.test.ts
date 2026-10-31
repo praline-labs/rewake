@@ -25,10 +25,41 @@ test("the top row cuts the path from its start and keeps the branch", () => {
     const shown = path && branch ? `${path} · ${branch}` : path + branch;
     expect(Bun.stringWidth(shown)).toBeLessThanOrEqual(width);
   }
-  // Too narrow for both, the branch stays, cut at its end.
-  expect(row(12)).toEqual({ branch: "⎇ brief60" });
-  expect(row(6)).toEqual({ branch: "⎇ bri…" });
+  // Too narrow for both, the branch goes and the path is cut further.
+  expect(row(12)).toEqual({ path: "…/wt-3836d0" });
+  expect(row(6)).toEqual({ path: "…836d0" });
   // Outside a repository the path alone; nothing before the path is known.
   expect(pathParts({ path: "/tmp/x" }, 4, "/home/u")).toEqual({ path: "…/x" });
   expect(pathParts({ branch: "main" }, 40)).toEqual({});
+});
+
+// The owner, October 31, 2026: the session's rewake name at the top row's
+// right edge, for every pane; a narrow row cuts the path from its start
+// first, then drops the branch, then cuts the name.
+test("the top row ends with the session's name, cut last", () => {
+  const state = {
+    path: "/home/u/.rewake2-worktrees/rewake-44a66b/wt-3836d0",
+    branch: "brief60",
+    session: "review-pi",
+  };
+  const row = (width: number) => pathParts(state, width, "/home/u");
+  expect(row(80)).toEqual({
+    path: "~/.rewake2-worktrees/rewake-44a66b/wt-3836d0",
+    branch: "⎇ brief60",
+    name: "review-pi",
+  });
+  expect(row(40)).toEqual({ path: "…/wt-3836d0", branch: "⎇ brief60", name: "review-pi" });
+  expect(row(30)).toEqual({ path: "…836d0", branch: "⎇ brief60", name: "review-pi" });
+  expect(row(25)).toEqual({ path: "…/wt-3836d0", name: "review-pi" });
+  expect(row(14)).toEqual({ path: "…0", name: "review-pi" });
+  expect(row(13)).toEqual({ name: "review-pi" });
+  expect(row(6)).toEqual({ name: "revie…" });
+  for (let width = 1; width <= 80; width++) {
+    const { path = "", branch = "", name = "" } = row(width);
+    const left = path && branch ? `${path} · ${branch}` : path + branch;
+    const gap = left && name ? 3 : 0;
+    expect(Bun.stringWidth(left) + gap + Bun.stringWidth(name)).toBeLessThanOrEqual(width);
+  }
+  // Before the path is known the name stands alone.
+  expect(pathParts({ session: "main-claude" }, 40)).toEqual({ name: "main-claude" });
 });

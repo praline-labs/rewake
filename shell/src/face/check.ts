@@ -110,6 +110,7 @@ function messageOf(m: unknown): FromFace {
       need(links.has(f.link), "its link");
       need(typeof f.prompts === "boolean", "its prompts");
       need(f.mode === undefined || modes.has(f.mode), "its mode");
+      need(f.cycles === undefined || typeof f.cycles === "boolean", "its cycles");
       const message: FromFace = {
         kind: "lines",
         lines,
@@ -118,6 +119,7 @@ function messageOf(m: unknown): FromFace {
         prompts: f.prompts as boolean,
       };
       if (f.mode !== undefined) message.mode = f.mode as PermissionMode;
+      if (f.cycles !== undefined) message.cycles = f.cycles as boolean;
       return message;
     }
     case "error":

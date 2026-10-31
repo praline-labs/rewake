@@ -1,7 +1,8 @@
 // The pane's top row (docs/shell.md, "The pane"): where its session works
 // now, `~`-shortened, and the branch checked out there, from the room view's
-// path and branch, the same for every harness. A worktree entry moves it; a
-// `cd` in a shell command does not, as it moves no harness.
+// path and branch, the same for every harness, and the session's rewake name
+// at its right edge. A worktree entry moves the path; a `cd` in a shell
+// command does not, as it moves no harness.
 import { RGBA } from "@opentui/core";
 import { ShellRow, selecting, separator } from "./bar.tsx";
 import type { StripState } from "./strip.tsx";
@@ -48,25 +49,44 @@ function fromEnd(text: string, room: number): string {
   return `${kept}…`;
 }
 
-// pathParts is the row for a width: the path cut from its start where it is
-// too long, then the branch; a row too narrow for both keeps the branch and
-// cuts it at its end. Nothing before the path is known.
-export function pathParts(
-  state: Pick<StripState, "path" | "branch">,
-  width: number,
-  under = home,
-): { path?: string; branch?: string } {
-  if (!state.path) return {};
-  const path = tilded(state.path, under);
-  const branch = state.branch ? `⎇ ${state.branch}` : undefined;
-  if (!branch) return { path: fromStart(path, width) };
+// leftParts is the path and branch in room cells: the path cut from its
+// start where it is too long, then the branch dropped; undefined where not
+// even `…` and the path's last letter fit.
+function leftParts(
+  path: string,
+  branch: string | undefined,
+  room: number,
+): { path: string; branch?: string } | undefined {
   // At least `…` and the last letter of the path, the separator and the branch.
-  const room = width - separator.length - cells(branch);
-  if (room >= Math.min(cells(path), 2)) return { path: fromStart(path, room), branch };
-  return { branch: fromEnd(branch, width) };
+  const least = Math.min(cells(path), 2);
+  if (branch && room - separator.length - cells(branch) >= least)
+    return { path: fromStart(path, room - separator.length - cells(branch)), branch };
+  if (room >= least) return { path: fromStart(path, room) };
+  return undefined;
 }
 
-// PathRow is a pane's top row, width wide, fitted to it less the padding.
+// pathParts is the row for a width: the path and its branch at the left,
+// the session's name at the right edge, a separator's width at least
+// between them. A row too narrow cuts the path from its start, then drops
+// the branch, then leaves the path out and cuts the name at its end.
+// Nothing before the path is known.
+export function pathParts(
+  state: Pick<StripState, "path" | "branch"> & { session?: string },
+  width: number,
+  under = home,
+): { path?: string; branch?: string; name?: string } {
+  const name = state.session || undefined;
+  const room = name ? width - cells(name) - separator.length : width;
+  if (!state.path) return name ? { name: fromEnd(name, width) } : {};
+  const path = tilded(state.path, under);
+  const branch = state.branch ? `⎇ ${state.branch}` : undefined;
+  const left = leftParts(path, branch, room);
+  if (left) return { ...left, name };
+  return name ? { name: fromEnd(name, width) } : {};
+}
+
+// PathRow is a pane's top row, width wide, fitted to it less the padding:
+// where its session works at the left, its name against the right end.
 export function PathRow(props: {
   state: () => StripState;
   width: number;
@@ -91,6 +111,14 @@ export function PathRow(props: {
         )}
         {parts().branch ?? ""}
       </text>
+      <text
+        height={1}
+        wrapMode="none"
+        flexShrink={0}
+        fg={RGBA.defaultForeground()}
+        {...selecting(props.theme)}
+        content={parts().name ?? ""}
+      />
     </ShellRow>
   );
 }

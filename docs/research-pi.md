@@ -554,6 +554,26 @@ events on (`internal/adapter/pi/mirror.go`). The extension's side is `mirror.ts`
   goes back into pi's own editor, which the face does not show. pi's Esc is one key while it works,
   with text in the editor or none; a second Esc on an empty editor while idle opens its tree or fork
   selector by `doubleEscapeAction`, which the face does not take. Nothing else calls it.
+- **The thinking level** (read October 31, 2026, pi 1.4.0, `docs/keybindings.md`,
+  `core/agent-session.js`, `modes/interactive/interactive-mode.js`,
+  `modes/interactive/components/footer.js`, `theme/dark.json` and `light.json`,
+  `core/extensions/types.d.ts`; brief 62). pi has no permission mode; what shift+tab switches is the
+  thinking level, `app.thinking.cycle` (ctrl+p cycles the model). Its levels are `off`, `minimal`,
+  `low`, `medium`, `high`, `xhigh`, `max`; a model that reasons offers those its
+  `thinkingLevelMap` does not set to null, `xhigh` and `max` only where the map names them, and one
+  that does not offers `off` alone (pi-ai's `getSupportedThinkingLevels`). shift+tab moves to the
+  next of them, wrapping to the first, and from a level the model does not offer to the first;
+  with a model that does not reason it says `Current model does not support thinking`. pi names the
+  level in its footer after the model, `<model> • high`, or `<model> • thinking off`, nothing for a
+  model that does not reason, says `Thinking level: high` in its status on its own key, and colours
+  its editor's border by the level (`thinkingOff` … `thinkingMax`, okhsl in its themes). An
+  extension reads it with `pi.getThinkingLevel()` and sets it with `pi.setThinkingLevel(level)`,
+  for the session alone, clamped to the model: the session emits `thinking_level_changed`, on which
+  pi's screen redraws its footer and border, and extensions hear `thinking_level_select`; no status
+  line is said. rewake's extension answers the face's `thinking` input so (`faceThinking` in
+  `faced.ts`, its order repeated in `levelsOf`, tested by `interrupt.test.ts`), and its telemetry,
+  which already sent the level as `effort` on every `thinking_level_select`, carries it to the
+  face's rule ([face.md](face.md), "The look").
 - **An aborted or failed message** ends as pi's screen ends it (`interactive-mode.js`,
   `message_end`; `components/assistant-message.js`, read on 1.4.0): a block that was streaming
   settles with what the message holds, never a gap; every call it asked for that never ran ends
@@ -631,3 +651,13 @@ aborted`, then the turn's end. Esc while a reply streamed: pi's view kept the te
 `Operation aborted`; the face kept the reply whole, no gap mark, and `⎿  Operation aborted` in red.
 Esc while idle changed nothing on the screen. Still differs: a bash call folded into a run shows no
 `Command aborted` of its own, as the face folds a failed call; pi's time under the call is not drawn.
+
+**[live]** October 31, 2026 (brief 62), this build, a private `REWAKE_DIR` and project under `/tmp`,
+the shell from its sources under a pty of 200 by 50, a pi main and a pi worker on the cheapest model
+the workers' agent folder accepts at minimal thinking, no prompt sent. The worker's face drew `── ◆
+minimal (shift+tab to cycle) ───`; shift+tab in it moved the rule and the strip each press, `low`,
+`medium`, `high`, `xhigh`, `max`, `thinking off`, `minimal`, one level a press, so the key did not
+reach pi's pty as well. In pi's own view (the prefix's `v`) its footer read `<model> • minimal`,
+and pi's own shift+tab made it `• low`, the strip `low thinking` within two seconds; back on the face
+the rule read `◆ low`. The top rows read `/tmp/rw62-proj · ⎇ master` and, at the right edge,
+`main-pi` and `p1-pi`.

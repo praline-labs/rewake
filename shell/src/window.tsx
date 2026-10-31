@@ -173,7 +173,7 @@ export function Window(props: { env: Env; view: () => View }) {
                           height={height()}
                           theme={theme}
                           work={stripOf(pane.id).status?.work}
-                          name={stripOf(pane.id).session}
+                          level={stripOf(pane.id).status?.effort}
                           live={live}
                           active={() => live && view().focused === pane.id && !props.env.closing()}
                         />

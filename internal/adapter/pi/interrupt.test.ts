@@ -1,9 +1,9 @@
-// The person's Esc in the face and the run it stops, run by go test
+// The person's Esc and shift+tab in the face, and the run Esc stops, run by go test
 // (worktree_tool_test.go): pi's own screen ends an aborted or failed message
 // so (dist/modes/interactive/interactive-mode.js, message_end, and
 // components/assistant-message.js, read on 1.4.0), and the face draws it the same.
 import { expect, test } from "bun:test";
-import { faceInterrupt } from "./faced.ts";
+import { faceInterrupt, faceThinking, levelsOf } from "./faced.ts";
 import { Mirror, serveMirror } from "./mirror.ts";
 import type { MirrorEvent } from "./outbox.ts";
 
@@ -45,6 +45,40 @@ test("Esc stops a working pi through its own abort, and leaves an idle one alone
   mirror.on = false;
   expect(faceInterrupt(mirror, pi(false), false).error).toContain("does not draw");
   expect(aborted).toBe(1);
+});
+
+// pi's shift+tab moves the level to the next its model takes and wraps
+// round to off (core/agent-session.js cycleThinkingLevel, read on 1.4.0).
+test("shift+tab moves pi's thinking level on as pi's own does", () => {
+  const { mirror } = mirrored();
+  const reasoning = { reasoning: true, thinkingLevelMap: { minimal: null, xhigh: "xhigh" } };
+  expect(levelsOf(reasoning)).toEqual(["off", "low", "medium", "high", "xhigh"]);
+  expect(levelsOf({ reasoning: true })).toEqual(["off", "minimal", "low", "medium", "high"]);
+  expect(levelsOf({ reasoning: false })).toEqual(["off"]);
+  let level = "high";
+  const pi = {
+    getThinkingLevel: () => level as never,
+    setThinkingLevel: (to: string) => {
+      level = to;
+    },
+  };
+  const cycled = () => faceThinking(pi, mirror, reasoning);
+  expect(cycled()).toEqual({ ok: true });
+  expect(level).toBe("xhigh");
+  cycled();
+  expect(level).toBe("off");
+  cycled();
+  expect(level).toBe("low");
+  // A level the model does not take moves to its first, as in pi.
+  level = "minimal";
+  cycled();
+  expect(level).toBe("off");
+  expect(faceThinking(pi, mirror, { reasoning: false }).error).toBe(
+    "Current model does not support thinking",
+  );
+  mirror.on = false;
+  expect(cycled().error).toContain("does not draw");
+  expect(level).toBe("off");
 });
 
 test("a reply stopped mid-stream keeps what streamed and says Operation aborted in red", () => {

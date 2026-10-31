@@ -8,6 +8,7 @@ import (
 	"errors"
 	"net"
 	"os"
+	"slices"
 	"sync"
 	"time"
 
@@ -32,6 +33,10 @@ const writeWait = 10 * time.Second
 
 // inputWait bounds how long an input may take to reach the harness.
 const inputWait = 10 * time.Second
+
+// inputKinds are the inputs a face may send; the session's own list, on
+// hello, says which of them it takes.
+var inputKinds = []InputKind{InputKindPrompt, InputKindInterrupt, InputKindThinking}
 
 // Serve listens at path, which a dead run of the same name and epoch cannot
 // hold, and serves the model until Close.
@@ -125,7 +130,7 @@ func (s *Server) read(conn net.Conn, c *client) {
 		var input Input
 		decoder := json.NewDecoder(bytes.NewReader(scanner.Bytes()))
 		decoder.DisallowUnknownFields()
-		if err := decoder.Decode(&input); err != nil || (input.Kind != InputKindPrompt && input.Kind != InputKindInterrupt) || input.ID == "" {
+		if err := decoder.Decode(&input); err != nil || !slices.Contains(inputKinds, input.Kind) || input.ID == "" {
 			c.push(encode(answer(input.ID, errors.New("not an input of the face"))))
 			continue
 		}

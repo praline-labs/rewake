@@ -228,16 +228,19 @@ type Input struct {
 	// Kind is what the input asks.
 	Kind InputKind `json:"kind"`
 
-	// Text is a prompt's text; empty for an interrupt.
+	// Text is a prompt's text; empty for an interrupt and for thinking.
 	Text string `json:"text"`
 }
 
 // InputKind is what the face may send: a prompt, typed as the person; an interrupt, the
-// person's Esc stopping the turn that works, as the harness's own Esc does.
+// person's Esc stopping the turn that works, as the harness's own Esc does; thinking, the
+// person's shift+tab moving the session's thinking level to the next, as the harness's own key
+// does.
 type InputKind string
 
 // The values of InputKind.
 const (
 	InputKindPrompt    InputKind = "prompt"
 	InputKindInterrupt InputKind = "interrupt"
+	InputKindThinking  InputKind = "thinking"
 )

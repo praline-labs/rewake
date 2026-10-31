@@ -89,7 +89,7 @@ func (harness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, error)
 	run.hostsSpaces, run.onClosing = request.Role.Spaces, request.Closing
 	if request.Mirror != nil {
 		run.mirror = request.Mirror
-		run.mirror.Take(run.input, mirror.InputKindPrompt, mirror.InputKindInterrupt)
+		run.mirror.Take(run.input, mirror.InputKindPrompt, mirror.InputKindInterrupt, mirror.InputKindThinking)
 	}
 	command, args := request.Invocation(ID, args)
 	return adapter.LaunchPlan{

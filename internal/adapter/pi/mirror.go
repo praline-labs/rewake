@@ -84,16 +84,20 @@ func (r *run) mirrored(request frame) frame {
 var turnStates = map[string]mirror.TurnState{"working": mirror.TurnStateWorking, "idle": mirror.TurnStateIdle}
 
 // input carries an input of rewake's face to pi: a prompt typed there as
-// the person's, which the extension mirrors once pi hears it as its input,
-// or the person's Esc, which stops the run as pi's own Esc does.
+// the person's, which the extension mirrors once pi hears it as its input;
+// the person's Esc, which stops the run as pi's own Esc does; or their
+// shift+tab, which moves the thinking level on as pi's own does.
 func (r *run) input(ctx context.Context, input mirror.Input) error {
 	l, thread := r.connection()
 	if l == nil {
 		return errors.New("pi's extension is not connected")
 	}
 	request := frame{Op: "prompt", Thread: thread, Text: input.Text}
-	if input.Kind == mirror.InputKindInterrupt {
+	switch input.Kind {
+	case mirror.InputKindInterrupt:
 		request = frame{Op: "interrupt", Thread: thread}
+	case mirror.InputKindThinking:
+		request = frame{Op: "thinking", Thread: thread}
 	}
 	answer, err := l.ask(ctx, request)
 	if err != nil {

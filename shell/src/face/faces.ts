@@ -117,6 +117,7 @@ export const pointFace = (id: string, type: Pointing, x: number, y: number, focu
 export const unselectFace = (id: string) => faces.get(id)?.host.unselect();
 export const unfoldFace = (id: string) => faces.get(id)?.host.unfold();
 export const escapeFace = (id: string) => faces.get(id)?.host.escape();
+export const thinkingFace = (id: string) => faces.get(id)?.host.thinking();
 export const promptFace = (id: string, text: string) => faces.get(id)?.host.prompt(text) ?? false;
 
 // checkFace starts the face this shell runs and waits for its answer to a

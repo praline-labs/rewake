@@ -70,6 +70,10 @@ export type Look = {
   // suggestion the words saying a copy went to the clipboard.
   selection: string;
   suggestion: string;
+  // thinking is a pi session's thinking level on the input's rule, by the
+  // level, as pi's own theme colours its editor's border for it (its
+  // dark.json and light.json of 1.4.0, okhsl as pi-tui turns it into rgb).
+  thinking: Record<string, string>;
 };
 
 // The two sets as Claude Code's dark and light themes define them.
@@ -86,6 +90,15 @@ export const looks: { dark: Look; light: Look } = {
     removed: "#7a2936",
     selection: "#264f78",
     suggestion: "#b1b9f9",
+    thinking: {
+      off: "#6c767b",
+      minimal: "#68808d",
+      low: "#5489a4",
+      medium: "#6185cc",
+      high: "#9776e5",
+      xhigh: "#de54c1",
+      max: "#fe5462",
+    },
   },
   light: {
     success: "#2c7a39",
@@ -99,6 +112,15 @@ export const looks: { dark: Look; light: Look } = {
     removed: "#ffa8b4",
     selection: "#b4d5ff",
     suggestion: "#5769f7",
+    thinking: {
+      off: "#c2c8ca",
+      minimal: "#b5c4cb",
+      low: "#9fc2d5",
+      medium: "#a2b7e0",
+      high: "#b5a5e8",
+      xhigh: "#e585cd",
+      max: "#fe7479",
+    },
   },
 };
 

@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { createConnection, type Socket } from "node:net";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { briefTools } from "./briefs.ts";
-import { faceInterrupt, facePrompt } from "./faced.ts";
+import { faceInterrupt, facePrompt, faceThinking } from "./faced.ts";
 import { management, type State } from "./management.ts";
 import { Mirror, serveMirror } from "./mirror.ts";
 import { type MirrorEvent, Outbox } from "./outbox.ts";
@@ -170,6 +170,10 @@ export default function (pi: ExtensionAPI) {
     }
     if (frame.op === "interrupt") {
       respond(faceInterrupt(mirror, context, managed.busy()));
+      return;
+    }
+    if (frame.op === "thinking") {
+      respond(faceThinking(pi, mirror, context.model));
       return;
     }
     if (frame.op === "control") {

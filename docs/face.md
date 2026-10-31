@@ -81,9 +81,10 @@ compaction clears it); `took` (how long it worked, ms) and `at` (when it ended) 
 happened, with `stopped` as on `turn`. A turn that begins forgets them. The face keeps no clock of
 its own for a turn: it draws `since`, `took` and `at` as given (wrapper and face share a machine).
 Nothing else changes; the schema's `version` stays, one build per room being its guard. A face
-sends `{id, kind: "prompt", text}`, or `{id, kind: "interrupt", text: ""}` for the person's Esc, and
-is answered `answer{id, ok, detail?}`; hello's `inputs` lists the kinds the session takes (pi's
-both, Claude Code's the prompt alone), and any other input is refused. A face whose queue passes 4096 lines or 4 MiB past its snapshot is cut off rather than
+sends `{id, kind: "prompt", text}`, `{id, kind: "interrupt", text: ""}` for the person's Esc, or
+`{id, kind: "thinking", text: ""}` for their shift+tab (brief 62, October 31, 2026), and is answered
+`answer{id, ok, detail?}`; hello's `inputs` lists the kinds the session takes (pi's all three,
+Claude Code's the prompt alone), and any other input is refused. A face whose queue passes 4096 lines or 4 MiB past its snapshot is cut off rather than
 given a gap, and reconnects for a fresh snapshot.
 
 ## The dev worker
@@ -95,7 +96,8 @@ answer then says `mirror: true`. Without it no mirror code runs: no events, no s
 
 On a harness implementing `adapter.FacedWorkersHarness`, pi alone, every worker is recorded dev,
 `--dev` or not; main is not drawn yet, so the flag only chooses which launches set `Mirror`. pi has
-no permission mode, so its face shows none.
+no permission mode, so its face shows none; its thinking level stands in its place (the look,
+"Rules").
 
 ## The face
 
@@ -111,9 +113,9 @@ two rules sends a prompt to the session, refused with its reason where the sessi
 the row under the rules says the face's last error, or the link while it is not live (below, "The
 input"). It has no
 header: the strip says the turn's state, and the input's top rule carries the session's own
-permission mode at its left end and at the right the run's room work, as Claude Code's hint line
-ends with it, then the session's name, `── ⏵⏵ auto mode ──── brief 57 3/6 · review-pi ─` (the look,
-"Rules"); the name and the context are on the strip under the pane too, drawn by the face or not. The mouse wheel over the face
+permission mode at its left end, or pi's thinking level, and at the right the run's room work, as
+Claude Code's hint line ends with it, `── ⏵⏵ auto mode ──── brief 57 3/6 ─` (the look, "Rules"); the
+name is on the pane's top row and the strip, the context on the strip, drawn by the face or not. The mouse wheel over the face
 scrolls the conversation as a native pane scrolls (below, "The scroll"), and PgUp and PgDn a page
 less a row; at the bottom the face follows new rows, scrolled up it holds the rows the person put
 there while more arrive below (`face/src/scroll.ts`), and back at the bottom, or after a
@@ -126,7 +128,12 @@ rewake's face the keys go to that input, never to the pty. Esc drops a selection
 the turn works, it interrupts it where the session takes an interrupt, whatever the input holds, as
 pi's own Esc stops its run: the face sends `interrupt` and the harness stops as on its own Esc, a
 refusal said under the input (`not interrupted: …`). Esc while idle, or to a session that takes no
-interrupt (a Claude Code dev worker), does nothing. `rewake screen`
+interrupt (a Claude Code dev worker), does nothing. shift+tab moves the session's thinking level to
+the next, as pi's own `app.thinking.cycle` does, where the session takes `thinking` (pi alone): the
+face sends `thinking`, pi's extension sets the next of the model's levels, and pi's own screen and
+the strip hear it as any change of the level; a refusal is said under the input (`not changed:
+Current model does not support thinking`); to any other session it does nothing, and it never
+reaches the pty (brief 62). `rewake screen`
 takes the window as the person sees it: the shadow window draws the face too.
 
 ### The input
@@ -257,13 +264,20 @@ decision, October 30, 2026: first the same look, customised later), as read from
   top one carries the session's permission mode at its left, `⏵⏵ auto mode`, `⏸ plan mode`,
   `⏵⏵ accept edits`, `⏵⏵ bypass permissions`, `⏵⏵ don't ask`, in native's colour for it (auto's
   amber, plan's teal, accept edits' violet, the other two red) and nothing for the default mode or
-  one not yet said; at its right the run's room work, the room view's `work`
+  one not yet said. A session that takes shift+tab for its thinking level (pi, which has no
+  permission mode) shows that level there instead, in pi's words beside its model, `◆ high (shift+tab
+  to cycle)` or `◆ thinking off (shift+tab to cycle)`, the level in the colour pi's own theme gives
+  its editor's border for it (`look.thinking` in `shell/src/theme.ts`; the owner, October 31, 2026,
+  brief 62). The level is the room view's `effort`, which pi's extension pushes on every change of
+  it, pi's own shift+tab or the face's, so it follows within the shell's one-second read of the room.
+  At its right only the run's room work, the room view's `work`
   (`internal/core/work`): its open briefs with their ticks, `brief 57 3/6`, and the reports it waits
-  on, `⧗ 3`, the same text Claude Code's hint line ends with ([claude.md](claude.md#the-band)), then
-  ` · ` and rewake's name of the session, `── brief 61 1/3 · review-pi ─`, or `── review-pi ─` with no
-  work (the owner, October 31, 2026); at least one cell of rule between. A narrow pane drops the
-  mode first, then the work, then cuts the name with `…`, and leaves it out where not a letter fits. Mode and work are the
-  session's own, never a worker's by assumption: main drawn by the face later takes the same rule. The turn's time is the model's
+  on, `⧗ 3`, the same text Claude Code's hint line ends with ([claude.md](claude.md#the-band));
+  nothing without work, and no name, which is on the pane's top row ([shell.md](shell.md#the-pane));
+  at least one cell of rule between. A narrow pane drops the level's hint first, then the mode or
+  the level, then cuts the work with `…`, and leaves it out where not a letter fits. Mode, level
+  and work are the session's own, never a worker's by assumption: main drawn by the face later
+  takes the same rule. The turn's time is the model's
   (see "The socket"), so a face connected mid-turn or reloaded after one says the same as one
   that watched it. The conversation always keeps one blank row above the input's top rule, so
   a reply never sits on the input: under the turn's line too, the working one, `Done` or
@@ -470,7 +484,8 @@ A new face, a reload's or a lost link's, follows the bottom with no selection: t
 worker's and is not carried across, so a change under `face/src/` while the person reads up
 puts the view back at the bottom (seen live, October 31, 2026, brief 49). Tests: `shell/src/face/host.test.ts`, the contract in `check.test.ts` and through the worker in `contract.test.ts`, the look in `face/src/render.test.ts`, `thinking.test.ts` and `view.test.tsx`, the clock
 in `ticker.test.ts`, the scroll in `scroll.test.ts`, a notch's rows in `wheel.test.ts` and through
-the worker in `host.test.ts`, Esc's paths through the worker in `escape.test.ts`, unfolding in
+the worker in `host.test.ts`, Esc's and shift+tab's paths through the worker in `escape.test.ts` (pi's cycle in
+`internal/adapter/pi/interrupt.test.ts`), unfolding in
 `face/src/unfold.test.ts` and ctrl+o kept across a reload in `shell/src/face/unfold.test.ts`, the input's growth, keys and
 pastes in `shell/src/face/input.test.tsx`, a queued prompt in `face/src/queued.test.ts`,
 `internal/core/mirror/queued_test.go` and pi's side in `internal/adapter/pi/queued.test.ts`, the

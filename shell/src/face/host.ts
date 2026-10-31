@@ -20,6 +20,8 @@ export type FaceState = {
   link: Link | "stopped";
   prompts: boolean;
   mode?: PermissionMode;
+  // cycles says the session takes shift+tab for its thinking level.
+  cycles?: boolean;
   // error is the face's last failure, shown in its header until it draws again.
   error?: string;
   // said is the answer to the last prompt.
@@ -138,6 +140,7 @@ export class FaceHost {
           link: message.link,
           prompts: message.prompts,
           mode: message.mode,
+          cycles: message.cycles,
           error: undefined,
         });
       case "error":
@@ -226,6 +229,15 @@ export class FaceHost {
     const id = `e${++ids}`;
     this.keep(id, { text: "", at: Date.now(), verb: "not interrupted" });
     this.send({ kind: "escape", id });
+  }
+
+  // thinking is the person's shift+tab: the session's thinking level moves
+  // on, a refusal showing as a prompt's does.
+  thinking() {
+    if (!this.worker) return;
+    const id = `t${++ids}`;
+    this.keep(id, { text: "", at: Date.now(), verb: "not changed" });
+    this.send({ kind: "thinking", id });
   }
 
   // prompt says false when no face runs to take it.

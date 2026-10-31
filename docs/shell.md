@@ -326,9 +326,10 @@ brief 60): where the session works on the row above the pane, who it is and how 
 strip under it, and its room work at its input. The program has two rows less.
 
 ```
-~/.rewake2-worktrees/rewake-44a66b/wt-5928f6 · ⎇ brief60-pane-facts         the top row
+~/.rewake2-worktrees/rewake-44a66b/wt-5928f6 · ⎇ brief60-pane-facts   write-claude   the top row
   … the session's own screen, native or drawn by rewake's face …
-  ── ⏵⏵ auto mode ──── brief 57 3/6 · write-claude ─                          the face's input rule
+  ── ⏵⏵ auto mode ─────────────── brief 57 3/6 ─                             the face's input rule
+  ── ◆ high (shift+tab to cycle) ─ brief 57 3/6 ─                            the same for pi
   ⏵⏵ auto mode on (shift+tab to cycle) · brief 57 3/6                         or Claude Code's hint line
 write-claude (code) · working · <model> low · 90% 42m                  230k/1M   the strip
 ```
@@ -337,14 +338,17 @@ write-claude (code) · working · <model> low · 90% 42m                  230k/1
   now, with the person's home as `~`, then ` · ⎇ ` and the branch checked out there. Claude Code's
   mod sends `$.session.cwd()` with every sample ([claude.md](claude.md#telemetry)), which a worktree
   entry moves and a `cd` in Bash does not; pi's directory is the one it started in, its record's
-  `cwd`. A worker whose row is not read yet shows its space's checkout. Too long, the path loses whole
-  directories from its start, `…/worktrees/wt-3836d0`, then letters of its last; too narrow for both,
-  the branch stays, cut at its end. A press on it chooses the pane. The briefs, shown in a worker's
-  place, take the row into their own height, so their strip stands where a pane's does.
+  `cwd`. A worker whose row is not read yet shows its space's checkout. At the row's right edge
+  stands the session's rewake name, `review-pi`, `main-claude`, for every pane, at least ` · `'s
+  width from the path (the owner, October 31, 2026, brief 62; on the strip too). Too long, the path
+  loses whole directories from its start, `…/worktrees/wt-3836d0`, then letters of its last down to
+  `…` and one; then the branch goes, the path taking its room again; then the path goes and the name
+  is cut at its end. A press on it chooses the pane. The briefs, shown in a worker's place, take the
+  row into their own height, so their strip stands where a pane's does.
 - **At the input**: the run's room work, the room view's `work` (`internal/core/work`): its open
   briefs with their ticks, `brief 57 3/6`, and the reports it waits on, `⧗ 3`; nothing when there is
-  none. On the face's input rule ([face.md](face.md#the-look)), before the session's name, and at the
-  end of Claude Code's hint line ([claude.md](claude.md#the-band)), the same text. A narrow row cuts
+  none. At the right end of the face's input rule ([face.md](face.md#the-look)), alone there, and at
+  the end of Claude Code's hint line ([claude.md](claude.md#the-band)), the same text. A narrow row cuts
   it first, so it is never the only place: the briefs view, `rewake brief show` and `rewake inbox --awaited` say the same.
 - **The person's own status line** is off in every Claude Code run rewake starts
   ([claude.md](claude.md#the-cache-ttl)): the strip says what it said.
@@ -354,7 +358,10 @@ worker's top row went from the project to `/tmp/rw60/worktrees/repo-6a8dae/wt-bf
 on its `worktree_enter`, and to `…/repo-6a8dae/wt-bfe5d6 · ⎇ wt-bfe5d6` at 46 columns; main's hint
 line ended `· ⧗ 1`, the worker's `· brief 1 2/3`, a pi worker's rule `brief 2 1/2`. At 46 columns
 the strip had dropped the model and the limits and kept the context and the cache, the pi rule
-kept its brief, and Claude Code's hint line was cut to `· bri`, our tail first.
+kept its brief, and Claude Code's hint line was cut to `· bri`, our tail first. Seen live on October 31,
+2026 (brief 62, pi 1.4.0, a private room): main's top row ended `main-pi` at its right edge and the
+worker's `p1-pi`, and the pi worker's rule read `── ◆ minimal (shift+tab to cycle) ───` with no name
+([research-pi.md](research-pi.md#the-face-of-a-pi-worker)).
 
 ## The strip
 

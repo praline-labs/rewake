@@ -10,6 +10,7 @@ const frame = (spans: object[], more: object = {}) => ({
   link: "live",
   prompts: true,
   mode: "auto",
+  cycles: true,
   ...more,
 });
 
@@ -33,6 +34,7 @@ test("anything else names its fault", () => {
     [frame([{ text: "x", cell: -1 }]), "a span's cell or code"],
     [frame([], { link: "gone" }), "its link"],
     [frame([], { mode: "turbo" }), "its mode"],
+    [frame([], { cycles: "yes" }), "its cycles"],
     [{ ...frame([]), lines: Array(3000).fill({ spans: [] }) }, "its rows"],
     [{ kind: "copy", text: "x".repeat(5 << 20), what: "selection" }, "a copy"],
     [{ kind: "answer", id: "p1" }, "an answer"],

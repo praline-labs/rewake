@@ -138,10 +138,12 @@ export interface Input {
   id: string
   // kind is what the input asks.
   kind: InputKind
-  // text is a prompt's text; empty for an interrupt.
+  // text is a prompt's text; empty for an interrupt and for thinking.
   text: string
 }
 
 // InputKind is what the face may send: a prompt, typed as the person; an interrupt, the
-// person's Esc stopping the turn that works, as the harness's own Esc does.
-export type InputKind = "prompt" | "interrupt"
+// person's Esc stopping the turn that works, as the harness's own Esc does; thinking, the
+// person's shift+tab moving the session's thinking level to the next, as the harness's own key
+// does.
+export type InputKind = "prompt" | "interrupt" | "thinking"

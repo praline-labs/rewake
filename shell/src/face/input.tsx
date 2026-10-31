@@ -5,7 +5,8 @@
 // `\`; it grows with its text to 30% of the pane, at least 5 rows, then
 // scrolls inside with `↑ N more` and `↓ N more` on its rules; a paste comes
 // whole with its newlines, a large one as pi's marker. Its keys never reach a
-// pty: the pane's widget is blurred while the face is shown.
+// pty: the pane's widget is blurred while the face is shown. shift+tab moves
+// the session's thinking level on where it takes that, as pi's own key does.
 
 import type {
   KeyBinding,
@@ -28,6 +29,7 @@ import {
   scrollFace,
   setDraft,
   setInput,
+  thinkingFace,
   unfoldFace,
   unselectFace,
 } from "./faces.ts";
@@ -251,6 +253,12 @@ export function FaceInput(props: {
             return;
           }
           if (key.name === "escape") escapeFace(props.id);
+          // shift+tab moves the session's thinking level on, as pi's own key.
+          if (key.name === "tab" && key.shift) {
+            key.preventDefault();
+            thinkingFace(props.id);
+            return;
+          }
           if (key.name === "o" && key.ctrl) unfoldFace(props.id);
           if (key.name === "pageup") scrollFace(props.id, props.page());
           if (key.name === "pagedown") scrollFace(props.id, -props.page());

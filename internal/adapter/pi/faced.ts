@@ -1,5 +1,5 @@
 // What the person does in rewake's face, handed to pi (docs/face.md, "The
-// face"): a prompt typed there, and Esc.
+// face"): a prompt typed there, Esc and shift+tab.
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import type { Mirror } from "./mirror.ts";
 
@@ -42,5 +42,43 @@ export function faceInterrupt(
     return { ok: true };
   } catch {
     return { error: "pi did not take the interrupt" };
+  }
+}
+
+// levels are pi's thinking levels in the order its shift+tab cycles them:
+// a model that reasons has those its map does not take away, xhigh and max
+// only where it names them, and one that does not has off alone (pi-ai's
+// getSupportedThinkingLevels, read on 1.4.0).
+const levels = ["off", "minimal", "low", "medium", "high", "xhigh", "max"] as const;
+type Level = (typeof levels)[number];
+type Thinker = { reasoning?: boolean; thinkingLevelMap?: Partial<Record<string, unknown>> };
+
+export function levelsOf(model: Thinker | undefined): Level[] {
+  if (!model?.reasoning) return ["off"];
+  return levels.filter((level) => {
+    const mapped = model.thinkingLevelMap?.[level];
+    if (mapped === null) return false;
+    return level === "xhigh" || level === "max" ? mapped !== undefined : true;
+  });
+}
+
+// faceThinking moves pi's thinking level on at the person's shift+tab in the
+// face, as pi's own app.thinking.cycle does: the next of the model's levels,
+// for this session alone. pi's screen and rewake's telemetry hear it as any
+// change of the level.
+export function faceThinking(
+  pi: Pick<ExtensionAPI, "getThinkingLevel" | "setThinkingLevel">,
+  mirror: Mirror,
+  model: Thinker | undefined,
+): { ok?: boolean; error?: string } {
+  if (!mirror.on) return { error: "rewake's face does not draw this session" };
+  if (!model?.reasoning) return { error: "Current model does not support thinking" };
+  try {
+    const cycle = levelsOf(model);
+    const next = cycle[(cycle.indexOf(pi.getThinkingLevel() as Level) + 1) % cycle.length];
+    if (next) pi.setThinkingLevel(next);
+    return { ok: true };
+  } catch {
+    return { error: "pi did not change the thinking level" };
   }
 }
