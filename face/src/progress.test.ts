@@ -115,9 +115,9 @@ test("the working text is by the phase, a running call by its name", () => {
 });
 
 // The glyph turns through the four-dot orbit on the clock's one now, in the accent tone.
-test("the glyph is the four-dot orbit, turning every 120 ms", () => {
+test("the glyph is the four-dot orbit, turning clockwise every 120 ms", () => {
   const glyph = (now: number) => turnLine("working", { now, since: 0 })?.spans[0];
-  expect(glyph(0)).toEqual({ text: "⡇ ", tone: "accent" });
-  expect(glyph(120)?.text).toBe("⣆ ");
-  expect(glyph(960)?.text).toBe("⡇ ");
+  expect(glyph(0)).toEqual({ text: "⠏ ", tone: "accent" });
+  expect(glyph(120)?.text).toBe("⠛ ");
+  expect(glyph(960)?.text).toBe("⠏ ");
 });

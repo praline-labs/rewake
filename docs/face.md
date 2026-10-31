@@ -183,7 +183,7 @@ decision, October 30, 2026: first the same look, customised later), as read from
   a line of JSON pretty-printed, then a faint `… +N lines`; an empty one `(No output)` for Bash,
   `(No content)` for the rest.
 - **Turn**: under the conversation, rewake's own line, not Claude Code's (the owner's decision,
-  October 31, 2026, brief 53): four dots running round a braille cell `⡇ ⣆ ⣤ ⣰ ⢸ ⠹ ⠛ ⠏` (as pi's own screen turns) that turns a frame every 120 ms in the terminal's
+  October 31, 2026, brief 53): four dots running clockwise round a braille cell `⠏ ⠛ ⠹ ⢸ ⣰ ⣤ ⣆ ⡇` (clockwise by the owner's word, October 31, 2026) that turns a frame every 120 ms in the terminal's
   bright green (the `accent` tone, the person's palette colour 10, so the shell draws it), and
   beside it what the turn does by its phase, in plain words, no verb picked at random:
   `Thinking…` while a thinking block streams, `Writing…` while the reply does, `Running Bash…` while
@@ -193,8 +193,8 @@ decision, October 30, 2026: first the same look, customised later), as read from
   by an interrupt (the turn line's `stopped`, not a guess from the conversation: a call stopped
   mid-run ends with its error and no notice). The glyph set in use is `orbit4`
   in `face/src/turn.ts`; others stay beside it, unused, for a switch: the one-dot orbit
-  `⠁ ⠂ ⠄ ⡀ ⢀ ⠠ ⠐ ⠈` (`orbit`), the two-dot `⠃ ⠆ ⡄ ⣀ ⢠ ⠰ ⠘ ⠉` and three-dot
-  `⠋ ⠙ ⠸ ⢰ ⣠ ⣄ ⡆ ⠇` orbits, the arc `◜ ◝ ◞ ◟` and the pulse `· • ● •`. A running call's dot, and an open run's,
+  `⠈ ⠐ ⠠ ⢀ ⡀ ⠄ ⠂ ⠁` (`orbit`), the two-dot `⠉ ⠘ ⠰ ⢠ ⣀ ⡄ ⠆ ⠃` and three-dot
+  `⠇ ⡆ ⣄ ⣠ ⢰ ⠸ ⠙ ⠋` orbits, all clockwise, the arc `◜ ◝ ◞ ◟` and the pulse `· • ● •`. A running call's dot, and an open run's,
   shows and hides every 600 ms. The bracket also holds an arrow and an
   estimate of what streamed back (`face/src/progress.ts`, on the one clock): `↑` while a request
   is out with nothing back yet — the turn just began, or every call of a step ended — and `↓`

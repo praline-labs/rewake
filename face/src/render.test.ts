@@ -164,7 +164,7 @@ test("a run of reads, searches and commands folds into one counted line", () => 
   // While the turn works, its last run says what it does and on what.
   m.turn = "working";
   m.items.push(call("Bash", { command: "sleep 5", description: "Wait" }, undefined, "running"));
-  expect(text(render(m, 80, 4))).toEqual(["● Wait…", "  ⎿  $ sleep 5", "", "⡇ Working…"]);
+  expect(text(render(m, 80, 4))).toEqual(["● Wait…", "  ⎿  $ sleep 5", "", "⠏ Working…"]);
 });
 
 test("a prompt and a letter wrap under their text, a letter's dot by its status", () => {

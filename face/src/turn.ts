@@ -31,13 +31,14 @@ export function timeOf(ms: number): string {
 }
 
 // The glyph turns a frame every 120 ms on the clock's one now, so it moves in
-// the same paint as the time. The four-dot orbit is the one in use; the
-// other sets are kept for the owner to switch to.
+// the same paint as the time. The orbits run clockwise, as the owner asked;
+// the four-dot one is in use, the other sets are kept for the owner to
+// switch to.
 export const arc = ["◜", "◝", "◞", "◟"];
-export const orbit = ["⠁", "⠂", "⠄", "⡀", "⢀", "⠠", "⠐", "⠈"];
-export const orbit2 = ["⠃", "⠆", "⡄", "⣀", "⢠", "⠰", "⠘", "⠉"];
-export const orbit3 = ["⠋", "⠙", "⠸", "⢰", "⣠", "⣄", "⡆", "⠇"];
-export const orbit4 = ["⡇", "⣆", "⣤", "⣰", "⢸", "⠹", "⠛", "⠏"];
+export const orbit = ["⠈", "⠐", "⠠", "⢀", "⡀", "⠄", "⠂", "⠁"];
+export const orbit2 = ["⠉", "⠘", "⠰", "⢠", "⣀", "⡄", "⠆", "⠃"];
+export const orbit3 = ["⠇", "⡆", "⣄", "⣠", "⢰", "⠸", "⠙", "⠋"];
+export const orbit4 = ["⠏", "⠛", "⠹", "⢸", "⣰", "⣤", "⣆", "⡇"];
 export const beat = ["·", "•", "●", "•"];
 const frames = orbit4;
 export const glyphEvery = 120;
