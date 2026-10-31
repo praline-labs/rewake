@@ -1,5 +1,5 @@
 // The row under the conversation (docs/face.md, "The look"): while a turn
-// works, a turning dot in the terminal's bright green and what the turn does
+// works, a turning tail of dots in the terminal's bright green and what the turn does
 // by its phase, then faint its time and its phase's arrow with the tokens
 // streamed back, as the width allows; after it, how long it took and when it
 // ended.
@@ -31,14 +31,15 @@ export function timeOf(ms: number): string {
 }
 
 // The glyph turns a frame every 120 ms on the clock's one now, so it moves in
-// the same paint as the time. The one-dot orbit is the one in use; the
+// the same paint as the time. The four-dot orbit is the one in use; the
 // other sets are kept for the owner to switch to.
 export const arc = ["◜", "◝", "◞", "◟"];
 export const orbit = ["⠁", "⠂", "⠄", "⡀", "⢀", "⠠", "⠐", "⠈"];
 export const orbit2 = ["⠃", "⠆", "⡄", "⣀", "⢠", "⠰", "⠘", "⠉"];
 export const orbit3 = ["⠋", "⠙", "⠸", "⢰", "⣠", "⣄", "⡆", "⠇"];
+export const orbit4 = ["⡇", "⣆", "⣤", "⣰", "⢸", "⠹", "⠛", "⠏"];
 export const beat = ["·", "•", "●", "•"];
-const frames = orbit;
+const frames = orbit4;
 export const glyphEvery = 120;
 
 export const glyphAt = (now: number) => frames[Math.floor(now / glyphEvery) % frames.length];

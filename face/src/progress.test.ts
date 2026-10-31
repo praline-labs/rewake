@@ -114,10 +114,10 @@ test("the working text is by the phase, a running call by its name", () => {
   expect(t.at([prompt, { ...call, status: "done" }], 0).tool).toBeUndefined();
 });
 
-// The glyph turns through the one-dot orbit on the clock's one now, in the accent tone.
-test("the glyph is the one-dot orbit, turning every 120 ms", () => {
+// The glyph turns through the four-dot orbit on the clock's one now, in the accent tone.
+test("the glyph is the four-dot orbit, turning every 120 ms", () => {
   const glyph = (now: number) => turnLine("working", { now, since: 0 })?.spans[0];
-  expect(glyph(0)).toEqual({ text: "⠁ ", tone: "accent" });
-  expect(glyph(120)?.text).toBe("⠂ ");
-  expect(glyph(960)?.text).toBe("⠁ ");
+  expect(glyph(0)).toEqual({ text: "⡇ ", tone: "accent" });
+  expect(glyph(120)?.text).toBe("⣆ ");
+  expect(glyph(960)?.text).toBe("⡇ ");
 });
