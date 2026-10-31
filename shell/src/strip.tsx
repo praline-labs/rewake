@@ -1,10 +1,10 @@
 // The strip, the row under a pane, main's and each worker's (docs/shell.md,
-// "The strip"): who the session is, what it does, its model, how much of its
-// context it used, its cache and the account's limits, from rewake's own
-// records, the same for every harness. Where it works is the pane's top row
-// (path.tsx).
+// "The strip"): who the session is, what it does, its model, its cache, on
+// main's the account's limits, and at the right end how much of its context
+// it used, from rewake's own records, the same for every harness. Where it
+// works is the pane's top row (path.tsx).
 import { RGBA } from "@opentui/core";
-import { createSignal, For, onCleanup } from "solid-js";
+import { createMemo, createSignal, For, onCleanup } from "solid-js";
 import { ShellRow, selecting, separator } from "./bar.tsx";
 import { type FaceMode, modeOf } from "./face/faces.ts";
 import type { Session, Space, Verdict } from "./room.ts";
@@ -124,15 +124,21 @@ export function nameOf(state: StripState): string {
   return type ? `${state.session} (${type})` : state.session;
 }
 
-// stripParts is the line for a width: the name, activity and context always;
-// the model, then the seven days' limit, then the five hours', then the cache
-// left out while the line is too long, and the rest cut at the width.
-export function stripParts(state: StripState, width: number, now = Date.now()): Part[] {
+// Line is the strip's parts for a width: the left run from the name, and the
+// context, which stands at the strip's right edge.
+export type Line = { left: Part[]; context?: Part };
+
+// stripParts is the line for a width: the name, activity and context always,
+// the context at the right edge; the model, then the seven days' limit, then
+// the five hours', then the cache left out while the line is too long, and
+// the rest of the left cut at the width. The account's limits are main's
+// alone: a worker's strip never shows them.
+export function stripParts(state: StripState, width: number, now = Date.now()): Line {
   const s = state.status;
   const activity = s && activityOf(s);
   const cache = s && cacheOf(s, now);
-  const five = s && limitOf(s, "5h");
-  const seven = s && limitOf(s, "7d");
+  const five = s?.own ? limitOf(s, "5h") : undefined;
+  const seven = s?.own ? limitOf(s, "7d") : undefined;
   // In the order shown; the optional ones are left out, 1 first, 4 last.
   const all: ((Part & { optional?: number }) | undefined)[] = [
     { text: nameOf(state), kind: "name" },
@@ -146,28 +152,33 @@ export function stripParts(state: StripState, width: number, now = Date.now()): 
           optional: 1,
         }
       : undefined,
-    s ? contextOf(s) : undefined,
     cache ? { ...cache, optional: 4 } : undefined,
     five ? { ...five, optional: 3 } : undefined,
     seven ? { ...seven, optional: 2 } : undefined,
   ];
   let parts = all.filter((p) => p !== undefined);
+  let context = s ? contextOf(s) : undefined;
+  // The context is kept whole while it fits, a separator's width from the
+  // left run; what is left of the width is the left's.
+  if (context && context.text.length > width)
+    context = { ...context, text: `${context.text.slice(0, Math.max(width - 1, 0))}…` };
+  const right = context ? context.text.length + separator.length : 0;
   const length = () =>
     parts.reduce((n, p) => n + p.text.length, 0) + separator.length * (parts.length - 1);
   for (const drop of [1, 2, 3, 4])
-    if (length() > width) parts = parts.filter((p) => p.optional !== drop);
+    if (length() + right > width) parts = parts.filter((p) => p.optional !== drop);
   // What still does not fit is cut at the width.
-  let room = width;
-  const out: Part[] = [];
+  let room = width - right;
+  const left: Part[] = [];
   for (const [i, part] of parts.entries()) {
     const sep = i > 0 ? separator.length : 0;
     if (room - sep <= 0) break;
     const text =
       part.text.length > room - sep ? `${part.text.slice(0, room - sep - 1)}…` : part.text;
-    out.push({ ...part, text });
+    left.push({ ...part, text });
     room -= sep + text.length;
   }
-  return out;
+  return { left, context };
 }
 
 // fillColour is the context's colour by how full it is, the owner's own
@@ -179,7 +190,7 @@ function fillColour(fill: number | undefined): RGBA {
 
 // Strip is the strip of a pane width wide, its name in the colour of the
 // pane's program: a shell's row like the bar, its line fitted to the width
-// less the padding.
+// less the padding, the context against its right end.
 export function Strip(props: {
   state: () => StripState;
   width: number;
@@ -191,17 +202,17 @@ export function Strip(props: {
   const [now, setNow] = createSignal(Date.now());
   const timer = setInterval(() => setNow(Date.now()), tick);
   onCleanup(() => clearInterval(timer));
-  const parts = () => stripParts(props.state(), Math.max(props.width - 2, 1), now());
+  const line = createMemo(() => stripParts(props.state(), Math.max(props.width - 2, 1), now()));
   return (
     <ShellRow theme={props.theme} onMouseDown={props.pick}>
       <text height={1} wrapMode="none" flexGrow={1} fg={plain} {...selecting(props.theme)}>
-        <For each={parts()}>
+        <For each={line().left}>
           {(part, i) => (
             <>
               {i() > 0 ? <span style={{ fg: props.theme.faint }}>{separator}</span> : ""}
               {part.kind === "name" ? (
                 <b style={{ fg: props.colour }}>{part.text}</b>
-              ) : part.kind === "context" || part.kind === "limit" ? (
+              ) : part.kind === "limit" ? (
                 <span style={{ fg: fillColour(part.fill) }}>{part.text}</span>
               ) : part.kind === "dev" ? (
                 <span style={{ fg: RGBA.fromIndex(5) }}>{part.text}</span>
@@ -216,6 +227,14 @@ export function Strip(props: {
           )}
         </For>
       </text>
+      <text
+        height={1}
+        wrapMode="none"
+        flexShrink={0}
+        fg={fillColour(line().context?.fill)}
+        {...selecting(props.theme)}
+        content={line().context?.text ?? ""}
+      />
     </ShellRow>
   );
 }

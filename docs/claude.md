@@ -274,7 +274,7 @@ replace — the launch says so in a note, and the person's own line then stays �
 name and `thinking.enabled` to the run's host at `status/line` (bounded at 2 s), and prints nothing,
 always exiting 0. So the person's own status line is off in every Claude Code session rewake runs,
 main and workers, and untouched outside rewake: what it would repeat — the model, the context, the
-cache's life, the account's limits — is in rewake's strip under the pane (the owner's decision,
+cache's life, the account's limits (on main's) — is in rewake's strip under the pane (the owner's decision,
 October 31, 2026, brief 60; [shell.md](shell.md#the-strip)). A managed `statusLine` outranks
 rewake's, which then does not run. The expiry is absolute, so a slow timer loses nothing; the
 command runs after each response too. The stdin read is bounded in time (3 s) as well as size.
