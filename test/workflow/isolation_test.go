@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/praline-labs/rewake/internal/infra/proxyenv"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -267,15 +268,16 @@ func (iso *Isolation) collect(sub string, matches func(os.DirEntry) (bool, error
 
 // Env is the environment for anything this case launches. It is built from
 // nothing rather than filtered from the developer's, so a variable nobody
-// thought about cannot leak in and change what is being measured.
+// thought about cannot leak in and change what is being measured; the
+// machine's proxy, its only way out, is carried (the owner, October 31, 2026).
 func (iso *Isolation) Env() []string {
-	return []string{
+	return append([]string{
 		"PATH=" + iso.ShimDir + string(os.PathListSeparator) + "/usr/bin" + string(os.PathListSeparator) + "/bin",
 		"HOME=" + iso.Home,
 		"REWAKE_DIR=" + iso.StateDir,
 		// Deliberately absent: REWAKE_SESSION, REWAKE_EPOCH and REWAKE_ROOM.
 		// Inheriting them makes the case believe it is the session running it.
-	}
+	}, proxyenv.Of(os.Environ())...)
 }
 
 // Lookup resolves an executable against the case's PATH rather than the test

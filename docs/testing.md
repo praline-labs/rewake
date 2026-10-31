@@ -34,8 +34,10 @@ documents. Whoever runs a real harness, by hand or in a future tier, keeps these
   ([launch-defaults.md](launch-defaults.md)), so a case sets two variables and touches no
   harness configuration.
 - **Isolation per tier.** Every tier runs in a fresh private HOME, configuration and state
-  directory, with no owner credentials, configuration or session mounts, no inherited identity
-  or proxy, and verified binaries. The free tiers may put a shim for the harness on `PATH` in
+  directory, with no owner credentials, configuration or session mounts, no inherited identity,
+  and verified binaries. The machine's proxy variables are carried, by `internal/infra/proxyenv`
+  into every environment a test builds from nothing for a harness or a case: this machine reaches
+  the network only through its proxy (the owner, October 31, 2026). The free tiers may put a shim for the harness on `PATH` in
   place of separate network, mount and PID boundaries: no real credentials are near and a
   substituted harness does not reach outside. Those boundaries stay mandatory for a paid run,
   where real credentials live alongside. Failing to establish the isolation a tier requires

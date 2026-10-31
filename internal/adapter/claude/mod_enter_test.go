@@ -8,6 +8,8 @@ import (
 	"syscall"
 	"testing"
 	"time"
+
+	"github.com/praline-labs/rewake/internal/infra/proxyenv"
 )
 
 // enterProbe calls EnterWorktree from session.start as worktree_enter does,
@@ -68,10 +70,12 @@ func enterOnce(t *testing.T, program, settings string) string {
 	command := exec.Command(program, "-p", "probe", "--plugin-dir", plugin,
 		"--settings", filepath.Join(base, "settings.json"), "--setting-sources", "")
 	command.Dir = work
-	command.Env = []string{
+	// The machine's proxy, its only way out, and nothing else of this
+	// process's environment.
+	command.Env = append([]string{
 		"HOME=" + base, "CLAUDE_CONFIG_DIR=" + filepath.Join(base, "config"), "PATH=" + os.Getenv("PATH"),
 		"REWAKE_WORKTREE_ENTER=1", "ENTER_PROBE_OUTPUT=" + output,
-	}
+	}, proxyenv.Of(os.Environ())...)
 	out := runBounded(t, command, time.Minute, filepath.Join(base, "output.txt"))
 	answer, err := os.ReadFile(output)
 	if err != nil {
