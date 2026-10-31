@@ -2,7 +2,8 @@
 // release with the pointer on the press's cell all the while is a click,
 // which copies the part under it; a drag to any other cell selects, and its
 // release copies the selection. A press drops the selection there was; the
-// pointer with no button pressed lights the part under it.
+// pointer with no button pressed lights nothing (the owner's word, October 31,
+// 2026: a light that follows the pointer gets in the way).
 import type { Point, Selection } from "./select.ts";
 
 // View is where the conversation's rows stand in the face: the first shown,
@@ -26,13 +27,11 @@ export function pointAt(x: number, y: number, view: View): Point {
   return { row: view.top + n, col: Math.min(Math.max(x, 0), Math.max(view.width - 1, 0)) };
 }
 
-// A click names the conversation's row it was on, the row the pointer lit.
+// A click names the conversation's row it was on.
 export type Gesture = { selected: Selection } | { clicked: number } | undefined;
 
 export class Pointer {
   selection: Selection | undefined;
-  // over is the pointer with no button pressed, to light the part under it.
-  over: { x: number; y: number } | undefined;
   private pressed:
     | { at: Point; row: number | undefined; x: number; y: number; focused: boolean }
     | undefined;
@@ -44,10 +43,9 @@ export class Pointer {
 
   // down presses on a point of the view: a drag selects from the cell under
   // it, the nearest row's past the rows shown, while a click is only on a row
-  // shown, as the light is.
+  // shown.
   down(view: View, x: number, y: number, focused: boolean) {
     this.selection = undefined;
-    this.over = undefined;
     this.dragging = false;
     this.pressed = { at: pointAt(x, y, view), row: rowAt(y, view), x, y, focused };
   }
@@ -72,10 +70,6 @@ export class Pointer {
       return this.selection && { selected: this.selection };
     }
     return p.focused && p.row !== undefined ? { clicked: p.row } : undefined;
-  }
-
-  move(x: number, y: number) {
-    if (!this.pressed) this.over = { x, y };
   }
 
   clear() {

@@ -1,6 +1,8 @@
 import { expect, test } from "bun:test";
 import { TextAttributes } from "@opentui/core";
 import { testRender } from "@opentui/solid";
+import "../pane.ts";
+import type { PaneTerminal } from "../pane.ts";
 import { themeOf } from "../theme.ts";
 import { ruleOf } from "./rule.ts";
 import { FaceRow, FaceView } from "./view.tsx";
@@ -136,4 +138,54 @@ test("a drag over a row of the face starts no selection of the renderer's", asyn
   await renderOnce();
   await mockMouse.drag(0, 0, 8, 0);
   expect(renderer.getSelection()).toBeNull();
+});
+
+// The owner's rule on a real pane: a pi worker's pty draws its normal
+// screen with scrollback and takes no mouse, so the pane's widget would
+// scroll its own scrollback on the wheel, and a fullscreen program's would
+// pass the wheel to its pty. Under the face the widget hears no wheel at all:
+// its mouse forwarding is the one path to either.
+test("the wheel over the face never reaches the pane's widget, pi's or a fullscreen program's", async () => {
+  const programs = [
+    Array.from({ length: 40 }, (_, i) => `row ${i}`).join("\r\n"),
+    "\x1b[?1049h\x1b[?1002h\x1b[?1006hrow 39",
+  ];
+  const heard: Uint8Array[] = [];
+  const forwarded: string[] = [];
+  const pane = (output: string) => (t: PaneTerminal) => {
+    t.onData = (data) => heard.push(data);
+    const widget = t as unknown as { forwardMouse(e: { type: string }, a: string): void };
+    const forward = widget.forwardMouse.bind(t);
+    widget.forwardMouse = (event, action) => {
+      forwarded.push(event.type);
+      forward(event, action);
+    };
+    t.write(output);
+  };
+  const { renderOnce, mockMouse, renderer } = await testRender(
+    () => (
+      <box width={40} height={8} flexDirection="row">
+        {programs.map((output, i) => (
+          <box width={20} height={8}>
+            <pane_terminal id={`w${i}`} ref={pane(output)} width={20} height={8} />
+            <FaceView
+              id="none"
+              width={20}
+              height={8}
+              theme={theme}
+              live={true}
+              active={() => true}
+            />
+          </box>
+        ))}
+      </box>
+    ),
+    { width: 40, height: 8 },
+  );
+  await renderOnce();
+  for (const x of [4, 24])
+    for (let i = 0; i < 5; i++) await mockMouse.scroll(x, 2, i % 2 ? "down" : "up");
+  expect(forwarded).toEqual([]);
+  expect(heard).toEqual([]);
+  renderer.destroy();
 });

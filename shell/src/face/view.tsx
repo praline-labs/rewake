@@ -5,7 +5,7 @@
 
 import type { BoxRenderable, InputRenderable } from "@opentui/core";
 import { RGBA } from "@opentui/core";
-import { createEffect, For, Index, onCleanup, Show } from "solid-js";
+import { createEffect, For, Index, Show } from "solid-js";
 import { mix, type Theme } from "../theme.ts";
 import {
   draftOf,
@@ -64,7 +64,7 @@ const backgroundOf = (theme: Theme) =>
 
 // FaceRow is one row the face's worker drew, its spans in the person's
 // colours, each cell on the row's own background: the band for a prompt and
-// for the part the pointer is over, the selection's for a selected cell.
+// for the part a click just copied, the selection's for a selected cell.
 // OpenTUI's own selection is off: the face's worker selects its text.
 export function FaceRow(props: { line: FaceLine; theme: Theme }) {
   const bg = backgroundOf(props.theme);
@@ -162,21 +162,18 @@ export function FaceView(props: {
   const row = (text: string) => text + " ".repeat(Math.max(props.width - Bun.stringWidth(text), 0));
   let input: InputRenderable | undefined;
   let rows: BoxRenderable | undefined;
-  // pointed passes the left button and the bare pointer over the
-  // conversation to the face's worker, in the conversation's cells: a press
-  // on the rules or the input is theirs, while a drag goes on past any edge.
-  // Nothing here reaches the pane's pty: the layer is what the pointer hits.
+  // pointed passes the left button over the conversation to the face's
+  // worker, in the conversation's cells: a press on the rules or the input is
+  // theirs, while a drag goes on past any edge. The bare pointer is not
+  // passed: nothing lights as it moves. Nothing here reaches the pane's pty:
+  // the layer is what the pointer hits.
   const pointed = (type: Pointing) => (event: { x: number; y: number; button: number }) => {
-    if (!props.live || !rows) return;
-    if ((type === "down" || type === "drag" || type === "up") && event.button !== 0) return;
+    if (!props.live || !rows || event.button !== 0) return;
     const x = event.x - rows.x;
     const y = event.y - rows.y;
-    const inside = x >= 0 && x < props.width && y >= 0 && y < props.height;
     if (type === "down" && y >= body()) return;
-    if (type === "out" && inside) return;
     pointFace(props.id, type, x, y, props.active());
   };
-  onCleanup(() => pointFace(props.id, "out", -1, -1, false));
   return (
     <box
       position="absolute"
@@ -202,8 +199,6 @@ export function FaceView(props: {
       onMouseDown={pointed("down")}
       onMouseDrag={pointed("drag")}
       onMouseUp={pointed("up")}
-      onMouseMove={pointed("move")}
-      onMouseOut={pointed("out")}
     >
       {/* Rows are updated in place: the face posts a frame on every tick
           that changes it. */}

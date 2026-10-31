@@ -31,7 +31,7 @@ A person using rewake reads [user-guide.md](user-guide.md) alone. An agent worki
      [launch-defaults.md](launch-defaults.md)
      → [worker-profile.md](worker-profile.md) → [worker-types.md](worker-types.md) →
      [space.md](space.md) → [rules/space.md](rules/space.md) → [shell.md](shell.md) →
-     [screen.md](screen.md) → [face.md](face.md) → [worktree.md](worktree.md), [worktree-tools.md](worktree-tools.md), [briefs.md](briefs.md),
+     [screen.md](screen.md) → [face.md](face.md), [research-face.md](research-face.md) → [worktree.md](worktree.md), [worktree-tools.md](worktree-tools.md), [briefs.md](briefs.md),
      [research-herdr.md](research-herdr.md) for the terminal manager main may run in;
    - **main's view**: [session-state.md](session-state.md) → [remote-control.md](remote-control.md)
      → [permission-requests.md](permission-requests.md);

@@ -8,7 +8,7 @@ import type { Line, PermissionMode } from "./mirror.gen.ts";
 import { bounds } from "./mirror.gen.ts";
 import { FaceModel } from "./model.ts";
 import { partOf } from "./parts.ts";
-import { Pointer, pointAt, rowAt, type View } from "./pointer.ts";
+import { Pointer, pointAt, type View } from "./pointer.ts";
 import { Tracker } from "./progress.ts";
 import { blinked, bodyOf, fill, statusOf } from "./render.ts";
 import { Scroll } from "./scroll.ts";
@@ -103,16 +103,35 @@ const viewOf = (): View => {
   };
 };
 
+// flash is the part a click copied, lit for a moment with the notice so the
+// person sees what went; nothing lights as the pointer moves.
+const flashFor = 1000;
+let flash: { part: string; timer: ReturnType<typeof setTimeout> } | undefined;
+
+function unflash() {
+  clearTimeout(flash?.timer);
+  flash = undefined;
+}
+
+function flashed(part: string) {
+  unflash();
+  flash = {
+    part,
+    timer: setTimeout(() => {
+      flash = undefined;
+      paint();
+    }, flashFor),
+  };
+}
+
 // paint posts the view of the committed frame, unless it is what was posted:
-// the selection marked, and the part the pointer is over lit.
+// the selection marked, and the part a click just copied lit.
 function paint() {
   if (!frame) return;
   try {
     const shown = scroll.view(frame.rows, height);
     const view = viewOf();
-    const over = pointer.over && rowAt(pointer.over.y, view);
-    const part = over === undefined ? undefined : frame.rows[over]?.part;
-    const marked = lit(highlighted(shown, view.top, pointer.selection), part);
+    const marked = lit(highlighted(shown, view.top, pointer.selection), flash?.part);
     const message: FromFace = {
       kind: "lines",
       lines: fill(blinked(marked, frame.now), width, height),
@@ -191,6 +210,7 @@ function pointed(type: Pointing, x: number, y: number, focused: boolean) {
   switch (type) {
     case "down":
       stopEdge();
+      unflash();
       pointer.down(viewOf(), x, y, focused);
       break;
     case "drag":
@@ -206,17 +226,13 @@ function pointed(type: Pointing, x: number, y: number, focused: boolean) {
       } else if (gesture) {
         const key = frame.rows[gesture.clicked]?.part;
         const part = key === undefined ? undefined : partOf(model.items, key);
-        if (part) post({ kind: "copy", text: part.text, what: part.what });
+        if (key !== undefined && part) {
+          post({ kind: "copy", text: part.text, what: part.what });
+          flashed(key);
+        }
       }
-      pointer.move(x, y);
       break;
     }
-    case "move":
-      pointer.move(x, y);
-      break;
-    case "out":
-      pointer.over = undefined;
-      break;
   }
   paint();
 }
@@ -247,6 +263,7 @@ function connect() {
   stale = true;
   scroll.follow();
   pointer.clear();
+  unflash();
   since = worked = undefined;
   progress.reset();
   link = "connecting";
