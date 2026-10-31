@@ -558,7 +558,7 @@ events on (`internal/adapter/pi/mirror.go`). The extension's side is `mirror.ts`
   2026, the bundled package's `dist/`, brief 56).
 - **ctrl+o** is pi's `app.tools.expand`, "Collapse or expand tool output", one state for every
   call on the screen, said in its status as `Tool output: expanded`; ctrl+t hides or shows
-  thinking (`docs/keybindings.md`, read October 31, 2026, pi 1.4.0). The face's ctrl+o opens its
+  thinking (`pi-coding-agent/docs/keybindings.md`, read October 31, 2026, pi 1.4.0). The face's ctrl+o opens its
   folds the same way ([face.md](face.md), "Unfolding").
 - **The outbox** keeps the mod's caps, counted in UTF-8 bytes of JSON: batches every 50 ms, one
   in flight, a 5 s deadline; an event 40 KiB, a batch 48 KiB, the outbox 256 KiB with 16 KiB
