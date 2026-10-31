@@ -264,8 +264,10 @@ decision, October 30, 2026: first the same look, customised later), as read from
   Title, mode and context are the session's own, never a worker's by assumption: main drawn by the
   face later takes the same rule. The turn's time is the model's
   (see "The socket"), so a face connected mid-turn or reloaded after one says the same as one
-  that watched it. The conversation always keeps one blank row above the input's top rule, the
-  `Done` line or not, so a reply never sits on the input.
+  that watched it. The conversation always keeps one blank row above the input's top rule, so
+  a reply never sits on the input: under the turn's line too, the working one, `Done` or
+  `Stopped`, as Claude Code draws it (the owner, October 31, 2026: the conversation, the turn's
+  line, a blank row, the rule).
 
 A row breaks at spaces, a word cut only when it is wider than the row; what still passes the
 pane's edge — a mark or a gutter on a pane narrower than it — is cut there; and escapes and control

@@ -165,11 +165,12 @@ test("a run of reads, searches and commands folds into one counted line", () => 
   // While the turn works, its last run says what it does and on what.
   m.turn = "working";
   m.items.push(call("Bash", { command: "sleep 5", description: "Wait" }, undefined, "running"));
-  expect(text(render(m, 80, 4))).toEqual([
+  expect(text(render(m, 80, 5))).toEqual([
     "● Wait… (ctrl+o to expand)",
     "  ⎿  $ sleep 5",
     "",
     "⠏ Working…",
+    "",
   ]);
 });
 
@@ -381,6 +382,9 @@ test("a face that connects after a turn draws its Done, one mid-turn its start",
     "● hi",
     "",
     "  Done in 1m 9s · 8:43 PM",
+    // A blank row between the turn's line and the input, as Claude Code
+    // draws it (the owner, October 31, 2026).
+    "",
   ]);
   const stopped = snapshot({ turn: "idle", took: 10_000, at, stopped: true });
   expect(stopped.worked?.stopped).toBe(true);

@@ -258,14 +258,17 @@ export function steeringRows(items: Item[], width: number): FaceLine[] {
 }
 
 // statusOf is the rows under the conversation that move with the clock: the
-// prompts waiting, then the turn's line, each after a blank row; with no
-// line, the blank row alone, so the conversation never sits on the input.
+// prompts waiting, then the turn's line, each after a blank row, and a blank
+// row under the turn's line, as Claude Code leaves one above its input (the
+// owner, October 31, 2026); with no line, the blank row alone, so the
+// conversation never sits on the input.
 export function statusOf(model: FaceModel, clock: Clock, width = 80): FaceLine[] {
   const status = turnLine(model.turn, clock, width);
   const waiting = steeringRows(model.items, width);
   const queued = waiting.length > 0 ? [blank(), ...waiting] : [];
-  if (model.items.length === waiting.length && waiting.length === 0) return status ? [status] : [];
-  return status ? [...queued, blank(), status] : [...queued, blank()];
+  if (model.items.length === waiting.length && waiting.length === 0)
+    return status ? [status, blank()] : [];
+  return status ? [...queued, blank(), status, blank()] : [...queued, blank()];
 }
 
 // bodyOf is the conversation's rows from the top, at least its last want of
