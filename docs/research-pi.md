@@ -1,5 +1,5 @@
 ---
-description: pi's adapter: how it launches, wakes and hears turns, its wire contract, the bundled copy, and the probes behind each fact.
+description: pi's adapter: how it launches, wakes and hears turns, its wire contract, the bundled copy, the face's feed, and the probes behind each fact.
 ---
 
 # pi: the adapter
@@ -225,7 +225,9 @@ harness pid and rechecks its process start time before accepting the first frame
 
 | Direction | Operation | Fields and acknowledgment |
 |---|---|---|
-| Extension to host | `hello` | `protocol: 2`, `thread`, initial `state`; success makes Wake, TurnBoundary and Telemetry live, plus Control when its directory exists and Spaces on a main's run |
+| Extension to host | `hello` | `protocol: 2`, `thread`, initial `state`; success makes Wake, TurnBoundary and Telemetry live, plus Control when its directory exists and Spaces on a main's run; the answer's `mirror: true` (October 31, 2026, optional) says rewake's face draws the run |
+| Extension to host | `mirror` | `thread`, `events`: a batch of the face's neutral events ([below](#the-face-of-a-pi-worker)); answer `ok`, or `error` for a run the face does not draw (October 31, 2026) |
+| Host to extension | `prompt` | `thread`, `text`: a prompt typed in rewake's face; answer `ok` and whether it was `steered`, or `error` while compacting, for an empty text or a run not drawn (October 31, 2026) |
 | Extension to host | `closing` | `thread`; sent at `session_shutdown` whose `reason` is `"quit"`, before the link closes, waited for at most one second; a main's run in rewake's shell calls `LaunchRequest.Closing` (October 24, 2026) |
 | Host to extension | `wake` | `thread`, `notice`; answer says `ok` and whether it was `steered`, or `pending` while compacting |
 | Extension to host | `turn-start` | `thread`, `turn`; acknowledgment precedes model work |
@@ -480,3 +482,66 @@ So an adapter for pi takes everything from events, the text per delta, with noth
 and no render site to read; it can hold a call at `tool_call` for at least ten minutes, ask
 the person through pi's own selector and close it from outside, start, steer and abort a turn,
 and hide or replace pi's own working row, header and footer.
+
+## The face of a pi worker
+
+October 31, 2026, pi 1.4.0, the owner's word: a pi worker is drawn by rewake's face
+([face.md](face.md)) as a Claude Code session looks. rewake's extension feeds the face's model from
+pi's events, as the Claude Code mod does ([claude.md](claude.md#the-mirror)); the host only hands the
+events on (`internal/adapter/pi/mirror.go`). The extension's side is `mirror.ts` (the events),
+`toolmap.ts` (the tools' names) and `outbox.ts` (the bounds), tested by `mirror.test.ts`.
+
+- **Only when drawn.** The extension mirrors nothing until hello's answer says `mirror: true`;
+  every worker's launch sets it (`adapter.FacedWorkersHarness`), main's does not yet. An older
+  extension never sends `mirror` and answers a `prompt` with `unknown host operation`.
+- **The events.** `input` is a `prompt`, its `source` its origin: `interactive` is the person's,
+  `extension` the face's when it is the text the face last sent, else `extension`, `rpc`; a
+  prompt steered into a working run carries the run. `agent_start` begins a run (an id of its
+  own, kept through pi's retries) and says `working`; `agent_settled` says `idle`. A
+  `message_update`'s `text_*`/`thinking_*` are a block's `delta`s and its `settle`, the block's id
+  `<run>.<turnIndex>.<contentIndex>`; `thinking_start` opens the block, so an empty one (a
+  signature only) shows too. `toolcall_start` is the `tool`, its `toolcall_delta`s its `input`,
+  sent at most every 100 ms, `toolcall_end` and `tool_execution_start` the whole input;
+  `tool_execution_end` is the `result` with its content's text. An assistant `message_end` with
+  `stopReason: "error"` adds pi's `errorMessage` as a `notice`. A call with a `parentToolCallId`
+  is left out. pi has no permission mode: no `mode` event is sent.
+- **Refused by a hook.** A call ends `refused`, permit `{by: "hook", allowed: false, reason}`,
+  when `tool_execution_end` has `isError` and no `durationMs` (the tool never ran), rewake's own
+  `tool_call` handler saw it (pi validated the arguments and asked the hooks, rewake's first: a
+  CLI `-e` extension loads first) and the run was not aborted; else an error is `error`.
+- **A letter.** rewake's wake is a `rewake_notice` message (`pi.sendMessage`), which reaches no
+  `input` handler, so the host mirrors a delivered letter itself, a `prompt` of origin `rewake`
+  in the `<task-notification>` form the face reads a letter from, its status by the notice's kind.
+- **The prompt back.** The face's prompt reaches the host's model, which asks the extension
+  `prompt`; it calls `pi.sendUserMessage(text)` while idle, with `deliverAs: "steer"` while
+  pi works, and answers at once: pi's own errors come later, on its screen.
+- **The outbox** keeps the mod's caps, counted in UTF-8 bytes of JSON: batches every 50 ms, one
+  in flight, a 5 s deadline; an event 40 KiB, a batch 48 KiB, the outbox 256 KiB with 16 KiB
+  kept for markers, a block 256 KiB with its head and tail, a field 64 KiB. Past them deltas go
+  first, then whole items behind a `lost`; a failed or late batch is counted and a `resync` sent.
+  Nothing waits for it, and a throw in the mirror is dropped: pi's work is never held.
+
+| pi tool | drawn as | input |
+|---|---|---|
+| `bash` | `Bash` | `command` |
+| `read` | `Read` | `path` → `file_path`, `offset`, `limit` |
+| `write` | `Write` | `path` → `file_path`, `content` |
+| `edit`, one edit | `Edit` (the face's `Update`) | `path` → `file_path`, `oldText`/`newText` → `old_string`/`new_string` |
+| `edit`, several | `MultiEdit` | `edits` as `old_string`/`new_string` |
+| `grep` | `Grep` | `pattern`, `path`, `glob`, `ignoreCase` → `-i`, `context` → `-C`, `limit` → `head_limit` |
+| `find` | `Glob` | `pattern`, `path` |
+| `ls` | `Bash` | `ls <path>`, so it counts as a listed directory |
+| another | its own name | its own input, drawn by the face's generic rule |
+
+**[live]** October 31, 2026, this build in a private `REWAKE_DIR` and project under `/tmp`, the
+shell from its sources under a pty of 200 by 50, a pi main and a pi worker on the cheapest model
+the workers' agent folder offers at minimal thinking: a prompt typed in the face ran a `bash` `ls`,
+two `read`s and an `edit` and answered in markdown; the face drew `Read 2 files, listed 1
+directory`, `Update(main.go)` with its counts and lines, the reply's list and code block and
+`Cooked for 9s`; the rule said `p2-pi · 3k/272k` and no mode, the strip `dev rewake · idle`, the
+model and its thinking level. The prefix's `v` showed pi's own TUI with the same turn and back. A
+task sent to the worker showed as a letter with its dot and its one-word answer after it. Still
+differs from Claude Code: an empty thinking block is drawn as `∴ Thinking` where pi's screen shows
+the provider's summary, as the face draws Claude Code's; pi's header, its footer's cost and token
+counts are not drawn; an edit shows the model's fragments with no line numbers where pi's own
+screen shows the file's lines numbered, as the face does for Claude Code's.

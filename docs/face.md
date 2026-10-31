@@ -7,7 +7,8 @@ description: rewake's own face for a live session — the mirror model in the se
 A worker's pane shows one of two **faces**: `native`, the harness's own TUI as the pty draws it, or
 `rewake`, drawn by rewake's shell from the **mirror**, a harness-free model of the session's
 conversation kept in the session's wrapper. A **dev worker** is one raised with the mirror on
-(`rewake space open … --dev`); the first slice draws only dev workers on Claude Code.
+(`rewake space open … --dev`); the face draws dev workers on Claude Code and every pi worker, dev
+without the flag (the owner's word, October 31, 2026: pi drawn as Claude Code looks).
 
 **The owner's word (October 28, 2026):** a conversation drawn by rewake's face passes to the shell as
 data in memory only. The mirror reads no transcript file and writes nothing: prompt, reply and tool
@@ -48,7 +49,8 @@ The adapter hands the model neutral events (`prompt`, `delta`, `settle` in parts
 its parts arrived in order; a missing part, a `lost` for the id or the turn's end leaves the item a
 gap with what streamed. A `resync` marks everything in flight as a gap, leaves the turn unknown until
 the next turn event and adds a notice counting what was lost. How Claude Code's mod feeds it, with
-its outbox's caps, is [claude.md](claude.md#the-mirror).
+its outbox's caps, is [claude.md](claude.md#the-mirror); pi's extension, with the same caps and
+its tools named as their Claude Code kin, [research-pi.md](research-pi.md#the-face-of-a-pi-worker).
 
 ## The socket
 
@@ -71,8 +73,12 @@ given a gap, and reconnects for a fresh snapshot.
 
 `rewake space open <name> --alias <alias> --dev` records `worker.dev` in the space record (absent
 reads false) and refuses, exit 2, a harness that does not offer the mirror. The worker's launch
-reads the flag from its record and sets `LaunchRequest.Mirror`; on Claude Code the hello answer then
-says `mirror: true`. Without it no mirror code runs: no events, no socket, no field in the view.
+reads the flag from its record and sets `LaunchRequest.Mirror`; on Claude Code and on pi the hello
+answer then says `mirror: true`. Without it no mirror code runs: no events, no socket, no field in the view.
+
+On a harness implementing `adapter.FacedWorkersHarness`, pi alone, every worker is recorded dev,
+`--dev` or not; main is not drawn yet, so the flag only chooses which launches set `Mirror`. pi has
+no permission mode, so its face shows none.
 
 ## The face
 
@@ -388,3 +394,6 @@ edit's path, its old and its new lines and a write's file lines; the pointer ove
 its rows alone; main's native pane beside it showed no selection. A copied code block
 pasted into the face's input arrived as `make allmake test`: the input is one line and drops a
 paste's newline.
+
+Live, October 31, 2026 (brief 46): a pi worker drawn by the face, its turn and letter, beside pi's own
+TUI, and what still differs from Claude Code's look, in [research-pi.md](research-pi.md#the-face-of-a-pi-worker).

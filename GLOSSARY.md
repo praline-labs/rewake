@@ -36,7 +36,7 @@ Where: `internal/core/mirror`, [docs/face.md](docs/face.md).
 
 ## Dev worker
 Variants: dev workers
-Means: a worker raised with `rewake space open --dev`, whose wrapper serves its mirror, so the shell can draw it with rewake's face.
+Means: a worker raised with `rewake space open --dev`, or any pi worker, whose wrapper serves its mirror, so the shell can draw it with rewake's face.
 
 ## Task
 Variants: tasks

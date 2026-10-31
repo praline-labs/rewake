@@ -10,12 +10,16 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter"
+	"github.com/praline-labs/rewake/internal/core/mirror"
 	"github.com/praline-labs/rewake/internal/core/session"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
-//go:embed extension.ts management.ts worktree.ts briefs.ts
+//go:embed extension.ts management.ts worktree.ts briefs.ts mirror.ts outbox.ts toolmap.ts
 var extensions embed.FS
+
+// modules are the extension's files, written beside it for each run.
+var modules = []string{"extension.ts", "management.ts", "worktree.ts", "briefs.ts", "mirror.ts", "outbox.ts", "toolmap.ts"}
 
 type run struct {
 	file, socket, controlDir string
@@ -24,7 +28,10 @@ type run struct {
 	hostsSpaces bool
 	// onClosing is LaunchRequest.Closing, nil outside rewake's shell: the
 	// extension's closing frame, at pi's quit, calls it.
-	onClosing   func()
+	onClosing func()
+	// mirror is LaunchRequest.Mirror, the model rewake's face draws, nil for
+	// a run it does not draw.
+	mirror      *mirror.Model
 	observed    observations
 	ctx         context.Context
 	cancel      context.CancelFunc
@@ -60,7 +67,7 @@ func (r *run) HarnessStarted(process adapter.RunProcess) {
 
 func (r *run) Start(ctx context.Context, _ func(string)) error {
 	r.ctx, r.cancel = context.WithCancel(ctx)
-	for _, name := range []string{"extension.ts", "management.ts", "worktree.ts", "briefs.ts"} {
+	for _, name := range modules {
 		data, err := extensions.ReadFile(name)
 		if err != nil {
 			return err

@@ -37,6 +37,10 @@ type frame struct {
 	Open         bool    `json:"open,omitempty"`
 	TokensBefore *int64  `json:"tokensBefore,omitempty"`
 	TokensAfter  *int64  `json:"tokensAfter,omitempty"`
+	// Mirror, in hello's answer, says rewake's face draws the run; Events
+	// are the conversation a mirror frame carries (mirror.go).
+	Mirror bool          `json:"mirror,omitempty"`
+	Events []mirrorEvent `json:"events,omitempty"`
 }
 
 const (

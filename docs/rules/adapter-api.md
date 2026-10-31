@@ -239,7 +239,9 @@ A harness whose adapter implements `adapter.MirrorHarness` can feed a run's conv
 wrapper's `mirror.Model`, which a launch passes as `LaunchRequest.Mirror` only when the run is
 drawn by rewake's face; nil, the adapter sends nothing of the conversation. The wrapper refuses a
 drawn run on a harness without it before anything starts ([face.md](../face.md)). Claude Code
-implements it ([claude.md](../claude.md#the-mirror)).
+implements it ([claude.md](../claude.md#the-mirror)), and pi
+([research-pi.md](../research-pi.md#the-face-of-a-pi-worker)). One that also implements
+`adapter.FacedWorkersHarness`, pi, has every worker it raises drawn, `--dev` or not.
 
 ### Conversation names
 

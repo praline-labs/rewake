@@ -323,7 +323,7 @@ its control directory.
 
 ## The mirror
 
-A run the face draws (a dev worker in the first slice, [face.md](face.md)) gets `mirror: true` in its
+A run the face draws (a dev worker, [face.md](face.md)) gets `mirror: true` in its
 hello answer, and `mirror.ts` then passes its conversation to the wrapper's model in memory: the
 prompts (`prompt.submit`), the main loop's text and thinking chunks as `turn.step` yields them, each
 tool call with its input and result (`tool.call` observed through `next`), and the turn's state. It
