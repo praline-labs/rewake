@@ -31,7 +31,7 @@ A person using rewake reads [user-guide.md](user-guide.md) alone. An agent worki
      [launch-defaults.md](launch-defaults.md)
      → [worker-profile.md](worker-profile.md) → [worker-types.md](worker-types.md) →
      [space.md](space.md) → [rules/space.md](rules/space.md) → [shell.md](shell.md) →
-     [screen.md](screen.md) → [face.md](face.md), [research-face.md](research-face.md), [face-plugin.md](face-plugin.md) → [worktree.md](worktree.md), [worktree-tools.md](worktree-tools.md), [briefs.md](briefs.md),
+     [screen.md](screen.md) → [face.md](face.md), [research-face.md](research-face.md) → [worktree.md](worktree.md), [worktree-tools.md](worktree-tools.md), [briefs.md](briefs.md),
      [research-herdr.md](research-herdr.md) for the terminal manager main may run in;
    - **main's view**: [session-state.md](session-state.md) → [remote-control.md](remote-control.md)
      → [permission-requests.md](permission-requests.md);
@@ -58,8 +58,7 @@ A person using rewake reads [user-guide.md](user-guide.md) alone. An agent worki
 - **A design page** — for a step that changes the protocol or the state (`AGENTS.md`, "Delegation
   and review"), `roadmap/<step>.md`, named by the step's entry: what will be built, not yet true.
   When the step lands, what it settled goes into the living documents and the page leaves the
-  roadmap. Open now, at the path its brief named: [face-plugin.md](face-plugin.md), the face as
-  code of its own built into rewake.
+  roadmap. None is open now.
 - **The project's goal** — [project.md](project.md), changed only by the owner's decision; the
   project's words in `GLOSSARY.md`; how the project is built and its checks in `AGENTS.md`.
 
