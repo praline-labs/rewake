@@ -362,6 +362,20 @@ call, in a private HOME as well as the person's. What the worker profile
 - `--plugin-dir` of a folder whose children are plugins loads each; a plugin's skills show as
   `<plugin>:<skill>`, source `Plugin`.
 
+## A run's status line turns off the person's
+
+**[verified live, installed 2.1.310, the cheapest models; October 31, 2026]** A private room
+(`REWAKE_DIR` in `/tmp`) in an already trusted project whose `.claude/settings.json` holds
+`"statusLine": {"type": "command", "command": "echo OWNER-LINE-STANDIN"}`, standing in for the
+person's line; the configuration directory was the workers' folder for every run, main's
+included, so the person's `~/.claude` was neither read nor touched. A plain `claude` there
+printed `OWNER-LINE-STANDIN` under its input within 2 s. Under `rewake claude`, main and a
+Claude Code worker each started with a `--settings` whose `statusLine` is
+`'<room>/bin/rewake' statusline`, `refreshInterval` 30: across the whole run — turns, a
+`worktree_enter`, a resize to 46 columns — the terminal's output never held the stand-in, and the
+row under the input showed only native's hints and the band's tail. The project layer loses to
+the flag layer, as the order above says; a managed `statusLine` would still win.
+
 ## A configuration directory of the workers
 
 **[verified live, installed 2.1.302, no login, no model call; October 23, 2026]** Run in private

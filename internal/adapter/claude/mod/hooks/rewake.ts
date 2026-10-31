@@ -14,7 +14,7 @@ import type {
 } from "../protocol.gen.ts";
 import { paths } from "../protocol.gen.ts";
 import { Asks } from "./asks.ts";
-import { Band, sample, serveBand } from "./band.ts";
+import { Band, serveBand } from "./band.ts";
 import { briefToolsFor, serveBriefs } from "./briefs.ts";
 import { exitReasons, tellClosing } from "./closing.ts";
 import { serveDialogs } from "./dialogs.ts";
@@ -184,16 +184,7 @@ export const register: Register = (on) => {
       // Loaded outside a rewake run: nobody to report to.
       return started;
     }
-    try {
-      band.begin(
-        await $.env.get("REWAKE_SESSION"),
-        () => $.ui.invalidate("ui.render"),
-        await $.env.get("REWAKE_CONTEXT_WINDOW"),
-      );
-      await sample(() => $.session.usage(), band);
-    } catch {
-      // No band; the session is drawn as it is.
-    }
+    band.begin(() => $.ui.invalidate("ui.render"));
     if (await $.env.get("REWAKE_EXECUTABLE")) {
       const role = await $.env.get("REWAKE_ROLE");
       for (const tool of [...worktreeToolsFor(role), ...briefToolsFor(role)]) {
@@ -229,6 +220,7 @@ export const register: Register = (on) => {
         {
           id: () => $.session.id(),
           model: () => $.session.model(),
+          cwd: () => $.session.cwd(),
           usage: () => $.session.usage(),
           compact: (focus) => $.session.compact({ instructions: focus || undefined }),
           abort: (turnId) => $.turn.abort({ turnId }),
@@ -253,7 +245,9 @@ export const register: Register = (on) => {
             void hello(current, latest, 0, true);
           }
         },
+        () => band.shown,
         (answer, generation) => {
+          band.told(answer.work);
           current.management.changed();
           if (answer.control) void current.management.control(answer.control, generation);
         },
@@ -318,7 +312,6 @@ export const register: Register = (on) => {
     if (e.agentId === undefined) {
       load?.management.usageSeen(step.usage);
       load?.management.changed();
-      await sample(() => $.session.usage(), band);
     }
     return step;
   });
@@ -376,7 +369,6 @@ export const register: Register = (on) => {
   on("session.measure", async ($, e, next) => {
     const measured = await next(e);
     load?.management.changed();
-    await sample(() => $.session.usage(), band);
     return measured;
   });
 

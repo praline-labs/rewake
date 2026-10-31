@@ -163,7 +163,10 @@ the same status line, main's as a worker's;
 `rewake list` drops a trailing parenthesis from the name. Not live: a session whose status line
 does not run — a launch with no run directory, an untrusted workspace, a main launched with a
 `--settings` of its own — shows the request's effort only, a turn late, the model's id and no
-thinking ([research-claude-mod.md](research-claude-mod.md#effort)). Rate limits are not copied. A
+thinking ([research-claude-mod.md](research-claude-mod.md#effort)). The session's directory now
+(`cwd`, `$.session.cwd()`, which a worktree entry moves) and the account's rate-limit windows
+(`rateLimits`: `kind`, whole `percent`, `resetsAt`, from `$.session.usage().rateLimits`, none off a
+subscription) come with every sample; a sample without them clears them. A
 reload of the mod makes compaction coverage partial. On an organization-managed installation
 the harness skips a local plugin's compaction observer, so a native compaction is not counted
 there; one main asked for is still counted from its result.

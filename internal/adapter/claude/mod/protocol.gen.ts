@@ -358,6 +358,9 @@ export interface AliveRequest {
   loadId: string
   // generation is the heartbeat generation the hello answered.
   generation: number
+  // work is the room work the load shows at the input, empty for none: a poll whose work is not
+  // the run's is answered at once, and one without it at the hold's end.
+  work?: string
 }
 
 // EndedRequest names the other runs whose ends the harness's store keeps.
@@ -439,6 +442,10 @@ export interface ControlCommand {
 export interface AliveAnswer {
   // control is the command dispatched once to this generation.
   control?: ControlCommand
+  // work is the run's room work for the hint under the input (internal/core/work): its briefs
+  // with their ticks and the reports it waits on, empty for none; absent where the host reads
+  // none.
+  work?: string
 }
 
 // StateRequest is a complete current observation, without transcript content.
@@ -485,6 +492,23 @@ export interface StateRequest {
   // waiting is what a dialog the session waits at on its screen asks while the mod holds it —
   // a permission, or the model's own question — absent when none.
   waiting?: AskKind
+  // cwd is the directory the session runs in now, the harness's own working directory, which a
+  // worktree entry moves; absent when unknown.
+  cwd?: string
+  // rateLimits are the account's rate-limit windows the last response reported, absent or empty
+  // off a subscription or before the first reading.
+  rateLimits?: RateLimit[]
+}
+
+// RateLimit is one rate-limit window of the account, as the harness reported it.
+export interface RateLimit {
+  // kind is the window: five_hour, seven_day, or another the harness names.
+  kind: string
+  // percent is how much of the window is used, in whole percent.
+  percent: number
+  // resetsAt is when the window resets, in seconds since the epoch, absent when the harness
+  // does not say.
+  resetsAt?: number
 }
 
 // ControlReply is an initial or final result for a dispatched command.

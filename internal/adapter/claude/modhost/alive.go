@@ -152,22 +152,58 @@ func (s *Server) alive(w http.ResponseWriter, r *http.Request) {
 		s.refuseEffect(w, status, err)
 		return
 	}
-	if command := s.takeCommand(poll); command != nil {
-		s.answer(w, r, AliveAnswer{Control: command})
+	work, moved := s.workFor(poll)
+	if command := s.takeCommand(poll); command != nil || moved {
+		s.answer(w, r, AliveAnswer{Control: command, Work: work})
 		return
 	}
 	timer := time.NewTimer(s.hold())
 	defer timer.Stop()
-	select {
-	case <-timer.C:
-	case <-s.management.wake:
-	case <-s.stop:
-		refuse(w, http.StatusServiceUnavailable, errClosing.Error())
-		return
-	case <-r.Context().Done():
-		return
+	var reread <-chan time.Time
+	if s.cfg.Work != nil {
+		ticker := time.NewTicker(s.workEvery())
+		defer ticker.Stop()
+		reread = ticker.C
 	}
-	s.answer(w, r, AliveAnswer{Control: s.takeCommand(poll)})
+hold:
+	for {
+		select {
+		case <-timer.C:
+			break hold
+		case <-s.management.wake:
+			break hold
+		case <-reread:
+			if _, moved := s.workFor(poll); moved {
+				break hold
+			}
+		case <-s.stop:
+			refuse(w, http.StatusServiceUnavailable, errClosing.Error())
+			return
+		case <-r.Context().Done():
+			return
+		}
+	}
+	work, _ = s.workFor(poll)
+	s.answer(w, r, AliveAnswer{Control: s.takeCommand(poll), Work: work})
+}
+
+// workFor is the run's room work for an answer, and whether it is not what
+// the polling load shows, which a held poll is answered early for; nil and
+// false where the host reads none. A poll that names no work is of a load
+// that shows none, and is answered at the hold's end, never at once.
+func (s *Server) workFor(poll AliveRequest) (*string, bool) {
+	if s.cfg.Work == nil {
+		return nil, false
+	}
+	work := s.cfg.Work()
+	return &work, poll.Work != nil && *poll.Work != work
+}
+
+func (s *Server) workEvery() time.Duration {
+	if s.cfg.WorkEvery > 0 {
+		return s.cfg.WorkEvery
+	}
+	return 2 * time.Second
 }
 
 // renew is a poll's effect, decided as a turn's is: the peer checked again

@@ -192,7 +192,9 @@ compatibility scan or fallback: an old record must not appear in a new room by a
 - `cwd` — the directory rewake was launched from, taken when the name is claimed. A harness that
   moves itself afterwards is not followed: Claude Code launched with `-w <name>` runs in
   `.claude/worktrees/<name>`, while the record, `rewake list` and the availability notices show
-  the launch directory ([research-launch.md](research-launch.md#a-worktree-at-launch)).
+  the launch directory ([research-launch.md](research-launch.md#a-worktree-at-launch)). Where the
+  session works now is its telemetry's (`Snapshot.Cwd`, Claude Code's alone: pi's directory is
+  the one it started in), which the room view gives the pane's top row as `path`.
 - `pidNamespace` — the pid namespace the two pids belong to: a reader in another one cannot judge
   whether they are alive, and does not try.
 

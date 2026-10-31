@@ -75,8 +75,12 @@ export interface SessionRow {
   type?: string
   // cwd is the directory the session started in.
   cwd: string
-  // branch is the branch the session works on: its space's own checkout, else what is checked
-  // out where it started, a detached head as its short commit; absent outside a repository.
+  // path is the directory the session works in now, for the pane's top row: where its harness
+  // says it runs (a worktree entry moves it), else where it started.
+  path: string
+  // branch is the branch checked out at path: its space's own checkout while it works there,
+  // else what is checked out at path, a detached head as its short commit; absent outside a
+  // repository.
   branch?: string
   // verdict is what rewake judged the session does; absent while the room view carries no
   // telemetry.
@@ -95,6 +99,13 @@ export interface SessionRow {
   percent?: number
   // cache is the prompt cache, where the harness says; absent when unknown.
   cache?: CacheRow
+  // limits are the account's rate-limit windows of five hours and seven days, as the harness
+  // reported them last; absent where it reports none.
+  limits?: LimitRow[]
+  // work is the run's room work as its input shows it (internal/core/work): the open briefs
+  // bound to it with their ticks, `brief 57 3/6`, and the reports it waits on, `⧗ 3`; absent
+  // when there is none and unless asMain.
+  work?: string
   // mirror is where the session's wrapper serves its conversation to rewake's own face
   // (docs/face.md), while it does; absent otherwise and unless asMain. The shell builds no path
   // itself.
@@ -127,6 +138,16 @@ export interface CacheRow {
   hit: number
   // expiresAt is when the cache expires, in epoch milliseconds, where the harness says.
   expiresAt?: number
+}
+
+// LimitRow is one rate-limit window of the account as the strip shows it.
+export interface LimitRow {
+  // window is the window as the strip names it: 5h or 7d.
+  window: string
+  // percent is the whole percent of the window used.
+  percent: number
+  // resetsAt is when the window resets, in epoch milliseconds, where the harness says.
+  resetsAt?: number
 }
 
 // BriefView is a brief; in the list without text and comments, which only the opened brief

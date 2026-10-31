@@ -19,7 +19,7 @@ test("an admitted load polls with its generation, one poll at a time, the next a
   await start($);
   await run.clock.settle();
   expect(run.polls().map((one) => one.body)).toEqual([
-    { loadId: run.hellos()[0].body.loadId, generation: 1 },
+    { loadId: run.hellos()[0].body.loadId, generation: 1, work: "" },
   ]);
   await run.clock.advance(holdMs);
   expect(run.polls().length).toBe(2);
@@ -179,7 +179,12 @@ test("a poll of an older generation answered after a newer one began ends its ch
   for (const status of [200, 409, 503]) {
     const { host, posts, timers, tick } = handHost();
     let again = 0;
-    const heartbeat = new Heartbeat(host, "load-1", () => again++);
+    const heartbeat = new Heartbeat(
+      host,
+      "load-1",
+      () => again++,
+      () => undefined,
+    );
     heartbeat.begin(1);
     await tick();
     heartbeat.begin(2);

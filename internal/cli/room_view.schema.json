@@ -62,7 +62,8 @@
         "own": {"type": "boolean", "description": "marks the shell's own main, the run the caller proved to be."},
         "type": {"type": "string", "description": "is the type of a worker opened with one."},
         "cwd": {"type": "string", "description": "is the directory the session started in."},
-        "branch": {"type": "string", "description": "is the branch the session works on: its space's own checkout, else what is checked out where it started, a detached head as its short commit; absent outside a repository."},
+        "path": {"type": "string", "description": "is the directory the session works in now, for the pane's top row: where its harness says it runs (a worktree entry moves it), else where it started."},
+        "branch": {"type": "string", "description": "is the branch checked out at path: its space's own checkout while it works there, else what is checked out at path, a detached head as its short commit; absent outside a repository."},
         "verdict": {"$ref": "#/$defs/Verdict", "description": "is what rewake judged the session does; absent while the room view carries no telemetry."},
         "model": {"type": "string", "description": "is the harness's display name of the model, else the template's label, else the id."},
         "effort": {"type": "string", "description": "is the reasoning effort."},
@@ -71,9 +72,11 @@
         "window": {"type": "integer", "description": "is the limit the conversation is kept to, in tokens."},
         "percent": {"type": "integer", "description": "is how full the context is, in percent of the window."},
         "cache": {"$ref": "#/$defs/CacheRow", "description": "is the prompt cache, where the harness says; absent when unknown."},
+        "limits": {"type": "array", "items": {"$ref": "#/$defs/LimitRow"}, "description": "are the account's rate-limit windows of five hours and seven days, as the harness reported them last; absent where it reports none."},
+        "work": {"type": "string", "description": "is the run's room work as its input shows it (internal/core/work): the open briefs bound to it with their ticks, `brief 57 3/6`, and the reports it waits on, `⧗ 3`; absent when there is none and unless asMain."},
         "mirror": {"type": "string", "description": "is where the session's wrapper serves its conversation to rewake's own face (docs/face.md), while it does; absent otherwise and unless asMain. The shell builds no path itself."}
       },
-      "required": ["name", "cwd"],
+      "required": ["name", "cwd", "path"],
       "additionalProperties": false
     },
     "Mark": {
@@ -102,6 +105,17 @@
         "expiresAt": {"type": "integer", "description": "is when the cache expires, in epoch milliseconds, where the harness says."}
       },
       "required": ["hit"],
+      "additionalProperties": false
+    },
+    "LimitRow": {
+      "type": "object",
+      "description": "is one rate-limit window of the account as the strip shows it.",
+      "properties": {
+        "window": {"type": "string", "description": "is the window as the strip names it: 5h or 7d."},
+        "percent": {"type": "integer", "description": "is the whole percent of the window used."},
+        "resetsAt": {"type": "integer", "description": "is when the window resets, in epoch milliseconds, where the harness says."}
+      },
+      "required": ["window", "percent"],
       "additionalProperties": false
     },
     "BriefView": {

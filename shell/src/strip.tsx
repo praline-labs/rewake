@@ -1,7 +1,8 @@
 // The strip, the row under a pane, main's and each worker's (docs/shell.md,
-// "The strip"): who the session is, what it does, where it works, its model
-// and how much of its context it used, from rewake's own records, the same for every
-// harness.
+// "The strip"): who the session is, what it does, its model, how much of its
+// context it used, its cache and the account's limits, from rewake's own
+// records, the same for every harness. Where it works is the pane's top row
+// (path.tsx).
 import { RGBA } from "@opentui/core";
 import { createSignal, For, onCleanup } from "solid-js";
 import { ShellRow, selecting, separator } from "./bar.tsx";
@@ -11,6 +12,8 @@ import type { Theme } from "./theme.ts";
 
 export type StripState = {
   session: string;
+  // path and branch are where the session works now, for the pane's top row.
+  path?: string;
   branch?: string;
   status?: Session;
   // face is the pane's face where its session serves a mirror: the dev mark.
@@ -25,24 +28,26 @@ const [sessions, showSessions] = createSignal(new Map<string, Session>());
 export { showSessions, showSpaces };
 
 // stripOf is a worker pane's state: its space's session, as main sees it,
-// and the branch of the space's own checkout, else of where it started.
+// where it works now, and, before its row is read, its space's checkout.
 export function stripOf(id: string): StripState {
   const space = spaces().find((s) => s.id === id);
   const session = space?.worker ?? id;
   const status = sessions().get(session);
-  return { session, status, branch: space?.checkout?.branch ?? status?.branch, face: modeOf(id) };
+  const path = status?.path ?? space?.checkout?.path;
+  const branch = status ? status.branch : space?.checkout?.branch;
+  return { session, status, path, branch, face: modeOf(id) };
 }
 
 // mainStrip is main's own: its row of the listing, once the run the listing
-// is asked as is known, and the branch where it started.
+// is asked as is known, and where it works now.
 export function mainStrip(): StripState {
   const status = [...sessions().values()].find((s) => s.own);
-  return { session: status?.name ?? "main", status, branch: status?.branch };
+  return { session: status?.name ?? "main", status, path: status?.path, branch: status?.branch };
 }
 
 type Part = {
   text: string;
-  kind: "name" | "plain" | "context" | "cache" | "dev";
+  kind: "name" | "plain" | "context" | "cache" | "limit" | "dev";
   fill?: number;
   cold?: boolean;
 };
@@ -76,8 +81,8 @@ export function markOf(s: Session | undefined): Mark {
   return s?.verdict?.mark ?? "off";
 }
 
-// windowOf is the context as the strip and the face's rule show it, used of
-// the window: 145k/1M, –/1M before the harness counted it.
+// windowOf is the context as the strip shows it, used of the window: 145k/1M,
+// –/1M before the harness counted it.
 export function windowOf(s: Session | undefined): string | undefined {
   if (!s?.window) return undefined;
   return `${s.used === undefined ? "–" : tokens(s.used)}/${tokens(s.window)}`;
@@ -105,26 +110,34 @@ export function cacheOf(s: Session, now: number): Part | undefined {
   return { text, kind: "cache", cold };
 }
 
+// limitOf is an account's window as the strip shows it, `5h 37%`, in the
+// colour of how much of it is used.
+function limitOf(s: Session, window: string): Part | undefined {
+  const limit = s.limits?.find((l) => l.window === window);
+  if (!limit) return undefined;
+  return { text: `${window} ${limit.percent}%`, kind: "limit", fill: limit.percent };
+}
+
 // nameOf is who the session is, with its type after it.
 export function nameOf(state: StripState): string {
   const type = state.status?.type;
   return type ? `${state.session} (${type})` : state.session;
 }
 
-// stripParts is the line for a width: the name, activity and context always,
-// the model, then the cache, then the branch left out while the line is too
-// long, and the rest cut at the width.
+// stripParts is the line for a width: the name, activity and context always;
+// the model, then the seven days' limit, then the five hours', then the cache
+// left out while the line is too long, and the rest cut at the width.
 export function stripParts(state: StripState, width: number, now = Date.now()): Part[] {
   const s = state.status;
   const activity = s && activityOf(s);
   const cache = s && cacheOf(s, now);
-  // In the order shown; the optional ones are left out, 1 then 2 then 3.
+  const five = s && limitOf(s, "5h");
+  const seven = s && limitOf(s, "7d");
+  // In the order shown; the optional ones are left out, 1 first, 4 last.
   const all: ((Part & { optional?: number }) | undefined)[] = [
-    // Under rewake's face the name is on the face's input rule instead.
-    state.face === "rewake" ? undefined : { text: nameOf(state), kind: "name" },
+    { text: nameOf(state), kind: "name" },
     state.face ? { text: `dev ${state.face}`, kind: "dev" } : undefined,
     activity ? { text: activity, kind: "plain" } : undefined,
-    state.branch ? { text: `⎇ ${state.branch}`, kind: "plain", optional: 3 } : undefined,
     // Thinking is named only while it is on: off and unknown say nothing.
     s?.model
       ? {
@@ -133,14 +146,15 @@ export function stripParts(state: StripState, width: number, now = Date.now()): 
           optional: 1,
         }
       : undefined,
-    // Under rewake's face the context is on the face's input rule too.
-    s && state.face !== "rewake" ? contextOf(s) : undefined,
-    cache ? { ...cache, optional: 2 } : undefined,
+    s ? contextOf(s) : undefined,
+    cache ? { ...cache, optional: 4 } : undefined,
+    five ? { ...five, optional: 3 } : undefined,
+    seven ? { ...seven, optional: 2 } : undefined,
   ];
   let parts = all.filter((p) => p !== undefined);
   const length = () =>
     parts.reduce((n, p) => n + p.text.length, 0) + separator.length * (parts.length - 1);
-  for (const drop of [1, 2, 3])
+  for (const drop of [1, 2, 3, 4])
     if (length() > width) parts = parts.filter((p) => p.optional !== drop);
   // What still does not fit is cut at the width.
   let room = width;
@@ -187,7 +201,7 @@ export function Strip(props: {
               {i() > 0 ? <span style={{ fg: props.theme.faint }}>{separator}</span> : ""}
               {part.kind === "name" ? (
                 <b style={{ fg: props.colour }}>{part.text}</b>
-              ) : part.kind === "context" ? (
+              ) : part.kind === "context" || part.kind === "limit" ? (
                 <span style={{ fg: fillColour(part.fill) }}>{part.text}</span>
               ) : part.kind === "dev" ? (
                 <span style={{ fg: RGBA.fromIndex(5) }}>{part.text}</span>

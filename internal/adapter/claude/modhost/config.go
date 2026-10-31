@@ -56,4 +56,10 @@ type Config struct {
 	// by mirror/events (mirror.go); nil for a run the face does not draw,
 	// whose load is never asked for its conversation.
 	Mirror *mirror.Model
+	// Work reads the run's room work for the hint under the input
+	// (internal/core/work), which the heartbeat answers with; nil answers
+	// none. Read about every WorkEvery while a poll is held.
+	Work func() string
+	// WorkEvery is how often a held poll reads the work again, 2 s when zero.
+	WorkEvery time.Duration
 }

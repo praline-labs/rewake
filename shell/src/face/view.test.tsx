@@ -68,29 +68,29 @@ test("a marked span is painted on its mark's colour", async () => {
   expect(spans.find((s) => s.text.startsWith("H"))?.attributes).toBe(TextAttributes.UNDERLINE);
 });
 
-// The session's name sits at the right end of the input's top rule, as the
-// terminal program draws its own, and fits any pane.
-test("the input's rule carries the name, cut to a narrow pane", () => {
-  expect(ruleOf(20, "w-claude (code)")).toBe("── w-claude (code) ─");
-  expect(ruleOf(12, "w-claude (code)")).toBe("── w-clau… ─");
+// The run's room work sits at the right end of the input's top rule, where
+// Claude Code's hint line ends with it, and fits any pane; none is a bare rule.
+test("the input's rule carries the run's work, cut to a narrow pane", () => {
+  expect(ruleOf(20, "brief 57 3/6")).toBe(`${"─".repeat(5)} brief 57 3/6 ─`);
+  expect(ruleOf(12, "brief 57 3/6 · ⧗ 2")).toBe("─── brief… ─");
   expect(ruleOf(30)).toBe("─".repeat(30));
   for (let width = 0; width <= 30; width++) {
-    const rule = ruleOf(width, "名前-claude (code)");
+    const rule = ruleOf(width, "名前 brief 57 3/6");
     expect(Bun.stringWidth(rule)).toBe(width);
     expect(rule.endsWith(" ─") || rule === "─".repeat(width)).toBe(true);
   }
 });
 
-// The mode sits at the rule's left end, the context after the name; a
-// narrow pane drops the mode, then the context, then cuts the name.
-test("the input's rule carries the mode and the context, dropped in turn as the pane narrows", () => {
-  const rule = (width: number) => ruleOf(width, "w", "46k/272k", "auto");
-  expect(rule(40)).toBe(`── ⏵⏵ auto mode ${"─".repeat(9)} w · 46k/272k ─`);
-  expect(rule(30)).toBe("───────────────── w · 46k/272k ─".slice(-30));
-  expect(rule(12)).toBe("────────── w ─".slice(-12));
-  expect(ruleOf(40, "w", "46k/272k", "default")).toBe(`${"─".repeat(25)} w · 46k/272k ─`);
+// The mode sits at the rule's left end; a narrow pane drops it before it
+// cuts the work.
+test("the input's rule carries the mode, dropped before the work as the pane narrows", () => {
+  const rule = (width: number) => ruleOf(width, "⧗ 3", "auto");
+  expect(rule(30)).toBe(`── ⏵⏵ auto mode ${"─".repeat(8)} ⧗ 3 ─`);
+  expect(rule(20)).toBe(`${"─".repeat(14)} ⧗ 3 ─`);
+  expect(ruleOf(30, undefined, "auto")).toBe(`── ⏵⏵ auto mode ${"─".repeat(14)}`);
+  expect(ruleOf(40, "⧗ 3", "default")).toBe(`${"─".repeat(34)} ⧗ 3 ─`);
   for (let width = 0; width <= 50; width++)
-    expect(Bun.stringWidth(ruleOf(width, "名前", "46k/272k", "bypass"))).toBe(width);
+    expect(Bun.stringWidth(ruleOf(width, "brief 名前 1/2", "bypass"))).toBe(width);
 });
 
 // The owner's rule: the mouse over the face never reaches the pane's pty. A

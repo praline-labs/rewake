@@ -68,9 +68,14 @@ func handleRoom(ctx *Context, call Call) error {
 		return failf("could not read the spaces in %s: %v", dir, err)
 	}
 	view := RoomView{Room: filepath.Base(dir), AsMain: asMain, Spaces: spaceRowsOf(dir, records)}
-	view.Sessions = sessionRowsOf(dir, records, sessionViewsOf(dir, sessions, asMain), mainName, asMain)
+	var home taskbrief.Home
+	var workOf func(name, epoch string) string
 	if asMain {
-		home := quietHomeOf(dir)
+		home = quietHomeOf(dir)
+		workOf = workReader(home)
+	}
+	view.Sessions = sessionRowsOf(dir, records, sessionViewsOf(dir, sessions, asMain), mainName, workOf)
+	if asMain {
 		if call.Switch("briefs") {
 			var problem error
 			view.Briefs, view.UnreadableBriefs, problem = briefRowsOf(home)

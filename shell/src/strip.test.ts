@@ -5,6 +5,7 @@ import { cacheOf, markOf, stripParts } from "./strip.tsx";
 const base: Session = {
   name: "w",
   cwd: "/p",
+  path: "/p",
   model: "Model",
   effort: "low",
   window: 100_000,
@@ -22,20 +23,28 @@ test("the cache reads as rewake list has it, counted on the given clock", () => 
   expect(cacheOf(base, now)).toBeUndefined();
 });
 
-test("a long line drops the model, then the cache, then the branch", () => {
-  const state = { session: "w", branch: "wt-1", status: at(60 * 60_000) };
+// The owner, October 31, 2026: the ttl and the 5h/7d limits matter, and a
+// narrow pane loses what is least needed first.
+test("a long line drops the model, then the 7d limit, then the 5h, then the cache", () => {
+  const status: Session = {
+    ...at(60 * 60_000),
+    limits: [
+      { window: "5h", percent: 37 },
+      { window: "7d", percent: 9 },
+    ],
+  };
+  const state = { session: "w", path: "/p", branch: "wt-1", status };
   const texts = (width: number) => stripParts(state, width, now).map((p) => p.text);
   const full = texts(200);
-  expect(full.at(-1)).toBe("90% 60m");
-  expect(full).toContain("Model low");
-  const noModel = texts(full.join(" · ").length - 1);
-  expect(noModel).not.toContain("Model low");
-  expect(noModel).toContain("90% 60m");
-  const noCache = texts(noModel.join(" · ").length - 1);
-  expect(noCache).not.toContain("90% 60m");
-  expect(noCache).toContain("⎇ wt-1");
-  const noBranch = texts(noCache.join(" · ").length - 1);
-  expect(noBranch).not.toContain("⎇ wt-1");
+  expect(full).toEqual(["w", "Model low", "23k/100k", "90% 60m", "5h 37%", "7d 9%"]);
+  // The branch is on the pane's top row now, never on the strip.
+  expect(full.join(" ")).not.toContain("wt-1");
+  let shown = full;
+  for (const gone of ["Model low", "7d 9%", "5h 37%", "90% 60m"]) {
+    shown = texts(shown.join(" · ").length - 1);
+    expect(shown).not.toContain(gone);
+  }
+  expect(shown).toEqual(["w", "23k/100k"]);
 });
 
 test("thinking is named after the effort only while it is on", () => {
@@ -70,15 +79,17 @@ test("the strip shows the verdict's label and the button its mark, deriving neit
   expect(markOf(undefined)).toBe("off");
 });
 
-test("a pane under rewake's face leaves its name and context to the face's rule; a native one keeps them", () => {
+// The face's input rule carries the run's work now (brief 60): every pane's
+// strip names the session and its context, drawn by the face or not.
+test("every pane's strip names the session and its context, under rewake's face too", () => {
   const status = { ...base, type: "code" };
   const texts = (face?: "rewake" | "native") =>
     stripParts({ session: "w", status, face }, 200, now).map((p) => p.text);
-  expect(texts("rewake")[0]).toBe("dev rewake");
-  expect(texts("rewake")).not.toContain("23k/100k");
-  expect(texts("native")[0]).toBe("w (code)");
-  expect(texts("native")).toContain("23k/100k");
+  for (const face of ["rewake", "native", undefined] as const) {
+    expect(texts(face)[0]).toBe("w (code)");
+    expect(texts(face)).toContain("23k/100k");
+  }
+  expect(texts("rewake")[1]).toBe("dev rewake");
   // No pane's strip says the percent of the window.
-  expect(texts(undefined)).toContain("23k/100k");
   expect(texts(undefined).join(" ")).not.toContain("23%");
 });

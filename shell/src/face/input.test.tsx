@@ -345,10 +345,10 @@ test("the input's rules say how many rows it hides above and under", () => {
   expect(Bun.stringWidth(moreRule(20, "↓", 3))).toBe(20);
   expect(moreRule(8, "↓", 3)).toBe("─".repeat(8));
   // A rule with no run of the rule long enough for it says nothing.
-  const rule = withMore(ruleParts(40, "w", "46k/272k", "auto"), 2)
+  const rule = withMore(ruleParts(40, "brief 57 3/6 · ⧗ 2", "auto"), 2)
     .map((p) => p.text)
     .join("");
-  expect(rule).toBe("── ⏵⏵ auto mode ───────── w · 46k/272k ─");
+  expect(rule).toBe(`── ⏵⏵ auto mode ${"─".repeat(3)} brief 57 3/6 · ⧗ 2 ─`);
   expect(
     withMore(ruleParts(40, "w"), 2)
       .map((p) => p.text)

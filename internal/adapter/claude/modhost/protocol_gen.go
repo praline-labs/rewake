@@ -453,6 +453,10 @@ type AliveRequest struct {
 
 	// Generation is the heartbeat generation the hello answered.
 	Generation int `json:"generation"`
+
+	// Work is the room work the load shows at the input, empty for none: a poll whose work is not
+	// the run's is answered at once, and one without it at the hold's end.
+	Work *string `json:"work,omitempty"`
 }
 
 // EndedRequest names the other runs whose ends the harness's store keeps.
@@ -556,6 +560,11 @@ type ControlCommand struct {
 type AliveAnswer struct {
 	// Control is the command dispatched once to this generation.
 	Control *ControlCommand `json:"control,omitempty"`
+
+	// Work is the run's room work for the hint under the input (internal/core/work): its briefs
+	// with their ticks and the reports it waits on, empty for none; absent where the host reads
+	// none.
+	Work *string `json:"work,omitempty"`
 }
 
 // StateRequest is a complete current observation, without transcript content.
@@ -620,6 +629,27 @@ type StateRequest struct {
 	// Waiting is what a dialog the session waits at on its screen asks while the mod holds it —
 	// a permission, or the model's own question — absent when none.
 	Waiting *AskKind `json:"waiting,omitempty"`
+
+	// Cwd is the directory the session runs in now, the harness's own working directory, which a
+	// worktree entry moves; absent when unknown.
+	Cwd *string `json:"cwd,omitempty"`
+
+	// RateLimits are the account's rate-limit windows the last response reported, absent or empty
+	// off a subscription or before the first reading.
+	RateLimits []RateLimit `json:"rateLimits,omitempty"`
+}
+
+// RateLimit is one rate-limit window of the account, as the harness reported it.
+type RateLimit struct {
+	// Kind is the window: five_hour, seven_day, or another the harness names.
+	Kind string `json:"kind"`
+
+	// Percent is how much of the window is used, in whole percent.
+	Percent int `json:"percent"`
+
+	// ResetsAt is when the window resets, in seconds since the epoch, absent when the harness does
+	// not say.
+	ResetsAt *int `json:"resetsAt,omitempty"`
 }
 
 // ControlReply is an initial or final result for a dispatched command.

@@ -55,6 +55,33 @@ test("context is sampled initially, on measurement and after the main turn; miss
   expect(states(run).at(-1).activity).toBe("idle");
 });
 
+// Brief 60: a sample names where the session runs now, which a worktree
+// entry moves, and the account's windows in whole percent with their resets.
+test("a sample carries the session's directory and the account's rate limits", async ($, on) => {
+  let cwd = "/work";
+  let limits: unknown[] = [];
+  const run = world(on, { cwd: () => cwd, limits: () => limits });
+  await start($);
+  await run.clock.settle();
+  expect(states(run).at(-1).cwd).toBe("/work");
+  expect(states(run).at(-1).rateLimits).toBeUndefined();
+  cwd = "/work/.claude/worktrees/wt";
+  limits = [
+    { kind: "five_hour", percentUsed: 37.4, resetsAt: "2026-10-31T13:00:00Z" },
+    { kind: "seven_day", percentUsed: 9 },
+  ];
+  await $.turn.start({ turnId: "t" } as any);
+  await run.clock.settle();
+  expect(states(run).at(-1)).toMatchObject({
+    cwd: "/work/.claude/worktrees/wt",
+    rateLimits: [
+      { kind: "five_hour", percent: 37, resetsAt: Date.parse("2026-10-31T13:00:00Z") / 1000 },
+      { kind: "seven_day", percent: 9 },
+    ],
+  });
+  expect(states(run).at(-1).rateLimits[1].resetsAt).toBeUndefined();
+});
+
 test("remote compact carries focus, returns requested while the heartbeat continues, then counts completion once", async ($, on) => {
   const run = world(on, { replies: { "/v1/mod/alive": orders(() => run, command("compact")) } });
   const calls: any[] = [];

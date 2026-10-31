@@ -94,6 +94,10 @@ type LaunchRequest struct {
 	// screen goes. An adapter calls it when its harness says so, as often as
 	// it says (docs/shell.md).
 	Closing func()
+	// Work, set by the host, reads the run's room work (internal/core/work)
+	// for an adapter whose harness shows it at its input, as often as it
+	// shows it.
+	Work func() string
 	// Env is the run's whole environment, built by the host: the current
 	// one less what the adapter's runs must not inherit (EnvNotInherited),
 	// plus the rewake variables that name the run. The adapter starts the

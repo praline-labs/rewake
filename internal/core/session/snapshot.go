@@ -70,6 +70,13 @@ type Snapshot struct {
 	// it: the publisher and the reader are different processes, and the wall
 	// clock can be stepped by seconds between the two.
 	PublishedBoot int64 `json:"publishedBoot,omitempty"`
+	// Cwd is the directory the session runs in now, where the harness tells
+	// it: a worktree entry moves it. Nil where it does not tell, and the
+	// session's record names where it started.
+	Cwd *string `json:"cwd,omitempty"`
+	// RateLimits are the account's rate-limit windows the harness reported
+	// last; none where it reports none, as off a subscription.
+	RateLimits []RateLimit `json:"rateLimits,omitempty"`
 	// Verdict is Judge's verdict, set by a reader for those it shows the
 	// snapshot to; Save never stores it, since its staleness is the
 	// reader's.
@@ -86,6 +93,15 @@ type Cache struct {
 	Read       int64 `json:"readTokens"`
 	Write      int64 `json:"writeTokens"`
 	Input      int64 `json:"uncachedInputTokens"`
+}
+
+// RateLimit is one rate-limit window of the account as the harness reports
+// it: its kind (five_hour, seven_day, or another the harness names), the
+// whole percent used, and when it resets where the harness says.
+type RateLimit struct {
+	Kind     string     `json:"kind"`
+	Percent  int        `json:"percent"`
+	ResetsAt *time.Time `json:"resetsAt,omitempty"`
 }
 
 // CacheLife is the prompt cache's lifetime as the harness tells it: the tier

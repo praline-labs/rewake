@@ -217,19 +217,9 @@ func TestARunWritesItsModAndServesItsSocket(t *testing.T) {
 	}
 }
 
-func TestTheModEnvNamesTheLaunchsWindow(t *testing.T) {
-	for _, c := range []struct {
-		args []string
-		want string
-	}{
-		{[]string{"--autocompact", "272k"}, modWindowEnv + "=272000"},
-		{[]string{"--autocompact", "auto"}, modWindowEnv + "=0"},
-		{nil, modWindowEnv + "=0"},
-	} {
-		env := modEnv([]string{modWindowEnv + "=1", "A=b"}, "/s.sock", c.args)
-		if !slices.Contains(env, c.want) || !slices.Contains(env, modSocketEnv+"=/s.sock") || len(env) != 3 {
-			t.Errorf("modEnv(%v) = %v, want %s", c.args, env, c.want)
-		}
+func TestTheModEnvNamesTheSocket(t *testing.T) {
+	if env := modEnv([]string{modSocketEnv + "=/old.sock", "A=b"}, "/s.sock"); !slices.Equal(env, []string{"A=b", modSocketEnv + "=/s.sock"}) && !slices.Equal(env, []string{modSocketEnv + "=/s.sock", "A=b"}) {
+		t.Errorf("modEnv = %v", env)
 	}
 }
 
