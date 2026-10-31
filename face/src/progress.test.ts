@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import type { Item } from "./mirror.gen.ts";
-import { count, phaseOf, Tracker } from "./progress.ts";
+import { count, phaseOf, retriesOf, Tracker } from "./progress.ts";
 import { turnLine } from "./turn.ts";
 
 const prompt: Item = { id: "p", kind: "prompt", status: "settled", text: "go" };
@@ -120,4 +120,38 @@ test("the glyph is the four-dot orbit, turning clockwise every 120 ms", () => {
   expect(glyph(0)).toEqual({ text: "⠏ ", tone: "accent" });
   expect(glyph(120)?.text).toBe("⠛ ");
   expect(glyph(960)?.text).toBe("⠏ ");
+});
+
+// Brief 56: pi tries a failed request again within the turn, its screen
+// saying `Retrying (1/3)` in the warning's colour; the face knows a retry by
+// the failures the turn told while it still works.
+test("a working turn after its failures says it tries again, in the warning's colour", () => {
+  const failed = (id: string, turn = "t1"): Item => ({
+    id,
+    kind: "notice",
+    status: "error",
+    turn,
+    text: "Error: 503 overloaded",
+  });
+  const steered: Item = { id: "s", kind: "prompt", status: "settled", turn: "t1", text: "and" };
+  const reply: Item = { id: "r", kind: "text", status: "streaming", turn: "t1", text: "x" };
+  expect(retriesOf([prompt, failed("e1")])).toBe(1);
+  expect(retriesOf([prompt, failed("e1"), steered, failed("e2")])).toBe(2);
+  expect(retriesOf([prompt, failed("e1"), reply])).toBe(0);
+  // The last turn's failure, then this turn's prompt: no retry of this one.
+  expect(retriesOf([failed("e0", "t0"), prompt])).toBe(0);
+  expect(retriesOf([failed("e0", "t0"), failed("e1")])).toBe(1);
+  // A face that saw the turn begin counts only after what was there.
+  expect(retriesOf([failed("e0", "t0"), prompt, failed("e1")], "e0")).toBe(1);
+  const t = new Tracker();
+  t.reset(0, [failed("e0", "t0"), prompt]);
+  expect(t.at([failed("e0", "t0"), prompt], 0).retry).toBeUndefined();
+  expect(t.at([failed("e0", "t0"), prompt, failed("e1")], 0).retry).toBe(1);
+  const line = turnLine("working", {
+    now: 0,
+    since: 0,
+    progress: { phase: "requesting", tokens: 0, retry: 2 },
+  });
+  expect(line?.spans[1]).toEqual({ text: "Retrying (attempt 2)…", tone: "gap" });
+  expect(line?.spans[0]?.tone).toBe("gap");
 });

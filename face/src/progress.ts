@@ -10,9 +10,10 @@ import { nameOf } from "./tools.ts";
 // reply, a thinking block, a call's input or a call coming back.
 export type Phase = "requesting" | "responding" | "thinking" | "tool-input" | "tool-use";
 
-// Progress is the turn's phase, what streamed back, and the name of the call
-// that runs, as the face draws its head.
-export type Progress = { phase: Phase; tokens: number; tool?: string };
+// Progress is the turn's phase, what streamed back, the name of the call
+// that runs, as the face draws its head, and how many requests in a row
+// failed while the turn still works: the session is trying again.
+export type Progress = { phase: Phase; tokens: number; tool?: string; retry?: number };
 
 // own is an item a turn streamed back: no prompt, no notice.
 const own = (item: Item) => item.kind !== "prompt" && item.kind !== "notice";
@@ -46,6 +47,26 @@ export function phaseOf(items: Item[], before?: string): Phase {
   return "tool-use";
 }
 
+// retriesOf is how many failures of one turn the session told last, with
+// nothing of the turn since, after the item that was latest as the turn
+// began. A turn that still works after a failed request is trying it again:
+// the session ends a turn at once on a failure it does not retry. A prompt
+// sent into the turn goes by; one that names no turn began this one.
+export function retriesOf(items: Item[], mark?: string): number {
+  const from = mark === undefined ? 0 : items.findIndex((item) => item.id === mark) + 1;
+  let n = 0;
+  let turn: string | undefined;
+  for (let i = items.length - 1; i >= from; i--) {
+    const item = items[i];
+    if (item?.kind === "prompt" && item.turn !== undefined) continue;
+    if (item?.kind !== "notice" || item.status !== "error") break;
+    if (n > 0 && item.turn !== turn) break;
+    turn = item.turn;
+    n++;
+  }
+  return n;
+}
+
 // lengthOf is what streamed back in the turn, counted as the terminal
 // program counts it: the characters of its replies, its thinking and its
 // calls' inputs.
@@ -70,11 +91,13 @@ export class Tracker {
   private shown = 0;
   private last: number | undefined;
   private before: string | undefined;
+  private mark: string | undefined;
 
   reset(now?: number, items: Item[] = []) {
     this.shown = 0;
     this.last = now;
     this.before = items.findLast(own)?.turn;
+    this.mark = items.at(-1)?.id;
   }
 
   at(items: Item[], now: number): Progress {
@@ -94,10 +117,12 @@ export class Tracker {
       const by = towards(Math.abs(gap));
       this.shown = gap > 0 ? Math.min(this.shown + by, length) : Math.max(this.shown - by, length);
     }
+    const retry = retriesOf(items, this.mark);
     return {
       phase,
       tokens: Math.round(this.shown / 4),
       tool: running ? nameOf(running) : undefined,
+      ...(retry > 0 ? { retry } : {}),
     };
   }
 }

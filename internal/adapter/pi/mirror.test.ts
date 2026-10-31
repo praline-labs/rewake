@@ -314,6 +314,49 @@ test("each run pi starts within a turn has blocks of its own, a retry's never se
   expect(new Set(events.map((e) => e.turn)).size).toBe(1);
 });
 
+// Brief 56: pi tells no extension of its retries (auto_retry_* go to its own
+// screen only); a run started again after a failed message is one. Its
+// screen says each failure in red, then `Retry failed after N attempts` or
+// `Aborted after N retry attempts`.
+test("a failed message pi tries again is counted, and the retries' end said as pi says it", () => {
+  const notices = (events: MirrorEvent[]) =>
+    events.filter((e) => e.kind === "notice").map((e) => e.text);
+  const failed = { message: { role: "assistant", stopReason: "error", errorMessage: "503" } };
+  const exhausted = mirrored();
+  exhausted.emit("agent_start", {});
+  for (let i = 0; i < 3; i++) {
+    exhausted.emit("message_end", failed);
+    exhausted.emit("agent_start", {});
+  }
+  exhausted.emit("message_end", failed);
+  exhausted.emit("agent_settled", { aborted: false });
+  expect(notices(exhausted.events)).toEqual([
+    "Error: 503",
+    "Error: 503",
+    "Error: 503",
+    "Error: 503",
+    "Error: Retry failed after 3 attempts: 503",
+  ]);
+  const stopped = mirrored();
+  stopped.emit("agent_start", {});
+  stopped.emit("message_end", failed);
+  stopped.emit("agent_start", {});
+  stopped.emit("message_end", { message: { role: "assistant", stopReason: "aborted" } });
+  stopped.emit("agent_settled", { aborted: true });
+  expect(notices(stopped.events)).toEqual(["Error: 503", "Aborted after 1 retry attempt"]);
+  // A retry that came through, or a failure pi does not retry, says no more.
+  const through = mirrored();
+  through.emit("agent_start", {});
+  through.emit("message_end", failed);
+  through.emit("agent_start", {});
+  through.emit("message_end", { message: { role: "assistant", stopReason: "stop" } });
+  through.emit("agent_settled", { aborted: false });
+  through.emit("agent_start", {});
+  through.emit("message_end", failed);
+  through.emit("agent_settled", { aborted: false });
+  expect(notices(through.events)).toEqual(["Error: 503", "Error: 503"]);
+});
+
 test("a long call's input and output stay within an event, and every batch within its cap", () => {
   const { events, emit } = mirrored();
   emit("agent_start", {});

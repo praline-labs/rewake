@@ -112,7 +112,8 @@ a native pane's keeps them. The mouse wheel over the face
 scrolls the conversation as a native pane scrolls (below, "The scroll"), and PgUp and PgDn a page
 less a row; at the bottom the face follows new rows, scrolled up it holds the rows the person put
 there while more arrive below (`face/src/scroll.ts`), and back at the bottom, or after a
-prompt it sent, it follows again. A drag selects and a click copies a part (below, "Copying"). The
+prompt it sent, it follows again. ctrl+o opens or folds the whole conversation (below,
+"Unfolding"). A drag selects and a click copies a part (below, "Copying"). The
 wheel and the mouse never reach the pty. A prompt
 waits for its answer only while the answer can come: at most the latest 16, each for 30 s, none past
 the link it went by, a reload or the face's end. Under
@@ -152,12 +153,14 @@ decision, October 30, 2026: first the same look, customised later), as read from
 - **Thinking**: the block's text, when the session sent any (the summary a provider streams, which
   pi's own screen draws as markdown in its thinking colour, italic, whole — read in
   `assistant-message.js` of the bundled 1.4.0, October 31, 2026, brief 54), as markdown rows faint and
-  italic after a faint `∴ ` hung at two columns; more than ten rows fold to ten and `… +N lines`.
+  italic after a faint `∴ ` hung at two columns; more than ten rows fold to ten and `… +N lines`,
+  which a click opens.
   A block with no text is the faint italic `∴ Thinking`, as the terminal draws it. Claude Code's
   mod carries thinking text only where the session gives it; it is drawn the same.
 - **Runs**: consecutive Read, Grep, Glob and Bash calls fold into one faint row hung at two columns,
   `Searched for 1 pattern, read 2 files, listed 1 directory, ran 2 shell commands`, the numbers
-  bold, a failed call counted too. Bash is read by the first word of each part of its pipeline:
+  bold, a failed call counted too and then said in red, `ran 2 shell commands, 1 failed`, the
+  number bold (brief 56; an open run's dot is red already). Bash is read by the first word of each part of its pipeline:
   `grep`, `find`, `rg`… search, `cat`, `head`, `wc`… read, `ls`, `tree`, `du` list, `echo` and its
   like count for nothing, any other word makes it a shell command; reads count files, each once.
   A call a gap lost leaves its mark under the run's line. Text, a prompt, thinking or another call ends a run, so each sits where it came; a notice does not, and shows after it;
@@ -191,7 +194,11 @@ decision, October 30, 2026: first the same look, customised later), as read from
   nothing back, then the faint bracket `(12s · ↓ 340 tokens)`; after the turn, a faint
   `Done in 31s · 7:52 AM` hung at two columns, or `Stopped after 10s · 7:52 AM` when the turn ended
   by an interrupt (the turn line's `stopped`, not a guess from the conversation: a call stopped
-  mid-run ends with its error and no notice). The glyph set in use is `orbit4`
+  mid-run ends with its error and no notice). While the turn works with the session's failures
+  last in it (error notices of the turn, a prompt sent into it going by, after what was there as
+  it began), the session is trying again — pi ends a turn at once on a failure it does not
+  retry — and the line reads `Retrying (attempt 2)…`, glyph and text in the warning's amber, as pi's
+  own `Retrying (2/3) in 4s...` (brief 56). The glyph set in use is `orbit4`
   in `face/src/turn.ts`; others stay beside it, unused, for a switch: the one-dot orbit
   `⠈ ⠐ ⠠ ⢀ ⡀ ⠄ ⠂ ⠁` (`orbit`), the two-dot `⠉ ⠘ ⠰ ⢠ ⣀ ⡄ ⠆ ⠃` and three-dot
   `⠇ ⡆ ⣄ ⣠ ⢰ ⠸ ⠙ ⠋` orbits, all clockwise, the arc `◜ ◝ ◞ ◟` and the pulse `· • ● •`. A running call's dot, and an open run's,
@@ -226,8 +233,28 @@ named in `shell/src/theme.ts` by the element each colours, its dark set or, on a
 background is light, its light one. What the face cannot repeat, for want of a field the mirror
 does not carry: paths relative to the session's directory, an edit's line numbers and context rows,
 a call's progress, syntax colours of a
-code block (a highlighter the face does not have), and ctrl+o's expansion, a key the face does not
-have.
+code block (a highlighter the face does not have), a retry's limit and delay (pi gives its
+extensions neither), and a long prompt opened whole.
+
+## Unfolding
+
+Both natives open what they fold by ctrl+o: pi's `app.tools.expand`, "Collapse or expand tool
+output", for every call at once, and the terminal program's detailed transcript, every call of a
+folded run and every output whole, its footer `Showing detailed transcript · ctrl+o to toggle`;
+its fullscreen view also toggles one folded group or cut result by a click (read October 31,
+2026, brief 56). The face does the same (`face/src/unfold.ts`): ctrl+o in its input opens
+everything, and the row under the rules says `Showing detailed transcript · ctrl+o to toggle`
+while it is open; a click on a run's line or on a `… +N lines` row opens that one alone, and
+under ctrl+o closes it. An opened run draws its line, then each call as a call alone is drawn,
+its error under it; an opened output or thinking block shows every row the model kept, the cut
+mark of the mirror's 64 KiB bound where it cut, then `… −N lines`, a click on which folds it
+again; under ctrl+o nothing is counted. The row clicked stays on the screen row it was on,
+whatever opened above it (an anchor: the part's key and the row's place in it), where the rows
+above it can fill the view to there: a conversation shorter than the pane is drawn at its bottom,
+and once opened past the pane's height it shows from its first row. ctrl+o on a view scrolled up
+keeps its first row of a part where it was. The shell keeps ctrl+o's state for
+each face and sends `unfold` again after a reload's `start`; the parts a click opened are the
+worker's and go with it, or with a new snapshot. The key never reaches the pty.
 
 ## One clock
 
@@ -306,10 +333,11 @@ terminal clipboard settings if paste fails`, `sent the code block (18 chars) …
   so a click off the conversation's rows — the blank above a short one —
   copies nothing, though a drag from there starts at its first row. A reply's row copies the
   reply's markdown source; a code block's, its code alone; a call's head, its input as the head shows it (Bash's
-  command, a file's path, a pattern, a URL, a query, a skill) or else the input as given; a folded
-  run's line, its calls' inputs one a line; an open run's `⎿` row, its latest call's; an output's
-  rows, the call's output; an edit's red rows its old lines and green rows its new ones; a write's
-  preview, the file's lines.
+  command, a file's path, a pattern, a URL, a query, a skill) or else the input as given; an open
+  run's `⎿` row, its latest call's; an output's rows, the call's output; an edit's red rows its
+  old lines and green rows its new ones; a write's preview, the file's lines; a thinking block's
+  rows, its text as written. A folded run's line and a `… +N lines` row copy nothing: a click on
+  them opens or folds (above, "Unfolding").
 - **Nothing lights as the pointer moves** (the owner's word, October 31, 2026: a light over the
   whole reply under the pointer got in the way); the shell passes the face no bare pointer. A
   click that copies a part lights its rows on the band's colour, the prompt's, in place, so
@@ -389,7 +417,9 @@ A new face, a reload's or a lost link's, follows the bottom with no selection: t
 worker's and is not carried across, so a change under `face/src/` while the person reads up
 puts the view back at the bottom (seen live, October 31, 2026, brief 49). Tests: `shell/src/face/host.test.ts`, the contract in `check.test.ts` and through the worker in `host.test.ts`, the look in `face/src/render.test.ts` and `view.test.tsx`, the clock
 in `ticker.test.ts`, the scroll in `scroll.test.ts`, a notch's rows in `wheel.test.ts` and through
-the worker in `host.test.ts`, Esc's paths through the worker in `escape.test.ts`, copying in `select.test.ts` (a selection over gutters, a wrapped
+the worker in `host.test.ts`, Esc's paths through the worker in `escape.test.ts`, unfolding in
+`face/src/unfold.test.ts` and ctrl+o kept across a reload in `shell/src/face/unfold.test.ts`, the
+retry line in `progress.test.ts`, copying in `select.test.ts` (a selection over gutters, a wrapped
 line, a diff and a table; what a click on each part copies; a click told from a drag), through the
 worker in `host.test.ts` with the light after a click and none on a move, and the pty under the
 face hearing no mouse in `view.test.tsx`, the wheel included over a real pane's widget fed as pi's

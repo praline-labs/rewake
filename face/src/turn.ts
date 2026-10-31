@@ -47,6 +47,7 @@ export const glyphAt = (now: number) => frames[Math.floor(now / glyphEvery) % fr
 
 // workingText is what the turn does now, by its phase.
 function workingText(p: Progress | undefined): string {
+  if (p?.retry) return `Retrying (attempt ${p.retry})…`;
   switch (p?.phase) {
     case "thinking":
       return "Thinking…";
@@ -106,10 +107,16 @@ function progressOf(verb: string, clock: Clock, width: number): Span[] {
 // turnLine is the row under the conversation that says the turn goes on, or
 // how long the last one took.
 export function turnLine(turn: string, clock: Clock, width = 80): FaceLine | undefined {
-  const glyph = { text: `${glyphAt(clock.now)} `, tone: "accent" as const };
+  const glyph: Span = { text: `${glyphAt(clock.now)} `, tone: "accent" };
   if (turn === "working") {
     const verb = workingText(clock.progress);
-    const spans: Span[] = [glyph, { text: verb, tone: "accent" }];
+    // A retry is said in the warning's colour, as the session's own screen
+    // says it.
+    const tone = clock.progress?.retry ? "gap" : "accent";
+    const spans: Span[] = [
+      { ...glyph, tone },
+      { text: verb, tone },
+    ];
     spans.push(...progressOf(verb, clock, width));
     return { spans };
   }

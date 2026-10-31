@@ -18,6 +18,7 @@ import {
   scrollFace,
   setDraft,
   sizeFace,
+  unfoldFace,
   unselectFace,
   wheelFace,
 } from "./faces.ts";
@@ -153,7 +154,13 @@ export function FaceView(props: {
     const failed = f?.error ?? f?.said;
     if (failed) return { text: failed, fg: indexed(1, props.theme) };
     const link = f?.link ?? "connecting";
-    if (link === "live") return { text: "", fg: faint };
+    // While everything is open the row says so and how to fold it again, as
+    // the terminal program's footer does under its detailed transcript.
+    if (link === "live")
+      return {
+        text: f?.expanded ? "Showing detailed transcript · ctrl+o to toggle" : "",
+        fg: faint,
+      };
     return { text: link === "connecting" ? "connecting…" : `the face is ${link}`, fg: faint };
   };
   const row = (text: string) => text + " ".repeat(Math.max(props.width - Bun.stringWidth(text), 0));
@@ -268,8 +275,9 @@ export function FaceView(props: {
                 if (input) input.value = "";
               }) as never
             }
-            onKeyDown={(key: { name: string }) => {
+            onKeyDown={(key: { name: string; ctrl?: boolean }) => {
               if (key.name === "escape") escapeFace(props.id);
+              if (key.name === "o" && key.ctrl) unfoldFace(props.id);
               if (key.name === "pageup") scrollFace(props.id, body() - 1);
               if (key.name === "pagedown") scrollFace(props.id, -(body() - 1));
             }}

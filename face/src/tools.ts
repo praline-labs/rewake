@@ -132,13 +132,14 @@ export function argumentOf(item: Item): string {
 // A head longer than this many rows ends in an ellipsis.
 const headRows = 3;
 
-// headRowsOf is the call's head after its dot, at most a few rows.
-export function headRowsOf(item: Item, width: number): Span[][] {
+// headRowsOf is the call's head after its dot, at most a few rows unless
+// the call is shown whole.
+export function headRowsOf(item: Item, width: number, whole = false): Span[][] {
   const arg = argumentOf(item);
   const spans: Span[] = [{ text: nameOf(item), bold: true }];
   if (arg) spans.push({ text: `(${arg})` });
   const rows = wrapSpans(spans, width);
-  if (rows.length <= headRows) return rows;
+  if (whole || rows.length <= headRows) return rows;
   const kept = rows.slice(0, headRows);
   // The last row kept gives a cell to the ellipsis.
   const last = wrapSpans(kept[headRows - 1] ?? [], Math.max(width - 1, 1))[0] ?? [];

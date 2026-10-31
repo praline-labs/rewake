@@ -3,6 +3,8 @@
 // mirror socket itself, keeps its copy of the model and posts the lines to
 // draw. Everything it does is caught here and posted as an error, so a face
 // that breaks leaves its last lines on the screen and the shell untouched.
+
+import { Edge, edgeRows } from "./edge.ts";
 import {
   contract,
   type FaceLine,
@@ -15,13 +17,14 @@ import type { Line, PermissionMode } from "./mirror.gen.ts";
 import { bounds } from "./mirror.gen.ts";
 import { FaceModel } from "./model.ts";
 import { partOf } from "./parts.ts";
-import { Pointer, pointAt, type View } from "./pointer.ts";
+import { Flash, Pointer, pointAt, type View } from "./pointer.ts";
 import { Tracker } from "./progress.ts";
 import { blinked, bodyOf, fill, statusOf } from "./render.ts";
 import { Scroll } from "./scroll.ts";
 import { copyOf, highlighted, lit } from "./select.ts";
 import { Ticker } from "./ticker.ts";
 import type { Clock } from "./turn.ts";
+import { type Anchor, anchorAt, toggles, topFor, Unfold } from "./unfold.ts";
 import { Wheel } from "./wheel.ts";
 
 declare const self: Worker;
@@ -58,6 +61,12 @@ let socket: { write(data: string): number; end(): void } | undefined;
 let posted = "";
 // progress follows the working turn from tick to tick.
 const progress = new Tracker();
+// unfold is what the person opened, everything by the shell's key or a part
+// by a click; anchor is the row to keep where it stood on the screen once
+// the conversation is laid out again: its part's key, its place among that
+// part's rows and its row in the view.
+const unfold = new Unfold();
+let anchor: Anchor | undefined;
 
 // turned follows the working turn's progress from the turn's start, which
 // the model carries.
@@ -77,8 +86,10 @@ const clockAt = (now: number): Clock => ({
 // every row from the same clock.
 function draw(now: number) {
   try {
-    if (stale) laid = bodyOf(model, width).rows;
+    if (stale) laid = bodyOf(model, width, Infinity, unfold).rows;
     stale = false;
+    if (anchor) scroll.top = topFor(laid, anchor) ?? scroll.top;
+    anchor = undefined;
     const rows = [...laid, ...statusOf(model, clockAt(now), width)];
     const prompts = model.inputs.includes("prompt");
     frame = { rows, now, turn: model.turn, link, prompts, mode: model.mode };
@@ -99,26 +110,8 @@ const viewOf = (): View => {
   };
 };
 
-// flash is the part a click copied, lit for a moment with the notice so the
-// person sees what went; nothing lights as the pointer moves.
-const flashFor = 1000;
-let flash: { part: string; timer: ReturnType<typeof setTimeout> } | undefined;
-
-function unflash() {
-  clearTimeout(flash?.timer);
-  flash = undefined;
-}
-
-function flashed(part: string) {
-  unflash();
-  flash = {
-    part,
-    timer: setTimeout(() => {
-      flash = undefined;
-      paint();
-    }, flashFor),
-  };
-}
+// flash is the part a click copied, lit for a moment with the notice.
+const flash = new Flash(() => paint());
 
 // paint posts the view of the committed frame, unless it is what was posted:
 // the selection marked, and the part a click just copied lit.
@@ -127,7 +120,7 @@ function paint() {
   try {
     const shown = scroll.view(frame.rows, height);
     const view = viewOf();
-    const marked = lit(highlighted(shown, view.top, pointer.selection), flash?.part);
+    const marked = lit(highlighted(shown, view.top, pointer.selection), flash.part);
     const message: FromFace = {
       kind: "lines",
       lines: fill(blinked(marked, frame.now), width, height),
@@ -167,64 +160,72 @@ function scrolled(by: number) {
   paint();
 }
 
-// A drag past the view's top or bottom scrolls it on a clock of its own,
-// two rows every 50 ms for at most ten seconds, as the native pane does, the
-// selection's end on the edge's row.
-const edgeRows = 2;
-const edgeEvery = 50;
-const edgeTicks = 200;
-let edge: { timer: ReturnType<typeof setInterval>; ticks: number } | undefined;
-let dragged = { x: 0, y: 0 };
+// A drag past the body's edge scrolls the view, the selection's end with it.
+const edge = new Edge(
+  () => height,
+  (way) => {
+    if (!frame) return false;
+    scroll.by(way * edgeRows, frame.rows.length, height);
+    const { x, y } = edge.at;
+    pointer.drag(pointAt(x, y, viewOf()), x, y);
+    paint();
+    return true;
+  },
+);
 
-function stopEdge() {
-  clearInterval(edge?.timer);
-  edge = undefined;
+// pin keeps a row of the committed frame where it stands in the view once
+// the conversation is laid out again, by the part it is a row of.
+function pin(row: number) {
+  if (frame) anchor = anchorAt(frame.rows, row, viewOf().top);
 }
 
-function followEdge() {
-  const away = dragged.y < 0 ? 1 : dragged.y >= height ? -1 : 0;
-  if (away === 0) return stopEdge();
-  if (edge) return;
-  edge = {
-    ticks: 0,
-    timer: setInterval(() => {
-      if (!frame || !edge || ++edge.ticks > edgeTicks) return stopEdge();
-      const way = dragged.y < 0 ? 1 : dragged.y >= height ? -1 : 0;
-      if (way === 0) return stopEdge();
-      scroll.by(way * edgeRows, frame.rows.length, height);
-      pointer.drag(pointAt(dragged.x, dragged.y, viewOf()), dragged.x, dragged.y);
-      paint();
-    }, edgeEvery),
-  };
+// unfolded opens or closes everything; a view scrolled up keeps the first
+// row of a part it shows where it was, one at the bottom stays there.
+function unfolded(all: boolean) {
+  if (all === unfold.all) return;
+  unfold.every(all);
+  if (frame && scroll.top !== undefined) {
+    const { top, shown } = viewOf();
+    const row = frame.rows.findIndex((r, i) => i >= top && i < top + shown && r.part);
+    if (row >= 0) pin(row);
+  }
+  soon();
 }
 
 // pointed takes the person's hand: a release copies the selection it made,
-// or the part a click was on.
+// or the part a click was on; a click on a run's line or a cut row opens or
+// closes it instead, the row staying under the pointer.
 function pointed(type: Pointing, x: number, y: number, focused: boolean) {
   if (!frame) return;
   const at = pointAt(x, y, viewOf());
   switch (type) {
     case "down":
-      stopEdge();
-      unflash();
+      edge.stop();
+      flash.off();
       pointer.down(viewOf(), x, y, focused);
       break;
     case "drag":
-      dragged = { x, y };
-      if (pointer.drag(at, x, y)) followEdge();
+      edge.at = { x, y };
+      if (pointer.drag(at, x, y)) edge.follow();
       break;
     case "up": {
-      stopEdge();
+      edge.stop();
       const gesture = pointer.up();
       if (gesture && "selected" in gesture) {
         const text = copyOf(frame.rows, gesture.selected);
         if (text.trim()) post({ kind: "copy", text, what: "selection" });
       } else if (gesture) {
         const key = frame.rows[gesture.clicked]?.part;
+        if (key !== undefined && toggles(key)) {
+          unfold.toggle(key);
+          pin(gesture.clicked);
+          soon();
+          break;
+        }
         const part = key === undefined ? undefined : partOf(model.items, key);
         if (key !== undefined && part) {
           post({ kind: "copy", text: part.text, what: part.what });
-          flashed(key);
+          flash.on(key);
         }
       }
       break;
@@ -258,8 +259,10 @@ function connect() {
   model = new FaceModel();
   stale = true;
   scroll.follow();
+  unfold.forget();
+  anchor = undefined;
   pointer.clear();
-  unflash();
+  flash.off();
   progress.reset();
   link = "connecting";
   Bun.connect({
@@ -370,6 +373,8 @@ self.onmessage = (event: MessageEvent<ToFace>) => {
         return paint();
       case "escape":
         return escaped(message.id);
+      case "unfold":
+        return unfolded(message.all);
       case "ping":
         return post({ kind: "pong", n: message.n });
     }

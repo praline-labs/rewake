@@ -9,17 +9,21 @@ import type { Item } from "./mirror.gen.ts";
 import { widthOf } from "./wrap.ts";
 
 // PartKind is what a click on a row copies whole (parts.ts): a reply, its
-// n-th code block, a call's input, a run's inputs, a call's output, an
-// edit's old or new lines, a written file's lines.
+// n-th code block, a thinking block's text, a call's input, a call's output,
+// an edit's old or new lines, a written file's lines. Two kinds copy nothing
+// and open or close instead (unfold.ts): a run's line, "fold", and the row
+// that says how many lines are cut, "more".
 export type PartKind =
   | "reply"
   | `code${number}`
+  | "thinking"
   | "input"
-  | "run"
   | "output"
   | "old"
   | "new"
-  | "content";
+  | "content"
+  | "fold"
+  | "more";
 
 // partKey names a part by its kind and its item's id, a run's by its first
 // call's.

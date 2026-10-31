@@ -26,6 +26,9 @@ export type FaceState = {
   said?: string;
   // copied says, for a few seconds, what the last copy sent to the clipboard.
   copied?: { text: string; ok: boolean };
+  // expanded is the person's ctrl+o: the conversation shown whole. The
+  // shell keeps it, so a reloaded face opens as the person left it.
+  expanded?: boolean;
 };
 
 export type FaceOptions = {
@@ -121,6 +124,7 @@ export class FaceHost {
       width: this.width,
       height: this.height,
     });
+    if (this.state.expanded) this.send({ kind: "unfold", all: true });
   }
 
   private heard(message: FromFace) {
@@ -206,6 +210,13 @@ export class FaceHost {
 
   unselect() {
     this.send({ kind: "unselect" });
+  }
+
+  // unfold is the person's ctrl+o: everything opened, or folded again.
+  unfold() {
+    const all = !this.state.expanded;
+    this.set({ expanded: all });
+    this.send({ kind: "unfold", all });
   }
 
   // escape is the person's Esc: the face drops its selection, or interrupts

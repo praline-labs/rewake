@@ -110,3 +110,28 @@ of its own); SGR mouse events written to the pty and its screen replayed from th
   (the face draws a thinking block whichever harness sent it), so pi's extension now sends no empty
   thinking block ([research-pi.md](research-pi.md#the-face-of-a-pi-worker)); pi's rule carries no
   mode, pi having none; pi's strip shows no limit window.
+
+## Unfolding, failures and retries in a pi worker (October 31, 2026, brief 56)
+
+pi 1.4.0, this change's build in a private state directory and project under `/tmp`, the shell from
+its sources under a pty of 200 by 50, a pi main and pi workers on the cheapest models the workers'
+agent folder takes at minimal thinking; SGR mouse events written to the pty, pictures by `rewake
+screen --text`.
+
+- **A run with a failure, a long output.** Three bash calls, the second failing, then a 30-line
+  write: the face drew `Read 1 file, listed 1 directory, ran 1 shell command, 1 failed` and the
+  write's ten lines with `… +20 lines`. ctrl+o drew each call of the run, the failure's
+  `Error: ls: cannot access …` under its call, both outputs whole with nothing counted, and
+  `Showing detailed transcript · ctrl+o to toggle` under the input; ctrl+o again folded it all.
+- **A click.** On the run's line it opened the run; on its call's `… +27 lines` it opened that output,
+  the row staying on screen row 16 as `… −27 lines`; a second click folded it, the row still there.
+  The first click, on a conversation shorter than the pane, moved the run's line from row 25 to 10:
+  the face is bottom-aligned, and with ten rows above it nothing could hold it, so the view shows
+  from the first row. A click on the thinking summary sent `**Planning sequential command
+  execution**` by OSC 52 and said `sent the thinking (41 chars)`.
+- **Errors.** A model the account does not take: `⎿  Error: Codex error: The '…' model is not
+  supported …` in red, as pi drew it. The network cut for the whole launch (a network namespace of
+  its own): `Retrying (attempt 1)…` to `(attempt 3)…` in amber while pi waited, a red
+  `⎿  Error: fetch failed` for each of four attempts, then `⎿  Error: Retry failed after 3 attempts:
+  fetch failed` and the turn's end after 14 s; pi's own view (the prefix's `v`) drew the same five
+  error lines.

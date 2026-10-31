@@ -64,6 +64,10 @@ export class Mirror {
   // aborted or failed message ends them as pi's own screen does.
   private open = new Map<string, number>();
   private waiting = new Set<string>();
+  // failed is the error the latest message ended with; retries, the runs pi
+  // started again since a message did not fail, which it tells no extension.
+  private failed?: string;
+  private retries = 0;
 
   constructor(
     private sink: Sink,
@@ -94,6 +98,8 @@ export class Mirror {
   started() {
     this.step = 0;
     if (this.run) {
+      if (this.failed !== undefined) this.retries++;
+      this.failed = undefined;
       this.pass++;
       return;
     }
@@ -110,6 +116,11 @@ export class Mirror {
   // turn's end, a fact the face draws, not a notice it would have to guess.
   settled(aborted = false) {
     const run = this.run;
+    // Retries that all failed end as pi's screen ends them.
+    if (run && !aborted && this.retries > 0 && this.failed !== undefined)
+      this.notice(`Error: Retry failed after ${this.retries} attempts: ${this.failed}`);
+    this.failed = undefined;
+    this.retries = 0;
     this.run = undefined;
     this.reached.clear();
     this.sentAt.clear();
@@ -202,13 +213,15 @@ export class Mirror {
     }
   }
 
-  // ended takes an assistant message's end. One pi stopped (the person's Esc)
-  // or that failed ends as pi's own screen ends it: what streamed stays,
-  // each call it asked for ends with the reason, and a message with no call
-  // says it in red, "Operation aborted" or "Error: " and pi's error.
+  // ended takes an assistant message's end. One pi stopped or that failed ends
+  // as pi's screen ends it: what streamed stays, each call it asked for ends
+  // with the reason, and a message with no call says it in red.
   ended(message: Ended) {
     if (message.role !== "assistant") return;
     const stop = message.stopReason;
+    const retries = this.retries;
+    this.failed = stop === "error" ? message.errorMessage || "Unknown error" : undefined;
+    if (stop !== "error") this.retries = 0;
     if (stop !== "aborted" && stop !== "error") return;
     const content = message.content ?? [];
     for (const [id, index] of this.open) {
@@ -218,19 +231,23 @@ export class Mirror {
     }
     this.open.clear();
     this.thought.clear();
-    const reason = stop === "aborted" ? "Operation aborted" : message.errorMessage || "Error";
+    const reason =
+      stop === "error"
+        ? message.errorMessage || "Error"
+        : retries > 0
+          ? `Aborted after ${retries} retry attempt${retries > 1 ? "s" : ""}`
+          : "Operation aborted";
     for (const id of this.waiting)
       this.push({ kind: "result", id, status: "error", text: fit(reason, textBudget) });
     this.waiting.clear();
     if (content.some((block) => block.type === "toolCall")) return;
-    const text = stop === "aborted" ? reason : `Error: ${message.errorMessage || "Unknown error"}`;
-    this.push({
-      kind: "notice",
-      id: randomUUID(),
-      turn: this.run,
-      status: "error",
-      text: fit(text, textBudget),
-    });
+    this.notice(stop === "aborted" ? reason : `Error: ${message.errorMessage || "Unknown error"}`);
+  }
+
+  // notice says a failure in red under what it stopped.
+  private notice(text: string) {
+    const id = randomUUID();
+    this.push({ kind: "notice", id, turn: this.run, status: "error", text: fit(text, textBudget) });
   }
 
   toolStarted(id: string, name: string, args: unknown) {

@@ -8,6 +8,7 @@ import { partOf } from "./parts.ts";
 import { Pointer, pointAt } from "./pointer.ts";
 import { bodyOf, linesOf } from "./render.ts";
 import { copyOf, highlighted } from "./select.ts";
+import { toggles } from "./unfold.ts";
 
 const drawn = (lines: FaceLine[]) => lines.map((l) => l.spans.map((s) => s.text).join(""));
 
@@ -95,11 +96,18 @@ const model = (...items: Item[]) => {
 };
 
 // clicked is what a click on the row drawn as `row` copies.
-function clicked(items: Item[], row: string, width = 40) {
+// keyOf is the part of the drawn row, clicked what a click on it copies: a
+// row that opens or closes copies nothing, as the worker takes it.
+function keyOf(items: Item[], row: string, width = 40) {
   const rows = bodyOf(model(...items), width).rows;
   const line = rows.find((l) => drawn([l])[0]?.trimEnd() === row);
   if (!line) throw new Error(`no row ${row} in ${JSON.stringify(drawn(rows))}`);
-  return line.part === undefined ? undefined : partOf(items, line.part);
+  return line.part;
+}
+
+function clicked(items: Item[], row: string, width = 40) {
+  const key = keyOf(items, row, width);
+  return key === undefined || toggles(key) ? undefined : partOf(items, key);
 }
 
 test("a click copies the whole part it is on", () => {
@@ -121,16 +129,12 @@ test("a click copies the whole part it is on", () => {
     output: "1\n2\n3\n4\n5\n6",
   };
   const shown = reply("ok");
-  // A run's line copies its calls' inputs: a folded command its command.
-  expect(clicked([bash, shown], "  Ran 1 shell command")).toEqual({
-    text: "make all",
-    what: "the command",
-  });
-  const read: Item = { ...bash, id: "rd", name: "Read", text: JSON.stringify({ file_path: "/a" }) };
-  expect(clicked([bash, read, shown], "  Read 1 file, ran 1 shell command")).toEqual({
-    text: "make all\n/a",
-    what: "the run's inputs",
-  });
+  // A run's line and a cut row open and close rather than copy (unfold.ts).
+  expect(keyOf([bash, shown], "  Ran 1 shell command")).toBe("fold b");
+  expect(clicked([bash, shown], "  Ran 1 shell command")).toBeUndefined();
+  // Brief 56: a thinking summary's rows copy its text, as written.
+  const thought: Item = { id: "th", kind: "thinking", status: "settled", text: "**Plan** it" };
+  expect(clicked([thought], "∴ Plan it")).toEqual({ text: "**Plan** it", what: "the thinking" });
   const edit: Item = {
     id: "e",
     kind: "tool",
@@ -150,7 +154,8 @@ test("a click copies the whole part it is on", () => {
     text: JSON.stringify({ q: 1 }),
     output: "a\nb\nc\nd\ne\nf",
   };
-  expect(clicked([mcp], "     … +3 lines")).toEqual({
+  expect(keyOf([mcp], "     … +3 lines")).toBe("more m");
+  expect(clicked([mcp], "  ⎿  a")).toEqual({
     text: "a\nb\nc\nd\ne\nf",
     what: "the call's output",
   });

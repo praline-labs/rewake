@@ -1,13 +1,16 @@
 // What shows under a call's head, after the ⎿ mark (docs/face.md, "The
 // look"): a counted line where Claude Code's terminal gives one, the old and
-// new lines of an edit, or the first rows of the output and how many more.
+// new lines of an edit, or the output, of which a folded call shows the first
+// rows and how many more.
 
 import type { Span } from "./messages.ts";
 import type { Item } from "./mirror.gen.ts";
 import { field, inputOf, shortPath } from "./tools.ts";
 import { clean, widthOf, wrapSpans } from "./wrap.ts";
 
-export type Result = { rows: Span[][]; more: number };
+// Result is every row of what is under a call, how many of them a folded
+// call shows, and how many more lines its cut row counts.
+export type Result = { rows: Span[][]; keep: number; more: number };
 
 // An output shows three rows, or four when only one more would be left.
 const outputRows = 3;
@@ -30,8 +33,8 @@ const counted = (before: string, n: number, after: string): Span[] => [
 
 // fold keeps the first rows, one more when it would be the only one left.
 function fold(rows: Span[][], keep: number): Result {
-  const shown = rows.length <= keep + 1 ? rows : rows.slice(0, keep);
-  return { rows: shown, more: rows.length - shown.length };
+  const kept = rows.length <= keep + 1 ? rows.length : keep;
+  return { rows, keep: kept, more: rows.length - kept };
 }
 
 // A line that is JSON as a whole is shown pretty-printed.
@@ -103,8 +106,8 @@ function editResult(item: Item, width: number): Result {
     ...counted("removed ", removed, ` ${plural(removed, "line")}`),
   ];
   const patch = diff(item, width);
-  const rows = [said, ...patch.slice(0, diffRows)];
-  return { rows, more: Math.max(patch.length - diffRows, 0) };
+  const more = Math.max(patch.length - diffRows, 0);
+  return { rows: [said, ...patch], keep: 1 + patch.length - more, more };
 }
 
 function writeResult(item: Item, width: number): Result {
@@ -115,8 +118,13 @@ function writeResult(item: Item, width: number): Result {
     ...counted("Wrote ", content.length, ` ${plural(content.length, "line")} to `),
     { text: path, bold: true },
   ];
-  const body = content.slice(0, writtenRows).flatMap((line) => rowsOf(line, width));
-  return { rows: [said, ...body], more: Math.max(content.length - writtenRows, 0) };
+  const body = content.map((line) => rowsOf(line, width));
+  const kept = body.slice(0, writtenRows).flat().length;
+  return {
+    rows: [said, ...body.flat()],
+    keep: 1 + kept,
+    more: Math.max(content.length - writtenRows, 0),
+  };
 }
 
 // resultOf is the rows under a finished call's head; reads, searches and
@@ -140,6 +148,7 @@ export function resultOf(item: Item, width: number): Result {
   if (output === "" || output === "(Bash completed with no output)")
     return {
       rows: [[{ text: item.name === "Bash" ? "(No output)" : "(No content)", tone: "faint" }]],
+      keep: 1,
       more: 0,
     };
   return fold(rowsOf(pretty(output), width), outputRows);

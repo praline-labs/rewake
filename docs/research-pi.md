@@ -532,6 +532,34 @@ events on (`internal/adapter/pi/mirror.go`). The extension's side is `mirror.ts`
   `error` with `Operation aborted`, or pi's error for a failure; one with no call adds a `notice` of
   status `error`, `Operation aborted` or `Error: ` and pi's error, which the face draws in red. A
   running call ends with its tool's own error, bash's `Command aborted` after its output.
+- **Retries** (read October 31, 2026, pi 1.4.0, `core/agent-session.js` `_prepareRetry`,
+  `interactive-mode.js`, `components/status-indicator.js`). A message that ends `error` with a
+  text pi deems transient (overloaded, rate limit, 429, 5xx, network, timeout…; never a quota or
+  billing error) is dropped from what the model sees and its run started again after
+  `baseDelayMs` 2000 doubled each time, at most `maxRetries` 3 by default. pi's screen draws each
+  failed message's `Error: <text>` in red, while it waits the amber spinner `Retrying (1/3) in
+  2s... (Esc to cancel)` that goes when the next attempt starts, and after the last one fails
+  `Error: Retry failed after 3 attempts: <error>`; an Esc during the wait ends it `Retry failed
+  after N attempts: Retry cancelled`, one during an attempt `Aborted after N retry attempts`
+  (`interactive-mode.js`, `message_end`: the message and the calls it asked for end so).
+  `auto_retry_start`/`auto_retry_end` go to the session's own listeners, never to an
+  extension, and the extensions' context reads no retry setting, so the extension infers them
+  (brief 56): an `agent_start` within a run whose last message failed is a retry. The mirror's
+  shape is unchanged: each failure is the `notice` above, and a run that settles not aborted after
+  retries whose last attempt failed adds the notice `Error: Retry failed after N attempts:
+  <error>`; an abort after retries ends `Aborted after N retry attempt(s)` as pi
+  says it. The face reads a working turn with failures last as a retry,
+  `Retrying (attempt N)…` in amber ([face.md](face.md), "The look"; seen live, [research-face.md](research-face.md)). Not mirrored: the retry limit and
+  the delay, an Esc during the wait (no `message_end` comes), and an `agent_start` after an
+  overflow's compaction, which counts as a retry.
+- **Limits.** pi 1.4.0 draws no rate-limit warning, usage meter or reset time: a provider's
+  limit reaches its screen only as a failed message's error text, retried when it matches the
+  transient set (`rate limit`, `429`). The face shows the same and nothing more (read October 31,
+  2026, the bundled package's `dist/`, brief 56).
+- **ctrl+o** is pi's `app.tools.expand`, "Collapse or expand tool output", one state for every
+  call on the screen, said in its status as `Tool output: expanded`; ctrl+t hides or shows
+  thinking (`docs/keybindings.md`, read October 31, 2026, pi 1.4.0). The face's ctrl+o opens its
+  folds the same way ([face.md](face.md), "Unfolding").
 - **The outbox** keeps the mod's caps, counted in UTF-8 bytes of JSON: batches every 50 ms, one
   in flight, a 5 s deadline; an event 40 KiB, a batch 48 KiB, the outbox 256 KiB with 16 KiB
   kept for markers, a block 256 KiB settled in parts, a call's input or output cut to its head and tail with a

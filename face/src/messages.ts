@@ -9,7 +9,7 @@ import type { PermissionMode } from "./mirror.gen.ts";
 // contract is the version of these messages, raised with any change of
 // them: start carries the shell's, and a face that speaks another draws
 // nothing. The shell holds what a face sends to it (shell/src/face/check.ts).
-export const contract = 2;
+export const contract = 3;
 
 // Tone is a span's colour by its meaning; the shell's thread picks the
 // colour from the person's theme (view.tsx).
@@ -69,6 +69,9 @@ export type ToFace =
   // interrupts the session's working turn where the session takes it, the
   // answer coming back under its id.
   | { kind: "escape"; id: string }
+  // unfold opens everything the face folds, or closes it again: the
+  // person's ctrl+o, kept by the shell across a reload.
+  | { kind: "unfold"; all: boolean }
   | { kind: "ping"; n: number };
 
 // Pointing is what the pointer did with the left button: pressed, dragged

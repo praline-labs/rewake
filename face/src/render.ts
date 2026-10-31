@@ -3,52 +3,18 @@
 // colours, so a face that changes or breaks never touches the shell's tree.
 
 import { entriesOf, lostLine, runLines } from "./fold.ts";
+import { hung, marked } from "./hang.ts";
 import { markdownRows } from "./markdown.ts";
 import type { FaceLine, Span, Tone } from "./messages.ts";
 import type { Item } from "./mirror.gen.ts";
 import type { FaceModel } from "./model.ts";
+import { promptLines } from "./prompt.ts";
 import { resultOf } from "./results.ts";
 import { type PartKind, partKey } from "./select.ts";
 import { headRowsOf } from "./tools.ts";
 import { blinkOff, type Clock, turnLine } from "./turn.ts";
+import { type Opened, shut } from "./unfold.ts";
 import { clean, widthOf, wrapSpans } from "./wrap.ts";
-
-// marked puts a mark before the first row and an indent of its width before
-// the others, both drawing, not text.
-function marked(rows: Span[][], mark: Span, band?: boolean): FaceLine[] {
-  const indent = { text: " ".repeat(widthOf(mark.text)), gutter: true };
-  const first = { ...mark, gutter: true };
-  return rows.map((row, i) => ({ spans: [i === 0 ? first : indent, ...row], band }));
-}
-
-// hung puts a mark before the first row and hangs every other row, a wrapped
-// one or one after a newline, under the text at the mark's width.
-const hung = (text: string, width: number, mark: Span, base: Span, band?: boolean): FaceLine[] =>
-  marked(
-    text
-      .split("\n")
-      .flatMap((line) => wrapSpans([{ ...base, text: line }], width - widthOf(mark.text))),
-    mark,
-    band,
-  );
-
-// letterRows draws a letter's summary as rewake's notice carries it: its first
-// line after the dot, each `↳` preview on its own row under it, the rows hung
-// under their text.
-function letterRows(said: string, width: number, tone?: Tone): FaceLine[] {
-  const [head = "", ...previews] = said
-    .split("\n")
-    .map((line) => line.replace(/\s+/g, " ").trim())
-    .filter((line) => line !== "");
-  return [
-    ...hung(head, width, { text: "● ", tone }, { text: "" }),
-    ...previews.flatMap((line) =>
-      line.startsWith("↳")
-        ? hung(line.slice(1).trim(), width, { text: "  ↳ " }, { text: "" })
-        : hung(line, width, { text: "  " }, { text: "" }),
-    ),
-  ];
-}
 
 // parted names the part a click on each row copies: kind gives it by the
 // row, none for a row of no part.
@@ -68,49 +34,6 @@ function resultPart(item: Item, line: FaceLine): PartKind {
   if (item.status === "done" && item.name === "Write") return "content";
   const mark = line.spans.find((s) => s.mark)?.mark;
   return mark === "removed" ? "old" : mark === "added" ? "new" : "output";
-}
-
-// A letter rewake delivered reaches the harness as its notification: the face
-// shows its summary, as a terminal program shows the notice it was given, its
-// dot by how the task it tells of stands.
-const notification = /<task-notification>[\s\S]*?<\/task-notification>/g;
-const summary = /<summary>([\s\S]*?)<\/summary>/;
-const state = /<status>\s*(\w+)\s*<\/status>/;
-const letterTone: Record<string, Tone> = { completed: "done", failed: "error", killed: "gap" };
-
-// A prompt this long shows its head and tail and how many lines between.
-const longPrompt = 10_000;
-const promptEnd = 2_500;
-
-function shortened(text: string): string {
-  if (text.length <= longPrompt) return text;
-  const head = text.slice(0, promptEnd);
-  const tail = text.slice(-promptEnd);
-  const cut = text.slice(promptEnd, -promptEnd).split("\n").length;
-  return `${head}\n… +${cut} lines …\n${tail}`;
-}
-
-function promptLines(item: Item, width: number): FaceLine[] {
-  const out: FaceLine[] = [];
-  const text = clean(item.text);
-  for (const m of text.matchAll(notification)) {
-    const said = summary.exec(m[0])?.[1] ?? m[0];
-    out.push(...letterRows(said, width, letterTone[state.exec(m[0])?.[1] ?? ""]));
-  }
-  const rest = text.replace(notification, "").trim();
-  if (rest || out.length === 0) {
-    const tone: Tone | undefined = item.status === "refused" ? "error" : undefined;
-    out.push(
-      ...hung(
-        shortened(rest),
-        width,
-        { text: "❯ ", tone: tone ?? "faint" },
-        { text: "", tone },
-        true,
-      ),
-    );
-  }
-  return out;
 }
 
 const dotTone = (item: Item): Tone =>
@@ -140,9 +63,18 @@ function permitRows(item: Item): Span[][] | undefined {
   return [[{ text, tone: "faint" }]];
 }
 
-function toolLines(item: Item, width: number): FaceLine[] {
+// cutRow is the faint row that counts the lines a folded part leaves out, or
+// the lines an opened one shows past its fold; a click on it opens or closes
+// the part. Where everything is open nothing is counted.
+function cutRow(more: number, open: boolean, view: Opened): Span[] | undefined {
+  if (more <= 0 || (open && view.all)) return undefined;
+  return [{ text: `… ${open ? "−" : "+"}${more} lines`, tone: "faint" }];
+}
+
+function toolLines(item: Item, width: number, view: Opened): FaceLine[] {
+  const open = view.open(partKey("more", item));
   const dot: Span = { text: "● ", tone: dotTone(item), blink: item.status === "running" };
-  const out = parted(marked(headRowsOf(item, width - 2), dot), item, () => "input");
+  const out = parted(marked(headRowsOf(item, width - 2, open), dot), item, () => "input");
   const mark = { text: "  ⎿  " };
   if (item.output === undefined) {
     if (item.status === "running")
@@ -156,9 +88,14 @@ function toolLines(item: Item, width: number): FaceLine[] {
       mark,
     );
   if (permit && !item.permit?.allowed) return [...out, ...under(permit)];
-  const { rows, more } = resultOf(item, width - 5);
-  if (more > 0) rows.push([{ text: `… +${more} lines`, tone: "faint" }]);
-  out.push(...parted(under(rows), item, (line) => resultPart(item, line)));
+  const { rows, keep, more } = resultOf(item, width - 5);
+  const cut = cutRow(more, open, view);
+  const shown = open ? rows : rows.slice(0, keep);
+  const lines = under(cut ? [...shown, cut] : shown);
+  const last = lines.at(-1);
+  out.push(
+    ...parted(lines, item, (line) => (cut && line === last ? "more" : resultPart(item, line))),
+  );
   if (permit) out.push(...under(permit));
   return out;
 }
@@ -168,8 +105,8 @@ function toolLines(item: Item, width: number): FaceLine[] {
 const thinkingRows = 10;
 
 // thinkingLines is a thinking block: its summary after a faint `∴`, or only
-// `∴ Thinking` where the session sent no text.
-function thinkingLines(item: Item, width: number): FaceLine[] {
+// `∴ Thinking` where the session sent no text. A click on its text copies it.
+function thinkingLines(item: Item, width: number, view: Opened): FaceLine[] {
   const text = clean(item.text).trim();
   if (text === "")
     return wrapSpans([{ text: "∴ Thinking", tone: "faint", italic: true }], width).map((spans) => ({
@@ -178,13 +115,16 @@ function thinkingLines(item: Item, width: number): FaceLine[] {
   const rows = markdownRows(text, width - 2, { text: "", tone: "faint", italic: true }).map((row) =>
     row.map(({ code: _, ...span }) => span),
   );
+  const open = view.open(partKey("more", item));
   const more = rows.length - thinkingRows;
-  if (more > 1) rows.splice(thinkingRows, more, [{ text: `… +${more} lines`, tone: "faint" }]);
-  return marked(rows, { text: "∴ ", tone: "faint" });
+  const cut = more > 1 ? cutRow(more, open, view) : undefined;
+  if (more > 1 && !open) rows.splice(thinkingRows, more);
+  const said = parted(marked(rows, { text: "∴ ", tone: "faint" }), item, () => "thinking");
+  return cut ? [...said, ...parted(marked([cut], { text: "  " }), item, () => "more")] : said;
 }
 
-// linesOf is one item's rows.
-export function linesOf(item: Item, width: number): FaceLine[] {
+// linesOf is one item's rows, shown whole where the view opened it.
+export function linesOf(item: Item, width: number, view: Opened = shut): FaceLine[] {
   const out: FaceLine[] = [];
   switch (item.kind) {
     case "prompt":
@@ -203,10 +143,10 @@ export function linesOf(item: Item, width: number): FaceLine[] {
       );
       break;
     case "thinking":
-      out.push(...thinkingLines(item, width));
+      out.push(...thinkingLines(item, width, view));
       break;
     case "tool":
-      out.push(...toolLines(item, width));
+      out.push(...toolLines(item, width, view));
       break;
     case "notice":
       // A failure or an interrupt the session told, in red under what it
@@ -235,15 +175,20 @@ export function linesOf(item: Item, width: number): FaceLine[] {
 // redraws on every tick of the face's clock, and only its last block grows.
 type Drawn = Pick<Item, "kind" | "status" | "text" | "output" | "name" | "cut" | "permit"> & {
   width: number;
+  open: boolean;
+  all: boolean;
   lines: FaceLine[];
 };
 const laidOut = new WeakMap<Item, Drawn>();
 
-function cachedLinesOf(item: Item, width: number): FaceLine[] {
+function cachedLinesOf(item: Item, width: number, view: Opened): FaceLine[] {
   const hit = laidOut.get(item);
+  const open = view.open(partKey("more", item));
   if (
     hit &&
     hit.width === width &&
+    hit.open === open &&
+    hit.all === view.all &&
     hit.kind === item.kind &&
     hit.status === item.status &&
     hit.text === item.text &&
@@ -253,13 +198,35 @@ function cachedLinesOf(item: Item, width: number): FaceLine[] {
     hit.permit === item.permit
   )
     return hit.lines;
-  const lines = linesOf(item, width);
+  const lines = linesOf(item, width, view);
   const { kind, status, text, output, name, cut, permit } = item;
-  laidOut.set(item, { kind, status, text, output, name, cut, permit, width, lines });
+  laidOut.set(item, {
+    kind,
+    status,
+    text,
+    output,
+    name,
+    cut,
+    permit,
+    width,
+    lines,
+    open,
+    all: view.all,
+  });
   return lines;
 }
 
 const blank = (): FaceLine => ({ spans: [] });
+
+// runRows is a run's rows: its line, and once opened each call under it as
+// a call alone is drawn.
+function runRows(run: { calls: Item[]; open: boolean }, width: number, view: Opened): FaceLine[] {
+  const first = run.calls[0];
+  const open = first !== undefined && view.open(partKey("fold", first));
+  const lines = runLines(run, width, open);
+  if (!open) return lines;
+  return [...lines, ...run.calls.flatMap((call) => [blank(), ...cachedLinesOf(call, width, view)])];
+}
 
 // statusOf is the rows under the conversation that move with the clock: the
 // turn's line after a blank row; with no line, the blank row alone, so the
@@ -278,6 +245,7 @@ export function bodyOf(
   model: FaceModel,
   width: number,
   want = Infinity,
+  view: Opened = shut,
 ): { rows: FaceLine[]; whole: boolean } {
   const rows: FaceLine[] = [];
   const entries = entriesOf(model.items, model.turn === "working");
@@ -285,7 +253,8 @@ export function bodyOf(
   for (; i >= 0 && rows.length < want; i--) {
     const entry = entries[i];
     if (!entry) continue;
-    const lines = "item" in entry ? cachedLinesOf(entry.item, width) : runLines(entry, width);
+    const lines =
+      "item" in entry ? cachedLinesOf(entry.item, width, view) : runRows(entry, width, view);
     rows.unshift(...(i > 0 ? [blank()] : []), ...lines);
   }
   const whole = i < 0;

@@ -128,6 +128,10 @@ function counts(calls: Item[]): [Op, number][] {
     .map((op) => [op, n[op]]);
 }
 
+const failed = (call: Item) => call.status === "error" || call.status === "refused";
+
+// said is what a run did, counted, and how many of its calls failed, in red
+// as the terminal program marks a run with a failed call.
 function said(calls: Item[], tense: "done" | "doing"): Span[] {
   const spans: Span[] = [];
   counts(calls).forEach(([op, n], i) => {
@@ -137,6 +141,13 @@ function said(calls: Item[], tense: "done" | "doing"): Span[] {
     spans.push({ text: String(n), tone: "faint", bold: true });
     spans.push({ text: ` ${w.thing[n === 1 ? 0 : 1]}`, tone: "faint" });
   });
+  const n = calls.filter(failed).length;
+  if (n > 0)
+    spans.push(
+      { text: ", ", tone: "faint" },
+      { text: String(n), tone: "error", bold: true },
+      { text: " failed", tone: "error" },
+    );
   return spans;
 }
 
@@ -168,19 +179,28 @@ const hang = (rows: Span[][], first: Span, rest: Span): FaceLine[] =>
 
 // runLines is a run's rows: a finished run one faint line, an open one its
 // dot, the running command's description or what it is doing, and what the
-// latest call works on.
-export function runLines(run: { calls: Item[]; open: boolean }, width: number): FaceLine[] {
-  const lines = drawnRun(run, width);
-  return run.calls.some((c) => c.status === "gap") ? [...lines, lostLine] : lines;
+// latest call works on. A run the person opened shows its line alone, its
+// calls drawn under it (render.ts), each with its own mark of a loss.
+export function runLines(
+  run: { calls: Item[]; open: boolean },
+  width: number,
+  opened = false,
+): FaceLine[] {
+  const lines = drawnRun(run, width, opened);
+  return !opened && run.calls.some((c) => c.status === "gap") ? [...lines, lostLine] : lines;
 }
 
-// A click on a run's line copies its calls' inputs (parts.ts).
+// A click on a run's line opens or closes it (unfold.ts).
 const parted = (lines: FaceLine[], calls: Item[]) => {
   const first = calls[0];
-  return first ? lines.map((line) => ({ ...line, part: partKey("run", first) })) : lines;
+  return first ? lines.map((line) => ({ ...line, part: partKey("fold", first) })) : lines;
 };
 
-function drawnRun(run: { calls: Item[]; open: boolean }, width: number): FaceLine[] {
+function drawnRun(
+  run: { calls: Item[]; open: boolean },
+  width: number,
+  opened: boolean,
+): FaceLine[] {
   const pad = { text: "  " };
   if (!run.open)
     return parted(hang(wrapSpans(said(run.calls, "done"), width - 2), pad, pad), run.calls);
@@ -189,12 +209,17 @@ function drawnRun(run: { calls: Item[]; open: boolean }, width: number): FaceLin
   const description = running && field(inputOf(running), "description");
   const head: Span[] = description
     ? [{ text: `${clean(description).replace(/\s+/g, " ").trim()}…` }]
-    : [...said(run.calls, "doing").map((s) => ({ ...s, tone: undefined })), { text: "…" }];
-  const out = parted(
-    hang(wrapSpans(head, width - 2), { text: "● ", tone: "faint", blink: true }, pad),
-    run.calls,
-  );
-  if (last) {
+    : [
+        ...said(run.calls, "doing").map((s) => ({
+          ...s,
+          tone: s.tone === "error" ? s.tone : undefined,
+        })),
+        { text: "…" },
+      ];
+  // The dot is red once a call of the run failed, as the terminal program's.
+  const dot: Span = { text: "● ", tone: run.calls.some(failed) ? "error" : "faint", blink: true };
+  const out = parted(hang(wrapSpans(head, width - 2), dot, pad), run.calls);
+  if (last && !opened) {
     const hint = wrapSpans([{ text: hintOf(last), tone: "faint" }], width - 5)[0] ?? [];
     // A click on it copies what the latest call works on (parts.ts).
     out.push({ spans: [{ text: "  ⎿  ", gutter: true }, ...hint], part: partKey("input", last) });

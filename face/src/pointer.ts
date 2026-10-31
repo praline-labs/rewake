@@ -76,3 +76,29 @@ export class Pointer {
     this.selection = undefined;
   }
 }
+
+// Flash is the part a click copied, lit for a moment with the notice so the
+// person sees what went; nothing lights as the pointer moves.
+const flashFor = 1000;
+
+export class Flash {
+  part: string | undefined;
+  private timer: ReturnType<typeof setTimeout> | undefined;
+
+  // over is told when the light goes out by itself.
+  constructor(private readonly over: () => void) {}
+
+  on(part: string) {
+    this.off();
+    this.part = part;
+    this.timer = setTimeout(() => {
+      this.part = undefined;
+      this.over();
+    }, flashFor);
+  }
+
+  off() {
+    clearTimeout(this.timer);
+    this.part = undefined;
+  }
+}

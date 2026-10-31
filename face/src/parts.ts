@@ -1,10 +1,9 @@
 // The parts a click copies whole (docs/face.md, "Copying"): a reply as its
-// markdown source, a code block's code, a call's input — a command, a path,
-// a pattern, else the input as given — a run's inputs one a line, a call's
+// markdown source, a code block's code, a thinking block's text, a call's
+// input — a command, a path, a pattern, else the input as given — a call's
 // output, an edit's old or new lines, a written file's lines. A row names its
 // part by a key (select.ts); the text is taken from the model when the click
 // comes, so the rows carry no copy of it.
-import { entriesOf } from "./fold.ts";
 import { codeBlocks } from "./markdown.ts";
 import type { Item } from "./mirror.gen.ts";
 import { field, inputOf } from "./tools.ts";
@@ -49,20 +48,14 @@ export function partOf(items: Item[], key: string): { text: string; what: string
   const id = key.slice(at + 1);
   const item = items.find((i) => i.id === id);
   if (!item) return undefined;
-  if (kind === "run") {
-    // A run is named by its first call: its calls' inputs, one a line.
-    const run = entriesOf(items, false).find((e) => "calls" in e && e.calls[0]?.id === id);
-    const calls = run && "calls" in run ? run.calls : [item];
-    const one = calls.length === 1 && item.name === "Bash";
-    const text = calls.map(inputText).join("\n");
-    return text ? { text, what: one ? "the command" : "the run's inputs" } : undefined;
-  }
   const part = ((): { text: string; what: string } | undefined => {
     const code = /^code(\d+)$/.exec(kind);
     if (code) return { text: codeBlocks(item.text)[Number(code[1])] ?? "", what: "the code block" };
     switch (kind) {
       case "reply":
         return { text: item.text, what: "the reply" };
+      case "thinking":
+        return { text: item.text, what: "the thinking" };
       case "input":
         return {
           text: inputText(item),
