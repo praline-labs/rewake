@@ -132,7 +132,7 @@ test("a run of reads, searches and commands folds into one counted line", () => 
     call("Read", { file_path: "/d1" }),
     call("Read", { file_path: "/d1" }),
     call("ToolSearch", { query: "q" }, ""),
-    { id: "th", kind: "thinking", status: "settled", text: "hm" },
+    { id: "th", kind: "thinking", status: "settled", text: "" },
     call("Grep", { pattern: "x" }, "No files found"),
     call("Bash", { command: "ls docs" }, "a"),
     call("Bash", { command: "cd /a && grep -rl x ." }, "", "error"),
@@ -229,7 +229,7 @@ test("every row the face draws covers the pane's width, however narrow", () => {
       text: `# Head\n${"界".repeat(30)}\n- item **b** \`c\`\n  1. nested\n> a quote\n---\n\`\`\`\ncode 界\n\`\`\`\n| a | b |\n|---|---|\n| long cell | c |`,
     },
     call("Bash", "{}", "\x1b[31mred\x1b[0m\tx", "error"),
-    { id: "th", kind: "thinking", status: "settled", text: "hm" },
+    { id: "th", kind: "thinking", status: "settled", text: "" },
     { id: "n", kind: "notice", status: "settled", text: "a notice 界" },
     { id: "x", kind: "notice", status: "error", text: "Operation aborted 界" },
     call("Edit", { file_path: "/a/b/c.ts", old_string: "界", new_string: "x" }, "ok"),
@@ -275,7 +275,7 @@ test("the turn's line says it works, and how long the last one took", () => {
 test("thinking sits where it came, between two folded runs", () => {
   const m = model(
     call("Read", { file_path: "/a" }),
-    { id: "th", kind: "thinking", status: "settled", text: "hm" },
+    { id: "th", kind: "thinking", status: "settled", text: "" },
     call("Bash", { command: "make" }, "", "error"),
     { id: "n", kind: "notice", status: "error", text: "Error: aborted" },
   );
@@ -352,4 +352,26 @@ test("the model keeps whether the last turn line ended the turn by an interrupt"
   expect(m.stopped).toBe(true);
   m.apply({ op: "turn", turn: "working" });
   expect(m.stopped).toBe(false);
+});
+
+// Brief 54: pi's own screen draws the summary the provider streams as the
+// thinking, in markdown, faint and italic; `∴ Thinking` stands for a block
+// that sent no text.
+test("a thinking block with text shows it faint and italic, a long one folds", () => {
+  const block = (text: string): Item => ({ id: "th", kind: "thinking", status: "settled", text });
+  const lines = linesOf(block("**Planning the edit**\n\nRead the file, then change it."), 40);
+  expect(text(lines)).toEqual(["∴ Planning the edit", "  ", "  Read the file, then change it."]);
+  expect(lines[0]?.spans[1]).toEqual({
+    text: "Planning the edit",
+    tone: "faint",
+    italic: true,
+    bold: true,
+  });
+  expect(lines[0]?.spans[0]).toMatchObject({ text: "∴ ", gutter: true });
+  expect(text(linesOf(block(""), 40))).toEqual(["∴ Thinking"]);
+  expect(text(linesOf(block("  \n"), 40))).toEqual(["∴ Thinking"]);
+  const long = block(Array.from({ length: 30 }, (_, i) => `line ${i}`).join("\n\n"));
+  const folded = text(linesOf(long, 40));
+  expect(folded).toHaveLength(11);
+  expect(folded[10]).toMatch(/^ {2}… \+\d+ lines$/);
 });

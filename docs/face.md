@@ -139,7 +139,12 @@ decision, October 30, 2026: first the same look, customised later), as read from
   faint `▎` in italic; a table in box lines with a rule between every row, the header bold, and
   when it is too wide each column its longest word and the room left shared out by how much its
   widest cell exceeds that, the cells wrapped; a fenced block as written.
-- **Thinking**: a faint italic `∴ Thinking`; its text shows in the terminal's transcript view only.
+- **Thinking**: the block's text, when the session sent any (the summary a provider streams, which
+  pi's own screen draws as markdown in its thinking colour, italic, whole — read in
+  `assistant-message.js` of the bundled 1.4.0, October 31, 2026, brief 54), as markdown rows faint and
+  italic after a faint `∴ ` hung at two columns; more than ten rows fold to ten and `… +N lines`.
+  A block with no text is the faint italic `∴ Thinking`, as the terminal draws it. Claude Code's
+  mod carries thinking text only where the session gives it; it is drawn the same.
 - **Runs**: consecutive Read, Grep, Glob and Bash calls fold into one faint row hung at two columns,
   `Searched for 1 pattern, read 2 files, listed 1 directory, ran 2 shell commands`, the numbers
   bold, a failed call counted too. Bash is read by the first word of each part of its pipeline:

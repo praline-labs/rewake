@@ -163,6 +163,26 @@ function toolLines(item: Item, width: number): FaceLine[] {
   return out;
 }
 
+// A summary of the model's thinking shows as pi's screen draws it: markdown,
+// faint and italic, whole; a long one folds after this many rows.
+const thinkingRows = 10;
+
+// thinkingLines is a thinking block: its summary after a faint `∴`, or only
+// `∴ Thinking` where the session sent no text.
+function thinkingLines(item: Item, width: number): FaceLine[] {
+  const text = clean(item.text).trim();
+  if (text === "")
+    return wrapSpans([{ text: "∴ Thinking", tone: "faint", italic: true }], width).map((spans) => ({
+      spans,
+    }));
+  const rows = markdownRows(text, width - 2, { text: "", tone: "faint", italic: true }).map((row) =>
+    row.map(({ code: _, ...span }) => span),
+  );
+  const more = rows.length - thinkingRows;
+  if (more > 1) rows.splice(thinkingRows, more, [{ text: `… +${more} lines`, tone: "faint" }]);
+  return marked(rows, { text: "∴ ", tone: "faint" });
+}
+
 // linesOf is one item's rows.
 export function linesOf(item: Item, width: number): FaceLine[] {
   const out: FaceLine[] = [];
@@ -183,9 +203,7 @@ export function linesOf(item: Item, width: number): FaceLine[] {
       );
       break;
     case "thinking":
-      // Its text shows only in the terminal's transcript view.
-      for (const spans of wrapSpans([{ text: "∴ Thinking", tone: "faint", italic: true }], width))
-        out.push({ spans });
+      out.push(...thinkingLines(item, width));
       break;
     case "tool":
       out.push(...toolLines(item, width));

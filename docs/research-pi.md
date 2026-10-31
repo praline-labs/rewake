@@ -559,8 +559,8 @@ directory`, `Update(main.go)` with its counts and lines, the reply's list and co
 `Cooked for 9s`; the rule said `p2-pi · 3k/272k` and no mode, the strip `dev rewake · idle`, the
 model and its thinking level. The prefix's `v` showed pi's own TUI with the same turn and back. A
 task sent to the worker showed as a letter with its dot and its one-word answer after it. Still
-differs from Claude Code: an empty thinking block is drawn as `∴ Thinking` where pi's screen shows
-the provider's summary, as the face draws Claude Code's; pi's header, its footer's cost and token
+differs from Claude Code: an empty thinking block is drawn as `∴ Thinking`, and one with a summary shows it as
+pi's screen does (brief 54); pi's header, its footer's cost and token
 counts are not drawn; an edit shows the model's fragments with no line numbers where pi's own
 screen shows the file's lines numbered, as the face does for Claude Code's.
 
