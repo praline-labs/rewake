@@ -29,12 +29,13 @@ pi worker, read with a prompt back, the switch and hot reload:
   ты мне пишешь и очень легко могу прозевать"). main marks a message as one that waits for the
   person's answer, and it lands whole in a panel of the shell beside the conversation; there can be
   many, each with an input under it for the answer, and one submit at the bottom sends main all the
-  answers at once. main can edit or withdraw an entry to keep it current. Worth weighing with it:
-  a count of open entries in the bar or the strip so a waiting question is seen from any pane; an
-  entry's choices as buttons where main offers options (its recommendation first); entries kept
-  across a restart of the room until answered; an answered entry folded with its answer, not lost;
-  workers' blocking questions to main shown there too, read-only, so the person sees what holds
-  the room.
+  answers at once. main can edit or withdraw an entry to keep it current. The owner's word on the
+  rest: a button with an envelope and the count of open entries opens the panel; where main offers
+  choices they are picked as Claude Code's own question dialog picks them, not crude buttons;
+  entries are kept across a restart of the room until answered; an answered entry leaves the view
+  quietly, reachable but out of the way ("ответив я уже навряд ли войду смотреть прошлые
+  сообщения"); workers' blocking questions do not go there — main decides them or stops and waits
+  for the person.
 - A headless worker as a fallback where no terminal is at hand.
 - A room panel, and panels that are not terminals, with the modal.
 - Conversation reset — `rewake clear` from main — and a conversation marker in `list` and in
