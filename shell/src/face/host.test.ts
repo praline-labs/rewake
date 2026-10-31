@@ -7,7 +7,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { FaceHost, type FaceState } from "./host.ts";
 
-const worker = new URL("./worker.ts", import.meta.url).pathname;
+const worker = new URL("../../../face/src/worker.ts", import.meta.url).pathname;
 const dirs: string[] = [];
 const ends: (() => void)[] = [];
 
@@ -309,4 +309,39 @@ test("a drag over the face copies the selection's text and a click the part's so
   expect(host.state.lines[second]?.lit).toBeUndefined();
   await until((s) => !s.lines[first]?.lit);
   expect(host.state.copied).toBeDefined();
+});
+
+test("a face that posts what the contract does not allow is stopped, and nothing of it is kept", async () => {
+  const dir = scratch();
+  const url = faceFile(
+    dir,
+    `self.onmessage = (e) => {
+  if (e.data.kind === "start")
+    self.postMessage({ kind: "lines", lines: [{ spans: [{ text: 5 }] }], turn: "idle", link: "live", prompts: false });
+};\n`,
+  );
+  const { host, until } = hosted(url);
+  host.start();
+  const stopped = await until((s) => s.link === "stopped");
+  expect(stopped.error).toBe("the face sent what the contract does not allow: a span's text");
+  expect(stopped.lines).toEqual([]);
+  expect(host.running).toBe(false);
+});
+
+test("a face of another contract draws nothing and says why", async () => {
+  const dir = scratch();
+  // The real face, told by its shell of a contract one past its own.
+  const url = faceFile(
+    dir,
+    `import ${JSON.stringify(worker)};
+const real = self.onmessage;
+self.onmessage = (e) => real({ data: e.data.kind === "start" ? { ...e.data, contract: e.data.contract + 1 } : e.data });\n`,
+  );
+  const { host, until } = hosted(url, mirror(dir, "say hi").path);
+  host.start();
+  const said = await until((s) => s.error !== undefined);
+  expect(said.error).toMatch(/^this face speaks contract \d+, the shell \d+$/);
+  await Bun.sleep(200);
+  expect(host.state.lines).toEqual([]);
+  expect(host.state.link).toBe("connecting");
 });

@@ -1,12 +1,16 @@
 // The faces of the shell's panes (docs/face.md, "The face"): a pane whose
 // session's wrapper serves a mirror can show rewake's face over its native
 // one, which stays mounted, sized and fed underneath, so its pty never sees a
-// change. Run from its sources, the shell reloads every face when a file of
-// the face changes; a compiled shell has no sources to watch.
+// change. The face is code of its own (face/): the shell runs the worker
+// REWAKE_FACE names, or its own, and reloads every face when a file of the
+// copy it runs from disk changes; a compiled shell's own copy is embedded and
+// watched by nothing.
 import { existsSync, watch } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { createSignal } from "solid-js";
+import type { FromFace, Pointing, ToFace } from "../../../face/src/messages.ts";
+import { faultOf } from "./check.ts";
 import { FaceHost, type FaceState } from "./host.ts";
-import type { Pointing } from "./messages.ts";
 
 export type FaceMode = "rewake" | "native";
 
@@ -18,10 +22,19 @@ const [modes, setModes] = createSignal(new Map<string, FaceMode>());
 const [drafts, setDrafts] = createSignal(new Map<string, string>());
 
 // A compiled shell holds the face as a second entrypoint, named from the
-// bundle's root (build.ts); from the sources it is the file beside this one.
+// bundle's root (build.ts); from the sources it is the checkout's face/.
+// REWAKE_FACE, the path of a worker script, is read from the shell's own
+// environment, never from a session's or the room's.
 const compiled = import.meta.url.includes("$bunfs");
-const workerUrl = compiled ? "./face/worker.ts" : new URL("./worker.ts", import.meta.url).href;
-const sources = new URL(".", import.meta.url).pathname;
+const embedded = "./face/src/worker.ts";
+const named = process.env.REWAKE_FACE
+  ? resolve(process.env.REWAKE_SHELL_CWD || process.cwd(), process.env.REWAKE_FACE)
+  : undefined;
+const workerFile =
+  named ??
+  (compiled ? undefined : new URL("../../../face/src/worker.ts", import.meta.url).pathname);
+export const workerUrl = workerFile ?? embedded;
+const sources = workerFile ? dirname(workerFile) : undefined;
 const reloadAfter = 150;
 let watching = false;
 // copier is the shell's one path to the person's clipboard, the terminal's
@@ -90,6 +103,40 @@ export const pointFace = (id: string, type: Pointing, x: number, y: number, focu
 export const unselectFace = (id: string) => faces.get(id)?.host.unselect();
 export const promptFace = (id: string, text: string) => faces.get(id)?.host.prompt(text) ?? false;
 
+// checkFace starts the face this shell runs and waits for its answer to a
+// ping: `rewake-shell --face-check`, the release gate's proof that a compiled
+// shell carries a face that loads, since a moved entrypoint breaks only
+// there.
+export function checkFace(within = 5000): Promise<string | undefined> {
+  return new Promise((done) => {
+    let worker: Worker;
+    try {
+      worker = new Worker(workerUrl);
+    } catch (err) {
+      return done(`the face does not start: ${String(err)}`);
+    }
+    const end = (why?: string) => {
+      clearTimeout(timer);
+      worker.terminate();
+      done(why);
+    };
+    const timer = setTimeout(
+      () => end(`the face did not answer within ${within / 1000} s`),
+      within,
+    );
+    worker.addEventListener("error", (event) => {
+      event.preventDefault();
+      end(`the face failed: ${event.message || String(event)}`);
+    });
+    worker.addEventListener("message", (event: MessageEvent<unknown>) => {
+      const fault = faultOf(event.data);
+      if (fault) return end(`the face sent what the contract does not allow: ${fault}`);
+      if ((event.data as FromFace).kind === "pong") end();
+    });
+    worker.postMessage({ kind: "ping", n: 1 } satisfies ToFace);
+  });
+}
+
 export function reloadFaces() {
   for (const face of faces.values()) face.host.start();
 }
@@ -98,10 +145,10 @@ export function endFaces() {
   for (const face of faces.values()) face.host.end();
 }
 
-// watchSources reloads the faces 150 ms after the last change of a file of
-// the face, only where the sources are on disk.
+// watchSources reloads the faces 150 ms after the last change of a file in
+// the directory of the copy run from disk.
 function watchSources() {
-  if (watching || !existsSync(sources)) return;
+  if (watching || !sources || !existsSync(sources)) return;
   watching = true;
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {

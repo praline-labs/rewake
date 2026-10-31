@@ -63,7 +63,8 @@ The last commit of a step, before it lands on `v2`, adds what the hook does not 
 ```bash
 env -u REWAKE_SESSION -u REWAKE_EPOCH -u REWAKE_DIR -u REWAKE_ROOM \
   go test -race -shuffle=on -timeout 20m ./...
-(cd shell && bun install --frozen-lockfile && bun run check)   # when the shell changed
+(cd shell && bun install --frozen-lockfile && bun run check)   # when shell/ or face/ changed
+(cd face && bun install --frozen-lockfile && bun run check)    # when face/ changed
 ```
 
 and the workflow scenarios the change touches (below). The commit-msg hook refuses a message

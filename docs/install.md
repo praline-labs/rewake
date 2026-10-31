@@ -75,7 +75,9 @@ ln -sf "$dir/rewake" ~/.local/bin/rewake
 - **The shell** is compiled again when an update changes `shell/` (`bun-linux-arm64` on an
   arm64 machine). Without it, `rewake claude` at a terminal refuses, naming where it looked.
   `REWAKE_SHELL=<checkout>/shell/rewake-shell` runs the shell from its sources instead, as you
-  edit them.
+  edit them. rewake's face, `face/` in the checkout, is compiled into the shell and needs no step
+  of its own; `REWAKE_FACE=<checkout>/face/src/worker.ts` has any shell run the face from those
+  sources, reloaded as you edit them ([face.md](face.md#the-faces-own-code)).
 - **pi** is looked for in a `node_modules` above the executable's directory, as node resolves a
   dependency. The version is `PinnedVersion` in `internal/adapter/pi/ship.go`; when an update
   changes it, install that one, or the start of a pi session refuses, naming both versions.
@@ -123,7 +125,8 @@ go run ./tools/release 2.0.0
 ```
 
 It installs the entry globally into a scratch prefix and runs the command and the shell beside
-the binary, installs each other build as npm would choose it for that cpu, and installs the
+the binary, with the face the shell carries, installs each other build as npm would choose it
+for that cpu, and installs the
 entry with `--omit=optional` to see the command fail naming the reinstall. That last one goes
 into a project rather than globally: npm 11.17 installs a global package's optional
 dependencies even under `--omit=optional`, seen on September 28, 2026. On a tree with
@@ -198,7 +201,8 @@ Every release goes through the gate, `tools/release`:
    binary for `--version` — the version, built from HEAD with no local changes — and has
    npm install the release from a registry it serves on the loopback interface: this
    machine's build alone, whose command then runs, with the pinned pi beside it running
-   under node and the shell beside the binary drawing a main's output, each other build
+   under node and the shell beside the binary drawing a main's output and starting its own
+   face, each other build
    alone for its cpu,
    and none with `--omit=optional`, whose command then fails naming the reinstall. It
    runs the shim's own tests, `go test ./scripts/`, too. A dry run goes on past a failed

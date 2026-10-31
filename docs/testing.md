@@ -130,8 +130,9 @@ on `v2` with a clean tree. It fast-forwards `v2`, or makes a merge commit with t
 conflict with the tree left as it was. Then the checks of a step's last commit, every one even
 after a red one: `go test -race -shuffle=on -timeout 20m ./...` with `-p 4`, or `-p 2` while the
 process list shows another `go test -race` or a run over a whole tree; the whole workflow suite
-with `-v`; and the shell's `bun install --frozen-lockfile && bun run check` when `shell/` changed
-between the old `v2` and the new. On green it pushes `v2` and builds `cmd/rewake` into
+with `-v`; and the shell's `bun install --frozen-lockfile && bun run check` when `shell/` or
+`face/` changed between the old `v2` and the new, the same in `face/` when `face/` changed. On
+green it pushes `v2` and builds `cmd/rewake` into
 `~/.local/share/rewake2/rewake.next` (`--install <dir>` for another), renamed over `rewake` there:
 the owner's rule, a swap right after landing and green checks, and the room runs it once
 restarted. On red, or interrupted during the checks, it resets `v2` to where it was — nothing was pushed — and names the failing

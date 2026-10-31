@@ -1,5 +1,5 @@
 ---
-description: rewake's own face for a live session — the mirror model in the session's wrapper, its socket, the dev worker, the shell's face with its switch and hot reload.
+description: rewake's own face for a live session — the mirror model in the session's wrapper, its socket, the dev worker, the shell's face with its switch, its own code in face/ with its contract, and hot reload.
 ---
 
 # rewake's face
@@ -20,7 +20,7 @@ worker's: `LaunchRequest.Mirror` turns them on, and a dev worker is only the fir
 ## The model — `internal/core/mirror`
 
 One schema, `mirror.schema.json`; `tools/protogen` writes its Go types and the shell's TypeScript
-types (`shell/src/face/mirror.gen.ts`), held by the generator's drift test. The model holds
+types (`face/src/mirror.gen.ts`), held by the generator's drift test. The model holds
 **items** — a `prompt` with its `origin` (person, face, …), a `text` or `thinking` block
 (`streaming`, then `settled`), a `tool` call with its name, input, output and end (`running`,
 `done`, `error`, `refused`), a `notice` — and the turn's state (idle, working, compacting, unknown,
@@ -99,7 +99,7 @@ permission mode at its left end and its name with its type, then its context, at
 a native pane's keeps them. The mouse wheel over the face
 scrolls the conversation as a native pane scrolls (below, "The scroll"), and PgUp and PgDn a page
 less a row; at the bottom the face follows new rows, scrolled up it holds the rows the person put
-there while more arrive below (`shell/src/face/scroll.ts`), and back at the bottom, or after a
+there while more arrive below (`face/src/scroll.ts`), and back at the bottom, or after a
 prompt it sent, it follows again. A drag selects and a click copies a part (below, "Copying"). The
 wheel and the mouse never reach the pty. A prompt
 waits for its answer only while the answer can come: at most the latest 16, each for 30 s, none past
@@ -165,7 +165,7 @@ decision, October 30, 2026: first the same look, customised later), as read from
   `Brewed for 37s · done 7:01 AM` hung at two columns. A running call's dot, and an open run's,
   shows and hides every 600 ms. While the turn works the faint bracket also holds an arrow and an
   estimate of what streamed back, then the thinking, `Mulling… (12s · ↓ 1.2k tokens · thinking)`
-  (`shell/src/face/progress.ts`, on the one clock): `↑` while a request is out with nothing back
+  (`face/src/progress.ts`, on the one clock): `↑` while a request is out with nothing back
   yet — the turn just began, or every call of a step ended — and `↓` while a reply, a thinking block
   or a call's input streams or a call runs; the turn's items are those that name its turn, so a prompt queued while
   it works neither ends it nor resets the count; the estimate is the characters of the turn's replies,
@@ -201,7 +201,7 @@ have.
 ## One clock
 
 Everything the face shows moves on one clock, as the terminal program's own animation frame does
-(`shell/src/face/ticker.ts`): a change from the mirror or a resize only marks the face to draw,
+(`face/src/ticker.ts`): a change from the mirror or a resize only marks the face to draw,
 and the next tick, every 50 ms, lays it out with the glyph, the verb's glow, a running dot's blink
 and the turn's time all read from that tick's one moment; a tick that draws what was posted last
 posts nothing, and the clock stops while nothing changes or moves. A scroll alone is painted at
@@ -220,7 +220,7 @@ the turn's under them, with that tick's moment for the blink — and posts it at
 nothing out and shows nothing the tick did not: a change that came after the tick waits for the
 next one, scroll or not (found in review: a notch between two ticks painted a delta early). The
 tick lays the whole conversation out again only when it or the width changed, about 2.3 ms at the
-model's bound of 1000 items (12 000 rows), where its tail alone took 0.25 ms. A notch moves as many rows as the native pane moves for it (`shell/src/face/wheel.ts`, from
+model's bound of 1000 items (12 000 rows), where its tail alone took 0.25 ms. A notch moves as many rows as the native pane moves for it (`face/src/wheel.ts`, from
 the time the shell's thread heard it): one alone; while notches come within 40 ms of each other,
 0.3 more a notch up to six; the first notch against the way the view moved is held and moves
 nothing, as a wheel's bounce, and the next one the new way turns it; a notch back the old way within
@@ -244,7 +244,7 @@ The face takes the mouse itself, whichever session it draws: its layer is the to
 pointer, a mouse event bubbles only to its parents and the pane's widget is not one, and every
 `<text>` of the face is not `selectable`, so OpenTUI's own selection never starts over it
 (`view.tsx`). The shell's thread passes the left button and the bare pointer to the worker
-(`pointFace`), which keeps the gesture (`shell/src/face/pointer.ts`) and posts what to copy; the
+(`pointFace`), which keeps the gesture (`face/src/pointer.ts`) and posts what to copy; the
 shell sends it by `renderer.copyToClipboardOSC52` and nowhere else, and says it under the input
 for four seconds in the terminal program's words and colour, `sent 437 chars via OSC 52 · check
 terminal clipboard settings if paste fails`, `sent the code block (18 chars) …` for a part, or
@@ -255,7 +255,7 @@ terminal clipboard settings if paste fails`, `sent the code block (18 chars) …
   and its release copies the selection. A click copies only on a face that was focused when it was
   pressed, so the click that focuses a face copies nothing. A press drops the selection there was,
   and so does a key or Esc; a finished selection stays drawn, as natively.
-- **A selection copies text, not drawing** (`shell/src/face/select.ts`). A span may be a `gutter`:
+- **A selection copies text, not drawing** (`face/src/select.ts`). A span may be a `gutter`:
   a row's mark (`●`, `⎿`, `❯`), its indent and a hanging indent, a list's continuation indent, a
   quote's `▎`, a diff's sign and the padding of its band, a table's lines and its cells' padding. A
   gutter is neither highlighted nor copied, and a row of drawing alone, a table's rule, adds no
@@ -270,7 +270,7 @@ terminal clipboard settings if paste fails`, `sent the code block (18 chars) …
   seconds, with the selection's end on the edge's row, native's rule and numbers. The pointer
   cannot go above the terminal's first row, so where the face's body starts there, as natively in
   a fullscreen pane, scrolling up while selecting is the wheel's.
-- **A click copies the part it is on** (`shell/src/face/parts.ts`): every row names its part, and
+- **A click copies the part it is on** (`face/src/parts.ts`): every row names its part, and
   the text is taken from the model when the click comes. A click takes the row it was pressed on,
   so a click off the conversation's rows — the blank above a short one —
   copies nothing, though a drag from there starts at its first row. A reply's row copies the
@@ -293,19 +293,49 @@ key, and a selection over a table copies its whole rows.
 
 The model lives in the wrapper and the face only draws it, so a face can be replaced at any moment
 and lose nothing: a new one connects and gets the snapshot. The face is a Bun `Worker`
-(`shell/src/face/worker.ts`, with `model.ts` and `render.ts`) that connects to the socket itself,
+(`face/src/worker.ts`, with `model.ts` and `render.ts`) that connects to the socket itself,
 keeps its copy of the model and posts rows of styled spans — a tone, bold, italic, underlined, a
 diff's mark, a row on the band — to the shell's thread, which paints them in the theme's colours
-(`host.ts`, `view.tsx`, `shell/src/theme.ts`);
+(`shell/src/face/host.ts`, `view.tsx`, `shell/src/theme.ts`);
 the rows are laid out by `render.ts`, with the modules of "The look", and an item is
-laid out again only when what is drawn of it changed. The shell run from its sources (`shell/rewake-shell` as
-`REWAKE_SHELL`, a second build beside the installed one, [install.md](install.md)) watches
-`shell/src/face/` and starts every face again 150 ms after the last change; what reloads is the
-worker's code, while `faces.ts`, `host.ts` and `view.tsx` are the shell's own and change only with a
-new shell. A compiled shell holds the worker as a second entrypoint and watches nothing. A worker,
-not a module re-imported in the shell's thread: a module can neither be unloaded nor stopped when it
-loops, and its timers and sockets would stay; a worker is ended whole. The cost is a thread, a
-socket and a copy of the model (at most 4 MiB) per face, and rows of spans rather than a widget tree.
+laid out again only when what is drawn of it changed. A worker, not a module re-imported in the
+shell's thread: a module can neither be unloaded nor stopped when it loops, and its timers and
+sockets would stay; a worker is ended whole. The cost is a thread, a socket and a copy of the model
+(at most 4 MiB) per face, and rows of spans rather than a widget tree.
+
+### The face's own code
+
+The face is code of its own in rewake's repository, `face/` at its root, with its tests and its
+checks (`bun run check`, `bun test` there), and is not published apart: rewake's release builds it
+into the shell (the owner, October 31, 2026: a plugin in code of its own, then «а мы можем не
+публиковать ее? а просто встроить в rewake?»). It imports no package, only Bun's runtime. The
+contract between it and the shell is `face/src/messages.ts`, the shell importing its types and
+`contract`, the number of its shape, raised with any change of it; `start` carries the shell's,
+and a face of another contract says so under the input and draws nothing. The shell holds every
+message a face posts to the contract (`shell/src/face/check.ts`: the kinds, each field's type, the
+tones and marks it knows, the sizes of strings, the ranges of numbers, at most 2000 rows of 4096
+spans) and stops a face that sends anything else as one that threw, so no face makes the shell's
+thread throw. The face takes no lease or lock and writes nothing; one build per room is the Go
+image's ([rules/state.md](rules/state.md#the-builds-identity)).
+
+Which copy runs, read once from the shell's own environment when it starts:
+
+- `REWAKE_FACE`, the path of a worker script, relative to the directory the shell was started in;
+  a compiled shell runs it as well as one run from its sources (a compiled Bun 1.4.0 executable
+  started a worker from a `.js` or `.ts` file outside it, a relative import included; probe,
+  October 31, 2026);
+- else, in the shell run from its sources (`shell/rewake-shell` as `REWAKE_SHELL`, a second build
+  beside the installed one, [install.md](install.md); `rewake2`), the checkout's
+  `face/src/worker.ts`;
+- else, in a compiled shell, the face it holds as a second entrypoint (`shell/build.ts`), named in
+  the bundle from the common directory of `face/` and `shell/`; `rewake-shell --face-check`
+  starts it and waits for its answer to a ping, which the release gate runs on the installed
+  shell, since a name that moved breaks only there.
+
+The shell watches the directory of a copy it runs from a file, recursively, and starts every face
+again 150 ms after the last change there; what reloads is the worker's code, while `faces.ts`,
+`host.ts`, `check.ts` and `view.tsx` are the shell's own and change only with a new shell. The
+compiled shell's own copy is watched by nothing.
 
 A reload never restarts or exits the shell and never writes to, resizes or closes a pane's pty,
 main's included: closing the shell ends main and every worker ([shell.md](shell.md)). Each failure
@@ -316,13 +346,15 @@ is contained in the shell's thread, and the person can always switch to native w
   its last lines stay with the error under them.
 - **throws**: a drawing or a message that throws is caught in the worker and posted as the error,
   the last lines staying; one that escapes ends in the `error` event, as above.
+- **breaks the contract**: a message the shell does not take ends the worker as above, its reason
+  under the last lines.
 - **hangs**: no answer to a ping within 2 s; the shell terminates the worker and shows why.
 - **its socket fails**: shown as `lost`, and the worker connects again a second later.
 
 A stopped face starts again at the next change of its sources, or when the person switches to it.
 A new face, a reload's or a lost link's, follows the bottom with no selection: the scroll is the
-worker's and is not carried across, so a change under `shell/src/face/` while the person reads up
-puts the view back at the bottom (seen live, October 31, 2026, brief 49). Tests: `shell/src/face/host.test.ts`, the look in `render.test.ts` and `view.test.tsx`, the clock
+worker's and is not carried across, so a change under `face/src/` while the person reads up
+puts the view back at the bottom (seen live, October 31, 2026, brief 49). Tests: `shell/src/face/host.test.ts`, the contract in `check.test.ts` and through the worker in `host.test.ts`, the look in `face/src/render.test.ts` and `view.test.tsx`, the clock
 in `ticker.test.ts`, the scroll in `scroll.test.ts`, a notch's rows in `wheel.test.ts` and through
 the worker in `host.test.ts`, copying in `select.test.ts` (a selection over gutters, a wrapped
 line, a diff and a table; what a click on each part copies; a click told from a drag), through the

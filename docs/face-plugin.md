@@ -1,10 +1,11 @@
 ---
-description: The design of rewake's face as code of its own in rewake's repository, built into rewake's release — its contract, which copy runs, live reload, what stays in the shell; for acceptance, not built.
+description: The design of rewake's face as code of its own in rewake's repository, built into rewake's release — its contract, which copy runs, live reload, what stays in the shell; built with it.
 ---
 
 # The face as a plugin: the design
 
-Not yet built. The owner (October 31, 2026): the face is a plugin, part of rewake's project in code
+Built in the same branch, and stated in [face.md](face.md#the-faces-own-code); the page leaves
+when the step lands. The owner (October 31, 2026): the face is a plugin, part of rewake's project in code
 of its own — and then, the same day: not published, built into rewake. [face.md](face.md) stays
 true but where this page moves it.
 

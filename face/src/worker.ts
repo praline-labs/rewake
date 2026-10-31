@@ -3,7 +3,14 @@
 // mirror socket itself, keeps its copy of the model and posts the lines to
 // draw. Everything it does is caught here and posted as an error, so a face
 // that breaks leaves its last lines on the screen and the shell untouched.
-import type { FaceLine, FromFace, Link, Pointing, ToFace } from "./messages.ts";
+import {
+  contract,
+  type FaceLine,
+  type FromFace,
+  type Link,
+  type Pointing,
+  type ToFace,
+} from "./messages.ts";
 import type { Line, PermissionMode } from "./mirror.gen.ts";
 import { bounds } from "./mirror.gen.ts";
 import { FaceModel } from "./model.ts";
@@ -321,6 +328,12 @@ self.onmessage = (event: MessageEvent<ToFace>) => {
   try {
     switch (message.kind) {
       case "start":
+        // A shell of another contract would misread what this face posts.
+        if (message.contract !== contract)
+          return post({
+            kind: "error",
+            text: `this face speaks contract ${contract}, the shell ${message.contract}`,
+          });
         path = message.path;
         width = message.width;
         height = message.height;

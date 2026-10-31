@@ -6,6 +6,8 @@
 import type { BoxRenderable, InputRenderable } from "@opentui/core";
 import { RGBA } from "@opentui/core";
 import { createEffect, For, Index, Show } from "solid-js";
+import type { FaceLine, Pointing, Span, Tone } from "../../../face/src/messages.ts";
+import type { PermissionMode } from "../../../face/src/mirror.gen.ts";
 import { mix, type Theme } from "../theme.ts";
 import {
   draftOf,
@@ -18,8 +20,6 @@ import {
   unselectFace,
   wheelFace,
 } from "./faces.ts";
-import type { FaceLine, Pointing, Span, Tone } from "./messages.ts";
-import type { PermissionMode } from "./mirror.gen.ts";
 import { ruleOf, ruleParts } from "./rule.ts";
 
 const colour = (c: string) => RGBA.fromHex(c);

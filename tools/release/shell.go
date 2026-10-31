@@ -30,6 +30,14 @@ func (g *gate) installedShell(ctx context.Context, modules string, p pkg, scratc
 		} else {
 			g.fail("%s: the installed shell %s did not draw main's output: %s", ref, shell, r.why())
 		}
+		// The face is a second entrypoint of the compiled shell, named in the
+		// bundle by where face/ and shell/ lie; a name that moved breaks only
+		// here, so the gate starts it and waits for its answer.
+		if r := g.run(ctx, runLimit, scratch, shell, "--face-check"); r.ok() {
+			g.pass("%s: the installed shell's own face starts and answers", ref)
+		} else {
+			g.fail("%s: the installed shell's own face did not answer: %s", ref, r.why())
+		}
 		return
 	}
 	g.fail("%s: npm installed no bin/rewake under %s, beside which the shell would be", ref, modules)
