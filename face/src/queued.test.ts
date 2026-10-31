@@ -45,9 +45,10 @@ test("a queued prompt waits under the conversation until it is taken", () => {
     "Steering: also run the tests",
     "",
     "⠏ Working…",
+    "",
   ]);
   // Cut to the pane with …, as pi cuts its own.
-  expect(text(render(m, 20, 100, 0, clock)).at(-3)).toBe("Steering: also run …");
+  expect(text(render(m, 20, 100, 0, clock)).at(-4)).toBe("Steering: also run …");
   m.apply({ op: "drop", id: "q", dropped: 0 });
   m.apply({
     op: "add",
@@ -59,6 +60,7 @@ test("a queued prompt waits under the conversation until it is taken", () => {
     "❯ also",
     "",
     "⠏ Working…",
+    "",
   ]);
 });
 

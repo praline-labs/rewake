@@ -20,7 +20,7 @@ test("a delta and the timer that change together are painted once, at the tick",
   const since = 0;
   const paints: string[][] = [];
   const ticker = new Ticker(
-    (at) => paints.push(text(render(m, 40, 3, 0, { now: at, since }))),
+    (at) => paints.push(text(render(m, 40, 4, 0, { now: at, since }))),
     () => m.turn === "working",
     {
       every: (tick, ms) => {
