@@ -16,11 +16,8 @@ at its interface, the old tests that reached past it removed.
 
 1. The face's input rule from the mirror alone (mode and thinking level beside each other), and
    the shell's `check.ts` derived from the face's `messages.ts`.
-2. One handle on a session's mail instead of `(dir, self, epoch)`; `mail.world` folded away.
-3. The face's worker as a module with an interface (post, socket, clock), tested in process.
-4. A command's form parsed once, answering both its access class and its run; a send kind
-   owning its step after the write.
-5. Each owner's on-disk layout beside it (mail, brief, space), `infra/state` keeping the lease,
+2. The face's worker as a module with an interface (post, socket, clock), tested in process.
+3. Each owner's on-disk layout beside it (mail, brief, space), `infra/state` keeping the lease,
    the guard and atomic writes.
 
 rewake's face ([face.md](../face.md)), after its first slice — a dev worker on Claude Code and every
