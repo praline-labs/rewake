@@ -114,8 +114,9 @@ The level, its line and its field on `begin` are additive (brief 75): an older f
 **The turn's times are the model's** (brief 55, October 31, 2026), so a face that connects or reloads
 after a turn draws `Done in 1m 9s · 8:43 AM` as one that watched it. The model stamps them with its
 own clock when a turn event moves the turn, in Unix milliseconds: `since`, on `begin` and on `turn`
-while the turn is `working`, is when it began (a repeated `working` keeps it; a `resync` or a
-compaction clears it); `took` (how long it worked, ms) and `at` (when it ended) ride `turn` to
+while the turn is `working`, is when it began (a repeated `working` keeps it, and so does a
+`compacting` inside the working turn, which also leaves its items in flight; a `resync` or a
+compaction outside a turn clears it); `took` (how long it worked, ms) and `at` (when it ended) ride `turn` to
 `idle` from `working`, and `begin` while the last turn that worked is the latest thing to have
 happened, with `stopped` as on `turn`. A turn that begins forgets them. The face keeps no clock of
 its own for a turn: it draws `since`, `took` and `at` as given (wrapper and face share a machine).
@@ -293,7 +294,15 @@ what is under it, `fold.ts` runs of calls, `markdown.ts` and
   by an interrupt (the turn line's `stopped`, not a guess from the conversation: a call stopped
   mid-run ends with its error and no notice). While the model says the working turn's requests
   failed (its `retry`, "The turn's times are the model's"), the session is trying again, and the line reads `Retrying (attempt
-  2)…`, glyph and text in the warning's amber, as pi's own `Retrying (2/3) in 4s...` (brief 56). The glyph set in use is `orbit4`
+  2)…`, glyph and text in the warning's amber, as pi's own `Retrying (2/3) in 4s...` (brief 56).
+  While the session compacts its context the line reads `Compacting…`, glyph and text in the
+  accent, without the bracket, as Claude Code 2.1.310's spinner says `Compacting conversation…`
+  (brief 79, November 1, 2026). Once a compaction ends, the line shows nothing of it, as Claude Code's
+  spinner shows nothing after one. A compaction inside a working turn, pi's own at the threshold, is
+  part of that turn: the line goes back to the working turn and its `Done in` counts the compaction
+  in. One outside a turn leaves the last turn's `Done in` as it was. pi's adapter says it
+  ([research-pi.md](research-pi.md), "Compaction on the face"); the Claude Code mod says no
+  compaction to the mirror yet. The glyph set in use is `orbit4`
   in `face/src/turn.ts`; others stay beside it, unused, for a switch: the one-dot orbit
   `⠈ ⠐ ⠠ ⢀ ⡀ ⠄ ⠂ ⠁` (`orbit`), the two-dot `⠉ ⠘ ⠰ ⢠ ⣀ ⡄ ⠆ ⠃` and three-dot
   `⠇ ⡆ ⣄ ⣠ ⢰ ⠸ ⠙ ⠋` orbits, all clockwise, the arc `◜ ◝ ◞ ◟` and the pulse `· • ● •`. A running call's dot, and an open run's,

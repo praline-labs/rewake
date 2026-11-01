@@ -5,7 +5,8 @@
 import { expect, test } from "bun:test";
 import { faceInterrupt, faceThinking, levelsOf, serveLevel } from "./faced.ts";
 import type { MirrorEvent } from "./feed.ts";
-import { Mirror, serveMirror } from "./mirror.ts";
+import { Mirror } from "./mirror.ts";
+import { serveMirror } from "./mirrorhooks.ts";
 
 function mirrored() {
   const events: MirrorEvent[] = [];

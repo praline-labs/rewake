@@ -490,8 +490,8 @@ October 31, 2026, pi 1.4.0, the owner's word: a pi worker is drawn by rewake's f
 ([face.md](face.md)) as a Claude Code session looks. rewake's extension feeds the face's model from
 pi's events, as the Claude Code mod does ([claude.md](claude.md#the-mirror)); the host only decodes
 the events with `mirror.Decode` and hands them on (`internal/adapter/pi/mirror.go`). The extension's
-side is `mirror.ts` (the events), `toolmap.ts` (the tools' names, each form a row of the face's
-table of its vocabulary, [face.md](face.md#calls)), tested by `mirror.test.ts`, and
+side is `mirror.ts` (the model of the events), `mirrorhooks.ts` (pi's events it hears), `toolmap.ts` (the tools' names, each form a row of the face's
+table of its vocabulary, [face.md](face.md#calls)), tested by `mirror.test.ts` and `compaction.test.ts`, and
 `feed.ts`, the copy of the feed every adapter sends through ([face.md](face.md#the-feed)).
 
 - **Only when drawn.** The extension mirrors nothing until hello's answer says `mirror: true`;
@@ -611,6 +611,21 @@ table of its vocabulary, [face.md](face.md#calls)), tested by `mirror.test.ts`, 
   limit reaches its screen only as a failed message's error text, retried when it matches the
   transient set (`rate limit`, `429`). The face shows the same and nothing more (read October 31,
   2026, the bundled package's `dist/`, brief 56).
+- **Compaction on the face** (read November 1, 2026, pi 1.4.0, `core/agent-session.js` `compact`
+  and `_runAutoCompaction`; brief 79). Every compaction pi does goes through one of those two: the
+  person's `/compact` and the one main asks for (`ctx.compact`) through `compact`, which first
+  aborts the run going on and waits for it to settle; pi's own at the threshold or on an overflow
+  through `_runAutoCompaction`, which runs inside the agent run, after `agent_end` and before
+  `agent_settled`, or before a request within it (`_compactBeforeNextAssistantResponse`). Either
+  says `session_before_compact` once it has something to compact, then `session_compact` when it
+  is done or `session_compact_failed` when it failed, was aborted (Esc, `abortCompaction`) or an
+  extension cancelled it; a manual one with nothing to compact says only `session_compact_failed`.
+  The extension's mirror hears these three and returns nothing, so it never cancels a compaction
+  or gives it a summary. At the start it sends `turn` `compacting`, on the run going on or on one
+  of its own outside a run; at the end it sends `working` for a run that goes on, else `idle`; an
+  end with no start sends nothing. The face draws `Compacting…` and then what follows
+  ([face.md](face.md), "The look"); the wrapper's model keeps a working turn's start through a
+  compaction inside it.
 - **ctrl+o** is pi's `app.tools.expand`, "Collapse or expand tool output", one state for every
   call on the screen, said in its status as `Tool output: expanded`; ctrl+t hides or shows
   thinking (`pi-coding-agent/docs/keybindings.md`, read October 31, 2026, pi 1.4.0). The face's ctrl+o opens its
@@ -666,3 +681,19 @@ reach pi's pty as well. In pi's own view (the prefix's `v`) its footer read `<mo
 and pi's own shift+tab made it `• low`, the strip `low thinking` within two seconds; back on the face
 the rule read `◆ low`. The top rows read `/tmp/rw62-proj · ⎇ master` and, at the right edge,
 `main-pi` and `p1-pi`.
+
+**[live]** November 1, 2026 (brief 79), this build, a private `REWAKE_DIR` and project under `/tmp`
+with no `HERDR_*` and no session variables, the shell from its sources under a pty of 200 by 50, a
+pi main and pi workers on the cheapest model at minimal thinking, the project's `.pi/settings.json`
+setting `compaction.keepRecentTokens` 200 so a short conversation had something to compact. A
+`rewake compact` after one turn too short (the default budget) came back `nothing to compact`, and
+the worker's face showed no compaction. After one turn under the small budget, `rewake compact`
+from main drew `⠏ Compacting…` on the worker's turn line, glyph and text in the accent, then the turn
+before it, `Done in 15s · 8:51 AM`, again; main's letter said `3325 tokens before, 3358 after
+(compaction 1)`. `/compact` typed in pi's own view (the prefix's `v`) drew the same in the face, and
+pi's view showed `[compaction] Compacted from 3,405 tokens`. With `compaction.reserveTokens` 271000
+as well, the worker's second turn compacted inside the run, after its reply (pi's view: the reply,
+then `[compaction] Compacted from 3,185 tokens`): the face drew `Compacting…` and then `Done in 11s ·
+8:59 AM`, the compaction counted in, where the turn's own work took about 3 s. Its first turn did
+not compact, nor did any turn of a worker under a reserve of 268500 (about 3k tokens, under its
+threshold); why the first turn did not was not traced.

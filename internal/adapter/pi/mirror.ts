@@ -5,7 +5,6 @@
 // handler only pushes to the outbox and returns, never awaits, never blocks a
 // call or changes an event, and a failure of its own is dropped.
 import { randomUUID } from "node:crypto";
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { fit, type MirrorEvent, pieces, settles, textBudget } from "./feed.ts";
 import { Queue, textOf } from "./queued.ts";
 import { facedTool, resultText } from "./toolmap.ts";
@@ -74,6 +73,9 @@ export class Mirror {
   private failed?: string;
   private retries = 0;
   private retrying = false;
+  // compaction is the turn a compaction going on is said as: the run's when
+  // pi compacts inside one, else one of its own.
+  private compaction?: string;
   // queue follows the prompts pi holds until it takes them.
   readonly queue = new Queue((event) => this.push(event));
 
@@ -161,6 +163,25 @@ export class Mirror {
         state: "idle",
         ...(aborted ? { status: "error" } : {}),
       });
+  }
+
+  // compacting is pi beginning a compaction: its own at the threshold, the
+  // person's /compact or the one main asked for.
+  compacting() {
+    if (this.compaction) return;
+    this.compaction = this.run ?? randomUUID();
+    this.push({ kind: "turn", turn: this.compaction, state: "compacting" });
+  }
+
+  // compacted is its end, done, failed or aborted: the run pi compacted inside
+  // goes on, and one outside a run leaves pi idle. pi says the end of one it
+  // refused before beginning, with nothing to compact, which changed nothing.
+  compacted() {
+    const turn = this.compaction;
+    if (!turn) return;
+    this.compaction = undefined;
+    if (this.run) this.push({ kind: "turn", turn: this.run, state: "working" });
+    else this.push({ kind: "turn", turn, state: "idle" });
   }
 
   private blockId(index: number | undefined) {
@@ -299,99 +320,4 @@ export class Mirror {
       });
     this.push({ kind: "result", id, status: "error", text });
   }
-}
-
-type Observed = {
-  signal?: AbortSignal;
-  isIdle: () => boolean;
-  hasPendingMessages?: () => boolean;
-};
-
-// observing runs a handler as an observer: whatever it throws is dropped, and
-// it returns nothing, so pi's event goes on as it came.
-const observing =
-  <E>(handle: (event: E, ctx: Observed) => void) =>
-  (event: E, ctx: Observed) => {
-    try {
-      handle(event, ctx);
-    } catch {}
-    return undefined;
-  };
-
-// serveMirror hooks pi's events for the face; nested calls a tool made are
-// left out, as the Claude Code mod leaves a subagent's.
-export function serveMirror(pi: ExtensionAPI, mirror: Mirror) {
-  pi.on(
-    "input",
-    observing((e: { text: string; source: string; streamingBehavior?: string }) =>
-      mirror.input(e.text, e.source, e.streamingBehavior !== undefined),
-    ),
-  );
-  pi.on(
-    "agent_start",
-    observing(() => mirror.started()),
-  );
-  pi.on(
-    "turn_start",
-    observing((e: { turnIndex: number }, ctx) => {
-      mirror.stepped(e.turnIndex);
-      mirror.queue.check(ctx.hasPendingMessages?.() ?? true);
-    }),
-  );
-  pi.on(
-    "message_start",
-    observing((e: { message: { role?: string; content?: unknown } }, ctx) =>
-      mirror.began(e.message, ctx.hasPendingMessages?.() ?? true),
-    ),
-  );
-  pi.on(
-    "message_update",
-    observing((e: { assistantMessageEvent: Streamed }) => mirror.streamed(e.assistantMessageEvent)),
-  );
-  pi.on(
-    "message_end",
-    observing((e: { message: Parameters<Mirror["ended"]>[0] }) => mirror.ended(e.message)),
-  );
-  pi.on(
-    "tool_execution_start",
-    observing(
-      (e: { toolCallId: string; toolName: string; args: unknown; parentToolCallId?: string }) => {
-        if (!e.parentToolCallId) mirror.toolStarted(e.toolCallId, e.toolName, e.args);
-      },
-    ),
-  );
-  pi.on(
-    "tool_call",
-    observing((e: { toolCallId: string; parentToolCallId?: string }) => {
-      if (!e.parentToolCallId) mirror.toolCalled(e.toolCallId);
-    }),
-  );
-  pi.on(
-    "tool_execution_end",
-    observing(
-      (
-        e: {
-          toolCallId: string;
-          result: unknown;
-          isError: boolean;
-          durationMs?: number;
-          parentToolCallId?: string;
-        },
-        ctx,
-      ) => {
-        if (!e.parentToolCallId)
-          mirror.toolEnded(
-            e.toolCallId,
-            e.result,
-            e.isError,
-            e.durationMs !== undefined,
-            !!ctx.signal?.aborted,
-          );
-      },
-    ),
-  );
-  pi.on(
-    "agent_settled",
-    observing((event: { aborted?: boolean }) => mirror.settled(event.aborted === true)),
-  );
 }
