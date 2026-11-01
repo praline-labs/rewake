@@ -113,7 +113,7 @@ under the same hold. The turn end that writes a report holds that lock, so a rep
 before the look that decides, which refuses, or after the write. A first look without the
 lock (`CurrentSent`, `TaskToAddTo`) only refuses early. A refusal is a `mail.Refusal` naming
 its reason, and a failure a `mail.StepError` naming its step; the command words both. What a
-sender is told of a letter just written is `mail.AwaitSent` (`sent_delivery.go`), which only
+sender is told of a letter just written is `mail.Box.AwaitSent` (`sent_delivery.go`), which only
 reads.
 
 ## Settling a letter with its outcome

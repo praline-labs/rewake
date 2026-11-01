@@ -40,7 +40,7 @@ func sendOK(t *testing.T, argv ...string) string {
 
 func stored(t *testing.T, dir, id string) mail.Message {
 	t.Helper()
-	for _, message := range must(mail.SentMatching(dir, "web", epochOf(t, dir, "web"), id)) {
+	for _, message := range must(mail.Open(dir, "web", epochOf(t, dir, "web")).SentMatching(id)) {
 		return message
 	}
 	t.Fatalf("%s is not kept", id)
@@ -238,7 +238,7 @@ func TestAWithdrawalAfterTheNoticeTellsTheRecipient(t *testing.T) {
 		!strings.HasPrefix(told[0].Text, want) || !strings.HasSuffix(told[0].Text, "): withdrawn unread.") {
 		t.Fatalf("recalls %+v", told)
 	}
-	if len(must(mail.SentMatching(dir, "web", epochOf(t, dir, "web"), told[0].ID))) != 0 {
+	if len(must(mail.Open(dir, "web", epochOf(t, dir, "web")).SentMatching(told[0].ID))) != 0 {
 		t.Fatal("the recall is taken for a letter of the sender's own")
 	}
 	if code, _, _ := run("withdraw", loud); code != ExitOK || len(recalls(t, dir)) != 1 {

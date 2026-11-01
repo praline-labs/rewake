@@ -43,11 +43,10 @@ func handleEdit(ctx *Context, call Call) error {
 	if strings.TrimSpace(text) == "" {
 		return &UsageError{Command: call.Command, Message: "The new text is empty; to take the message back without a replacement, run rewake withdraw."}
 	}
-	self, epoch, named, err := sentBySelf(call, dir, call.Positionals[0], "rewake edit <id> \"...\"")
+	box, named, err := sentBySelf(call, dir, call.Positionals[0], "rewake edit <id> \"...\"")
 	if err != nil {
 		return err
 	}
-	box := mail.Open(dir, self.Name, epoch)
 	old, err := box.CurrentSent(named)
 	if err != nil {
 		return refusalOf(err, registry.Session{})
@@ -62,7 +61,7 @@ func handleEdit(ctx *Context, call Call) error {
 	if err != nil {
 		return failf("could not read the record of %s: %v", old.To, err)
 	}
-	if old.To == self.Name {
+	if old.To == box.Name() {
 		// Only a build before send refused this could have written it; a
 		// replacement would be the same self-send again.
 		return &UsageError{Command: call.Command, Message: fmt.Sprintf("a session cannot send to itself, and %s is this session: take %s back with rewake withdraw %s and do the work in this turn.", old.To, old.ID, shortRef(old.ID))}
@@ -87,12 +86,12 @@ func handleEdit(ctx *Context, call Call) error {
 	}
 	started := time.Now()
 	replacement := mail.Message{
-		ID: mail.NewID(), From: self.Name, FromEpoch: epoch, To: old.To, ToEpoch: old.ToEpoch,
+		ID: mail.NewID(), From: box.Name(), FromEpoch: box.Epoch(), To: old.To, ToEpoch: old.ToEpoch,
 		Kind: old.Kind, Text: text, CreatedAt: time.Now(), Replaces: old.ID, AddendumTo: old.AddendumTo,
 		Brief: old.Brief,
 	}
 	if kind.kind == mail.Question {
-		release, err := mail.Open(dir, self.Name, "").ReserveAnswer(replacement.ID)
+		release, err := box.ReserveAnswer(replacement.ID)
 		if err != nil {
 			return failf("could not reserve the answer: %v", err)
 		}
@@ -108,9 +107,9 @@ func handleEdit(ctx *Context, call Call) error {
 		return refusalOf(err, target)
 	}
 	if err != nil {
-		return withdrawRefusal(dir, old, lockText(err, old.To), true)
+		return withdrawRefusal(box, old, lockText(err, old.To), true)
 	}
-	after := sent{dir: dir, self: self, epoch: epoch, target: target, deadline: started.Add(wait)}
+	after := sent{dir: dir, box: box, target: target, deadline: started.Add(wait)}
 	if old.ID != named.ID {
 		after.named = named.ID
 		if !ctx.JSON {
@@ -118,10 +117,10 @@ func handleEdit(ctx *Context, call Call) error {
 		}
 	}
 	// Addenda are never rewritten: they name the old id, which now leads to
-	// the replacement (mail.CurrentTask), and the sender is told they came
+	// the replacement (mail.Box.AddedTo), and the sender is told they came
 	// along, since a correction it meant to drop with the old text would
 	// otherwise go on being read.
-	addenda, err := mail.AddendaOf(dir, replacement)
+	addenda, err := box.AddendaOf(replacement)
 	if err != nil && !ctx.JSON {
 		// The edit is done; only the list of what came along is unknown, and
 		// an empty one would say nothing did.

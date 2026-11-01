@@ -14,22 +14,22 @@ const MinReference = 4
 // run's behalf, and only this run's: mail from a plain shell or an earlier run
 // is out of reach. An exact id wins over prefixes of it. An error says a
 // letter could not be read, which may be the one referred to.
-func SentMatching(dir, name, epoch, reference string) ([]Message, error) {
-	if epoch == "" || len(reference) < MinReference {
+func (b Box) SentMatching(reference string) ([]Message, error) {
+	if b.epoch == "" || len(reference) < MinReference {
 		return nil, nil
 	}
-	recipients, err := mailboxes(dir)
+	recipients, err := mailboxes(b.dir)
 	if err != nil {
 		return nil, err
 	}
 	var matches []Message
 	for _, recipient := range recipients {
-		all, err := everywhere(dir, recipient)
+		all, err := everywhere(b.dir, recipient)
 		if err != nil {
 			return nil, err
 		}
 		for _, message := range all {
-			if message.From != name || message.FromEpoch != epoch || !written(message) {
+			if message.From != b.name || message.FromEpoch != b.epoch || !written(message) {
 				continue
 			}
 			if message.ID == reference {

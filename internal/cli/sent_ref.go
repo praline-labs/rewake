@@ -6,35 +6,34 @@ import (
 	"strings"
 
 	"github.com/praline-labs/rewake/internal/core/mail"
-	"github.com/praline-labs/rewake/internal/core/registry"
 )
 
 // sentBySelf finds the message a reference names among what this run sent.
 // Every refusal says what to run next: the caller is an agent, and a refusal
 // it cannot act on is a dead end.
-func sentBySelf(call Call, dir, reference, retry string) (registry.Session, string, mail.Message, error) {
-	self, epoch, err := ownRun(dir)
+func sentBySelf(call Call, dir, reference, retry string) (mail.Box, mail.Message, error) {
+	_, box, err := ownMail(accessChange, dir)
 	if err != nil {
-		return registry.Session{}, "", mail.Message{}, &UsageError{
+		return mail.Box{}, mail.Message{}, &UsageError{
 			Command: call.Command,
 			Message: fmt.Sprintf("Only the session run that sent a message may change it, and this shell is not one (%v).", err),
 		}
 	}
 	if len(reference) < mail.MinReference {
-		return self, epoch, mail.Message{}, &UsageError{
+		return box, mail.Message{}, &UsageError{
 			Command: call.Command,
 			Message: fmt.Sprintf("%q is too short to name a message: give at least %d characters of its id, or of the part after the dash. rewake inbox --awaited lists the ids.", reference, mail.MinReference),
 		}
 	}
-	matches, err := mail.SentMatching(dir, self.Name, epoch, reference)
+	matches, err := box.SentMatching(reference)
 	if err != nil {
-		return self, epoch, mail.Message{}, failf("could not read what this run sent (%v), so which message %s names is unknown; nothing was done; run the same command again", err, reference)
+		return box, mail.Message{}, failf("could not read what this run sent (%v), so which message %s names is unknown; nothing was done; run the same command again", err, reference)
 	}
 	switch len(matches) {
 	case 1:
-		return self, epoch, matches[0], nil
+		return box, matches[0], nil
 	case 0:
-		return self, epoch, mail.Message{}, failf("no message this run sent matches %s; list what you sent with: rewake inbox --awaited", reference)
+		return box, mail.Message{}, failf("no message this run sent matches %s; list what you sent with: rewake inbox --awaited", reference)
 	}
 	lines := []string{fmt.Sprintf("%s matches %d messages this run sent; give more of the id:", reference, len(matches))}
 	for _, message := range matches {
@@ -51,7 +50,7 @@ func sentBySelf(call Call, dir, reference, retry string) (registry.Session, stri
 	// The placeholder stays: any one id filled in would be a guess, and a
 	// ready line is copied as it stands.
 	lines = append(lines, "then: "+retry)
-	return self, epoch, mail.Message{}, &FailedError{Message: strings.Join(lines, "\n")}
+	return box, mail.Message{}, &FailedError{Message: strings.Join(lines, "\n")}
 }
 
 // shortRef is the reference a hint offers: the tail of the id, which is
@@ -60,7 +59,7 @@ func shortRef(id string) string { return mail.ShortID(id) }
 
 // withdrawRefusal explains why a message cannot be taken back, and what to do
 // instead. editing says the call was rewake edit, whose retry is its own.
-func withdrawRefusal(dir string, message mail.Message, err error, editing bool) error {
+func withdrawRefusal(box mail.Box, message mail.Message, err error, editing bool) error {
 	kind := mail.KindOf(message)
 	if message.Withdrawn != nil {
 		kind = message.Withdrawn.Kind
@@ -83,7 +82,7 @@ func withdrawRefusal(dir string, message mail.Message, err error, editing bool) 
 	// it got: marked withdrawn, the recipient reads it as withdrawn already,
 	// and the next call finishes the rest. One that cannot be read says
 	// nothing of how far it got, and "nothing changed" would be a guess.
-	status, _, statusErr := mail.ReadStatus(dir, message.To, message.ID)
+	status, _, statusErr := box.StatusOf(message)
 	switch {
 	case statusErr != nil && editing:
 		return failf("could not replace your %s %s to %s (%v), and how far it got cannot be read now (%v); try again: rewake edit %s \"...\"", kind, message.ID, message.To, err, statusErr, shortRef(message.ID))

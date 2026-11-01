@@ -32,7 +32,7 @@ func handlePending(ctx *Context, call Call) error {
 	if err != nil {
 		return &UsageError{Command: call.Command, Message: err.Error()}
 	}
-	self, epoch, err := ownRun(dir)
+	self, box, err := ownMail(accessChange, dir)
 	if err != nil {
 		return &UsageError{Command: call.Command, Message: "rewake pending marks the turn of the session running it, and this is not one: " + err.Error() + "."}
 	}
@@ -47,7 +47,7 @@ func handlePending(ctx *Context, call Call) error {
 		// (docs/delivery-turn-end.md#pending-marks).
 		return failf("the time this call started cannot be read, so a mark could not be tied to this turn; nothing was marked")
 	}
-	waiting, err := mail.Open(dir, self.Name, epoch).MarkTurnPending(context.Background(), text, at)
+	waiting, err := box.MarkTurnPending(context.Background(), text, at)
 	var step *mail.StepError
 	switch {
 	case errors.Is(err, mail.ErrTurnEnded):

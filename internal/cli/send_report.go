@@ -11,10 +11,10 @@ import (
 // prints it, then hands over to what its kind does next — a question waits
 // for its answer.
 func reportSent(ctx *Context, after sent, message mail.Message, kind messageKind, wait time.Duration) error {
-	dir, session := after.dir, after.target
+	session := after.target
 	delivery := deliveryWait(kind, wait)
 	model := sendModel{ID: message.ID, To: session.Name, From: message.From, Addenda: after.addenda, Replaces: message.Replaces, Named: after.named}
-	got := mail.AwaitSent(dir, session, message.ID, delivery)
+	got := after.box.AwaitSent(session, message.ID, delivery)
 	model.State, model.Via, model.Detail = string(got.State), got.Via, got.Detail
 	switch got.Fate {
 	case mail.FateRead:

@@ -72,7 +72,7 @@ func TestAwaitSentSaysWhatBecameOfTheLetter(t *testing.T) {
 			if c.target != nil {
 				target = c.target(target)
 			}
-			if got := AwaitSent(lab.dir, target, letter.ID, time.Second); got != c.want {
+			if got := lab.box.AwaitSent(target, letter.ID, time.Second); got != c.want {
 				t.Fatalf("got %+v, want %+v", got, c.want)
 			}
 		})
@@ -89,7 +89,7 @@ func TestAnUnreadableStatusIsPending(t *testing.T) {
 	})
 	ended := lab.api
 	ended.ServiceStart++
-	if got := AwaitSent(lab.dir, ended, letter.ID, time.Second); got.State != Pending || got.Fate != FateUnknown || got.Err == nil {
+	if got := lab.box.AwaitSent(ended, letter.ID, time.Second); got.State != Pending || got.Fate != FateUnknown || got.Err == nil {
 		t.Fatalf("an unreadable status answered %+v", got)
 	}
 }

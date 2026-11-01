@@ -46,13 +46,14 @@ type Delivery struct {
 // await waits for a status; a test stands in for the delivery server here.
 var await = Await
 
-// AwaitSent waits up to wait for the outcome of the letter id just written to
-// target's run, and says what became of it. A held or pending status is no
-// final answer. Promising a later delivery is honest only while the run the
-// letter was written for is still there to make one. A session that ended
+// AwaitSent waits up to wait for the outcome of the letter id this run just
+// wrote to target's run, and says what became of it. A held or pending status
+// is no final answer. Promising a later delivery is honest only while the run
+// the letter was written for is still there to make one. A session that ended
 // since, or whose name a later run took, leaves the letter with nobody to
 // take it. A long wait ends when that run does.
-func AwaitSent(dir string, target registry.Session, id string, wait time.Duration) Delivery {
+func (b Box) AwaitSent(target registry.Session, id string, wait time.Duration) Delivery {
+	dir := b.dir
 	status, known := await(dir, target.Name, id, wait, recipientRunning(dir, target))
 	// Await takes a status it cannot read for none yet, so one more look
 	// tells absent from unknown.

@@ -24,11 +24,11 @@ func addendumRoot(call Call, dir string, kind messageKind, target registry.Sessi
 	if kind.kind != mail.Task {
 		return "", &UsageError{Command: call.Command, Message: "--to adds to a task already sent and is a task itself; it excludes " + kind.flag.Flag + "."}
 	}
-	self, epoch, named, err := sentBySelf(call, dir, reference, fmt.Sprintf("rewake send %s \"...\" --to <id>", target.Name))
+	box, named, err := sentBySelf(call, dir, reference, fmt.Sprintf("rewake send %s \"...\" --to <id>", target.Name))
 	if err != nil {
 		return "", err
 	}
-	root, err := mail.Open(dir, self.Name, epoch).TaskToAddTo(named, target)
+	root, err := box.TaskToAddTo(named, target)
 	if err != nil {
 		return "", refusalOf(err, target)
 	}
@@ -37,8 +37,8 @@ func addendumRoot(call Call, dir string, kind messageKind, target registry.Sessi
 
 // writeSent puts a new message into its recipient's mailbox; an addendum goes
 // in under the lock, with its task asked again (mail.Box.Send).
-func writeSent(dir string, self registry.Session, epoch string, message mail.Message, target registry.Session) error {
-	err := mail.Open(dir, self.Name, epoch).Send(context.Background(), message, target)
+func writeSent(box mail.Box, message mail.Message, target registry.Session) error {
+	err := box.Send(context.Background(), message, target)
 	var refusal *mail.Refusal
 	switch {
 	case err == nil:

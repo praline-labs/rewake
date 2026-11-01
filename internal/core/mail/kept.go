@@ -49,12 +49,7 @@ func pendingDir(dir, name string) string { return filepath.Join(state.InboxPath(
 // which has ended, is none: it is never taken. One that cannot be read is an
 // error, since it may be this run's, and nothing writes over it.
 func readKept(dir, name, epoch string) (keptRecord, bool, error) {
-	return live(dir).readKept(name, epoch)
-}
-
-func (w world) readKept(name, epoch string) (keptRecord, bool, error) {
-	dir := w.dir
-	raw, err := w.readFile(keptPath(dir, name))
+	raw, err := readRecord(keptPath(dir, name))
 	if errors.Is(err, os.ErrNotExist) {
 		return keptRecord{}, false, nil
 	}
@@ -141,10 +136,10 @@ func HeldEnd(dir, name, epoch, op string) (string, bool, error) {
 // published it, when it is still the version published. A later answer kept
 // since is another turn end's to publish; one that cannot be read may be
 // either, and is an error.
-func (w world) dropKeptVersion(name, epoch, version string) error {
-	record, ok, err := w.readKept(name, epoch)
+func dropKeptVersion(dir, name, epoch, version string) error {
+	record, ok, err := readKept(dir, name, epoch)
 	if err != nil || !ok || record.Version != version {
 		return err
 	}
-	return w.remove(keptPath(w.dir, name))
+	return removeRecord(keptPath(dir, name))
 }

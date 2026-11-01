@@ -14,7 +14,7 @@ func TestARecallIsAnnouncedAtOnce(t *testing.T) {
 	withdrawn := message("delete the staging bucket")
 	withdrawn.ToEpoch = "5.5"
 	written := time.Now()
-	note, err := mail.Recall(f.dir, withdrawn)
+	note, err := mail.Open(f.dir, withdrawn.From, withdrawn.FromEpoch).Recall(withdrawn)
 	if err != nil {
 		t.Fatal(err)
 	}

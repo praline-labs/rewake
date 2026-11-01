@@ -110,7 +110,7 @@ func (b Box) WithdrawSent(parent context.Context, named Message) (Withdrawn, err
 		if err != nil {
 			return err
 		}
-		addenda, err := AddendaOf(b.dir, current)
+		addenda, err := b.AddendaOf(current)
 		if err != nil {
 			return failedAt(StepAddenda, err)
 		}

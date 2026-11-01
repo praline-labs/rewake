@@ -110,7 +110,7 @@ func publishTurnContext(ctx context.Context, dir string, self registry.Session, 
 	if kept {
 		// Taken once published, and only this version of it: an answer kept
 		// after it is a later turn end's.
-		if err := live(dir).dropKeptVersion(self.Name, self.Epoch(), held.Version); err != nil {
+		if err := dropKeptVersion(dir, self.Name, self.Epoch(), held.Version); err != nil {
 			return Outcome{}, err
 		}
 	}
