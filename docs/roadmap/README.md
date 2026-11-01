@@ -17,25 +17,23 @@ at its interface, the old tests that reached past it removed.
 1. One mirror feed under both adapters: the bounded outbox, text bounding and settle-in-parts of
    `internal/adapter/pi/outbox.ts` and the mod's `hooks/mirror.ts` + `sizes.ts` as one module, the
    adapters mapping only their harness's events; one decoder of a neutral event in `core/mirror`.
-2. Reading a mailbox, `rewake pending` and the owed hint as operations of `core/mail`, the lock
-   and the order of effects inside them, not in `internal/cli` closures.
-3. A tool-call module in the face: one place says a call's heading, argument, fold, copied field
+2. A tool-call module in the face: one place says a call's heading, argument, fold, copied field
    and result kind, for `tools.ts`, `parts.ts`, `fold.ts`, `results.ts`, `render.ts` and pi's
    `toolmap.ts`.
-4. A sent letter as one module of `core/mail`: send, edit, withdraw and addendum hand it an
+3. A sent letter as one module of `core/mail`: send, edit, withdraw and addendum hand it an
    intent and a reference; it re-resolves, locks, checks standing, writes and returns an outcome.
-5. A turn's phase and retry attempt carried by the mirror model from the adapters' events, not
+4. A turn's phase and retry attempt carried by the mirror model from the adapters' events, not
    inferred in the face's `progress.ts`.
-6. The face's input rule from the mirror alone (mode and thinking level beside each other), and
+5. The face's input rule from the mirror alone (mode and thinking level beside each other), and
    the shell's `check.ts` derived from the face's `messages.ts`.
-7. A typed part reference in the face, owning what a row is and what a click on it does.
-8. Settling a letter with an outcome as an operation of `core/mail`, the delivery server keeping
+6. A typed part reference in the face, owning what a row is and what a click on it does.
+7. Settling a letter with an outcome as an operation of `core/mail`, the delivery server keeping
    only scheduling, the window and retries.
-9. One handle on a session's mail instead of `(dir, self, epoch)`; `mail.world` folded away.
-10. The face's worker as a module with an interface (post, socket, clock), tested in process.
-11. A command's form parsed once, answering both its access class and its run; a send kind
+8. One handle on a session's mail instead of `(dir, self, epoch)`; `mail.world` folded away.
+9. The face's worker as a module with an interface (post, socket, clock), tested in process.
+10. A command's form parsed once, answering both its access class and its run; a send kind
     owning its step after the write.
-12. Each owner's on-disk layout beside it (mail, brief, space), `infra/state` keeping the lease,
+11. Each owner's on-disk layout beside it (mail, brief, space), `infra/state` keeping the lease,
     the guard and atomic writes.
 
 rewake's face ([face.md](../face.md)), after its first slice — a dev worker on Claude Code and every
