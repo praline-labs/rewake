@@ -312,7 +312,7 @@ and the bar under the worker's.
   strip and the row under it read as one band of two rows; narrow, the strip, the hints and the bar
   as one of three. A terminal that does not say its background gets no band.
 - **Colours and weights.** Words are in the terminal's own foreground; what names a program is bold
-  in its colour — the focused button filled, the strip's name, the hints' keys in the focused
+  in its colour — the focused button filled, the hints' keys in the focused
   program's colour; main's colour, the palette's entry 4, is apart from the workers'. Parts are separated by ` · ` in a faint colour, halfway from the foreground to
   the background (palette 8 where the terminal did not say both): OpenTUI 0.6.6 writes no dim over
   the terminal's own foreground.
@@ -322,16 +322,17 @@ and the bar under the worker's.
 ## The pane
 
 Each fact around a pane is in one place, alike for Claude Code and pi (the owner, October 31, 2026,
-brief 60): where the session works on the row above the pane, who it is and how it stands on the
-strip under it, and its room work at its input. The program has two rows less.
+brief 60): where the session works and who it is on the row above the pane, how it stands on the
+strip under it, and its room work at its input, main's awaited reports on its strip. The program
+has two rows less.
 
 ```
-~/.rewake2-worktrees/rewake-44a66b/wt-5928f6 · ⎇ brief60-pane-facts   write-claude   the top row
+~/.rewake2-worktrees/rewake-44a66b/wt-5928f6 · ⎇ brief60-pane-facts   write-claude (code)   the top row
   … the session's own screen, native or drawn by rewake's face …
   ── ⏵⏵ auto mode ─────────────── brief 57 3/6 ─                             the face's input rule
   ── ◆ high (shift+tab to cycle) ─ brief 57 3/6 ─                            the same for pi
   ⏵⏵ auto mode on (shift+tab to cycle) · brief 57 3/6                         or Claude Code's hint line
-write-claude (code) · working · <model> low · 90% 42m                  230k/1M   the strip
+<model> low · 90% 42m                                                  230k/1M   the strip
 ```
 
 - **The top row** (`shell/src/path.tsx`): the room view's `path`, the directory the session works in
@@ -340,16 +341,21 @@ write-claude (code) · working · <model> low · 90% 42m                  230k/1
   entry moves and a `cd` in Bash does not; pi's directory is the one it started in, its record's
   `cwd`. A worker whose row is not read yet shows its space's checkout. At the row's right edge
   stands the session's rewake name, `review-pi`, `main-claude`, for every pane, at least ` · `'s
-  width from the path (the owner, October 31, 2026, brief 62; on the strip too). Too long, the path
-  loses whole directories from its start, `…/worktrees/wt-3836d0`, then letters of its last down to
-  `…` and one; then the branch goes, the path taking its room again; then the path goes and the name
-  is cut at its end. A press on it chooses the pane. The briefs, shown in a worker's place, take the
+  width from the path (the owner, October 31, 2026, brief 62), and a worker's type of work in
+  brackets after it, `write-claude (code)`, which was on the strip until November 1, 2026 (the
+  owner's word); main has none. The top row is the only place a pane's name stands. Too long, the
+  path loses whole directories from its start, `…/worktrees/wt-3836d0`, then letters of its last
+  down to `…` and one; then the branch goes, the path taking its room again; then the path goes and
+  the name with its type is cut at its end, so the type goes first, `write-claude (co…`. A press on it chooses the pane. The briefs, shown in a worker's place, take the
   row into their own height, so their strip stands where a pane's does.
 - **At the input**: the run's room work, the room view's `work` (`internal/core/work`): its open
   briefs with their ticks, `brief 57 3/6`, and the reports it waits on, `⧗ 3`; nothing when there is
   none. At the right end of the face's input rule ([face.md](face.md#the-look)), alone there, and at
   the end of Claude Code's hint line ([claude.md](claude.md#the-band)), the same text. A narrow row cuts
   it first, so it is never the only place: the briefs view, `rewake brief show` and `rewake inbox --awaited` say the same.
+  Main's `⧗ 3` is not at its input but on its strip ([the strip](#the-strip)): Claude Code keeps
+  adding text to its hint line before our tail, which moved it all the time (the owner, November 1,
+  2026).
 - **The person's own status line** is off in every Claude Code run rewake starts
   ([claude.md](claude.md#the-cache-ttl)): the strip says what it said.
 
@@ -367,20 +373,19 @@ worker's `p1-pi`, and the pi worker's rule read `── ◆ minimal (shift+tab t
 
 The row under each pane, main's and every worker's, a shell's row, is one line drawn by the shell
 (`shell/src/strip.tsx`), the same for every harness. Main's strip,
-asked for by the owner on October 26, 2026, reads main's own row of the same listing; main has no
-type, so its name stands alone. The context stands at the strip's right edge, the rest from the
-left, and the account's limits are on main's strip alone (the owner, October 31, 2026).
+asked for by the owner on October 26, 2026, reads main's own row of the same listing. The context
+stands at the strip's right edge, the rest from the left, and the account's limits are on main's
+strip alone (the owner, October 31, 2026). No strip names its session or says what it does (the
+owner, November 1, 2026): the name and a worker's type are the top row's ([the pane](#the-pane)),
+and the activity is the button's mark ([the bar](#the-bar)), `rewake list`'s Status and the
+letters' state header ([session-state.md](session-state.md#activity)).
 
 ```
-write-claude (code) · working · <model> low thinking · 90% 42m                          230k/1M
-main · working · <model> high · 90% 42m · 5h 37% · 7d 9%                               674k/1M
+<model> low thinking · 90% 42m                                                          230k/1M
+<model> high · 90% 42m · 5h 37% · 7d 9%                                          ⧗ 2 · 674k/1M
 ```
 
-- **What it says**: the session and its type, on a pane drawn by rewake's face as on a native one,
-  the activity as the label of its verdict, which
-  `rewake list` shows too, after `dev rewake` or `dev native` on a dev worker's strip (`working`, `waiting for a permission`, `waiting at a dialog`, `idle`,
-  `compacting`, with ` (stale)` once it is not current; nothing while it is `unknown`;
-  [session-state.md](session-state.md#activity)), the model and
+- **What it says**: `dev rewake` or `dev native` first on a dev worker's strip, the model and
   effort, with `thinking` after them while the harness says thinking is on — Claude Code's
   session setting, pi's level for a model with reasoning — and nothing when it is off or not told, the prompt cache, and at the right edge the context as used and window. A value rewake does
   not know is left out; a window without a measure reads `–/<window>`. The model reads as the
@@ -396,14 +401,17 @@ main · working · <model> high · 90% 42m · 5h 37% · 7d 9%                   
   the room view: the share used of the five-hour and seven-day windows Claude Code's mod reads from
   `$.session.usage()` ([claude.md](claude.md#telemetry)); one account's, so a worker's strip does
   not repeat them; left out where the harness reports none, as off a subscription, and on pi,
-  which reports none.
+  which reports none. On main's strip alone, just before the context and pinned to the right edge
+  with it, the reports main waits on, `⧗ 2`: the last part of main's room view `work`, as
+  `internal/core/work` writes it; nothing when it waits on none. A worker's room work stays at its
+  input.
 - **Where it comes from**: telemetry is shown only to a verified main, and the shell is main's
   terminal and no session, so it proves itself by the process tree: it passes `--wrapper <pid>`,
   the pid of main's wrapper, and the command takes it only for the `servicePid` of a main
   record whose parent is the process that called it, as the shell is main's wrapper's parent
   (`asMain` in the view). Then the view carries the sessions' telemetry and marks main's own row
   `own`, which is main's strip; without the proof — before main's record is found — the sessions
-  come bare and the strip reads `main` alone, and the next call proves it.
+  come bare, main's strip is empty and its top row reads `main`, and the next call proves it.
 - **The branch**, on the top row, is in the view: the space record's `checkout.branch` while the
   session works in its space's checkout (made by its launch, or entered); otherwise the branch
   checked out at its `path`, read from `HEAD` by the command itself on each call (no process, so no
@@ -411,9 +419,9 @@ main · working · <model> high · 90% 42m · 5h 37% · 7d 9%                   
 - **Narrow**: the line fits the pane, the context kept whole at the right edge at least a
   separator's width from the rest. Too long, it leaves out the model and effort, then the seven
   days' limit, then the five hours', then the cache; what still does not fit on the left is cut with
-  `…`. The name, the activity and the context stay; only a strip narrower than the context cuts it.
-- **Colours**: the name bold in its program's colour, main's or the workers'; the rest in the terminal's own
-  foreground with faint separators; the context and each limit in the palette's green, yellow or
+  `…`. Main's `⧗ 2` stays whole before the context while both fit, and goes before the context is
+  cut; the context stays, and only a strip narrower than the context cuts it.
+- **Colours**: the terminal's own foreground with faint separators; the context and each limit in the palette's green, yellow or
   red from 50% and 80% used; the cache in the palette's cyan while it is warm, faint once it expired.
 - **How fresh**: a Claude Code worker's mod samples after each main-loop step's response, at a
   turn's end and with each heartbeat ([claude.md](claude.md#telemetry)), so the context grows

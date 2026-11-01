@@ -1,8 +1,9 @@
 // The strip, the row under a pane, main's and each worker's (docs/shell.md,
-// "The strip"): who the session is, what it does, its model, its cache, on
-// main's the account's limits, and at the right end how much of its context
-// it used, from rewake's own records, the same for every harness. Where it
-// works is the pane's top row (path.tsx).
+// "The strip"): its model, its cache, on main's the account's limits and the
+// reports main waits on, and at the right end how much of its context it
+// used, from rewake's own records, the same for every harness. Who the
+// session is and where it works are the pane's top row (path.tsx); what it
+// does is the button's mark.
 import { RGBA } from "@opentui/core";
 import { createMemo, createSignal, For, onCleanup } from "solid-js";
 import { ShellRow, selecting, separator } from "./bar.tsx";
@@ -47,7 +48,7 @@ export function mainStrip(): StripState {
 
 type Part = {
   text: string;
-  kind: "name" | "plain" | "context" | "cache" | "limit" | "dev";
+  kind: "plain" | "context" | "cache" | "limit" | "dev" | "awaited";
   fill?: number;
   cold?: boolean;
 };
@@ -62,13 +63,6 @@ export function tokens(n: number): string {
   if (n >= 1_000_000) return `${Math.round(n / 100_000) / 10}M`;
   if (n >= 1000) return `${Math.round(n / 1000)}k`;
   return String(n);
-}
-
-// activityOf is the verdict's label, as rewake list's Status has it; an
-// unknown activity says nothing in a narrow line.
-function activityOf(s: Session): string | undefined {
-  if (!s.verdict || s.verdict.activity === "unknown") return undefined;
-  return s.verdict.label;
 }
 
 // Mark is what a worker's button edge says (docs/shell.md, "The bar"), as
@@ -118,32 +112,36 @@ function limitOf(s: Session, window: string): Part | undefined {
   return { text: `${window} ${limit.percent}%`, kind: "limit", fill: limit.percent };
 }
 
-// nameOf is who the session is, with its type after it.
-export function nameOf(state: StripState): string {
-  const type = state.status?.type;
-  return type ? `${state.session} (${type})` : state.session;
+// awaitedOf is main's `⧗ 3`, the reports it waits on: the last part of its
+// room work as internal/core/work writes it. It stands on main's strip, not in
+// Claude Code's hint line, where the text the harness keeps adding before it
+// moved it all the time (the owner, November 1, 2026). A worker's room work
+// stays on its input's rule, the strip shows none of it.
+function awaitedOf(s: Session): Part | undefined {
+  if (!s.own) return undefined;
+  const text = s.work?.split(" · ").find((part) => part.startsWith("⧗ "));
+  return text ? { text, kind: "awaited" } : undefined;
 }
 
-// Line is the strip's parts for a width: the left run from the name, and the
-// context, which stands at the strip's right edge.
-export type Line = { left: Part[]; context?: Part };
+// Line is the strip's parts for a width: the left run, and at the strip's
+// right edge main's awaited reports, then the context.
+export type Line = { left: Part[]; awaited?: Part; context?: Part };
 
-// stripParts is the line for a width: the name, activity and context always,
-// the context at the right edge; the model, then the seven days' limit, then
-// the five hours', then the cache left out while the line is too long, and
-// the rest of the left cut at the width. The account's limits are main's
-// alone: a worker's strip never shows them.
+// stripParts is the line for a width: the context always, at the right edge,
+// main's awaited reports just before it while both fit; the model, then the
+// seven days' limit, then the five hours', then the cache left out while the
+// line is too long, and the rest of the left cut at the width. The account's
+// limits are main's alone: a worker's strip never shows them. No pane's strip
+// names its session or says what it does (the owner, November 1, 2026): the
+// name is the top row's, the activity the button's mark.
 export function stripParts(state: StripState, width: number, now = Date.now()): Line {
   const s = state.status;
-  const activity = s && activityOf(s);
   const cache = s && cacheOf(s, now);
   const five = s?.own ? limitOf(s, "5h") : undefined;
   const seven = s?.own ? limitOf(s, "7d") : undefined;
   // In the order shown; the optional ones are left out, 1 first, 4 last.
   const all: ((Part & { optional?: number }) | undefined)[] = [
-    { text: nameOf(state), kind: "name" },
     state.face ? { text: `dev ${state.face}`, kind: "dev" } : undefined,
-    activity ? { text: activity, kind: "plain" } : undefined,
     // Thinking is named only while it is on: off and unknown say nothing.
     s?.model
       ? {
@@ -162,7 +160,14 @@ export function stripParts(state: StripState, width: number, now = Date.now()): 
   // left run; what is left of the width is the left's.
   if (context && context.text.length > width)
     context = { ...context, text: `${context.text.slice(0, Math.max(width - 1, 0))}…` };
-  const right = context ? context.text.length + separator.length : 0;
+  // The awaited reports stand whole before the context, or not at all.
+  let awaited = s ? awaitedOf(s) : undefined;
+  const pinned = (context?.text.length ?? 0) + (context ? separator.length : 0);
+  if (awaited && awaited.text.length + pinned > width) awaited = undefined;
+  const right = [awaited, context].reduce(
+    (n, p) => n + (p ? p.text.length + separator.length : 0),
+    0,
+  );
   const length = () =>
     parts.reduce((n, p) => n + p.text.length, 0) + separator.length * (parts.length - 1);
   for (const drop of [1, 2, 3, 4])
@@ -178,7 +183,7 @@ export function stripParts(state: StripState, width: number, now = Date.now()): 
     left.push({ ...part, text });
     room -= sep + text.length;
   }
-  return { left, context };
+  return { left, awaited, context };
 }
 
 // fillColour is the context's colour by how full it is, the owner's own
@@ -188,13 +193,12 @@ function fillColour(fill: number | undefined): RGBA {
   return RGBA.fromIndex(fill >= 80 ? 1 : fill >= 50 ? 3 : 2);
 }
 
-// Strip is the strip of a pane width wide, its name in the colour of the
-// pane's program: a shell's row like the bar, its line fitted to the width
-// less the padding, the context against its right end.
+// Strip is the strip of a pane width wide: a shell's row like the bar, its
+// line fitted to the width less the padding, main's awaited reports and the
+// context against its right end.
 export function Strip(props: {
   state: () => StripState;
   width: number;
-  colour: string;
   theme: Theme;
   pick: () => void;
 }) {
@@ -210,9 +214,7 @@ export function Strip(props: {
           {(part, i) => (
             <>
               {i() > 0 ? <span style={{ fg: props.theme.faint }}>{separator}</span> : ""}
-              {part.kind === "name" ? (
-                <b style={{ fg: props.colour }}>{part.text}</b>
-              ) : part.kind === "limit" ? (
+              {part.kind === "limit" ? (
                 <span style={{ fg: fillColour(part.fill) }}>{part.text}</span>
               ) : part.kind === "dev" ? (
                 <span style={{ fg: RGBA.fromIndex(5) }}>{part.text}</span>
@@ -227,6 +229,14 @@ export function Strip(props: {
           )}
         </For>
       </text>
+      <text
+        height={1}
+        wrapMode="none"
+        flexShrink={0}
+        fg={plain}
+        {...selecting(props.theme)}
+        content={line().awaited ? `${line().awaited?.text}${line().context ? separator : ""}` : ""}
+      />
       <text
         height={1}
         wrapMode="none"

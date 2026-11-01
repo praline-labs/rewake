@@ -2,7 +2,10 @@
 // line the face draws as the input's rule (docs/face.md, "The look";
 // shell/src/face/rule.ts), so a native pane and a face pane tell the same:
 // the briefs it was given with their ticks and the reports it waits on, as
-// the host's heartbeat answers them (internal/core/work). The terminal
+// the host's heartbeat answers them (internal/core/work). Main's tail leaves
+// out the reports it waits on, `⧗ 3`: the text Claude Code keeps adding
+// before the tail moved them all the time, so they stand on main's strip in
+// the shell (the owner, November 1, 2026). The terminal
 // program keeps its own line and its pills and cuts our tail first where the
 // row ends, so nothing is only here: the briefs view and the commands say the
 // same. It only informs: its code answers no verdict and no prompt, and a
@@ -14,12 +17,14 @@ import type { Register } from "claude-code";
 // it, so it waits for nothing.
 export class Band {
   private live = false;
+  private main = false;
   private text = "";
   private redraw: () => void = () => {};
 
-  // begin makes the band live for a rewake run.
-  begin(redraw: () => void) {
+  // begin makes the band live for a rewake run of the given role.
+  begin(redraw: () => void, role: string | undefined) {
     this.live = true;
+    this.main = role === "main";
     this.redraw = redraw;
   }
 
@@ -37,10 +42,14 @@ export class Band {
     return this.live ? this.text : undefined;
   }
 
-  // tail is what the band adds to the hint line: the work, nothing when
-  // there is none or outside a rewake run.
+  // tail is what the band adds to the hint line: the work, main's without
+  // its last part `⧗ 3`, nothing when there is none or outside a rewake run.
   get tail(): string | undefined {
-    return this.live && this.text ? this.text : undefined;
+    if (!this.live) return undefined;
+    const parts = this.text
+      .split(" · ")
+      .filter((part) => part && !(this.main && part.startsWith("⧗ ")));
+    return parts.length > 0 ? parts.join(" · ") : undefined;
   }
 }
 

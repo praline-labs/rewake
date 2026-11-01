@@ -361,13 +361,17 @@ keeps its native interface and gets the run's room work added to the hint line u
 input (`hooks/band.ts`, a `ui.render` hook on `PromptHint` that sets the `tail` prop): the open briefs
 it was given with their ticks, `brief 57 3/6`, and the reports it waits on, `⧗ 3` (`rewake inbox
 --awaited`'s count), joined by ` · ` (`internal/core/work`, the same text the face's input rule
-carries); nothing when there is none. Native's own text and pills stay as they are, and the tail
+carries); nothing when there is none. Main's tail leaves out its `⧗ 3`, which stands on main's
+strip in the shell instead ([shell.md](shell.md#the-strip)): the text Claude Code keeps adding to the
+hint line before our tail moved it all the time (the owner, November 1, 2026). The band takes the run's
+role from `REWAKE_ROLE`, and every poll still names the work as the host told it, the `⧗` included,
+so dropping it asks the host for nothing. Native's own text and pills stay as they are, and the tail
 follows them dim, so it reads `⏵⏵ auto mode on (shift+tab to cycle) · brief 57 3/6`. It is the line
 under the input, as close as a mod can draw to it, and shows idle and working alike. The mode is not
 drawn: native's footer shows it. A narrow row cuts ours first, the engine's own rule — the tail goes
 before native's text is touched — so nothing is only there: the briefs view and `rewake brief show`,
-`rewake inbox --awaited` say the same, and the name and context are on the shell's strip
-([shell.md](shell.md#the-strip)). It is information only: no button, nothing to answer.
+`rewake inbox --awaited` say the same, the name is on the shell's top row of the pane and the context
+on its strip ([shell.md](shell.md#the-pane)). It is information only: no button, nothing to answer.
 
 The work comes with the heartbeat, so the render hook waits for nothing: every `mod/alive` answer
 carries the run's `work` as the host reads it (`modhost.Config.Work`, which the wrapper fills from

@@ -48,8 +48,9 @@ Each snapshot carries the session's activity, with its own observation time and 
 What it amounts to is judged once, in `internal/core/session` (`Snapshot.Judge`, the
 **activity verdict**), and every reader renders that verdict and derives nothing: `rewake list`'s
 Status and the letters' state header take its label, main's report to herdr its activity and
-what it waits on ([launch.md](launch.md#herdr)), and the shell's strip its label and the worker's
-button its mark ([shell.md](shell.md#the-bar)). The verdict is judged at the read, never stored,
+what it waits on ([launch.md](launch.md#herdr)), and the worker's button in the shell its mark
+([shell.md](shell.md#the-bar)); the shell's strip shows no activity since November 1, 2026 (the
+owner's word). The verdict is judged at the read, never stored,
 and JSON carries it as the telemetry's `verdict` — `activity`, `label`, `blocked`, `stale`,
 `mark` — beside the fields it was judged from. The activity is one of:
 
