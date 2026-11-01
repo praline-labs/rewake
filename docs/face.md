@@ -299,8 +299,8 @@ what is under it, `fold.ts` runs of calls, `markdown.ts` and
   accent, without the bracket, as Claude Code 2.1.310's spinner says `Compacting conversation…`
   (brief 79, November 1, 2026). Once a compaction ends, the line shows nothing of it, as Claude Code's
   spinner shows nothing after one. A compaction inside a working turn, pi's own at the threshold, is
-  part of that turn: the line goes back to the working turn and its `Done in` counts the compaction
-  in. One outside a turn leaves the last turn's `Done in` as it was. pi's adapter says it
+  part of that turn: the line goes back to the working turn, its phase and tokens counted from the
+  turn's start as before, and its `Done in` counts the compaction in. One outside a turn leaves the last turn's `Done in` as it was. pi's adapter says it
   ([research-pi.md](research-pi.md), "Compaction on the face"); the Claude Code mod says no
   compaction to the mirror yet. The glyph set in use is `orbit4`
   in `face/src/turn.ts`; others stay beside it, unused, for a switch: the one-dot orbit
