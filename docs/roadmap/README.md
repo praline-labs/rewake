@@ -14,9 +14,7 @@ The architecture pass of November 1, 2026 (the owner asked for every candidate, 
 order): deepening the modules the last stretch changed most, each step one module with its tests
 at its interface, the old tests that reached past it removed.
 
-1. The face's input rule from the mirror alone (mode and thinking level beside each other), and
-   the shell's `check.ts` derived from the face's `messages.ts`.
-2. The face's worker as a module with an interface (post, socket, clock), tested in process.
+1. The face's worker as a module with an interface (post, socket, clock), tested in process.
 
 rewake's face ([face.md](../face.md)), after its first slice — a dev worker on Claude Code and every
 pi worker, read with a prompt back, the switch and hot reload:
