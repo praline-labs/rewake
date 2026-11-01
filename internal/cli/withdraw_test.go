@@ -7,7 +7,6 @@ import (
 	"regexp"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/registry"
@@ -19,9 +18,7 @@ import (
 func sender(t *testing.T) (string, registry.Session) {
 	t.Helper()
 	dir, web := questionSender(t)
-	awaitStatus = func(string, string, string, time.Duration, func() bool) (mail.Status, bool) {
-		return mail.Status{State: mail.Delivered, Via: "socket"}, true
-	}
+	serveOnDisk(t, dir, "api", delivered)
 	return dir, web
 }
 

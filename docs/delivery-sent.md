@@ -31,7 +31,8 @@ copying it cannot act on whichever candidate happened to sort first.
 
 ## Withdraw (`rewake withdraw <id>`)
 
-Under the recipient's mailbox lock, waited for as long as a reader waits. The readable copy in
+Under the recipient's mailbox lock, waited for as long as a reader waits
+(`mail.Box.WithdrawSent`). The readable copy in
 `unread/` is made before any notice ([delivery.md](delivery.md#servicing-process-the-wrapper)),
 which decides the outcome:
 
@@ -126,7 +127,7 @@ tombstone and the recall note are the answer to that notice, within what a recal
 
 ## Edit (`rewake edit <id> <text>`)
 
-A withdrawal and a new letter of the same kind under one lock, never an edit in place: the
+A withdrawal and a new letter of the same kind under one lock (`mail.Box.Replace`), never an edit in place: the
 message may be a hard link in two directories, the preview has shown its first line already,
 and read is final only while an id's text never changes. The old id becomes a tombstone with
 `withdrawn.replacedBy` and the text `Rewake: <sender> replaced its <kind> of HH:MM:SS before
@@ -166,7 +167,7 @@ wants; one withdraw per addendum is the cheaper mistake to fix.
 
 **The old id names the replacement.** After an edit the id main was printed first is still the
 name it has for the task, so every action by it acts on the letter that stands now, through as
-many edits as there were (`currentSent`): `rewake withdraw <old id>` withdraws the replacement
+many edits as there were (`mail.Box.CurrentSent`): `rewake withdraw <old id>` withdraws the replacement
 with its addenda, and `rewake edit <old id>` replaces the replacement. The answer says so first
 — `Rewake: <old id> was replaced by <new id>; withdrawing <new id>.`, or `editing` — and
 `--json` gives the letter acted on as `id` for a withdrawal and `replaces` for an edit, with
@@ -194,8 +195,9 @@ withdrawn, is a note, was already reported on (send it as a new task), failed, o
 recipient's run has ended; and with exit 2 beside `--notify` or `--question`. An id that
 `rewake edit` replaced adds to its replacement.
 
-The checks are made twice: once without a lock, for a quick refusal, and again under the
-recipient's mailbox lock, with the addendum written under the same hold. The turn end that
+The checks are made twice: once without a lock, for a quick refusal (`mail.Box.TaskToAddTo`),
+and again under the recipient's mailbox lock, with the addendum written under the same hold
+(`mail.Box.Send`). The turn end that
 writes a report holds that lock too, so a report lands either before the second look, which
 then refuses, or after the addendum is in the mailbox. An addendum in the mailbox before the
 report is read with the task and settled by it, or read after it and owed on its own, as

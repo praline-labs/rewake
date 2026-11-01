@@ -9,9 +9,11 @@ import (
 
 // Box is one run's own mail: the room it lives in, its session's name and the
 // run's epoch. What a run does with its own mailbox hangs off it, so a caller
-// names the triple once and cannot pair a name with another run's epoch; what
-// touches another session's mailbox — a delivery to a recipient, a status, a
-// withdrawal — stays a function that names whose mailbox it is. The epoch may
+// names the triple once and cannot pair a name with another run's epoch. So do
+// its acts on the letters it sent (sent_letter.go), whose recipient each letter
+// names. A low-level step in another session's mailbox — a delivery to a
+// recipient, a status, the withdrawal itself — stays a function that names
+// whose mailbox it is. The epoch may
 // be empty for what needs only the mailbox (AvailableUnread, ReserveAnswer).
 type Box struct {
 	dir, name, epoch string

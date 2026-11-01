@@ -5,7 +5,6 @@ import (
 	"os"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/registry"
@@ -94,16 +93,17 @@ func TestStoppedWithNobodyWaitingSendsNothing(t *testing.T) {
 
 func TestAStoppedQuestionReturnsAndLeavesTheLaterResultReadable(t *testing.T) {
 	dir, web := questionSender(t)
-	var question string
-	awaitStatus = func(_, _, id string, _ time.Duration, _ func() bool) (mail.Status, bool) {
-		question = id
+	asked := make(chan string, 1)
+	serveOnDisk(t, dir, "api", func(id string) (mail.Status, bool) {
+		asked <- id
 		rawUnread(t, dir, "web", map[string]any{"from": "api", "kind": "stopped", "toEpoch": web.Epoch(), "inReplyTo": []string{id}, "text": "the person at the keyboard stopped this turn"})
 		return mail.Status{State: mail.Delivered}, true
-	}
+	})
 	code, _, errOut := run("send", "api", "work", "--question", "--wait", "1")
 	if code != ExitFailed {
 		t.Fatalf("stopped question: %d %s", code, errOut)
 	}
+	question := <-asked
 	rawUnread(t, dir, "web", map[string]any{"from": "api", "kind": "finished", "toEpoch": web.Epoch(), "inReplyTo": []string{question}, "text": "continued result"})
 	t.Setenv(state.SessionEnv, "web")
 	t.Setenv(state.EpochEnv, web.Epoch())

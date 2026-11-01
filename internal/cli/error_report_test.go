@@ -5,7 +5,6 @@ import (
 	"os"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/registry"
@@ -134,10 +133,10 @@ func TestIdentifiedFailuresAreNotRoutedAgainAfterTheirWaitsClear(t *testing.T) {
 
 func TestQuestionsReturnAnErrorOutcome(t *testing.T) {
 	dir, peer := questionSender(t)
-	awaitStatus = func(_, _, id string, _ time.Duration, _ func() bool) (mail.Status, bool) {
+	serveOnDisk(t, dir, "api", func(id string) (mail.Status, bool) {
 		rawUnread(t, dir, "web", map[string]any{"kind": "error", "text": "failure", "toEpoch": peer.Epoch(), "inReplyTo": []string{id}})
 		return mail.Status{State: mail.Delivered}, true
-	}
+	})
 	code, out, errOut := run("send", "api", "question", "--question", "--wait", "0.2", "--json")
 	if code != ExitFailed || !strings.Contains(out, `"kind": "error"`) || !strings.Contains(out, `"answer": "failure"`) {
 		t.Fatalf("question=%d %s %s", code, out, errOut)

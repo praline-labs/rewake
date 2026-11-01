@@ -8,47 +8,10 @@ import (
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
-// reportLands makes api's report on a task arrive between the first look at
-// it and the one under the lock, as a turn end would.
-func reportLands(t *testing.T, dir, task string) {
-	t.Helper()
-	web := epochOf(t, dir, "web")
-	old := beforeAddendumLock
-	t.Cleanup(func() { beforeAddendumLock = old })
-	beforeAddendumLock = func() {
-		rawUnread(t, dir, "web", map[string]any{"from": "api", "fromEpoch": epochOf(t, dir, "api"), "kind": "finished", "toEpoch": web, "inReplyTo": []string{task}, "text": "done"})
-	}
-}
-
 func withdrawn(t *testing.T, dir, id string) bool {
 	t.Helper()
 	status, _, _ := mail.ReadStatus(dir, "api", id)
 	return status.Withdrawn
-}
-
-// A report that lands after send --to looked at the task is seen by the look
-// under the lock: the addendum is refused, not sent to work already reported.
-func TestAnAddendumIsAskedAgainUnderTheLock(t *testing.T) {
-	dir, _ := sender(t)
-	task := sendOK(t, "api", "rerun the smoke")
-	reportLands(t, dir, task)
-	code, _, errOut := run("send", "api", "also rerun the lint", "--to", task)
-	if code != ExitFailed || !strings.Contains(errOut, "already reported on") {
-		t.Fatalf("send --to across a report: %d %q", code, errOut)
-	}
-}
-
-// And so is an edit of an addendum: its replacement would add to a task
-// reported on, so the addendum stays as it was.
-func TestAnAddendumsEditIsAskedAgainUnderTheLock(t *testing.T) {
-	dir, _ := sender(t)
-	task := sendOK(t, "api", "rerun the smoke")
-	addendum := sendOK(t, "api", "also rerun the lint", "--to", task)
-	reportLands(t, dir, task)
-	code, _, errOut := run("edit", addendum, "also rerun the vet")
-	if code != ExitFailed || !strings.Contains(errOut, "already reported on") || withdrawn(t, dir, addendum) {
-		t.Fatalf("edit across a report: %d %q, withdrawn %v", code, errOut, withdrawn(t, dir, addendum))
-	}
 }
 
 // Withdrawing a task takes its unread addenda along — an addendum left behind

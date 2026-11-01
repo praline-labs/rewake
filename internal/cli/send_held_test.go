@@ -15,30 +15,29 @@ import (
 
 // holdEverything makes the recipient's harness hold whatever it is sent, and
 // calls then with the message id once the hold is reported.
-func holdEverything(t *testing.T, then func(id string)) {
+func holdEverything(t *testing.T, dir string, then func(id string)) {
 	t.Helper()
-	previous := awaitStatus
-	t.Cleanup(func() { awaitStatus = previous })
-	awaitStatus = func(_ string, _ string, id string, _ time.Duration, _ func() bool) (mail.Status, bool) {
+	serveOnDisk(t, dir, "api", func(id string) (mail.Status, bool) {
 		if then != nil {
 			then(id)
 		}
 		return mail.Status{State: mail.Held, Via: "socket", Detail: "the session holds the notice"}, true
-	}
+	})
 }
 
 // A held message was accepted and not delivered: exit 3, and it says held.
 func TestAHeldSendIsNotReportedDelivered(t *testing.T) {
-	liveSession(t, "api")
-	holdEverything(t, nil)
-	code, out, errOut := run("send", "api", "rerun the smoke")
+	dir := liveSession(t, "api")
+	holdEverything(t, dir, nil)
+	// Held is no final answer, so the wait runs out: a short one.
+	code, out, errOut := run("send", "api", "rerun the smoke", "--wait", "0.2")
 	if code != 3 {
 		t.Fatalf("exit %d, want 3; stdout %q stderr %q", code, out, errOut)
 	}
 	if !strings.HasPrefix(out, "Rewake: held for api: the session holds the notice") {
 		t.Fatalf("stdout %q", out)
 	}
-	code, out, _ = run("send", "api", "rerun the smoke", "--json")
+	code, out, _ = run("send", "api", "rerun the smoke", "--wait", "0.2", "--json")
 	var model struct {
 		State string `json:"state"`
 	}
@@ -51,7 +50,7 @@ func TestAHeldSendIsNotReportedDelivered(t *testing.T) {
 // held there would promise a delivery nobody makes.
 func TestAHoldInAnEndedSessionFails(t *testing.T) {
 	dir := liveSession(t, "api")
-	holdEverything(t, func(string) {
+	holdEverything(t, dir, func(string) {
 		if err := os.Remove(state.SessionPath(dir, "api")); err != nil {
 			t.Error(err)
 		}
@@ -69,7 +68,7 @@ func TestAQuestionStopsWaitingWhenItsHoldFails(t *testing.T) {
 	web := otherRun(t, dir, "web")
 	t.Setenv(state.SessionEnv, "web")
 	t.Setenv(epochEnv, web.Epoch())
-	holdEverything(t, func(id string) {
+	holdEverything(t, dir, func(id string) {
 		go func() {
 			time.Sleep(300 * time.Millisecond)
 			status, _ := json.Marshal(mail.Status{State: mail.Failed, Via: "socket", Detail: "the hold expired", At: time.Now()})

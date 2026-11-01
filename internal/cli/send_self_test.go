@@ -53,30 +53,17 @@ func TestSendChecksFlagsBeforeTheSession(t *testing.T) {
 }
 
 // A task or a heads-up waits for its delivery as long as --wait says: it once
-// stopped at five seconds and said it had waited the whole time asked.
+// stopped at five seconds and said it had waited the whole time asked. A
+// question gives the delivery a few seconds of it, and waits the rest for its
+// answer.
 func TestSendWaitsForTheDeliveryAsLongAsAsked(t *testing.T) {
 	for _, c := range []struct {
-		kind string
+		kind messageKind
 		want time.Duration
-	}{{"", 12 * time.Second}, {"--notify", 12 * time.Second}} {
-		t.Run("kind "+c.kind, func(t *testing.T) {
-			_, _, peer := stateCaller(t, "main")
-			var waited time.Duration
-			previous := awaitStatus
-			awaitStatus = func(_, _, _ string, wait time.Duration, _ func() bool) (mail.Status, bool) {
-				waited = wait
-				return mail.Status{State: mail.Delivered}, true
-			}
-			t.Cleanup(func() { awaitStatus = previous })
-			args := []string{"send", peer.Name, "do it", "--wait", "12"}
-			if c.kind != "" {
-				args = append(args, c.kind)
-			}
-			_, _, _ = run(args...)
-			if waited != c.want {
-				t.Fatalf("waited %s for the delivery, want %s", waited, c.want)
-			}
-		})
+	}{{taskKind, 12 * time.Second}, {noteKind, 12 * time.Second}, {questionKind, defaultWait}} {
+		if got := deliveryWait(c.kind, 12*time.Second); got != c.want {
+			t.Errorf("%s waits %s for the delivery, want %s", c.kind.kind, got, c.want)
+		}
 	}
 }
 

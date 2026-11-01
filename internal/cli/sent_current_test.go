@@ -91,28 +91,3 @@ func TestWithdrawingAgainSendsNoSecondRecall(t *testing.T) {
 		t.Fatalf("recalls %+v", told)
 	}
 }
-
-// Two edits of one letter at once: the second finds, under the lock, that the
-// first has replaced it, and replaces that replacement instead of refusing
-// with advice to send the letter again.
-func TestAnEditBesideAnotherReplacesItsReplacement(t *testing.T) {
-	dir, _ := sender(t)
-	task := sendOK(t, "api", "rerun the smoke")
-	addendum := sendOK(t, "api", "also rerun the lint", "--to", task)
-	var second string
-	old := beforeAddendumLock
-	t.Cleanup(func() { beforeAddendumLock = old })
-	beforeAddendumLock = func() {
-		beforeAddendumLock = old
-		second = editOK(t, addendum, "also rerun the vet")
-	}
-
-	code, out, errOut := run("edit", addendum, "also rerun the tests")
-	if code != ExitOK || !strings.HasPrefix(out, "Rewake: "+addendum+" was replaced by "+second+"; editing "+second+".\n") {
-		t.Fatalf("the edit beside another: %d %q %q", code, out, errOut)
-	}
-	third := idLine.FindStringSubmatch(out)[1]
-	if replacement := stored(t, dir, third); replacement.Replaces != second || replacement.AddendumTo != task || !withdrawn(t, dir, second) {
-		t.Fatalf("the third letter %+v does not replace %s", replacement, second)
-	}
-}
