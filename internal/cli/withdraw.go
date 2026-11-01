@@ -136,11 +136,11 @@ func withdrawLine(model withdrawModel, result mail.Withdrawal, readAddendum bool
 // underMailboxLock runs fn under the recipient's mailbox lock, waiting for it
 // as long as a reader does.
 func underMailboxLock(dir, name string, fn func() error) error {
-	wait, cancel := context.WithTimeout(context.Background(), readerLockWait)
+	wait, cancel := context.WithTimeout(context.Background(), mail.ReadLockWait)
 	defer cancel()
 	err := state.WithMailboxLock(wait, dir, name, fn)
 	if errors.Is(err, state.ErrMailboxBusy) {
-		return fmt.Errorf("the mailbox of %s stayed busy for %s", name, readerLockWait)
+		return fmt.Errorf("the mailbox of %s stayed busy for %s", name, mail.ReadLockWait)
 	}
 	return err
 }

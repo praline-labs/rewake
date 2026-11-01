@@ -46,7 +46,7 @@ inbox.`, and nothing is said when there is none; `--json` carries the count as
 `unread`, 0 included. The count says work is waiting, not that a report is; it counts what plain
 `rewake inbox` reads, mail written for an earlier run of the name included, which owes no
 report. Unread mail
-is looked at before what is owed, and a message in both is counted once, as owed: a
+is looked at before what is owed (`mail.Box.Owed`), and a message in both is counted once, as owed: a
 parallel `rewake inbox` writes the wait record before it moves the message out of
 `unread/`, so a message read between the two looks is found at least once — the other
 order could miss it in both and answer "nothing owed" with nothing unread. "Nothing owed" is not "no work": a worker that asked `--owed`

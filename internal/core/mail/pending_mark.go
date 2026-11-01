@@ -1,33 +1,76 @@
 package mail
 
 import (
-	"github.com/praline-labs/rewake/internal/core/registry"
+	"context"
+	"errors"
+	"time"
 )
 
-// MarkVerdict is what a pending mark found under the mailbox lock, just before
-// it is written.
-type MarkVerdict int
+// pendingLockWait bounds the wait for the mailbox, as reading does.
+const pendingLockWait = 5 * time.Second
 
-const (
-	// VerdictWrite says the turn is not shown ended: it marks.
-	VerdictWrite MarkVerdict = iota
-	// VerdictTurnEnded says an end is on record at or after the mark's time,
-	// or a turn start was recorded after it; no later end's window can hold
-	// the mark.
-	VerdictTurnEnded
-)
+// ErrTurnEnded refuses a pending mark whose turn is shown ended: an end is on
+// record at or after the mark's time, or a turn start was recorded after it,
+// so no later end's window can hold the mark.
+var ErrTurnEnded = errors.New("the turn ended first, so its end reported without this mark")
 
-// JudgeMark decides a mark under the mailbox lock. started is the latest turn
-// start on record, zero when none is. An error writes no mark: a journal that
-// cannot be read may be this turn's end.
-func JudgeMark(dir string, self registry.Session, epoch string, at, started int64) (MarkVerdict, error) {
-	ended, err := endedSince(dir, self.Name, epoch, at)
+// ErrNothingOwed refuses a pending mark of a turn that owes nobody a report:
+// there is nothing to keep open.
+var ErrNothingOwed = errors.New("nothing is owed a report")
+
+// MarkTurnPending marks the running turn of this run, at the boot-clock time
+// at its call started, as not the end of the work, and answers the names of
+// those who wait for its report; that turn's end tells them the work goes on
+// (docs/rules/effects.md, "A pending mark").
+//
+// Every check runs under the mailbox lock, just before the mark, in this
+// order: who waits, the latest turn start, the ends on record. A record that
+// cannot be read writes no mark and is a *StepError naming it: a journal may
+// be this turn's end, a waiter one the mark would speak to. ErrTurnEnded and
+// ErrNothingOwed say why no mark was written. The mark and an end's choice of
+// its mark share the lock, so a mark written before the end's journal is that
+// end's to take, and one after it is never written.
+func (b Box) MarkTurnPending(parent context.Context, text string, at int64) ([]string, error) {
+	ctx, cancel := context.WithTimeout(parent, pendingLockWait)
+	defer cancel()
+	var waiting []string
+	err := b.WithLock(ctx, func(Locked) error {
+		var err error
+		waiting, err = b.markTurnPendingLocked(text, at)
+		return err
+	})
+	if err := lockFailure(err); err != nil {
+		return nil, err
+	}
+	return waiting, nil
+}
+
+func (b Box) markTurnPendingLocked(text string, at int64) ([]string, error) {
+	waiters, err := readWaiters(b.dir, b.name, b.epoch)
 	if err != nil {
-		return 0, err
+		return nil, failedAt(StepWaiters, err)
+	}
+	started, err := latestTurnStart(b.dir, b.name, b.epoch)
+	if err != nil {
+		return nil, failedAt(StepTurnStart, err)
+	}
+	ended, err := endedSince(b.dir, b.name, b.epoch, at)
+	if err != nil {
+		return nil, failedAt(StepEnded, err)
 	}
 	// A later start proves the turn ended; its absence proves nothing.
 	if ended || started > at {
-		return VerdictTurnEnded, nil
+		return nil, ErrTurnEnded
 	}
-	return VerdictWrite, nil
+	if len(waiters) == 0 {
+		return nil, ErrNothingOwed
+	}
+	waiting := make([]string, 0, len(waiters))
+	for _, waiter := range waiters {
+		waiting = append(waiting, waiter.Name)
+	}
+	if err := MarkPending(b.dir, b.name, b.epoch, MarkName(at, NewID()), text, at); err != nil {
+		return nil, failedAt(StepPending, err)
+	}
+	return waiting, nil
 }

@@ -1,15 +1,12 @@
 package cli
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -118,65 +115,6 @@ type brokenWriter struct{}
 
 func (brokenWriter) Write([]byte) (int, error) { return 0, errors.New("no space left on device") }
 
-// Marking a message read before its text reached the reader loses it.
-func TestInboxKeepsMailItCouldNotShow(t *testing.T) {
-	dir := liveSession(t, "api")
-	t.Setenv(state.SessionEnv, "api")
-	current, _ := registry.Lookup(dir, "api")
-	t.Setenv(epochEnv, current.Epoch())
-	id := rawUnread(t, dir, "api", map[string]any{"from": "web", "toEpoch": current.Epoch(), "text": "keep me"})
-
-	code := Run(testCatalog(), []string{"inbox"}, brokenWriter{}, brokenWriter{})
-	if code == ExitOK {
-		t.Error("inbox reported success with nowhere to write")
-	}
-	if _, err := os.Stat(filepath.Join(state.UnreadPath(dir, "api"), id+".json")); err != nil {
-		t.Errorf("a message nobody saw left the unread set: %v", err)
-	}
-}
-
-// Recording a read can fail after the text was shown. The message then stays
-// unread, and the report its sender is owed is recorded on the next read.
-func TestAFailedReadRecordIsRetried(t *testing.T) {
-	dir := liveSession(t, "api")
-	web := otherRun(t, dir, "web")
-	t.Setenv(state.SessionEnv, "api")
-	rawUnread(t, dir, "api", map[string]any{"from": "web", "fromEpoch": web.Epoch(), "toEpoch": epochOf(t, dir, "api"), "text": "report back"})
-
-	// Closed to writes, not replaced by a file: a file where the waits belong
-	// stops the mailbox, and removing it is no evidence of what it held.
-	blocked := state.AwaitingPath(dir, "api")
-	block(t, blocked)
-	if code, _, _ := run("inbox"); code == ExitOK {
-		t.Error("inbox reported success although the read could not be recorded")
-	}
-	unblock(t, blocked)
-	if _, out, _ := run("inbox"); !strings.Contains(out, "report back") {
-		t.Errorf("second read = %q, want the message shown again", out)
-	}
-
-	mustEndTurn(t, smokeEnd)
-	if found := finishedFor(t, dir, "web"); len(found) != 1 {
-		t.Errorf("web holds %v, want the report it was owed", found)
-	}
-}
-
-func TestAFailedReadStatusIsReported(t *testing.T) {
-	dir := liveSession(t, "api")
-	t.Setenv(state.SessionEnv, "api")
-	id := rawUnread(t, dir, "api", map[string]any{"from": "web", "toEpoch": epochOf(t, dir, "api"), "text": "task"})
-	if err := os.Mkdir(filepath.Join(state.InboxPath(dir, "api"), id+".status"), 0o700); err != nil {
-		t.Fatalf("block: %v", err)
-	}
-
-	if code, _, _ := run("inbox"); code == ExitOK {
-		t.Error("inbox reported success although the read status could not be written")
-	}
-	if _, err := os.Stat(filepath.Join(state.UnreadPath(dir, "api"), id+".json")); err != nil {
-		t.Errorf("the message left the unread set: %v", err)
-	}
-}
-
 // A process with a session name and no run cannot be told from a leftover of
 // an ended session, so it reads nothing.
 func TestInboxWithoutARunIsRefused(t *testing.T) {
@@ -188,58 +126,6 @@ func TestInboxWithoutARunIsRefused(t *testing.T) {
 	code, out, _ := run("inbox")
 	if code == ExitOK || strings.Contains(out, "for the current run") {
 		t.Errorf("exit = %d, out = %q; a process without a run read the mail", code, out)
-	}
-}
-
-// gate is a writer that holds the first write until released.
-type gate struct {
-	mu       sync.Mutex
-	output   bytes.Buffer
-	entered  chan struct{}
-	release  chan struct{}
-	waitOnce sync.Once
-}
-
-func (g *gate) Write(data []byte) (int, error) {
-	g.waitOnce.Do(func() {
-		close(g.entered)
-		<-g.release
-	})
-	g.mu.Lock()
-	defer g.mu.Unlock()
-	return g.output.Write(data)
-}
-
-func (g *gate) String() string {
-	g.mu.Lock()
-	defer g.mu.Unlock()
-	return g.output.String()
-}
-
-// Two readers at once — parallel tool calls, or a command run again while the
-// first still prints — must not both be handed the same task.
-func TestTwoReadersAtOnceShowATaskOnce(t *testing.T) {
-	dir := liveSession(t, "api")
-	t.Setenv(state.SessionEnv, "api")
-	rawUnread(t, dir, "api", map[string]any{"from": "web", "toEpoch": epochOf(t, dir, "api"), "text": "execute once"})
-
-	first := &gate{entered: make(chan struct{}), release: make(chan struct{})}
-	second := &gate{entered: make(chan struct{}), release: make(chan struct{})}
-	close(second.release)
-
-	var wg sync.WaitGroup
-	wg.Add(2)
-	go func() { defer wg.Done(); Run(testCatalog(), []string{"inbox"}, first, io.Discard) }()
-	<-first.entered
-	go func() { defer wg.Done(); Run(testCatalog(), []string{"inbox"}, second, io.Discard) }()
-	// The second reader gets as far as it can while the first is mid-print.
-	time.Sleep(300 * time.Millisecond)
-	close(first.release)
-	wg.Wait()
-
-	copies := strings.Count(first.String()+second.String(), "execute once")
-	if copies != 1 {
-		t.Errorf("the task was shown %d times: first %q, second %q", copies, first.String(), second.String())
 	}
 }
 

@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/praline-labs/rewake/internal/core/mail"
@@ -36,36 +37,21 @@ func showOwed(ctx *Context, call Call, dir string, session registry.Session, epo
 			Message: fmt.Sprintf("%s owes no reports: a %s session's reads record no obligation, so --owed has nothing to show. rewake inbox --awaited shows what others owe it.", session.Name, session.Role),
 		}
 	}
-	// Unread first, then owed: a read by a parallel rewake inbox writes the
-	// wait record before it moves the message out of unread/, so a message
-	// read between the two looks lands in both lists, never in neither. The
-	// other order could miss it twice and answer "nothing owed" with nothing
-	// unread — the trap the count is there for. One in both is counted once,
-	// as owed.
-	unread, err := mail.Open(dir, session.Name, "").PeekUnread()
-	if err != nil {
+	summary, err := mail.Open(dir, session.Name, epoch).Owed()
+	var step *mail.StepError
+	switch {
+	case errors.As(err, &step) && step.Step == mail.StepUnread:
 		return failf("could not look at the unread mail of %s: %v; run rewake inbox", session.Name, err)
-	}
-	owed, err := mail.Open(dir, session.Name, epoch).OwedMessages()
-	if err != nil {
+	case err != nil:
 		return failf("could not read what %s owes (%v); nothing is shown rather than part of it; run the same command again", session.Name, err)
 	}
-	messages := make([]mail.Message, 0, len(owed))
-	for _, message := range owed {
+	messages := make([]mail.Message, 0, len(summary.Owed))
+	for _, message := range summary.Owed {
 		messages = append(messages, message.Message)
 	}
-	model := owedModel{Session: session.Name, Messages: make([]owedView, 0, len(owed))}
+	model := owedModel{Session: session.Name, Messages: make([]owedView, 0, len(summary.Owed)), Unread: summary.Unread}
 	for index, view := range withBriefs(dir, viewedMessages(dir, messages), session.Name, epoch) {
-		model.Messages = append(model.Messages, owedView{messageView: view, Kept: owed[index].Kept})
-	}
-	listed := make(map[string]bool, len(owed))
-	for _, message := range owed {
-		listed[message.ID] = true
-	}
-	for _, message := range unread {
-		if mail.AsksForWork(message) && !listed[message.ID] {
-			model.Unread++
-		}
+		model.Messages = append(model.Messages, owedView{messageView: view, Kept: summary.Owed[index].Kept})
 	}
 	return printValue(ctx, model, func() []string { return append(owedLines(model.Messages), unreadHint(model.Unread)...) })
 }

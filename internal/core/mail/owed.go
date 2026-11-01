@@ -84,6 +84,49 @@ func owedMessages(dir, name, epoch string) ([]OwedMessage, error) {
 	return owed, nil
 }
 
+// OwedSummary is what this run owes a report on, and the work waiting unread
+// beside it.
+type OwedSummary struct {
+	// Owed is what this run read and has not yet reported on, oldest read
+	// first (owedMessages).
+	Owed []OwedMessage
+	// Unread counts the tasks and questions waiting unread for any run of the
+	// name, whoever sent them, and not in Owed: it says work is waiting, not
+	// that a report is. A session that asks what it owes after a compaction
+	// must not take "nothing owed" for "no work": a worker once skipped a new
+	// task twice that way.
+	Unread int
+}
+
+// Owed answers what this run owes and the unread work beside it. It only
+// reads and takes no lock. Unread is looked at first, then what is owed: a
+// read in parallel writes its wait record before it moves the letter out of
+// unread/, so a letter read between the two looks is in both, counted once as
+// owed, and never in neither. The other order could miss it twice and answer
+// "nothing owed" with nothing unread. A *StepError names the look that failed:
+// StepUnread or StepOwed; nothing is answered rather than part of it.
+func (b Box) Owed() (OwedSummary, error) {
+	unread, err := peekUnread(b.dir, b.name, "")
+	if err != nil {
+		return OwedSummary{}, failedAt(StepUnread, err)
+	}
+	owed, err := owedMessages(b.dir, b.name, b.epoch)
+	if err != nil {
+		return OwedSummary{}, failedAt(StepOwed, err)
+	}
+	listed := make(map[string]bool, len(owed))
+	for _, message := range owed {
+		listed[message.ID] = true
+	}
+	summary := OwedSummary{Owed: owed}
+	for _, message := range unread {
+		if AsksForWork(message) && !listed[message.ID] {
+			summary.Unread++
+		}
+	}
+	return summary, nil
+}
+
 // owedIDs is the set of message ids this run still owes a report for. An
 // error says a wait record could not be read, and the set may lack an id.
 func owedIDs(dir, name, epoch string) (map[string]bool, error) {

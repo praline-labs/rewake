@@ -351,8 +351,8 @@ Reports reserved for a waiting send are skipped. A verified main caller receives
 answers; workers and plain shells receive none. Message text and receipt identity are
 unchanged.
 
-Under the mailbox lock, the text is printed first. Only once the output got through is each
-message recorded: its sender run in `awaiting/<own epoch>/` (unless it is a `finished` notice
+Under the mailbox lock (`mail.Box.Read`, `internal/core/mail/inbox_read.go`), the text is
+printed first. Only once the output got through is each message recorded: its sender run in `awaiting/<own epoch>/` (unless it is a `finished` notice
 or has no `fromEpoch`), then the `read` status, then the move to `done/`, which is the commit.
 A failure at any step leaves the message unread, and the next `inbox` shows and records it
 again. Two readers at once are serialized: the second finds nothing new.

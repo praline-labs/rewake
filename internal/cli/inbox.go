@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"strings"
-	"time"
 
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/infra/state"
@@ -54,70 +53,39 @@ func handleInbox(ctx *Context, call Call) error {
 	if mode.owed {
 		return showOwed(ctx, call, dir, session, epoch)
 	}
-	// Held from looking to marking. Two readers at once — parallel tool calls,
-	// a command run again while the first still prints — would otherwise both
-	// show the same task, and the server must not record a delivery over a read
-	// that is half done.
-	var failure error
-	wait, cancel := context.WithTimeout(context.Background(), readerLockWait)
-	defer cancel()
-	err = state.WithMailboxLock(wait, dir, session.Name, func() error {
-		// Every run's unread mail, not only this run's: an earlier run of the
-		// name that ended before reading what was announced to it leaves it in
-		// unread/, and nobody else will ever read it.
-		messages, err := mail.Open(dir, session.Name, "").AvailableUnread()
-		if err != nil {
-			failure = failf("could not read the inbox of %s: %v", session.Name, err)
-			return nil
-		}
-		if selected != "" {
-			var found bool
-			for _, message := range messages {
-				if message.ID == selected {
-					messages, found = []mail.Message{message}, true
-					break
-				}
-			}
-			if !found {
-				failure = failf("message %q is not available in this session's unread inbox (unknown, not yet announced, reserved or already read); run rewake inbox --peek", selected)
-				return nil
-			}
-		}
+	request := mail.ReadRequest{Selected: selected, Peek: peek, Reports: mail.OwesReports(session.Role)}
+	_, err = mail.Open(dir, session.Name, epoch).Read(context.Background(), request, func(messages []mail.Message) error {
 		views := fromEarlierRuns(viewedMessages(dir, messages), epoch)
 		if peek {
-			if err := writeInboxPeek(ctx, session.Name, views); err != nil {
-				failure = failf("could not print the inbox overview: %v", err)
-				return nil
-			}
-			return nil
+			return writeInboxPeek(ctx, session.Name, views)
 		}
-		if err := writeInbox(ctx, inboxModel{Session: session.Name, Messages: withBriefs(dir, views, session.Name, epoch)}); err != nil {
-			failure = failf("could not print the messages, so none were marked read: %v", err)
-			return nil
-		}
-		for _, message := range messages {
-			// A task an earlier run never read is lost to its sender, who may
-			// have sent it again: reading it now owes nothing.
-			reports := mail.OwesReports(session.Role) && message.ToEpoch == epoch
-			if err := mail.Open(dir, session.Name, epoch).MarkRead(message, reports); err != nil {
-				failure = failf("the messages were shown, but recording that failed, so they stay unread and show again next time: %v", err)
-				return nil
-			}
-		}
-		return nil
+		return writeInbox(ctx, inboxModel{Session: session.Name, Messages: withBriefs(dir, views, session.Name, epoch)})
 	})
-	if errors.Is(err, state.ErrMailboxBusy) {
-		return failf("the inbox of %s is being read by another command right now; run rewake inbox again in a moment", session.Name)
-	}
-	if err != nil {
-		return failf("could not lock the inbox of %s: %v", session.Name, err)
-	}
-	return failure
+	return readFailure(err, session.Name, selected, peek)
 }
 
-// readerLockWait is how long a reader waits for another reader, or for the
-// server, to let go of the mailbox.
-const readerLockWait = 10 * time.Second
+// readFailure is what a read that stopped tells its caller, by the step it
+// stopped at.
+func readFailure(err error, name, selected string, peek bool) error {
+	var step *mail.StepError
+	switch {
+	case err == nil:
+		return nil
+	case errors.Is(err, state.ErrMailboxBusy):
+		return failf("the inbox of %s is being read by another command right now; run rewake inbox again in a moment", name)
+	case !errors.As(err, &step) || step.Step == mail.StepLock:
+		return failf("could not lock the inbox of %s: %v", name, err)
+	case step.Step == mail.StepSelect:
+		return failf("message %q is not available in this session's unread inbox (unknown, not yet announced, reserved or already read); run rewake inbox --peek", selected)
+	case step.Step == mail.StepShow && peek:
+		return failf("could not print the inbox overview: %v", err)
+	case step.Step == mail.StepShow:
+		return failf("could not print the messages, so none were marked read: %v", err)
+	case step.Step == mail.StepMark:
+		return failf("the messages were shown, but recording that failed, so they stay unread and show again next time: %v", err)
+	}
+	return failf("could not read the inbox of %s: %v", name, err)
+}
 
 // writeInbox prints the messages and reports whether the output got through.
 func writeInbox(ctx *Context, model inboxModel) error {

@@ -80,15 +80,27 @@ built against it ([build-for-failures.md](../build-for-failures.md)).
 
 ## A pending mark
 
-`rewake pending` marks the running turn (`internal/cli/pending.go`), and the mark speaks for
-that turn only. The call takes the boot-clock time it started (`At`); under the mailbox lock,
-just before the mark, it looks for an end of its run on record at or after `At`, or a turn
-start recorded after it (`mail.Box.RecordTurnStart`): either proves the turn ended, and it marks
-nothing and says so, exit 1. A recorded start is the harness's own time of the turn's start,
-never when the report arrived; a missing one proves nothing. A journal that cannot be read
-writes no mark, and the call fails, to be run again. The mark and an end's choice of its mark
-share the mailbox lock, so a mark written before the end's journal is that end's to take, and
-one after it is never written (`mail.EndedSince`).
+`rewake pending` marks the running turn (`mail.Box.MarkTurnPending`,
+`internal/core/mail/pending_mark.go`), and the mark speaks for that turn only. The call takes
+the boot-clock time it started (`At`); under the mailbox lock, just before the mark, it reads
+who waits, then the latest turn start, then the ends on record, and looks for an end of its run
+at or after `At`, or a turn start recorded after it (`mail.Box.RecordTurnStart`): either proves
+the turn ended, and it marks nothing and says so, exit 1. No check is made outside the lock. A
+recorded start is the harness's own time of the turn's start, never when the report arrived; a
+missing one proves nothing. A journal that cannot be read writes no mark, and the call fails,
+to be run again. The mark and an end's choice of its mark share the mailbox lock, so a mark
+written before the end's journal is that end's to take, and one after it is never written
+(`endedSince`, `internal/core/mail/journal_ends.go`).
+
+## Reading a letter
+
+A read is one operation of the mailbox, `mail.Box.Read` (`internal/core/mail/inbox_read.go`):
+under the lock it lists the available unread mail, takes the selected letter if one was named,
+hands what it took to its caller to show, and only after the showing answered marks each
+letter read (E4, E5). Its failure names the step it stopped at (`mail.StepError`), so the
+command says what was left undone. What a session owes and the unread work beside it is
+`mail.Box.Owed` (`internal/core/mail/owed.go`), which only reads and takes no lock: it looks
+at unread mail first, then at what is owed.
 
 ## Retiring a letter
 
