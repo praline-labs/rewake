@@ -18,7 +18,8 @@ Checked October 27, 2026 on herdr 0.9.5 (`herdr --version`), live:
   harness in the next pane is.
 - Every process in a pane inherits `HERDR_ENV=1`, `HERDR_PANE_ID`, `HERDR_BIN_PATH`,
   `HERDR_SOCKET_PATH`, `HERDR_TAB_ID` and `HERDR_WORKSPACE_ID`. A worker's wrapper, under a space
-  host outside main's process tree, still carries them: it inherits main's environment.
+  host outside main's process tree, carried them then, inherited from main's environment; since
+  November 1, 2026 the space host drops them ([launch.md](launch.md#herdr)).
 
 ## The reporting command
 

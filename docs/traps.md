@@ -212,6 +212,18 @@ was fixed in 8924fcb.
 
 *October 21, 2026.*
 
+### Main showed in herdr as `pi` during a worker's live check
+
+While a writer ran a live check of pi in a private room, herdr showed the owner's main as `pi`:
+`herdr pane list` gave the owner's pane the agent `rewake-pi`. The check's main, a `rewake pi`
+started inside the worker, carried `HERDR_PANE_ID` of the owner's pane, which the worker had
+inherited from main's environment; being a main, it reported itself to herdr as that pane's
+agent. The role kept only the worker itself from reporting. The space host now drops every
+`HERDR_*` from its environment, so a worker and whatever it starts carry none
+([launch.md](launch.md#herdr)).
+
+*November 1, 2026.*
+
 ## Arguments and continuing a conversation
 
 ### A positional prompt eaten by a variadic

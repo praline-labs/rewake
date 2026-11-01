@@ -53,3 +53,35 @@ func TestTheWorkerGetsMainsBaseAndNothingOfItsSession(t *testing.T) {
 		}
 	}
 }
+
+// A worker runs in no pane of herdr's, so it carries none of the variables
+// herdr gives main's pane: a main the worker starts, a live check's in a
+// private room, would otherwise report itself as the agent of the person's
+// pane. The space host drops them, so the worker made from its environment
+// has none, while main's own environment is left as it was.
+func TestTheWorkerCarriesNoneOfHerdrsVariables(t *testing.T) {
+	mains := []string{
+		"HOME=/home/someone", "PATH=/usr/bin",
+		"HERDR_ENV=1", "HERDR_PANE_ID=w2:p7M", "HERDR_TAB_ID=w2:t1", "HERDR_WORKSPACE_ID=w2",
+		"HERDR_SOCKET_PATH=/run/herdr.sock", "HERDR_BIN_PATH=/usr/bin/herdr", "HERDR_STARTUP_CWD=/home/someone",
+	}
+	given := slices.Clone(mains)
+	host := hostEnv(given, Spec{Base: "/tmp/rewake-1000", Room: "work"})
+	worker, err := WorkerEnv(host, "/tmp/rewake-1000", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, kv := range slices.Concat(host, worker) {
+		if strings.HasPrefix(kv, "HERDR_") {
+			t.Errorf("the space host or the worker carries %s", kv)
+		}
+	}
+	for _, kept := range []string{"HOME=/home/someone", "PATH=/usr/bin"} {
+		if !slices.Contains(worker, kept) {
+			t.Errorf("the worker lacks %s: %q", kept, worker)
+		}
+	}
+	if !slices.Equal(given, mains) {
+		t.Errorf("main's environment was changed: %q", given)
+	}
+}
