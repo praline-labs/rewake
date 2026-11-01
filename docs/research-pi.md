@@ -594,12 +594,16 @@ table of its vocabulary, [face.md](face.md#calls)), tested by `mirror.test.ts`, 
   (`interactive-mode.js`, `message_end`: the message and the calls it asked for end so).
   `auto_retry_start`/`auto_retry_end` go to the session's own listeners, never to an
   extension, and the extensions' context reads no retry setting, so the extension infers them
-  (brief 56): an `agent_start` within a run whose last message failed is a retry. The mirror's
-  shape is unchanged: each failure is the `notice` above, and a run that settles not aborted after
-  retries whose last attempt failed adds the notice `Error: Retry failed after N attempts:
-  <error>`; an abort after retries ends `Aborted after N retry attempt(s)` as pi
-  says it. The face reads a working turn with failures last as a retry,
-  `Retrying (attempt N)…` in amber ([face.md](face.md), "The look"; seen live, [research-face.md](research-face.md)). Not mirrored: the retry limit and
+  (brief 56): an `agent_start` within a run whose last message failed is a retry. Each failure is
+  the `notice` above, and a run that settles not aborted after retries whose last attempt failed
+  adds the notice `Error: Retry failed after N attempts: <error>`; an abort after retries ends
+  `Aborted after N retry attempt(s)` as pi says it. Each failed message, a call it asked for or
+  not, is also sent as the turn's attempt, `turn` `working` with `retry` N, the failures in a row
+  as pi's screen counts them, and the first item that comes back after it as `working` with none
+  (brief 69, November 1, 2026): a run that still works after a failure is pi trying again, since
+  pi settles a failure it does not retry at once, so the attempt is said at the failure, while
+  pi waits, as pi's own spinner is. The face draws `Retrying (attempt N)…` in amber from it
+  ([face.md](face.md), "The turn's times are the model's"; seen live, [research-face.md](research-face.md)). Not mirrored: the retry limit and
   the delay, an Esc during the wait (no `message_end` comes), and an `agent_start` after an
   overflow's compaction, which counts as a retry.
 - **Limits.** pi 1.4.0 draws no rate-limit warning, usage meter or reset time: a provider's

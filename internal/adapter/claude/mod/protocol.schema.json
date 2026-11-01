@@ -289,6 +289,7 @@
         "part": {"type": "integer", "description": "is a settle's part, from 0."},
         "of": {"type": "integer", "description": "is how many parts the settle has."},
         "lost": {"type": "integer", "description": "counts the events a resync stands for."},
+        "retry": {"type": "integer", "description": "is how many of the working turn's requests failed in a row, on a turn event that says working; the mod sends none, as Claude Code tells a mod of no retry (docs/research-claude-mod.md)."},
         "permit": {"$ref": "#/$defs/MirrorPermit", "description": "is how the call of a result was let run or refused, where the mod could tell."},
         "mode": {"type": "string", "description": "is the session's permission mode as Claude Code names it, on a mode event."}
       },

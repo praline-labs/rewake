@@ -17,6 +17,7 @@ type WireEvent struct {
 	Part   int        `json:"part,omitempty"`
 	Of     int        `json:"of,omitempty"`
 	Lost   int        `json:"lost,omitempty"`
+	Retry  int        `json:"retry,omitempty"`
 	Permit *Permit    `json:"permit,omitempty"`
 	// Mode is the session's permission mode in its harness's own name,
 	// which Decode turns into the model's word by the adapter's table.
@@ -45,7 +46,7 @@ func Decode(sent []WireEvent, modes map[string]PermissionMode) []Event {
 		}
 		events = append(events, Event{
 			Kind: e.Kind, ID: e.ID, Turn: e.Turn, Block: e.Block, Text: e.Text, Origin: e.Origin, Name: e.Name,
-			Status: e.Status, State: e.State, Part: e.Part, Of: e.Of, Lost: e.Lost, Permit: e.Permit, Mode: modes[e.Mode],
+			Status: e.Status, State: e.State, Part: e.Part, Of: e.Of, Lost: e.Lost, Retry: e.Retry, Permit: e.Permit, Mode: modes[e.Mode],
 		})
 	}
 	return events

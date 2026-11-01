@@ -12,7 +12,7 @@ import (
 func TestABatchDecodesIntoTheModelsEvents(t *testing.T) {
 	var sent []WireEvent
 	body := `[
-		{"kind":"turn","turn":"t","state":"working"},
+		{"kind":"turn","turn":"t","state":"working","retry":2},
 		{"kind":"result","id":"c","status":"refused","text":"no","permit":{"by":"hook","allowed":false,"reason":"r"}},
 		{"kind":"settle","id":"b","turn":"t","block":"text","part":1,"of":2,"text":"lo"},
 		{"kind":"prompt","id":"p","origin":"person","status":"queued","text":"go"},
@@ -28,7 +28,7 @@ func TestABatchDecodesIntoTheModelsEvents(t *testing.T) {
 	}
 	reason := "r"
 	want := []Event{
-		{Kind: EventTurn, Turn: "t", State: TurnStateWorking},
+		{Kind: EventTurn, Turn: "t", State: TurnStateWorking, Retry: 2},
 		{Kind: EventResult, ID: "c", Status: ItemStatusRefused, Text: "no", Permit: &Permit{By: PermitByHook, Reason: &reason}},
 		{Kind: EventSettle, ID: "b", Turn: "t", Block: ItemKindText, Part: 1, Of: 2, Text: "lo"},
 		{Kind: EventPrompt, ID: "p", Origin: "person", Status: ItemStatusQueued, Text: "go"},

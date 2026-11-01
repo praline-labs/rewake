@@ -29,6 +29,7 @@
         "since": {"type": "integer", "description": "is when the working turn began, in Unix milliseconds, on begin and turn while the turn works."},
         "took": {"type": "integer", "description": "is how long the last turn worked, in milliseconds, on turn to idle from working and on begin while that is the latest turn."},
         "at": {"type": "integer", "description": "is when the last turn ended, in Unix milliseconds, with took."},
+        "retry": {"type": "integer", "description": "is how many of the working turn's requests failed in a row with nothing come back since, the session trying again, on begin and turn while the turn works; absent when none did."},
         "mode": {"$ref": "#/$defs/PermissionMode", "description": "is the session's permission mode, on begin and mode; absent while the session has not said it."},
         "ok": {"type": "boolean", "description": "says whether the input was taken, on answer."},
         "detail": {"type": "string", "description": "is why an input was refused, on answer."}

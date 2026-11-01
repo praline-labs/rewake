@@ -288,6 +288,10 @@ export interface MirrorEvent {
   of?: number
   // lost counts the events a resync stands for.
   lost?: number
+  // retry is how many of the working turn's requests failed in a row, on a turn event that says
+  // working; the mod sends none, as Claude Code tells a mod of no retry
+  // (docs/research-claude-mod.md).
+  retry?: number
   // permit is how the call of a result was let run or refused, where the mod could tell.
   permit?: MirrorPermit
   // mode is the session's permission mode as Claude Code names it, on a mode event.

@@ -37,6 +37,9 @@ const inputEvery = 100;
 // The face's prompts sent and not yet heard back as pi's input.
 const facedKept = 16;
 
+// The events of an item a request brought back, ending a retry's wait.
+const cameBack = new Set(["delta", "settle", "tool"]);
+
 const origins: Record<string, string> = {
   interactive: "person",
   extension: "extension",
@@ -66,9 +69,11 @@ export class Mirror {
   private open = new Map<string, number>();
   private waiting = new Set<string>();
   // failed is the error the latest message ended with; retries, the runs pi
-  // started again since a message did not fail, which it tells no extension.
+  // started again since a message did not fail, which it tells no extension;
+  // retrying, the turn said to be trying again since nothing came back.
   private failed?: string;
   private retries = 0;
+  private retrying = false;
   // queue follows the prompts pi holds until it takes them.
   readonly queue = new Queue((event) => this.push(event));
 
@@ -78,7 +83,13 @@ export class Mirror {
   ) {}
 
   private push(event: MirrorEvent) {
-    if (this.on) this.sink.push(event);
+    if (!this.on) return;
+    // An attempt's first item come back ends its trying again.
+    if (this.retrying && cameBack.has(event.kind)) {
+      this.retrying = false;
+      this.sink.push({ kind: "turn", turn: this.run, state: "working" });
+    }
+    this.sink.push(event);
   }
 
   // sent is a prompt of the face handed to pi, heard back as its input.
@@ -136,6 +147,7 @@ export class Mirror {
       this.notice(`Error: Retry failed after ${this.retries} attempts: ${this.failed}`);
     this.failed = undefined;
     this.retries = 0;
+    this.retrying = false;
     this.run = undefined;
     this.reached.clear();
     this.sentAt.clear();
@@ -245,8 +257,16 @@ export class Mirror {
     for (const id of this.waiting)
       this.push({ kind: "result", id, status: "error", text: fit(reason, textBudget) });
     this.waiting.clear();
-    if (content.some((block) => block.type === "toolCall")) return;
-    this.notice(stop === "aborted" ? reason : `Error: ${message.errorMessage || "Unknown error"}`);
+    if (!content.some((block) => block.type === "toolCall"))
+      this.notice(
+        stop === "aborted" ? reason : `Error: ${message.errorMessage || "Unknown error"}`,
+      );
+    // Each failed request is the turn's retry attempt, as pi's screen counts
+    // them: pi settles at once a failure it does not retry.
+    if (stop === "error" && this.run) {
+      this.retrying = true;
+      this.push({ kind: "turn", turn: this.run, state: "working", retry: retries + 1 });
+    }
   }
 
   // notice says a failure in red under what it stopped.

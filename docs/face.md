@@ -111,6 +111,15 @@ compaction clears it); `took` (how long it worked, ms) and `at` (when it ended) 
 `idle` from `working`, and `begin` while the last turn that worked is the latest thing to have
 happened, with `stopped` as on `turn`. A turn that begins forgets them. The face keeps no clock of
 its own for a turn: it draws `since`, `took` and `at` as given (wrapper and face share a machine).
+**The retry attempt is the turn's too** (brief 69, November 1, 2026): `retry`, on `begin` and `turn`
+while the turn works, counts its requests that failed in a row with nothing come back since, as
+the adapter says it on a `turn` event saying `working`; one without it says none, and a turn that
+stops working, a resync or a compaction forgets it. The face draws it and infers nothing from the
+conversation's order. pi's adapter says each failed message as the attempt and the first item come
+back after it as none ([research-pi.md](research-pi.md), "Retries"); the Claude Code mod says
+none, as Claude Code tells a mod of no retry
+([research-claude-mod.md](research-claude-mod.md#an-api-retry-is-not-told-to-a-mod-november-1-2026-21310)).
+An older face ignores the field; a face of this build with an older wrapper draws no retry.
 Nothing else changes; the schema's `version` stays, one build per room being its guard. A face
 sends `{id, kind: "prompt", text}`, `{id, kind: "interrupt", text: ""}` for the person's Esc, or
 `{id, kind: "thinking", text: ""}` for their shift+tab (brief 62, October 31, 2026), and is answered
@@ -274,11 +283,9 @@ what is under it, `fold.ts` runs of calls, `markdown.ts` and
   nothing back, then the faint bracket `(12s · ↓ 340 tokens)`; after the turn, a faint
   `Done in 31s · 7:52 AM` hung at two columns, or `Stopped after 10s · 7:52 AM` when the turn ended
   by an interrupt (the turn line's `stopped`, not a guess from the conversation: a call stopped
-  mid-run ends with its error and no notice). While the turn works with the session's failures
-  last in it (error notices of the turn, a prompt sent into it going by, after what was there as
-  it began), the session is trying again — pi ends a turn at once on a failure it does not
-  retry — and the line reads `Retrying (attempt 2)…`, glyph and text in the warning's amber, as pi's
-  own `Retrying (2/3) in 4s...` (brief 56). The glyph set in use is `orbit4`
+  mid-run ends with its error and no notice). While the model says the working turn's requests
+  failed (its `retry`, "The turn's times are the model's"), the session is trying again, and the line reads `Retrying (attempt
+  2)…`, glyph and text in the warning's amber, as pi's own `Retrying (2/3) in 4s...` (brief 56). The glyph set in use is `orbit4`
   in `face/src/turn.ts`; others stay beside it, unused, for a switch: the one-dot orbit
   `⠈ ⠐ ⠠ ⢀ ⡀ ⠄ ⠂ ⠁` (`orbit`), the two-dot `⠉ ⠘ ⠰ ⢠ ⣀ ⡄ ⠆ ⠃` and three-dot
   `⠇ ⡆ ⣄ ⣠ ⢰ ⠸ ⠙ ⠋` orbits, all clockwise, the arc `◜ ◝ ◞ ◟` and the pulse `· • ● •`. A running call's dot, and an open run's,
@@ -540,7 +547,8 @@ the worker in `host.test.ts`, Esc's and shift+tab's paths through the worker in 
 `face/src/unfold.test.ts` and ctrl+o kept across a reload in `shell/src/face/unfold.test.ts`, the input's growth, keys and
 pastes in `shell/src/face/input.test.tsx`, a queued prompt in `face/src/queued.test.ts`,
 `internal/core/mirror/queued_test.go` and pi's side in `internal/adapter/pi/queued.test.ts`, the
-retry line in `progress.test.ts`, copying in `select.test.ts` (a selection over gutters, a wrapped
+retry line drawn from the model's turn lines in `progress.test.ts` (the model's count in
+`internal/core/mirror/model_test.go`, pi's in `internal/adapter/pi/mirror.test.ts`), copying in `select.test.ts` (a selection over gutters, a wrapped
 line, a diff and a table; what a click on each part copies; a click told from a drag), through the
 worker in `host.test.ts` with the light after a click and none on a move, and the pty under the
 face hearing no mouse in `view.test.tsx`, the wheel included over a real pane's widget fed as pi's

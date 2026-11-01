@@ -330,6 +330,11 @@ type MirrorEvent struct {
 	// Lost counts the events a resync stands for.
 	Lost *int `json:"lost,omitempty"`
 
+	// Retry is how many of the working turn's requests failed in a row, on a turn event that says
+	// working; the mod sends none, as Claude Code tells a mod of no retry
+	// (docs/research-claude-mod.md).
+	Retry *int `json:"retry,omitempty"`
+
 	// Permit is how the call of a result was let run or refused, where the mod could tell.
 	Permit *MirrorPermit `json:"permit,omitempty"`
 

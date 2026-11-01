@@ -292,6 +292,45 @@ test("a failed message pi tries again is counted, and the retries' end said as p
   expect(notices(through.events)).toEqual(["Error: 503", "Error: 503"]);
 });
 
+// The count pi's screen shows as `Retrying (2/3)` is the turn's fact: each
+// failed message says the attempt on a working turn event, a call it asked
+// for or not, and the first item come back after it says none.
+test("each failed message is said as the turn's retry attempt until something comes back", () => {
+  const failed = { message: { role: "assistant", stopReason: "error", errorMessage: "503" } };
+  const said = (events: MirrorEvent[]) =>
+    events.filter((e) => e.kind === "turn").map((e) => `${e.state} ${e.retry ?? 0}`);
+  const { events, emit } = mirrored();
+  emit("agent_start", {});
+  emit("message_end", failed);
+  emit("agent_start", {});
+  emit("turn_start", { turnIndex: 0 });
+  const call = { type: "toolCall", id: "c", name: "bash", arguments: {} };
+  emit(
+    "message_update",
+    update({ type: "toolcall_start", contentIndex: 0, partial: { content: [call] } }),
+  );
+  emit("message_end", { message: { ...failed.message, content: [{ type: "toolCall" }] } });
+  emit("agent_start", {});
+  emit("turn_start", { turnIndex: 0 });
+  emit("message_update", update({ type: "text_delta", contentIndex: 0, delta: "ok" }));
+  emit("message_update", update({ type: "text_delta", contentIndex: 0, delta: "!" }));
+  emit("message_end", { message: { role: "assistant", stopReason: "stop" } });
+  emit("agent_settled", { aborted: false });
+  expect(said(events)).toEqual([
+    "working 0",
+    "working 1",
+    "working 0",
+    "working 2",
+    "working 0",
+    "idle 0",
+  ]);
+  // The attempt comes after the failure's notice, the reset before the item.
+  const kinds = events.map((e) => e.kind);
+  expect(kinds.slice(0, 4)).toEqual(["turn", "notice", "turn", "turn"]);
+  expect(kinds.at(-4)).toBe("turn");
+  expect(kinds.at(-3)).toBe("delta");
+});
+
 test("a long call's input and output stay within an event", () => {
   const { events, emit } = mirrored();
   emit("agent_start", {});

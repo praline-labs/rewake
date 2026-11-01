@@ -71,7 +71,7 @@ const clockAt = (now: number): Clock => ({
   now,
   since: model.since,
   worked: model.worked,
-  progress: model.turn === "working" ? progress.at(model.items, now) : undefined,
+  progress: model.turn === "working" ? progress.at(model.items, now, model.retry) : undefined,
 });
 
 // draw is the tick's frame: the whole conversation, laid out again when it

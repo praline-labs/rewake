@@ -14,6 +14,9 @@ export class FaceModel {
   // after the turn draws what one that watched it does.
   since: number | undefined;
   worked: { took: number; at: number; stopped: boolean } | undefined;
+  // retry is how many of the working turn's requests failed in a row, the
+  // session trying again, as its adapter told the model; 0 when none.
+  retry = 0;
   dropped = 0;
   // mode is the session's permission mode, unknown until it says it.
   mode: PermissionMode | undefined;
@@ -75,11 +78,13 @@ export class FaceModel {
     }
   }
 
-  // timed takes the turn's times off a begin or a turn line. A turn that
+  // timed takes the turn's times and its retry off a begin or a turn line;
+  // a turn that stopped working tries nothing again. A turn that
   // begins forgets how the last ended; the end of one that did not work is
   // not a Done, and leaves the last as it was.
   private timed(line: Line) {
     this.since = this.turn === "working" ? line.since : undefined;
+    this.retry = this.turn === "working" ? (line.retry ?? 0) : 0;
     if (this.turn === "working") this.worked = undefined;
     else if (line.took !== undefined && line.at !== undefined)
       this.worked = { took: line.took, at: line.at, stopped: line.stopped === true };
