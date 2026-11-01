@@ -23,7 +23,7 @@ placed right under its task, headed `+ addendum from <sender> · HH:MM:SS`, so t
 corrections are re-read with the brief they correct; one whose task is not owed any
 more stands alone, its heading naming the task (`· addendum to <id>`). The task is
 the one as it is now: an addendum to a task `rewake edit` replaced goes under the
-replacement, and `addendumTo` names it (`mail.CurrentTask`, [delivery-sent.md](delivery-sent.md#edit-rewake-edit-id-text)).
+replacement, and `addendumTo` names it (`mail.Box.AddedTo`, [delivery-sent.md](delivery-sent.md#edit-rewake-edit-id-text)).
 Only the rendering nests: `--json` keeps the flat list, each addendum with its `addendumTo`.
 It is the task a session is working on, from the mailbox rather than from memory,
 which is what a session needs after a context compaction: a summary retells the brief

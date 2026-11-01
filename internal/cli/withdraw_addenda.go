@@ -31,7 +31,7 @@ func readAddendum(taken []mail.AddendumWithdrawn) bool {
 // notices call for, and fills the model. again says the task was withdrawn by
 // an earlier call, which sent any recall a read addendum called for. failed
 // says a withdrawal did not finish, which makes the call's exit 1.
-func addendaLines(dir, to string, taken []mail.AddendumWithdrawn, again bool, model *withdrawModel) ([]string, bool) {
+func addendaLines(box mail.Box, to string, taken []mail.AddendumWithdrawn, again bool, model *withdrawModel) ([]string, bool) {
 	var lines []string
 	failed := false
 	for _, addendum := range taken {
@@ -45,7 +45,7 @@ func addendaLines(dir, to string, taken []mail.AddendumWithdrawn, again bool, mo
 				lines = append(lines, fmt.Sprintf("Rewake: withdrew its addendum %s too, before its notice went out.", id))
 			case mail.WithdrawnAnnounced:
 				lines = append(lines, fmt.Sprintf("Rewake: withdrew its addendum %s too; its notice may have gone out, so %s is told not to act on it.", id, to))
-				lines = append(lines, recallLine(dir, addendum.Letter, &entry.Recall)...)
+				lines = append(lines, recallLine(box, addendum.Letter, &entry.Recall)...)
 			case mail.WithdrawnHeld:
 				lines = append(lines, fmt.Sprintf("Rewake: withdrew its addendum %s too; its notice still waits in the approval queue of %s's harness.", id, to))
 			}

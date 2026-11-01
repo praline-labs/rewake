@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/praline-labs/rewake/internal/core/registry"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // interimRecord is a run's last word on whether the work goes on
@@ -31,11 +32,8 @@ func interimPath(dir, name string) string {
 
 // readInterim answers the interim record whichever run wrote it, nil when
 // there is none, and an error naming the path when it cannot be read.
-func readInterim(dir, name string) (*interimRecord, error) { return live(dir).readInterim(name) }
-
-func (w world) readInterim(name string) (*interimRecord, error) {
-	dir := w.dir
-	raw, err := w.readFile(interimPath(dir, name))
+func readInterim(dir, name string) (*interimRecord, error) {
+	raw, err := readRecord(interimPath(dir, name))
 	if errors.Is(err, os.ErrNotExist) {
 		return nil, nil
 	}
@@ -72,15 +70,10 @@ func lastInterim(dir, name, epoch string) (string, bool, error) {
 // that does alone: only the run holding the name is ever asked about its
 // interim end.
 func recordInterim(dir, name, epoch, op string, ended int64, line *string, settles bool) error {
-	return live(dir).recordInterim(name, epoch, op, ended, line, settles)
-}
-
-func (w world) recordInterim(name, epoch, op string, ended int64, line *string, settles bool) error {
 	if line == nil && !settles {
 		return nil
 	}
-	dir := w.dir
-	record, err := w.readInterim(name)
+	record, err := readInterim(dir, name)
 	if err != nil {
 		return err
 	}
@@ -103,12 +96,12 @@ func (w world) recordInterim(name, epoch, op string, ended int64, line *string, 
 	if line != nil {
 		fresh.Text = *line
 	}
-	if err := w.ensureDir(pendingDir(dir, name)); err != nil {
+	if err := state.EnsureSubdir(pendingDir(dir, name)); err != nil {
 		return err
 	}
 	raw, err := json.Marshal(fresh)
 	if err != nil {
 		return err
 	}
-	return w.writeFile(interimPath(dir, name), raw)
+	return state.WriteAtomic(interimPath(dir, name), raw)
 }

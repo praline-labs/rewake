@@ -233,7 +233,7 @@ func TestAnAdditionIsRefusedWhereNoReportCanCome(t *testing.T) {
 	if _, err := lab.box.WithdrawSent(t.Context(), withdrawn); err != nil {
 		t.Fatal(err)
 	}
-	withdrawn = must(SentMatching(lab.dir, "web", "sender-epoch", withdrawn.ID))[0]
+	withdrawn = must(lab.box.SentMatching(withdrawn.ID))[0]
 	failed := lab.send(t, Task, "never delivered", "")
 	if err := WriteStatus(lab.dir, "api", failed.ID, Result{State: Failed, Detail: "refused"}); err != nil {
 		t.Fatal(err)

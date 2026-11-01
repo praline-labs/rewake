@@ -59,7 +59,7 @@ type messageView struct {
 	mail.Message
 }
 
-func viewedMessages(dir string, messages []mail.Message) []messageView {
+func viewedMessages(dir string, box mail.Box, messages []mail.Message) []messageView {
 	visible := canSeeSessionState(dir)
 	result := make([]messageView, 0, len(messages))
 	for _, message := range messages {
@@ -70,7 +70,7 @@ func viewedMessages(dir string, messages []mail.Message) []messageView {
 			// The task as it is now: an edit leaves the addendum naming the
 			// letter it replaced. A copy on the way that cannot be read
 			// leaves the task it was sent to, which is still true.
-			if current, err := mail.CurrentTask(dir, message.To, message.AddendumTo); err == nil {
+			if current, err := box.AddedTo(message); err == nil {
 				view.AddendumTo = current
 			}
 		}

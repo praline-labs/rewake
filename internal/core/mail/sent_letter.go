@@ -94,11 +94,11 @@ func (r *Refusal) Unwrap() error { return r.Err }
 // no longer kept is refused as ReplacementLost. On a failure the letter given
 // is answered.
 func (b Box) CurrentSent(letter Message) (Message, error) {
-	id, err := CurrentTask(b.dir, letter.To, letter.ID)
+	id, err := currentTask(b.dir, letter.To, letter.ID)
 	if err != nil {
 		return letter, failedAt(StepChain, err)
 	}
-	matches, err := SentMatching(b.dir, b.name, b.epoch, id)
+	matches, err := b.SentMatching(id)
 	if err != nil {
 		return letter, failedAt(StepChain, err)
 	}
@@ -133,14 +133,14 @@ func (b Box) rootOf(letter Message) (Message, error) {
 		if current.AddendumTo != "" {
 			id = current.AddendumTo
 		}
-		id, err := CurrentTask(b.dir, current.To, id)
+		id, err := currentTask(b.dir, current.To, id)
 		if err != nil {
 			return Message{}, &Refusal{Reason: TaskUnknown, Letter: letter, Err: err}
 		}
 		if id == current.ID {
 			return current, nil
 		}
-		matches, err := SentMatching(b.dir, b.name, b.epoch, id)
+		matches, err := b.SentMatching(id)
 		if err != nil {
 			return Message{}, &Refusal{Reason: TaskUnknown, Letter: letter, Err: err}
 		}

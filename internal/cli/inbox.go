@@ -35,7 +35,7 @@ func handleInbox(ctx *Context, call Call) error {
 	if err != nil {
 		return &UsageError{Command: call.Command, Message: err.Error()}
 	}
-	session, epoch, err := ownRunIn(ctx.access, dir)
+	session, box, err := ownMail(ctx.access, dir)
 	switch {
 	case errors.Is(err, errNotASession):
 		return &UsageError{
@@ -48,18 +48,18 @@ func handleInbox(ctx *Context, call Call) error {
 		return failf("%v; its mail cannot be read", err)
 	}
 	if mode.awaited {
-		return showAwaited(ctx, dir, session, epoch)
+		return showAwaited(ctx, box)
 	}
 	if mode.owed {
-		return showOwed(ctx, call, dir, session, epoch)
+		return showOwed(ctx, call, dir, session, box)
 	}
 	request := mail.ReadRequest{Selected: selected, Peek: peek, Reports: mail.OwesReports(session.Role)}
-	_, err = mail.Open(dir, session.Name, epoch).Read(context.Background(), request, func(messages []mail.Message) error {
-		views := fromEarlierRuns(viewedMessages(dir, messages), epoch)
+	_, err = box.Read(context.Background(), request, func(messages []mail.Message) error {
+		views := fromEarlierRuns(viewedMessages(dir, box, messages), box.Epoch())
 		if peek {
 			return writeInboxPeek(ctx, session.Name, views)
 		}
-		return writeInbox(ctx, inboxModel{Session: session.Name, Messages: withBriefs(dir, views, session.Name, epoch)})
+		return writeInbox(ctx, inboxModel{Session: session.Name, Messages: withBriefs(dir, views, session.Name, box.Epoch())})
 	})
 	return readFailure(err, session.Name, selected, peek)
 }

@@ -104,7 +104,7 @@ func handleSend(ctx *Context, call Call) error {
 	// Signed with this session's name and run only when both are known to be
 	// current: a report then reaches this run, and a process left over from an
 	// earlier run cannot speak for the next one.
-	self, epoch, selfErr := ownRun(dir)
+	self, box, selfErr := ownMail(accessChange, dir)
 	if selfErr == nil && self.Name == session.Name {
 		// A task to itself would be announced into the turn that sent it and
 		// owe a report to that same turn; a question would wait for an answer
@@ -165,19 +165,19 @@ func handleSend(ctx *Context, call Call) error {
 	// end of the turn, and taking it for one lost the report the other side was
 	// waiting for.
 	if selfErr == nil {
-		message.From, message.FromEpoch = self.Name, epoch
+		message.From, message.FromEpoch = self.Name, box.Epoch()
 	}
 	if kind.kind == mail.Question {
-		release, err := mail.Open(dir, self.Name, "").ReserveAnswer(message.ID)
+		release, err := box.ReserveAnswer(message.ID)
 		if err != nil {
 			return failf("could not reserve the answer: %v", err)
 		}
 		defer release()
 	}
-	if err := writeSent(dir, self, epoch, message, session); err != nil {
+	if err := writeSent(box, message, session); err != nil {
 		return err
 	}
-	after := sent{dir: dir, self: self, epoch: epoch, target: session, deadline: started.Add(wait)}
+	after := sent{dir: dir, box: box, target: session, deadline: started.Add(wait)}
 	if !session.HasLive(string(adapter.WakeCapability)) {
 		return reportUnwoken(ctx, after, message)
 	}

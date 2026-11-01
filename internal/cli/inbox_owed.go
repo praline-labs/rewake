@@ -30,14 +30,14 @@ type owedModel struct {
 // on — the task a session is working on, for one that lost it to a compaction.
 // It changes nothing: a second read of a task is not a second obligation, and
 // the report still goes when the turn ends.
-func showOwed(ctx *Context, call Call, dir string, session registry.Session, epoch string) error {
+func showOwed(ctx *Context, call Call, dir string, session registry.Session, box mail.Box) error {
 	if !mail.OwesReports(session.Role) {
 		return &UsageError{
 			Command: call.Command,
 			Message: fmt.Sprintf("%s owes no reports: a %s session's reads record no obligation, so --owed has nothing to show. rewake inbox --awaited shows what others owe it.", session.Name, session.Role),
 		}
 	}
-	summary, err := mail.Open(dir, session.Name, epoch).Owed()
+	summary, err := box.Owed()
 	var step *mail.StepError
 	switch {
 	case errors.As(err, &step) && step.Step == mail.StepUnread:
@@ -50,7 +50,7 @@ func showOwed(ctx *Context, call Call, dir string, session registry.Session, epo
 		messages = append(messages, message.Message)
 	}
 	model := owedModel{Session: session.Name, Messages: make([]owedView, 0, len(summary.Owed)), Unread: summary.Unread}
-	for index, view := range withBriefs(dir, viewedMessages(dir, messages), session.Name, epoch) {
+	for index, view := range withBriefs(dir, viewedMessages(dir, box, messages), session.Name, box.Epoch()) {
 		model.Messages = append(model.Messages, owedView{messageView: view, Kept: summary.Owed[index].Kept})
 	}
 	return printValue(ctx, model, func() []string { return append(owedLines(model.Messages), unreadHint(model.Unread)...) })

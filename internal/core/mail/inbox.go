@@ -227,30 +227,26 @@ func NewID() string {
 }
 
 // Put writes a message into the mailbox of its receiver.
-func Put(dir string, message Message) error { return live(dir).put(message) }
-
-func (w world) put(message Message) error {
+func Put(dir string, message Message) error {
 	if message.CreatedBoot == 0 {
 		message.CreatedBoot = boottime.Now()
 	}
-	mailbox := state.InboxPath(w.dir, message.To)
-	if err := w.ensureDir(mailbox); err != nil {
+	mailbox := state.InboxPath(dir, message.To)
+	if err := state.EnsureSubdir(mailbox); err != nil {
 		return err
 	}
 	encoded, err := json.MarshalIndent(message, "", "  ")
 	if err != nil {
 		return err
 	}
-	return w.writeFile(filepath.Join(mailbox, message.ID+".json"), append(encoded, '\n'))
+	return state.WriteAtomic(filepath.Join(mailbox, message.ID+".json"), append(encoded, '\n'))
 }
 
 // PutOnce writes a message unless one with its id already exists in the
 // mailbox, whatever became of it since. A message moves forward only — waiting,
 // unread, done — so looking in that order cannot miss one on its way.
-func PutOnce(dir string, message Message) error { return live(dir).putOnce(message) }
-
-func (w world) putOnce(message Message) error {
-	found, err := w.present(message.To, message.ID)
+func PutOnce(dir string, message Message) error {
+	found, err := present(dir, message.To, message.ID)
 	if found {
 		return nil
 	}
@@ -259,20 +255,18 @@ func (w world) putOnce(message Message) error {
 		// outcome that cannot be taken back.
 		return err
 	}
-	return w.put(message)
+	return Put(dir, message)
 }
 
 // present says whether a mailbox holds a letter in any of its stages. An
 // error means it could not tell: only "no such file" in every stage is
 // absence, and something other than a file where the letter belongs hides
 // whether it is there.
-func present(dir, to, id string) (bool, error) { return live(dir).present(to, id) }
-
-func (w world) present(to, id string) (bool, error) {
+func present(dir, to, id string) (bool, error) {
 	var unknown error
-	for _, directory := range []string{state.InboxPath(w.dir, to), state.UnreadPath(w.dir, to), state.DonePath(w.dir, to)} {
+	for _, directory := range []string{state.InboxPath(dir, to), state.UnreadPath(dir, to), state.DonePath(dir, to)} {
 		path := filepath.Join(directory, id+".json")
-		info, err := w.stat(path)
+		info, err := os.Stat(path)
 		switch {
 		case err == nil && info.Mode().IsRegular():
 			return true, nil

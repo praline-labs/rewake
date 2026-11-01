@@ -45,18 +45,18 @@ func handleWithdraw(ctx *Context, call Call) error {
 	if err != nil {
 		return &UsageError{Command: call.Command, Message: err.Error()}
 	}
-	self, epoch, named, err := sentBySelf(call, dir, call.Positionals[0], "rewake withdraw <id>")
+	box, named, err := sentBySelf(call, dir, call.Positionals[0], "rewake withdraw <id>")
 	if err != nil {
 		return err
 	}
-	done, err := mail.Open(dir, self.Name, epoch).WithdrawSent(context.Background(), named)
+	done, err := box.WithdrawSent(context.Background(), named)
 	message, result, addenda := done.Letter, done.Result, done.Addenda
 	var refusal *mail.Refusal
 	if errors.As(err, &refusal) {
 		return refusalOf(err, registry.Session{})
 	}
 	if err != nil {
-		return withdrawRefusal(dir, message, lockText(err, named.To), false)
+		return withdrawRefusal(box, message, lockText(err, named.To), false)
 	}
 	model := withdrawModel{ID: message.ID, To: message.To, Kind: sentKind(message), Result: withdrawalNames[result]}
 	var lines []string
@@ -70,9 +70,9 @@ func handleWithdraw(ctx *Context, call Call) error {
 	recallTask := result == mail.WithdrawnAnnounced || read && (result == mail.WithdrawnUnseen || result == mail.WithdrawnHeld)
 	lines = append(lines, withdrawLine(model, result, read))
 	if recallTask {
-		lines = append(lines, recallLine(dir, message, &model.Recall)...)
+		lines = append(lines, recallLine(box, message, &model.Recall)...)
 	}
-	more, failed := addendaLines(dir, message.To, addenda, result == mail.AlreadyWithdrawn, &model)
+	more, failed := addendaLines(box, message.To, addenda, result == mail.AlreadyWithdrawn, &model)
 	lines = append(lines, more...)
 	if failed {
 		if ctx.JSON {
@@ -86,8 +86,8 @@ func handleWithdraw(ctx *Context, call Call) error {
 
 // recallLine tells the recipient not to act on a notice, and records the
 // note's id; a failure to write it is said with the command to send instead.
-func recallLine(dir string, message mail.Message, recall *string) []string {
-	note, err := mail.Recall(dir, message)
+func recallLine(box mail.Box, message mail.Message, recall *string) []string {
+	note, err := box.Recall(message)
 	if err != nil {
 		return []string{fmt.Sprintf("Rewake: could not tell %s not to act on the notice (%v); tell it with: rewake send %s \"disregard %s\" --notify", message.To, err, message.To, shortRef(message.ID))}
 	}

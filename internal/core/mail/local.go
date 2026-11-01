@@ -14,12 +14,10 @@ import (
 // to the same failing conversation. The caller holds that mailbox's lock. A
 // copy that cannot be looked up may be the one kept already, so it is an
 // error rather than a second copy.
-func PutLocal(dir string, message Message) error { return live(dir).putLocal(message) }
-
-func (w world) putLocal(message Message) error {
-	for _, directory := range []string{state.UnreadPath(w.dir, message.To), state.DonePath(w.dir, message.To)} {
+func PutLocal(dir string, message Message) error {
+	for _, directory := range []string{state.UnreadPath(dir, message.To), state.DonePath(dir, message.To)} {
 		path := filepath.Join(directory, message.ID+".json")
-		info, err := w.stat(path)
+		info, err := os.Stat(path)
 		if err == nil && !info.Mode().IsRegular() {
 			return fmt.Errorf("%s, where a letter belongs, is not a regular file", path)
 		}
@@ -30,13 +28,13 @@ func (w world) putLocal(message Message) error {
 			return err
 		}
 	}
-	directory := state.UnreadPath(w.dir, message.To)
-	if err := w.ensureDir(directory); err != nil {
+	directory := state.UnreadPath(dir, message.To)
+	if err := state.EnsureSubdir(directory); err != nil {
 		return err
 	}
 	raw, err := json.Marshal(message)
 	if err != nil {
 		return err
 	}
-	return w.writeFile(filepath.Join(directory, message.ID+".json"), raw)
+	return state.WriteAtomic(filepath.Join(directory, message.ID+".json"), raw)
 }

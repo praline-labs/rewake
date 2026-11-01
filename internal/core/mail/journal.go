@@ -58,7 +58,7 @@ func writeJournalFile(path string, journal TurnJournal) error {
 }
 
 func readJournalFile(path string) (TurnJournal, error) {
-	raw, err := live("").readFile(path)
+	raw, err := readRecord(path)
 	if err != nil {
 		return TurnJournal{}, err
 	}

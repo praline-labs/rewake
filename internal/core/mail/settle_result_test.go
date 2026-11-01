@@ -27,7 +27,7 @@ func copies(t *testing.T, dir string, letter Message) (waiting, unread, done boo
 func announcedLetter(t *testing.T, lab twoSessionLab) Message {
 	t.Helper()
 	letter := lab.report(Task)
-	if err := live(lab.dir).put(letter); err != nil {
+	if err := Put(lab.dir, letter); err != nil {
 		t.Fatal(err)
 	}
 	if err := LinkUnread(lab.dir, letter.To, letter.ID); err != nil {

@@ -45,7 +45,7 @@ func TestSentMatchingTakesUniquePrefixesOfThisRunOnly(t *testing.T) {
 		"179":                              0, // too short
 	}
 	for reference, want := range cases {
-		if got := must(SentMatching(dir, "web", "web-epoch", reference)); len(got) != want {
+		if got := must(Open(dir, "web", "web-epoch").SentMatching(reference)); len(got) != want {
 			t.Errorf("%s: %d matches, want %d", reference, len(got), want)
 		}
 	}

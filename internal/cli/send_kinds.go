@@ -28,9 +28,9 @@ type messageKind struct {
 
 // sent is what a kind knows once its message is on its way.
 type sent struct {
-	dir      string
-	self     registry.Session
-	epoch    string
+	dir string
+	// box is the sender's mail: a plain shell's names no run.
+	box      mail.Box
 	target   registry.Session
 	model    sendModel
 	deadline time.Time

@@ -82,7 +82,7 @@ which decides the outcome:
 adds to; left standing after it, it would be read on its own and owe a report on work its
 sender took back. So under the same lock, once the task is withdrawn — or found withdrawn
 already, which lets a retry finish the rest — each of its addenda from the same run is
-withdrawn the same way (`mail.AddendaOf`, which follows edits, below), and the answer adds a
+withdrawn the same way (`mail.Box.AddendaOf`, which follows edits, below), and the answer adds a
 line for each: `withdrew its addendum <id> too`, with the recall its own notice calls for. A
 read addendum is final like any read message: it stays owed, the answer says so, and the task
 is recalled for it even when the task's own notice never went out, since the addendum named
@@ -159,7 +159,7 @@ task may have been reported on since.
 **An edited task keeps its addenda.** They are not rewritten — a letter's content never
 changes once written — and go on naming the old id; the old id's tombstone names the
 replacement (`withdrawn.replacedBy`), and every place that asks what an addendum adds to
-follows that link, through as many edits as there were (`mail.CurrentTask`): `--owed`,
+follows that link, through as many edits as there were (`mail.Box.AddedTo`): `--owed`,
 `--awaited`, a plain read and `--peek` show the addendum under, or as adding to, the
 replacement, and `--to` given either id adds to the replacement. The answer names them — `your
 addendum <id> now adds to <new id>`, with the withdraw that takes it back — and `--json` lists

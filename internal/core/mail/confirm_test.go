@@ -25,19 +25,19 @@ func TestAKeptAnswerBelongsToItsRun(t *testing.T) {
 	if err != nil || !ok {
 		t.Fatalf("the answer: %v %v", ok, err)
 	}
-	if err := live(dir).dropKeptVersion("api", "1.1", "an earlier version"); err != nil {
+	if err := dropKeptVersion(dir, "api", "1.1", "an earlier version"); err != nil {
 		t.Fatal(err)
 	}
 	if _, ok, _ := keptAnswer(dir, "api", "1.1"); !ok {
 		t.Error("dropping another version took this answer")
 	}
-	if err := live(dir).dropKeptVersion("api", "1.1", version); err != nil {
+	if err := dropKeptVersion(dir, "api", "1.1", version); err != nil {
 		t.Fatal(err)
 	}
 	if _, ok, _ := keptAnswer(dir, "api", "1.1"); ok {
 		t.Error("the answer outlived dropping its version")
 	}
-	if err := live(dir).dropKeptVersion("api", "1.1", version); err != nil {
+	if err := dropKeptVersion(dir, "api", "1.1", version); err != nil {
 		t.Errorf("dropping nothing: %v", err)
 	}
 }

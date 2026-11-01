@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/core/mail"
-	"github.com/praline-labs/rewake/internal/core/registry"
 )
 
 // awaitedView is one task or question this run sent and has no report on yet.
@@ -40,14 +39,14 @@ type awaitedModel struct {
 // showAwaited lists what this run sent and still waits on a report for, by
 // recipient — what a main session hands out, for one that lost track of it to a
 // compaction. It only reads: no lock, no record, nothing sent.
-func showAwaited(ctx *Context, dir string, session registry.Session, epoch string) error {
-	standings, err := mail.Open(dir, session.Name, epoch).Standings()
+func showAwaited(ctx *Context, box mail.Box) error {
+	standings, err := box.Standings()
 	if err != nil {
 		// A partial list would show a task as answered, or lost and worth
 		// sending again.
-		return failf("could not read where what %s sent stands (%v); nothing is shown rather than part of it; run the same command again", session.Name, err)
+		return failf("could not read where what %s sent stands (%v); nothing is shown rather than part of it; run the same command again", box.Name(), err)
 	}
-	model := awaitedModel{Session: session.Name, Recipients: []awaitedRecipient{}}
+	model := awaitedModel{Session: box.Name(), Recipients: []awaitedRecipient{}}
 	index := map[string]int{}
 	for _, standing := range standings {
 		view := awaitedView{

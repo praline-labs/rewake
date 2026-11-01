@@ -9,11 +9,11 @@ import (
 	"github.com/praline-labs/rewake/internal/infra/build/buildtest"
 )
 
-// recallOf is the note mail.Recall writes for a withdrawn task, its own text
+// recallOf is the note mail.Box.Recall writes for a withdrawn task, its own text
 // and all: the line a notice gives it is only as good as that text.
 func recallOf(t *testing.T, id, from string, at time.Time) mail.Message {
 	t.Helper()
-	recall, err := mail.Recall(buildtest.Dir(t), mail.Message{ID: id, From: from, To: "api", Kind: mail.Task, CreatedAt: at, Text: "delete the staging bucket"})
+	recall, err := mail.Open(buildtest.Dir(t), from, "").Recall(mail.Message{ID: id, From: from, To: "api", Kind: mail.Task, CreatedAt: at, Text: "delete the staging bucket"})
 	if err != nil {
 		t.Fatal(err)
 	}

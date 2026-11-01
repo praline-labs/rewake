@@ -34,7 +34,7 @@ func blockDone(t *testing.T, dir, name string) func() {
 // waiting copy was settled.
 func landUnread(t *testing.T, dir string, report Message) string {
 	t.Helper()
-	if err := live(dir).put(report); err != nil {
+	if err := Put(dir, report); err != nil {
 		t.Fatal(err)
 	}
 	if err := state.EnsureSubdir(state.UnreadPath(dir, report.To)); err != nil {
@@ -82,7 +82,7 @@ func TestAFailedArchiveKeepsTheLastCopy(t *testing.T) {
 func TestSettlingADeliveredLetterKeepsItsOnlyCopy(t *testing.T) {
 	lab := newTwoSessionLab(t)
 	report := lab.report(Finished)
-	if err := live(lab.dir).put(report); err != nil {
+	if err := Put(lab.dir, report); err != nil {
 		t.Fatal(err)
 	}
 	waiting := filepath.Join(state.InboxPath(lab.dir, report.To), report.ID+".json")

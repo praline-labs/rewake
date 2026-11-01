@@ -3,7 +3,6 @@ package mail
 import (
 	"context"
 
-	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -11,10 +10,12 @@ import (
 // run's epoch. What a run does with its own mailbox hangs off it, so a caller
 // names the triple once and cannot pair a name with another run's epoch. So do
 // its acts on the letters it sent (sent_letter.go), whose recipient each letter
-// names. A low-level step in another session's mailbox — a delivery to a
-// recipient, a status, the withdrawal itself — stays a function that names
-// whose mailbox it is. The epoch may
-// be empty for what needs only the mailbox (AvailableUnread, ReserveAnswer).
+// names, and what it is told of them (StatusOf, AwaitSent): a command opens one
+// Box and asks it everything about its mail. A low-level step in another
+// session's mailbox — a delivery to a recipient, a status, the withdrawal
+// itself — stays a function that names whose mailbox it is, for the delivery
+// server and the core. The epoch may be empty for what needs only the mailbox
+// (AvailableUnread, ReserveAnswer).
 type Box struct {
 	dir, name, epoch string
 }
@@ -22,8 +23,12 @@ type Box struct {
 // Open is the mail of the run epoch of the session name in the room dir.
 func Open(dir, name, epoch string) Box { return Box{dir: dir, name: name, epoch: epoch} }
 
-// BoxOf is the mail of a registered session's own run.
-func BoxOf(dir string, session registry.Session) Box { return Open(dir, session.Name, session.Epoch()) }
+// Name is the session whose mail this is.
+func (b Box) Name() string { return b.name }
+
+// Epoch is the run whose mail this is, empty for a box opened for its mailbox
+// alone.
+func (b Box) Epoch() string { return b.epoch }
 
 // Locked is the mailbox while its lock is held by WithLock. What retires or
 // moves a letter runs under that lock and takes none of its own, since the

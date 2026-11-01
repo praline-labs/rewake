@@ -112,7 +112,7 @@ func (b Box) Standings() ([]Standing, error) {
 		}
 		standing := Standing{AwaitedMessage: message}
 		if message.AddendumTo != "" {
-			if current, err := CurrentTask(b.dir, message.To, message.AddendumTo); err == nil {
+			if current, err := currentTask(b.dir, message.To, message.AddendumTo); err == nil {
 				standing.Under = current
 			}
 		}

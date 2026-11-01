@@ -31,11 +31,11 @@ func ShortID(id string) string {
 	return id
 }
 
-// Recall tells the recipient of a withdrawn message not to act on its notice,
-// in a note from the message's own sender and run. The instruction comes
+// Recall tells the recipient of a withdrawn message this run sent not to act
+// on its notice, in a note from the message's own sender and run. The instruction comes
 // first: a notice line is cut at its end, and what must survive is which
 // message not to act on.
-func Recall(dir string, message Message) (Message, error) {
+func (b Box) Recall(message Message) (Message, error) {
 	kind := KindOf(message)
 	if message.Withdrawn != nil {
 		kind = message.Withdrawn.Kind
@@ -47,5 +47,5 @@ func Recall(dir string, message Message) (Message, error) {
 		Text:   fmt.Sprintf("Do not act on %s %s from %s (%s): withdrawn unread.", kind, ShortID(message.ID), message.From, at),
 		Recall: &RecallNotice{ID: message.ID, Kind: kind},
 	}
-	return note, Put(dir, note)
+	return note, Put(b.dir, note)
 }

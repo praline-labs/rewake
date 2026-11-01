@@ -46,6 +46,12 @@ func Answered(dir, to, id string) (bool, error) {
 	return true, nil
 }
 
+// StatusOf is ReadStatus of a letter this run sent, in its recipient's
+// mailbox.
+func (b Box) StatusOf(letter Message) (Status, bool, error) {
+	return ReadStatus(b.dir, letter.To, letter.ID)
+}
+
 // ReadStatus returns the status of a message, and whether one has been
 // written. An error says it could not tell: a status that cannot be read may
 // say read or withdrawn, and nothing takes it for one never written.

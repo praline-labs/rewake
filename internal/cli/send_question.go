@@ -40,11 +40,11 @@ func answerQuestion(ctx *Context, question sent) error {
 	watched := make(chan struct{})
 	go func() {
 		defer close(watched)
-		watchRefusal(wait, refusalWatch{dir: question.dir, to: target.Name, id: model.ID}, refused, cancel)
+		watchRefusal(wait, refusalWatch{box: question.box, letter: mail.Message{ID: model.ID, To: target.Name}}, refused, cancel)
 	}()
 	defer func() { cancel(); <-watched }()
 
-	_, found, err := mail.Open(question.dir, question.self.Name, question.epoch).AwaitAnswer(wait, model.ID, func(answer mail.Message) error {
+	_, found, err := question.box.AwaitAnswer(wait, model.ID, func(answer mail.Message) error {
 		model.State, model.Answer = string(mail.Read), answer.Text
 		if canSeeSessionState(question.dir) {
 			model.Telemetry = sessionSnapshot(question.dir, answer.From, answer.FromEpoch)
@@ -106,9 +106,11 @@ type refusal struct {
 	status mail.Status
 }
 
-// refusalWatch names the question a wait watches.
+// refusalWatch names the question a wait watches, by its recipient and id,
+// and the box of the run that sent it.
 type refusalWatch struct {
-	dir, to, id string
+	box    mail.Box
+	letter mail.Message
 }
 
 // watchRefusal ends the wait for an answer once the question itself has
@@ -118,7 +120,7 @@ func watchRefusal(ctx context.Context, w refusalWatch, refused chan<- refusal, s
 	defer ticker.Stop()
 	for {
 		// One that cannot be read is looked at again on the next tick.
-		if status, ok, err := mail.ReadStatus(w.dir, w.to, w.id); err == nil && ok && status.State == mail.Failed {
+		if status, ok, err := w.box.StatusOf(w.letter); err == nil && ok && status.State == mail.Failed {
 			refused <- refusal{status: status}
 			stop()
 			return

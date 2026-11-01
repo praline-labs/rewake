@@ -120,10 +120,6 @@ func markAwaitingSequence(dir, name, epoch, from, fromEpoch, messageID string, s
 // read times follow the sequences, so a record with times has sequences too;
 // a sequence of 0 is one not known, as a missing one is.
 func writeWaiter(file string, waiter Waiter) error {
-	return world{}.writeWaiter(file, waiter)
-}
-
-func (w world) writeWaiter(file string, waiter Waiter) error {
 	record := waiter.Epoch + " " + strconv.FormatInt(waiter.Since, 10) + " " + strings.Join(waiter.Messages, ",")
 	timed := len(waiter.ReadAt) == len(waiter.Messages) && len(waiter.Messages) > 0
 	if timed || len(waiter.ReadSequences) == len(waiter.Messages) && len(waiter.Messages) > 0 {
@@ -144,7 +140,7 @@ func (w world) writeWaiter(file string, waiter Waiter) error {
 		}
 		record += " " + strings.Join(times, ",")
 	}
-	return w.writeFile(file, []byte(strings.TrimSpace(record)))
+	return state.WriteAtomic(file, []byte(strings.TrimSpace(record)))
 }
 
 // Waiters is ReadWaiters without its error, for tests that look at records
@@ -161,15 +157,11 @@ func waitersOf(dir, name, epoch string) []Waiter {
 // It answers the waiters it read and an error for any it could not, since a
 // record that cannot be read may be a waiter.
 func readWaiters(dir, name, epoch string) ([]Waiter, error) {
-	return live(dir).readWaiters(name, epoch)
-}
-
-func (w world) readWaiters(name, epoch string) ([]Waiter, error) {
-	path, ok := awaitingPath(w.dir, name, epoch)
+	path, ok := awaitingPath(dir, name, epoch)
 	if !ok {
 		return nil, nil
 	}
-	entries, err := w.readDir(path)
+	entries, err := state.ReadPlainDir(path)
 	if errors.Is(err, os.ErrNotExist) {
 		return nil, nil
 	}
@@ -183,7 +175,7 @@ func (w world) readWaiters(name, epoch string) ([]Waiter, error) {
 		if entry.IsDir() || !state.ValidName(peer) {
 			continue
 		}
-		raw, err := w.readFile(filepath.Join(path, peer))
+		raw, err := readRecord(filepath.Join(path, peer))
 		if errors.Is(err, os.ErrNotExist) {
 			continue
 		}
@@ -254,16 +246,12 @@ func parseWaiter(name, raw string) (Waiter, error) {
 // sender would join it and be reported with it a second time. The caller keeps
 // the clearing to finish before the record is used again.
 func clearAwaiting(dir, name, epoch string, peer Waiter) error {
-	return live(dir).clearAwaiting(name, epoch, peer)
-}
-
-func (w world) clearAwaiting(name, epoch string, peer Waiter) error {
-	path, ok := awaitingPath(w.dir, name, epoch)
+	path, ok := awaitingPath(dir, name, epoch)
 	if !ok || !state.ValidName(peer.Name) {
 		return nil
 	}
 	file := filepath.Join(path, peer.Name)
-	raw, err := w.readFile(file)
+	raw, err := readRecord(file)
 	if errors.Is(err, os.ErrNotExist) {
 		return nil
 	}
@@ -275,7 +263,7 @@ func (w world) clearAwaiting(name, epoch string, peer Waiter) error {
 		return err
 	}
 	if current.same(peer) {
-		return w.remove(file)
+		return removeRecord(file)
 	}
 	if current.Epoch != peer.Epoch || current.Since != peer.Since {
 		return nil
@@ -296,12 +284,12 @@ func (w world) clearAwaiting(name, epoch string, peer Waiter) error {
 		return nil
 	}
 	if len(remaining) == 0 {
-		return w.remove(file)
+		return removeRecord(file)
 	}
 	current.Messages = remaining
 	current.ReadSequences = sequences
 	current.ReadAt = times
-	return w.writeWaiter(file, current)
+	return writeWaiter(file, current)
 }
 
 // SweepAwaitingLocked forgets what earlier runs of this name were waited on

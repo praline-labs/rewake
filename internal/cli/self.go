@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/role"
 
 	"github.com/praline-labs/rewake/internal/core/registry"
@@ -38,6 +39,16 @@ func ownRunIn(class access, dir string) (registry.Session, string, error) {
 		return ownRunBy(dir, registry.LookupReadOnly)
 	}
 	return ownRun(dir)
+}
+
+// ownMail is the mail of the run this process belongs to (ownRunIn), the one
+// handle a command opens on it: what the command does with its own mailbox and
+// with the letters it sent is asked of the box, which carries the run. It is
+// opened from what ownRunIn answered even with an error, for a command that
+// goes on without a run, as send from a plain shell does.
+func ownMail(class access, dir string) (registry.Session, mail.Box, error) {
+	self, epoch, err := ownRunIn(class, dir)
+	return self, mail.Open(dir, self.Name, epoch), err
 }
 
 func ownRunBy(dir string, lookup func(dir, name string) (registry.Session, error)) (registry.Session, string, error) {
