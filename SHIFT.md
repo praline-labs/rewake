@@ -127,8 +127,8 @@ Open a document for numbers, commands and names: the map only points.
 
 - `docs/rules/adapter-api.md` — The adapter API — capabilities offered and live, what the core does without each, the interfaces in internal/adapter, the catalogue, minimum and pinned versions, and adding a harness.
   sections: Why capabilities · The capabilities · Two levels: offered and live · The catalogue · Minimum versions
-- `docs/rules/effects.md` — E1–E8, what may decide a mail operation's effect and the order of a turn end's steps, the rule a pending mark keeps and how a letter is retired; open before changing how mail is written, read or published.
-  sections: The rules · A pending mark · Reading a letter · Acting on a sent letter · Retiring a letter
+- `docs/rules/effects.md` — E1–E8, what may decide a mail operation's effect and the order of a turn end's steps, the rule a pending mark keeps, how a letter is settled and how it is retired; open before changing how mail is written, read or published.
+  sections: The rules · A pending mark · Reading a letter · Acting on a sent letter · Settling a letter with its outcome · Retiring a letter
 - `docs/rules/launch.md` — L1–L3: what a launch adds to a harness, what it never changes, and that nothing it writes outlives the run.
   sections: The rules
 - `docs/rules/layout.md` — The import rule between layers, and where a harness may be named; open before adding a package or an import.
