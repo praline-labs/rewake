@@ -17,8 +17,6 @@ at its interface, the old tests that reached past it removed.
 1. The face's input rule from the mirror alone (mode and thinking level beside each other), and
    the shell's `check.ts` derived from the face's `messages.ts`.
 2. The face's worker as a module with an interface (post, socket, clock), tested in process.
-3. Each owner's on-disk layout beside it (mail, brief, space), `infra/state` keeping the lease,
-   the guard and atomic writes.
 
 rewake's face ([face.md](../face.md)), after its first slice — a dev worker on Claude Code and every
 pi worker, read with a prompt back, the switch and hot reload:
