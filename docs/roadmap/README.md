@@ -10,12 +10,6 @@ what it taught goes into the living documents.
 
 ## Open, in order
 
-The architecture pass of November 1, 2026 (the owner asked for every candidate, main sets the
-order): deepening the modules the last stretch changed most, each step one module with its tests
-at its interface, the old tests that reached past it removed.
-
-1. The face's worker as a module with an interface (post, socket, clock), tested in process.
-
 rewake's face ([face.md](../face.md)), after its first slice — a dev worker on Claude Code and every
 pi worker, read with a prompt back, the switch and hot reload:
 
