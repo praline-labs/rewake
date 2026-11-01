@@ -42,7 +42,7 @@ The mod's files are embedded from `internal/adapter/claude/mod/`, each named in 
 of `mod.go`, since a pattern skips the manifest's dot directory: the manifest `rewake`
 (`.claude-plugin/plugin.json`), `hooks/hooks.json`, the one module `hooks/rewake.ts` and the
 files it imports — `outbox.ts`, `heartbeat.ts`, `management.ts`, `asks.ts`, `calls.ts`,
-`dialogs.ts`, `closing.ts`, `worktree.ts`, `briefs.ts`, `enter.ts`, `mirror.ts`, `permits.ts`, `sizes.ts` — and
+`dialogs.ts`, `closing.ts`, `worktree.ts`, `briefs.ts`, `enter.ts`, `mirror.ts`, `permits.ts`, `feed.ts` — and
 the generated `protocol.gen.ts`. The run's service
 writes them into `<run dir>/mod` before the harness starts, and the launch passes
 `--plugin-dir <run dir>/mod` to that launch only. Nothing in the person's settings changes (L1);
@@ -323,14 +323,14 @@ A run the face draws (a dev worker, [face.md](face.md)) gets `mirror: true` in i
 hello answer, and `mirror.ts` then passes its conversation to the wrapper's model in memory: the
 prompts (`prompt.submit`), the main loop's text and thinking chunks as `turn.step` yields them, each
 tool call with its input and result (`tool.call` observed through `next`), and the turn's state. It
-reads no transcript file. A hook only appends to an outbox and returns; the `turn.step` generator yields
-every chunk unchanged before queueing it. A sender posts the outbox every 50 ms, one batch of at most
-48 KiB in flight with a 5 s deadline; a failed batch is dropped and counted. Each event is at most
-40 KiB serialized, a block's settle comes in parts within that; what a step holds until it stops,
-its open blocks and its tools' inputs together, is at most 1 MiB, each input 256 KiB, counted in UTF-8
-bytes. The outbox is held to 256 KiB by dropping deltas first, then settles whole as `lost{id}`
-markers, then collapsing the markers into one `resync` that counts what went. The wrapper's model
-marks what was lost as a gap, never as settled. Subagents are not mirrored.
+reads no transcript file. A hook only pushes to the feed's outbox and returns; the `turn.step`
+generator yields every chunk unchanged before queueing it. The feed (`hooks/feed.ts`, the copy of
+[face.md](face.md#the-feed)'s module) bounds, queues and batches every event; its bounds are the
+protocol's `maxMirror*` ones, which a mod test holds equal. What a step holds until it stops, its
+open blocks and its tools' inputs together, is at most 1 MiB, each input 256 KiB, counted in UTF-8
+bytes. The host decodes the events with `mirror.Decode`, naming Claude Code's permission modes in
+the model's words; the wrapper's model marks what was lost as a gap, never as settled. Subagents
+are not mirrored.
 
 Each result of a run the face draws carries its **permit** (`permits.ts`, made only once the
 hello's answer says `mirror`): `tool.check`'s hook reads the verdict of `next(e)` and returns it

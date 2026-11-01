@@ -9,6 +9,8 @@ import (
 	"net"
 	"sync"
 	"time"
+
+	"github.com/praline-labs/rewake/internal/core/mirror"
 )
 
 // Both peers number their own requests. Only answer frames consume a waiter;
@@ -39,8 +41,8 @@ type frame struct {
 	TokensAfter  *int64  `json:"tokensAfter,omitempty"`
 	// Mirror, in hello's answer, says rewake's face draws the run; Events
 	// are the conversation a mirror frame carries (mirror.go).
-	Mirror bool          `json:"mirror,omitempty"`
-	Events []mirrorEvent `json:"events,omitempty"`
+	Mirror bool               `json:"mirror,omitempty"`
+	Events []mirror.WireEvent `json:"events,omitempty"`
 }
 
 const (

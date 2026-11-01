@@ -1,7 +1,8 @@
 // Command protogen writes the types of the mod's protocol from its one JSON
 // schema: TypeScript for the mod, Go for its endpoint
-// (docs/claude.md#the-protocol). Run it from the module root after
-// editing the schema:
+// (docs/claude.md#the-protocol); and it copies the mirror's feed into each
+// adapter that embeds it (docs/face.md, "The feed"). Run it from the module
+// root after editing a schema or the feed:
 //
 //	go run ./tools/protogen
 //
@@ -45,6 +46,14 @@ var targets = []target{
 	{"internal/cli/room_view.schema.json", "shell/src/room_view.gen.ts", "internal/cli/room_view_gen.go", "cli"},
 	{"internal/core/mirror/mirror.schema.json", "face/src/mirror.gen.ts", "internal/core/mirror/mirror_gen.go", "mirror"},
 }
+
+// feedPath is the mirror's feed, one TypeScript module both adapters' harness
+// sides send through. Each embeds files of its own folder alone, and the
+// mod's host imports no file outside the mod, so each folder holds a copy,
+// marked as one and written from this source.
+const feedPath = "internal/core/mirror/feed.ts"
+
+var feedCopies = []string{"internal/adapter/pi/feed.ts", "internal/adapter/claude/mod/hooks/feed.ts"}
 
 func main() {
 	if err := run(".", os.Stdout); err != nil {
@@ -98,5 +107,18 @@ func generateAt(root string) ([]generated, error) {
 		}
 		files = append(files, generated{path: t.ts, content: emitTS(schema)}, generated{path: t.goFile, content: goSource})
 	}
+	feed, err := os.ReadFile(filepath.Join(root, feedPath))
+	if err != nil {
+		return nil, err
+	}
+	for _, path := range feedCopies {
+		files = append(files, generated{path: path, content: feedCopy(feed)})
+	}
 	return files, nil
+}
+
+// feedCopy is the feed as a copy holds it, under a line naming its source.
+func feedCopy(feed []byte) []byte {
+	header := "// A copy of " + feedPath + ", written by go run ./tools/protogen: edit that file.\n"
+	return append([]byte(header), feed...)
 }

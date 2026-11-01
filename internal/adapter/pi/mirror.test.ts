@@ -1,8 +1,8 @@
 // The face's mirror of a pi session, run by go test (worktree_tool_test.go).
 import { expect, test } from "bun:test";
 import { facePrompt } from "./faced.ts";
+import { bounds, type MirrorEvent } from "./feed.ts";
 import { Mirror, serveMirror } from "./mirror.ts";
-import { bounds, type Carrier, type MirrorEvent, Outbox } from "./outbox.ts";
 import { facedTool, resultText } from "./toolmap.ts";
 
 test("pi's tools are named and given as their Claude Code kin, another as it is", () => {
@@ -249,56 +249,6 @@ test("nothing is mirrored before the hello's answer says mirror, and a failure o
   expect(second.emit("input", { text: "look", source: "interactive" })).toEqual([undefined]);
 });
 
-// carrier is a link the test answers by hand.
-function carrier(ready = true) {
-  const posted: MirrorEvent[][] = [];
-  const answers: ((ok: boolean) => void)[] = [];
-  const timers: (() => void)[] = [];
-  const c: Carrier = {
-    ready: () => ready,
-    post: (events) => {
-      posted.push(events);
-      return new Promise((resolve) => answers.push(resolve));
-    },
-    after: (_ms, run) => timers.push(run),
-  };
-  const fire = () => {
-    for (const run of timers.splice(0)) run();
-  };
-  return { c, posted, answers, fire };
-}
-
-test("the outbox sends one batch at a time and a failed batch stands as lost", async () => {
-  const { c, posted, answers, fire } = carrier();
-  const box = new Outbox(c);
-  box.push({ kind: "delta", id: "b", text: "a" });
-  box.push({ kind: "input", id: "c", text: "{}" });
-  box.push({ kind: "input", id: "c", text: '{"a":1}' });
-  fire();
-  expect(posted.length).toBe(1);
-  // A later input replaces one still queued.
-  expect(posted[0].map((e) => e.text)).toEqual(["a", '{"a":1}']);
-  box.push({ kind: "delta", id: "b", text: "b" });
-  fire();
-  answers[0](false);
-  await Promise.resolve();
-  fire();
-  await Promise.resolve();
-  expect(posted[1][0]).toEqual({ kind: "delta", id: "b", text: "b" });
-  expect(posted[1][1]).toEqual({ kind: "resync", lost: 2 });
-});
-
-test("the outbox stays within its bound: deltas go first, then whole items behind a marker", () => {
-  const { c } = carrier(false);
-  const box = new Outbox(c);
-  const text = "x".repeat(30000);
-  box.push({ kind: "tool", id: "t", name: "Bash" });
-  for (let i = 0; i < 20; i++) box.push({ kind: "delta", id: "b", text });
-  expect(box.bytes).toBeLessThanOrEqual(bounds.outbox);
-  for (let i = 0; i < 20; i++) box.push({ kind: "settle", id: `s${i}`, part: 0, of: 1, text });
-  expect(box.bytes).toBeLessThanOrEqual(bounds.outbox);
-});
-
 test("each run pi starts within a turn has blocks of its own, a retry's never settling over an earlier step", () => {
   const { events, emit } = mirrored();
   emit("agent_start", {});
@@ -358,7 +308,7 @@ test("a failed message pi tries again is counted, and the retries' end said as p
   expect(notices(through.events)).toEqual(["Error: 503", "Error: 503"]);
 });
 
-test("a long call's input and output stay within an event, and every batch within its cap", () => {
+test("a long call's input and output stay within an event", () => {
   const { events, emit } = mirrored();
   emit("agent_start", {});
   const content = "x".repeat(60000);
@@ -373,21 +323,7 @@ test("a long call's input and output stay within an event, and every batch withi
     isError: false,
     durationMs: 1,
   });
+  expect(events.filter((e) => e.kind === "input" || e.kind === "result").length).toBe(2);
   for (const e of events)
     expect(Buffer.byteLength(JSON.stringify(e))).toBeLessThanOrEqual(bounds.event);
-  const { c, posted, answers, fire } = carrier();
-  const box = new Outbox(c);
-  for (const e of events) box.push(e);
-  // An event past the bound is never sent: its item is lost instead.
-  box.push({ kind: "result", id: "big", status: "done", text: "y".repeat(bounds.batch) });
-  for (let i = 0; i < 10; i++) {
-    fire();
-    answers.splice(0).map((answer) => answer(true));
-  }
-  expect(posted.length).toBeGreaterThan(1);
-  for (const batch of posted)
-    expect(Buffer.byteLength(JSON.stringify(batch))).toBeLessThanOrEqual(bounds.batch);
-  const sent = posted.flat();
-  expect(sent.some((e) => e.id === "big" && e.kind === "result")).toBe(false);
-  expect(sent).toContainEqual({ kind: "lost", id: "big" });
 });

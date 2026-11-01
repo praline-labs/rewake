@@ -5,7 +5,7 @@
 // here changes a verdict, and nothing throws into them.
 import type { MirrorPermit } from "../protocol.gen.ts";
 import { type CheckEvent, callKey, type DialogEvent } from "./calls.ts";
-import { pieces, utf8Size } from "./sizes.ts";
+import { pieces, utf8Size } from "./feed.ts";
 
 // Verdict is what the check's next(e) came to, as far as the permit reads it.
 export interface Verdict {
@@ -103,7 +103,7 @@ export class Permits {
       cwd !== undefined &&
       editTools.includes(e.tool) &&
       typeof file === "string" &&
-      (file === cwd || file.startsWith(cwd.endsWith("/") ? cwd : cwd + "/"));
+      (file === cwd || file.startsWith(cwd.endsWith("/") ? cwd : `${cwd}/`));
     this.calls.set(e.tool_use_id, { verdict, edit });
     if (verdict.decision === "ask") this.asked.set(callKey(e.tool, e.input), e.tool_use_id);
     for (const [id] of this.calls) {

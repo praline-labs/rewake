@@ -16,11 +16,20 @@ import (
 // carries it, since none carries a text.
 const actionPrompt = "prompt"
 
+// mirrorBatch is MirrorBatch as the host reads it: the same fields on the
+// wire (protocol.schema.json), its events in the feed's neutral form, which
+// core/mirror decodes for every adapter alike.
+type mirrorBatch struct {
+	LoadID     string             `json:"loadId"`
+	Generation int                `json:"generation"`
+	Events     []mirror.WireEvent `json:"events"`
+}
+
 // mirrorEvents hands a batch of the conversation to the model the face
 // draws. The batch is the current load's: one of a lapsed generation, or of
 // a run not drawn by the face, is refused, and the mod drops it.
 func (s *Server) mirrorEvents(w http.ResponseWriter, r *http.Request) {
-	var batch MirrorBatch
+	var batch mirrorBatch
 	if status, err := decode(w, r, &batch, MaxBodyBytes); err != nil {
 		refuse(w, status, err.Error())
 		return
@@ -40,47 +49,8 @@ func (s *Server) mirrorEvents(w http.ResponseWriter, r *http.Request) {
 		s.refuseEffect(w, status, err)
 		return
 	}
-	events := make([]mirror.Event, 0, len(batch.Events))
-	for _, e := range batch.Events {
-		events = append(events, mirrorEvent(e))
-	}
-	s.cfg.Mirror.Apply(events...)
+	s.cfg.Mirror.Apply(mirror.Decode(batch.Events, modes)...)
 	s.answer(w, r, Done{})
-}
-
-func mirrorEvent(e MirrorEvent) mirror.Event {
-	text := func(p *string) string {
-		if p == nil {
-			return ""
-		}
-		return *p
-	}
-	number := func(p *int) int {
-		if p == nil {
-			return 0
-		}
-		return *p
-	}
-	out := mirror.Event{
-		Kind: mirror.EventKind(e.Kind), ID: text(e.ID), Turn: text(e.Turn), Text: text(e.Text),
-		Origin: text(e.Origin), Name: text(e.Name), Part: number(e.Part), Of: number(e.Of), Lost: number(e.Lost),
-	}
-	if e.Block != nil {
-		out.Block = mirror.ItemKind(*e.Block)
-	}
-	if e.Status != nil {
-		out.Status = mirror.ItemStatus(*e.Status)
-	}
-	if e.State != nil {
-		out.State = mirror.TurnState(*e.State)
-	}
-	if e.Permit != nil {
-		out.Permit = &mirror.Permit{By: mirror.PermitBy(e.Permit.By), Allowed: e.Permit.Allowed, Reason: e.Permit.Reason}
-	}
-	if e.Mode != nil {
-		out.Mode = modes[*e.Mode]
-	}
-	return out
 }
 
 // modes names Claude Code's permission modes in the model's words; one the

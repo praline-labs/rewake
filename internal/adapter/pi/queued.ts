@@ -7,7 +7,7 @@
 // face shows it waiting, as pi's own screen does under its chat, until the
 // take settles it where pi took it.
 
-import type { MirrorEvent } from "./outbox.ts";
+import type { MirrorEvent } from "./feed.ts";
 
 // A run queues few prompts; past this many the oldest is no longer followed
 // and, left queued, ends a gap with the run.

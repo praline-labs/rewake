@@ -31,6 +31,7 @@ internal/core/role/                           the role catalogue: flag, briefing
 internal/core/brief/                          text injected into an agent, independent of transport
 internal/core/worktype/                       the kinds of work a worker is raised for: the built-in texts and the person's and project's own
 internal/core/session/                        optional, epoch-scoped observations of a harness (telemetry): the Observer every adapter reports to, which merges them into the snapshot, and the activity verdict on it
+internal/core/mirror/                         the mirror: the model of a session's conversation the face draws, its socket, the decoder of a batch's neutral events, and feed.ts, the TypeScript feed every adapter's harness side sends through, copied into each by tools/protogen
 internal/core/screen/                         a window as cells for `rewake screen`: the frame, its text, its PNG with the embedded font, the picture's file with its refusals
 internal/core/space/                          the record of each space a main opens: its states, its steps, the kept checkouts' reminder
 internal/core/work/                           a run's room work as its input shows it: the open briefs bound to it with their ticks and the reports it waits on
@@ -56,7 +57,7 @@ test/leaserig/                                the room's build lease raced betwe
 tools/checksummary/                           summarizes a suite run into a few lines and summary.json
 tools/release/                                the release gate: checks, builds with pack.sh, publishes only when told, waits for the registry with --wait
 tools/land/                                   lands an accepted branch on v2: merges, runs a step's last-commit checks, pushes and installs rewake2's build, or resets on red
-tools/protogen/                               writes the Go and TypeScript types of three schemas, the mod protocol's, the shell's room view (internal/cli/room_view.schema.json) and the mirror's, whose TypeScript goes to the face (face/src/mirror.gen.ts); its test fails when a checked-in file differs
+tools/protogen/                               writes the Go and TypeScript types of three schemas, the mod protocol's, the shell's room view (internal/cli/room_view.schema.json) and the mirror's, whose TypeScript goes to the face (face/src/mirror.gen.ts); copies the mirror's feed into pi's extension and the mod; its test fails when a checked-in file differs
 ```
 
 `cmd/` holds only what the project ships; `tools/` holds development programs that ship

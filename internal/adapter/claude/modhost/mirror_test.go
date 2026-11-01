@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"reflect"
 	"testing"
 	"time"
 
@@ -48,18 +49,50 @@ func TestMirrorEventsReachTheModelOfTheCurrentLoadOnly(t *testing.T) {
 }
 
 // Claude Code's mode names reach the model in its own words, a name it does
-// not know leaves the mode unsaid, and a result keeps its permit.
+// not know leaves the mode as it was, and a result keeps its permit.
 func TestAModeAndAPermitReachTheModelInItsWords(t *testing.T) {
-	for claude, want := range map[string]mirror.PermissionMode{"acceptEdits": mirror.PermissionModeEdits, "bypassPermissions": mirror.PermissionModeBypass, "dontAsk": mirror.PermissionModeUnasked, "auto": mirror.PermissionModeAuto, "someday": ""} {
-		if got := mirrorEvent(MirrorEvent{Kind: MirrorEventKindMode, Mode: &claude}).Mode; got != want {
-			t.Errorf("%s became %q", claude, got)
+	model := mirror.New()
+	_, socket := servingWith(t, func(server *Server) { server.cfg.Mirror = model })
+	postValue(t, socket, PathHello, HelloRequest{LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
+	for _, step := range []struct {
+		claude string
+		want   mirror.PermissionMode
+	}{{"acceptEdits", mirror.PermissionModeEdits}, {"someday", mirror.PermissionModeEdits}, {"bypassPermissions", mirror.PermissionModeBypass}, {"dontAsk", mirror.PermissionModeUnasked}, {"auto", mirror.PermissionModeAuto}} {
+		postValue(t, socket, PathMirrorEvents, MirrorBatch{LoadID: "load", Generation: 1, Events: []MirrorEvent{{Kind: MirrorEventKindMode, Mode: &step.claude}}})
+		for _, line := range model.Snapshot() {
+			if line.Op == mirror.LineOpBegin && (line.Mode == nil || *line.Mode != step.want) {
+				t.Errorf("%s left the mode %v", step.claude, line.Mode)
+			}
 		}
 	}
-	id := "call"
-	got := mirrorEvent(MirrorEvent{Kind: MirrorEventKindResult, ID: &id, Permit: &MirrorPermit{By: MirrorPermitByClassifier, Allowed: true}})
-	if got.Permit == nil || got.Permit.By != mirror.PermitByClassifier || !got.Permit.Allowed {
-		t.Fatalf("the permit: %+v", got.Permit)
+	id, name := "call", "Bash"
+	postValue(t, socket, PathMirrorEvents, MirrorBatch{LoadID: "load", Generation: 1, Events: []MirrorEvent{
+		{Kind: MirrorEventKindTool, ID: &id, Name: &name},
+		{Kind: MirrorEventKindResult, ID: &id, Permit: &MirrorPermit{By: MirrorPermitByClassifier, Allowed: true}},
+	}})
+	for _, line := range model.Snapshot() {
+		if line.Op == mirror.LineOpItem && (line.Item.Permit == nil || line.Item.Permit.By != mirror.PermitByClassifier || !line.Item.Permit.Allowed) {
+			t.Fatalf("the permit: %+v", line.Item.Permit)
+		}
 	}
+}
+
+// The host reads a batch in the feed's neutral form, which must be the
+// protocol's batch field for field: the schema stays the wire's contract.
+func TestTheNeutralBatchIsTheProtocols(t *testing.T) {
+	for _, pair := range [][2]any{{MirrorBatch{}, mirrorBatch{}}, {MirrorEvent{}, mirror.WireEvent{}}, {MirrorPermit{}, mirror.Permit{}}} {
+		if protocol, neutral := jsonFields(pair[0]), jsonFields(pair[1]); !reflect.DeepEqual(protocol, neutral) {
+			t.Errorf("%T has %v, the host reads %v", pair[0], protocol, neutral)
+		}
+	}
+}
+
+func jsonFields(v any) []string {
+	var fields []string
+	for i := range reflect.TypeOf(v).NumField() {
+		fields = append(fields, reflect.TypeOf(v).Field(i).Tag.Get("json"))
+	}
+	return fields
 }
 
 // A prompt of the face rides the next heartbeat with its text; its item is the
