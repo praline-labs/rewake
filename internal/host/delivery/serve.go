@@ -75,6 +75,9 @@ type Server struct {
 	// wrapper published; what that turn left unread is reminded once
 	// (reminder.go). Nil for a run whose turns are not reported.
 	Ends <-chan int64
+	// Handoff asks the server to stop for an exec of the wrapper
+	// (handoff.go); each request is answered once. Nil asks never.
+	Handoff <-chan chan<- string
 
 	// attempts remembers when each pending message was last tried.
 	attempts map[string]time.Time
@@ -178,6 +181,10 @@ func (s *Server) Serve(ctx context.Context) {
 			s.receive(ctx, receipt)
 		case ended := <-s.Ends:
 			s.remind(ctx, ended)
+		case reply := <-s.Handoff:
+			if s.handoff(reply) {
+				return
+			}
 		}
 	}
 }

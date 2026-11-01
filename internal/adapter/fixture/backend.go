@@ -10,8 +10,8 @@ import (
 	"net"
 	"os"
 	"os/exec"
-	"slices"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -74,6 +74,13 @@ type backend struct {
 	turns    map[string]turnRecord
 	ends     map[string]adapter.TurnEnd
 	observed *session.Observer
+	// serves is what the hello named, handed over with the connection; open
+	// are the turns started whose end was not yet published, and inflight the
+	// calls into the wrapper's handler under way: either keeps the run from
+	// being handed over (handover.go).
+	serves   []string
+	open     map[string]bool
+	inflight atomic.Int32
 
 	// report is where the live set goes (ReportLive), told once the first
 	// exchange has run (exchanged) and at every change after; changes orders
@@ -109,7 +116,7 @@ func newBackend(program string, args, env []string, dir, socket, epoch string) *
 		endWait: endDeadline, observed: session.NewObserver(session.ObserverConfig{Epoch: epoch}),
 		exited: make(chan struct{}), greeted: make(chan struct{}), hello: make(chan struct{}),
 		live: map[string]bool{}, turns: map[string]turnRecord{}, ends: map[string]adapter.TurnEnd{},
-		waiting: map[net.Conn]bool{},
+		open: map[string]bool{}, waiting: map[net.Conn]bool{},
 	}
 }
 
@@ -172,7 +179,11 @@ func (b *backend) spawn() error {
 	command.Env = b.env
 	command.Dir = b.dir
 	command.Stderr = os.Stderr
-	command.SysProcAttr = &syscall.SysProcAttr{Setpgid: true, Pdeathsig: syscall.SIGKILL}
+	// No parent-death signal: the kernel sends it when the thread that forked
+	// the program ends, and an exec of the wrapper ends every thread but one
+	// (handover.go). A program whose wrapper was killed loses its connection
+	// and ends on its own.
+	command.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	if err := command.Start(); err != nil {
 		if errors.Is(err, exec.ErrNotFound) {
 			return fmt.Errorf("%s is not installed or not in PATH", b.program)
@@ -242,6 +253,13 @@ func (b *backend) admit(conn net.Conn) {
 		return
 	}
 	_ = conn.SetReadDeadline(time.Time{})
+	b.attach(l, reader, first)
+}
+
+// attach runs the exchange on a connection past its hello: the one admit took,
+// or the one an earlier image of the wrapper handed over (handover.go), whose
+// hello is the one it took then.
+func (b *backend) attach(l *link, reader *bufio.Reader, first Frame) {
 	b.mu.Lock()
 	if b.link != nil || b.closing {
 		// One hello per connection, one connection at a time: a second
@@ -250,7 +268,7 @@ func (b *backend) admit(conn net.Conn) {
 		l.close()
 		return
 	}
-	b.link, b.thread, b.version = l, first.Thread, first.Version
+	b.link, b.thread, b.version, b.serves = l, first.Thread, first.Version, first.Serves
 	b.live = map[string]bool{}
 	b.mu.Unlock()
 	b.greetOnce.Do(func() { close(b.greeted) })
@@ -292,75 +310,6 @@ func (b *backend) fromProgram(conn *net.UnixConn) bool {
 	}
 	start, err := proc.StartTime(b.pid)
 	return err == nil && start == b.start
-}
-
-// probe sends one probe per served capability, all at once, and answers the
-// set whose probes came back right within the bound. A capability the hello
-// did not name is not probed.
-func (b *backend) probe(l *link, serves []string) map[string]bool {
-	live := map[string]bool{}
-	var mu sync.Mutex
-	var wg sync.WaitGroup
-	for _, capability := range Served {
-		if !slices.Contains(serves, capability) {
-			continue
-		}
-		request := Frame{Op: opProbe, Capability: capability}
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			answer, err := l.ask(request, b.bound)
-			if err == nil && probeAnswered(capability, answer) {
-				mu.Lock()
-				live[capability] = true
-				mu.Unlock()
-			}
-		}()
-	}
-	wg.Wait()
-	return live
-}
-
-// probeAnswered says whether a probe's answer is the one its capability
-// gives: an acknowledgment for Wake, a turn state for TurnBoundary, a sample
-// or none for Telemetry, ready for Control.
-func probeAnswered(capability string, answer Frame) bool {
-	if !answer.OK {
-		return false
-	}
-	switch capability {
-	case TurnBoundary:
-		return answer.State == "idle" || answer.Turn != "" && answer.State == "turn"
-	case Telemetry:
-		return answer.State == "none" || answer.State == "working" || answer.State == "idle"
-	case Control:
-		return answer.State == "ready"
-	}
-	return true
-}
-
-// current is the live set now: the capabilities whose probes the program
-// answered on the connection held now, and nothing else. The caller holds
-// b.mu.
-func (b *backend) current() []adapter.Capability {
-	var out []adapter.Capability
-	for _, capability := range Served {
-		if b.live[capability] {
-			out = append(out, adapter.Capability(capability))
-		}
-	}
-	// A space host is rewake's own process, which needs of the run only that
-	// it runs: the program's connection proves that.
-	if b.hostsSpaces && b.link != nil {
-		out = append(out, adapter.SpacesCapability)
-	}
-	return out
-}
-
-func (b *backend) isLive(capability string) (*link, bool) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	return b.link, b.link != nil && b.live[capability]
 }
 
 // Thread is the program's conversation while a connection with a live Wake

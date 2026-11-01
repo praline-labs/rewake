@@ -61,10 +61,14 @@ func (b *backend) enter() bool {
 		return false
 	}
 	b.users.Add(1)
+	b.inflight.Add(1)
 	return true
 }
 
-func (b *backend) leave() { b.users.Done() }
+func (b *backend) leave() {
+	b.inflight.Add(-1)
+	b.users.Done()
+}
 
 // dispatchHook, when a test sets it, runs on a frame's own goroutine before
 // its work: the moment a scheduler could delay that work by.
@@ -123,7 +127,7 @@ func (b *backend) Close() {
 
 // stopProgram ends the program's group: SIGTERM, then SIGKILL.
 func (b *backend) stopProgram() {
-	if b.process == nil {
+	if b.pid == 0 {
 		return
 	}
 	b.stopOnce.Do(func() {

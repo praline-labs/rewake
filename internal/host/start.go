@@ -1,9 +1,14 @@
 package host
 
 import (
+	"context"
+	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 
+	"github.com/praline-labs/rewake/internal/adapter"
+	"github.com/praline-labs/rewake/internal/host/delivery"
 	"github.com/praline-labs/rewake/internal/host/mainhost"
 )
 
@@ -44,3 +49,34 @@ func startHarness(request Request, command *exec.Cmd) (func(int), error) {
 // write whole between two of the harness's, so the mark lands between its
 // writes.
 func tellShellClosing() { _, _ = os.Stdout.WriteString(mainhost.ClosingMark) }
+
+// runHarness starts the plan's program, or adopts the one an earlier image
+// of this wrapper started (reexec.go).
+func runHarness(request Request, plan adapter.LaunchPlan) (*os.Process, func(int), error) {
+	if request.Handover != nil {
+		return adoptHarness(request)
+	}
+	command := exec.Command(plan.Command, plan.Args...)
+	command.Env = plan.Env
+	onStop, err := startHarness(request, command)
+	if err != nil {
+		if errors.Is(err, exec.ErrNotFound) {
+			return nil, nil, fmt.Errorf("%s is not installed or not in PATH", plan.Command)
+		}
+		return nil, nil, err
+	}
+	return command.Process, onStop, nil
+}
+
+// serveHandingOver serves until ctx ends; a server stopped for an exec that
+// failed serves again.
+func serveHandingOver(ctx context.Context, server *delivery.Server, resume <-chan struct{}) {
+	for {
+		server.Serve(ctx)
+		select {
+		case <-ctx.Done():
+			return
+		case <-resume:
+		}
+	}
+}

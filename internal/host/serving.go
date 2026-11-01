@@ -83,7 +83,7 @@ func startServing(ctx context.Context, request Request, self registry.Session, n
 		// Before the harness: its first word goes to an address that has to
 		// exist by then. Closed either way: what the launch prepared for it
 		// goes.
-		err := plan.Service.Start(ctx, func(note string) { _, _ = fmt.Fprintln(os.Stderr, "rewake: "+note) })
+		err := startService(ctx, request, plan.Service, func(note string) { _, _ = fmt.Fprintln(os.Stderr, "rewake: "+note) })
 		stops = append(stops, closeService)
 		if err != nil {
 			stop()

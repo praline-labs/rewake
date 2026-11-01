@@ -252,3 +252,11 @@ func newID() string {
 	_, _ = rand.Read(raw[:])
 	return hex.EncodeToString(raw[:])
 }
+
+// Count is how many requests the broker holds open: none is the only state
+// an exec of the wrapper may leave behind (.scratch/reexec-probe.md).
+func (b *Broker) Count() int {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return len(b.requests)
+}

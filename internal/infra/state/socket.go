@@ -46,6 +46,25 @@ func listen(path string, check func(op string) error) (*Listener, error) {
 	return &Listener{UnixListener: listener, path: path, check: check}, nil
 }
 
+// Inherit takes the socket at path that an earlier image of this process
+// bound and handed over as file (adapter.Handover): it is already bound, so
+// nothing is written, but its close removes the path behind the same guard.
+// file is closed; the listener holds a copy of its descriptor.
+func Inherit(path string, file *os.File) (*Listener, error) {
+	defer func() { _ = file.Close() }()
+	inherited, err := net.FileListener(file)
+	if err != nil {
+		return nil, err
+	}
+	listener, ok := inherited.(*net.UnixListener)
+	if !ok {
+		_ = inherited.Close()
+		return nil, errors.New("the inherited listener is not a unix socket")
+	}
+	listener.SetUnlinkOnClose(false)
+	return &Listener{UnixListener: listener, path: path, check: func(op string) error { return guard(op, path) }}, nil
+}
+
 // Close stops listening and removes the socket's file, once: a second close
 // must not remove a socket the next run of the name has bound since. A
 // removal the guard refuses leaves the file, for the next bind of the name to

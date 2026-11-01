@@ -43,7 +43,17 @@ func (b *backend) handle(l *link, frame Frame) {
 		b.dispatch(frame, func() { _ = l.answer(frame, reply) })
 	case opTurnEnded:
 		completion, err := b.endOf(l, frame)
-		b.dispatch(frame, func() { _ = l.answer(frame, b.decide(l, completion, frame.Hold, err)) })
+		b.dispatch(frame, func() {
+			reply := b.decide(l, completion, frame.Hold, err)
+			_ = l.answer(frame, reply)
+			if reply.Reason == "" {
+				// Published or refused, and the program told: it goes on
+				// with no turn open. A held end continues the turn.
+				b.mu.Lock()
+				delete(b.open, frame.Turn)
+				b.mu.Unlock()
+			}
+		})
 	case opActivity:
 		b.activity(l, frame)
 	case opCompacted:
@@ -79,6 +89,7 @@ func (b *backend) turnStarted(l *link, frame Frame) Frame {
 	if _, known := b.turns[frame.Turn]; !known {
 		b.turns[frame.Turn] = record
 	}
+	b.open[frame.Turn] = true
 	thread := b.thread
 	b.mu.Unlock()
 	if b.handler.Started != nil {

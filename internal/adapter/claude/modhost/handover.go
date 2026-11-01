@@ -1,0 +1,122 @@
+package modhost
+
+import (
+	"errors"
+	"fmt"
+	"os"
+	"slices"
+
+	"github.com/praline-labs/rewake/internal/adapter"
+	"github.com/praline-labs/rewake/internal/infra/state"
+)
+
+// The mod's endpoint across an exec of its wrapper, the Go-level probe of
+// .scratch/reexec-probe.md: the listener goes as a file, and the order of
+// the run's loads — the current one with its generation, the superseded,
+// the admitted, the numbers — as Handed, so the unchanged mod's next poll is
+// answered as before the exec rather than with the 400 a fresh server gives a
+// load it never heard. What is not handed over keeps the exec from going
+// (Busy); each end's first capture is not handed over either (turns.go), the
+// one gap a feature has to close.
+
+// handedVersion is the version of Handed; a server adopts only its own.
+const handedVersion = 1
+
+// Handed is the endpoint's order of loads as one image hands it to the next.
+type Handed struct {
+	Version    int                `json:"version"`
+	Harness    adapter.RunProcess `json:"harness"`
+	Current    *HandedLoad        `json:"current,omitempty"`
+	Superseded []string           `json:"superseded,omitempty"`
+	Loads      []string           `json:"loads,omitempty"`
+	Generation int                `json:"generation"`
+	Transition uint64             `json:"transition"`
+}
+
+// HandedLoad is the current load: its hello and its generation's state.
+type HandedLoad struct {
+	Hello      HelloRequest `json:"hello"`
+	Generation int          `json:"generation"`
+	Live       bool         `json:"live"`
+}
+
+// Busy answers what of the endpoint lives only in this image, "" when
+// nothing does.
+func (s *Server) Busy() string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	switch {
+	case s.closed:
+		return "the mod's endpoint is closing"
+	case s.management.queued != nil || len(s.management.requests) > 0:
+		return "a control request is dispatched to the mod"
+	case s.asks.Count() > 0:
+		return "a permission request or a question of the worker is open"
+	}
+	return ""
+}
+
+// HandOver answers the order of loads and a copy of the listener, changing
+// nothing: the server serves on until the exec replaces it.
+func (s *Server) HandOver() (Handed, *os.File, error) {
+	if why := s.Busy(); why != "" {
+		return Handed{}, nil, errors.New(why)
+	}
+	s.mu.Lock()
+	handed := Handed{Version: handedVersion, Harness: s.harness, Generation: s.generation, Transition: s.transition}
+	if s.current != nil {
+		handed.Current = &HandedLoad{Hello: s.current.hello, Generation: s.current.generation, Live: s.current.live}
+	}
+	for load := range s.superseded {
+		handed.Superseded = append(handed.Superseded, load)
+	}
+	for load := range s.loads {
+		handed.Loads = append(handed.Loads, load)
+	}
+	s.mu.Unlock()
+	slices.Sort(handed.Superseded)
+	slices.Sort(handed.Loads)
+	file, err := s.listener.File()
+	return handed, file, err
+}
+
+// Adopt serves the listener an earlier image handed over, in place of Start,
+// with its order of loads. A live generation is watched from now, the
+// adoption counting as its poll, and reported proven, since this image's run
+// has heard nothing yet.
+func (s *Server) Adopt(handed Handed, listener *os.File) error {
+	if handed.Version != handedVersion {
+		_ = listener.Close()
+		return fmt.Errorf("the mod's endpoint was handed over as version %d; this build takes %d", handed.Version, handedVersion)
+	}
+	inherited, err := state.Inherit(s.cfg.Socket, listener)
+	if err != nil {
+		return fmt.Errorf("could not take the mod socket %s: %w", s.cfg.Socket, err)
+	}
+	s.mu.Lock()
+	s.generation, s.transition = handed.Generation, handed.Transition
+	for _, load := range handed.Superseded {
+		s.superseded[load] = true
+	}
+	for _, load := range handed.Loads {
+		s.loads[load] = true
+	}
+	var transition uint64
+	if current := handed.Current; current != nil {
+		s.current = &loadState{hello: current.Hello, generation: current.Generation, live: current.Live}
+		if current.Live {
+			s.rearm(s.current)
+			s.transition++
+			transition = s.transition
+		}
+	}
+	s.mu.Unlock()
+	if handed.Harness.PID != 0 {
+		s.HarnessStarted(handed.Harness)
+	}
+	s.serveOn(inherited)
+	if transition != 0 {
+		s.report(transition, true)
+	}
+	return nil
+}

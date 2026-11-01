@@ -9,6 +9,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/core/role"
+	"github.com/praline-labs/rewake/internal/host"
 	"github.com/praline-labs/rewake/internal/host/launch"
 	"github.com/praline-labs/rewake/internal/host/spacehost"
 )
@@ -20,6 +21,11 @@ func Run(catalog adapter.Catalog, argv []string, stdout, stderr io.Writer) int {
 	// with no arguments of its own: it runs before anything reads them.
 	if spec, ok := os.LookupEnv(spacehost.Env); ok && len(argv) == 0 {
 		return spacehost.Stage(spec)
+	}
+	// A wrapper's new image after an exec of itself (host/reexec.go), with
+	// the arguments of its launch, which the handover carries parsed.
+	if spec, ok := os.LookupEnv(host.HandoverEnv); ok {
+		return adoptRun(catalog, spec, stderr)
 	}
 	t := newTable(catalog)
 	ctx := &Context{Stdout: stdout, Stderr: stderr, table: t}

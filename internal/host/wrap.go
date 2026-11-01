@@ -11,11 +11,10 @@ package host
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
+	"sync"
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/core/control"
@@ -82,6 +81,9 @@ type Request struct {
 	// keeps until Run returns; nil has Run take its own. Run adds a hold of
 	// its own either way, which lasts until the run's workers have stopped.
 	Lease *build.Lease
+	// Handover is the run an earlier image of this wrapper handed over
+	// (reexec.go): Run adopts it instead of claiming and starting.
+	Handover *Handover
 }
 
 // Run starts the harness, serves its mailbox until it exits, and returns the
@@ -140,7 +142,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 	// The name is claimed before anything is prepared. Preparing first means a
 	// launch that loses the race has already touched what belongs to the session
 	// that won — its socket file, for one.
-	session, err := claimName(request, self, selfStart, boot, cwd)
+	session, err := claimOrAdopt(request, self, selfStart, boot, cwd)
 	if err != nil {
 		return 0, err
 	}
@@ -283,19 +285,14 @@ func Run(ctx context.Context, request Request) (int, error) {
 		return 0, err
 	}
 
-	command := exec.Command(plan.Command, plan.Args...)
-	command.Env = plan.Env
-	onStop, err := startHarness(request, command)
+	harness, onStop, err := runHarness(request, plan)
 	if err != nil {
-		if errors.Is(err, exec.ErrNotFound) {
-			return 0, fmt.Errorf("%s is not installed or not in PATH", plan.Command)
-		}
 		return 0, err
 	}
 
 	process, _ := plan.Service.(adapter.ProcessService)
-	if start, err := proc.StartTime(command.Process.Pid); err == nil {
-		session.HarnessPID = command.Process.Pid
+	if start, err := proc.StartTime(harness.Pid); err == nil {
+		session.HarnessPID = harness.Pid
 		session.HarnessStart = start
 		// The record as it stands: the live set may have moved since the
 		// copy here was read.
@@ -309,11 +306,11 @@ func Run(ctx context.Context, request Request) (int, error) {
 	if process != nil {
 		watchCtx, stopWatching := context.WithCancel(ctx)
 		defer stopWatching()
-		go stopWithProcess(watchCtx, process, command.Process, session.HarnessStart)
+		go stopWithProcess(watchCtx, process, harness, session.HarnessStart)
 	}
 	harnessStart := session.HarnessStart
-	go forward(signals, command.Process, func() bool {
-		return proc.Alive(command.Process.Pid, harnessStart)
+	go forward(signals, harness, func() bool {
+		return proc.Alive(harness.Pid, harnessStart)
 	})
 
 	serveCtx, stopServing := context.WithCancel(ctx)
@@ -322,7 +319,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 	serviceReady := make(chan struct{})
 	boundaryProven := availableAfterStart(session, request.Harness, live)
 	stopAvailability := startAvailability(serveCtx, request.Dir, session, serviceReady, func() bool {
-		if !proc.Alive(command.Process.Pid, harnessStart) || !boundaryProven() {
+		if !proc.Alive(harness.Pid, harnessStart) || !boundaryProven() {
 			return false
 		}
 		// A process that speaks for the harness makes it available once it
@@ -338,6 +335,12 @@ func Run(ctx context.Context, request Request) (int, error) {
 		return true
 	}, &life.workers)
 	defer stopAvailability()
+	handover := &reexec{
+		request: request, session: session, runDir: runDir, service: plan.Service, harness: harness, start: harnessStart,
+		handoff: make(chan chan<- string), resume: make(chan struct{}),
+	}
+	defer handover.watch(serveCtx)()
+	adopted(request, runDir)
 	go func() {
 		defer close(served)
 		// No adapter follows its conversation outside a service since S9;
@@ -353,7 +356,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 			thread = plan.Thread.Thread
 		}
 		server := &delivery.Server{
-			Ready:  func() { close(serviceReady) },
+			Ready:  sync.OnceFunc(func() { close(serviceReady) }),
 			Dir:    request.Dir,
 			Thread: threadIfLive(thread, live),
 			Name:   name,
@@ -366,6 +369,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 			Window:  delivery.Coalescing,
 			Deliver: wakeIfLive(plan.Wake, live),
 			Ends:    ends,
+			Handoff: handover.handoff,
 		}
 		if reserver, ok := plan.Wake.(adapter.Reserver); ok {
 			server.Reserve = reserveIfLive(reserver, live)
@@ -373,10 +377,10 @@ func Run(ctx context.Context, request Request) (int, error) {
 		if receiver, ok := plan.Wake.(adapter.Receiver); ok {
 			server.Receipts, server.Opened = receiver.Receipts(), receiver.Opened()
 		}
-		server.Serve(serveCtx)
+		serveHandingOver(serveCtx, server, handover.resume)
 	}()
 
-	code := waitForHarness(command.Process.Pid, onStop)
+	code := waitForHarness(harness.Pid, onStop)
 	// The run begins to end with its harness: no decision is taken from here.
 	life.closeAdmission()
 

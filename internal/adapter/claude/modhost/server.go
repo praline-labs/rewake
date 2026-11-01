@@ -128,6 +128,12 @@ func (s *Server) Start() error {
 	if err != nil {
 		return fmt.Errorf("could not listen on the mod socket %s: %w", s.cfg.Socket, err)
 	}
+	s.serveOn(listener)
+	return nil
+}
+
+// serveOn serves the listener, bound by Start or adopted (handover.go).
+func (s *Server) serveOn(listener *state.Listener) {
 	s.listener = listener
 	s.http = &http.Server{
 		Handler:           http.HandlerFunc(s.serve),
@@ -142,11 +148,13 @@ func (s *Server) Start() error {
 		ErrorLog: log.New(io.Discard, "", 0),
 	}
 	s.http.SetKeepAlivesEnabled(false)
+	// The socket itself, not the state's listener: Serve closes what it
+	// serves on return, and the path goes in Close alone, so an image that
+	// stops serving for an exec leaves it to the next (handover.go).
 	go func() {
 		defer close(s.served)
-		_ = s.http.Serve(listener)
+		_ = s.http.Serve(listener.UnixListener)
 	}()
-	return nil
 }
 
 // HarnessStarted names the harness's process: from now on it alone is served.
