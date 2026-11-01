@@ -39,6 +39,8 @@ type Event struct {
 	Permit *Permit
 	// Mode is the session's permission mode, on a mode event.
 	Mode PermissionMode
+	// Level is the session's thinking level, on a level event.
+	Level ThinkingLevel
 }
 
 // EventKind is what an event says.
@@ -59,6 +61,7 @@ const (
 	EventResync EventKind = "resync"
 	EventNotice EventKind = "notice"
 	EventMode   EventKind = "mode"
+	EventLevel  EventKind = "level"
 	// EventTaken says the session took a queued prompt into its
 	// conversation, or with Status refused gave it back untaken.
 	EventTaken EventKind = "taken"

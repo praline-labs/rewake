@@ -1,5 +1,6 @@
 // What the person does in rewake's face, handed to pi (docs/face.md, "The
-// face"): a prompt typed there, Esc and shift+tab.
+// face"): a prompt typed there, Esc and shift+tab, and the thinking level
+// shift+tab moves, told to the face.
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import type { Mirror } from "./mirror.ts";
 
@@ -81,4 +82,20 @@ export function faceThinking(
   } catch {
     return { error: "pi did not change the thinking level" };
   }
+}
+
+// serveLevel tells the face pi's thinking level, which the face's rule shows
+// and its shift+tab moves: say once the face draws this run, and on each
+// change of the level or of the model, which may clamp it. pi's own level
+// names are the mirror's. Whatever it throws is dropped, as the mirror's
+// observers do.
+export function serveLevel(pi: Pick<ExtensionAPI, "on" | "getThinkingLevel">, mirror: Mirror) {
+  const say = () => {
+    try {
+      mirror.push({ kind: "level", level: pi.getThinkingLevel() });
+    } catch {}
+  };
+  pi.on("thinking_level_select", async () => say());
+  pi.on("model_select", async () => say());
+  return say;
 }

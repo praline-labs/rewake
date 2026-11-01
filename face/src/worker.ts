@@ -84,8 +84,7 @@ function draw(now: number) {
     anchor = undefined;
     const rows = pinned(laid, statusOf(model, clockAt(now), width), height);
     const prompts = model.inputs.includes("prompt");
-    const cycles = model.inputs.includes("thinking") || undefined;
-    frame = { rows, now, turn: model.turn, link, prompts, mode: model.mode, cycles };
+    frame = { rows, now, turn: model.turn, link, prompts, mode: model.mode, level: model.level };
     paint();
   } catch (err) {
     post({ kind: "error", text: `the face's drawing failed: ${String(err)}` });

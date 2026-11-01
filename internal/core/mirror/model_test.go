@@ -129,8 +129,9 @@ func TestAToolCallCarriesItsInputAndEnd(t *testing.T) {
 	}
 }
 
-// A call's permit comes with its result, and the session's mode is sent as
-// it changes and given to a face that connects later on its begin line.
+// A call's permit comes with its result, and the session's mode and thinking
+// level are each sent as they change and given to a face that connects later
+// on its begin line.
 func TestAPermitRidesItsResultAndTheModeItsBegin(t *testing.T) {
 	m := New()
 	c := m.subscribe()
@@ -138,21 +139,22 @@ func TestAPermitRidesItsResultAndTheModeItsBegin(t *testing.T) {
 	reason := "out of scope"
 	m.Apply(
 		Event{Kind: EventMode, Mode: PermissionModeAuto},
-		Event{Kind: EventMode, Mode: PermissionModeAuto},
+		Event{Kind: EventLevel, Level: ThinkingLevelLow},
+		Event{Kind: EventLevel, Level: ThinkingLevelLow},
 		Event{Kind: EventTool, ID: "call", Turn: "t", Name: "Bash"},
 		Event{Kind: EventResult, ID: "call", Text: "denied", Status: ItemStatusRefused, Permit: &Permit{By: PermitByClassifier, Reason: &reason}},
 	)
-	if got := ops(lines(t, c)); got != "mode add set" {
+	if got := ops(lines(t, c)); got != "mode level add set" {
 		t.Fatalf("the changes: %s", got)
 	}
 	if p := itemOf(t, m, "call").Permit; p == nil || p.By != PermitByClassifier || p.Allowed || p.Reason == nil || *p.Reason != reason {
 		t.Fatalf("the call's permit: %+v", p)
 	}
-	if begin := m.Snapshot()[1]; begin.Mode == nil || *begin.Mode != PermissionModeAuto {
+	if begin := m.Snapshot()[1]; begin.Mode == nil || *begin.Mode != PermissionModeAuto || begin.Level == nil || *begin.Level != ThinkingLevelLow {
 		t.Fatalf("the begin line: %+v", begin)
 	}
-	if begin := New().Snapshot()[1]; begin.Mode != nil {
-		t.Fatalf("a session that has not said its mode: %+v", begin)
+	if begin := New().Snapshot()[1]; begin.Mode != nil || begin.Level != nil {
+		t.Fatalf("a session that has not said its mode or level: %+v", begin)
 	}
 }
 

@@ -30,6 +30,7 @@ export type MirrorEvent = {
     | "result"
     | "turn"
     | "mode"
+    | "level"
     | "notice"
     | "lost"
     | "resync"
@@ -50,6 +51,9 @@ export type MirrorEvent = {
   retry?: number;
   permit?: { by: string; allowed: boolean; reason?: string };
   mode?: string;
+  // level is the session's thinking level in the model's words, on a level
+  // event: the one the face's shift+tab moves.
+  level?: string;
 };
 
 export const bounds = {

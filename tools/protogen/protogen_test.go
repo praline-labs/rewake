@@ -168,7 +168,7 @@ func TestAnOptionalFieldStaysApartFromItsZero(t *testing.T) {
 		}
 	}
 	ts := string(emitTS(s))
-	for _, want := range []string{"  index?: number\n", "  cols: number\n", "  kinds?: Kind[]\n", "  kind?: Kind\n", `export type Kind = "one" | "two"`} {
+	for _, want := range []string{"  index?: number\n", "  cols: number\n", "  kinds?: Kind[]\n", "  kind?: Kind\n", `export type Kind = "one" | "two"`, `export const kindValues: readonly Kind[] = ["one", "two"]`} {
 		if !strings.Contains(ts, want) {
 			t.Errorf("the TypeScript side lacks %q:\n%s", want, ts)
 		}

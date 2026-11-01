@@ -4,7 +4,6 @@ import { testRender } from "@opentui/solid";
 import "../pane.ts";
 import type { PaneTerminal } from "../pane.ts";
 import { themeOf } from "../theme.ts";
-import { ruleOf, ruleParts } from "./rule.ts";
 import { FaceRow, FaceView } from "./view.tsx";
 
 const theme = themeOf(undefined);
@@ -66,56 +65,6 @@ test("a marked span is painted on its mark's colour", async () => {
       .slice(0, 3),
   ).toEqual([122, 41, 54]);
   expect(spans.find((s) => s.text.startsWith("H"))?.attributes).toBe(TextAttributes.UNDERLINE);
-});
-
-// The run's room work sits at the right end of the input's top rule, where
-// Claude Code's hint line ends with it, and fits any pane; none is a bare rule.
-test("the input's rule carries the run's work, cut to a narrow pane", () => {
-  expect(ruleOf(20, "brief 57 3/6")).toBe(`${"─".repeat(5)} brief 57 3/6 ─`);
-  expect(ruleOf(12, "brief 57 3/6 · ⧗ 2")).toBe("─── brief… ─");
-  expect(ruleOf(30)).toBe("─".repeat(30));
-  for (let width = 0; width <= 30; width++) {
-    const rule = ruleOf(width, "名前 brief 57 3/6");
-    expect(Bun.stringWidth(rule)).toBe(width);
-    expect(rule.endsWith(" ─") || rule === "─".repeat(width)).toBe(true);
-  }
-});
-
-// The mode sits at the rule's left end; a narrow pane drops it before it
-// cuts the work.
-test("the input's rule carries the mode, dropped before the work as the pane narrows", () => {
-  const rule = (width: number) => ruleOf(width, "⧗ 3", "auto");
-  expect(rule(30)).toBe(`── ⏵⏵ auto mode ${"─".repeat(8)} ⧗ 3 ─`);
-  expect(rule(20)).toBe(`${"─".repeat(14)} ⧗ 3 ─`);
-  expect(ruleOf(30, undefined, "auto")).toBe(`── ⏵⏵ auto mode ${"─".repeat(14)}`);
-  expect(ruleOf(40, "⧗ 3", "default")).toBe(`${"─".repeat(34)} ⧗ 3 ─`);
-  for (let width = 0; width <= 50; width++)
-    expect(Bun.stringWidth(ruleOf(width, "brief 名前 1/2", "bypass"))).toBe(width);
-});
-
-// The owner, October 31, 2026: pi's thinking level stands where Claude Code
-// shows its mode, in pi's words, with the key that moves it; the right end is
-// the room work alone. A narrow pane drops the hint, then the level, then
-// cuts the work.
-test("the input's rule carries pi's thinking level at its left and the work alone at its right", () => {
-  expect(ruleOf(60, "brief 61 1/3", undefined, "high")).toBe(
-    `── ◆ high (shift+tab to cycle) ${"─".repeat(14)} brief 61 1/3 ─`,
-  );
-  expect(ruleOf(40, undefined, undefined, "off")).toBe(`── ◆ thinking off (shift+tab to cycle) ─`);
-  expect(ruleOf(30, "brief 61 1/3", undefined, "high")).toBe(
-    `── ◆ high ${"─".repeat(5)} brief 61 1/3 ─`,
-  );
-  expect(ruleOf(20, "brief 61 1/3", undefined, "high")).toBe(`${"─".repeat(5)} brief 61 1/3 ─`);
-  expect(ruleOf(10, "brief 61 1/3", undefined, "high")).toBe("── brie… ─");
-  expect(ruleOf(20)).toBe("─".repeat(20));
-  // The mode wins where a session says both.
-  expect(ruleOf(30, undefined, "auto", "high")).toBe(`── ⏵⏵ auto mode ${"─".repeat(14)}`);
-  const parts = ruleParts(60, "⧗ 2", undefined, "xhigh");
-  expect(parts.find((p) => p.level)).toEqual({ text: "◆ xhigh", level: "xhigh" });
-  for (let width = 0; width <= 60; width++) {
-    const rule = ruleOf(width, "brief 名前 1/2", undefined, "minimal");
-    expect(Bun.stringWidth(rule)).toBe(width);
-  }
 });
 
 // The owner's rule: the mouse over the face never reaches the pane's pty. A

@@ -11,7 +11,7 @@ import {
   type Pointing,
   type ToFace,
 } from "../../../face/src/messages.ts";
-import type { PermissionMode } from "../../../face/src/mirror.gen.ts";
+import type { PermissionMode, ThinkingLevel } from "../../../face/src/mirror.gen.ts";
 import { taken } from "./check.ts";
 
 export type FaceState = {
@@ -19,9 +19,10 @@ export type FaceState = {
   turn: string;
   link: Link | "stopped";
   prompts: boolean;
+  // mode is the session's permission mode, and level the thinking level
+  // shift+tab moves, as the face heard them from the mirror.
   mode?: PermissionMode;
-  // cycles says the session takes shift+tab for its thinking level.
-  cycles?: boolean;
+  level?: ThinkingLevel;
   // error is the face's last failure, shown in its header until it draws again.
   error?: string;
   // said is the answer to the last prompt.
@@ -140,7 +141,7 @@ export class FaceHost {
           link: message.link,
           prompts: message.prompts,
           mode: message.mode,
-          cycles: message.cycles,
+          level: message.level,
           error: undefined,
         });
       case "error":

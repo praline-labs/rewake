@@ -2,7 +2,8 @@
 // selection first; else it interrupts the session's working turn, where the
 // session takes an interrupt, as the harness's own Esc does; an idle session,
 // or one that takes none, hears nothing.
-// Their shift+tab moves the thinking level on where the session takes that.
+// Their shift+tab moves the thinking level on where the session takes that,
+// and the rule shows the level the session's mirror says.
 import { afterEach, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -18,14 +19,15 @@ afterEach(() => {
 
 // A wrapper's mirror socket of one reply in the turn given, taking the inputs
 // given: it keeps what the face writes and answers an interrupt as told.
-function session(turn: string, inputs: string[], refuse?: string) {
+// level is the thinking level its begin line says.
+function session(turn: string, inputs: string[], refuse?: string, level?: string) {
   const dir = mkdtempSync(join(tmpdir(), "face-"));
   ends.push(() => rmSync(dir, { recursive: true, force: true }));
   const path = join(dir, "m.sock");
   const item = { id: "r", kind: "text", status: "settled", text: "a reply to select" };
   const lines = [
     { op: "hello", v: 1, inputs },
-    { op: "begin", items: 1, dropped: 0, turn },
+    { op: "begin", items: 1, dropped: 0, turn, level },
     { op: "item", item },
     { op: "end" },
   ];
@@ -113,10 +115,15 @@ test("Esc drops a selection first, and only the next one interrupts", async () =
   expect(heard.map((h) => h.kind)).toEqual(["interrupt", "prompt"]);
 });
 
-test("shift+tab reaches a session that takes it, which the rule is told, and says a refusal", async () => {
-  const { host, heard, until } = session("idle", ["prompt", "interrupt", "thinking"]);
+test("shift+tab reaches a session that takes it, whose level the rule is told, and says a refusal", async () => {
+  const { host, heard, until } = session(
+    "idle",
+    ["prompt", "interrupt", "thinking"],
+    undefined,
+    "high",
+  );
   host.start();
-  expect((await until(drawn)).cycles).toBe(true);
+  expect((await until(drawn)).level).toBe("high");
   host.thinking();
   await until(() => heard.length === 1);
   expect(heard[0]).toMatchObject({ kind: "thinking", text: "" });
@@ -130,7 +137,7 @@ test("shift+tab reaches a session that takes it, which the rule is told, and say
 
   const other = session("idle", ["prompt"]);
   other.host.start();
-  expect((await other.until(drawn)).cycles).toBeUndefined();
+  expect((await other.until(drawn)).level).toBeUndefined();
   other.host.thinking();
   other.host.prompt("next");
   await other.until(() => other.heard.length > 0);

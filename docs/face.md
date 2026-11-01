@@ -20,7 +20,8 @@ worker's: `LaunchRequest.Mirror` turns them on, and a dev worker is only the fir
 ## The model — `internal/core/mirror`
 
 One schema, `mirror.schema.json`; `tools/protogen` writes its Go types and the shell's TypeScript
-types (`face/src/mirror.gen.ts`), held by the generator's drift test. The model holds
+types (`face/src/mirror.gen.ts`), each enum's values beside its type, held by the generator's drift
+test. The model holds
 **items** — a `prompt` with its `origin` (person, face, …), `queued` while the session holds it
 and has not taken it into its conversation, `refused` when it gave it back untaken, a `text` or `thinking` block
 (`streaming`, then `settled`), a `tool` call with its name, input, output and end (`running`,
@@ -36,7 +37,12 @@ permission request, answered by main, by the person through it or by its deadlin
 included, within a short field: the face draws it as given and knows no harness's address. The model also holds the session's
 permission **mode** — `default`, `plan`, `edits`, `auto`, `bypass` or `unasked` (never asking,
 refusing instead), absent until the session says it. Both are the session's whatever its role: main
-drawn by the face later carries them as a worker does. (Shape of October 30, 2026, brief 44.)
+drawn by the face later carries them as a worker does. (Shape of October 30, 2026, brief 44.) And
+the thinking **level** the face's shift+tab moves — `off`, `minimal`, `low`, `medium`, `high`,
+`xhigh` or `max`, pi's own words — absent until the session says it and from a session whose level
+the face does not move: pi's extension says it once the face draws its run and at each change of the
+level or the model; the Claude Code mod says none. The input's rule shows the mode, else the level,
+both from the mirror alone; a work mode of pi's would come as a mode (brief 75, November 1, 2026).
 
 Every bound counts serialized bytes: an item is at most 256 KiB, a text past it keeping its head and
 its latest tail with a cut mark, a tool's input and output 64 KiB each; the model is at most 1000
@@ -46,7 +52,7 @@ are dropped and counted first, then the oldest settle being put together, its bl
 last the oldest items in flight, so a stream that never settles stays within the bounds too.
 
 The adapter hands the model neutral events (`prompt`, `delta`, `settle` in parts, `tool`, `input`,
-`result` with its permit, `turn`, `mode`, `taken`, `lost`, `resync`). `taken` settles a queued
+`result` with its permit, `turn`, `mode`, `level`, `taken`, `lost`, `resync`). `taken` settles a queued
 prompt where the session took it: the model moves it to the end of the conversation, sent to a face
 as a `drop` and an `add`, its bytes and the dropped count unchanged; with status `refused` it stays
 where it was, given back. A `taken` for a prompt no longer queued — dropped by the bounds, a gap
@@ -84,7 +90,8 @@ through that one interface:
 
 The host decodes a batch's events with `mirror.Decode` (`internal/core/mirror/wire.go`), one
 decoder for every adapter: a kind the model does not take, or a turn's state it does not know, is
-left out, and a permission mode is named in the model's words by the adapter's own table. The
+left out, and a permission mode is named in the model's words by the adapter's own table; a level
+comes in the model's words already, and one it has no word for is left unsaid. The
 wire is each adapter's (the mod's `protocol.schema.json`, pi's frame); its events are the same
 fields on both.
 
@@ -98,10 +105,11 @@ user, `sock/` 0700. A harness that does not implement `adapter.MirrorHarness` is
 anything is served.
 
 The stream is JSON lines, each at most 512 KiB. On connect: `hello{v, inputs}`,
-`begin{items, turn, mode?, since?, took?, at?, stopped?}`, one `item` line per item and `end`, taken under the model's lock with
+`begin{items, turn, mode?, level?, since?, took?, at?, stopped?}`, one `item` line per item and `end`, taken under the model's lock with
 the subscription, so no change falls between the snapshot and the stream. Then `add`, `append`,
 `set`, `turn` (to idle with `stopped: true` when an interrupt ended the turn: the adapter's idle
-turn event carries status `error`, pi's `agent_settled` with `aborted`), `mode` and `drop`.
+turn event carries status `error`, pi's `agent_settled` with `aborted`), `mode`, `level` and `drop`.
+The level, its line and its field on `begin` are additive (brief 75): an older face ignores them.
 
 **The turn's times are the model's** (brief 55, October 31, 2026), so a face that connects or reloads
 after a turn draws `Done in 1m 9s · 8:43 AM` as one that watched it. The model stamps them with its
@@ -136,8 +144,8 @@ answer then says `mirror: true`. Without it no mirror code runs: no events, no s
 
 On a harness implementing `adapter.FacedWorkersHarness`, pi alone, every worker is recorded dev,
 `--dev` or not; main is not drawn yet, so the flag only chooses which launches set `Mirror`. pi has
-no permission mode, so its face shows none; its thinking level stands in its place (the look,
-"Rules").
+no permission mode, so its face shows none; its thinking level, which its mirror says, stands in
+its place (the look, "Rules").
 
 ## The face
 
@@ -303,12 +311,14 @@ what is under it, `fold.ts` runs of calls, `markdown.ts` and
   top one carries the session's permission mode at its left, `⏵⏵ auto mode`, `⏸ plan mode`,
   `⏵⏵ accept edits`, `⏵⏵ bypass permissions`, `⏵⏵ don't ask`, in native's colour for it (auto's
   amber, plan's teal, accept edits' violet, the other two red) and nothing for the default mode or
-  one not yet said. A session that takes shift+tab for its thinking level (pi, which has no
-  permission mode) shows that level there instead, in pi's words beside its model, `◆ high (shift+tab
+  one not yet said. A session whose mirror says the thinking level shift+tab moves (pi, which has
+  no permission mode) shows that level there instead, in pi's words beside its model, `◆ high (shift+tab
   to cycle)` or `◆ thinking off (shift+tab to cycle)`, the level in the colour pi's own theme gives
   its editor's border for it (`look.thinking` in `shell/src/theme.ts`; the owner, October 31, 2026,
-  brief 62). The level is the room view's `effort`, which pi's extension pushes on every change of
-  it, pi's own shift+tab or the face's, so it follows within the shell's one-second read of the room.
+  brief 62). The level is the mirror's `level`, which pi's extension says on every change of it,
+  pi's own shift+tab or the face's, and the face hands the shell beside the mode in its `lines`;
+  mode and level reach the rule as one, from the mirror alone (brief 75, November 1, 2026: before,
+  the level came from the room view's `effort` and a `cycles` flag the face inferred).
   At its right only the run's room work, the room view's `work`
   (`internal/core/work`): its open briefs with their ticks, `brief 57 3/6`, and the reports it waits
   on, `⧗ 3`, the same text Claude Code's hint line ends with ([claude.md](claude.md#the-band));
@@ -499,15 +509,20 @@ The face is code of its own in rewake's repository, `face/` at its root, with it
 checks (`bun run check`, `bun test` there), and is not published apart: rewake's release builds it
 into the shell (the owner, October 31, 2026: a plugin in code of its own, then «а мы можем не
 публиковать ее? а просто встроить в rewake?»). It imports no package, only Bun's runtime. The
-contract between it and the shell is `face/src/messages.ts`, the shell importing its types and
-`contract`, the number of its shape, raised with any change of it; `start` carries the shell's,
+contract between it and the shell is `face/src/messages.ts`, the shell importing its types, the
+shapes of what a face posts and `contract`, the number of its shape, raised with any change of it
+(5 since brief 75: `level` in a face's `lines` for the `cycles` flag, the dead `glow` of a span
+gone); `start` carries the shell's,
 and a face of another contract says so under the input and draws nothing, and stays so: it answers
 pings and takes nothing else the shell sends, its ctrl+o and its size included, so the shell keeps
 the last frame and the error (review of 288cd7f). The shell holds every
-message a face posts to the contract (`shell/src/face/check.ts`: the kinds, each field's type, the
-tones and marks it knows, the sizes of strings, the ranges of numbers, at most 2000 rows of 4096
-spans) and stops a face that sends anything else as one that threw; what it keeps is its own copy,
-built from the fields it checked, since a structured clone keeps an array's own extra properties
+message a face posts to the contract and stops a face that sends anything else as one that threw.
+Each field is said once, as a value, in `messages.ts` (`face/src/shape.ts` the words: a text within
+a named bound, a flag, a count, one of a list of words, a list of objects of a shape, any of them
+optional); the types are inferred from those shapes, and `shell/src/face/check.ts` walks the same
+shapes, built into the shell whatever face runs, with bounds of its own (texts of 16 KiB, names of
+4 KiB, a copy of 4 MiB, at most 2000 rows of 4096 spans), so a field is added in one place. What
+the shell keeps is its own copy, built from the fields the shapes name, anything else left behind, since a structured clone keeps an array's own extra properties
 (a list with its own `slice` threw in Solid's `Index`; found in review). So no face makes the
 shell's thread throw. The face takes no lease or lock and writes nothing; one build per room is the Go
 image's ([rules/state.md](rules/state.md#the-builds-identity)).
@@ -548,7 +563,7 @@ is contained in the shell's thread, and the person can always switch to native w
 A stopped face starts again at the next change of its sources, or when the person switches to it.
 A new face, a reload's or a lost link's, follows the bottom with no selection: the scroll is the
 worker's and is not carried across, so a change under `face/src/` while the person reads up
-puts the view back at the bottom (seen live, October 31, 2026, brief 49). Tests: `shell/src/face/host.test.ts`, the contract in `check.test.ts` and through the worker in `contract.test.ts`, the look in `face/src/render.test.ts`, `thinking.test.ts` and `view.test.tsx`, the tool vocabulary in `call.test.ts`, the clock
+puts the view back at the bottom (seen live, October 31, 2026, brief 49). Tests: `shell/src/face/host.test.ts`, the contract in `check.test.ts` and through the worker in `contract.test.ts`, the look in `face/src/render.test.ts`, `thinking.test.ts` and `view.test.tsx`, the input's rule in `shell/src/face/rule.test.ts` and the mode and level the face keeps in `face/src/model.test.ts`, the tool vocabulary in `call.test.ts`, the clock
 in `ticker.test.ts`, the scroll in `scroll.test.ts`, a notch's rows in `wheel.test.ts` and through
 the worker in `host.test.ts`, Esc's and shift+tab's paths through the worker in `escape.test.ts` (pi's cycle in
 `internal/adapter/pi/interrupt.test.ts`), unfolding in

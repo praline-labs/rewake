@@ -116,6 +116,7 @@ export const bounds = {
 
 // AskKind is what a request asks: a permission for a call, or the model's own question.
 export type AskKind = "permission" | "question"
+export const askKindValues: readonly AskKind[] = ["permission", "question"]
 
 // AskOpenRequest is a request to open: what the harness's question dialog shows, and for a
 // permission the call it is about.
@@ -174,6 +175,7 @@ export interface AskPollRequest {
 // AskState is what became of a request: nothing yet, main's answer, settled, or past its
 // deadline.
 export type AskState = "pending" | "answered" | "settled" | "expired"
+export const askStateValues: readonly AskState[] = ["pending", "answered", "settled", "expired"]
 
 // AskPollAnswer is what became of a request.
 export interface AskPollAnswer {
@@ -197,6 +199,7 @@ export interface AskAnswer {
 // AskWinner is the answer a request was settled with: main's, the person's at the screen, none
 // by the deadline, or none because the call was cut short.
 export type AskWinner = "main" | "local" | "expired" | "aborted"
+export const askWinnerValues: readonly AskWinner[] = ["main", "local", "expired", "aborted"]
 
 // AskSettleRequest ends an open request.
 export interface AskSettleRequest {
@@ -296,10 +299,14 @@ export interface MirrorEvent {
   permit?: MirrorPermit
   // mode is the session's permission mode as Claude Code names it, on a mode event.
   mode?: string
+  // level is the thinking level the face's shift+tab moves, on a level event; the mod sends
+  // none, as the face moves no level of a Claude Code session (docs/face.md).
+  level?: string
 }
 
 // MirrorEventKind is a mirror event's kind.
 export type MirrorEventKind = "prompt" | "delta" | "settle" | "tool" | "input" | "result" | "turn" | "mode" | "lost" | "resync"
+export const mirrorEventKindValues: readonly MirrorEventKind[] = ["prompt", "delta", "settle", "tool", "input", "result", "turn", "mode", "lost", "resync"]
 
 // MirrorPermit is who let a call run or refused it, in the face's words (docs/face.md, Permit).
 export interface MirrorPermit {
@@ -315,15 +322,19 @@ export interface MirrorPermit {
 // MirrorPermitBy is who settled a call: a settings rule, the mode or the tool's own check, auto
 // mode's classifier, the person at the dialog, rewake's permission request, a hook.
 export type MirrorPermitBy = "rule" | "mode" | "classifier" | "person" | "rewake" | "hook"
+export const mirrorPermitByValues: readonly MirrorPermitBy[] = ["rule", "mode", "classifier", "person", "rewake", "hook"]
 
 // MirrorBlock is a block's kind: a reply's text or thinking.
 export type MirrorBlock = "text" | "thinking"
+export const mirrorBlockValues: readonly MirrorBlock[] = ["text", "thinking"]
 
 // MirrorEnd is how a tool call ended.
 export type MirrorEnd = "done" | "error" | "refused"
+export const mirrorEndValues: readonly MirrorEnd[] = ["done", "error", "refused"]
 
 // MirrorTurn is the turn's state a turn event says.
 export type MirrorTurn = "working" | "idle" | "compacting"
+export const mirrorTurnValues: readonly MirrorTurn[] = ["working", "idle", "compacting"]
 
 // Done is the answer of an endpoint that did what was asked and has nothing to say.
 export type Done = Record<string, never>
@@ -417,6 +428,7 @@ export interface TurnEndRequest {
 
 // EndReason is why a turn ended, mapped from the harness's own reason.
 export type EndReason = "answered" | "aborted" | "refused" | "failed"
+export const endReasonValues: readonly EndReason[] = ["answered", "aborted", "refused", "failed"]
 
 // Receipt says the core took a turn's start or end.
 export interface Receipt {

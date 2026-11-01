@@ -67,6 +67,10 @@ export interface Line {
   // mode is the session's permission mode, on begin and mode; absent while the session has not
   // said it.
   mode?: PermissionMode
+  // level is the session's thinking level, which the face's thinking input moves on, on begin
+  // and level; absent while the session has not said it, and from a session whose level the
+  // face does not move.
+  level?: ThinkingLevel
   // ok says whether the input was taken, on answer.
   ok?: boolean
   // detail is why an input was refused, on answer.
@@ -74,7 +78,8 @@ export interface Line {
 }
 
 // LineOp is a line's kind.
-export type LineOp = "hello" | "begin" | "item" | "end" | "add" | "append" | "set" | "turn" | "mode" | "drop" | "answer"
+export type LineOp = "hello" | "begin" | "item" | "end" | "add" | "append" | "set" | "turn" | "mode" | "level" | "drop" | "answer"
+export const lineOpValues: readonly LineOp[] = ["hello", "begin", "item", "end", "add", "append", "set", "turn", "mode", "level", "drop", "answer"]
 
 // Item is one entry of the conversation.
 export interface Item {
@@ -102,16 +107,19 @@ export interface Item {
 
 // ItemKind is a prompt, a reply's text, thinking, a tool call or a notice of rewake's.
 export type ItemKind = "prompt" | "text" | "thinking" | "tool" | "notice"
+export const itemKindValues: readonly ItemKind[] = ["prompt", "text", "thinking", "tool", "notice"]
 
 // ItemStatus is streaming or settled for a text; running, done, error or refused for a tool;
 // error also for a notice telling a failure or an interrupt, drawn as one; queued for a prompt
 // the session holds and has not taken yet, refused for one it gave back untaken; gap when part
 // of it was lost on the way and the native face has it whole.
 export type ItemStatus = "streaming" | "settled" | "running" | "done" | "error" | "refused" | "gap" | "queued"
+export const itemStatusValues: readonly ItemStatus[] = ["streaming", "settled", "running", "done", "error", "refused", "gap", "queued"]
 
 // TurnState is the session's turn: idle, working, compacting, unknown after events were lost,
 // or ended with the session.
 export type TurnState = "idle" | "working" | "compacting" | "unknown" | "ended"
+export const turnStateValues: readonly TurnState[] = ["idle", "working", "compacting", "unknown", "ended"]
 
 // Permit is who let a tool call run or refused it: the outcome of the session's permission
 // check and of whoever it put the call to.
@@ -129,11 +137,18 @@ export interface Permit {
 // nobody asked; the mode's own decider, a classifier; the person at the session's own dialog;
 // rewake's permission request, answered by main, the person through it or its deadline; a hook.
 export type PermitBy = "rule" | "mode" | "classifier" | "person" | "rewake" | "hook"
+export const permitByValues: readonly PermitBy[] = ["rule", "mode", "classifier", "person", "rewake", "hook"]
 
 // PermissionMode is how the session's calls are permitted: asked as configured, planning only,
 // edits accepted, a classifier deciding, every check bypassed, or never asking and refusing
 // instead.
 export type PermissionMode = "default" | "plan" | "edits" | "auto" | "bypass" | "unasked"
+export const permissionModeValues: readonly PermissionMode[] = ["default", "plan", "edits", "auto", "bypass", "unasked"]
+
+// ThinkingLevel is how much the session's model thinks before it answers, in the words of the
+// harness that moves it, from not at all to the most.
+export type ThinkingLevel = "off" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max"
+export const thinkingLevelValues: readonly ThinkingLevel[] = ["off", "minimal", "low", "medium", "high", "xhigh", "max"]
 
 // Input is one line the face sends: an input, answered by a line with its id. A face sends only
 // the kinds hello listed.
@@ -151,3 +166,4 @@ export interface Input {
 // person's shift+tab moving the session's thinking level to the next, as the harness's own key
 // does.
 export type InputKind = "prompt" | "interrupt" | "thinking"
+export const inputKindValues: readonly InputKind[] = ["prompt", "interrupt", "thinking"]

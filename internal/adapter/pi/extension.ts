@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { createConnection, type Socket } from "node:net";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { briefTools } from "./briefs.ts";
-import { faceInterrupt, facePrompt, faceThinking } from "./faced.ts";
+import { faceInterrupt, facePrompt, faceThinking, serveLevel } from "./faced.ts";
 import { type MirrorEvent, Outbox } from "./feed.ts";
 import { management, type State } from "./management.ts";
 import { Mirror, serveMirror } from "./mirror.ts";
@@ -87,6 +87,7 @@ export default function (pi: ExtensionAPI) {
   });
   const mirror = new Mirror(outbox);
   serveMirror(pi, mirror);
+  const sayLevel = serveLevel(pi, mirror);
 
   function warn(message: string) {
     if (context?.hasUI) context.ui.notify(`rewake: ${message}`, "warning");
@@ -283,6 +284,7 @@ export default function (pi: ExtensionAPI) {
         link.ready = true;
         delay = 250;
         mirror.on = reply.mirror === true;
+        sayLevel();
         outbox.kick();
       } catch {
         close(link);

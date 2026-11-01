@@ -8,7 +8,8 @@ import (
 
 // A batch as a wire carries it decodes into the model's events: every field
 // carried, a kind or a turn's state the model does not know left out, and a
-// mode named in the model's words by the adapter's table alone.
+// mode named in the model's words by the adapter's table alone, a level only
+// in the model's own.
 func TestABatchDecodesIntoTheModelsEvents(t *testing.T) {
 	var sent []WireEvent
 	body := `[
@@ -19,6 +20,8 @@ func TestABatchDecodesIntoTheModelsEvents(t *testing.T) {
 		{"kind":"resync","lost":3},
 		{"kind":"mode","mode":"harness-plan"},
 		{"kind":"mode","mode":"someday"},
+		{"kind":"level","level":"high"},
+		{"kind":"level","level":"extreme"},
 		{"kind":"guess","id":"x"},
 		{"kind":"turn","turn":"t","state":"ended"},
 		{"kind":"turn","turn":"t"}
@@ -35,6 +38,8 @@ func TestABatchDecodesIntoTheModelsEvents(t *testing.T) {
 		{Kind: EventResync, Lost: 3},
 		{Kind: EventMode, Mode: PermissionModePlan},
 		{Kind: EventMode},
+		{Kind: EventLevel, Level: ThinkingLevelHigh},
+		{Kind: EventLevel},
 	}
 	got := Decode(sent, map[string]PermissionMode{"harness-plan": PermissionModePlan})
 	if !reflect.DeepEqual(got, want) {

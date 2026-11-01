@@ -3,7 +3,7 @@
 // so (dist/modes/interactive/interactive-mode.js, message_end, and
 // components/assistant-message.js, read on 1.4.0), and the face draws it the same.
 import { expect, test } from "bun:test";
-import { faceInterrupt, faceThinking, levelsOf } from "./faced.ts";
+import { faceInterrupt, faceThinking, levelsOf, serveLevel } from "./faced.ts";
 import type { MirrorEvent } from "./feed.ts";
 import { Mirror, serveMirror } from "./mirror.ts";
 
@@ -79,6 +79,31 @@ test("shift+tab moves pi's thinking level on as pi's own does", () => {
   mirror.on = false;
   expect(cycled().error).toContain("does not draw");
   expect(level).toBe("off");
+});
+
+// The face's rule shows the level shift+tab moves, told when the face starts
+// drawing and at each change of the level or the model.
+test("pi tells the face its thinking level, and nothing while the face draws no run", () => {
+  const { mirror, events } = mirrored();
+  const handlers = new Map<string, () => unknown>();
+  let level = "high";
+  const pi = {
+    on: (name: string, handle: () => unknown) => handlers.set(name, handle),
+    getThinkingLevel: () => level as never,
+  };
+  const say = serveLevel(pi as never, mirror);
+  say();
+  level = "xhigh";
+  handlers.get("thinking_level_select")?.();
+  level = "medium";
+  handlers.get("model_select")?.();
+  mirror.on = false;
+  handlers.get("thinking_level_select")?.();
+  expect(events).toEqual([
+    { kind: "level", level: "high" },
+    { kind: "level", level: "xhigh" },
+    { kind: "level", level: "medium" },
+  ]);
 });
 
 test("a reply stopped mid-stream keeps what streamed and says Operation aborted in red", () => {

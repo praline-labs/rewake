@@ -82,7 +82,7 @@ export class Mirror {
     private now = () => Date.now(),
   ) {}
 
-  private push(event: MirrorEvent) {
+  push(event: MirrorEvent) {
     if (!this.on) return;
     // An attempt's first item come back ends its trying again.
     if (this.retrying && cameBack.has(event.kind)) {

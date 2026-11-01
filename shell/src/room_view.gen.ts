@@ -53,9 +53,11 @@ export interface SpaceRow {
 
 // SpaceState is a space that is not over: opening, open, or closing.
 export type SpaceState = "opening" | "open" | "closing"
+export const spaceStateValues: readonly SpaceState[] = ["opening", "open", "closing"]
 
 // RunState is whether a run lives: running, ended, or unknown when that cannot be told.
 export type RunState = "running" | "ended" | "unknown"
+export const runStateValues: readonly RunState[] = ["running", "ended", "unknown"]
 
 // Checkout is a worker's own worktree.
 export interface Checkout {
@@ -114,6 +116,7 @@ export interface SessionRow {
 
 // Mark is the edge of a session's button in the shell.
 export type Mark = "off" | "steady" | "blink"
+export const markValues: readonly Mark[] = ["off", "steady", "blink"]
 
 // Verdict is rewake's verdict on a session's activity (docs/session-state.md#activity): the
 // shell shows it and derives nothing.
@@ -205,6 +208,7 @@ export interface BriefComment {
 // BindingKind is a run's right to a brief: work reads, ticks and comments; review reads and
 // comments, never ticks.
 export type BindingKind = "work" | "review"
+export const bindingKindValues: readonly BindingKind[] = ["work", "review"]
 
 // Problem is a file that does not read.
 export interface Problem {

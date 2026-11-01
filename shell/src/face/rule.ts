@@ -1,17 +1,23 @@
 // The input's top rule (docs/face.md, "The look"): at its left end the
 // session's permission mode, as the terminal program names it under its
-// input, or, for a session whose thinking level shift+tab moves, that level
-// as pi names it, `── ◆ high (shift+tab to cycle) ─`; at its right the run's
+// input, or else the thinking level shift+tab moves, as pi names it,
+// `── ◆ high (shift+tab to cycle) ─`, both as the mirror says them; at its right the run's
 // room work, as Claude Code's hint line ends with it (internal/core/work),
 // `── brief 61 1/3 ─`, and nothing without work. A narrow pane drops the
 // level's hint first, then the mode or the level, then cuts the work with …;
 // whatever its role, a session's rule is drawn the same.
 
-import type { PermissionMode } from "../../../face/src/mirror.gen.ts";
+import type { PermissionMode, ThinkingLevel } from "../../../face/src/mirror.gen.ts";
+
+// Left is what may stand at the rule's left, as the face heard it from the
+// session's mirror: a session that says a mode shows it, one that says the
+// level shift+tab moves shows that, and a work mode of pi's would come as a
+// mode.
+export type Left = { mode?: PermissionMode; level?: ThinkingLevel };
 
 // RulePart is a run of the rule's text, in the rule's colour unless it
 // names the mode or the thinking level, drawn in that one's colour.
-export type RulePart = { text: string; mode?: PermissionMode; level?: string };
+export type RulePart = { text: string; mode?: PermissionMode; level?: ThinkingLevel };
 
 // modeNames are the modes as the terminal program shows them; the default
 // one says nothing.
@@ -50,7 +56,7 @@ const tail = (text?: string) => (text ? ` ${text} ─` : "");
 
 // lefts are what may stand at the rule's left, the widest first: the mode,
 // or the thinking level with its hint, then without.
-function lefts(mode?: PermissionMode, level?: string): RulePart[][] {
+function lefts({ mode, level }: Left = {}): RulePart[][] {
   const named = mode ? modeNames[mode] : undefined;
   if (named) return [[{ text: named, mode }]];
   if (!level) return [];
@@ -62,14 +68,9 @@ function lefts(mode?: PermissionMode, level?: string): RulePart[][] {
 // right, at least a cell of the rule between them and two before the right
 // alone. Without the room for both the left narrows, then goes; then the
 // work is cut.
-export function ruleParts(
-  cells: number,
-  work?: string,
-  mode?: PermissionMode,
-  level?: string,
-): RulePart[] {
+export function ruleParts(cells: number, work?: string, said?: Left): RulePart[] {
   const right = tail(work);
-  for (const left of lefts(mode, level)) {
+  for (const left of lefts(said)) {
     const used = left.reduce((n, part) => n + width(part.text), 0);
     const fill = cells - width("── ") - used - 1 - width(right);
     if (fill >= 1) return [{ text: "── " }, ...left, { text: ` ${line(fill)}${right}` }];
@@ -84,8 +85,8 @@ export function ruleParts(
 }
 
 // ruleOf is the rule's text alone.
-export const ruleOf = (cells: number, work?: string, mode?: PermissionMode, level?: string) =>
-  ruleParts(cells, work, mode, level)
+export const ruleOf = (cells: number, work?: string, said?: Left) =>
+  ruleParts(cells, work, said)
     .map((p) => p.text)
     .join("");
 

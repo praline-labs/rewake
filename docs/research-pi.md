@@ -573,9 +573,10 @@ table of its vocabulary, [face.md](face.md#calls)), tested by `mirror.test.ts`, 
   for the session alone, clamped to the model: the session emits `thinking_level_changed`, on which
   pi's screen redraws its footer and border, and extensions hear `thinking_level_select`; no status
   line is said. rewake's extension answers the face's `thinking` input so (`faceThinking` in
-  `faced.ts`, its order repeated in `levelsOf`, tested by `interrupt.test.ts`), and its telemetry,
-  which already sent the level as `effort` on every `thinking_level_select`, carries it to the
-  face's rule ([face.md](face.md), "The look").
+  `faced.ts`, its order repeated in `levelsOf`, tested by `interrupt.test.ts`), and says the level
+  to the face's mirror once the face draws the run and on every `thinking_level_select` and
+  `model_select` (`serveLevel`, brief 75), pi's level names being the mirror's; the face's rule
+  shows it from there ([face.md](face.md), "The look"). Its telemetry still sends it as `effort`.
 - **An aborted or failed message** ends as pi's screen ends it (`interactive-mode.js`,
   `message_end`; `components/assistant-message.js`, read on 1.4.0): a block that was streaming
   settles with what the message holds, never a gap; every call it asked for that never ran ends

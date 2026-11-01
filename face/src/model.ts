@@ -1,7 +1,14 @@
 // The face's copy of a session's mirror (docs/face.md): the snapshot the
 // wrapper sends on connect, then its changes. The wrapper holds the model to
 // its bounds, so this copy keeps whatever it is sent.
-import type { InputKind, Item, Line, PermissionMode, TurnState } from "./mirror.gen.ts";
+import type {
+  InputKind,
+  Item,
+  Line,
+  PermissionMode,
+  ThinkingLevel,
+  TurnState,
+} from "./mirror.gen.ts";
 import { bounds } from "./mirror.gen.ts";
 
 export class FaceModel {
@@ -18,8 +25,10 @@ export class FaceModel {
   // session trying again, as its adapter told the model; 0 when none.
   retry = 0;
   dropped = 0;
-  // mode is the session's permission mode, unknown until it says it.
+  // mode is the session's permission mode, and level the thinking level the
+  // face's shift+tab moves, each unknown until the session says it.
   mode: PermissionMode | undefined;
+  level: ThinkingLevel | undefined;
   inputs: InputKind[] = [];
   // ready is a snapshot whole: until its end the face shows what it had.
   ready = false;
@@ -40,6 +49,7 @@ export class FaceModel {
         this.dropped = line.dropped ?? 0;
         this.stopped = line.stopped === true;
         this.mode = line.mode;
+        this.level = line.level;
         this.timed(line);
         return false;
       case "item":
@@ -67,6 +77,9 @@ export class FaceModel {
         return true;
       case "mode":
         this.mode = line.mode;
+        return true;
+      case "level":
+        this.level = line.level;
         return true;
       case "drop":
         if (line.id !== undefined && this.byId.delete(line.id))

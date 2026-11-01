@@ -31,6 +31,7 @@
         "at": {"type": "integer", "description": "is when the last turn ended, in Unix milliseconds, with took."},
         "retry": {"type": "integer", "description": "is how many of the working turn's requests failed in a row with nothing come back since, the session trying again, on begin and turn while the turn works; absent when none did."},
         "mode": {"$ref": "#/$defs/PermissionMode", "description": "is the session's permission mode, on begin and mode; absent while the session has not said it."},
+        "level": {"$ref": "#/$defs/ThinkingLevel", "description": "is the session's thinking level, which the face's thinking input moves on, on begin and level; absent while the session has not said it, and from a session whose level the face does not move."},
         "ok": {"type": "boolean", "description": "says whether the input was taken, on answer."},
         "detail": {"type": "string", "description": "is why an input was refused, on answer."}
       },
@@ -40,7 +41,7 @@
     "LineOp": {
       "type": "string",
       "description": "is a line's kind.",
-      "enum": ["hello", "begin", "item", "end", "add", "append", "set", "turn", "mode", "drop", "answer"]
+      "enum": ["hello", "begin", "item", "end", "add", "append", "set", "turn", "mode", "level", "drop", "answer"]
     },
     "Item": {
       "type": "object",
@@ -95,6 +96,11 @@
       "type": "string",
       "description": "is how the session's calls are permitted: asked as configured, planning only, edits accepted, a classifier deciding, every check bypassed, or never asking and refusing instead.",
       "enum": ["default", "plan", "edits", "auto", "bypass", "unasked"]
+    },
+    "ThinkingLevel": {
+      "type": "string",
+      "description": "is how much the session's model thinks before it answers, in the words of the harness that moves it, from not at all to the most.",
+      "enum": ["off", "minimal", "low", "medium", "high", "xhigh", "max"]
     },
     "Input": {
       "type": "object",
