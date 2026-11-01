@@ -28,7 +28,7 @@ test("ctrl+o opens everything, and a reloaded face opens it again", async () => 
   host.unfold();
   expect(host.state.expanded).toBe(true);
   await until((s) => has(s, "     line 12"));
-  host.start();
+  host.reload();
   await until((s) => has(s, "     line 12"));
   host.unfold();
   expect(host.state.expanded).toBe(false);

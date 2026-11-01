@@ -524,7 +524,9 @@ shapes of what a face posts and `contract`, the number of its shape, raised with
 gone); `start` carries the shell's,
 and a face of another contract says so under the input and draws nothing, and stays so: it answers
 pings and takes nothing else the shell sends, its ctrl+o and its size included, so the shell keeps
-the last frame and the error (review of 288cd7f). The shell holds every
+the last frame and the error (review of 288cd7f). Its refusal, `refusal` in `messages.ts`, and the
+shapes of `start`, `ping`, `pong` and `error` are the one part no contract changes: a shell of any
+contract reads the face's number from it, which a reload needs (below). The shell holds every
 message a face posts to the contract and stops a face that sends anything else as one that threw.
 Each field is said once, as a value, in `messages.ts` (`face/src/shape.ts` the words: a text within
 a named bound, a flag, a count, one of a list of words, a list of objects of a shape, any of them
@@ -550,10 +552,22 @@ Which copy runs, read once from the shell's own environment when it starts:
   starts it and waits for its answer to a ping, which the release gate runs on the installed
   shell, since a name that moved breaks only there.
 
-The shell watches the directory of a copy it runs from a file, recursively, and starts every face
-again 150 ms after the last change there; what reloads is the worker's code, while `faces.ts`,
+The shell watches the directory of a copy it runs from a file, recursively, and reloads every face
+150 ms after the last change there; what reloads is the worker's code, while `faces.ts`,
 `host.ts`, `check.ts` and `view.tsx` are the shell's own and change only with a new shell. The
 compiled shell's own copy is watched by nothing.
+
+A reload starts the new worker beside the running one, which draws on, and swaps them on the new
+one's first answer (brief 80, November 1, 2026). When that answer is the refusal of another
+contract, the new worker is ended and the running face kept: a shell of contract 4 that reloaded a
+face of 5 from its checkout had frozen the pane on the refusal until a restart
+([traps.md](traps.md#a-face-froze-on-this-face-speaks-contract-5-the-shell-4-after-a-change-of-face)).
+The row under the input then says, for 10 s and once for each contract met,
+`the face on disk speaks contract 5, this shell 4: a restart of the room loads it`; a reload into
+the shell's contract again swaps as before. Any other first answer, a failure included, swaps them
+as a start does, so a face that fails to load still shows its error below; one that says nothing
+within 2 s is taken in, and its missed ping stops it. A start, the first or a stopped face's, has
+no face to keep: a face of another contract then says why itself, as above.
 
 A reload never restarts or exits the shell and never writes to, resizes or closes a pane's pty,
 main's included: closing the shell ends main and every worker ([shell.md](shell.md)). Each failure
@@ -572,7 +586,7 @@ is contained in the shell's thread, and the person can always switch to native w
 A stopped face starts again at the next change of its sources, or when the person switches to it.
 A new face, a reload's or a lost link's, follows the bottom with no selection: the scroll is the
 worker's and is not carried across, so a change under `face/src/` while the person reads up
-puts the view back at the bottom (seen live, October 31, 2026, brief 49). Tests: the face's glue in process in `face/src/face.test.ts` (drawing at the tick, the wheel, a notch between two ticks, the turn's line, the pointer and the edge, ctrl+o and the row it keeps) and `link.test.ts` (a prompt, Esc, shift+tab and the level, a lost or broken link, a refused contract), the real worker under the host in `shell/src/face/host.test.ts`, the contract in `check.test.ts` and through the worker in `contract.test.ts`, the look in `face/src/render.test.ts`, `thinking.test.ts` and `view.test.tsx`, the input's rule in `shell/src/face/rule.test.ts` and the mode and level the face keeps in `face/src/model.test.ts`, the tool vocabulary in `call.test.ts`, the clock
+puts the view back at the bottom (seen live, October 31, 2026, brief 49). Tests: the face's glue in process in `face/src/face.test.ts` (drawing at the tick, the wheel, a notch between two ticks, the turn's line, the pointer and the edge, ctrl+o and the row it keeps) and `link.test.ts` (a prompt, Esc, shift+tab and the level, a lost or broken link, a refused contract), the real worker under the host in `shell/src/face/host.test.ts`, the contract in `check.test.ts` and through the worker in `contract.test.ts` (a reload into another contract keeping the running face, one of the same swapping), the look in `face/src/render.test.ts`, `thinking.test.ts` and `view.test.tsx`, the input's rule in `shell/src/face/rule.test.ts` and the mode and level the face keeps in `face/src/model.test.ts`, the tool vocabulary in `call.test.ts`, the clock
 in `ticker.test.ts`, the scroll in `scroll.test.ts`, a notch's rows in `wheel.test.ts`, Esc's and shift+tab's paths through the real worker and a refusal said in `shell/src/face/escape.test.ts` (pi's cycle in
 `internal/adapter/pi/interrupt.test.ts`), unfolding in
 `face/src/unfold.test.ts`, the row a click keeps in `parts.test.ts`, and ctrl+o kept across a reload in `shell/src/face/unfold.test.ts`, the input's growth, keys and

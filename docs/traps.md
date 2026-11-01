@@ -324,3 +324,18 @@ revision with a modified tree print the same line; compare the hashes for those.
 owner restarts the windows; the agent does not revive vanished workers.
 
 *September 19, 2026; the revision in `--version` since September 25, 2026.*
+
+### A face froze on `this face speaks contract 5, the shell 4` after a change of `face/`
+
+The face contract went from 4 to 5 (`69f31a1`) while the owner's shell, run from its sources,
+spoke 4. It watches `face/src` and reloaded every face from the checkout; the new face refused
+the shell, and the pi worker's pane showed only that line: nothing moved, the strip's context
+went on growing, until a restart. A reload reloads the face alone: the shell's own code, its
+contract among it, stays what the process loaded, as a running wrapper stays old.
+
+A reload now starts the new face beside the running one and keeps the running one when the new
+speaks another contract, saying under the input that a restart of the room loads it
+([face.md](face.md#hot-reload)). A pane on that line is a shell older than this, or a face started
+anew, not reloaded; restart the room.
+
+*November 1, 2026.*

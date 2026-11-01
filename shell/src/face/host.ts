@@ -1,51 +1,20 @@
 // The shell's side of one face (docs/face.md, "Hot reload"): it starts the
 // face's worker, forwards sizes, prompts and pings, and keeps what the face
-// drew. A reload ends the worker whole and starts it again from the current
-// sources; nothing here touches a pane's pty or the shell's process, so a face
-// that fails to load, throws or hangs costs its own drawing alone.
+// drew. A reload starts a worker of the current sources beside the running
+// one and ends the old whole once the new speaks this shell's contract;
+// nothing here touches a pane's pty or the shell's process, so a face that
+// fails to load, throws or hangs costs its own drawing alone.
 import {
   contract,
-  type FaceLine,
   type FromFace,
-  type Link,
   type Pointing,
+  refusedBy,
   type ToFace,
 } from "../../../face/src/messages.ts";
-import type { PermissionMode, ThinkingLevel } from "../../../face/src/mirror.gen.ts";
 import { taken } from "./check.ts";
+import type { FaceOptions, FaceState } from "./facestate.ts";
 
-export type FaceState = {
-  lines: FaceLine[];
-  turn: string;
-  link: Link | "stopped";
-  prompts: boolean;
-  // mode is the session's permission mode, and level the thinking level
-  // shift+tab moves, as the face heard them from the mirror.
-  mode?: PermissionMode;
-  level?: ThinkingLevel;
-  // error is the face's last failure, shown in its header until it draws again.
-  error?: string;
-  // said is the answer to the last prompt.
-  said?: string;
-  // copied says, for a few seconds, what the last copy sent to the clipboard.
-  copied?: { text: string; ok: boolean };
-  // expanded is the person's ctrl+o: the conversation shown whole. The
-  // shell keeps it, so a reloaded face opens as the person left it.
-  expanded?: boolean;
-};
-
-export type FaceOptions = {
-  path: string;
-  url: string;
-  onState: (state: FaceState) => void;
-  pingEvery?: number;
-  pongWithin?: number;
-  promptsExpireAfter?: number;
-  // copy puts a text on the person's clipboard through the terminal, and
-  // says whether it could.
-  copy?: (text: string) => boolean;
-  copiedFor?: number;
-};
+export type { FaceState } from "./facestate.ts";
 
 let ids = 0;
 
@@ -58,6 +27,19 @@ const shownChars = 40;
 const expireAfter = 30_000;
 // A copy is said as long as the terminal program says one sent by OSC 52.
 const copiedFor = 4000;
+const noticeFor = 10_000;
+
+// Candidate is a reload's face until its first answer says whether it speaks
+// this shell's contract, with when, the size and the unfolding it was
+// started with.
+type Candidate = {
+  worker: Worker;
+  timer: ReturnType<typeof setTimeout>;
+  at: number;
+  width: number;
+  height: number;
+  expanded: boolean;
+};
 
 export class FaceHost {
   state: FaceState = { lines: [], turn: "unknown", link: "connecting", prompts: false };
@@ -70,6 +52,10 @@ export class FaceHost {
   private timer: ReturnType<typeof setInterval> | undefined;
   private sent = new Map<string, { text: string; at: number; verb?: string }>();
   private copiedTimer: ReturnType<typeof setTimeout> | undefined;
+  private noticeTimer: ReturnType<typeof setTimeout> | undefined;
+  private candidate: Candidate | undefined;
+  // told is the contract of the last face a reload kept out: said once.
+  private told: number | undefined;
 
   constructor(private readonly options: FaceOptions) {}
 
@@ -81,33 +67,103 @@ export class FaceHost {
   // start runs the face, ended first if it runs.
   start() {
     this.end();
+    const worker = this.spawn();
+    if (worker) this.adopt(worker);
+  }
+
+  // reload starts a face of the current sources beside the running one, which
+  // draws on until the new one answers. A face of another contract would
+  // draw nothing until a restart (docs/traps.md), so it is ended and the
+  // running one kept; any other answer, a failure included, swaps them as a
+  // start does. A stopped face is started.
+  reload() {
+    if (!this.worker) return this.start();
+    this.drop();
+    const at = Date.now();
+    const worker = this.spawn();
+    if (!worker) return;
+    // One that never answers is taken in, and its missed ping stops it.
+    const timer = setTimeout(() => {
+      if (this.candidate?.worker === worker) this.adopt(worker);
+    }, this.options.pongWithin ?? 2000);
+    const { width, height } = this;
+    this.candidate = { worker, timer, at, width, height, expanded: this.state.expanded ?? false };
+  }
+
+  // spawn starts a worker and tells it to start, ping 1 sent with it; what it
+  // posts is heard once it is the face.
+  private spawn(): Worker | undefined {
     let worker: Worker;
     try {
       worker = new Worker(this.options.url);
     } catch (err) {
-      return this.failed(`the face does not start: ${String(err)}`);
+      this.failed(`the face does not start: ${String(err)}`);
+      return;
     }
-    this.worker = worker;
     // A face that does not load, or throws outside its own catch, ends here:
     // its last lines stay, with the error over them.
+    const failed = (text: string) => {
+      if (this.candidate?.worker === worker) this.adopt(worker);
+      if (this.worker === worker) this.failed(text);
+    };
     worker.addEventListener("error", (event) => {
       event.preventDefault();
-      if (this.worker === worker) this.failed(`the face failed: ${event.message || String(event)}`);
+      failed(`the face failed: ${event.message || String(event)}`);
     });
-    worker.addEventListener("messageerror", () => {
-      if (this.worker === worker) this.failed("the face sent what does not read");
-    });
+    worker.addEventListener("messageerror", () => failed("the face sent what does not read"));
     // What the face posts is held to the contract, and only the shell's own
     // copy of it is read.
     worker.addEventListener("message", (event: MessageEvent<unknown>) => {
-      if (this.worker !== worker) return;
       const got = taken(event.data);
+      if (this.candidate?.worker === worker && !this.agreed(worker, got)) return;
+      if (this.worker !== worker) return;
       if ("fault" in got)
         return this.failed(`the face sent what the contract does not allow: ${got.fault}`);
       this.heard(got.message);
     });
-    this.pinged = this.ponged = 0;
-    this.pingedAt = Date.now();
+    this.send(
+      { kind: "start", contract, path: this.options.path, width: this.width, height: this.height },
+      worker,
+    );
+    if (this.state.expanded) this.send({ kind: "unfold", all: true }, worker);
+    this.send({ kind: "ping", n: 1 }, worker);
+    return worker;
+  }
+
+  // agreed takes a reload's face in on its first answer, unless that is the
+  // refusal of another contract: then it is ended, the running face draws on,
+  // and the person is told once, in the shell's words, what would load it.
+  private agreed(worker: Worker, got: ReturnType<typeof taken>) {
+    const theirs =
+      "message" in got && got.message.kind === "error" ? refusedBy(got.message.text) : undefined;
+    if (theirs === undefined) {
+      this.adopt(worker);
+      return true;
+    }
+    this.drop();
+    if (theirs !== this.told) {
+      this.told = theirs;
+      this.noticed(
+        `the face on disk speaks contract ${theirs}, this shell ${contract}: a restart of the room loads it`,
+      );
+    }
+    return false;
+  }
+
+  // adopt makes a started worker the face, the one it replaces ended; ping 1
+  // went with its start.
+  private adopt(worker: Worker) {
+    const was = this.candidate?.worker === worker ? this.candidate : undefined;
+    if (was) {
+      clearTimeout(was.timer);
+      this.candidate = undefined;
+    }
+    this.retire();
+    this.worker = worker;
+    this.told = undefined;
+    this.pinged = 1;
+    this.ponged = 0;
+    this.pingedAt = was?.at ?? Date.now();
     const every = this.options.pingEvery ?? 1000;
     const within = this.options.pongWithin ?? 2000;
     this.timer = setInterval(() => {
@@ -120,14 +176,11 @@ export class FaceHost {
       }
     }, every);
     this.set({ link: "connecting", error: undefined });
-    this.send({
-      kind: "start",
-      contract,
-      path: this.options.path,
-      width: this.width,
-      height: this.height,
-    });
-    if (this.state.expanded) this.send({ kind: "unfold", all: true });
+    // What changed while it was a candidate.
+    if (was && (was.width !== this.width || was.height !== this.height))
+      this.send({ kind: "size", width: this.width, height: this.height });
+    if (was && was.expanded !== (this.state.expanded ?? false))
+      this.send({ kind: "unfold", all: this.state.expanded ?? false });
   }
 
   private heard(message: FromFace) {
@@ -180,14 +233,24 @@ export class FaceHost {
     this.set({ copied });
   }
 
+  // noticed says a notice under the input for a while.
+  private noticed(text: string) {
+    clearTimeout(this.noticeTimer);
+    this.noticeTimer = setTimeout(
+      () => this.set({ notice: undefined }),
+      this.options.noticeFor ?? noticeFor,
+    );
+    this.set({ notice: text });
+  }
+
   private failed(text: string) {
     this.end();
     this.set({ link: "stopped", error: text });
   }
 
-  private send(message: ToFace) {
+  private send(message: ToFace, worker = this.worker) {
     try {
-      this.worker?.postMessage(message);
+      worker?.postMessage(message);
     } catch (err) {
       this.failed(`the face does not take messages: ${String(err)}`);
     }
@@ -271,9 +334,24 @@ export class FaceHost {
     return this.worker !== undefined;
   }
 
-  // end stops the worker, keeping what it drew; the answers it owed go with
-  // it.
+  // end stops the worker and a reload's beside it, keeping what it drew; the
+  // answers it owed go with it.
   end() {
+    this.drop();
+    this.retire();
+  }
+
+  // drop ends a reload's face not yet taken in.
+  private drop() {
+    const was = this.candidate;
+    this.candidate = undefined;
+    if (!was) return;
+    clearTimeout(was.timer);
+    was.worker.terminate();
+  }
+
+  // retire ends the running face, keeping what it drew.
+  private retire() {
     this.sent.clear();
     clearTimeout(this.copiedTimer);
     clearInterval(this.timer);

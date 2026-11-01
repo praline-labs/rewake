@@ -24,7 +24,7 @@ test("a face draws the wrapper's snapshot, and a reload that fails to import kee
   expect(text.filter(Boolean)).toEqual(["❯ say hi"]);
 
   faceFile(dir, `import "./missing.ts";\n`);
-  host.start();
+  host.reload();
   const failed = await until((s) => s.link === "stopped");
   expect(failed.error).toContain("missing");
   expect(failed.lines).toEqual(drawn.lines);
@@ -32,7 +32,7 @@ test("a face draws the wrapper's snapshot, and a reload that fails to import kee
 
   // Fixed again, the next reload draws afresh from the snapshot.
   faceFile(dir, `import ${JSON.stringify(worker)};\n`);
-  host.start();
+  host.reload();
   await until((s) => s.link === "live" && s.error === undefined);
 });
 

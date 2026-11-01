@@ -2,6 +2,8 @@
 // stopped or draws nothing, and what it sends reaches the shell only as the
 // shell's own copies (docs/face.md, "Hot reload").
 import { afterEach, expect, test } from "bun:test";
+import { contract } from "../../../face/src/messages.ts";
+import type { FaceState } from "./host.ts";
 import { cleanup, ends, faceFile, hosted, mirror, scratch, worker } from "./hostkit.ts";
 
 // Solid's client build, whose Index takes a copy of a list on its update as
@@ -30,8 +32,8 @@ test("a face that posts what the contract does not allow is stopped, and nothing
 
 // Review of 288cd7f: a face refused for its contract stays refused; what the
 // shell sends after start, its ctrl+o among it, leaves the last good frame
-// and the error.
-test("a face reloaded into another contract says why, and the last good frame stays", async () => {
+// and the error. A start, unlike a reload, has no running face to keep.
+test("a face started again in another contract says why, and the last good frame stays", async () => {
   const dir = scratch();
   const url = faceFile(dir, `import ${JSON.stringify(worker)};\n`);
   const { host, until } = hosted(url, mirror(dir, { prompt: "say hi" }).path);
@@ -87,4 +89,76 @@ test("rows and spans a face sends reach the shell only as its own copies", async
   expect(Object.keys(drawn.lines)).toEqual(["0"]);
   expect(Object.keys(drawn.lines[0]?.spans ?? {})).toEqual(["0"]);
   expect(host.running).toBe(true);
+});
+
+const texts = (s: FaceState) =>
+  s.lines.map((l) =>
+    l.spans
+      .map((sp) => sp.text)
+      .join("")
+      .trimEnd(),
+  );
+const shows = (text: string) => (s: FaceState) => s.link === "live" && texts(s).includes(text);
+
+// November 1, 2026: a shell of contract 4 reloaded faces of contract 5 from
+// the checkout, and the pane froze on the refusal until a restart.
+test("a reload into a face of another contract keeps the running face drawing, said once", async () => {
+  const dir = scratch();
+  const url = faceFile(dir, `import ${JSON.stringify(worker)};\n`);
+  const wrapper = mirror(dir, { prompt: "say hi" });
+  const { host, states, until } = hosted(url, wrapper.path, { pingEvery: 50, noticeFor: 300 });
+  host.start();
+  await until(shows("❯ say hi"));
+  // A face of the next contract, refusing this shell as a real one does.
+  const messages = new URL("../../../face/src/messages.ts", import.meta.url).pathname;
+  faceFile(
+    dir,
+    `import { refusal } from ${JSON.stringify(messages)};
+self.onmessage = (e) => {
+  if (e.data.kind === "start") self.postMessage({ kind: "error", text: refusal(e.data.contract + 1, e.data.contract) });
+  if (e.data.kind === "ping") self.postMessage({ kind: "pong", n: e.data.n });
+};\n`,
+  );
+  host.reload();
+  const told = await until((s) => s.notice !== undefined);
+  expect(told.notice).toBe(
+    `the face on disk speaks contract ${contract + 1}, this shell ${contract}: a restart of the room loads it`,
+  );
+  expect(told.error).toBeUndefined();
+  // The running face still hears the mirror and draws.
+  wrapper.send({
+    op: "add",
+    item: { id: "r", kind: "text", status: "settled", text: "still here" },
+  });
+  await until(shows("● still here"));
+  await until((s) => s.notice === undefined);
+  // The same contract met again is not said again; the face is not stopped.
+  host.reload();
+  await Bun.sleep(200);
+  expect(states.filter((s) => s.notice !== undefined).length).toBeGreaterThan(0);
+  expect(host.state.notice).toBeUndefined();
+  expect(host.state.link).toBe("live");
+  expect(host.running).toBe(true);
+});
+
+test("a reload of the same contract swaps the faces", async () => {
+  const dir = scratch();
+  const url = faceFile(dir, `import ${JSON.stringify(worker)};\n`);
+  const { host, until } = hosted(url, mirror(dir, { prompt: "say hi" }).path, { pingEvery: 50 });
+  host.start();
+  await until(shows("❯ say hi"));
+  faceFile(
+    dir,
+    `self.onmessage = (e) => {
+  if (e.data.kind === "start")
+    self.postMessage({ kind: "lines", lines: [{ spans: [{ text: "new face" }] }], turn: "idle", link: "live", prompts: false });
+  if (e.data.kind === "ping") self.postMessage({ kind: "pong", n: e.data.n });
+};\n`,
+  );
+  host.reload();
+  await until(shows("new face"));
+  // Its pings are answered, so it is not stopped as hung.
+  await Bun.sleep(200);
+  expect(host.state.link).toBe("live");
+  expect(host.state.notice).toBeUndefined();
 });

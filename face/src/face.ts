@@ -14,6 +14,7 @@ import {
   type FromFace,
   type Link,
   type Pointing,
+  refusal,
   type ToFace,
 } from "./messages.ts";
 import type { InputKind, Line } from "./mirror.gen.ts";
@@ -100,10 +101,7 @@ export class Face {
           // A shell of another contract would misread what this face posts.
           if (message.contract !== contract) {
             this.refused = true;
-            return this.post({
-              kind: "error",
-              text: `this face speaks contract ${contract}, the shell ${message.contract}`,
-            });
+            return this.post({ kind: "error", text: refusal(contract, message.contract) });
           }
           this.path = message.path;
           this.width = message.width;

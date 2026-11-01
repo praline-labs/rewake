@@ -150,6 +150,7 @@ export function FaceView(props: {
       };
     const failed = f?.error ?? f?.said;
     if (failed) return { text: failed, fg: indexed(1, props.theme) };
+    if (f?.notice) return { text: f.notice, fg: colour(props.theme.look.warning) };
     const link = f?.link ?? "connecting";
     // While everything is open the row says so and how to fold it again, as
     // the terminal program's footer does under its detailed transcript.

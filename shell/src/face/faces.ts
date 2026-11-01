@@ -155,7 +155,7 @@ export function checkFace(within = 5000): Promise<string | undefined> {
 }
 
 export function reloadFaces() {
-  for (const face of faces.values()) face.host.start();
+  for (const face of faces.values()) face.host.reload();
 }
 
 export function endFaces() {

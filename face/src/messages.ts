@@ -13,6 +13,17 @@ import { count, flag, list, type Of, one, optional, type Shape, serial, text } f
 // (shell/src/face/check.ts).
 export const contract = 5;
 
+// refusal is a face's answer to a start of another contract. Its words, and
+// the shapes of start, ping, pong and error, are the one part no contract
+// changes: a shell of any contract reads the face's number from it and keeps
+// the face it runs (docs/face.md, "Hot reload").
+export const refusal = (face: number, shell: number) =>
+  `this face speaks contract ${face}, the shell ${shell}`;
+export const refusedBy = (text: string): number | undefined => {
+  const words = /^this face speaks contract (\d+), the shell \d+$/.exec(text);
+  return words ? Number(words[1]) : undefined;
+};
+
 // tones are a span's colours by their meaning; the shell's thread picks the
 // colour from the person's theme (view.tsx).
 const tones = ["text", "faint", "code", "accent", "done", "error", "gap"] as const;
