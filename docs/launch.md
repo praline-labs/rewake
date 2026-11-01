@@ -285,8 +285,10 @@ herdr, a terminal workspace manager for coding agents, finds an agent by its pan
 process, which for main in the shell is `rewake-shell`. So main's wrapper reports main itself,
 through herdr's own reporting command (`internal/host/herdr`). It does so only when `HERDR_ENV=1`
 and `HERDR_PANE_ID`, `HERDR_BIN_PATH` and `HERDR_SOCKET_PATH` are all set, and only for main.
-Workers run in no pane of herdr's: they inherit the variables, and the role keeps them out. A
-run outside herdr starts nothing, and so does a test binary, since it inherits its session's
+Workers run in no pane of herdr's, and carry none of its variables: the space host drops every
+`HERDR_*` from its own environment, which the worker's is made from (`hostEnv`), so a main started
+inside a worker, a live check's in a private room, cannot report itself as the agent of main's
+pane. A run outside herdr starts nothing, and so does a test binary, since it inherits its session's
 pane.
 
 - **Name and source.** The source is `rewake`. The reports name the agent `rewake-<harness id>`, and

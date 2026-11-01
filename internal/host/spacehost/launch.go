@@ -72,12 +72,17 @@ func launch(spec Spec) int {
 
 // hostEnv is the environment of the launcher and the space host: the
 // caller's, as no session's, in main's room. The worker's is made from it by
-// WorkerEnv.
+// WorkerEnv. None of herdr's variables pass: they name the herdr pane main
+// runs in, and the worker runs in none. A main started inside the worker, as
+// a live check's in a private room, would report itself as that pane's
+// agent (docs/launch.md#herdr).
 func hostEnv(env []string, spec Spec) []string {
 	out := make([]string, 0, len(env)+2)
 	for _, kv := range env {
-		switch name, _, _ := strings.Cut(kv, "="); name {
-		case state.SessionEnv, state.EpochEnv, state.DirEnv, state.RoomEnv:
+		name, _, _ := strings.Cut(kv, "=")
+		switch {
+		case name == state.SessionEnv, name == state.EpochEnv, name == state.DirEnv, name == state.RoomEnv,
+			strings.HasPrefix(name, "HERDR_"):
 			continue
 		}
 		out = append(out, kv)
