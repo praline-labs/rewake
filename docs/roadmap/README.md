@@ -10,15 +10,11 @@ what it taught goes into the living documents.
 
 ## Open, in order
 
-Updating without losing the sessions. The owner decided this on November 1, 2026, on the design https://claude.ai/artifact/DK7YF2q9kQsbLjez2JMUgt. Main's session lives only as long as the shell, because the shell holds main's pty.
+Updating without losing the sessions. The owner decided this on November 1, 2026, on the design https://claude.ai/artifact/DK7YF2q9kQsbLjez2JMUgt. A Go host in the person's pane now holds main's pty, and `rewake restart shell` keeps main and the workers ([shell.md](../shell.md)).
 
-1. **A restartable shell.** A Go host in the person's pane holds main's pty, its emulator and a stream with a preamble, as a space host does for a worker. The shell becomes its replaceable child.
-   - A restart on request (`rewake restart shell` or a key) leaves main and the workers running, and so does one restart after a crash.
-   - Closing the window, losing the terminal or a stop signal still ends everything.
-   - `room --json`'s proof of main goes through the host.
-2. **Updating from inside rewake.** A manifest of the parts inside one release, giving each part's digest, the contracts it needs and its restart class. Any one part can be restarted on its own with `rewake restart <part>`, for a quick reload; the manifest lists the parts. The owner's words: «рестарт "кусочка" будет выборочным, как раз для быстрой перезагрузки». The shell shows a banner of an update, with what it will restart. A changelog by part, its "what restarts" computed from the manifests.
-3. **A Go update without a room restart.** Each long-lived process `exec`s the new build, keeping its pid, its children and its fds, and hands over the state that lives only in memory. It starts with a probe on one idle wrapper of the same build.
-4. **A door for plugins.** The parts' contracts and the manifest admit a part that is not rewake's own. A project's main can attach its own part, or a ready one, to rewake: a pane or a strip segment in the shell, a command, a tool for the sessions, a listener of the room's events. Steps 1 and 2 keep their seams generic and versioned, so that a plugin is one more client.
+1. **Updating from inside rewake.** A manifest of the parts inside one release, giving each part's digest, the contracts it needs and its restart class. Any one part can be restarted on its own with `rewake restart <part>`, for a quick reload; the manifest lists the parts. The owner's words: «рестарт "кусочка" будет выборочным, как раз для быстрой перезагрузки». The shell shows a banner of an update, with what it will restart. A changelog by part, its "what restarts" computed from the manifests.
+2. **A Go update without a room restart.** Each long-lived process `exec`s the new build, keeping its pid, its children and its fds, and hands over the state that lives only in memory. It starts with a probe on one idle wrapper of the same build.
+3. **A door for plugins.** The parts' contracts and the manifest admit a part that is not rewake's own. A project's main can attach its own part, or a ready one, to rewake: a pane or a strip segment in the shell, a command, a tool for the sessions, a listener of the room's events. The seams stay generic and versioned, so that a plugin is one more client.
 
 rewake's face ([face.md](../face.md)), after its first slice — a dev worker on Claude Code and every
 pi worker, read with a prompt back, the switch and hot reload:
