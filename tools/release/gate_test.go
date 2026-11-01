@@ -218,6 +218,23 @@ func TestTheChangelogMustHaveTheRelease(t *testing.T) {
 	}
 }
 
+// A prerelease is a release the gate takes, so it has its changelog entry,
+// and a stable release's changelog keeps the entries of its prereleases.
+func TestAPrereleaseHasItsChangelogEntry(t *testing.T) {
+	const stable = "## 1.1.0\n### shell\n- Banner.\n\n## 1.1.0-rc.1\n### shell\n- Banner, tried.\n\n## 1.0.0\n### rewake\n- Old.\n"
+	for version, changelog := range map[string]string{
+		"1.1.0-rc.1": "## 1.1.0-rc.1\n### shell\n- Banner, tried.\n\n## 1.0.0\n### rewake\n- Old.\n",
+		"1.1.0":      stable,
+	} {
+		f := &fake{answer: func(string) result { return result{stdout: changelog} }}
+		g, out := newGate(t, call{version: version}, f)
+		g.checkChangelog(context.Background())
+		if len(g.failures) > 0 || !strings.Contains(out.String(), "has the entry of "+version) {
+			t.Errorf("%s: failures %v\n%s", version, g.failures, out)
+		}
+	}
+}
+
 // The registry is asked for each version of the release exactly, so a free
 // entry does not hide a build that is already taken.
 func TestTheRegistryIsAskedForEachVersion(t *testing.T) {

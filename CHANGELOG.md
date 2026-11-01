@@ -5,7 +5,7 @@ or `docs`. `rewake update` shows the entries between the release a room runs and
 what a release restarts is computed from its manifest, never read from here
 ([docs/install.md](docs/install.md#updating-from-inside-rewake)).
 
-## 2.12.0
+## 3.0.0
 
 ### rewake
 - `rewake update` shows a newer release on npm, its changes by part and what installing it

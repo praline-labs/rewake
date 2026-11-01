@@ -26,8 +26,9 @@ To update, run `rewake update`, which shows a newer release and what installing 
 `npm install -g` again does it too. To remove, `npm uninstall -g @praline-labs/rewake`, and the
 build goes with the entry. A running room keeps the build it was launched with: its
 sessions run the room's own copy of it, a `rewake` command typed in a terminal there is handed to
-that copy with one line saying so, and restarting the room's main — its workers end with it —
-moves the room to the new build ([rules/state.md](rules/state.md#the-rooms-own-copy)). A pi
+that copy with one line saying so, which points at `rewake restart` for what the room must restart:
+only the shell, when only it changed, and else main — its workers end with it — which moves the
+room to the new build ([rules/state.md](rules/state.md#the-rooms-own-copy)). A pi
 worker raised in an old room after an update that changed the bundled pi is refused until then.
 
 **Limits** a person meets:
@@ -206,9 +207,10 @@ naming its rebuild, and keeps only the plan's banner. The code is `internal/infr
 - **`rewake update`** prints `running · installed · latest`, the changelog's entries after the
   running release up to the latest, by release and part, and the plan from what the room runs to
   the latest release's manifest, one line per step as `rewake restart` prints it — computed, never
-  read from the changelog. `rewake update <version>` takes the exact release only — no range, no
-  `latest`, not a platform build's version — which the registry must have (npm's `E404` is "no
-  such release"); then `npm install -g @praline-labs/rewake@<version> --prefix <prefix>`, npm's
+  read from the changelog; only a release is offered, never a prerelease, so a stable build is never
+  moved onto one. `rewake update <version>` takes the exact release only — no range, no `latest`,
+  not a platform build's version; a prerelease such as `3.1.0-rc.1` only so — which the registry
+  must have (npm's `E404` is "no such release"); then `npm install -g @praline-labs/rewake@<version> --prefix <prefix>`, npm's
   output on stderr so `--json` stays clean, a check that the install the command came from now
   holds that release, and the plan of the new install. The plan reads the install the command
   came from, taken before npm ran: npm 11.17 moves the running directory aside to replace it (seen
@@ -216,13 +218,13 @@ naming its rebuild, and keeps only the plan's banner. The code is `internal/infr
   `running` stays the old release until main restarts. An older release is a rollback. Main or
   the person runs it; a worker is refused.
 - **The banner.** The room view's `available` is `{version, restarts}` when the record's latest is
-  newer than both the installed and the running release; `restarts` is `room` when the plan to it
+  a release newer than both the installed and the running one; `restarts` is `room` when the plan to it
   has a room step, else `shell`, else `nothing`
   ([shell.md](shell.md#the-prefix-and-the-room)). Once it is installed, the plan's banner takes
   over.
 - **The changelog.** `CHANGELOG.md` at the repository root, shipped in the entry: `## <version>`
-  newest first, `### <part>` a part of the manifest or `docs`, and `- ` lines, a line continued
-  by two spaces. It is written by hand at release time from `git log` since the last release;
+  newest first by semver's precedence, a prerelease below the release it leads to and kept there,
+  `### <part>` a part of the manifest or `docs`, and `- ` lines, a line continued by two spaces. It is written by hand at release time from `git log` since the last release;
   the gate refuses a release without its entry.
 
 ## Testing how a release installs

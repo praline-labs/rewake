@@ -75,7 +75,7 @@ func TestHandoffOnlyToACopyOfTheRoomsBuild(t *testing.T) {
 	if !ok || path != Pinned(room) || recorded != theirs {
 		t.Fatalf("Handoff = %q, %q, %v", path, recorded, ok)
 	}
-	if line := HandoffLine(room, theirs); !strings.Contains(line, Short(theirs)) || !strings.Contains(line, "Restarting main") {
+	if line := HandoffLine(room, theirs); !strings.Contains(line, Short(theirs)) || !strings.Contains(line, "rewake restart says what the room must restart") || strings.Contains(line, "Restarting main") {
 		t.Fatalf("the line: %q", line)
 	}
 	// Replaced, not written: the copy is a link to the running test binary.

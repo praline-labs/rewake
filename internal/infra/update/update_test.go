@@ -18,14 +18,40 @@ func TestNewer(t *testing.T) {
 		{"3.0.0", "2.99.99", true},
 		{"2.11.0", "2.11.0", false},
 		{"2.11.0", "2.12.0", false},
-		{"2.12.0-linux-x64", "2.11.0", false},
-		{"2.12.0-rc.1", "2.11.0", false},
+		{"2.12.0-rc.1", "2.11.0", true},
+		{"2.12.0", "2.12.0-rc.1", true},
+		{"2.12.0-rc.1", "2.12.0", false},
+		{"2.12.0-rc.2", "2.12.0-rc.1", true},
+		{"2.12.0-rc.10", "2.12.0-rc.2", true},
+		{"2.12.0-rc.1", "2.12.0-beta.9", true},
+		{"2.12.0-rc.1.1", "2.12.0-rc.1", true},
+		{"2.12.0-1", "2.12.0-rc", false},
 		{"latest", "2.11.0", false},
+		{"2.12.0+build", "2.11.0", false},
 		{"2.12.0", "", true},
 		{"02.12.0", "2.11.0", false},
 	} {
 		if got := Newer(c.a, c.b); got != c.want {
 			t.Errorf("Newer(%q, %q) = %v, want %v", c.a, c.b, got, c.want)
+		}
+	}
+}
+
+// An update offers only a release: a prerelease is installed when it is
+// named, never offered, so a stable build is never moved onto one.
+func TestOnlyAStableReleaseIsOffered(t *testing.T) {
+	for _, c := range []struct {
+		latest, over string
+		want         bool
+	}{
+		{"2.13.0", "2.12.0", true},
+		{"2.13.0", "2.13.0-rc.1", true},
+		{"2.13.0-rc.1", "2.12.0", false},
+		{"2.13.0-rc.2", "2.13.0-rc.1", false},
+		{"2.12.0", "2.12.0", false},
+	} {
+		if got := Offered(c.latest, c.over); got != c.want {
+			t.Errorf("Offered(%q, %q) = %v, want %v", c.latest, c.over, got, c.want)
 		}
 	}
 }
@@ -44,7 +70,7 @@ func TestOnlyABuildFromNPMUpdates(t *testing.T) {
 }
 
 func TestPlatformBuild(t *testing.T) {
-	for version, want := range map[string]string{"2.12.0-linux-x64": "2.12.0", "2.12.0-linux-arm64": "2.12.0", "2.12.0": "", "2.12.0-rc.1": ""} {
+	for version, want := range map[string]string{"2.12.0-linux-x64": "2.12.0", "2.12.0-linux-arm64": "2.12.0", "2.13.0-rc.1-linux-x64": "2.13.0-rc.1", "2.12.0": "", "2.12.0-rc.1": ""} {
 		release, ok := PlatformBuild(version)
 		if ok != (want != "") || ok && release != want {
 			t.Errorf("PlatformBuild(%q) = %q, %v; want %q", version, release, ok, want)

@@ -52,6 +52,26 @@ func TestChangelogBetweenTwoReleases(t *testing.T) {
 	}
 }
 
+// A prerelease has its entry, ordered by semver's precedence, below the
+// release it leads to; a stable release's changelog keeps it.
+func TestChangelogKeepsPrereleases(t *testing.T) {
+	text := "## 2.13.0\n### shell\n- Done.\n\n## 2.13.0-rc.2\n### shell\n- Again.\n\n## 2.13.0-rc.1\n### shell\n- Tried.\n\n## 2.12.0\n### face\n- Older.\n"
+	releases, err := ParseChangelog([]byte(text))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, r := range Between(releases, "2.12.0", "2.13.0-rc.2") {
+		got = append(got, r.Version)
+	}
+	if want := []string{"2.13.0-rc.2", "2.13.0-rc.1"}; !reflect.DeepEqual(got, want) {
+		t.Errorf("between 2.12.0 and 2.13.0-rc.2: %v, want %v", got, want)
+	}
+	if _, err := ParseChangelog([]byte("## 2.13.0-rc.1\n### shell\n- a\n## 2.13.0\n### shell\n- b\n")); err == nil || !strings.Contains(err.Error(), "newest first") {
+		t.Errorf("a prerelease above its release: %v", err)
+	}
+}
+
 // A changelog the command would show half of fails as a whole.
 func TestChangelogOutOfShapeFails(t *testing.T) {
 	for text, want := range map[string]string{

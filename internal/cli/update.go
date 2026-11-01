@@ -20,12 +20,12 @@ func updateCommand() *Command {
 		Name: "update", Args: "[<version>]", MaxPositionals: 1,
 		Summary:  "With no version, ask npm for a newer release of rewake and show its changes by part and what installing it restarts. With a version, install exactly that release where this rewake was installed; nothing restarts.",
 		Options:  []Option{jsonOption},
-		Examples: []string{"rewake update", "rewake update 2.12.0", "rewake update --json"},
+		Examples: []string{"rewake update", "rewake update 3.0.0", "rewake update --json"},
 		Next:     []string{"rewake restart", "rewake restart shell"},
 		Notes: []string{
 			"Only a rewake installed with npm updates so; one built from source — tools/land, a build by hand — updates by being built again, and is refused. Main or the person may run it, in the room's directory; a worker is refused.",
 			"With no version it asks the registry afresh, the same npm configuration the install reads: every npm call takes --global and the install's own --prefix, so a project's .npmrc is never read. It prints the running, installed and latest releases, the changelog's entries between the running release and the latest, and the plan from what the room runs to the latest release's manifest, one line per part as rewake restart prints it. Main's host asks too, every six hours, and the shell shows a newer release in its hints row.",
-			"With a version, the exact release: no range, no latest, not a platform build's version. It must be on the registry. npm installs it with --global under the install's prefix, its output on stderr; then the plan of the newly installed parts is printed, as rewake restart prints it. The room keeps running its own copy of its build until its restart, so installing restarts nothing; an older release is allowed and is a rollback.",
+			"With a version, the exact release: no range, no latest, not a platform build's version; a prerelease, such as 3.1.0-rc.1, only so, since with no version only a release is offered. It must be on the registry. npm installs it with --global under the install's prefix, its output on stderr; then the plan of the newly installed parts is printed, as rewake restart prints it. The room keeps running its own copy of its build until its restart, so installing restarts nothing; an older release is allowed and is a rollback.",
 			"Exit 0 shown, or installed; 1 refused or failed (not installed from npm, a worker, the registry not reached, no such release, npm failed); 2 a wrong call — a version that is not a release's.",
 		},
 		Access: changeForm, Handler: handleUpdate,
@@ -113,7 +113,7 @@ func showUpdate(ctx *Context, npm update.NPM, origin string) error {
 	installed, _ := update.Installed(origin)
 	view := updateView{Running: Version, Installed: installed, Latest: record.Latest, Changes: []update.Release{}, Steps: []parts.Step{}}
 	room := roomUpdate(ctx.table.catalog, origin)
-	newer := update.Newer(record.Latest, installed)
+	newer := update.Offered(record.Latest, installed)
 	switch {
 	case newer && record.Manifest != nil:
 		view.Changes = update.Between(record.Changelog, Version, record.Latest)
@@ -207,7 +207,7 @@ func availableOf(running []parts.Part) *Available {
 	}
 	record := update.ReadRecord(root)
 	installed, err := update.Installed(installedDir())
-	if err != nil || record.Manifest == nil || !update.Newer(record.Latest, installed) || !update.Newer(record.Latest, Version) {
+	if err != nil || record.Manifest == nil || !update.Offered(record.Latest, installed) || !update.Offered(record.Latest, Version) {
 		return nil
 	}
 	return &Available{Version: record.Latest, Restarts: restartsOf(parts.Plan(running, *record.Manifest))}

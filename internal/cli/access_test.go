@@ -42,7 +42,7 @@ func documentedForms(launch string) []formCase {
 		{[]string{"restart", "shell"}, change},
 		{[]string{"restart", "shell", "--json"}, change},
 		{[]string{"update"}, change},
-		{[]string{"update", "2.12.0"}, change},
+		{[]string{"update", "3.0.0"}, change},
 		{[]string{"update", "--json"}, change},
 		{[]string{"whoami"}, view},
 		{[]string{"whoami", "--json"}, view},
