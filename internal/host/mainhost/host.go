@@ -36,6 +36,9 @@ const (
 	endWait = 15 * time.Second
 	// doorWait: a restart asked at the door is answered within it.
 	doorWait = 40 * time.Second
+	// drainWithin: a shell's socket is read this long after its exit, for
+	// what it said last.
+	drainWithin = 2 * time.Second
 )
 
 // fallbackSize is main's size when the first shell gave none.

@@ -29,13 +29,14 @@ const ClosingMark = "\x1b]6262;rewake-closing\x07"
 
 // The closing's bounds, as the shell had them: main hears its terminal hang
 // up, has hangupWait to end, then SIGTERM to its group and termWait, then
-// SIGKILL.
-const (
+// SIGKILL. Variables, so a test of the host's end need not wait them out.
+var (
 	hangupWait = 5 * time.Second
 	termWait   = 3 * time.Second
-	// registerPoll is how often the host looks for main's session.
-	registerPoll = 100 * time.Millisecond
 )
+
+// registerPoll is how often the host looks for main's session.
+const registerPoll = 100 * time.Millisecond
 
 // mainRun is main's wrapper on the host's terminal.
 type mainRun struct {

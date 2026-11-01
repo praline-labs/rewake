@@ -3,13 +3,16 @@ package mainhost
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"os/exec"
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 )
 
 // HostFDEnv tells the shell which of its descriptors is its socket to the
@@ -68,9 +71,19 @@ func (h *Host) startShell(why string) (*shellProc, error) {
 		return nil, fmt.Errorf("could not start the shell %s: %w", h.cfg.Shell, err)
 	}
 	p.cmd = cmd
-	go h.readShell(p)
+	// The exit reaches the loop after the last of what the shell said: a
+	// shell writes released and exits at once, and its socket still holds the
+	// state while the process is gone. The socket is read on for drainWithin
+	// after the exit, as a child of the shell may hold its end open.
+	exited := make(chan struct{})
 	go func() {
 		_ = cmd.Wait()
+		_ = conn.SetReadDeadline(time.Now().Add(drainWithin))
+		close(exited)
+	}()
+	go func() {
+		h.readShell(p)
+		<-exited
 		_ = conn.Close()
 		h.post(ev{kind: kExit, gen: p.gen})
 	}()
@@ -82,6 +95,10 @@ func (h *Host) startShell(why string) (*shellProc, error) {
 func (h *Host) readShell(p *shellProc) {
 	l := newLines(p.conn)
 	client, err := takeHello(p.conn, l)
+	if errors.Is(err, io.EOF) || errors.Is(err, os.ErrDeadlineExceeded) {
+		// It ended before its hello: its exit says why.
+		return
+	}
 	if err == nil && client != clientShell {
 		err = fmt.Errorf("a hello from %q on the shell's socket", client)
 	}

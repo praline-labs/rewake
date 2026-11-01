@@ -89,7 +89,9 @@ The first launch runs in this order:
   2. The old shell gets `release`. It gives the screen back, hands over what the person had
      chosen as `released {state}` and exits within 3 s, or is killed. The state is the focus, the
      chosen worker, the zoom, each pane's face and the drafts typed in it. The host does not read
-     it.
+     it, but reads the old shell's socket to its last line, up to 2 s after its exit, before it
+     hands over: the shell exits the moment it has written the state, and a state of a megabyte
+     was still on its way.
   3. The host draws one line on a blank alternate screen and discards the keys typed meanwhile:
      they are not queued for the new shell. Then it sends `go` with the state.
   4. The new shell attaches to main and to every open space from their preambles, and answers
