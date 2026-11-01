@@ -1,14 +1,13 @@
 // What the person copies out of the face (docs/face.md, "Copying"): the text
-// a selection holds, not its drawing, and the part a click is on.
+// a selection holds, not its drawing, and a click told from a drag; what a
+// click on a row does is parts.test.ts.
 import { expect, test } from "bun:test";
 import type { FaceLine } from "./messages.ts";
 import type { Item } from "./mirror.gen.ts";
 import { FaceModel } from "./model.ts";
-import { partOf } from "./parts.ts";
 import { Pointer, pointAt } from "./pointer.ts";
 import { bodyOf, linesOf } from "./render.ts";
 import { copyOf, highlighted } from "./select.ts";
-import { toggles } from "./unfold.ts";
 
 const drawn = (lines: FaceLine[]) => lines.map((l) => l.spans.map((s) => s.text).join(""));
 
@@ -94,79 +93,6 @@ const model = (...items: Item[]) => {
   m.apply({ op: "end" });
   return m;
 };
-
-// clicked is what a click on the row drawn as `row` copies.
-// keyOf is the part of the drawn row, clicked what a click on it copies: a
-// row that opens or closes copies nothing, as the worker takes it.
-function keyOf(items: Item[], row: string, width = 40) {
-  const rows = bodyOf(model(...items), width).rows;
-  const line = rows.find((l) => drawn([l])[0]?.trimEnd() === row);
-  if (!line) throw new Error(`no row ${row} in ${JSON.stringify(drawn(rows))}`);
-  return line.part;
-}
-
-function clicked(items: Item[], row: string, width = 40) {
-  const key = keyOf(items, row, width);
-  return key === undefined || toggles(key) ? undefined : partOf(items, key);
-}
-
-test("a click copies the whole part it is on", () => {
-  const source = "Run it:\n\n```sh\nmake all\n```\n\n**done**";
-  expect(clicked([reply(source)], "  done")).toEqual({
-    text: source,
-    what: "the reply",
-  });
-  expect(clicked([reply(source)], "  make all")).toEqual({
-    text: "make all",
-    what: "the code block",
-  });
-  const bash: Item = {
-    id: "b",
-    kind: "tool",
-    status: "done",
-    name: "Bash",
-    text: JSON.stringify({ command: "make all" }),
-    output: "1\n2\n3\n4\n5\n6",
-  };
-  const shown = reply("ok");
-  // A run's line and a cut row open and close rather than copy (unfold.ts).
-  expect(keyOf([bash, shown], "  Ran 1 shell command (ctrl+o to expand)")).toBe("fold b");
-  expect(clicked([bash, shown], "  Ran 1 shell command (ctrl+o to expand)")).toBeUndefined();
-  // Brief 56: a thinking summary's rows copy its text, as written.
-  const thought: Item = { id: "th", kind: "thinking", status: "settled", text: "**Plan** it" };
-  expect(clicked([thought], "∴ Plan it")).toEqual({ text: "**Plan** it", what: "the thinking" });
-  const edit: Item = {
-    id: "e",
-    kind: "tool",
-    status: "done",
-    name: "Edit",
-    text: JSON.stringify({ file_path: "/x", old_string: "old", new_string: "new" }),
-    output: "The file was updated",
-  };
-  expect(clicked([edit], "     -old")).toEqual({ text: "old", what: "the old lines" });
-  expect(clicked([edit], "     +new")).toEqual({ text: "new", what: "the new lines" });
-  const mcp: Item = {
-    id: "m",
-    kind: "tool",
-    status: "done",
-    name: "mcp__s__t",
-    text: JSON.stringify({ q: 1 }),
-    output: "a\nb\nc\nd\ne\nf",
-  };
-  expect(keyOf([mcp], "     … +3 lines (ctrl+o to expand)")).toBe("more m");
-  expect(clicked([mcp], "  ⎿  a")).toEqual({
-    text: "a\nb\nc\nd\ne\nf",
-    what: "the call's output",
-  });
-  expect(clicked([mcp], "● s - t (MCP)(q: 1)")?.text).toBe('{\n  "q": 1\n}');
-  // An open run's latest call: a click on what it works on copies its command.
-  const running: Item = { ...bash, status: "running", output: undefined };
-  const m = model(running);
-  m.turn = "working";
-  const row = bodyOf(m, 40).rows.find((l) => l.part?.startsWith("input"));
-  expect(drawn([row ?? { spans: [] }])[0]).toBe("  ⎿  $ make all");
-  expect(partOf([running], row?.part ?? "")).toEqual({ text: "make all", what: "the command" });
-});
 
 // A press and its release on one cell is a click; any motion to another cell
 // first makes it a drag, whose release copies the selection.

@@ -16,15 +16,15 @@ import {
 import type { InputKind, Line } from "./mirror.gen.ts";
 import { bounds } from "./mirror.gen.ts";
 import { FaceModel } from "./model.ts";
-import { partOf } from "./parts.ts";
+import { type Anchor, anchorAt, clickOn, lit, topFor } from "./parts.ts";
 import { Flash, Pointer, pointAt, type View } from "./pointer.ts";
 import { Tracker } from "./progress.ts";
 import { blinked, bodyOf, fill, pinned, statusOf } from "./render.ts";
 import { Scroll } from "./scroll.ts";
-import { copyOf, highlighted, lit } from "./select.ts";
+import { copyOf, highlighted } from "./select.ts";
 import { Ticker } from "./ticker.ts";
 import type { Clock } from "./turn.ts";
-import { type Anchor, anchorAt, toggles, topFor, Unfold } from "./unfold.ts";
+import { Unfold } from "./unfold.ts";
 import { Wheel } from "./wheel.ts";
 
 declare const self: Worker;
@@ -56,8 +56,7 @@ let posted = "";
 const progress = new Tracker();
 // unfold is what the person opened, everything by the shell's key or a part
 // by a click; anchor is the row to keep where it stood on the screen once
-// the conversation is laid out again: its part's key, its place among that
-// part's rows and its row in the view.
+// the conversation is laid out again (parts.ts).
 const unfold = new Unfold();
 let anchor: Anchor | undefined;
 
@@ -184,8 +183,8 @@ function unfolded(all: boolean) {
 }
 
 // pointed takes the person's hand: a release copies the selection it made,
-// or the part a click was on; a click on a run's line or a cut row opens or
-// closes it instead, the row staying under the pointer.
+// or does what a click on its row does (parts.ts): copies the part, or opens
+// or closes it, the row staying under the pointer.
 function pointed(type: Pointing, x: number, y: number, focused: boolean) {
   if (!frame) return;
   const at = pointAt(x, y, viewOf());
@@ -206,18 +205,17 @@ function pointed(type: Pointing, x: number, y: number, focused: boolean) {
         const text = copyOf(frame.rows, gesture.selected);
         if (text.trim()) post({ kind: "copy", text, what: "selection" });
       } else if (gesture) {
-        const key = frame.rows[gesture.clicked]?.part;
-        if (key !== undefined && toggles(key)) {
+        const click = clickOn(model.items, frame.rows, gesture.clicked, viewOf().top);
+        if (click && "toggle" in click) {
           pointer.clear();
-          unfold.toggle(key);
-          pin(gesture.clicked);
+          unfold.toggle(click.toggle);
+          anchor = click.anchor;
           soon();
           break;
         }
-        const part = key === undefined ? undefined : partOf(model.items, key);
-        if (key !== undefined && part) {
-          post({ kind: "copy", text: part.text, what: part.what });
-          flash.on(key);
+        if (click) {
+          post({ kind: "copy", text: click.copy.text, what: click.copy.what });
+          flash.on(click.light);
         }
       }
       break;

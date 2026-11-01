@@ -7,7 +7,7 @@
 import { callOf, type Op } from "./call.ts";
 import type { FaceLine, Span } from "./messages.ts";
 import type { Item } from "./mirror.gen.ts";
-import { partKey } from "./select.ts";
+import { tagged } from "./parts.ts";
 import { hidden } from "./tools.ts";
 import { clean, wrapSpans } from "./wrap.ts";
 
@@ -134,10 +134,10 @@ export function runLines(
   return !opened && run.calls.some((c) => c.status === "gap") ? [...lines, lostLine] : lines;
 }
 
-// A click on a run's line opens or closes it (unfold.ts).
+// A click on a run's line opens or closes it (parts.ts).
 const parted = (lines: FaceLine[], calls: Item[]) => {
   const first = calls[0];
-  return first ? lines.map((line) => ({ ...line, part: partKey("fold", first) })) : lines;
+  return first ? tagged(lines, first, "fold") : lines;
 };
 
 function drawnRun(
@@ -169,7 +169,7 @@ function drawnRun(
   if (last && !opened) {
     const hint = wrapSpans([{ text: callOf(last).hint, tone: "faint" }], width - 5)[0] ?? [];
     // A click on it copies what the latest call works on (parts.ts).
-    out.push({ spans: [{ text: "  ⎿  ", gutter: true }, ...hint], part: partKey("input", last) });
+    out.push(...tagged([{ spans: [{ text: "  ⎿  ", gutter: true }, ...hint] }], last, "input"));
   }
   return out;
 }

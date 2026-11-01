@@ -5,29 +5,7 @@
 // copied by its cells' text, a tab between them; and a logical line loses its
 // trailing blanks, as the terminal program copies its own.
 import type { FaceLine, Span } from "./messages.ts";
-import type { Item } from "./mirror.gen.ts";
 import { widthOf } from "./wrap.ts";
-
-// PartKind is what a click on a row copies whole (parts.ts): a reply, its
-// n-th code block, a thinking block's text, a call's input, a call's output,
-// an edit's old or new lines, a written file's lines. Two kinds copy nothing
-// and open or close instead (unfold.ts): a run's line, "fold", and the row
-// that says how many lines are cut, "more".
-export type PartKind =
-  | "reply"
-  | `code${number}`
-  | "thinking"
-  | "input"
-  | "output"
-  | "old"
-  | "new"
-  | "content"
-  | "fold"
-  | "more";
-
-// partKey names a part by its kind and its item's id, a run's by its first
-// call's.
-export const partKey = (kind: PartKind, item: Item) => `${kind} ${item.id}`;
 
 // Point is a cell: its row counted from the conversation's first, its column
 // from the pane's left edge.
@@ -139,10 +117,3 @@ export function highlighted(rows: FaceLine[], top: number, s: Selection | undefi
     return { ...line, spans };
   });
 }
-
-// lit is the rows shown with those of one part marked, the part a click
-// just copied.
-export const lit = (rows: FaceLine[], part: string | undefined): FaceLine[] =>
-  part === undefined
-    ? rows
-    : rows.map((line) => (line.part === part ? { ...line, lit: true } : line));
