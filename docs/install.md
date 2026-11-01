@@ -261,9 +261,9 @@ Every release goes through the gate, `tools/release`:
    binary for `--version` — the version, built from HEAD with no local changes — and has
    npm install the release from a registry it serves on the loopback interface: this
    machine's build alone, whose command then runs, with the pinned pi beside it running
-   under node and the shell beside the binary drawing a main's output and starting its own
-   face, each other build
-   alone for its cpu,
+   under node, the command launched on a terminal as a person's launch is, a stand-in pi named
+   by `--command` as main, whose output and hints row the shell beside the binary draws under
+   the launch's host, and that shell starting its own face; each other build alone for its cpu,
    and none with `--omit=optional`, whose command then fails naming the reinstall. It
    runs the shim's own tests, `go test ./scripts/`, too. A dry run goes on past a failed
    check, so one run shows every problem, and exits 1 when any failed.
