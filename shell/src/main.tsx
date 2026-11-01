@@ -21,6 +21,7 @@ import {
   checkFace,
   copyWith,
   endFaces,
+  faceEmbedded,
   faceShown,
   type KeptFaces,
   keptFaces,
@@ -58,7 +59,7 @@ import { connectHost } from "./sources.ts";
 import { showSessions, stripOf } from "./strip.tsx";
 import { themeOf } from "./theme.ts";
 import { outerTitle } from "./title.ts";
-import { contracts, takeUpdate } from "./update.ts";
+import { contracts, helloContracts, takeUpdate } from "./update.ts";
 import { type Env, type View, Window } from "./window.tsx";
 
 const args = process.argv.slice(2);
@@ -118,10 +119,15 @@ let shown: { destroy(): void; closed: Promise<unknown> } | undefined;
 // The host gives the shell the terminal with go: before it, another shell
 // may still be drawing on it.
 const given = Promise.withResolvers<unknown>();
-const link = openLink(hostFd, fromHost, (why) => {
-  process.stderr.write(`rewake-shell: ${why}\n`);
-  leave(1);
-});
+const link = openLink(
+  hostFd,
+  fromHost,
+  (why) => {
+    process.stderr.write(`rewake-shell: ${why}\n`);
+    leave(1);
+  },
+  helloContracts(faceEmbedded),
+);
 
 function fromHost(m: FromHost) {
   switch (m.t) {

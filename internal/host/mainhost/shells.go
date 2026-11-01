@@ -47,6 +47,7 @@ type shellProc struct {
 	digested     chan struct{}
 	digest, file string
 	requires     map[string]string
+	face         *FaceContracts
 }
 
 // startShell starts the next generation of the shell on the person's
@@ -113,14 +114,7 @@ func (h *Host) readShell(p *shellProc) {
 		h.post(ev{kind: kRefused, gen: p.gen, why: "the new shell was refused: " + err.Error()})
 		return
 	}
-	if hello.Contracts != nil {
-		p.mu.Lock()
-		p.requires = hello.Contracts.Requires
-		if p.requires == nil {
-			p.requires = map[string]string{}
-		}
-		p.mu.Unlock()
-	}
+	p.took(hello)
 	h.post(ev{kind: kHello, gen: p.gen})
 	for {
 		line, err := l.next()

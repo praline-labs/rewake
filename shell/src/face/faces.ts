@@ -36,6 +36,9 @@ const workerFile =
   named ??
   (compiled ? undefined : new URL("../../../face/src/worker.ts", import.meta.url).pathname);
 export const workerUrl = workerFile ?? embedded;
+// faceEmbedded: this shell runs the face compiled into it, whose contracts
+// are the ones it imported, rather than one from files that follows them.
+export const faceEmbedded = workerFile === undefined;
 const sources = workerFile ? dirname(workerFile) : undefined;
 const reloadAfter = 150;
 let watching = false;

@@ -147,14 +147,18 @@ room's own copy. The shell is what main's host started: the host takes its diges
 manifest's function when it starts it (the sources' digest for a checkout's `rewake-shell`, else
 the file's, with the manifest's `digest` added when the installed manifest describes that file),
 and its contracts from the shell's hello ([shell.md](shell.md#the-hosts-channel)), and serves
-both at its door. The face from sources and pi are not recorded: the face follows its files
+both at its door; a compiled shell's hello says its face's contracts too, served as a face
+`within` the shell. The face from sources and pi are not recorded: the face follows its files
 unless the shell's contract refuses it, and a pi session runs the version rewake requires.
 
 ### The plan
 
-`parts.Plan` compares the running parts with the installed manifest: a part is the same when both
-digests match, else when both files do; one that changed restarts by its class, an unknown class
-as room, and a running shell that said no contracts gets its own step. Then every requirer must
+`parts.Plan` compares the running parts with the installed manifest: a part is the same when its
+digests match where both have one and its files where both have one, so a compiled shell whose
+embedded face alone changed is a change; one that changed restarts by its class, an unknown class
+as room, and a running shell that said no contracts gets its own step. A part `within` another
+moves with it: its contracts count as its container's, so a restart of a compiled shell is judged
+by its face's as well (found in review, November 1, 2026). Then every requirer must
 find its contract spoken at its value once the steps are taken; where it would not, the part
 that must move is raised to its class, and the reason names the contract (a face on disk that
 speaks 6 to a shell that requires 5 is a shell restart; a pi on disk that rewake does not pin is

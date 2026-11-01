@@ -36,7 +36,10 @@ func (l *lander) put(ctx context.Context) (string, string) {
 	}
 	was, _ := old.Find(parts.Rewake)
 	binary := filepath.Join(l.install, "rewake")
-	if err == nil && oldErr == nil && was.Digest == digest {
+	// The old manifest speaks for the binary only while the binary is the
+	// one it names: a build put in place by hand is replaced.
+	file, _ := parts.FileDigest(binary)
+	if err == nil && oldErr == nil && was.Digest == digest && was.File == file {
 		l.say("skip  build    rewake's sources are the installed build's")
 	} else if why := l.installBuild(ctx); why != "" {
 		return "", why

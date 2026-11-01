@@ -2,6 +2,7 @@ package parts
 
 import (
 	"fmt"
+	"maps"
 	"slices"
 )
 
@@ -37,13 +38,26 @@ func ClassOf(p Part) string {
 	return Room
 }
 
-// Same says two entries of a part are one version of it: by their digests
-// when both have one, else by their files.
+// Same says two entries of a part are one version of it: their digests
+// agree where both have one, and their files where both have one, with one
+// of the two to compare at least. Equal sources with another file is a
+// change: a compiled shell whose embedded face alone changed keeps its own
+// sources' digest.
 func Same(a, b Part) bool {
+	compared := false
 	if a.Digest != "" && b.Digest != "" {
-		return a.Digest == b.Digest
+		if a.Digest != b.Digest {
+			return false
+		}
+		compared = true
 	}
-	return a.File != "" && b.File != "" && a.File == b.File
+	if a.File != "" && b.File != "" {
+		if a.File != b.File {
+			return false
+		}
+		compared = true
+	}
+	return compared
 }
 
 // Plan is what makes the running parts the installed ones, in the installed
@@ -99,18 +113,51 @@ type world struct {
 
 func newWorld(running []Part, installed Manifest) *world {
 	w := &world{inst: map[string]Part{}, run: map[string]Part{}}
-	for _, p := range installed.Parts {
-		if p.Within == "" {
-			w.order = append(w.order, p)
-			w.inst[p.Name] = p
-		}
+	parts := withinFolded(installed.Parts)
+	w.order = parts
+	for _, p := range parts {
+		w.inst[p.Name] = p
 	}
-	for _, p := range running {
-		if p.Within == "" {
-			w.run[p.Name] = p
-		}
+	for _, p := range withinFolded(running) {
+		w.run[p.Name] = p
 	}
 	return w
+}
+
+// withinFolded is the parts with each one compiled into another folded into
+// it: it moves with its container, whose file covers it, so the container
+// speaks and requires its contracts too, and a restart of the container is
+// judged by them. One whose container is not listed is left out, as having
+// no restart of its own.
+func withinFolded(list []Part) []Part {
+	var out []Part
+	at := map[string]int{}
+	for _, p := range list {
+		if p.Within == "" {
+			at[p.Name] = len(out)
+			out = append(out, p)
+		}
+	}
+	for _, p := range list {
+		if i, ok := at[p.Within]; ok && p.Within != "" {
+			c := out[i]
+			c.Speaks, c.Requires = merged(c.Speaks, p.Speaks), merged(c.Requires, p.Requires)
+			out[i] = c
+		}
+	}
+	return out
+}
+
+// merged is a's contracts with b's added, a new map; nil when both are, so a
+// part that said no contracts still says none.
+func merged(a, b map[string]string) map[string]string {
+	if a == nil && b == nil {
+		return nil
+	}
+	out := make(map[string]string, len(a)+len(b))
+	maps.Copy(out, a)
+	maps.Copy(out, b)
+	return out
 }
 
 func (w *world) moving(name string) bool {

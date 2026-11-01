@@ -34,15 +34,34 @@ func (p *shellProc) takeDigest(path string) {
 	p.mu.Unlock()
 }
 
-// part is the shell as it runs, once its digest is taken.
-func (p *shellProc) part() parts.Part {
+// took keeps the contracts a shell's hello said; a hello without them
+// leaves requires nil, which the plan never takes for compatible.
+func (p *shellProc) took(hello Hello) {
+	if hello.Contracts == nil {
+		return
+	}
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.requires, p.face = hello.Contracts.Requires, hello.Contracts.Face
+	if p.requires == nil {
+		p.requires = map[string]string{}
+	}
+}
+
+// parts is the shell as it runs, once its digest is taken, and the face
+// compiled into it when it said one.
+func (p *shellProc) parts() []parts.Part {
 	select {
 	case <-p.digested:
 	case <-time.After(doorWait):
 	}
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	return parts.Part{Name: parts.ShellPart, Class: parts.Shell, Digest: p.digest, File: p.file, Requires: p.requires}
+	out := []parts.Part{{Name: parts.ShellPart, Class: parts.Shell, Digest: p.digest, File: p.file, Requires: p.requires}}
+	if p.face != nil {
+		out = append(out, parts.Part{Name: parts.Face, Class: parts.Shell, Within: parts.ShellPart, Speaks: p.face.Speaks, Requires: p.face.Requires})
+	}
+	return out
 }
 
 // running answers the door's parts: the shell drawing now, if one does.
@@ -52,7 +71,7 @@ func (h *Host) running(reply chan Message) {
 		answer(reply, Message{T: kindParts, Running: []parts.Part{}})
 		return
 	}
-	go func() { reply <- Message{T: kindParts, Running: []parts.Part{p.part()}} }()
+	go func() { reply <- Message{T: kindParts, Running: p.parts()} }()
 }
 
 // reload asks the drawing shell to reload a part in place, as its own watch

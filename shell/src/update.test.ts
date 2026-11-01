@@ -2,7 +2,7 @@ import { expect, test } from "bun:test";
 import { contract } from "../../face/src/messages.ts";
 import { hintsFor } from "./hints.ts";
 import { version } from "./link.ts";
-import { bannerOf, contracts } from "./update.ts";
+import { bannerOf, contracts, helloContracts } from "./update.ts";
 
 test("the banner says what the room's plan asks of the person", () => {
   const cases: [Parameters<typeof bannerOf>[0], string | undefined][] = [
@@ -41,4 +41,15 @@ test("the shell says the contracts it loaded", () => {
     shell: { requires: { host: String(version), face: String(contract) } },
     face: { speaks: { face: String(contract) }, requires: { mirror: "1" } },
   });
+});
+
+// Found in review: a compiled face moves only with its shell, so the hello
+// carries its contracts, and the host judges a restart of the shell by them.
+test("the hello carries the contracts of a face compiled into the shell", () => {
+  const own = { host: String(version), face: String(contract) };
+  expect(helloContracts(true)).toEqual({
+    requires: own,
+    face: { speaks: { face: String(contract) }, requires: { mirror: "1" } },
+  });
+  expect(helloContracts(false)).toEqual({ requires: own });
 });

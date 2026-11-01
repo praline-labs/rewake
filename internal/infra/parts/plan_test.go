@@ -116,8 +116,16 @@ func TestPlan(t *testing.T) {
 			Manifest{Parts: []Part{
 				{Name: Rewake, Class: Room, Digest: "go1", File: "bin1", Speaks: map[string]string{"host": "1"}},
 				{Name: ShellPart, Class: Shell, Digest: "sh1", File: "exe2", Requires: map[string]string{"host": "1", "face": "5"}},
-				{Name: Face, Class: Shell, Within: ShellPart, Digest: "fa2", Speaks: map[string]string{"face": "6"}},
+				{Name: Face, Class: Shell, Within: ShellPart, Digest: "fa2", Speaks: map[string]string{"face": "5"}},
 			}},
+			[]Step{{ShellPart, Shell, "changed"}},
+		},
+		{
+			// Found in review: the shell's own sources are as they were, and
+			// only the face compiled into its file changed.
+			"a compiled shell whose embedded face alone changed",
+			compiled("sh1", "exe1", "1"),
+			release("bin1", "1", "sh1", "exe2", "fa2", "1"),
 			[]Step{{ShellPart, Shell, "changed"}},
 		},
 		{
@@ -133,6 +141,40 @@ func TestPlan(t *testing.T) {
 				t.Fatalf("Plan =\n  %v\nwant\n  %v", got, c.want)
 			}
 		})
+	}
+}
+
+// compiled is a room running a released rewake of file bin1 and a compiled
+// shell, its face within it requiring mirror.
+func compiled(digest, file, mirror string) []Part {
+	return []Part{
+		{Name: Rewake, Class: Room, File: "bin1", Speaks: map[string]string{"host": "1", "mirror": "1"}, Requires: map[string]string{}},
+		{Name: ShellPart, Class: Shell, Digest: digest, File: file, Requires: map[string]string{"host": "1", "face": "5"}},
+		{Name: Face, Class: Shell, Within: ShellPart, Speaks: map[string]string{"face": "5"}, Requires: map[string]string{"mirror": mirror}},
+	}
+}
+
+// release is a release's manifest: rewake speaking mirror, the shell and the
+// face compiled into it requiring mirror.
+func release(rewakeFile, speaks, shellDigest, shellFile, faceDigest, requires string) Manifest {
+	return Manifest{Manifest: Format, Parts: []Part{
+		{Name: Rewake, Class: Room, Digest: "go-" + rewakeFile, File: rewakeFile, Speaks: map[string]string{"host": "1", "mirror": speaks}},
+		{Name: ShellPart, Class: Shell, Digest: shellDigest, File: shellFile, Requires: map[string]string{"host": "1", "face": "5"}},
+		{Name: Face, Class: Shell, Within: ShellPart, Digest: faceDigest, Speaks: map[string]string{"face": "5"}, Requires: map[string]string{"mirror": requires}},
+	}}
+}
+
+// A shell's restart is judged by the contracts of the face compiled into it
+// as well (found in review): a release whose face requires mirror 2 refuses
+// rewake restart shell while the room's rewake speaks 1.
+func TestBlocksTheFaceWithinTheShell(t *testing.T) {
+	newMirror := release("bin2", "2", "sh1", "exe2", "fa2", "2")
+	if why := Blocks(compiled("sh1", "exe1", "1"), newMirror, ShellPart); why != "the installed shell requires mirror 2, and the running rewake speaks 1" {
+		t.Fatalf("Blocks = %q", why)
+	}
+	newFace := release("bin1", "1", "sh1", "exe2", "fa2", "1")
+	if why := Blocks(compiled("sh1", "exe1", "1"), newFace, ShellPart); why != "" {
+		t.Fatalf("a face within the room's contracts blocks: %q", why)
 	}
 }
 

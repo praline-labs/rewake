@@ -52,8 +52,10 @@ The shell and the host speak JSON lines on a socket pair: the shell's end is the
 
 - The first line is the client's hello, `{"hello":"shell","v":1,"contracts":{"requires":{"host":"1","face":"5"}}}`.
   `contracts` is what that shell process loaded, the constants of `link.ts` and the face's
-  `messages.ts` as it imported them; the host keeps them for the generation and serves them at
-  its door ([install.md](install.md#the-running-set)). An older shell sends none, which the plan
+  `messages.ts` as it imported them; a compiled shell running its own face adds that face's,
+  `"face":{"speaks":{"face":"5"},"requires":{"mirror":"1"}}`, since that face moves only with
+  the shell. The host keeps them for the generation and serves them at its door
+  ([install.md](install.md#the-running-set)). An older shell sends none, which the plan
   never takes for compatible, and an older host ignores the field.
 - A host that does not speak that version answers the fixed refusal,
   `{"refused":"this host speaks 1, the client N","speaks":[1]}`, and closes. No version changes
@@ -74,7 +76,8 @@ The shell and the host speak JSON lines on a socket pair: the shell's end is the
   every face from its files, as its watch of them does, and answers `reloaded`, and the door
   `done`; a shell that does not answer within 2 s, an older one, fails the door naming
   `rewake restart shell`. `{"t":"parts"}` is answered `{"t":"parts","running":[…]}`, the shell
-  the host runs as a part of the manifest — its digest and the contracts of its hello — or none
+  the host runs as a part of the manifest — its digest and the contracts of its hello, with its
+  compiled face as a part `within` it — or none
   while no shell is ready ([install.md](install.md#the-running-set)).
 
 The first launch runs in this order:

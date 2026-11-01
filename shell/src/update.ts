@@ -15,6 +15,14 @@ export const contracts = () => ({
   face: { speaks: { face: String(contract) }, requires: { mirror: String(bounds.version) } },
 });
 
+// helloContracts is what the hello says this shell loaded: its own
+// contracts, and its face's when the face is compiled into it, since that
+// face moves only with the shell (docs/shell.md, "The host's channel").
+export const helloContracts = (embedded: boolean) => {
+  const c = contracts();
+  return embedded ? { requires: c.shell.requires, face: c.face } : { requires: c.shell.requires };
+};
+
 // bannerOf is the hint a plan gives the person, or none: a restart of the
 // room before one of the shell, since it loads both; a part that reloads
 // itself, or that new sessions take, asks nothing of the person.

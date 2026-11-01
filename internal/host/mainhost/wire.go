@@ -42,8 +42,17 @@ type Hello struct {
 	Contracts *Contracts `json:"contracts,omitempty"`
 }
 
-// Contracts are what a shell requires of the parts beside it.
+// Contracts are what a shell requires of the parts beside it, and Face what
+// the face compiled into it speaks and requires; absent when the shell runs
+// a face from files, which follows them.
 type Contracts struct {
+	Requires map[string]string `json:"requires"`
+	Face     *FaceContracts    `json:"face,omitempty"`
+}
+
+// FaceContracts are a compiled face's.
+type FaceContracts struct {
+	Speaks   map[string]string `json:"speaks"`
 	Requires map[string]string `json:"requires"`
 }
 

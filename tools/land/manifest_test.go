@@ -104,3 +104,22 @@ func TestLandWithoutAManifestNeedsTheRoom(t *testing.T) {
 		t.Errorf("the install holds %q", build)
 	}
 }
+
+// A build put in place by hand is not the one the manifest names, though
+// rewake's sources are: land builds again (found in review).
+func TestLandReplacesABuildPutInPlaceByHand(t *testing.T) {
+	r := newRepo(t)
+	r.branchOff("work", "a.go", "package a\n")
+	if code, out := r.land("work"); code != exitDone {
+		t.Fatalf("exit %d\n%s", code, out)
+	}
+	if err := os.WriteFile(filepath.Join(r.install, "rewake"), []byte("by hand"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	r.calls = nil
+	r.branchOff("docs", "docs.md", "docs\n")
+	code, out := r.land("docs")
+	if code != exitDone || !r.built() || strings.Contains(out, "skip  build") {
+		t.Fatalf("exit %d, built %v\n%s", code, r.built(), out)
+	}
+}

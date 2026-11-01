@@ -59,12 +59,14 @@ export function readLine(line: string): { message: FromHost } | { stop: string }
 
 export type Link = { send(message: ToHost): void };
 
-// openLink says hello on fd and hands each message to onMessage; onEnd hears
-// once why the channel ended. A write after the end is dropped.
+// openLink says hello on fd, with the contracts this shell loaded, and hands
+// each message to onMessage; onEnd hears once why the channel ended. A write
+// after the end is dropped.
 export function openLink(
   fd: number,
   onMessage: (message: FromHost) => void,
   onEnd: (why: string) => void,
+  contracts: { requires: Record<string, string> } = { requires: requires() },
 ): Link {
   let open = true;
   const end = (why: string) => {
@@ -80,7 +82,7 @@ export function openLink(
       end(`the host's channel failed: ${e}`);
     }
   };
-  write({ hello: "shell", v: version, contracts: { requires: requires() } });
+  write({ hello: "shell", v: version, contracts });
   void (async () => {
     const reader = Bun.file(fd).stream().getReader();
     const decoder = new TextDecoder();

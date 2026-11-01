@@ -143,7 +143,8 @@ cleared, as the tool runs it, it wrote nothing into the room's state directory. 
 green it pushes `v2` and builds `cmd/rewake` into
 `~/.local/share/rewake2/rewake.next` (`--install <dir>` for another), renamed over `rewake` there:
 the owner's rule, a swap right after landing and green checks. It builds only when the digest of
-rewake's sources differs from the installed manifest's, since every build's bytes differ by its
+rewake's sources differs from the installed manifest's, or the binary there is not the file that
+manifest names, since every build's bytes differ by its
 time and would ask for a room restart; a skipped build keeps the installed binary's file in the
 manifest. Then it writes `manifest.json` beside the build
 ([install.md](install.md#the-parts-and-what-an-update-restarts)), with the contracts the built
