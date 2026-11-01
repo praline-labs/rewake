@@ -68,6 +68,8 @@ func cleanRepository(line string) (result, bool) {
 		return result{}, true
 	case strings.HasPrefix(line, "git show HEAD:"+versionFile):
 		return result{stdout: "package cli\n\nvar Version = \"1.0.0\"\n"}, true
+	case strings.HasPrefix(line, "git show HEAD:CHANGELOG.md"):
+		return result{stdout: "# Changelog\n\n## 1.0.0\n### shell\n- The first.\n"}, true
 	}
 	return result{}, false
 }
@@ -191,6 +193,27 @@ func TestTheSourceVersionMustMatch(t *testing.T) {
 		}
 		if shown := f.called("git show HEAD:" + versionFile); len(shown) != 1 {
 			t.Errorf("read %v, want the file at HEAD", f.calls)
+		}
+	}
+}
+
+// A release ships its changelog's entry and rewake update shows it, so the
+// gate refuses a release without one and shows the one it finds.
+func TestTheChangelogMustHaveTheRelease(t *testing.T) {
+	for changelog, want := range map[string]string{
+		"## 1.0.0\n### shell\n- Banner.\n## 0.9.0\n### rewake\n- Old.\n": "ok    CHANGELOG.md at HEAD has the entry of 1.0.0:\n        shell\n          - Banner.\n",
+		"## 0.9.0\n### rewake\n- Old.\n":                                 "has no entry for 1.0.0",
+		"## 1.0.0\n":                                                     "has no entry for 1.0.0",
+		"## 1.0.0\nloose text\n":                                         "does not read",
+	} {
+		f := &fake{answer: func(string) result { return result{stdout: changelog} }}
+		g, out := newGate(t, call{version: "1.0.0"}, f)
+		g.checkChangelog(context.Background())
+		if !strings.Contains(out.String(), want) {
+			t.Errorf("%q: output lacks %q:\n%s", changelog, want, out)
+		}
+		if len(g.failures) == 0 != strings.HasPrefix(want, "ok") {
+			t.Errorf("%q: failures %v", changelog, g.failures)
 		}
 	}
 }

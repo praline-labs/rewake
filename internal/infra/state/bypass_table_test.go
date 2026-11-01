@@ -8,6 +8,7 @@ const (
 	worktreeOutside = "host/worktree writes beside a checkout and in the user's data directory, outside the state: no room's lease covers it, its own locks order it"
 	testHelper      = "a test helper that is not a _test.go file sets a scene a test writes, outside any build"
 	pictureOutside  = "rewake screen's picture, a file the caller named outside every state directory (refused inside one, through a link, over a non-regular file), written by a view that holds no lease"
+	npmScratch      = "npm pack's scratch directory in the system's temp, where it puts a release's entry to be read and removed, outside every state directory"
 	workerSettings  = "the Claude Code worker profile's settings.json, replaced in one step when rewake adds its newer defaults, the person's file outside any room"
 )
 
@@ -39,6 +40,9 @@ var bypassExceptions = []bypass{
 	{"internal/adapter/claude/workerdir.go", "os.CreateTemp", 1, workerSettings},
 	{"internal/adapter/claude/workerdir.go", "os.Rename", 1, workerSettings},
 	{"internal/adapter/claude/workerdir.go", "os.Remove", 1, workerSettings},
+
+	{"internal/infra/update/npm.go", "os.MkdirTemp", 1, npmScratch},
+	{"internal/infra/update/npm.go", "os.RemoveAll", 1, npmScratch},
 
 	{"internal/core/screen/write.go", "os.CreateTemp", 1, pictureOutside},
 	{"internal/core/screen/write.go", "os.Rename", 1, pictureOutside},

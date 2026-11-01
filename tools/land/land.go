@@ -184,10 +184,15 @@ func cleanup(ctx context.Context) context.Context {
 // installBuild builds cmd/rewake into rewake.next beside the room's build
 // and renames it over that build, as docs/install.md builds from source: a
 // rename does not meet "text file busy" on a running executable, and the
-// wrappers already running keep the file they started.
-func (l *lander) installBuild(ctx context.Context) string {
+// wrappers already running keep the file they started. The digest goes into
+// the build, so the room it runs in is judged by its sources
+// (docs/install.md#the-plan); "" when it could not be taken.
+func (l *lander) installBuild(ctx context.Context, digest string) string {
 	next := filepath.Join(l.install, "rewake.next")
 	flags := "-X github.com/praline-labs/rewake/internal/cli.built=" + time.Now().UTC().Format(time.RFC3339)
+	if digest != "" {
+		flags += " -X github.com/praline-labs/rewake/internal/cli.digest=" + digest
+	}
 	r := l.run(ctx, command{dir: l.root, name: "go", args: []string{"build", "-ldflags", flags, "-o", next, "./cmd/rewake"}, limit: buildLimit}, l.log)
 	if !r.ok() {
 		return "go build: " + r.why()

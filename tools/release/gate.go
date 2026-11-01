@@ -6,9 +6,11 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"time"
+
+	"github.com/praline-labs/rewake/internal/infra/parts"
+	"github.com/praline-labs/rewake/internal/infra/update"
 )
 
 const (
@@ -32,6 +34,8 @@ type gate struct {
 	pause func(ctx context.Context, d time.Duration) error
 	// goDigest is rewake's digest for a platform; nil is the real one.
 	goDigest func(ctx context.Context, root, goos, goarch string) (string, error)
+	// digests are rewake's, by npm cpu, taken before the build.
+	digests map[string]string
 }
 
 func (g *gate) say(format string, args ...any) {
@@ -76,6 +80,7 @@ func (g *gate) release(ctx context.Context) int {
 	g.say("before the build:")
 	g.checkRepository(ctx)
 	g.checkSourceVersion(ctx)
+	g.checkChangelog(ctx)
 	g.checkRegistry(ctx)
 	if g.publish && len(g.failures) > 0 {
 		return g.refuse("nothing was built or published")
@@ -83,6 +88,7 @@ func (g *gate) release(ctx context.Context) int {
 
 	g.say("")
 	g.say("building with scripts/pack.sh %s:", g.version)
+	g.takeDigests(ctx)
 	if r := g.run(ctx, buildLimit, g.root, "sh", filepath.Join(g.root, "scripts", "pack.sh"), g.version); !r.ok() {
 		g.fail("scripts/pack.sh failed: %s", r.why())
 		return g.refuse("nothing was published")
@@ -182,10 +188,8 @@ func (g *gate) checkRepository(ctx context.Context) {
 
 // versionFile holds the version a build from source reports; pack.sh
 // overrides it for the packages, and the release commit sets it to match.
-const versionFile = "internal/cli/registry.go"
-
-// versionLine is the declaration in versionFile.
-var versionLine = regexp.MustCompile(`(?m)^var Version = "([^"]*)"$`)
+// The digest of rewake leaves that one line out, by the same expression.
+const versionFile = parts.VersionFile
 
 // checkSourceVersion requires the committed default version to be the one
 // released: otherwise the tagged source builds a binary that names another
@@ -197,7 +201,7 @@ func (g *gate) checkSourceVersion(ctx context.Context) {
 		g.fail("could not read %s at HEAD: %s", versionFile, r.why())
 		return
 	}
-	match := versionLine.FindStringSubmatch(r.stdout)
+	match := parts.VersionLine.FindStringSubmatch(r.stdout)
 	switch {
 	case match == nil:
 		g.fail("%s at HEAD has no line var Version = \"...\"", versionFile)
@@ -205,6 +209,32 @@ func (g *gate) checkSourceVersion(ctx context.Context) {
 		g.fail("%s at HEAD says Version = %q, not %q: set it to var Version = %q in the release commit, and push", versionFile, match[1], g.version, g.version)
 	default:
 		g.pass("%s at HEAD says Version = %q", versionFile, match[1])
+	}
+}
+
+// checkChangelog requires the changelog at HEAD to read and to have an
+// entry for the release, and shows that entry: it ships in the package, and
+// rewake update shows it to whoever updates
+// (docs/install.md#updating-from-inside-rewake).
+func (g *gate) checkChangelog(ctx context.Context) {
+	r := g.run(ctx, gitLimit, g.root, "git", "show", "HEAD:"+update.ChangelogFile)
+	if !r.ok() {
+		g.fail("could not read %s at HEAD: %s", update.ChangelogFile, r.why())
+		return
+	}
+	releases, err := update.ParseChangelog([]byte(r.stdout))
+	if err != nil {
+		g.fail("%s at HEAD does not read: %v", update.ChangelogFile, err)
+		return
+	}
+	entry, ok := update.Find(releases, g.version)
+	if !ok || len(entry.Parts) == 0 {
+		g.fail("%s at HEAD has no entry for %s: add \"## %s\" with its changes by part in the release commit, and push", update.ChangelogFile, g.version, g.version)
+		return
+	}
+	g.pass("%s at HEAD has the entry of %s:", update.ChangelogFile, g.version)
+	for _, line := range entry.Lines()[1:] {
+		g.say("      %s", line)
 	}
 }
 

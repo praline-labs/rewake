@@ -27,6 +27,23 @@ test("the banner says what the room's plan asks of the person", () => {
   }
 });
 
+test("the banner shows a newer release on npm until the plan asks for more", () => {
+  const available = { version: "2.13.0", restarts: "shell" } as const;
+  const hint = bannerOf([], available);
+  expect(hint ? `${hint.keys} ${hint.does}` : undefined).toBe(
+    "2.13.0 available · restarts: shell · rewake update",
+  );
+  const nothing = bannerOf(undefined, { version: "2.13.0", restarts: "nothing" });
+  expect(nothing ? `${nothing.keys} ${nothing.does}` : undefined).toBe(
+    "2.13.0 available · restarts: nothing · rewake update",
+  );
+  // Installed, the plan's own step is what the person must do now.
+  const installed = bannerOf([{ part: "shell", class: "shell", why: "changed" }], available);
+  expect(installed ? `${installed.keys} ${installed.does}` : undefined).toBe(
+    "Ctrl+\\ r loads the updated shell",
+  );
+});
+
 test("the banner stands right after where the keys go, never in the prefix's list", () => {
   const update = { keys: "Ctrl+\\ r", does: "loads the updated shell" };
   const base = { focus: "main", name: "main", prefix: false, zoomed: false, workers: 0 } as const;

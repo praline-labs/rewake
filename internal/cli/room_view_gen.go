@@ -38,6 +38,11 @@ type RoomView struct {
 	// with no part prints them; absent where the install has no manifest
 	// (docs/install.md#the-parts-and-what-an-update-restarts).
 	Update []UpdateStep `json:"update,omitempty"`
+
+	// Available is a newer release on npm than the one installed and the one running, as main's
+	// host last found it; absent for a build not installed from npm, and once that release is
+	// installed (docs/install.md#updating-from-inside-rewake).
+	Available *Available `json:"available,omitempty"`
 }
 
 // UpdateStep is one part the room needs restarted.
@@ -51,6 +56,27 @@ type UpdateStep struct {
 	// Why is why: changed, or the contract that no longer agrees.
 	Why string `json:"why"`
 }
+
+// Available is a newer release, and what installing it would restart in the room.
+type Available struct {
+	// Version is the release.
+	Version string `json:"version"`
+
+	// Restarts is the most installing it asks of the room: its restart, the shell's, or nothing
+	// the person does.
+	Restarts Restarts `json:"restarts"`
+}
+
+// Restarts is the most an update asks of the room: room, its restart; shell, rewake restart
+// shell; nothing, no restart the person makes.
+type Restarts string
+
+// The values of Restarts.
+const (
+	RestartsRoom    Restarts = "room"
+	RestartsShell   Restarts = "shell"
+	RestartsNothing Restarts = "nothing"
+)
 
 // RestartClass is what a part's restart takes: live, it reloads itself; shell, rewake restart
 // shell; sessions, each new session takes it; room, main ended and started again.

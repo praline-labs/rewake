@@ -75,6 +75,13 @@ and contracts; `rewake restart` with no part, the shell's hints row and `tools/l
 parts the room must restart to run what is installed
 ([install.md](install.md#the-parts-and-what-an-update-restarts)).
 
+**Updates** — a build from npm asks the registry for a newer release, through npm as a child
+under the install's own prefix: main's host every six hours, `rewake update` afresh. The answer,
+with the newer release's manifest and changelog from its entry package, is one record under the
+state root, `v2/update.json`, shared by every room; the shell's banner and `rewake update`'s
+restarts are the plan to that manifest. `rewake update <version>` installs the exact release and
+restarts nothing ([install.md](install.md#updating-from-inside-rewake)).
+
 There's no separate daemon: nothing to start, stop, or recover, and there's no state where "the
 sessions exist but the daemon is dead". Exactly as many wrapper processes run as there are open
 sessions; a session without a wrapper doesn't take part in messaging.
@@ -95,6 +102,7 @@ verified main callers see them.
 
 ```
 <REWAKE_DIR>/                   the base
+  v2/update.json                the last check of npm for a newer release, every room's (install.md#updating-from-inside-rewake)
   v2/rooms/<room>/              2.0's root, then the room
     build.lock                 the room's build lease, flock(2): writers shared, a launch changing the build exclusive
     build                      the room's build id, the SHA-256 of the executable a launch established
@@ -399,7 +407,10 @@ harness; live runs with real harnesses by hand ([testing.md](testing.md), `AGENT
   inside, about 99 MB; rewake finds it beside its own executable
   ([shell.md](shell.md#how-rewake-starts-the-shell-and-how-it-ships)).
 - Each platform build carries `bin/manifest.json`, the manifest of its parts, and every part ships
-  in the one release ([install.md](install.md#the-parts-and-what-an-update-restarts)).
+  in the one release ([install.md](install.md#the-parts-and-what-an-update-restarts)). The entry
+  carries `CHANGELOG.md` and each build's manifest under `manifests/`, so a rewake asking what a
+  newer release changes and restarts fetches only the entry
+  ([install.md](install.md#updating-from-inside-rewake)).
 - A non-npm alternative: `go install`, with pi installed and the shell compiled beside the binary
   by hand ([install.md](install.md#building-from-source)).
 - The repository lives in the GitHub organization `praline-labs`, the module path is

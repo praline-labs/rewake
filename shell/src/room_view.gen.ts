@@ -33,6 +33,10 @@ export interface RoomView {
   // with no part prints them; absent where the install has no manifest
   // (docs/install.md#the-parts-and-what-an-update-restarts).
   update?: UpdateStep[]
+  // available is a newer release on npm than the one installed and the one running, as main's
+  // host last found it; absent for a build not installed from npm, and once that release is
+  // installed (docs/install.md#updating-from-inside-rewake).
+  available?: Available
 }
 
 // UpdateStep is one part the room needs restarted.
@@ -44,6 +48,20 @@ export interface UpdateStep {
   // why is why: changed, or the contract that no longer agrees.
   why: string
 }
+
+// Available is a newer release, and what installing it would restart in the room.
+export interface Available {
+  // version is the release.
+  version: string
+  // restarts is the most installing it asks of the room: its restart, the shell's, or nothing
+  // the person does.
+  restarts: Restarts
+}
+
+// Restarts is the most an update asks of the room: room, its restart; shell, rewake restart
+// shell; nothing, no restart the person makes.
+export type Restarts = "room" | "shell" | "nothing"
+export const restartsValues: readonly Restarts[] = ["room", "shell", "nothing"]
 
 // RestartClass is what a part's restart takes: live, it reloads itself; shell, rewake restart
 // shell; sessions, each new session takes it; room, main ended and started again.

@@ -409,7 +409,7 @@ stopRoom = pollRoom(
       takeSpaces(shownSpaces(view), endedSpaces(view), closing, beginClosing);
       restore();
       showSessions(new Map(view.sessions.map((s) => [s.name, s])));
-      takeUpdate(view.update);
+      takeUpdate(view.update, view.available);
       takeMirrors(workers().map((p) => [p.id, stripOf(p.id).status?.mirror]));
     }
     takeBriefs(view, asked);

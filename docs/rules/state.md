@@ -252,6 +252,7 @@ expand — has no form, takes no lease and writes nothing.
 |---|---|---|
 | change | a launch; `send` in every kind; `withdraw`; `edit`; `inbox`, `inbox --message`; `pending`; `compact`, `interrupt`; `answer`; `space open`, `space close`; `brief new`, `edit`, `close`, `tick`, `comment`; `worktree enter`, `rm`, `land`, `finish` | they write the room |
 | change | `inbox --peek` | it takes the mailbox lock, which orders it against a read in progress; taking a lock is a write |
+| change | `update`, `update <version>`, each with `--json` | they write the record of npm's answer under the root, and in a room hold its lease as every change does |
 | view | bare `rewake`, `guide`, `--help`, `--version`, each with `--json`; `list`; `whoami`; `workers`; `statusline`; `inbox --owed`, `inbox --awaited`; `worktree ls`, and a `worktree`, `space` or `brief` call with no change verb; `space list`; `brief list`, `brief show` | they answer from what is there |
 
 Each command's entry in the command table (`internal/cli/registry.go`, `access.go`) is the
@@ -284,7 +285,11 @@ refused, since the kernel follows a link before a `..`. The write primitives are
 the locks (`WithRoomLock`, `WithNameLock`, `TryWithNameLock`, `WithSpaceLock`, `WithBriefLock`,
 `WithMailboxLock`, `WithMailboxLockAt`, `TryHold`), and the os calls they name behind the same guard
 (`OpenFile` with a write flag, `WriteFile`, `Link`, `Move`, `Touch`, `Discard`,
-`RemoveAll`, `Flock`); the read clock goes through `state.Counter`, the sockets through
+`RemoveAll`, `Flock`), and `WriteUpdateRecord`, the one write of a path in no room: `<root>/update.json`,
+the last answer of npm for a newer release, a cache the rooms share rather than any room's state
+([install.md](../install.md#updating-from-inside-rewake)). It takes no lease, refuses in a view,
+writes only that path, by rename, and only when the root exists and passes its checks; it creates
+nothing, and the last writer wins. The read clock goes through `state.Counter`, the sockets through
 `state.Listen`, whose close removes the path once. A static test over `internal/`, in both
 build variants, fails on a write outside the state package, except in its own table of
 file, effect, count and reason, which fails on a stale entry. The same lease rule covers

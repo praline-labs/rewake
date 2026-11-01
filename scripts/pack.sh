@@ -56,9 +56,22 @@ for target in linux-amd64:linux-x64 linux-arm64:linux-arm64; do
   mkdir -p "$dir/bin"
   # The version reaches the binary too: a package that says 0.9.9 while its
   # rewake --version says something else is a package nobody can place. The
-  # binary names the release, not the platform build it arrived in.
+  # binary names the release, not the platform build it arrived in. It also
+  # knows it came from npm, which alone lets it check for and install a newer
+  # release, and, when tools/release passes it in, the digest of its sources,
+  # by which a room judges whether it must restart for the next release
+  # (docs/install.md#updating-from-inside-rewake).
+  flags="-X github.com/praline-labs/rewake/internal/cli.Version=$version -X github.com/praline-labs/rewake/internal/cli.built=$built"
+  flags="$flags -X github.com/praline-labs/rewake/internal/infra/update.Channel=npm"
+  case "$platform" in
+    linux-x64) digest="${REWAKE_DIGEST_LINUX_X64:-}" ;;
+    linux-arm64) digest="${REWAKE_DIGEST_LINUX_ARM64:-}" ;;
+  esac
+  if [ -n "$digest" ]; then
+    flags="$flags -X github.com/praline-labs/rewake/internal/cli.digest=$digest"
+  fi
   CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" go build -C "$root" -trimpath \
-    -ldflags "-X github.com/praline-labs/rewake/internal/cli.Version=$version -X github.com/praline-labs/rewake/internal/cli.built=$built" \
+    -ldflags "$flags" \
     -o "$dir/bin/rewake" ./cmd/rewake
   bun "$root/shell/build.ts" "bun-$platform" "$dir/bin/rewake-shell" >/dev/null
 
@@ -100,7 +113,7 @@ cat > "$entry/package.json" <<JSON
   "keywords": ["coding-agents", "ai-agents", "multi-agent", "agent-orchestration", "agent-messaging", "terminal", "cli"],
   $repository,
   "bin": { "rewake": "bin/rewake" },
-  "files": ["bin/rewake", "README.md", "LICENSE"],
+  "files": ["bin/rewake", "README.md", "CHANGELOG.md", "manifests", "LICENSE"],
   "dependencies": {
     "$pi_package": "$pi_version"
   },
@@ -111,6 +124,11 @@ cat > "$entry/package.json" <<JSON
 }
 JSON
 cp "$root/README.md" "$entry/README.md"
+# The changelog ships in the entry, and so does each platform build's
+# manifest, which tools/release writes into manifests/: a rewake asking what
+# a newer release changes and restarts fetches the small entry, never a build.
+cp "$root/CHANGELOG.md" "$entry/CHANGELOG.md"
+mkdir -p "$entry/manifests"
 cp "$root/LICENSE" "$entry/LICENSE"
 
 cp "$root/scripts/shim.sh" "$entry/bin/rewake"

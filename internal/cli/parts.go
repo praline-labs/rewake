@@ -39,13 +39,20 @@ func contractsOf(catalog adapter.Catalog) Contracts {
 	return c
 }
 
+// digest is the digest of the sources this build was made from
+// (parts.GoDigest), which the tool that builds it passes in:
+// -ldflags "-X github.com/praline-labs/rewake/internal/cli.digest=<digest>",
+// as tools/release through scripts/pack.sh and tools/land do. Empty in a
+// build by hand, whose rewake the plan then judges by its file.
+var digest string
+
 // ownPart is this build as a part. A command of a room runs as the room's
 // own copy, handed off to it when another build was called, so this is the
 // rewake the room runs.
 func ownPart(catalog adapter.Catalog) parts.Part {
 	id, _ := build.ID()
 	c := contractsOf(catalog)
-	return parts.Part{Name: parts.Rewake, Class: parts.Room, File: id, Speaks: c.Speaks, Requires: c.Requires}
+	return parts.Part{Name: parts.Rewake, Class: parts.Room, Digest: digest, File: id, Speaks: c.Speaks, Requires: c.Requires}
 }
 
 // partNames are the parts rewake restart knows: every build's, each harness
@@ -67,7 +74,8 @@ func partNames(catalog adapter.Catalog, installed parts.Manifest) []string {
 }
 
 // updateOf is the room's plan: the parts running — this build, and the shell
-// main's host draws with, if one answers — against the installed manifest.
+// main's host draws with, if one answers — against the manifest of the
+// install in dir.
 // problem says why there is no plan; running is what it compared.
 type updateOf struct {
 	installed parts.Manifest
@@ -76,14 +84,14 @@ type updateOf struct {
 	problem   string
 }
 
-func roomUpdate(catalog adapter.Catalog) updateOf {
+func roomUpdate(catalog adapter.Catalog, dir string) updateOf {
 	u := updateOf{running: []parts.Part{ownPart(catalog)}}
 	if dir, err := state.Dir(); err == nil {
 		if shells, err := mainhost.Running(mainhost.HostSocket(dir)); err == nil {
 			u.running = append(u.running, shells...)
 		}
 	}
-	installed, err := parts.Read(parts.InstalledDir())
+	installed, err := parts.Read(dir)
 	if err != nil {
 		u.problem = err.Error()
 		return u

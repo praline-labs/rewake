@@ -194,3 +194,20 @@ func TestBlocks(t *testing.T) {
 		t.Fatalf("no manifest blocks: %q", why)
 	}
 }
+
+// A shell-only release rebuilds rewake with its own version, so its file
+// differs; equal sources are no room restart. A side without a digest is
+// judged by the file as before.
+func TestASameRewakeOfAnotherReleaseNeedsNoRestart(t *testing.T) {
+	r := running(func(p map[string]*Part) { p[Rewake].Digest = "go1" })
+	next := installed(func(p map[string]*Part) {
+		p[Rewake].File = "bin2"
+		p[ShellPart].Digest = "sh2"
+	})
+	if got, want := Plan(r, next), []Step{{ShellPart, Shell, "changed"}}; !slices.Equal(got, want) {
+		t.Errorf("a shell-only release plans %v, want %v", got, want)
+	}
+	if got := Plan(running(nil), next); !slices.Contains(got, Step{Rewake, Room, "changed"}) {
+		t.Errorf("a running rewake without its digest plans %v, want rewake by its file", got)
+	}
+}

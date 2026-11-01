@@ -87,12 +87,17 @@ func Read(dir string) (Manifest, error) {
 	if err != nil {
 		return Manifest{}, err
 	}
+	return Decode(data, filepath.Join(dir, FileName))
+}
+
+// Decode is a manifest from its bytes, which where names in an error.
+func Decode(data []byte, where string) (Manifest, error) {
 	var m Manifest
 	if err := json.Unmarshal(data, &m); err != nil {
-		return Manifest{}, fmt.Errorf("the manifest %s does not read: %w", filepath.Join(dir, FileName), err)
+		return Manifest{}, fmt.Errorf("the manifest %s does not read: %w", where, err)
 	}
 	if m.Manifest != Format {
-		return Manifest{}, fmt.Errorf("the manifest %s is of format %d, this rewake reads %d", filepath.Join(dir, FileName), m.Manifest, Format)
+		return Manifest{}, fmt.Errorf("the manifest %s is of format %d, this rewake reads %d", where, m.Manifest, Format)
 	}
 	return m, nil
 }

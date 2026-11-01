@@ -19,8 +19,9 @@ type scene struct {
 }
 
 // leaseFree are the writes that need no lease: the bootstrap's, which only
-// view mode refuses (docs/rules/state.md#the-bootstrap).
-var leaseFree = map[string]bool{"Bootstrap": true, "OpenLeaseLock": true, "CreateLeaseLock": true}
+// view mode refuses (docs/rules/state.md#the-bootstrap), and the update
+// record, a cache under the root outside every room.
+var leaseFree = map[string]bool{"Bootstrap": true, "OpenLeaseLock": true, "CreateLeaseLock": true, "WriteUpdateRecord": true}
 
 // writePrimitives sets up a scene in the room at dir, which the caller holds
 // the lease of, and returns every write primitive of the package by name, each
@@ -89,8 +90,9 @@ func writePrimitives(t *testing.T, base, dir string) (map[string]func() error, s
 		"PlaceExecutable": func() error {
 			return PlaceExecutable(filepath.Join(dir, "placed"), file, file, func(string) error { return nil })
 		},
-		"RemoveAll": func() error { return RemoveAll(filepath.Join(dir, "sessions")) },
-		"Flock":     func() error { return Flock(locked, syscall.LOCK_EX|syscall.LOCK_NB) },
+		"RemoveAll":         func() error { return RemoveAll(filepath.Join(dir, "sessions")) },
+		"WriteUpdateRecord": func() error { return WriteUpdateRecord(filepath.Join(base, "v2"), nil) },
+		"Flock":             func() error { return Flock(locked, syscall.LOCK_EX|syscall.LOCK_NB) },
 		"OpenCounter": func() error {
 			opened, err := OpenCounter(filepath.Join(dir, "another counter"))
 			if opened != nil {

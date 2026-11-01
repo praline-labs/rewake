@@ -345,7 +345,12 @@ wrapper in the shell does the same for main (`terminal.UTF8Locale`), whose worke
   shows in the hints row, right after the focus, in every context, as `Ctrl+\ r loads the updated
   shell`; one of class room as `room restart needed: rewake`, which comes first since it loads
   both. A live step or a sessions step asks nothing of the person and shows nothing; the banner
-  clears once the running set is the installed one. The command is hidden like `statusline`:
+  clears once the running set is the installed one. With no step to show, the view's `available`
+  — a newer release on npm, from the last check's record, in a build from npm only
+  ([install.md](install.md#updating-from-inside-rewake)) — shows there as `2.13.0 available ·
+  restarts: shell · rewake update`, `restarts` the most the plan to that release asks: `room`,
+  `shell` or `nothing`. Once it is installed, `available` goes and the plan's steps show
+  instead (`shell/src/update.ts`). The command is hidden like `statusline`:
   the shell is its only caller, and a documented command would promise agents a shape. The
   existing `list`, `space list` and `brief` `--json` forms stay as they are.
 
