@@ -12,14 +12,14 @@ import (
 // tests, which need that step to fail.
 var removeWaiting = state.Discard
 
-// SettleLocked takes a message with an outcome out of the waiting set. One the harness
+// settleLocked takes a message with an outcome out of the waiting set. One the harness
 // was told about stays readable in unread/ — or has been read already — so only
 // the waiting copy goes. A refused one is taken back from unread/ and archived.
 // The caller holds the mailbox lock: a server whose lock cannot be taken
-// settles nothing (the delivery server's lockOrAlone). The delivery server's
-// settleOutcome and settleUnreadOnly call it inside their mailbox section; it
-// takes no lock of its own, since the mailbox lock is not reentrant. Only
-// mail.Locked reaches it.
+// settles nothing (the delivery server's lockOrAlone). It is reached through
+// Locked.SettleWith and Locked.SettleOnRecord, by the stage the outcome puts
+// the letter in (stage); it takes no lock of its own, since the mailbox lock
+// is not reentrant.
 //
 // Settling never removes a letter's last copy. The letter is the proof that it
 // landed, and retiring that proof is the sweep's alone, under the lock and by

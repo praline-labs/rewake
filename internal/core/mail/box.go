@@ -37,11 +37,6 @@ func (b Box) WithLock(ctx context.Context, fn func(Locked) error) error {
 	return state.WithMailboxLock(ctx, b.dir, b.name, func() error { return fn(Locked{b}) })
 }
 
-// Settle puts a letter where its recorded outcome says; see settleLocked.
-func (l Locked) Settle(id string, outcome State) bool {
-	return settleLocked(l.box.dir, l.box.name, id, outcome)
-}
-
 // SweepFinished retires the finished letters this run's mailbox keeps past
 // their time.
 func (l Locked) SweepFinished() { sweepFinishedLocked(l.box.dir, l.box.name, l.box.epoch) }

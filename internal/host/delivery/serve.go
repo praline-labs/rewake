@@ -1,7 +1,8 @@
 // Package delivery is the delivery server a wrapper runs for its session: it
 // serves the mailbox, announces ready mail in batches inside the coalescing
-// window, records each outcome and settles it through mail's locked entry
-// points, under the mailbox lock it takes itself.
+// window, and has mail record each outcome and settle the letter by it
+// (mail.Locked.SettleWith), deciding when, under the mailbox lock it takes
+// itself.
 package delivery
 
 import (
@@ -283,34 +284,19 @@ func (s *Server) refuseWaiting(reason string) {
 			continue
 		}
 		result := mail.Result{State: mail.Failed, Detail: reason}
-		reserved := false
 		if mail.IsReport(message) {
 			// Shutdown may precede the first drain. Admission still respects
-			// expiry and reservations before making the report readable.
-			err := s.lockOrAlone(s.lockCtx(), func() error {
-				status, known, err := mail.ReadStatus(s.Dir, s.Name, message.ID)
-				if err != nil {
-					return err
-				}
-				if known && status.Final() {
-					return nil
-				}
-				if reserved, err = mail.AwaitedHere(s.Dir, s.Name, message); err != nil {
-					return err
-				}
-				expired, err := s.answerExpired(message, reserved)
-				if err != nil || expired {
-					return err
-				}
-				if err := mail.LinkUnread(s.Dir, s.Name, message.ID); err != nil {
-					return err
-				}
-				result.ReportAvailable = true
-				return nil
+			// expiry and reservations before making the report readable; an
+			// answer awaited by a send is its sender's to take, not refused.
+			var read, answered, expired bool
+			err := s.lockOrAlone(s.lockCtx(), func() (err error) {
+				read, answered, expired, err = s.keepReport(message)
+				return err
 			})
-			if err != nil || reserved {
+			if err != nil || answered {
 				continue
 			}
+			result.ReportAvailable = !read && !expired
 		}
 		s.finish(message, result)
 	}

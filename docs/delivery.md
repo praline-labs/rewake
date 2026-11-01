@@ -163,7 +163,10 @@ written, and a restart loses none of it; its sender is not told again. Only a re
 archive: a letter held, delivered, made readable as a report or withdrawn stays in `unread/`,
 and a status that does not read decides nothing. The status a settling goes by is the one read
 under the lock that moves the letter: a withdrawal or a read that came while the lock was
-waited for decides, not what was read before it. Sweeping old mail happens under the lock too.
+waited for decides, not what was read before it. Recording a result and settling a letter by
+it or by its status are mail's operations (`mail.Box.Record`, `mail.Locked.SettleWith`,
+`mail.Locked.SettleOnRecord`; [effects.md](rules/effects.md#settling-a-letter-with-its-outcome));
+the server decides when they run. Sweeping old mail happens under the lock too.
 
 ### Servicing process (the wrapper)
 

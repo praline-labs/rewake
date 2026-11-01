@@ -1,5 +1,5 @@
 ---
-description: E1–E8, what may decide a mail operation's effect and the order of a turn end's steps, the rule a pending mark keeps and how a letter is retired; open before changing how mail is written, read or published.
+description: E1–E8, what may decide a mail operation's effect and the order of a turn end's steps, the rule a pending mark keeps, how a letter is settled and how it is retired; open before changing how mail is written, read or published.
 ---
 
 # Rules: the effects of a mail operation, E1–E8
@@ -115,6 +115,24 @@ lock (`CurrentSent`, `TaskToAddTo`) only refuses early. A refusal is a `mail.Ref
 its reason, and a failure a `mail.StepError` naming its step; the command words both. What a
 sender is told of a letter just written is `mail.AwaitSent` (`sent_delivery.go`), which only
 reads.
+
+## Settling a letter with its outcome
+
+What delivery did with a letter is recorded and settled by operations of the recipient's
+mailbox (`internal/core/mail/settle_result.go`). `mail.Box.Record` writes a result as the
+status unless the status on record is final — read, or withdrawn — which stands instead and is
+not written over; the first final status wins, and `Status.Final` is the one place that says
+which are. A status that cannot be read may be final, so nothing is written over it (E6). It
+moves nothing, so it runs under the lock or, when the lock cannot be used, without it.
+`mail.Locked.SettleWith` records the result and, under the same hold, puts the letter where
+what stands says: delivered or read keeps it readable, withdrawn keeps its tombstone, a refusal
+archives it, a refused report made readable all the same stays like a delivered one, held
+keeps both copies. `mail.Locked.SettleOnRecord` settles by the status read under the lock, not
+by one read before it was taken (E3); only a refusal on record archives a letter
+(`Status.Archives`), and pending, held or a status that does not read settles nothing. The
+delivery server decides only when and how often: which letters a pass looks at, its memory of
+an outcome whose status could not be written, and the retry interval
+([delivery.md](../delivery.md#one-lock-per-mailbox)).
 
 ## Retiring a letter
 

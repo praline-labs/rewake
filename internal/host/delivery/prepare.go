@@ -16,39 +16,18 @@ import (
 // the mailbox lock. Waiting for native readiness never holds the mailbox lock.
 func (s *Server) prepareDelivery(ctx context.Context, message *mail.Message) (read, answered, expired bool, reservation mail.Reservation, release func(), err error) {
 	release = func() {}
-	check := func() error {
-		// A status or a mark that cannot be read stops the pass with nothing
-		// made readable: the message may be read, withdrawn, or awaited by a
-		// send, and it stays pending until they can be told.
-		status, known, err := mail.ReadStatus(s.Dir, s.Name, message.ID)
-		if err != nil {
-			return err
-		}
-		if known && status.Final() {
-			// Withdrawn goes the way of read: nothing is made readable, and
-			// recording the read keeps the withdrawal as it is.
-			read = true
-			return nil
-		}
-		if answered, err = mail.AwaitedHere(s.Dir, s.Name, *message); err != nil {
-			return err
-		}
-		expired, err = s.answerExpired(*message, answered)
-		if err == nil && answered && !expired {
-			err = mail.LinkUnread(s.Dir, s.Name, message.ID)
-		}
+	check := func() (err error) {
+		read, answered, expired, err = s.admit(*message)
 		return err
 	}
 	refuse := func(cause error) error {
 		if mail.IsReport(*message) {
-			if err := s.lockOrAlone(s.lockCtx(), func() error {
+			if err := s.lockOrAlone(s.lockCtx(), func() (err error) {
 				if !s.owned() {
 					return mail.ErrThreadUnavailable
 				}
-				if err := check(); err != nil || read || answered || expired {
-					return err
-				}
-				return mail.LinkUnread(s.Dir, s.Name, message.ID)
+				read, answered, expired, err = s.keepReport(*message)
+				return err
 			}); err != nil {
 				return err
 			}
@@ -114,6 +93,38 @@ func (s *Server) prepareDelivery(ctx context.Context, message *mail.Message) (re
 		err = refuse(err)
 	}
 	return
+}
+
+// admit looks at a letter before it is made readable, in a mailbox section or
+// without one. A status or a mark that cannot be read stops the pass with
+// nothing made readable: the message may be read, withdrawn, or awaited by a
+// send, and it stays pending until they can be told. Withdrawn goes the way of
+// read: nothing is made readable, and recording the read keeps the withdrawal
+// as it is. An answer awaited by a send is made readable for it, unless it
+// has expired.
+func (s *Server) admit(message mail.Message) (read, answered, expired bool, err error) {
+	status, known, err := mail.ReadStatus(s.Dir, s.Name, message.ID)
+	if err != nil || known && status.Final() {
+		return err == nil, false, false, err
+	}
+	if answered, err = mail.AwaitedHere(s.Dir, s.Name, message); err != nil {
+		return false, answered, false, err
+	}
+	expired, err = s.answerExpired(message, answered)
+	if err == nil && answered && !expired {
+		err = mail.LinkUnread(s.Dir, s.Name, message.ID)
+	}
+	return false, answered, expired, err
+}
+
+// keepReport makes a report readable though its notice will not go out, so the
+// failure that follows leaves it available to its reader, unless admit stops
+// it or has made it readable for its answer already.
+func (s *Server) keepReport(message mail.Message) (read, answered, expired bool, err error) {
+	if read, answered, expired, err = s.admit(message); err != nil || read || answered || expired {
+		return read, answered, expired, err
+	}
+	return false, false, false, mail.LinkUnread(s.Dir, s.Name, message.ID)
 }
 
 // recordDeliveryThread runs under the mailbox lock before the message becomes
