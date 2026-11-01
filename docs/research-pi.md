@@ -488,9 +488,10 @@ and hide or replace pi's own working row, header and footer.
 
 October 31, 2026, pi 1.4.0, the owner's word: a pi worker is drawn by rewake's face
 ([face.md](face.md)) as a Claude Code session looks. rewake's extension feeds the face's model from
-pi's events, as the Claude Code mod does ([claude.md](claude.md#the-mirror)); the host only hands the
-events on (`internal/adapter/pi/mirror.go`). The extension's side is `mirror.ts` (the events),
-`toolmap.ts` (the tools' names) and `outbox.ts` (the bounds), tested by `mirror.test.ts`.
+pi's events, as the Claude Code mod does ([claude.md](claude.md#the-mirror)); the host only decodes
+the events with `mirror.Decode` and hands them on (`internal/adapter/pi/mirror.go`). The extension's
+side is `mirror.ts` (the events), `toolmap.ts` (the tools' names), tested by `mirror.test.ts`, and
+`feed.ts`, the copy of the feed every adapter sends through ([face.md](face.md#the-feed)).
 
 - **Only when drawn.** The extension mirrors nothing until hello's answer says `mirror: true`;
   every worker's launch sets it (`adapter.FacedWorkersHarness`), main's does not yet. An older
@@ -608,12 +609,10 @@ events on (`internal/adapter/pi/mirror.go`). The extension's side is `mirror.ts`
   call on the screen, said in its status as `Tool output: expanded`; ctrl+t hides or shows
   thinking (`pi-coding-agent/docs/keybindings.md`, read October 31, 2026, pi 1.4.0). The face's ctrl+o opens its
   folds the same way ([face.md](face.md), "Unfolding").
-- **The outbox** keeps the mod's caps, counted in UTF-8 bytes of JSON: batches every 50 ms, one
-  in flight, a 5 s deadline; an event 40 KiB, a batch 48 KiB, the outbox 256 KiB with 16 KiB
-  kept for markers, a block 256 KiB settled in parts, a call's input or output cut to its head and tail with a
-  mark within one event, an event that still passes its cap lost. Past them deltas go
-  first, then whole items behind a `lost`; a failed or late batch is counted and a `resync` sent.
-  Nothing waits for it, and a throw in the mirror is dropped: pi's work is never held.
+- **The feed** bounds, queues and batches the events as for every adapter
+  ([face.md](face.md#the-feed)); a call's input or output past 36 KiB keeps its head ½ and tail ¼
+  of that, as the mod's and the model's do (the tail was ½ until November 1, 2026). Nothing waits
+  for it, and a throw in the mirror is dropped: pi's work is never held.
 
 | pi tool | drawn as | input |
 |---|---|---|

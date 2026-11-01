@@ -6,7 +6,7 @@
 // call or changes an event, and a failure of its own is dropped.
 import { randomUUID } from "node:crypto";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { bounds, fit, type MirrorEvent, pieces, textBudget } from "./outbox.ts";
+import { fit, type MirrorEvent, pieces, settles, textBudget } from "./feed.ts";
 import { Queue, textOf } from "./queued.ts";
 import { facedTool, resultText } from "./toolmap.ts";
 
@@ -156,17 +156,7 @@ export class Mirror {
   }
 
   private settle(id: string, block: "text" | "thinking", text: string) {
-    const parts = pieces(fit(text, bounds.block), textBudget);
-    for (const [i, part] of parts.entries())
-      this.push({
-        kind: "settle",
-        id,
-        turn: this.run,
-        block,
-        part: i,
-        of: parts.length,
-        text: part,
-      });
+    for (const event of settles(id, this.run, block, text)) this.push(event);
   }
 
   private toolInput(id: string, name: string, args: unknown) {

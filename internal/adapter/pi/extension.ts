@@ -3,9 +3,9 @@ import { createConnection, type Socket } from "node:net";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { briefTools } from "./briefs.ts";
 import { faceInterrupt, facePrompt, faceThinking } from "./faced.ts";
+import { type MirrorEvent, Outbox } from "./feed.ts";
 import { management, type State } from "./management.ts";
 import { Mirror, serveMirror } from "./mirror.ts";
-import { type MirrorEvent, Outbox } from "./outbox.ts";
 import { worktreeTools } from "./worktree.ts";
 
 export type Frame = {
@@ -97,7 +97,7 @@ export default function (pi: ExtensionAPI) {
     if (link.socket.destroyed) throw new Error("the extension connection closed");
     const line = JSON.stringify(frame);
     if (Buffer.byteLength(line) > maxFrame) throw new Error("extension frame exceeds its bound");
-    link.socket.write(line + "\n");
+    link.socket.write(`${line}\n`);
   }
 
   function ask(link: Link, fields: Omit<Frame, "id">, bound = 5000): Promise<Frame> {

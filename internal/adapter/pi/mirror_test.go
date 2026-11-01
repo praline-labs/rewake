@@ -58,11 +58,11 @@ func TestTheMirrorReachesTheModelOfARunTheFaceDraws(t *testing.T) {
 	if !reply.Mirror {
 		t.Fatal("the hello answer of a drawn run does not say mirror")
 	}
-	askOK(t, l, frame{Op: "mirror", Thread: "conversation", Events: []mirrorEvent{
+	askOK(t, l, frame{Op: "mirror", Thread: "conversation", Events: []mirror.WireEvent{
 		{Kind: "turn", Turn: "t", State: "working"},
 		{Kind: "tool", ID: "c1", Turn: "t", Name: "Bash"},
 		{Kind: "input", ID: "c1", Text: `{"command":"ls"}`},
-		{Kind: "result", ID: "c1", Status: "refused", Text: "no", Permit: &mirrorPermit{By: "hook"}},
+		{Kind: "result", ID: "c1", Status: "refused", Text: "no", Permit: &mirror.Permit{By: mirror.PermitByHook}},
 		{Kind: "mode", Text: "auto"},
 		{Kind: "delta", ID: "b1", Turn: "t", Block: "text", Text: "Hel"},
 		{Kind: "settle", ID: "b1", Turn: "t", Block: "text", Of: 1, Text: "Hello"},
@@ -84,7 +84,7 @@ func TestTheMirrorReachesTheModelOfARunTheFaceDraws(t *testing.T) {
 	if plainReply.Mirror {
 		t.Fatal("a run the face does not draw asks for its conversation")
 	}
-	if reply, err := pl.ask(t.Context(), frame{Op: "mirror", Thread: "conversation", Events: []mirrorEvent{{Kind: "delta", ID: "b"}}}); err != nil || reply.OK {
+	if reply, err := pl.ask(t.Context(), frame{Op: "mirror", Thread: "conversation", Events: []mirror.WireEvent{{Kind: "delta", ID: "b"}}}); err != nil || reply.OK {
 		t.Fatalf("a batch to a run the face does not draw: %+v %v", reply, err)
 	}
 }

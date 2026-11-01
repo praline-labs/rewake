@@ -1,6 +1,5 @@
 import { expect, test } from "claude-code/testing";
-import { MirrorOutbox } from "../hooks/mirror.ts";
-import { fit, jsonSize, pieces, utf8Size } from "../hooks/sizes.ts";
+import { bounds as feedBounds, utf8Size } from "../hooks/feed.ts";
 import { bounds } from "../protocol.gen.ts";
 import type { Reply } from "./world.ts";
 import { holdMs, start, world } from "./world.ts";
@@ -10,90 +9,15 @@ const drawn = { status: 200, text: '{"role":"write","generation":1,"mirror":true
 const mirrored = (run: ReturnType<typeof world>) =>
   run.sent.filter((one) => one.path === "/v1/mirror/events").flatMap((one) => one.body.events);
 
-// A host that never answers: every batch stays in flight, as a stalled
-// wrapper's would.
-function stalled() {
-  const posted: any[] = [];
-  const host: any = {
-    post: (_path: string, body: any) => {
-      posted.push(body);
-      return new Promise(() => {});
-    },
-    after: () => {},
-  };
-  return { host, posted };
-}
-
-test("a text is cut to its budget with its head and tail, and split into pieces within it", () => {
-  const text = "HEAD" + '\u0001"é😀'.repeat(20000) + "TAIL";
-  const kept = fit(text, 4096);
-  expect(jsonSize(kept) <= 4096).toBe(true);
-  expect(kept.startsWith("HEAD") && kept.endsWith("TAIL")).toBe(true);
-  const parts = pieces(text, 1000);
-  expect(parts.join("")).toBe(text);
-  expect(parts.every((part) => jsonSize(part) <= 1000)).toBe(true);
-});
-
-test("an outbox past its bound drops deltas first, then settles to lost markers, and never passes the bound", () => {
-  const { host } = stalled();
-  const out = new MirrorOutbox(host, () => undefined);
-  const delta = "d".repeat(30000);
-  for (let i = 0; i < 20; i++) out.push({ kind: "delta", id: "b" + i, text: delta });
-  expect(out.bytes <= bounds.maxMirrorOutboxBytes).toBe(true);
-  for (let i = 0; i < 20; i++) {
-    out.push({ kind: "settle", id: "s" + i, part: 0, of: 1, text: delta });
-    expect(out.bytes <= bounds.maxMirrorOutboxBytes).toBe(true);
-  }
-  const queue: any[] = (out as any).queue;
-  expect(queue.some((q) => q.event.kind === "delta")).toBe(false);
-  expect(queue.filter((q) => q.event.kind === "lost").map((q) => q.event.id)).toContain("s0");
-  expect(queue.at(-1).event.id).toBe("s19");
-});
-
-test("markers past their reserve collapse into one resync that counts what went", () => {
-  const { host } = stalled();
-  const out = new MirrorOutbox(host, () => undefined);
-  for (let i = 0; i < 1000; i++)
-    out.push({ kind: "turn", turn: "t" + i, state: i % 2 ? "idle" : "working" });
-  expect(out.bytes <= bounds.mirrorMarkerBytes).toBe(true);
-  const queue: any[] = (out as any).queue;
-  expect(queue[0].event.kind).toBe("resync");
-  expect(queue[0].event.lost > 0).toBe(true);
-  expect(queue.filter((q) => q.event.kind === "resync").length).toBe(1);
-});
-
-test("a batch that does not answer is dropped after 5 s and stands as lost behind a resync", async ($, on) => {
-  const batches: any[] = [];
-  const run = world(on, {
-    replies: {
-      "/v1/hello": [drawn],
-      "/v1/mirror/events": [
-        (body: any) => {
-          batches.push(body);
-          return new Promise(() => {});
-        },
-        async (body: any) => {
-          batches.push(body);
-          return { status: 200, text: "{}" };
-        },
-      ],
-    },
+// The feed's bounds are the protocol's, which the wrapper holds a batch to.
+test("the feed's bounds are the protocol's", () => {
+  expect(feedBounds).toEqual({
+    event: bounds.maxMirrorEventBytes,
+    batch: bounds.maxMirrorBatchBytes,
+    outbox: bounds.maxMirrorOutboxBytes,
+    markers: bounds.mirrorMarkerBytes,
+    block: bounds.maxMirrorBlockBytes,
   });
-  await start($);
-  await run.clock.settle();
-  await $.turn.start({ turnId: "a" } as any);
-  await run.clock.advance(50);
-  expect(batches.length).toBe(1);
-  await $.turn.start({ turnId: "b" } as any);
-  await run.clock.advance(1000);
-  expect(batches.length).toBe(1);
-  await run.clock.advance(5000);
-  await run.clock.advance(50);
-  expect(batches.length).toBe(2);
-  expect(batches[1].events).toEqual([
-    { kind: "turn", turn: "b", state: "working" },
-    { kind: "resync", lost: 1 },
-  ]);
 });
 
 test("a step of a drawn run yields every chunk unchanged and sends its deltas, its settle and its tool", async ($, on) => {

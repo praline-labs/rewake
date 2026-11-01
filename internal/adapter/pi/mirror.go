@@ -19,69 +19,16 @@ func (harness) Mirrors() {}
 // session looks, without --dev (the owner's word, October 31, 2026).
 func (harness) FacesWorkers() {}
 
-// mirrorEvent is one thing the session showed, on the wire in the face's
-// neutral words (docs/face.md, "The model"): the extension maps pi's events
-// and tools to them, so the host only hands them on.
-type mirrorEvent struct {
-	Kind   string        `json:"kind"`
-	ID     string        `json:"id,omitempty"`
-	Turn   string        `json:"turn,omitempty"`
-	Block  string        `json:"block,omitempty"`
-	Text   string        `json:"text,omitempty"`
-	Origin string        `json:"origin,omitempty"`
-	Name   string        `json:"name,omitempty"`
-	Status string        `json:"status,omitempty"`
-	State  string        `json:"state,omitempty"`
-	Part   int           `json:"part,omitempty"`
-	Of     int           `json:"of,omitempty"`
-	Lost   int           `json:"lost,omitempty"`
-	Permit *mirrorPermit `json:"permit,omitempty"`
-}
-
-type mirrorPermit struct {
-	By      string  `json:"by"`
-	Allowed bool    `json:"allowed"`
-	Reason  *string `json:"reason,omitempty"`
-}
-
-// mirrorKinds are the events pi's extension sends; pi has no permission mode
-// to say, so a mode event is not among them.
-var mirrorKinds = map[string]mirror.EventKind{
-	"prompt": mirror.EventPrompt, "delta": mirror.EventDelta, "settle": mirror.EventSettle,
-	"tool": mirror.EventTool, "input": mirror.EventInput, "result": mirror.EventResult,
-	"turn": mirror.EventTurn, "notice": mirror.EventNotice, "lost": mirror.EventLost, "resync": mirror.EventResync,
-	"taken": mirror.EventTaken,
-}
-
-// mirrored hands a batch of the conversation to the model the face draws.
-// An event of a kind the model does not take is left out, never guessed at.
+// mirrored hands a batch of the conversation to the model the face draws,
+// in the feed's neutral words the extension mapped pi's events to.
 func (r *run) mirrored(request frame) frame {
 	if r.mirror == nil {
 		return frame{Error: "rewake's face does not draw this run"}
 	}
-	events := make([]mirror.Event, 0, len(request.Events))
-	for _, e := range request.Events {
-		kind, ok := mirrorKinds[e.Kind]
-		if !ok {
-			continue
-		}
-		out := mirror.Event{
-			Kind: kind, ID: e.ID, Turn: e.Turn, Block: mirror.ItemKind(e.Block), Text: e.Text, Origin: e.Origin,
-			Name: e.Name, Status: mirror.ItemStatus(e.Status), State: turnStates[e.State], Part: e.Part, Of: e.Of, Lost: e.Lost,
-		}
-		if kind == mirror.EventTurn && out.State == "" {
-			continue
-		}
-		if e.Permit != nil {
-			out.Permit = &mirror.Permit{By: mirror.PermitBy(e.Permit.By), Allowed: e.Permit.Allowed, Reason: e.Permit.Reason}
-		}
-		events = append(events, out)
-	}
-	r.mirror.Apply(events...)
+	// pi has no permission mode to say.
+	r.mirror.Apply(mirror.Decode(request.Events, nil)...)
 	return frame{OK: true}
 }
-
-var turnStates = map[string]mirror.TurnState{"working": mirror.TurnStateWorking, "idle": mirror.TurnStateIdle}
 
 // input carries an input of rewake's face to pi: a prompt typed there as
 // the person's, which the extension mirrors once pi hears it as its input;

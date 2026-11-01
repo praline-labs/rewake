@@ -53,9 +53,40 @@ where it was, given back. A `taken` for a prompt no longer queued — dropped by
 after the turn's end — does nothing, so nothing comes back. A settle replaces what streamed with the whole block once all
 its parts arrived in order; a missing part, a `lost` for the id or the turn's end leaves the item a
 gap with what streamed. A `resync` marks everything in flight as a gap, leaves the turn unknown until
-the next turn event and adds a notice counting what was lost. How Claude Code's mod feeds it, with
-its outbox's caps, is [claude.md](claude.md#the-mirror); pi's extension, with the same caps and
-its tools named as their Claude Code kin, [research-pi.md](research-pi.md#the-face-of-a-pi-worker).
+the next turn event and adds a notice counting what was lost. How Claude Code's mod maps its events
+is [claude.md](claude.md#the-mirror); pi's extension, with its tools named as their Claude Code
+kin, [research-pi.md](research-pi.md#the-face-of-a-pi-worker). Both send through one feed.
+
+## The feed
+
+Every adapter's harness side sends its events through one TypeScript module, the feed:
+`internal/core/mirror/feed.ts`, which names no harness and uses no runtime's own library. Each
+adapter embeds files of its own folder alone, and Claude Code's hooks worker imports no file outside
+the mod, so `go run ./tools/protogen` copies it into `internal/adapter/pi/feed.ts` and
+`internal/adapter/claude/mod/hooks/feed.ts` under a line naming the source; the generator's test
+fails when a copy differs. An adapter only maps its harness's events to the neutral ones and pushes
+them; the feed does the rest, its tests (`feed.test.ts`, run by `go test ./internal/core/mirror/`)
+through that one interface:
+
+- **Texts.** Every size is the UTF-8 bytes of the event as JSON. A text past its budget is cut as the
+  model's clip cuts one: its head within half the budget, the mark `… cut …`, its tail within a
+  quarter, never inside a character. An event is at most 40 KiB, its text within 36 KiB; a block's
+  settle is its whole text cut past 256 KiB and split into numbered parts, each within an event.
+- **The outbox.** Pushing never waits and never throws. The outbox holds 256 KiB, 16 KiB of it kept
+  for markers (`turn`, `lost`, `resync`); past it the oldest deltas go first, which the settle heals,
+  then the oldest other event with every event of its item (of a settle, its other parts) behind a
+  `lost{id}`, an event naming no item alone; markers past their reserve collapse into one `resync`
+  counting what went. An event still past 40 KiB is never sent and its item stands as lost. A call's
+  input replaces one still queued.
+- **Batches.** 50 ms after a push, while the link is up, the oldest events go as one batch of at
+  most 48 KiB, one in flight; a batch refused or unanswered in 5 s is never sent again and counts in
+  the next `resync`.
+
+The host decodes a batch's events with `mirror.Decode` (`internal/core/mirror/wire.go`), one
+decoder for every adapter: a kind the model does not take, or a turn's state it does not know, is
+left out, and a permission mode is named in the model's words by the adapter's own table. The
+wire is each adapter's (the mod's `protocol.schema.json`, pi's frame); its events are the same
+fields on both.
 
 ## The socket
 

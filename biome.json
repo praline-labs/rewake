@@ -14,6 +14,7 @@
       "face/src/**/*.ts",
       "internal/adapter/claude/mod/**/*.ts",
       "internal/adapter/pi/**/*.ts",
+      "internal/core/mirror/**/*.ts",
       "!internal/adapter/claude/mod/protocol.gen.ts",
       "!shell/src/room_view.gen.ts",
       "!face/src/mirror.gen.ts",
