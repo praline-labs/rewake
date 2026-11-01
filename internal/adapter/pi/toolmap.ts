@@ -1,8 +1,9 @@
-// pi's tools in the face's words (docs/face.md, "The look"; research-pi.md):
+// pi's tools in the face's words (docs/face.md, "Calls"; research-pi.md):
 // the face draws every harness as Claude Code's terminal looks and knows no
 // harness, so its adapter names each of pi's built-in tools by its Claude Code
-// kin and gives its input in that tool's fields. A tool with no kin keeps its
-// own name and input, which the face draws by its generic rule.
+// kin and gives its input in that tool's fields, each form a row of the face's
+// table (face/src/call.cases.ts, held by mirror.test.ts). A tool with no kin
+// keeps its own name and input, which the face draws by its generic rule.
 
 type Args = Record<string, unknown>;
 
@@ -58,8 +59,8 @@ export function facedTool(name: string, raw: unknown): Faced {
     case "find":
       return { name: "Glob", input: given(args, { pattern: "pattern", path: "path" }) };
     case "ls": {
-      // Claude Code lists a directory with its shell, so the face counts it
-      // as a listed directory.
+      // Claude Code has no tool of its own to list a directory (2.1.310): it
+      // runs ls in its shell, which the face reads as a listed directory.
       const path = typeof args.path === "string" && args.path !== "" ? ` ${quoted(args.path)}` : "";
       return { name: "Bash", input: { command: `ls${path}` } };
     }

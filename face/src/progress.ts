@@ -3,8 +3,8 @@
 // an estimate of what streamed back and the call that runs. All of it is
 // derived from the model on the face's clock; the session sends none of it.
 
+import { callOf } from "./call.ts";
 import type { Item } from "./mirror.gen.ts";
-import { nameOf } from "./tools.ts";
 
 // Phase is where the turn's request stands: out with nothing back yet, or a
 // reply, a thinking block, a call's input or a call coming back.
@@ -121,7 +121,7 @@ export class Tracker {
     return {
       phase,
       tokens: Math.round(this.shown / 4),
-      tool: running ? nameOf(running) : undefined,
+      tool: running ? callOf(running).name : undefined,
       ...(retry > 0 ? { retry } : {}),
     };
   }

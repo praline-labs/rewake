@@ -199,7 +199,8 @@ The face repeats the look of Claude Code's own terminal, for every harness it dr
 decision, October 30, 2026: first the same look, customised later), as read from its screen in
 2.1.310 and, for the rules a picture does not show, from an older Claude Code source tree (brief
 40; the screen wins where they differ). The code is rewake's own: `render.ts` lays out the items,
-`tools.ts` a call's head, `results.ts` what is under it, `fold.ts` runs of calls, `markdown.ts` and
+`call.ts` what the face reads of a tool call (below, "Calls"), `tools.ts` a call's head, `results.ts`
+what is under it, `fold.ts` runs of calls, `markdown.ts` and
 `table.ts` a reply, `turn.ts` the row under the conversation.
 
 - **Prompt**: a faint `❯ ` and the text as typed, no markdown, on the band's background across the
@@ -329,6 +330,25 @@ does not carry: paths relative to the session's directory, an edit's line number
 a call's progress, syntax colours of a
 code block (a highlighter the face does not have), a retry's limit and delay (pi gives its
 extensions neither), and a long prompt opened whole.
+
+### Calls
+
+The face knows tools by Claude Code's names and input fields, whichever harness it draws: an
+adapter renames its harness's tools into them (pi's `toolmap.ts`, [research-pi.md](research-pi.md#the-face-of-a-pi-worker)).
+That vocabulary is read in one module, `face/src/call.ts`: `callOf(item)` parses a call's input
+once and says all the face draws of it — whether it is drawn at all, the head's name and argument,
+what it does in a run (search, read, list, command) and the file a read counts, what an open run
+says it works on, the command's own description, what a click on its head copies and what to call
+it, what is under it once done (an edit's lines, a written file's, else the output) and what an
+empty output says, and whether an allowed call carries the classifier's row. `tools.ts`,
+`fold.ts`, `results.ts`, `parts.ts` and `render.ts` only draw, fold and copy what it says.
+
+The vocabulary is written down as a table, `face/src/call.cases.ts`: each row a name and an input
+and what the face draws of them, run through `callOf` by `call.test.ts`. An adapter that renames
+tools tests that each form it makes is a row (pi's in `internal/adapter/pi/mirror.test.ts`), so a
+new form is a new row. A listing is the shell's `ls`: Claude Code 2.1.310 has no tool of its own
+to list a directory and runs `ls` in its shell, which a run counts as a listed directory, so pi's
+`ls` is given as that command rather than as a tool the vocabulary does not have (brief 67).
 
 ## Unfolding
 
@@ -513,7 +533,7 @@ is contained in the shell's thread, and the person can always switch to native w
 A stopped face starts again at the next change of its sources, or when the person switches to it.
 A new face, a reload's or a lost link's, follows the bottom with no selection: the scroll is the
 worker's and is not carried across, so a change under `face/src/` while the person reads up
-puts the view back at the bottom (seen live, October 31, 2026, brief 49). Tests: `shell/src/face/host.test.ts`, the contract in `check.test.ts` and through the worker in `contract.test.ts`, the look in `face/src/render.test.ts`, `thinking.test.ts` and `view.test.tsx`, the clock
+puts the view back at the bottom (seen live, October 31, 2026, brief 49). Tests: `shell/src/face/host.test.ts`, the contract in `check.test.ts` and through the worker in `contract.test.ts`, the look in `face/src/render.test.ts`, `thinking.test.ts` and `view.test.tsx`, the tool vocabulary in `call.test.ts`, the clock
 in `ticker.test.ts`, the scroll in `scroll.test.ts`, a notch's rows in `wheel.test.ts` and through
 the worker in `host.test.ts`, Esc's and shift+tab's paths through the worker in `escape.test.ts` (pi's cycle in
 `internal/adapter/pi/interrupt.test.ts`), unfolding in

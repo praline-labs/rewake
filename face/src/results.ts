@@ -3,9 +3,9 @@
 // new lines of an edit, or the output, of which a folded call shows the first
 // rows and how many more.
 
+import { callOf, type Edit } from "./call.ts";
 import type { Span } from "./messages.ts";
 import type { Item } from "./mirror.gen.ts";
-import { field, inputOf, shortPath } from "./tools.ts";
 import { clean, widthOf, wrapSpans } from "./wrap.ts";
 
 // Result is every row of what is under a call, how many of them a folded
@@ -65,14 +65,11 @@ function errorText(output: string): string {
 
 // diff is an edit's old lines on red and new lines on green, each row the
 // width of the area, as the terminal marks a patch.
-function diff(item: Item, width: number): Span[][] {
-  const input = inputOf(item);
-  const edits: unknown[] = Array.isArray(input?.edits) ? input.edits : [input];
+function diff(edits: Edit[], width: number): Span[][] {
   const rows: Span[][] = [];
   for (const edit of edits) {
-    const e = edit as Record<string, unknown> | undefined;
-    const old = typeof e?.old_string === "string" ? e.old_string : "";
-    const now = typeof e?.new_string === "string" ? e.new_string : "";
+    const old = edit.old ?? "";
+    const now = edit.new ?? "";
     // The sign and the padding are drawing: a selection copies the line.
     for (const [sign, mark, text] of [
       ["-", "removed", old],
@@ -91,29 +88,25 @@ function diff(item: Item, width: number): Span[][] {
   return rows;
 }
 
-function editResult(item: Item, width: number): Result {
-  const input = inputOf(item);
-  const edits: unknown[] = Array.isArray(input?.edits) ? input.edits : [input];
+function editResult(edits: Edit[], width: number): Result {
   let added = 0;
   let removed = 0;
   for (const edit of edits) {
-    const e = edit as Record<string, unknown> | undefined;
-    removed += lines(typeof e?.old_string === "string" ? e.old_string : "").length;
-    added += lines(typeof e?.new_string === "string" ? e.new_string : "").length;
+    removed += lines(edit.old ?? "").length;
+    added += lines(edit.new ?? "").length;
   }
   const said: Span[] = [
     ...counted("Added ", added, ` ${plural(added, "line")}, `),
     ...counted("removed ", removed, ` ${plural(removed, "line")}`),
   ];
-  const patch = diff(item, width);
+  const patch = diff(edits, width);
   const more = Math.max(patch.length - diffRows, 0);
   return { rows: [said, ...patch], keep: 1 + patch.length - more, more };
 }
 
-function writeResult(item: Item, width: number): Result {
-  const input = inputOf(item);
-  const content = lines(clean(field(input, "content") ?? "").replace(/\n$/, ""));
-  const path = shortPath(field(input, "file_path") ?? "");
+function writeResult(written: { content: string; path: string }, width: number): Result {
+  const content = lines(clean(written.content).replace(/\n$/, ""));
+  const { path } = written;
   const said: Span[] = [
     ...counted("Wrote ", content.length, ` ${plural(content.length, "line")} to `),
     { text: path, bold: true },
@@ -135,19 +128,12 @@ export function resultOf(item: Item, width: number): Result {
     const rows = rowsOf(errorText(output), width, { text: "", tone: "error" });
     return fold(rows, errorRows);
   }
-  if (item.status === "done")
-    switch (item.name) {
-      case "Edit":
-      case "MultiEdit":
-        if (inputOf(item)) return editResult(item, width);
-        break;
-      case "Write":
-        if (inputOf(item)) return writeResult(item, width);
-        break;
-    }
+  const call = callOf(item);
+  if (item.status === "done" && call.edits) return editResult(call.edits, width);
+  if (item.status === "done" && call.written) return writeResult(call.written, width);
   if (output === "" || output === "(Bash completed with no output)")
     return {
-      rows: [[{ text: item.name === "Bash" ? "(No output)" : "(No content)", tone: "faint" }]],
+      rows: [[{ text: call.empty, tone: "faint" }]],
       keep: 1,
       more: 0,
     };

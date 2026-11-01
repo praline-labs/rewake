@@ -2,6 +2,7 @@
 // worker renders, the shell's thread only paints the spans in the person's
 // colours, so a face that changes or breaks never touches the shell's tree.
 
+import { callOf } from "./call.ts";
 import { entriesOf, lostLine, runLines } from "./fold.ts";
 import { hung, marked } from "./hang.ts";
 import { markdownRows } from "./markdown.ts";
@@ -31,7 +32,7 @@ const parted = (
 // resultPart is what a row under a call copies: an edit's old or new lines
 // by its mark, a written file's lines, else the call's output.
 function resultPart(item: Item, line: FaceLine): PartKind {
-  if (item.status === "done" && item.name === "Write") return "content";
+  if (item.status === "done" && callOf(item).result === "write") return "content";
   const mark = line.spans.find((s) => s.mark)?.mark;
   return mark === "removed" ? "old" : mark === "added" ? "new" : "output";
 }
@@ -53,7 +54,7 @@ function permitRows(item: Item): Span[][] | undefined {
   const p = item.permit;
   if (p?.by !== "classifier") return undefined;
   if (p.allowed)
-    return item.status === "done" && item.name !== "Agent"
+    return item.status === "done" && callOf(item).permitRow
       ? [[{ text: "Allowed by auto mode classifier", tone: "faint" }]]
       : undefined;
   if (item.status !== "refused" && item.status !== "error") return undefined;

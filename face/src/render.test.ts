@@ -89,7 +89,7 @@ const call = (name: string, input: object | string, output?: string, status = "d
 });
 
 // Seen live on 2.11.0: a call showed its input as JSON; brief 40 took the
-// terminal's names and arguments.
+// terminal's names and arguments, which call.cases.ts holds.
 test("a tool's head is the terminal's name and argument, its output folded", () => {
   const mcp = call("mcp__rewake__probe", { n: 1 }, "a\nb\nc\nd\ne");
   expect(text(linesOf(mcp, 40))).toEqual([
@@ -102,11 +102,6 @@ test("a tool's head is the terminal's name and argument, its output folded", () 
   expect(linesOf(mcp, 40)[0]?.spans[1]).toEqual({ text: "rewake - probe (MCP)", bold: true });
   // Only one more line shows rather than a fold of one.
   expect(text(linesOf(call("Probe", {}, "a\nb\nc\nd"), 40))).toHaveLength(5);
-  expect(text(linesOf(call("Grep", { pattern: "x", path: "/a" }, "", "running"), 40))[0]).toBe(
-    '● Search(pattern: "x", path: "/a")',
-  );
-  // An input cut to its bound no longer reads as JSON and shows as it is.
-  expect(text(linesOf(call("Bash", '{"command":"l'), 40))[0]).toBe('● Bash({"command":"l)');
   const failed = call("Probe", {}, "<tool_use_error>no such thing</tool_use_error>", "error");
   expect(text(linesOf(failed, 40))[1]).toBe("  ⎿  Error: no such thing");
 });
@@ -318,9 +313,6 @@ test("a call auto mode's classifier settled says so under it", () => {
   expect(rows(call({ permit: { by: "classifier", allowed: true } })).at(-1)).toBe(
     "  ⎿  Allowed by auto mode classifier",
   );
-  expect(
-    rows(call({ name: "Agent", permit: { by: "classifier", allowed: true } })).join("\n"),
-  ).not.toContain("Allowed by");
   expect(rows(call({ permit: { by: "rule", allowed: true } })).join("\n")).not.toContain(
     "Allowed by",
   );
