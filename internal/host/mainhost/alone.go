@@ -23,6 +23,7 @@ import (
 type aloneRun struct {
 	h    *Host
 	stop atomic.Bool
+	told atomic.Bool
 	wg   sync.WaitGroup
 
 	mu     sync.Mutex
@@ -74,6 +75,7 @@ func (a *aloneRun) draw() {
 		_, _ = os.Stdout.Write(s.Preamble)
 		for p := range s.Live {
 			if _, err := os.Stdout.Write(p); err != nil {
+				a.gone("the terminal took no output: " + err.Error())
 				return
 			}
 		}
@@ -97,17 +99,36 @@ func (a *aloneRun) keys() {
 		timeout := syscall.Timeval{Usec: 100_000}
 		n, err := syscall.Select(1, &set, nil, nil, &timeout)
 		if err != nil && err != syscall.EINTR {
+			a.gone("the terminal could not be read: " + err.Error())
 			return
 		}
 		if n <= 0 || a.stop.Load() {
 			continue
 		}
 		got, err := syscall.Read(0, buf)
-		if got <= 0 || err != nil {
+		switch {
+		case err == syscall.EINTR || err == syscall.EAGAIN:
+			continue
+		case err != nil:
+			a.gone("the terminal could not be read: " + err.Error())
+			return
+		case got <= 0:
+			a.gone("the terminal's input ended")
 			return
 		}
 		_ = a.h.main.relay.Type(buf[:got])
 	}
+}
+
+// gone tells the loop, once, that the person's terminal is gone. No signal
+// need follow — the terminal may not be the host's controlling one — and no
+// shell is there to say lost, so main alone says it. The post is its own
+// goroutine: the loop may be in leave, waiting for this one.
+func (a *aloneRun) gone(why string) {
+	if a.stop.Load() || a.told.Swap(true) {
+		return
+	}
+	go a.h.post(ev{kind: kTerminalGone, why: why})
 }
 
 // resize gives main the person's window size.

@@ -26,6 +26,19 @@ func TestClosingTheWindowEndsAMainThatIgnoresItsHangup(t *testing.T) {
 	h.awaitEnd(t, pid)
 }
 
+// Main alone, after a restart whose new shell failed, ends with the window
+// too: no shell is there to say the terminal went, and the window need not
+// be the host's controlling terminal, so no hangup comes either.
+func TestMainAloneEndsWithTheWindow(t *testing.T) {
+	h := startHost(t, caseFallback)
+	pid := h.mainPID(t)
+	if !h.drew("rewake restart shell tries again", 15*time.Second) {
+		t.Fatalf("main was never left alone; the window shows %q", h.shown())
+	}
+	_ = h.window.Close()
+	h.awaitEnd(t, pid)
+}
+
 // What the old shell hands on reaches the new one whole, though the old one
 // exits the moment it has written it: a megabyte of draft, under the line's
 // bound, as a person's pasted drafts may make it.
@@ -151,6 +164,16 @@ func (h *testHost) awaitEnd(t *testing.T, pid int) {
 	if alive(pid) {
 		t.Fatalf("main %d outlived its host", pid)
 	}
+}
+
+// drew waits up to d for the window to show text.
+func (h *testHost) drew(text string, d time.Duration) bool {
+	for until := time.Now().Add(d); time.Now().Before(until); time.Sleep(20 * time.Millisecond) {
+		if strings.Contains(h.shown(), text) {
+			return true
+		}
+	}
+	return false
 }
 
 func (h *testHost) shown() string {

@@ -116,7 +116,9 @@ The first launch runs in this order:
   then gives the terminal back: its saved modes, the normal screen, the mouse and keyboard modes
   reset. If main's code is not 0 and the terminal is still there, it prints main's last lines. No
   restart begins once main's closing mark has gone by. The host stays until main has ended,
-  whatever became of the shell: main's hangup, SIGTERM and SIGKILL run in it.
+  whatever became of the shell: main's hangup, SIGTERM and SIGKILL run in it. Main alone tells the
+  host the same as `lost` when the terminal's input ends or fails: no shell is there to say it,
+  and a window that is not the host's controlling terminal sends no hangup.
 
 ### The closing screen
 

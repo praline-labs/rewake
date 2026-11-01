@@ -8,21 +8,22 @@ import (
 type evKind int
 
 const (
-	kHello       evKind = iota // a shell said hello
-	kRefused                   // a shell's hello was refused
-	kMsg                       // a shell's message
-	kExit                      // a shell exited
-	kHelloLate                 // a shell's hello bound passed
-	kReadyLate                 // a shell's ready bound passed
-	kReleaseLate               // a released shell's exit bound passed
-	kFirstWait                 // the bound for the first shell's colors passed
-	kCrashCheck                // a crash settled
-	kDoor                      // a restart asked at the room's door
-	kParentGone                // the host's parent left
-	kRegistered                // main's session is registered and its stream served
-	kMainExited                // main's wrapper exited
-	kMark                      // main's closing mark went by
-	kEndLate                   // the shell's bound to finish after main passed
+	kHello        evKind = iota // a shell said hello
+	kRefused                    // a shell's hello was refused
+	kMsg                        // a shell's message
+	kExit                       // a shell exited
+	kHelloLate                  // a shell's hello bound passed
+	kReadyLate                  // a shell's ready bound passed
+	kReleaseLate                // a released shell's exit bound passed
+	kFirstWait                  // the bound for the first shell's colors passed
+	kCrashCheck                 // a crash settled
+	kDoor                       // a restart asked at the room's door
+	kParentGone                 // the host's parent left
+	kRegistered                 // main's session is registered and its stream served
+	kMainExited                 // main's wrapper exited
+	kMark                       // main's closing mark went by
+	kEndLate                    // the shell's bound to finish after main passed
+	kTerminalGone               // main alone met the end of the person's terminal
 )
 
 // ev is one event; the kind says which fields it carries.
@@ -73,6 +74,9 @@ func (h *Host) handle(e ev) bool {
 		h.restart(e.msg, e.reply)
 	case kParentGone:
 		return h.act(decide(evLost, h.situation()), "the window closed")
+	case kTerminalGone:
+		h.lost = true
+		return h.act(decide(evLost, h.situation()), e.why)
 	case kRegistered:
 		h.ref = e.ref
 		for _, p := range []*shellProc{h.shell, h.candidate} {
