@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
-import type { Item } from "./mirror.gen.ts";
-import { count, phaseOf, retriesOf, Tracker } from "./progress.ts";
+import { bounds, type Item } from "./mirror.gen.ts";
+import { FaceModel } from "./model.ts";
+import { count, phaseOf, Tracker } from "./progress.ts";
 import { turnLine } from "./turn.ts";
 
 const prompt: Item = { id: "p", kind: "prompt", status: "settled", text: "go" };
@@ -123,35 +124,28 @@ test("the glyph is the four-dot orbit, turning clockwise every 120 ms", () => {
 });
 
 // Brief 56: pi tries a failed request again within the turn, its screen
-// saying `Retrying (1/3)` in the warning's colour; the face knows a retry by
-// the failures the turn told while it still works.
-test("a working turn after its failures says it tries again, in the warning's colour", () => {
-  const failed = (id: string, turn = "t1"): Item => ({
-    id,
-    kind: "notice",
-    status: "error",
-    turn,
-    text: "Error: 503 overloaded",
-  });
-  const steered: Item = { id: "s", kind: "prompt", status: "settled", turn: "t1", text: "and" };
-  const reply: Item = { id: "r", kind: "text", status: "streaming", turn: "t1", text: "x" };
-  expect(retriesOf([prompt, failed("e1")])).toBe(1);
-  expect(retriesOf([prompt, failed("e1"), steered, failed("e2")])).toBe(2);
-  expect(retriesOf([prompt, failed("e1"), reply])).toBe(0);
-  // The last turn's failure, then this turn's prompt: no retry of this one.
-  expect(retriesOf([failed("e0", "t0"), prompt])).toBe(0);
-  expect(retriesOf([failed("e0", "t0"), failed("e1")])).toBe(1);
-  // A face that saw the turn begin counts only after what was there.
-  expect(retriesOf([failed("e0", "t0"), prompt, failed("e1")], "e0")).toBe(1);
+// saying `Retrying (1/3)` in the warning's colour. The count is the turn's
+// fact, told by the adapter and carried by the model's turn lines (brief 69):
+// the face draws it while the turn works and forgets it once it does not.
+test("a working turn the model says retries says it tries again, in the warning's colour", () => {
+  const m = new FaceModel();
   const t = new Tracker();
-  t.reset(0, [failed("e0", "t0"), prompt]);
-  expect(t.at([failed("e0", "t0"), prompt], 0).retry).toBeUndefined();
-  expect(t.at([failed("e0", "t0"), prompt, failed("e1")], 0).retry).toBe(1);
-  const line = turnLine("working", {
-    now: 0,
-    since: 0,
-    progress: { phase: "requesting", tokens: 0, retry: 2 },
-  });
-  expect(line?.spans[1]).toEqual({ text: "Retrying (attempt 2)…", tone: "gap" });
-  expect(line?.spans[0]?.tone).toBe("gap");
+  const shown = () => {
+    const progress = m.turn === "working" ? t.at(m.items, 0, m.retry) : undefined;
+    return turnLine(m.turn, { now: 0, since: m.since, progress })?.spans.slice(0, 2);
+  };
+  m.apply({ op: "hello", v: bounds.version });
+  m.apply({ op: "begin", items: 0, turn: "working", since: 0, retry: 2 });
+  m.apply({ op: "end" });
+  t.reset(0, m.items);
+  expect(shown()).toEqual([
+    { text: "⠏ ", tone: "gap" },
+    { text: "Retrying (attempt 2)…", tone: "gap" },
+  ]);
+  m.apply({ op: "turn", turn: "working", since: 0 });
+  expect(shown()?.[1]).toEqual({ text: "Waiting…", tone: "accent" });
+  m.apply({ op: "turn", turn: "working", since: 0, retry: 1 });
+  expect(shown()?.[1]?.text).toBe("Retrying (attempt 1)…");
+  m.apply({ op: "turn", turn: "idle", took: 1000, at: 1000 });
+  expect(m.retry).toBe(0);
 });

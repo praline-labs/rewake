@@ -325,3 +325,49 @@ func TestTheModelTimesTheTurnForAFaceThatCameLate(t *testing.T) {
 		t.Fatalf("begin of a new turn keeps the old end: %+v", begin)
 	}
 }
+
+// A working turn's failed requests are a fact its adapter tells: the model
+// carries the count on the turn line and on a late face's begin, keeps the
+// turn's start through it, and forgets it once the turn stops working.
+func TestTheModelCarriesTheTurnsRetryAttempt(t *testing.T) {
+	m := New()
+	at := time.UnixMilli(1_000_000)
+	m.now = func() time.Time { return at }
+	c := m.subscribe()
+	lines(t, c)
+	retryOf := func(l Line) int {
+		if l.Retry == nil {
+			return 0
+		}
+		return *l.Retry
+	}
+	m.Apply(Event{Kind: EventTurn, Turn: "t1", State: TurnStateWorking})
+	at = at.Add(time.Second)
+	m.Apply(Event{Kind: EventTurn, Turn: "t1", State: TurnStateWorking, Retry: 2})
+	if begin := lines(t, m.subscribe())[1]; retryOf(begin) != 2 || *begin.Since != 1_000_000 {
+		t.Fatalf("begin while retrying: %+v", begin)
+	}
+	m.Apply(
+		Event{Kind: EventTurn, Turn: "t1", State: TurnStateWorking},
+		Event{Kind: EventTurn, Turn: "t1", State: TurnStateWorking, Retry: 1},
+		Event{Kind: EventTurn, Turn: "t1", State: TurnStateIdle},
+	)
+	var got []int
+	for _, l := range lines(t, c) {
+		got = append(got, retryOf(l))
+	}
+	if len(got) != 5 || got[0] != 0 || got[1] != 2 || got[2] != 0 || got[3] != 1 || got[4] != 0 {
+		t.Fatalf("retry on the turn lines: %v", got)
+	}
+	if begin := lines(t, m.subscribe())[1]; begin.Retry != nil {
+		t.Fatalf("begin after the turn: %+v", begin)
+	}
+	m.Apply(
+		Event{Kind: EventTurn, Turn: "t2", State: TurnStateWorking, Retry: 1},
+		Event{Kind: EventResync},
+		Event{Kind: EventTurn, Turn: "t2", State: TurnStateWorking},
+	)
+	if begin := lines(t, m.subscribe())[1]; begin.Retry != nil {
+		t.Fatalf("a resync keeps the count: %+v", begin)
+	}
+}

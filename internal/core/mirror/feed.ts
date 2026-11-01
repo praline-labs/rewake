@@ -45,6 +45,9 @@ export type MirrorEvent = {
   part?: number;
   of?: number;
   lost?: number;
+  // retry is how many of the working turn's requests failed in a row, on a
+  // turn event saying working.
+  retry?: number;
   permit?: { by: string; allowed: boolean; reason?: string };
   mode?: string;
 };

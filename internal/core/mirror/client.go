@@ -98,6 +98,9 @@ func (m *Model) snapshotLocked() []Line {
 	switch {
 	case m.turn == TurnStateWorking && m.since > 0:
 		begin.Since = ptr(m.since)
+		if m.retry > 0 {
+			begin.Retry = ptr(m.retry)
+		}
 	case m.turn == TurnStateIdle && m.worked != nil:
 		begin.Took, begin.At = ptr(m.worked.took), ptr(m.worked.at)
 		if m.worked.stopped {

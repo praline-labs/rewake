@@ -70,6 +70,11 @@ type Line struct {
 	// At is when the last turn ended, in Unix milliseconds, with took.
 	At *int `json:"at,omitempty"`
 
+	// Retry is how many of the working turn's requests failed in a row with nothing come back
+	// since, the session trying again, on begin and turn while the turn works; absent when none
+	// did.
+	Retry *int `json:"retry,omitempty"`
+
 	// Mode is the session's permission mode, on begin and mode; absent while the session has not
 	// said it.
 	Mode *PermissionMode `json:"mode,omitempty"`

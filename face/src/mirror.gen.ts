@@ -60,6 +60,10 @@ export interface Line {
   took?: number
   // at is when the last turn ended, in Unix milliseconds, with took.
   at?: number
+  // retry is how many of the working turn's requests failed in a row with nothing come back
+  // since, the session trying again, on begin and turn while the turn works; absent when none
+  // did.
+  retry?: number
   // mode is the session's permission mode, on begin and mode; absent while the session has not
   // said it.
   mode?: PermissionMode

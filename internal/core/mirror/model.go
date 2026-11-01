@@ -42,6 +42,9 @@ type Model struct {
 	// works; worked is the last turn that worked, until the next one begins.
 	since  int
 	worked *worked
+	// retry is how many of the working turn's requests failed in a row, as
+	// its adapter last said; 0 when none works.
+	retry int
 	// now is the clock the turn's times are read from.
 	now func() time.Time
 }
@@ -172,7 +175,7 @@ func (m *Model) apply(e Event) {
 		for _, at := range m.order {
 			m.gap(at)
 		}
-		m.turn, m.since = TurnStateUnknown, 0
+		m.turn, m.since, m.retry = TurnStateUnknown, 0, 0
 		m.send(Line{Op: LineOpTurn, Turn: &m.turn})
 		if e.Lost > 0 {
 			m.notices++
@@ -263,12 +266,19 @@ func (m *Model) turnTo(e Event) {
 			m.since, m.worked = now, nil
 		}
 		line.Since = ptr(m.since)
+		m.retry = max(e.Retry, 0)
+		if m.retry > 0 {
+			line.Retry = ptr(m.retry)
+		}
 	case e.State == TurnStateIdle && m.turn == TurnStateWorking && m.since > 0:
 		m.worked = &worked{took: now - m.since, at: now, stopped: e.Status == ItemStatusError}
 		m.since = 0
 		line.Took, line.At = ptr(m.worked.took), ptr(m.worked.at)
 	default:
 		m.since = 0
+	}
+	if e.State != TurnStateWorking {
+		m.retry = 0
 	}
 	m.turn = e.State
 	if e.State == TurnStateIdle && e.Status == ItemStatusError {

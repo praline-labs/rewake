@@ -30,6 +30,10 @@ type Event struct {
 	Part, Of int
 	// Lost counts the events a resync stands for.
 	Lost int
+	// Retry is how many of the working turn's requests failed in a row with
+	// nothing come back since, on a turn event saying working: the session
+	// is trying again.
+	Retry int
 	// Permit is how a result's call was let run or refused, where the
 	// adapter could tell.
 	Permit *Permit

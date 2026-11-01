@@ -786,3 +786,21 @@ So a view of rewake's own can take the reply as it streams only from `turn.step`
 render sites; it can hold a permission request at `tool.check` for at least ten minutes and
 answer it from outside, with no dialog in the terminal meanwhile; and it can rebuild the
 transcript's rows from the render props, the calls' output from the unfolded rows or the events.
+
+## An API retry is not told to a mod (November 1, 2026, 2.1.310)
+
+Whether the mod can tell rewake's face that a turn is trying a failed request again, as pi's
+adapter does (brief 69; [face.md](face.md), "The turn's times are the model's"). Read in the
+`mods` skill's types of 2.1.310, the installed version; no retry was provoked live. **[read]**
+
+- Claude Code retries a failed request beneath the bottom of a `turn.step` chain: the hooks see
+  one step. Its retry marker passes them as a `TurnStepEngineChunk`, "the envelope, a block's
+  start and end, a retry marker, opaque by `ref`", nothing telling one from another; the step's
+  result says no attempt, only a `stopReason` and `usage` of `null` when no response came.
+- `turn.complete` with `reason: 'error'` and the classic `StopFailure` (its `error` kind such as
+  `overloaded` or `rate_limit`) come once the retries are spent, when the turn ends.
+- `Spinner`'s render props carry a `message` drawn "instead of the word while a state overrides
+  it"; whether a retry sets it was not seen, and it would be the screen's words, not a count.
+
+So the mod sends no `retry`: a Claude Code worker's turn line stays `Waiting…`, its arrow up and
+its clock running, through the engine's retries, and ends as the turn does.
