@@ -53,7 +53,9 @@ func (s *Server) settleRecorded() {
 // run holds and its status does not say yet is published, status first, the
 // way it was meant to be; otherwise the status decides, and is read again
 // under the lock that the settling takes. A letter it settles is forgotten;
-// one it leaves is tried again once the retry interval has passed.
+// one it leaves is tried again once the retry interval has passed. One whose
+// status under the lock is no longer a refusal is left where it is, by that
+// status, and owes nothing more.
 func (s *Server) settleUnreadOnly(id string) {
 	status, known, err := mail.ReadStatus(s.Dir, s.Name, id)
 	if err != nil {
@@ -69,31 +71,17 @@ func (s *Server) settleUnreadOnly(id string) {
 		}
 		return
 	}
-	if !known || !owesArchive(status) {
+	if !known || !status.Archives() {
 		return
 	}
 	s.attempts[id] = time.Now()
 	settled := false
 	_ = s.locked(func(l mail.Locked) error {
-		status, known, err := mail.ReadStatus(s.Dir, s.Name, id)
-		if err != nil {
-			return err
-		}
-		if !known || !owesArchive(status) {
-			settled = true
-			return nil
-		}
-		settled = l.Settle(id, mail.Failed)
-		return nil
+		recorded, decided, err := l.SettleOnRecord(id)
+		settled = err == nil && (!decided || recorded.Settled)
+		return err
 	})
 	if settled {
 		delete(s.attempts, id)
 	}
-}
-
-// owesArchive says whether a status settles its letter into done/: a refusal,
-// neither withdrawn — its tombstone stays to be read — nor a report left
-// readable for its recipient.
-func owesArchive(status mail.Status) bool {
-	return status.State == mail.Failed && !status.Withdrawn && !status.ReportAvailable
 }

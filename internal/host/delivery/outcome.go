@@ -45,8 +45,8 @@ func (s *Server) lockCtx() context.Context {
 // That an open fails proves nobody else holds the lock no more than it
 // proves anything of a descriptor opened earlier: a holder from before the
 // file's mode changed keeps its lock. So what fn decides alone, another may
-// decide at once; nothing that takes a copy away runs here (Locked.Settle
-// runs under lock only).
+// decide at once; nothing that takes a copy away runs here (mail.Locked runs
+// under the lock only).
 func (s *Server) lockOrAlone(ctx context.Context, fn func() error) error {
 	err := s.lockWithContext(ctx, fn)
 	var unusable *state.LockUnusableError
@@ -68,9 +68,10 @@ func (s *Server) finish(message mail.Message, result mail.Result) {
 	s.publish(message.ID, result)
 }
 
-// publish writes the outcome down and takes the message out of the waiting set.
-// Both steps are retried on later passes until they hold: a message whose
-// outcome is known is never delivered again, only recorded again.
+// publish writes the outcome down and takes the message out of the waiting set
+// (mail.Locked.SettleWith). Both steps are retried on later passes until they
+// hold: a message whose outcome is known is never delivered again, only
+// recorded again.
 //
 // The retry waits, though. Writing the status is itself a change to the mailbox,
 // and a directory that cannot be archived into turned that into a loop: write,
@@ -87,69 +88,50 @@ func (s *Server) publish(id string, result mail.Result) bool {
 
 	settled := false
 	err := s.locked(func(l mail.Locked) error {
-		outcome, err := s.recordLocked(id, result)
+		recorded, err := l.SettleWith(id, result)
 		if err != nil {
 			return err
 		}
-		settled = s.settleOutcome(l, id, outcome, result.ReportAvailable)
+		s.remember(id, recorded)
+		settled = recorded.Settled
 		return nil
 	})
 	var unusable *state.LockUnusableError
 	if errors.As(err, &unusable) {
-		_, _ = s.recordLocked(id, result)
+		_, _ = s.recordAlone(id, result)
 	}
 	return settled
 }
 
 // record writes what delivery did, unless the agent has read the message
-// already, and returns the outcome that stands.
-func (s *Server) record(id string, result mail.Result) mail.State {
-	var outcome mail.State
+// already or its sender took it back, and answers whether such a final
+// status stands instead.
+func (s *Server) record(id string, result mail.Result) bool {
+	kept := false
 	_ = s.lockOrAlone(s.lockCtx(), func() error {
-		var err error
-		outcome, err = s.recordLocked(id, result)
+		recorded, err := s.recordAlone(id, result)
+		kept = recorded.Kept
 		return err
 	})
-	return outcome
+	return kept
 }
 
-// recordLocked writes the status in a mailbox section or in the server's
-// status-only fallback; it never settles the letter. Read is final: the
-// agent has the text, so whatever the harness said about the notice afterwards
-// — pending, failed, even delivered — must not undo that, or the task is handed
-// out again or its sender told it was refused. Withdrawn is final the same
-// way: a late delivered would tell its sender the message arrived after all,
-// and a late failed would archive the tombstone its reader is to find.
-//
-// A letter being read in parts is delivered, whatever the harness says of
-// its notice: part of its text is in front of the agent. Recorded as failed,
-// its sender would hear it was refused and the settling would take it out of
-// unread/ in the middle of the read, which only a read may do.
-//
-// A status that cannot be read may be final, so nothing is written over it:
-// the error leaves the outcome to be recorded on a later pass.
-func (s *Server) recordLocked(id string, result mail.Result) (mail.State, error) {
-	current, known, err := mail.ReadStatus(s.Dir, s.Name, id)
-	if err != nil {
-		return "", err
+// recordAlone writes the status, in a mailbox section or without one; it
+// never settles the letter (mail.Box.Record).
+func (s *Server) recordAlone(id string, result mail.Result) (mail.Recorded, error) {
+	recorded, err := s.box().Record(id, result)
+	if err == nil {
+		s.remember(id, recorded)
 	}
-	if known && current.Final() {
-		s.outcomes[id] = current.Result()
-		return current.Outcome(), nil
-	}
-	if err := mail.WriteStatus(s.Dir, s.Name, id, result); err != nil {
-		return "", err
-	}
-	return result.State, nil
+	return recorded, err
 }
 
-// The durable flag distinguishes a failed wake-up from expired or foreign
-// mail. Recovery never manufactures an unread copy for an old failed status.
-func (s *Server) settleOutcome(l mail.Locked, id string, outcome mail.State, reportAvailable bool) bool {
-	if outcome == mail.Failed && reportAvailable {
-		return l.Settle(id, mail.Delivered)
+// remember takes a final status found on record for the outcome, in place of
+// what this run thought it was.
+func (s *Server) remember(id string, recorded mail.Recorded) {
+	if recorded.Kept {
+		s.outcomes[id] = recorded.Result
 	}
-	return l.Settle(id, outcome)
 }
 
 // alreadySettled reports whether this message has an outcome, from this run or
@@ -172,10 +154,7 @@ func (s *Server) alreadySettled(message mail.Message) bool {
 		s.attempts[message.ID] = time.Now()
 		return true
 	}
-	if !ok || status.State == mail.Pending || status.State == mail.Held {
-		// Held on disk and not in this run's memory was held by a run that
-		// died without saying how it ended — a wrapper killed outright. That
-		// is no outcome: like pending, the message is still to be decided.
+	if !ok || !status.Decided() {
 		return false
 	}
 	if last, tried := s.attempts[message.ID]; tried && time.Since(last) < retryInterval && !s.stopping {
@@ -190,18 +169,15 @@ func (s *Server) alreadySettled(message mail.Message) bool {
 }
 
 // settleOnRecord settles a letter by its status as it stands under the lock
-// the caller holds, not as it was read before the lock was taken: a
-// withdrawal, a read or a claim that came while the lock was waited for
-// decides instead (Locked.Settle), and a status that no longer reads or no longer
-// holds an outcome settles nothing. A letter settled is forgotten; one left
-// is tried again once the retry interval has passed.
+// the caller holds (mail.Locked.SettleOnRecord). A letter settled is
+// forgotten; one left is tried again once the retry interval has passed.
 func (s *Server) settleOnRecord(l mail.Locked, id string) {
-	status, ok, err := mail.ReadStatus(s.Dir, s.Name, id)
-	if err != nil || !ok || status.State == mail.Pending || status.State == mail.Held {
+	recorded, decided, err := l.SettleOnRecord(id)
+	if err != nil || !decided {
 		return
 	}
-	s.outcomes[id] = status.Result()
-	if s.settleOutcome(l, id, status.Outcome(), status.ReportAvailable) {
+	s.outcomes[id] = recorded.Result
+	if recorded.Settled {
 		delete(s.attempts, id)
 	}
 }

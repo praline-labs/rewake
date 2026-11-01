@@ -23,7 +23,7 @@ internal/core/registry/registrytest/          for tests: the boot a session of t
 internal/infra/proc/                          /proc: identity, liveness, job-control state, lineage, namespaces, owner and initial environment
 internal/infra/boottime/                      the boot clock, comparable across processes and never set back
 internal/infra/proxyenv/                      for tests: the proxy variables of an environment, carried into one built from nothing
-internal/core/mail/                           message, status, sender-side write, turn ends; `Box` is one run's own mail (room, name, epoch) with its read, its pending mark, what it owes and its acts on the letters it sent (send, edit, withdraw, addendum), each taking the lock itself, and `Locked` the operations that run under its mailbox lock
+internal/core/mail/                           message, status, sender-side write, turn ends; `Box` is one run's own mail (room, name, epoch) with its read, its pending mark, what it owes and its acts on the letters it sent (send, edit, withdraw, addendum), each taking the lock itself, and `Locked` the operations that run under its mailbox lock, settling a letter with a result or by its status among them
 internal/core/mail/mailtest/                  for tests outside mail: the paths and bytes of its records, each checked against mail
 internal/core/control/                        a main's control request to a run and its answer, as files
 internal/core/ask/                            a worker's permission requests and questions, held in its wrapper while main answers them
@@ -44,7 +44,7 @@ internal/adapter/fixture/                     the test harness behind rewaketest
 internal/host/                                wrapper: launch, signals, lifecycle
 internal/host/launch/                         a launch's host side: the run's environment, the version read before the claim, the bounded probe, the worker aliases main opens, a worker raised from one (`Set.Raise`: its worktree and type resolved, every conflicting request refused) and the worktree flag read for every launch
 internal/host/herdr/                          main reporting itself to herdr, the terminal manager it runs in: its state from the telemetry, its resume command, the release
-internal/host/delivery/                       the delivery server: the serving loop, notices and their batches, the coalescing window, outcomes and the sweep's lock
+internal/host/delivery/                       the delivery server: the serving loop, notices and their batches, the coalescing window, when an outcome is recorded and settled and the memory of it, and the sweep's lock
 internal/host/terminal/                       a program's pseudo-terminal by the standard library, whether a file is a terminal, the screen the program draws with its input modes, keyboard protocols and title, and the raw stream with its preamble for a late client, the one package the emulator library enters
 internal/host/reviewcheckout/                 a reviewer's checkout from the brief's assignment to its release: create, bind, release the one before, and whose checkout it is at a brief's close and a run's end
 internal/host/spacehost/                      the space host: the worker's pseudo-terminal and screen, the space socket's raw stream for the shell; and opening a space for main (`Open`): the record, the host started, the wait for the worker's registration, the rollback

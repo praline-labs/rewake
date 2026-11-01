@@ -138,7 +138,7 @@ func (s *Server) deliverGroup(ctx context.Context, pending []mail.Message) {
 		outcome.ReportAvailable = outcome.State == mail.Failed && mail.IsReport(member)
 		s.attempts[member.ID] = time.Now()
 		if outcome.State == mail.Pending {
-			if mail.IsFinal(s.record(member.ID, outcome)) {
+			if s.record(member.ID, outcome) {
 				s.finish(member, s.outcomes[member.ID])
 			}
 		} else {

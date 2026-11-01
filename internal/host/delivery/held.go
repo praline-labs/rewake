@@ -170,7 +170,7 @@ func (s *Server) takeBack(receipt mail.Receipt, members []mail.Message) {
 		if s.outcomes[member.ID].State != mail.Delivered {
 			continue
 		}
-		if mail.IsFinal(s.record(member.ID, receipt.Result)) {
+		if s.record(member.ID, receipt.Result) {
 			continue
 		}
 		s.outcomes[member.ID] = receipt.Result

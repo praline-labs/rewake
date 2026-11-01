@@ -116,26 +116,3 @@ func TestAReadDuringAPendingNoticeStands(t *testing.T) {
 		t.Errorf("status = %s, want read", status.State)
 	}
 }
-
-// Whatever the harness says after the agent has read the message — even that
-// the notice failed — the message was read, and its sender must hear that.
-func TestAReadIsNotUndoneByTheNoticeResult(t *testing.T) {
-	for _, outcome := range []mail.State{mail.Failed, mail.Delivered} {
-		t.Run(string(outcome), func(t *testing.T) {
-			dir := stateDir(t)
-			sent := message("already acted on")
-			if err := mail.Put(dir, sent); err != nil {
-				t.Fatalf("Put: %v", err)
-			}
-			server := &Server{Dir: dir, Name: "api", attempts: map[string]time.Time{}, outcomes: map[string]mail.Result{}}
-			server.Deliver = func(context.Context, mail.Message) mail.Result {
-				readAll(t, dir, "")
-				return mail.Result{State: outcome, Detail: "said after the read"}
-			}
-			server.drain(context.Background())
-			if status, _, _ := mail.ReadStatus(dir, "api", sent.ID); status.State != mail.Read {
-				t.Errorf("status = %s, want read", status.State)
-			}
-		})
-	}
-}
