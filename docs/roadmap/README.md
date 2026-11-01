@@ -10,13 +10,12 @@ what it taught goes into the living documents.
 
 ## Open, in order
 
-Updating without losing the sessions. The owner decided this on November 1, 2026, on the design https://claude.ai/artifact/DK7YF2q9kQsbLjez2JMUgt. A Go host in the person's pane now holds main's pty, and `rewake restart shell` keeps main and the workers ([shell.md](../shell.md)).
+Updating without losing the sessions. The owner decided this on November 1, 2026, on the design https://claude.ai/artifact/DK7YF2q9kQsbLjez2JMUgt. A Go host in the person's pane now holds main's pty, and `rewake restart shell` keeps main and the workers ([shell.md](../shell.md)); the manifest of the parts, `rewake restart <part>`, the banner, `rewake update` and the changelog are in ([install.md](../install.md#the-parts-and-what-an-update-restarts)).
 
-The next release is 3.0.0, not 2.12.0. It ships this whole feature in working order, steps 1 and 2 below; the plugin door comes after it. The owner, November 1, 2026: «чтобы 3.0.0 был "цельным" с этой фичой. Дверь для плагинов можно не включать в 3.0.0».
+The next release is 3.0.0, not 2.12.0. It ships this whole feature in working order, step 1 below included; the plugin door comes after it. The owner, November 1, 2026: «чтобы 3.0.0 был "цельным" с этой фичой. Дверь для плагинов можно не включать в 3.0.0».
 
-1. **Updating from inside rewake.** The manifest of the parts, `rewake restart <part>`, the plan and the shell's banner are in ([install.md](../install.md#the-parts-and-what-an-update-restarts)). Left: checking npm for a newer release and `rewake update` started from inside rewake, and a changelog by part, its "what restarts" computed from the manifests.
-2. **A Go update without a room restart.** Each long-lived process `exec`s the new build, keeping its pid, its children and its fds, and hands over the state that lives only in memory. It starts with a probe on one idle wrapper of the same build.
-3. **A door for plugins.** The parts' contracts and the manifest admit a part that is not rewake's own. A project's main can attach its own part, or a ready one, to rewake: a pane or a strip segment in the shell, a command, a tool for the sessions, a listener of the room's events. The seams stay generic and versioned, so that a plugin is one more client.
+1. **A Go update without a room restart.** Each long-lived process `exec`s the new build, keeping its pid, its children and its fds, and hands over the state that lives only in memory. It starts with a probe on one idle wrapper of the same build.
+2. **A door for plugins.** The parts' contracts and the manifest admit a part that is not rewake's own. A project's main can attach its own part, or a ready one, to rewake: a pane or a strip segment in the shell, a command, a tool for the sessions, a listener of the room's events. The seams stay generic and versioned, so that a plugin is one more client.
 
 rewake's face ([face.md](../face.md)), after its first slice — a dev worker on Claude Code and every
 pi worker, read with a prompt back, the switch and hot reload:
