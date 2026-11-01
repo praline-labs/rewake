@@ -65,6 +65,38 @@ export class Pastes {
     this.n = 0;
     this.kept.clear();
   }
+
+  // saved is the pastes as a restart hands them on; loaded takes them back.
+  saved(): KeptPastes {
+    return { n: this.n, kept: [...this.kept] };
+  }
+  static loaded(saved: KeptPastes): Pastes {
+    const p = new Pastes();
+    p.n = saved.n;
+    p.kept = new Map(saved.kept);
+    return p;
+  }
+}
+
+// KeptPastes is one input's pastes, as a restart hands them on.
+export type KeptPastes = { n: number; kept: [number, string][] };
+
+// The pastes each pane's input holds markers for, kept while the face is
+// switched away, as its draft is, and handed on with it by a restart: a
+// draft without them would send its markers, not what was pasted.
+const held = new Map<string, Pastes>();
+export const pastesOf = (id: string) => {
+  const p = held.get(id) ?? new Pastes();
+  held.set(id, p);
+  return p;
+};
+export const keptPastes = (): [string, KeptPastes][] =>
+  [...held]
+    .map(([id, p]): [string, KeptPastes] => [id, p.saved()])
+    .filter(([, k]) => k.kept.length > 0);
+export function restorePastes(kept: [string, KeptPastes][] | undefined) {
+  held.clear();
+  for (const [id, saved] of kept ?? []) held.set(id, Pastes.loaded(saved));
 }
 
 // moreRule is the rule above or under the input while its text scrolls
