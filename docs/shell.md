@@ -115,7 +115,8 @@ The first launch runs in this order:
   the shell keeps the closing screen until the workers it showed are over, and exits. The host
   then gives the terminal back: its saved modes, the normal screen, the mouse and keyboard modes
   reset. If main's code is not 0 and the terminal is still there, it prints main's last lines. No
-  restart begins once main's closing mark has gone by.
+  restart begins once main's closing mark has gone by. The host stays until main has ended,
+  whatever became of the shell: main's hangup, SIGTERM and SIGKILL run in it.
 
 ### The closing screen
 

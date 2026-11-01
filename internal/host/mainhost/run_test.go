@@ -15,6 +15,17 @@ import (
 	"github.com/praline-labs/rewake/internal/host/terminal"
 )
 
+// Closing the window ends main even when main ignores its hangup and
+// SIGTERM: the shell, gone with the window, does not take the host with it
+// before the host's escalation reached SIGKILL.
+func TestClosingTheWindowEndsAMainThatIgnoresItsHangup(t *testing.T) {
+	h := startHost(t, caseClose)
+	pid := h.mainPID(t)
+	time.Sleep(200 * time.Millisecond)
+	_ = h.window.Close()
+	h.awaitEnd(t, pid)
+}
+
 // What the old shell hands on reaches the new one whole, though the old one
 // exits the moment it has written it: a megabyte of draft, under the line's
 // bound, as a person's pasted drafts may make it.
@@ -114,8 +125,46 @@ func childEnv() []string {
 	return env
 }
 
+// mainPID is main's pid, once main runs.
+func (h *testHost) mainPID(t *testing.T) int {
+	t.Helper()
+	path := filepath.Join(h.dir, "main.pid")
+	if !waitPath(path, 15*time.Second) {
+		t.Fatalf("main never started; the window shows %q", h.shown())
+	}
+	raw, _ := os.ReadFile(path)
+	pid, err := strconv.Atoi(string(raw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return pid
+}
+
+// awaitEnd says the host ended within a bound, and main before it.
+func (h *testHost) awaitEnd(t *testing.T, pid int) {
+	t.Helper()
+	select {
+	case <-h.done:
+	case <-time.After(10 * time.Second):
+		t.Fatalf("the host still runs 10 s after its window closed (main alive: %v)", alive(pid))
+	}
+	if alive(pid) {
+		t.Fatalf("main %d outlived its host", pid)
+	}
+}
+
 func (h *testHost) shown() string {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	return h.out.String()
+}
+
+// alive says pid runs, a zombie not counted.
+func alive(pid int) bool {
+	raw, err := os.ReadFile("/proc/" + strconv.Itoa(pid) + "/stat")
+	if err != nil {
+		return false
+	}
+	_, rest, _ := strings.Cut(string(raw), ") ")
+	return !strings.HasPrefix(rest, "Z")
 }

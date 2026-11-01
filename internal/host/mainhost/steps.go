@@ -251,7 +251,9 @@ func (h *Host) exited(gen int) bool {
 	h.shell = nil
 	switch {
 	case h.phase == closing:
-		return h.main == nil || h.main.exited || h.lost
+		// Main's end — the hangup, SIGTERM, SIGKILL — runs in the host, so
+		// the host outlives a shell gone with the window until main has ended.
+		return h.main == nil || h.main.exited
 	case p.said == kindClose || p.said == kindLost:
 		return false
 	case p.releasing || h.phase == swapping && p.ready:
