@@ -1,6 +1,8 @@
 // A drag past the view's top or bottom scrolls it on a clock of its own,
 // two rows every 50 ms for at most ten seconds, as the native pane does, the
 // selection's end on the edge's row (docs/face.md, "Copying").
+import { realTimers, type Timers } from "./ticker.ts";
+
 const edgeEvery = 50;
 const edgeTicks = 200;
 export const edgeRows = 2;
@@ -8,7 +10,7 @@ export const edgeRows = 2;
 export class Edge {
   // at is where the drag's pointer last was, in the view's cells.
   at = { x: 0, y: 0 };
-  private timer: ReturnType<typeof setInterval> | undefined;
+  private timer: unknown;
   private ticks = 0;
 
   // step scrolls a tick's rows the way given, 1 up and -1 down, and says
@@ -16,6 +18,7 @@ export class Edge {
   constructor(
     private readonly height: () => number,
     private readonly step: (way: number) => boolean,
+    private readonly timers: Timers = realTimers,
   ) {}
 
   private way() {
@@ -23,7 +26,7 @@ export class Edge {
   }
 
   stop() {
-    clearInterval(this.timer);
+    if (this.timer !== undefined) this.timers.stop(this.timer);
     this.timer = undefined;
   }
 
@@ -31,9 +34,9 @@ export class Edge {
   // once it is back.
   follow() {
     if (this.way() === 0) return this.stop();
-    if (this.timer) return;
+    if (this.timer !== undefined) return;
     this.ticks = 0;
-    this.timer = setInterval(() => {
+    this.timer = this.timers.repeat(() => {
       const way = this.way();
       if (++this.ticks > edgeTicks || way === 0 || !this.step(way)) this.stop();
     }, edgeEvery);

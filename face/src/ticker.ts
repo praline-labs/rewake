@@ -8,15 +8,20 @@
 // tickEvery is the terminal program's own animation frame, 20 a second.
 export const tickEvery = 50;
 
-type Timers = {
-  every: (run: () => void, ms: number) => unknown;
+// Timers are all the face's clocks (face.ts): the tick, a flash, a drag at
+// the edge, a reconnect, all from one source a test holds in its hand.
+export type Timers = {
+  repeat: (run: () => void, ms: number) => unknown;
+  after: (run: () => void, ms: number) => unknown;
+  // stop ends either kind, as Bun's clearTimeout does.
   stop: (timer: unknown) => void;
   now: () => number;
 };
 
-const real: Timers = {
-  every: (run, ms) => setInterval(run, ms),
-  stop: (timer) => clearInterval(timer as ReturnType<typeof setInterval>),
+export const realTimers: Timers = {
+  repeat: (run, ms) => setInterval(run, ms),
+  after: (run, ms) => setTimeout(run, ms),
+  stop: (timer) => clearTimeout(timer as ReturnType<typeof setTimeout>),
   now: () => Date.now(),
 };
 
@@ -29,14 +34,14 @@ export class Ticker {
   constructor(
     private readonly paint: (now: number) => void,
     private readonly moving: () => boolean,
-    private readonly timers: Timers = real,
+    private readonly timers: Timers = realTimers,
   ) {}
 
   // change marks the face to paint at the next tick, starting the clock when
   // it stood.
   change() {
     this.dirty = true;
-    this.timer ??= this.timers.every(() => this.tick(), tickEvery);
+    this.timer ??= this.timers.repeat(() => this.tick(), tickEvery);
   }
 
   // tick paints when anything changed or moves, and stops the clock when

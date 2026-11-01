@@ -6,6 +6,7 @@
 // 2026: a light that follows the pointer gets in the way).
 import type { Part } from "./parts.ts";
 import type { Point, Selection } from "./select.ts";
+import { realTimers, type Timers } from "./ticker.ts";
 
 // View is where the conversation's rows stand in the face: the first shown,
 // how many, in a view of height rows width columns wide, the shown rows from
@@ -82,22 +83,26 @@ const flashFor = 1000;
 
 export class Flash {
   part: Part | undefined;
-  private timer: ReturnType<typeof setTimeout> | undefined;
+  private timer: unknown;
 
   // over is told when the light goes out by itself.
-  constructor(private readonly over: () => void) {}
+  constructor(
+    private readonly over: () => void,
+    private readonly timers: Timers = realTimers,
+  ) {}
 
   on(part: Part) {
     this.off();
     this.part = part;
-    this.timer = setTimeout(() => {
+    this.timer = this.timers.after(() => {
       this.part = undefined;
       this.over();
     }, flashFor);
   }
 
   off() {
-    clearTimeout(this.timer);
+    if (this.timer !== undefined) this.timers.stop(this.timer);
+    this.timer = undefined;
     this.part = undefined;
   }
 }

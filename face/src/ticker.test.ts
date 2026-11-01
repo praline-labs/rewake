@@ -23,11 +23,12 @@ test("a delta and the timer that change together are painted once, at the tick",
     (at) => paints.push(text(render(m, 40, 4, 0, { now: at, since }))),
     () => m.turn === "working",
     {
-      every: (tick, ms) => {
+      repeat: (tick, ms) => {
         expect(ms).toBe(tickEvery);
         run = tick;
         return 1;
       },
+      after: () => 0,
       stop: () => stopped++,
       now: () => now,
     },
