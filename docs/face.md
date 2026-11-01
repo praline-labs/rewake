@@ -143,10 +143,10 @@ last column showing (seen live on 2.11.0). Its body is the conversation; under i
 two rules sends a prompt to the session, refused with its reason where the session does not take it;
 the row under the rules says the face's last error, or the link while it is not live (below, "The
 input"). It has no
-header: the strip says the turn's state, and the input's top rule carries the session's own
+header: the button's mark says the turn's state, and the input's top rule carries the session's own
 permission mode at its left end, or pi's thinking level, and at the right the run's room work, as
 Claude Code's hint line ends with it, `── ⏵⏵ auto mode ──── brief 57 3/6 ─` (the look, "Rules"); the
-name is on the pane's top row and the strip, the context on the strip, drawn by the face or not. The mouse wheel over the face
+name and the type of its work are on the pane's top row, the context on the strip, drawn by the face or not. The mouse wheel over the face
 scrolls the conversation as a native pane scrolls (below, "The scroll"), and PgUp and PgDn a page
 less a row; at the bottom the face follows new rows, scrolled up it holds the rows the person put
 there while more arrive below (`face/src/scroll.ts`), and back at the bottom, or after a

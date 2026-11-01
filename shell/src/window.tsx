@@ -128,7 +128,6 @@ export function Window(props: { env: Env; view: () => View }) {
             <Strip
               state={mainStrip}
               width={widthOf(mainPane)}
-              colour={theme.main}
               theme={theme}
               pick={() => paneHooks.pressed("main")}
             />
@@ -183,7 +182,6 @@ export function Window(props: { env: Env; view: () => View }) {
                   <Strip
                     state={() => stripOf(pane.id)}
                     width={widthOf(pane)}
-                    colour={theme.worker}
                     theme={theme}
                     pick={() => paneHooks.pressed(pane.id)}
                   />

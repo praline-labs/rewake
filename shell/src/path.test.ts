@@ -63,3 +63,21 @@ test("the top row ends with the session's name, cut last", () => {
   // Before the path is known the name stands alone.
   expect(pathParts({ session: "main-claude" }, 40)).toEqual({ name: "main-claude" });
 });
+
+// The owner, November 1, 2026: a worker's type moves from its strip to the
+// top row, in brackets after its name; main has none. A narrow row loses the
+// path first as before, then cuts the label from its end: the type goes
+// before the name.
+test("the top row names a worker with its type, cut before the name", () => {
+  const state = { path: "/tmp/wt-1", session: "write-claude", type: "code" };
+  const row = (width: number) => pathParts(state, width, "/home/u");
+  expect(row(40)).toEqual({ path: "/tmp/wt-1", name: "write-claude (code)" });
+  expect(row(20)).toEqual({ name: "write-claude (code)" });
+  expect(row(17)).toEqual({ name: "write-claude (co…" });
+  expect(row(13)).toEqual({ name: "write-claude…" });
+  expect(row(12)).toEqual({ name: "write-claud…" });
+  expect(pathParts({ path: "/tmp/x", session: "main-claude" }, 40, "/home/u")).toEqual({
+    path: "/tmp/x",
+    name: "main-claude",
+  });
+});

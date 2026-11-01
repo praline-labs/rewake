@@ -1,7 +1,7 @@
 // The pane's top row (docs/shell.md, "The pane"): where its session works
 // now, `~`-shortened, and the branch checked out there, from the room view's
 // path and branch, the same for every harness, and the session's rewake name
-// at its right edge. A worktree entry moves the path; a `cd` in a shell
+// at its right edge, a worker's with the type of its work after it. A worktree entry moves the path; a `cd` in a shell
 // command does not, as it moves no harness.
 import { RGBA } from "@opentui/core";
 import { ShellRow, selecting, separator } from "./bar.tsx";
@@ -65,17 +65,24 @@ function leftParts(
   return undefined;
 }
 
+// labelOf is who the session is, `write-claude (code)`: its name, and a
+// worker's type in brackets after it. Main has none.
+export function labelOf(session: string | undefined, type?: string): string | undefined {
+  if (!session) return undefined;
+  return type ? `${session} (${type})` : session;
+}
+
 // pathParts is the row for a width: the path and its branch at the left,
-// the session's name at the right edge, a separator's width at least
+// the session's label at the right edge, a separator's width at least
 // between them. A row too narrow cuts the path from its start, then drops
-// the branch, then leaves the path out and cuts the name at its end.
-// Nothing before the path is known.
+// the branch, then leaves the path out and cuts the label at its end, so the
+// type goes before the name. Nothing before the path is known.
 export function pathParts(
-  state: Pick<StripState, "path" | "branch"> & { session?: string },
+  state: Pick<StripState, "path" | "branch"> & { session?: string; type?: string },
   width: number,
   under = home,
 ): { path?: string; branch?: string; name?: string } {
-  const name = state.session || undefined;
+  const name = labelOf(state.session, state.type);
   const room = name ? width - cells(name) - separator.length : width;
   if (!state.path) return name ? { name: fromEnd(name, width) } : {};
   const path = tilded(state.path, under);
@@ -86,14 +93,18 @@ export function pathParts(
 }
 
 // PathRow is a pane's top row, width wide, fitted to it less the padding:
-// where its session works at the left, its name against the right end.
+// where its session works at the left, its label against the right end.
 export function PathRow(props: {
   state: () => StripState;
   width: number;
   theme: Theme;
   pick: () => void;
 }) {
-  const parts = () => pathParts(props.state(), Math.max(props.width - 2, 1));
+  const parts = () => {
+    const state = props.state();
+    const type = state.status?.own ? undefined : state.status?.type;
+    return pathParts({ ...state, type }, Math.max(props.width - 2, 1));
+  };
   return (
     <ShellRow theme={props.theme} onMouseDown={props.pick}>
       <text

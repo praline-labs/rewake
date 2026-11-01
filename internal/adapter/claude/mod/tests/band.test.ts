@@ -1,5 +1,5 @@
 import { expect, test } from "claude-code/testing";
-import { holdMs, start, world } from "./world.ts";
+import { epoch, holdMs, socket, start, world } from "./world.ts";
 
 const HINT = {
   plugin: "rewake",
@@ -31,6 +31,11 @@ async function tailed($: any, props: Record<string, unknown> = {}) {
 // standIn is a run whose heartbeat answers each poll at once with each
 // answer in turn, and then holds its polls as the endpoint holds them.
 function standIn(on: any, ...answers: Record<string, unknown>[]) {
+  return standInAs(on, undefined, ...answers);
+}
+
+// standInAs is standIn for a run of the given role.
+function standInAs(on: any, role: string | undefined, ...answers: Record<string, unknown>[]) {
   engine(on);
   on("classic.SessionStart", () => ({}));
   let run: ReturnType<typeof world> | undefined;
@@ -39,7 +44,12 @@ function standIn(on: any, ...answers: Record<string, unknown>[]) {
     return { status: 200, text: "{}" };
   };
   const replies = answers.map((answer) => ({ status: 200, text: JSON.stringify(answer) }));
-  run = world(on, { replies: { "/v1/mod/alive": [...replies, held] } });
+  const env = {
+    REWAKE_MOD_SOCKET: socket,
+    REWAKE_EPOCH: epoch,
+    ...(role ? { REWAKE_ROLE: role } : {}),
+  };
+  run = world(on, { env, replies: { "/v1/mod/alive": [...replies, held] } });
   return run;
 }
 
@@ -73,4 +83,30 @@ test("an answer without work leaves the last, and work that is over leaves no ta
     "",
   ]);
   expect(await tailed($)).toBeUndefined();
+});
+
+// The owner, November 1, 2026: main's `⧗ N` moved to its strip in the shell,
+// as the text Claude Code adds to the hint line kept moving it; a worker's
+// tail keeps its briefs and the reports it waits on.
+test("main's tail leaves out the reports it waits on, and keeps its briefs", async ($, on) => {
+  const run = standInAs(on, "main", { work: "brief 57 3/6 · ⧗ 2" });
+  await start($);
+  await run.clock.settle();
+  expect(await tailed($)).toBe("brief 57 3/6");
+  // The poll still names the work as told, so the host does not answer it again.
+  expect(run.polls().at(-1)?.body.work).toBe("brief 57 3/6 · ⧗ 2");
+});
+
+test("main waiting on reports alone gets no tail", async ($, on) => {
+  const run = standInAs(on, "main", { work: "⧗ 2" });
+  await start($);
+  await run.clock.settle();
+  expect(await tailed($)).toBeUndefined();
+});
+
+test("a worker's tail keeps the reports it waits on", async ($, on) => {
+  const run = standInAs(on, "write", { work: "brief 57 3/6 · ⧗ 2" });
+  await start($);
+  await run.clock.settle();
+  expect(await tailed($)).toBe("brief 57 3/6 · ⧗ 2");
 });
