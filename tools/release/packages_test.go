@@ -107,15 +107,16 @@ func TestFileProblems(t *testing.T) {
 		}
 		return p
 	}
-	if problems := fileProblems(entry, files("LICENSE", "README.md", "bin/rewake", "package.json")); len(problems) > 0 {
+	all := []string{"CHANGELOG.md", "LICENSE", "README.md", "bin/rewake", "manifests/linux-arm64.json", "manifests/linux-x64.json", "package.json"}
+	if problems := fileProblems(entry, files(all...)); len(problems) > 0 {
 		t.Errorf("the exact set: %v", problems)
 	}
-	problems := fileProblems(entry, files("LICENSE", "bin/rewake", "package.json", ".env"))
+	problems := fileProblems(entry, files("CHANGELOG.md", "LICENSE", "bin/rewake", "manifests/linux-arm64.json", "manifests/linux-x64.json", "package.json", ".env"))
 	if len(problems) != 2 || !strings.Contains(problems[0], "README.md") || !strings.Contains(problems[1], ".env") {
 		t.Errorf("one missing and one extra: %v", problems)
 	}
-	flat := files("LICENSE", "README.md", "bin/rewake", "package.json")
-	flat.Files[2].Mode = 0o644
+	flat := files(all...)
+	flat.Files[3].Mode = 0o644
 	if problems := fileProblems(entry, flat); len(problems) != 1 || !strings.Contains(problems[0], "not executable") {
 		t.Errorf("a command that cannot run: %v", problems)
 	}

@@ -4,16 +4,57 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/praline-labs/rewake/internal/adapter/pi"
 	"github.com/praline-labs/rewake/internal/infra/parts"
+	"github.com/praline-labs/rewake/internal/infra/update"
 )
 
 // manifestFile is where a platform package carries the manifest of its
 // parts, beside the rewake that reads it
 // (docs/install.md#the-parts-and-what-an-update-restarts).
 const manifestFile = "bin/" + parts.FileName
+
+// entryManifest is where the entry package carries a platform build's
+// manifest, so a rewake asking what a release restarts fetches the small
+// entry rather than the build (docs/install.md#updating-from-inside-rewake).
+func entryManifest(platform string) string {
+	return path.Join(update.ManifestsDir, platform+".json")
+}
+
+// takeDigests takes rewake's digest for each platform before the build, and
+// hands each to scripts/pack.sh in its environment, which builds it into the
+// binary: a room then judges by the sources, not by bytes that every
+// release's version changes, whether this release asks it to restart. The
+// manifests take the same digests.
+func (g *gate) takeDigests(ctx context.Context) {
+	digest := g.goDigest
+	if digest == nil {
+		digest = parts.GoDigest
+	}
+	g.digests = map[string]string{}
+	for _, p := range packages {
+		if p.platform == "" {
+			continue
+		}
+		d, err := digest(ctx, g.root, "linux", goArch[p.cpu])
+		if err != nil {
+			g.fail("%s: the digest of rewake: %v", p.ref(g.version), err)
+			continue
+		}
+		g.digests[p.cpu] = d
+		// The gate's runner passes its own environment on to pack.sh.
+		_ = os.Setenv(digestEnv(p.platform), d)
+	}
+}
+
+// digestEnv is the variable scripts/pack.sh reads a platform's digest from.
+func digestEnv(platform string) string {
+	return "REWAKE_DIGEST_" + strings.ToUpper(strings.ReplaceAll(platform, "-", "_"))
+}
 
 // goArch is Go's name of an npm cpu.
 var goArch = map[string]string{"x64": "amd64", "arm64": "arm64"}
@@ -59,23 +100,20 @@ func (g *gate) writeManifests(ctx context.Context) {
 			Face:      parts.Part{Digest: face, Within: parts.ShellPart},
 			Harnesses: []parts.Part{parts.HarnessPart("pi", pi.Package, pi.PinnedVersion)},
 		}
-		if err := g.writeManifest(ctx, p, made); err != nil {
+		if err := g.writeManifest(p, made); err != nil {
 			g.fail("%s: the manifest: %v", p.ref(g.version), err)
 		} else {
-			g.pass("%s: %s lists its parts", p.ref(g.version), manifestFile)
+			g.pass("%s: %s lists its parts, and the entry's %s too", p.ref(g.version), manifestFile, entryManifest(p.platform))
 		}
 	}
 }
 
-func (g *gate) writeManifest(ctx context.Context, p pkg, made parts.Made) error {
-	digest := g.goDigest
-	if digest == nil {
-		digest = parts.GoDigest
+func (g *gate) writeManifest(p pkg, made parts.Made) error {
+	made.Rewake.Digest = g.digests[p.cpu]
+	if made.Rewake.Digest == "" {
+		return fmt.Errorf("rewake's digest was not taken")
 	}
 	var err error
-	if made.Rewake.Digest, err = digest(ctx, g.root, "linux", goArch[p.cpu]); err != nil {
-		return err
-	}
 	dir := g.dist(p)
 	if made.Rewake.File, err = parts.FileDigest(filepath.Join(dir, "bin", "rewake")); err != nil {
 		return err
@@ -87,8 +125,13 @@ func (g *gate) writeManifest(ctx context.Context, p pkg, made parts.Made) error 
 	if err != nil {
 		return err
 	}
-	if err := os.WriteFile(filepath.Join(dir, manifestFile), parts.Encode(m), 0o644); err != nil {
+	data := parts.Encode(m)
+	if err := os.WriteFile(filepath.Join(dir, manifestFile), data, 0o644); err != nil {
 		return fmt.Errorf("cannot write it: %w", err)
+	}
+	entry := filepath.Join(g.root, "dist", "npm", "rewake", filepath.FromSlash(entryManifest(p.platform)))
+	if err := os.WriteFile(entry, data, 0o644); err != nil {
+		return fmt.Errorf("cannot write it into the entry: %w", err)
 	}
 	return nil
 }

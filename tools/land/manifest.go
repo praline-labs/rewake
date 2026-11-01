@@ -41,7 +41,7 @@ func (l *lander) put(ctx context.Context) (string, string) {
 	file, _ := parts.FileDigest(binary)
 	if err == nil && oldErr == nil && was.Digest == digest && was.File == file {
 		l.say("skip  build    rewake's sources are the installed build's")
-	} else if why := l.installBuild(ctx); why != "" {
+	} else if why := l.installBuild(ctx, digest); why != "" {
 		return "", why
 	}
 	if err != nil {

@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"errors"
 	"os"
 	"os/exec"
@@ -9,7 +10,9 @@ import (
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/host/mainhost"
 	"github.com/praline-labs/rewake/internal/host/terminal"
+	"github.com/praline-labs/rewake/internal/infra/parts"
 	"github.com/praline-labs/rewake/internal/infra/state"
+	"github.com/praline-labs/rewake/internal/infra/update"
 )
 
 const (
@@ -70,6 +73,8 @@ func enterShell(h adapter.Harness, id launchIdentity) (bool, error) {
 		return false, &UsageError{Message: err.Error()}
 	}
 	command := append([]string{self}, os.Args[1:]...)
+	stop := watchUpdates(dir)
+	defer stop()
 	code := mainhost.Run(mainhost.Config{
 		Shell: program,
 		// The room, for the shell's own reads of it, and main's command line,
@@ -83,6 +88,26 @@ func enterShell(h adapter.Harness, id launchIdentity) (bool, error) {
 		Dir:       dir,
 	})
 	return false, &ExitCodeError{Code: code}
+}
+
+// watchUpdates has main's host ask npm for a newer release while main runs,
+// when this build came from npm (docs/install.md#updating-from-inside-rewake);
+// the answer goes to the record under the root, which the room view reads.
+func watchUpdates(room string) func() {
+	if !update.FromNPM() {
+		return func() {}
+	}
+	root, err := state.RootForRoom(room)
+	if err != nil {
+		return func() {}
+	}
+	prefix, err := update.Prefix(parts.InstalledDir())
+	if err != nil {
+		return func() {}
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	go update.Watch(ctx, root, update.NPM{Prefix: prefix})
+	return cancel
 }
 
 // mainEnv is what main's environment adds to the host's: the mark that it is

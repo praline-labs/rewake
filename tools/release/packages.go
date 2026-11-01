@@ -44,7 +44,7 @@ type pkg struct {
 var packages = []pkg{
 	{dir: "rewake-linux-x64", platform: "linux-x64", cpu: "x64", machine: elf.EM_X86_64, files: []string{"LICENSE", "bin/manifest.json", "bin/rewake", "bin/rewake-shell", "package.json"}},
 	{dir: "rewake-linux-arm64", platform: "linux-arm64", cpu: "arm64", machine: elf.EM_AARCH64, files: []string{"LICENSE", "bin/manifest.json", "bin/rewake", "bin/rewake-shell", "package.json"}},
-	{dir: "rewake", files: []string{"LICENSE", "README.md", "bin/rewake", "package.json"}},
+	{dir: "rewake", files: []string{"CHANGELOG.md", "LICENSE", "README.md", "bin/rewake", entryManifest("linux-arm64"), entryManifest("linux-x64"), "package.json"}},
 }
 
 // version is the npm version this upload gets in a release: the release

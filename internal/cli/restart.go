@@ -47,7 +47,7 @@ type planView struct {
 }
 
 func handleRestart(ctx *Context, call Call) error {
-	update := roomUpdate(ctx.table.catalog)
+	update := roomUpdate(ctx.table.catalog, installedDir())
 	if len(call.Positionals) == 0 {
 		return printPlan(ctx, update)
 	}

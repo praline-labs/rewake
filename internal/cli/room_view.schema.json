@@ -15,7 +15,8 @@
         "briefsProblem": {"type": "string", "description": "is why the briefs could not be read at all, when --briefs was asked and the list failed as brief list fails: the shell shows it as the list's line, never as no briefs; briefs is absent then."},
         "unreadableBriefs": {"type": "array", "items": {"$ref": "#/$defs/Problem"}, "description": "are the entries of the briefs directory that do not read as a brief: shown, never taken for absent; absent as briefs is."},
         "brief": {"$ref": "#/$defs/BriefView", "description": "is the brief --brief named, with its text and comments; absent unless it was asked, asMain and it reads."},
-        "update": {"type": "array", "items": {"$ref": "#/$defs/UpdateStep"}, "description": "are the parts the room needs restarted to run what is installed, as rewake restart with no part prints them; absent where the install has no manifest (docs/install.md#the-parts-and-what-an-update-restarts)."}
+        "update": {"type": "array", "items": {"$ref": "#/$defs/UpdateStep"}, "description": "are the parts the room needs restarted to run what is installed, as rewake restart with no part prints them; absent where the install has no manifest (docs/install.md#the-parts-and-what-an-update-restarts)."},
+        "available": {"$ref": "#/$defs/Available", "description": "is a newer release on npm than the one installed and the one running, as main's host last found it; absent for a build not installed from npm, and once that release is installed (docs/install.md#updating-from-inside-rewake)."}
       },
       "required": ["room", "asMain", "spaces", "sessions"],
       "additionalProperties": false
@@ -30,6 +31,21 @@
       },
       "required": ["part", "class", "why"],
       "additionalProperties": false
+    },
+    "Available": {
+      "type": "object",
+      "description": "is a newer release, and what installing it would restart in the room.",
+      "properties": {
+        "version": {"type": "string", "description": "is the release."},
+        "restarts": {"$ref": "#/$defs/Restarts", "description": "is the most installing it asks of the room: its restart, the shell's, or nothing the person does."}
+      },
+      "required": ["version", "restarts"],
+      "additionalProperties": false
+    },
+    "Restarts": {
+      "type": "string",
+      "description": "is the most an update asks of the room: room, its restart; shell, rewake restart shell; nothing, no restart the person makes.",
+      "enum": ["room", "shell", "nothing"]
     },
     "RestartClass": {
       "type": "string",

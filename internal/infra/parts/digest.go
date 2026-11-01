@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 	"time"
@@ -61,7 +62,7 @@ func SourcesDigest(dir string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return digestOf(dir, files, nil)
+	return digestOf(dir, files, nil, nil)
 }
 
 // ShellDigest is the digest of the shell a launch would start at path: a
@@ -79,10 +80,20 @@ func ShellDigest(path string) (digest, file string, err error) {
 	return "", file, err
 }
 
+// VersionFile holds the version a build from source reports, which a release
+// commit must set to the released one (tools/release); VersionLine is its
+// declaration there, the release gate's and the digest's one expression.
+const VersionFile = "internal/cli/registry.go"
+
+// VersionLine matches the declaration of the version in VersionFile.
+var VersionLine = regexp.MustCompile(`(?m)^var Version = "([^"]*)"$`)
+
 // GoDigest is a digest over what go build puts into ./cmd/rewake for a
 // platform: the Go and embedded files of every package of the module it
-// depends on, go.mod, go.sum and the toolchain's version. The build time and
-// the VCS stamp are left out, so two builds of one tree have one digest.
+// depends on, go.mod, go.sum and the toolchain's version. The build time, the
+// VCS stamp and the release version are left out, so two builds of one tree
+// have one digest, and so have two releases whose sources differ only in the
+// version a release must raise (docs/install.md#the-parts-and-what-an-update-restarts).
 // goos and goarch empty are this machine's.
 func GoDigest(ctx context.Context, root, goos, goarch string) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
@@ -129,11 +140,23 @@ func GoDigest(ctx context.Context, root, goos, goarch string) (string, error) {
 		}
 	}
 	platform := strings.TrimSpace(string(goVersion)) + " " + goos + "/" + goarch
-	return digestOf(root, files, []byte(platform))
+	return digestOf(root, files, []byte(platform), map[string]func([]byte) ([]byte, error){VersionFile: versionless})
 }
 
-// digestOf hashes each file's path and content, in path order, after extra.
-func digestOf(root string, files []string, extra []byte) (string, error) {
+// versionless is VersionFile with its one version line made empty; every
+// other line counts as it is. No such line, or two, fails: the line is the
+// release gate's contract, and a digest that silently kept a version would
+// ask every release for a room restart.
+func versionless(data []byte) ([]byte, error) {
+	if n := len(VersionLine.FindAllIndex(data, -1)); n != 1 {
+		return nil, fmt.Errorf("%s has %d lines var Version = \"...\", not one", VersionFile, n)
+	}
+	return VersionLine.ReplaceAll(data, []byte(`var Version = ""`)), nil
+}
+
+// digestOf hashes each file's path and content, in path order, after extra;
+// a file named in normalize is hashed as that function rewrites it.
+func digestOf(root string, files []string, extra []byte, normalize map[string]func([]byte) ([]byte, error)) (string, error) {
 	slices.Sort(files)
 	files = slices.Compact(files)
 	sum := sha256.New()
@@ -142,6 +165,11 @@ func digestOf(root string, files []string, extra []byte) (string, error) {
 		data, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(rel)))
 		if err != nil {
 			return "", err
+		}
+		if rewrite := normalize[rel]; rewrite != nil {
+			if data, err = rewrite(data); err != nil {
+				return "", err
+			}
 		}
 		_, _ = fmt.Fprintf(sum, "\x00%s\x00%d\x00", rel, len(data))
 		sum.Write(data)

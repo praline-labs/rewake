@@ -43,7 +43,15 @@ func ClassOf(p Part) string {
 // of the two to compare at least. Equal sources with another file is a
 // change: a compiled shell whose embedded face alone changed keeps its own
 // sources' digest.
+//
+// rewake is judged by its digest alone where both entries have one: a
+// release rebuilds it with its version and time inside, so its file always
+// differs, while equal sources are the same program; the file stays the
+// build's identity for the room's lease, which this does not touch.
 func Same(a, b Part) bool {
+	if a.Name == Rewake && a.Digest != "" && b.Digest != "" {
+		return a.Digest == b.Digest
+	}
 	compared := false
 	if a.Digest != "" && b.Digest != "" {
 		if a.Digest != b.Digest {

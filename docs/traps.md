@@ -339,3 +339,13 @@ speaks another contract, saying under the input that `rewake restart shell` load
 anew, not reloaded; `rewake restart shell`, which `rewake restart` with no part names as well.
 
 *November 1, 2026.*
+
+### `rewake update <version>` installed and then said `no manifest beside …/.rewake-XXXX/…`
+
+npm 11.17 replaces a global package by renaming its directory aside, to a hidden
+`.rewake-<random>` beside it, and removes it after. The rewake that ran `npm install` is still
+the old file, and its executable's path, read again after the install, names that removed
+directory, so a plan read beside it found no manifest. The plan after an install reads the install
+the command came from, taken before npm ran ([install.md](install.md#updating-from-inside-rewake)).
+
+*November 1, 2026, in the live check of a local registry.*

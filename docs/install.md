@@ -21,11 +21,14 @@ for the workers' configuration directory of their own, and `/login` in the first
 rewake's pi. What else is left to the person — the worker templates, a project's `.rewake/`, the
 shell's keys, where things live — is in [user-guide.md](user-guide.md).
 
-To update, run the same `npm install -g` again; to remove, `npm uninstall -g @praline-labs/rewake`,
-and the build goes with the entry. A running room keeps the build it was launched with: its
+To update, run `rewake update`, which shows a newer release and what installing it restarts, and
+`rewake update <version>` to install it ([below](#updating-from-inside-rewake)); the same
+`npm install -g` again does it too. To remove, `npm uninstall -g @praline-labs/rewake`, and the
+build goes with the entry. A running room keeps the build it was launched with: its
 sessions run the room's own copy of it, a `rewake` command typed in a terminal there is handed to
-that copy with one line saying so, and restarting the room's main — its workers end with it —
-moves the room to the new build ([rules/state.md](rules/state.md#the-rooms-own-copy)). A pi
+that copy with one line saying so, which points at `rewake restart` for what the room must restart:
+only the shell, when only it changed, and else main — its workers end with it — which moves the
+room to the new build ([rules/state.md](rules/state.md#the-rooms-own-copy)). A pi
 worker raised in an old room after an update that changed the bundled pi is refused until then.
 
 **Limits** a person meets:
@@ -125,12 +128,18 @@ it ships as one, `within` when it is compiled into another, and the contracts it
 
 | part | digest | class |
 |---|---|---|
-| `rewake` | the Go and embedded files of the module that `go list -deps ./cmd/rewake` names, `go.mod`, `go.sum`, the toolchain's version and the platform; `file` is the build id | room: end main and start it again, which ends its workers |
+| `rewake` | the Go and embedded files of the module that `go list -deps ./cmd/rewake` names, `go.mod`, `go.sum`, the toolchain's version and the platform, with the release's line `var Version = "…"` of `internal/cli/registry.go` read as `var Version = ""`; `file` is the build id | room: end main and start it again, which ends its workers |
 | `shell` | `shell/` without `node_modules`, tests and hidden files; in a release also `file`, of `bin/rewake-shell` | shell: `rewake restart shell`, or Ctrl+\ then `r` |
 | `face` | `face/` the same way; in a release `within: shell` | live: it follows its files; `rewake restart face` reloads it by hand |
 | `pi` | `npm:@earendil-works/pi-coding-agent@<version>` | sessions: each new session takes it |
 
-The build time stays out of every digest, so two builds of one tree have one. The contracts,
+The build time stays out of every digest, so two builds of one tree have one, and so does the
+release's version: every release changes that line, and a release that changes only the shell
+must not ask for a room restart (main's decision, November 1, 2026). The line is the gate's
+contract, `parts.VersionLine`, which the gate checks too; a `registry.go` with none or with two
+fails the digest. A build carries its digest: `tools/release` takes it for each platform and
+hands it to `scripts/pack.sh` (`REWAKE_DIGEST_LINUX_X64`, `_ARM64`), `tools/land` the same, as
+`-X …/internal/cli.digest`, so the running `rewake` says its digest beside its file. The contracts,
 each said by the part itself (`rewake --version --json`, `rewake-shell --contracts`), never read
 from the sources: `host`, the host channel's version, spoken by rewake and required by the shell;
 `face`, the face's `contract`, spoken by the face and required by the shell; `mirror`, spoken by
@@ -155,7 +164,9 @@ unless the shell's contract refuses it, and a pi session runs the version rewake
 
 `parts.Plan` compares the running parts with the installed manifest: a part is the same when its
 digests match where both have one and its files where both have one, so a compiled shell whose
-embedded face alone changed is a change; one that changed restarts by its class, an unknown class
+embedded face alone changed is a change; `rewake` alone is judged by its digest where both have
+one, since a release rebuilds it with its version inside and its file always differs, while its
+file stays the build's identity for the room's lease and hand-off; one that changed restarts by its class, an unknown class
 as room, and a running shell that said no contracts gets its own step. A part `within` another
 moves with it: its contracts count as its container's, so a restart of a compiled shell is judged
 by its face's as well (found in review, November 1, 2026). Then every requirer must
@@ -168,6 +179,53 @@ restart`; an install without a manifest — `go run`, a build by hand — has no
 installed part would require what the running rewake does not speak; `restart rewake` and a
 harness rewake ships refuse, naming the room's restart. The shell shows the plan's shell and room
 steps in its hints row ([shell.md](shell.md#the-prefix-and-the-room)).
+
+## Updating from inside rewake
+
+Owner decision, November 1, 2026: rewake updates from inside, shows a banner when npm has a newer
+release, keeps a changelog, and says what an update restarts. Only a build from npm does:
+`scripts/pack.sh` builds it with `-X …/internal/infra/update.Channel=npm`, and any other — a
+`tools/land` install such as the owner's, a build by hand, `go run` — refuses `rewake update`,
+naming its rebuild, and keeps only the plan's banner. The code is `internal/infra/update`.
+
+- **The check.** `npm view @praline-labs/rewake@latest version --json`, run as a child, 30 s at
+  most. Every npm call of the feature — `view`, `pack` and `install` — takes `--global --prefix
+  <prefix>`, the prefix being the install's own (the origin's path above `lib/node_modules/`), so
+  all three read one configuration — the user's `.npmrc`, the prefix's `etc/npmrc`, the
+  environment and its proxy — and never a project's `.npmrc`, which a global install ignores:
+  the preview cannot come from another registry than the install. When the latest release is
+  another than the last check's, `npm pack` fetches its entry into a scratch directory of the
+  system's, removed after, and `CHANGELOG.md` and `manifests/<platform>.json` are read from it: a
+  few KB, never the platform build. Main's host checks 30 s after it starts and then whenever the
+  record is 6 h old, read every 10 minutes; `rewake update` checks afresh. A view only reads.
+- **The record.** `<base>/v2/update.json` — `checked`, `latest`, the target's `manifest` and
+  parsed `changelog`, and the last `error` — one per state base, so the rooms of a machine share
+  it, written by rename through `state.WriteUpdateRecord` with no room's lease, being no room's
+  state ([rules/state.md](rules/state.md)); an unreadable record is a missing one. A failed check
+  keeps the last good answer and records the error and the time, so the host does not retry every
+  poll; offline, the banner shows the last good answer or nothing.
+- **`rewake update`** prints `running · installed · latest`, the changelog's entries after the
+  running release up to the latest, by release and part, and the plan from what the room runs to
+  the latest release's manifest, one line per step as `rewake restart` prints it — computed, never
+  read from the changelog; only a release is offered, never a prerelease, so a stable build is never
+  moved onto one. `rewake update <version>` takes the exact release only — no range, no `latest`,
+  not a platform build's version; a prerelease such as `3.1.0-rc.1` only so — which the registry
+  must have (npm's `E404` is "no such release"); then `npm install -g @praline-labs/rewake@<version> --prefix <prefix>`, npm's
+  output on stderr so `--json` stays clean, a check that the install the command came from now
+  holds that release, and the plan of the new install. The plan reads the install the command
+  came from, taken before npm ran: npm 11.17 moves the running directory aside to replace it (seen
+  on November 1, 2026). Installing restarts nothing: the room runs its own copy, and
+  `running` stays the old release until main restarts. An older release is a rollback. Main or
+  the person runs it; a worker is refused.
+- **The banner.** The room view's `available` is `{version, restarts}` when the record's latest is
+  a release newer than both the installed and the running one; `restarts` is `room` when the plan to it
+  has a room step, else `shell`, else `nothing`
+  ([shell.md](shell.md#the-prefix-and-the-room)). Once it is installed, the plan's banner takes
+  over.
+- **The changelog.** `CHANGELOG.md` at the repository root, shipped in the entry: `## <version>`
+  newest first by semver's precedence, a prerelease below the release it leads to and kept there,
+  `### <part>` a part of the manifest or `docs`, and `- ` lines, a line continued by two spaces. It is written by hand at release time from `git log` since the last release;
+  the gate refuses a release without its entry.
 
 ## Testing how a release installs
 
@@ -241,19 +299,22 @@ Every release goes through the gate, `tools/release`:
    holds the version a build from source reports, `var Version = "2.11.0"` today; the
    packages get theirs from `scripts/pack.sh`, and the gate refuses before the build
    when the line at HEAD names another version than the one released, so the tagged
-   source and the npm binary cannot disagree (owner decision, September 28, 2026). It
-   also wants a clean tree whose HEAD `origin/main` contains, as `git push` left the
-   remote-tracking ref.
+   source and the npm binary cannot disagree (owner decision, September 28, 2026). The
+   same commit adds the release's entry to `CHANGELOG.md`, which the gate requires at HEAD
+   ([above](#updating-from-inside-rewake)). It also wants a clean tree whose HEAD
+   `origin/main` contains, as `git push` left the remote-tracking ref.
 2. The dry run, which publishes nothing:
 
    ```bash
    go run ./tools/release 2.0.0
    ```
 
-   It asks the registry for each of the three versions exactly — `2.0.0`,
+   It prints the changelog's entry of the release, refusing a release without one, and asks
+   the registry for each of the three versions exactly — `2.0.0`,
    `2.0.0-linux-x64`, `2.0.0-linux-arm64` — and wants none of them there, builds them
-   with `scripts/pack.sh`, writes each platform package's `bin/manifest.json`
-   ([above](#the-parts-and-what-an-update-restarts)), checks each one's `package.json` and what
+   with `scripts/pack.sh`, each with its rewake's digest, writes each platform package's
+   `bin/manifest.json` ([above](#the-parts-and-what-an-update-restarts)) and the same bytes into
+   the entry as `manifests/<platform>.json`, checks each one's `package.json` and what
    `npm pack --dry-run --json` would upload against an allowlist in both directions,
    and wants the entry's `optionalDependencies` to be exactly the aliases to this
    release's builds. It reads the architecture of each platform binary and of the shell beside

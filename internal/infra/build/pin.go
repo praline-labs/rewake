@@ -115,8 +115,10 @@ func Handoff(room string) (path, theirs string, ok bool) {
 	return path, theirs, true
 }
 
-// HandoffLine is what a call handed to the room's copy says on stderr.
+// HandoffLine is what a call handed to the room's copy says on stderr. It
+// names no restart: another build installed may ask only for the shell's,
+// or none, and rewake restart computes which.
 func HandoffLine(room, theirs string) string {
 	own, _ := ID()
-	return fmt.Sprintf("Rewake: room %s runs build %s since its launch and this is build %s; the room's own copy answers. Restarting main moves the room to this build.", filepath.Base(room), Short(theirs), Short(own))
+	return fmt.Sprintf("Rewake: room %s runs build %s since its launch and this is build %s; the room's own copy answers. rewake restart says what the room must restart to run what is installed.", filepath.Base(room), Short(theirs), Short(own))
 }
