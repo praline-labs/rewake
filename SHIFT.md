@@ -56,7 +56,7 @@ Open a document for numbers, commands and names: the map only points.
 - `docs/flow.md` — The whole path of one message, from a launch through send, notice and read to the report, with every process, file and status on the way, and how main starts a worker in a space.
   sections: Cast · Act 1. A session starts · Act 2. A task is sent · Act 3. The wrapper announces it · Act 4. The agent reads · Act 5. The turn ends and the report goes back · A space: main starts a worker
 - `docs/install.md` — Installing rewake with npm or from source, updating it, a second build beside an installed one, testing how a release installs, upgrading from 1.x, and releasing to npm.
-  sections: Installing with npm · Building from source · Testing how a release installs · Upgrading from 1.x · Releasing to npm
+  sections: Installing with npm · Building from source · The parts and what an update restarts · Testing how a release installs · Upgrading from 1.x · Releasing to npm
 - `docs/launch-defaults.md` — Where a launch's model, effort and arguments come from: worker aliases, environment variables, the settings files and their precedence.
   sections: Launch defaults from the environment · The worker catalogue
 - `docs/launch.md` — What a launch does on each harness — the wrapper, the arguments and environment it adds, the workers' profile and service folder, pi's bundled copy, starting the shell, and signals.
