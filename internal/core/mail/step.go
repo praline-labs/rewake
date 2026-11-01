@@ -29,6 +29,15 @@ const (
 	StepEnded
 	// StepPending is the write of the pending mark itself.
 	StepPending
+	// StepChain is the reading of the edits that lead from a sent letter to
+	// the one that stands now.
+	StepChain
+	// StepWrite is the write of a new letter into its recipient's mailbox.
+	StepWrite
+	// StepAddenda is the listing of a task's addenda: nothing was withdrawn.
+	StepAddenda
+	// StepWithdraw is the withdrawal of a sent letter, an edit's included.
+	StepWithdraw
 )
 
 // StepError is a mail operation that stopped at Step; Err says why.

@@ -18,15 +18,13 @@ func TestAFastAnswerIsNotAnnouncedTwice(t *testing.T) {
 	web := otherRun(t, dir, "web")
 	t.Setenv(state.SessionEnv, "web")
 	t.Setenv(epochEnv, web.Epoch())
-	previous := awaitStatus
-	defer func() { awaitStatus = previous }()
 	var notices atomic.Int32
-	awaitStatus = func(_ string, _ string, id string, _ time.Duration, _ func() bool) (mail.Status, bool) {
+	serveOnDisk(t, dir, "api", func(id string) (mail.Status, bool) {
 		// Delivery may finish before the caller polls its status. The receiver's
 		// end-of-turn report can already be on its way in this interval.
 		report := mail.Message{ID: mail.NewID(), From: "api", To: "web", ToEpoch: web.Epoch(), Kind: mail.Finished, InReplyTo: []string{id}, Text: "fast result", CreatedAt: time.Now()}
 		if err := mail.Put(dir, report); err != nil {
-			t.Fatal(err)
+			t.Error(err)
 		}
 		ctx, cancel := context.WithCancel(context.Background())
 		done := make(chan struct{})
@@ -45,7 +43,7 @@ func TestAFastAnswerIsNotAnnouncedTwice(t *testing.T) {
 		}
 		t.Cleanup(func() { cancel(); <-done })
 		return mail.Status{State: mail.Delivered}, true
-	}
+	})
 	code, out, errOut := run("send", "api", "question", "--question", "--wait", "3")
 	t.Logf("exit=%d notices=%d stdout=%q stderr=%q", code, notices.Load(), out, errOut)
 	if code != 0 {

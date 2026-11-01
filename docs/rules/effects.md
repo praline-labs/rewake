@@ -102,6 +102,20 @@ command says what was left undone. What a session owes and the unread work besid
 `mail.Box.Owed` (`internal/core/mail/owed.go`), which only reads and takes no lock: it looks
 at unread mail first, then at what is owed.
 
+## Acting on a sent letter
+
+Withdraw, edit and addendum are operations of the sender's run, on `mail.Box`
+(`internal/core/mail/sent_letter.go`, `sent_write.go`): `WithdrawSent`, `Replace` and `Send`
+of a letter with `addendumTo`. Each follows the edits since to the letter that stands now,
+takes the recipient's mailbox lock, asks again under it whatever decides the act — the letter
+that stands now, and for an addition whether a report on its task can still come — and writes
+under the same hold. The turn end that writes a report holds that lock, so a report lands
+before the look that decides, which refuses, or after the write. A first look without the
+lock (`CurrentSent`, `TaskToAddTo`) only refuses early. A refusal is a `mail.Refusal` naming
+its reason, and a failure a `mail.StepError` naming its step; the command words both. What a
+sender is told of a letter just written is `mail.AwaitSent` (`sent_delivery.go`), which only
+reads.
+
 ## Retiring a letter
 
 A letter is the proof that it landed, and it is guarded by its recipient's mailbox lock. Its

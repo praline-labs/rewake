@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -46,9 +47,10 @@ func handleEdit(ctx *Context, call Call) error {
 	if err != nil {
 		return err
 	}
-	old, err := currentSent(dir, self, epoch, named)
+	box := mail.Open(dir, self.Name, epoch)
+	old, err := box.CurrentSent(named)
 	if err != nil {
-		return err
+		return refusalOf(err, registry.Session{})
 	}
 	if old.Withdrawn != nil {
 		return editedWithdrawn(old)
@@ -68,13 +70,9 @@ func handleEdit(ctx *Context, call Call) error {
 	if old.AddendumTo != "" {
 		// The replacement adds to the same task, which may have been reported
 		// on since: then it would owe a report nobody waits for. Asked again
-		// under the lock, below; this look only refuses early.
-		root, err := rootOf(dir, self, epoch, old, target)
-		if err != nil {
-			return err
-		}
-		if err := addendumRefusal(dir, self, epoch, root, target); err != nil {
-			return err
+		// under the lock (mail.Box.Replace); this look only refuses early.
+		if _, err := box.TaskToAddTo(old, target); err != nil {
+			return refusalOf(err, target)
 		}
 	}
 	kind := sendKinds[0]
@@ -103,32 +101,14 @@ func handleEdit(ctx *Context, call Call) error {
 	// No recall follows: the replacement is announced at once, and its own
 	// preview names the message it replaces (harness.Notice), so one line
 	// both sets the old work aside and shows the new.
-	replace := func() error {
-		// Asked again under the lock: an edit running beside this one may have
-		// replaced old since the look above, and this one then replaces the
-		// letter that stands now rather than find a tombstone.
-		current, err := currentSent(dir, self, epoch, named)
-		if err != nil {
-			return err
-		}
-		if current.Withdrawn != nil {
-			return editedWithdrawn(current)
-		}
-		old, replacement.Replaces = current, current.ID
-		_, err = mail.Withdraw(dir, old, &replacement)
-		return err
-	}
-	if old.AddendumTo == "" {
-		err = underMailboxLock(dir, old.To, replace)
-	} else {
-		err = underAddendumLock(dir, self, epoch, old, target, replace)
-	}
-	var refused *FailedError
-	if errors.As(err, &refused) {
-		return err
+	edited, err := box.Replace(context.Background(), mail.Edit{Named: named, Current: old, Target: target, Replacement: replacement})
+	old, replacement = edited.Replaced, edited.Replacement
+	var refusal *mail.Refusal
+	if errors.As(err, &refusal) {
+		return refusalOf(err, target)
 	}
 	if err != nil {
-		return withdrawRefusal(dir, old, err, true)
+		return withdrawRefusal(dir, old, lockText(err, old.To), true)
 	}
 	after := sent{dir: dir, self: self, epoch: epoch, target: target, deadline: started.Add(wait)}
 	if old.ID != named.ID {

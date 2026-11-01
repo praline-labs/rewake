@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -48,38 +49,16 @@ func handleWithdraw(ctx *Context, call Call) error {
 	if err != nil {
 		return err
 	}
-	message := named
-	var result mail.Withdrawal
-	var addenda []takenAddendum
-	if err := underMailboxLock(dir, named.To, func() error {
-		// Under the lock, so the replacement found is the one withdrawn.
-		if message, err = currentSent(dir, self, epoch, named); err != nil {
-			return err
-		}
-		// Listed before anything is withdrawn and under the same lock: an
-		// addendum left standing would be a task adding to nothing, still
-		// owing a report, so a list that cannot be read stops it all.
-		standing, err := mail.AddendaOf(dir, message)
-		if err != nil {
-			return err
-		}
-		if result, err = mail.Withdraw(dir, message, nil); err != nil {
-			return err
-		}
-		addenda = withdrawAddenda(dir, standing)
-		return nil
-	}); err != nil {
-		var refused *FailedError
-		if errors.As(err, &refused) {
-			return err
-		}
-		return withdrawRefusal(dir, message, err, false)
+	done, err := mail.Open(dir, self.Name, epoch).WithdrawSent(context.Background(), named)
+	message, result, addenda := done.Letter, done.Result, done.Addenda
+	var refusal *mail.Refusal
+	if errors.As(err, &refusal) {
+		return refusalOf(err, registry.Session{})
 	}
-	kind := mail.KindOf(message)
-	if message.Withdrawn != nil {
-		kind = message.Withdrawn.Kind
+	if err != nil {
+		return withdrawRefusal(dir, message, lockText(err, named.To), false)
 	}
-	model := withdrawModel{ID: message.ID, To: message.To, Kind: kind, Result: withdrawalNames[result]}
+	model := withdrawModel{ID: message.ID, To: message.To, Kind: sentKind(message), Result: withdrawalNames[result]}
 	var lines []string
 	if message.ID != named.ID {
 		model.Named = named.ID
@@ -131,16 +110,4 @@ func withdrawLine(model withdrawModel, result mail.Withdrawal, readAddendum bool
 		return head + "; its notice still waits in the approval queue of " + model.To + "'s harness, which rewake cannot empty: if it is approved, " + model.To + " finds the message marked withdrawn."
 	}
 	return fmt.Sprintf("Rewake: your %s %s to %s was already withdrawn.", model.Kind, model.ID, model.To)
-}
-
-// underMailboxLock runs fn under the recipient's mailbox lock, waiting for it
-// as long as a reader does.
-func underMailboxLock(dir, name string, fn func() error) error {
-	wait, cancel := context.WithTimeout(context.Background(), mail.ReadLockWait)
-	defer cancel()
-	err := state.WithMailboxLock(wait, dir, name, fn)
-	if errors.Is(err, state.ErrMailboxBusy) {
-		return fmt.Errorf("the mailbox of %s stayed busy for %s", name, mail.ReadLockWait)
-	}
-	return err
 }

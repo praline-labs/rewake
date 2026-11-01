@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/registry"
@@ -98,10 +97,10 @@ func TestAQuestionPreservesTheThreadWarning(t *testing.T) {
 	for _, format := range []string{"text", "json"} {
 		t.Run(format, func(t *testing.T) {
 			dir, web := questionSender(t)
-			awaitStatus = func(_, _, id string, _ time.Duration, _ func() bool) (mail.Status, bool) {
+			serveOnDisk(t, dir, "api", func(id string) (mail.Status, bool) {
 				rawUnread(t, dir, "web", map[string]any{"from": "api", "kind": "finished", "toEpoch": web.Epoch(), "inReplyTo": []string{id}, "text": "new turn", "threadChanged": true})
 				return mail.Status{State: mail.Delivered}, true
-			}
+			})
 			args := []string{"send", "api", "task", "--question", "--wait", "1"}
 			if format == "json" {
 				args = append(args, "--json")
