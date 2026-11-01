@@ -28,22 +28,31 @@ test("a face that posts what the contract does not allow is stopped, and nothing
   expect(host.running).toBe(false);
 });
 
-test("a face of another contract draws nothing and says why", async () => {
+// Review of 288cd7f: a face refused for its contract stays refused; what the
+// shell sends after start, its ctrl+o among it, leaves the last good frame
+// and the error.
+test("a face reloaded into another contract says why, and the last good frame stays", async () => {
   const dir = scratch();
+  const url = faceFile(dir, `import ${JSON.stringify(worker)};\n`);
+  const { host, until } = hosted(url, mirror(dir, { prompt: "say hi" }).path);
+  host.start();
+  const good = await until((s) => s.link === "live" && s.lines.length > 0);
+  host.unfold();
   // The real face, told by its shell of a contract one past its own.
-  const url = faceFile(
+  faceFile(
     dir,
     `import ${JSON.stringify(worker)};
 const real = self.onmessage;
 self.onmessage = (e) => real({ data: e.data.kind === "start" ? { ...e.data, contract: e.data.contract + 1 } : e.data });\n`,
   );
-  const { host, until } = hosted(url, mirror(dir, "say hi").path);
   host.start();
   const said = await until((s) => s.error !== undefined);
   expect(said.error).toMatch(/^this face speaks contract \d+, the shell \d+$/);
+  host.size(41, 30);
+  host.scroll(1);
   await Bun.sleep(200);
-  expect(host.state.lines).toEqual([]);
-  expect(host.state.link).toBe("connecting");
+  expect(host.state.lines).toEqual(good.lines);
+  expect(host.running).toBe(true);
 });
 
 test("rows and spans a face sends reach the shell only as its own copies", async () => {

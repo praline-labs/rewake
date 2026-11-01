@@ -44,27 +44,32 @@ export function hosted(url: string, path = "/nowhere.sock", timing = {}) {
   return { host, states, until };
 }
 
-// A wrapper's mirror socket serving one snapshot of one prompt, or of the
-// replies given; send writes a change to the face connected last.
-export function mirror(
-  dir: string,
-  text: string,
-  replies: string[] = [],
-  begin: object = {},
-  own: object[] = [],
-) {
+// A wrapper's mirror socket serving one snapshot of a prompt, of replies or
+// of the items given, taking the inputs given; it keeps what the face writes
+// and answers each input, with the refusal given if any. send writes a change
+// to the face connected last.
+export type Served = {
+  prompt?: string;
+  replies?: string[];
+  items?: object[];
+  begin?: object;
+  inputs?: string[];
+  refuse?: string;
+};
+
+export function mirror(dir: string, served: Served = {}) {
   const path = join(dir, "m.sock");
-  const items = own.length
-    ? own
-    : replies.length
-      ? replies.map((text, i) => ({ id: `r${i}`, kind: "text", status: "settled", text }))
-      : [{ id: "p", kind: "prompt", status: "settled", text }];
+  const items = served.items ??
+    served.replies?.map((text, i) => ({ id: `r${i}`, kind: "text", status: "settled", text })) ?? [
+      { id: "p", kind: "prompt", status: "settled", text: served.prompt ?? "" },
+    ];
   const lines = [
-    { op: "hello", v: 1, inputs: ["prompt"] },
-    { op: "begin", items: items.length, dropped: 0, turn: "idle", ...begin },
+    { op: "hello", v: 1, inputs: served.inputs ?? ["prompt"] },
+    { op: "begin", items: items.length, dropped: 0, turn: "idle", ...served.begin },
     ...items.map((item) => ({ op: "item", item })),
     { op: "end" },
   ];
+  const heard: { id: string; kind: string; text: string }[] = [];
   let last: { write(data: string): number } | undefined;
   const server = Bun.listen({
     unix: path,
@@ -73,10 +78,19 @@ export function mirror(
         last = s;
         s.write(lines.map((l) => `${JSON.stringify(l)}\n`).join(""));
       },
-      data() {},
+      data(s, chunk) {
+        for (const raw of chunk.toString().split("\n").filter(Boolean)) {
+          const input = JSON.parse(raw);
+          heard.push(input);
+          const answer = served.refuse
+            ? { op: "answer", id: input.id, ok: false, detail: served.refuse }
+            : { op: "answer", id: input.id, ok: true };
+          s.write(`${JSON.stringify(answer)}\n`);
+        }
+      },
     },
   });
   ends.push(() => server.stop(true));
   const send = (line: object) => last?.write(`${JSON.stringify(line)}\n`);
-  return { path, send };
+  return { path, send, heard };
 }

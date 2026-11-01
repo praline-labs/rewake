@@ -492,9 +492,8 @@ key, and a selection over a table copies its whole rows.
 ## Hot reload
 
 The model lives in the wrapper and the face only draws it, so a face can be replaced at any moment
-and lose nothing: a new one connects and gets the snapshot. The face is a Bun `Worker`
-(`face/src/worker.ts`, with `model.ts` and `render.ts`) that connects to the socket itself,
-keeps its copy of the model and posts rows of styled spans — a tone, bold, italic, underlined, a
+and lose nothing: a new one connects and gets the snapshot. The face is a Bun `Worker` that
+connects to the socket itself, keeps its copy of the model (`model.ts`) and posts rows of styled spans — a tone, bold, italic, underlined, a
 diff's mark, a row on the band — to the shell's thread, which paints them in the theme's colours
 (`shell/src/face/host.ts`, `view.tsx`, `shell/src/theme.ts`);
 the rows are laid out by `render.ts`, with the modules of "The look", and an item is
@@ -502,6 +501,16 @@ laid out again only when what is drawn of it changed. A worker, not a module re-
 shell's thread: a module can neither be unloaded nor stopped when it loops, and its timers and
 sockets would stay; a worker is ended whole. The cost is a thread, a socket and a copy of the model
 (at most 4 MiB) per face, and rows of spans rather than a widget tree.
+
+The face itself is a module, `face/src/face.ts`: a `Face` handed a `post` for what it sends the
+shell, a `Connect` that opens a unix socket and tells it what the socket does, and the `Timers` of
+`ticker.ts` — the tick, a click's light, a drag at the edge and the reconnect all read their time
+there; `take` handles each message the shell sends, as `ToFace` defines them. Its link to the mirror,
+reading the stream's lines, writing the person's inputs and connecting again, is `link.ts`.
+`face/src/worker.ts` only wires the worker's `postMessage`, `Bun.connect` and the real clock into
+it, so the glue between the shell's messages, the mirror's lines and what is posted runs in a test
+on a clock the test moves (`face/src/facekit.ts`), with no worker, socket or sleep; a few tests
+still run the real worker under the real host (brief 78).
 
 ### The face's own code
 
@@ -563,9 +572,8 @@ is contained in the shell's thread, and the person can always switch to native w
 A stopped face starts again at the next change of its sources, or when the person switches to it.
 A new face, a reload's or a lost link's, follows the bottom with no selection: the scroll is the
 worker's and is not carried across, so a change under `face/src/` while the person reads up
-puts the view back at the bottom (seen live, October 31, 2026, brief 49). Tests: `shell/src/face/host.test.ts`, the contract in `check.test.ts` and through the worker in `contract.test.ts`, the look in `face/src/render.test.ts`, `thinking.test.ts` and `view.test.tsx`, the input's rule in `shell/src/face/rule.test.ts` and the mode and level the face keeps in `face/src/model.test.ts`, the tool vocabulary in `call.test.ts`, the clock
-in `ticker.test.ts`, the scroll in `scroll.test.ts`, a notch's rows in `wheel.test.ts` and through
-the worker in `host.test.ts`, Esc's and shift+tab's paths through the worker in `escape.test.ts` (pi's cycle in
+puts the view back at the bottom (seen live, October 31, 2026, brief 49). Tests: the face's glue in process in `face/src/face.test.ts` (drawing at the tick, the wheel, a notch between two ticks, the turn's line, the pointer and the edge, ctrl+o and the row it keeps) and `link.test.ts` (a prompt, Esc, shift+tab and the level, a lost or broken link, a refused contract), the real worker under the host in `shell/src/face/host.test.ts`, the contract in `check.test.ts` and through the worker in `contract.test.ts`, the look in `face/src/render.test.ts`, `thinking.test.ts` and `view.test.tsx`, the input's rule in `shell/src/face/rule.test.ts` and the mode and level the face keeps in `face/src/model.test.ts`, the tool vocabulary in `call.test.ts`, the clock
+in `ticker.test.ts`, the scroll in `scroll.test.ts`, a notch's rows in `wheel.test.ts`, Esc's and shift+tab's paths through the real worker and a refusal said in `shell/src/face/escape.test.ts` (pi's cycle in
 `internal/adapter/pi/interrupt.test.ts`), unfolding in
 `face/src/unfold.test.ts`, the row a click keeps in `parts.test.ts`, and ctrl+o kept across a reload in `shell/src/face/unfold.test.ts`, the input's growth, keys and
 pastes in `shell/src/face/input.test.tsx`, a queued prompt in `face/src/queued.test.ts`,
@@ -574,8 +582,8 @@ retry line drawn from the model's turn lines in `progress.test.ts` (the model's 
 `internal/core/mirror/model_test.go`, pi's in `internal/adapter/pi/mirror.test.ts`), copying in `select.test.ts` (a selection over gutters, a wrapped
 line, a diff and a table; a click told from a drag), what a click on each kind of row does in
 `parts.test.ts`, one table of a conversation, the row clicked and the copy or the fold it gives,
-through the
-worker in `host.test.ts` with the light after a click and none on a move, and the pty under the
+in process in `face.test.ts` with the light after a click and none on a move, the copy
+crossing to the clipboard through the real worker in `host.test.ts`, and the pty under the
 face hearing no mouse in `view.test.tsx`, the wheel included over a real pane's widget fed as pi's
 normal screen and as a fullscreen program's.
 
