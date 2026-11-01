@@ -53,11 +53,12 @@ function readKey(key: string): Part | undefined {
   return undefined;
 }
 
-// resultOf is what a row under a call copies: a written file's lines, else
-// an edit's old or new lines by the row's mark, else the call's output.
+// resultOf is what a row under a call copies: a written file's lines where
+// they are drawn, as results.ts draws them from an input that reads, else an
+// edit's old or new lines by the row's mark, else the call's output.
 function resultOf(item: Item, line: FaceLine): Part {
   const { id } = item;
-  if (item.status === "done" && callOf(item).result === "write") return { kind: "content", id };
+  if (item.status === "done" && callOf(item).written) return { kind: "content", id };
   const mark = line.spans.find((s) => s.mark)?.mark;
   return { kind: mark === "removed" ? "old" : mark === "added" ? "new" : "output", id };
 }

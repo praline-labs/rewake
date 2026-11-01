@@ -105,6 +105,12 @@ const cases: Case[] = [
     gives: { copy: { text: "one\ntwo", what: "the file's lines" } },
   },
   {
+    what: "a write whose input is not JSON copies the output drawn under it",
+    items: [{ ...write, id: "w", text: '{"file_path":"/a' }],
+    row: "  ⎿  ok",
+    gives: { copy: { text: "ok", what: "the call's output" } },
+  },
+  {
     what: "an open run's ⎿ row copies its latest call's command",
     items: [{ ...bash, status: "running", output: undefined }],
     turn: "working",
