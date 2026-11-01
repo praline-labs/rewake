@@ -9,33 +9,13 @@ import { markdownRows } from "./markdown.ts";
 import type { FaceLine, Span, Tone } from "./messages.ts";
 import type { Item } from "./mirror.gen.ts";
 import type { FaceModel } from "./model.ts";
+import { tagged } from "./parts.ts";
 import { promptLines } from "./prompt.ts";
 import { resultOf } from "./results.ts";
-import { type PartKind, partKey } from "./select.ts";
 import { headRowsOf } from "./tools.ts";
 import { blinkOff, type Clock, turnLine } from "./turn.ts";
 import { type Opened, shut } from "./unfold.ts";
 import { clean, widthOf, wrapSpans } from "./wrap.ts";
-
-// parted names the part a click on each row copies: kind gives it by the
-// row, none for a row of no part.
-const parted = (
-  lines: FaceLine[],
-  item: Item,
-  kind: (line: FaceLine) => PartKind | undefined,
-): FaceLine[] =>
-  lines.map((line) => {
-    const k = kind(line);
-    return k ? { ...line, part: partKey(k, item) } : line;
-  });
-
-// resultPart is what a row under a call copies: an edit's old or new lines
-// by its mark, a written file's lines, else the call's output.
-function resultPart(item: Item, line: FaceLine): PartKind {
-  if (item.status === "done" && callOf(item).result === "write") return "content";
-  const mark = line.spans.find((s) => s.mark)?.mark;
-  return mark === "removed" ? "old" : mark === "added" ? "new" : "output";
-}
 
 const dotTone = (item: Item): Tone =>
   item.status === "running"
@@ -80,9 +60,9 @@ function cutRow(more: number, open: boolean, view: Opened): Span[] | undefined {
 }
 
 function toolLines(item: Item, width: number, view: Opened): FaceLine[] {
-  const open = view.open(partKey("more", item));
+  const open = view.open({ kind: "more", id: item.id });
   const dot: Span = { text: "● ", tone: dotTone(item), blink: item.status === "running" };
-  const out = parted(marked(headRowsOf(item, width - 2, open), dot), item, () => "input");
+  const out = tagged(marked(headRowsOf(item, width - 2, open), dot), item, "input");
   const mark = { text: "  ⎿  " };
   if (item.output === undefined) {
     if (item.status === "running")
@@ -99,11 +79,10 @@ function toolLines(item: Item, width: number, view: Opened): FaceLine[] {
   const { rows, keep, more } = resultOf(item, width - 5);
   const cut = cutRow(more, open, view);
   const shown = open ? rows : rows.slice(0, keep);
+  // The cut row is the last: a click on it opens or closes the output.
   const lines = under(cut ? [...shown, cut] : shown);
-  const last = lines.at(-1);
-  out.push(
-    ...parted(lines, item, (line) => (cut && line === last ? "more" : resultPart(item, line))),
-  );
+  const result = cut ? lines.slice(0, -1) : lines;
+  out.push(...tagged(result, item, "result"), ...tagged(lines.slice(result.length), item, "more"));
   if (permit) out.push(...under(permit));
   return out;
 }
@@ -123,12 +102,12 @@ function thinkingLines(item: Item, width: number, view: Opened): FaceLine[] {
   const rows = markdownRows(text, width - 2, { text: "", tone: "faint", italic: true }).map((row) =>
     row.map(({ code: _, ...span }) => span),
   );
-  const open = view.open(partKey("more", item));
+  const open = view.open({ kind: "more", id: item.id });
   const more = rows.length - thinkingRows;
   const cut = more > 1 ? cutRow(more, open, view) : undefined;
   if (more > 1 && !open) rows.splice(thinkingRows, more);
-  const said = parted(marked(rows, { text: "∴ ", tone: "faint" }), item, () => "thinking");
-  return cut ? [...said, ...parted(marked([cut], { text: "  " }), item, () => "more")] : said;
+  const said = tagged(marked(rows, { text: "∴ ", tone: "faint" }), item, "thinking");
+  return cut ? [...said, ...tagged(marked([cut], { text: "  " }), item, "more")] : said;
 }
 
 // linesOf is one item's rows, shown whole where the view opened it.
@@ -140,13 +119,10 @@ export function linesOf(item: Item, width: number, view: Opened = shut): FaceLin
       break;
     case "text":
       out.push(
-        ...parted(
+        ...tagged(
           marked(markdownRows(clean(item.text) || "…", width - 2), { text: "● " }),
           item,
-          (line) => {
-            const code = line.spans.find((s) => s.code !== undefined)?.code;
-            return code === undefined ? "reply" : `code${code}`;
-          },
+          "reply",
         ),
       );
       break;
@@ -191,7 +167,7 @@ const laidOut = new WeakMap<Item, Drawn>();
 
 function cachedLinesOf(item: Item, width: number, view: Opened): FaceLine[] {
   const hit = laidOut.get(item);
-  const open = view.open(partKey("more", item));
+  const open = view.open({ kind: "more", id: item.id });
   if (
     hit &&
     hit.width === width &&
@@ -231,7 +207,7 @@ const blank = (): FaceLine => ({ spans: [] });
 // program's folded group does, and how to fold back what a click opened.
 function runRows(run: { calls: Item[]; open: boolean }, width: number, view: Opened): FaceLine[] {
   const first = run.calls[0];
-  const open = first !== undefined && view.open(partKey("fold", first));
+  const open = first !== undefined && view.open({ kind: "fold", id: first.id });
   const hint = view.all ? undefined : open ? "(click to fold)" : "(ctrl+o to expand)";
   const lines = runLines(run, width, open, hint);
   if (!open) return lines;

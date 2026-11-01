@@ -1,12 +1,12 @@
 // What the person opens (docs/face.md, "Unfolding"): the shell's key opens
-// everything, a click one run or one cut part, and the row clicked stays
-// where it stood.
+// everything, a click one run or one cut part; the row clicked staying where
+// it stood is parts.test.ts.
 import { expect, test } from "bun:test";
 import type { FaceLine } from "./messages.ts";
 import type { Item } from "./mirror.gen.ts";
 import { FaceModel } from "./model.ts";
 import { bodyOf } from "./render.ts";
-import { anchorAt, topFor, Unfold } from "./unfold.ts";
+import { Unfold } from "./unfold.ts";
 
 const text = (lines: FaceLine[]) => lines.map((l) => l.spans.map((s) => s.text).join(""));
 
@@ -85,42 +85,19 @@ test("everything opened shows each call of a run and every output whole", () => 
 // the same row closes it; with everything open a click closes one.
 test("a click opens or closes one part against what the key opened", () => {
   const view = new Unfold();
-  view.toggle("more o");
+  view.toggle({ kind: "more", id: "o" });
   const opened = text(bodyOf(run, 40, Infinity, view).rows);
   // What a click opened says how to fold it back.
   expect(opened.slice(-2)).toEqual(["     line 8", "     … −5 lines (click to fold)"]);
-  expect(bodyOf(run, 40, Infinity, view).rows.at(-1)?.part).toBe("more o");
-  view.toggle("fold r");
+  view.toggle({ kind: "fold", id: "r" });
   expect(text(bodyOf(run, 40, Infinity, view).rows)[3]).toBe("● Read(/a)");
   view.every(true);
-  view.toggle("more o");
+  view.toggle({ kind: "more", id: "o" });
   expect(text(bodyOf(run, 40, Infinity, view).rows).slice(-2)).toEqual([
     "     line 3",
     "     … +5 lines (ctrl+o to expand)",
   ]);
   // The key again forgets the clicks.
   view.every(false);
-  expect(view.open("more o")).toBe(false);
-});
-
-// The row clicked keeps its row in the view, whatever opened above or
-// under it.
-test("the row a click opens stays where it stood in the view", () => {
-  const view = new Unfold();
-  const before = bodyOf(run, 40, Infinity, view).rows;
-  const row = before.findIndex((l) => l.part === "more o");
-  const anchor = anchorAt(before, row, row - 2);
-  expect(anchor).toEqual({ key: "more o", k: 0, y: 2 });
-  // The run above opens too, and the output grows under the row's place.
-  view.toggle("fold r");
-  view.toggle("more o");
-  const after = bodyOf(run, 40, Infinity, view).rows;
-  const top = anchor ? topFor(after, anchor) : undefined;
-  expect(text(after.slice(top, (top ?? 0) + 3))).toEqual([
-    "     line 7",
-    "     line 8",
-    "     … −5 lines (click to fold)",
-  ]);
-  // A part gone leaves the view where it was.
-  expect(topFor(after, { key: "more gone", k: 0, y: 0 })).toBeUndefined();
+  expect(view.open({ kind: "more", id: "o" })).toBe(false);
 });

@@ -4,6 +4,7 @@
 // release copies the selection. A press drops the selection there was; the
 // pointer with no button pressed lights nothing (the owner's word, October 31,
 // 2026: a light that follows the pointer gets in the way).
+import type { Part } from "./parts.ts";
 import type { Point, Selection } from "./select.ts";
 
 // View is where the conversation's rows stand in the face: the first shown,
@@ -80,13 +81,13 @@ export class Pointer {
 const flashFor = 1000;
 
 export class Flash {
-  part: string | undefined;
+  part: Part | undefined;
   private timer: ReturnType<typeof setTimeout> | undefined;
 
   // over is told when the light goes out by itself.
   constructor(private readonly over: () => void) {}
 
-  on(part: string) {
+  on(part: Part) {
     this.off();
     this.part = part;
     this.timer = setTimeout(() => {

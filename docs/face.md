@@ -369,8 +369,10 @@ while it is open; a click on a run's line or on a `… +N lines` row opens that 
 under ctrl+o closes it. An opened run draws its line, then each call as a call alone is drawn,
 its error under it; an opened output or thinking block shows every row the model kept, the cut
 mark of the mirror's 64 KiB bound where it cut, then `… −N lines (click to fold)`, a click on which folds it
-again; under ctrl+o nothing is counted. The row clicked stays on the screen row it was on,
-whatever opened above it (an anchor: the part's key and the row's place in it), where the rows
+again; under ctrl+o nothing is counted. Which rows open or close a part, and the row a click
+keeps, are the part module's, as what a click copies is (below, "Copying"). The row clicked stays
+on the screen row it was on, whatever opened above it (an anchor: the row's part and its place
+in it), where the rows
 above it can fill the view to there. A conversation starts at the pane's top and grows down (the
 owner, October 31, 2026), so on a short one the rows above a click do not move, and once one fills
 the pane it follows its bottom. ctrl+o on a view scrolled up
@@ -451,8 +453,14 @@ terminal clipboard settings if paste fails`, `sent the code block (18 chars) …
   seconds, with the selection's end on the edge's row, native's rule and numbers. The pointer
   cannot go above the terminal's first row, so where the face's body starts there, as natively in
   a fullscreen pane, scrolling up while selecting is the wheel's.
-- **A click copies the part it is on** (`face/src/parts.ts`): every row names its part, and
-  the text is taken from the model when the click comes. A click takes the row it was pressed on,
+- **A click copies the part it is on** (`face/src/parts.ts`). That module owns what a row is of
+  and what a click on it does: `render.ts` and `fold.ts` say what rows they draw — a reply's, a
+  thinking block's, a call's head, the rows under a call, a cut row, a run's line — and `tagged`
+  names each row's part, a typed `Part`; the worker asks `clickOn` what a click on a row does and
+  gets a copy (the text, what to call it, the part to light) or a fold to open or close with the
+  anchor that keeps the row in place. A row carries its part to the shell as an opaque string of
+  the module's own grammar, which nothing else builds or reads (brief 72). The text is taken from
+  the model when the click comes. A click takes the row it was pressed on,
   so a click off the conversation's rows — the blank under a short one —
   copies nothing, though a drag from there starts at its first row. A reply's row copies the
   reply's markdown source; a code block's, its code alone; a call's head, its input as the head shows it (Bash's
@@ -544,12 +552,14 @@ puts the view back at the bottom (seen live, October 31, 2026, brief 49). Tests:
 in `ticker.test.ts`, the scroll in `scroll.test.ts`, a notch's rows in `wheel.test.ts` and through
 the worker in `host.test.ts`, Esc's and shift+tab's paths through the worker in `escape.test.ts` (pi's cycle in
 `internal/adapter/pi/interrupt.test.ts`), unfolding in
-`face/src/unfold.test.ts` and ctrl+o kept across a reload in `shell/src/face/unfold.test.ts`, the input's growth, keys and
+`face/src/unfold.test.ts`, the row a click keeps in `parts.test.ts`, and ctrl+o kept across a reload in `shell/src/face/unfold.test.ts`, the input's growth, keys and
 pastes in `shell/src/face/input.test.tsx`, a queued prompt in `face/src/queued.test.ts`,
 `internal/core/mirror/queued_test.go` and pi's side in `internal/adapter/pi/queued.test.ts`, the
 retry line drawn from the model's turn lines in `progress.test.ts` (the model's count in
 `internal/core/mirror/model_test.go`, pi's in `internal/adapter/pi/mirror.test.ts`), copying in `select.test.ts` (a selection over gutters, a wrapped
-line, a diff and a table; what a click on each part copies; a click told from a drag), through the
+line, a diff and a table; a click told from a drag), what a click on each kind of row does in
+`parts.test.ts`, one table of a conversation, the row clicked and the copy or the fold it gives,
+through the
 worker in `host.test.ts` with the light after a click and none on a move, and the pty under the
 face hearing no mouse in `view.test.tsx`, the wheel included over a real pane's widget fed as pi's
 normal screen and as a fullscreen program's.
