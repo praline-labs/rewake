@@ -75,6 +75,11 @@ func handleRoom(ctx *Context, call Call) error {
 		workOf = workReader(home)
 	}
 	view.Sessions = sessionRowsOf(dir, records, sessionViewsOf(dir, sessions, asMain), mainName, workOf)
+	// The update's plan, which the shell shows as its banner: the same as
+	// rewake restart with no part prints.
+	for _, step := range roomUpdate(ctx.table.catalog).steps {
+		view.Update = append(view.Update, UpdateStep{Part: step.Part, Class: RestartClass(step.Class), Why: step.Why})
+	}
 	if asMain {
 		if call.Switch("briefs") {
 			var problem error

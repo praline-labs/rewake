@@ -50,23 +50,32 @@ run on, and closing the window still ends everything.
 The shell and the host speak JSON lines on a socket pair: the shell's end is the descriptor that
 `REWAKE_HOST_FD` names (3). The channel is versioned:
 
-- The first line is the client's hello, `{"hello":"shell","v":1}`.
+- The first line is the client's hello, `{"hello":"shell","v":1,"contracts":{"requires":{"host":"1","face":"5"}}}`.
+  `contracts` is what that shell process loaded, the constants of `link.ts` and the face's
+  `messages.ts` as it imported them; the host keeps them for the generation and serves them at
+  its door ([install.md](install.md#the-running-set)). An older shell sends none, which the plan
+  never takes for compatible, and an older host ignores the field.
 - A host that does not speak that version answers the fixed refusal,
   `{"refused":"this host speaks 1, the client N","speaks":[1]}`, and closes. No version changes
   this shape. A shell started without the channel, by an older rewake, refuses at once and says
   that the two must be of one version.
 - Messages are objects with a kind `t`.
   - The host sends `welcome {generation, why: first|requested|crashed, main?}`,
-    `main {pid, socket}`, `go {state?}`, `release`, `closing`, `main-ended {code}` and
-    `error {why}`.
-  - The shell sends `ready {colors, cols, rows}`, `restart`, `close`, `lost` and
-    `released {state}`.
+    `main {pid, socket}`, `go {state?}`, `release`, `closing`, `main-ended {code}`,
+    `reload {part}` and `error {why}`.
+  - The shell sends `ready {colors, cols, rows}`, `restart`, `close`, `lost`,
+    `released {state}` and `reloaded {part}`.
 - `sock/host.sock` takes a mode byte: `b` main's raw stream, `s` main's snapshot (`rewake screen`
   when no shell answers), and `c` the control door. On the door a client says
   `{"hello":"cli","v":1}` and asks `{"t":"restart","part":"shell"}`. The host answers
   `done {generation}` or `failed {why}` once the part is back or has failed. Another client of
   this version can use the door later. The part is a word, so later parts join without a new
-  command.
+  command. `{"t":"restart","part":"face"}` is sent on to the shell as `reload {part}`: it reloads
+  every face from its files, as its watch of them does, and answers `reloaded`, and the door
+  `done`; a shell that does not answer within 2 s, an older one, fails the door naming
+  `rewake restart shell`. `{"t":"parts"}` is answered `{"t":"parts","running":[…]}`, the shell
+  the host runs as a part of the manifest — its digest and the contracts of its hello — or none
+  while no shell is ready ([install.md](install.md#the-running-set)).
 
 The first launch runs in this order:
 
@@ -328,7 +337,12 @@ wrapper in the shell does the same for main (`terminal.UTF8Locale`), whose worke
   hand and the command's answer cannot drift from what the shell reads. The view carries the
   spaces not over — each with the socket path of its host, so the shell never builds one, and its
   `mainRun`, whose reading `ended` begins the closing screen — and the sessions for the strip
-  (below); while the briefs show, also the briefs (below). The command is hidden like `statusline`:
+  (below); while the briefs show, also the briefs (below); and `update`, the room's plan of
+  [install.md](install.md#the-plan), the same as `rewake restart` prints. A step of class shell
+  shows in the hints row, right after the focus, in every context, as `Ctrl+\ r loads the updated
+  shell`; one of class room as `room restart needed: rewake`, which comes first since it loads
+  both. A live step or a sessions step asks nothing of the person and shows nothing; the banner
+  clears once the running set is the installed one. The command is hidden like `statusline`:
   the shell is its only caller, and a documented command would promise agents a shape. The
   existing `list`, `space list` and `brief` `--json` forms stay as they are.
 

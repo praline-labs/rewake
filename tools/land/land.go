@@ -31,6 +31,9 @@ type lander struct {
 	logPath   string
 	// old is v2 before the merge, what a red check resets it to.
 	old string
+	// goDigest is rewake's digest from the checkout's sources; the tests
+	// replace it, having no module to list.
+	goDigest func(ctx context.Context, root string) (string, error)
 }
 
 func (l *lander) say(format string, args ...any) {
@@ -159,12 +162,14 @@ func (l *lander) land(ctx context.Context) int {
 		return exitFailed
 	}
 	l.say("pushed %s %s", branch, short(landed))
-	if why := l.installBuild(ctx); why != "" {
+	restart, why := l.put(ctx)
+	if why != "" {
 		l.say("FAIL  install: %s; %s is pushed, the room's build is the old one", why, branch)
 		l.say("log: %s", l.logPath)
 		return exitFailed
 	}
-	l.say("installed %s; the room runs it once restarted", filepath.Join(l.install, "rewake"))
+	l.say("installed %s", l.install)
+	l.say("%s", restart)
 	l.say("log: %s", l.logPath)
 	return exitDone
 }

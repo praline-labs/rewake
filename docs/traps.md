@@ -334,8 +334,8 @@ went on growing, until a restart. A reload reloads the face alone: the shell's o
 contract among it, stays what the process loaded, as a running wrapper stays old.
 
 A reload now starts the new face beside the running one and keeps the running one when the new
-speaks another contract, saying under the input that a restart of the room loads it
+speaks another contract, saying under the input that `rewake restart shell` loads it
 ([face.md](face.md#hot-reload)). A pane on that line is a shell older than this, or a face started
-anew, not reloaded; restart the room.
+anew, not reloaded; `rewake restart shell`, which `rewake restart` with no part names as well.
 
 *November 1, 2026.*

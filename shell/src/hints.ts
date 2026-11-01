@@ -14,6 +14,9 @@ export type Context = {
   workers: number;
   // face is the focused pane's face, where its session serves a mirror.
   face?: "rewake" | "native";
+  // update is the banner of an update the room needs restarted for
+  // (update.ts), second in every context but the prefix's.
+  update?: Hint;
 };
 
 export type Hint = { keys: string; does: string };
@@ -86,9 +89,13 @@ const table: Record<Context["focus"] | "prefix", Entry[]> = {
 export const separator = " · ";
 
 export function hintsFor(c: Context): Hint[] {
-  return (c.prefix ? table.prefix : table[c.focus])
+  const hints = (c.prefix ? table.prefix : table[c.focus])
     .filter((e) => !e.when || e.when(c))
     .map((e) => ({ keys: e.keys, does: typeof e.does === "string" ? e.does : e.does(c) }));
+  // Where typing goes stays first; the update tells the person what to
+  // restart right after it, before the keys they know.
+  if (c.update && !c.prefix) hints.splice(1, 0, c.update);
+  return hints;
 }
 
 // fitHints is the hints that fit a width whole, in the table's order; the

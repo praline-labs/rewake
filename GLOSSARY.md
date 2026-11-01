@@ -34,6 +34,11 @@ Where: [docs/face.md](docs/face.md).
 Means: the harness-free model of a session's conversation kept in memory in the session's wrapper and served to the shell's face; it reads no transcript and writes nothing.
 Where: `internal/core/mirror`, [docs/face.md](docs/face.md).
 
+## Part
+Variants: parts, manifest, restart class
+Means: one piece of rewake as installed — `rewake`, `shell`, `face`, a harness rewake ships — listed with its digest, contracts and restart class (live, shell, sessions, room) in the manifest beside the installed `rewake`; `rewake restart` with no part says which parts the room must restart.
+Where: `internal/infra/parts`, [docs/install.md](docs/install.md#the-parts-and-what-an-update-restarts).
+
 ## Dev worker
 Variants: dev workers
 Means: a worker raised with `rewake space open --dev`, or any pi worker, whose wrapper serves its mirror, so the shell can draw it with rewake's face.
@@ -63,7 +68,7 @@ Means: the report of a turn that broke off — a policy filter, the network, a l
 Means: the report of a turn a person stopped with Ctrl+C or Esc; only those awaiting a report get it, nothing is owed, and the task is not sent again — the person decides.
 
 ## `rewake.next`
-Means: a new build installed beside the running `rewake2`; main swaps it in right after landing and green checks, and the owner restarts the room to run it.
+Means: a new build installed beside the running `rewake2`; `tools/land` swaps it in right after landing and green checks when rewake's sources changed, and says what the room must restart to run it.
 
 ## `unread/`
 Means: the folder of a session's mailbox holding the letters not yet read, one JSON file each with `from`, `kind` and `text`.

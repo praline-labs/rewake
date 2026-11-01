@@ -8,6 +8,8 @@ import (
 	"io"
 	"net"
 	"time"
+
+	"github.com/praline-labs/rewake/internal/infra/parts"
 )
 
 // The host's channel (docs/shell.md#the-hosts-channel): lines of JSON, one
@@ -31,10 +33,18 @@ const (
 	clientCLI   = "cli"
 )
 
-// Hello is a client's first line.
+// Hello is a client's first line. A shell's says the contracts it loaded,
+// which the host keeps for the plan of an update: an older shell says none,
+// and an older host ignores the field.
 type Hello struct {
-	Hello string `json:"hello"`
-	V     int    `json:"v"`
+	Hello     string     `json:"hello"`
+	V         int        `json:"v"`
+	Contracts *Contracts `json:"contracts,omitempty"`
+}
+
+// Contracts are what a shell requires of the parts beside it.
+type Contracts struct {
+	Requires map[string]string `json:"requires"`
 }
 
 // Refusal is the answer to a hello the host does not take.
@@ -72,8 +82,10 @@ type Message struct {
 	Rows   int    `json:"rows,omitempty"`
 	// main-ended
 	Code *int `json:"code,omitempty"`
-	// restart
+	// restart, reload and reloaded
 	Part string `json:"part,omitempty"`
+	// parts, the door's answer: the parts the host runs.
+	Running []parts.Part `json:"running,omitempty"`
 }
 
 // The kinds of message.
@@ -92,6 +104,11 @@ const (
 	kindReleased = "released"
 	// shell or the room's door to host
 	kindRestart = "restart"
+	// the room's door to host, and the host's answer: the parts it runs
+	kindParts = "parts"
+	// host to shell: reload a part in place; the shell's answer
+	kindReload   = "reload"
+	kindReloaded = "reloaded"
 	// host to the door, or to a shell for a kind it does not take
 	kindDone   = "done"
 	kindFailed = "failed"
@@ -122,23 +139,23 @@ func (l *lines) next() ([]byte, error) {
 	}
 }
 
-// takeHello reads a client's hello: the client it names when it speaks this
-// version; otherwise the refusal is written and an error returned.
-func takeHello(conn net.Conn, l *lines) (string, error) {
+// takeHello reads a client's hello: the hello when it speaks this version;
+// otherwise the refusal is written and an error returned.
+func takeHello(conn net.Conn, l *lines) (Hello, error) {
 	line, err := l.next()
 	if err != nil {
-		return "", err
+		return Hello{}, err
 	}
 	var hello Hello
 	if err := json.Unmarshal(line, &hello); err != nil || hello.Hello == "" {
 		_ = writeLine(conn, refusalOf(0))
-		return "", fmt.Errorf("the first line is no hello: %q", line)
+		return Hello{}, fmt.Errorf("the first line is no hello: %q", line)
 	}
 	if hello.V != Version {
 		_ = writeLine(conn, refusalOf(hello.V))
-		return "", fmt.Errorf("a client of version %d", hello.V)
+		return Hello{}, fmt.Errorf("a client of version %d", hello.V)
 	}
-	return hello.Hello, nil
+	return hello, nil
 }
 
 // writeLine writes v as one line, within a bound: a client that stops

@@ -65,7 +65,15 @@ worker's launch in a pseudo-terminal, serves it to the shell and ends it with ma
 **Main's host** — the launch of a main at a terminal, which stays the person's pane's process
 for as long as main runs. It runs main's wrapper on a pseudo-terminal it owns, keeps its screen,
 serves it on `sock/host.sock`, and runs rewake's shell as a child it can replace. `rewake restart
-shell` asks it at that socket ([shell.md](shell.md#who-owns-which-pty)).
+shell` asks it at that socket ([shell.md](shell.md#who-owns-which-pty)), and `rewake restart face`
+has it ask the shell to reload its faces.
+
+**Parts** — what rewake installs, each with a restart class: `rewake` (the room's restart),
+`shell` (`rewake restart shell`), `face` (live from its files), and each harness rewake ships
+(new sessions take it). A build writes their manifest beside the installed `rewake`, with digests
+and contracts; `rewake restart` with no part, the shell's hints row and `tools/land` say which
+parts the room must restart to run what is installed
+([install.md](install.md#the-parts-and-what-an-update-restarts)).
 
 There's no separate daemon: nothing to start, stop, or recover, and there's no state where "the
 sessions exist but the daemon is dead". Exactly as many wrapper processes run as there are open
@@ -390,6 +398,8 @@ harness; live runs with real harnesses by hand ([testing.md](testing.md), `AGENT
 - The shell ships in each platform build as `bin/rewake-shell`, compiled by Bun with its runtime
   inside, about 99 MB; rewake finds it beside its own executable
   ([shell.md](shell.md#how-rewake-starts-the-shell-and-how-it-ships)).
+- Each platform build carries `bin/manifest.json`, the manifest of its parts, and every part ships
+  in the one release ([install.md](install.md#the-parts-and-what-an-update-restarts)).
 - A non-npm alternative: `go install`, with pi installed and the shell compiled beside the binary
   by hand ([install.md](install.md#building-from-source)).
 - The repository lives in the GitHub organization `praline-labs`, the module path is

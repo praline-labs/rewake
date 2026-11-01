@@ -80,6 +80,8 @@ type Host struct {
 	released json.RawMessage
 	// waiting are the answers owed for the restart under way.
 	waiting []chan Message
+	// reloads are the answers owed for a reload asked of the shell.
+	reloads []chan Message
 
 	colors string
 	size   terminal.Size

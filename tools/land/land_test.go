@@ -21,6 +21,8 @@ type repo struct {
 	// red names the checks that fail; calls records go and bun.
 	red   map[string]bool
 	calls []string
+	// shellContracts is what the shell says of its contracts.
+	shellContracts string
 }
 
 func newRepo(t *testing.T) *repo {
@@ -33,11 +35,12 @@ func newRepo(t *testing.T) *repo {
 	for _, name := range []string{"GIT_AUTHOR_EMAIL", "GIT_COMMITTER_EMAIL"} {
 		t.Setenv(name, "owner@example.com")
 	}
-	r := &repo{t: t, root: t.TempDir(), origin: t.TempDir(), install: t.TempDir(), red: map[string]bool{}}
+	r := &repo{t: t, root: t.TempDir(), origin: t.TempDir(), install: t.TempDir(), red: map[string]bool{}, shellContracts: shellSays("1", "5")}
 	r.git(r.origin, "init", "--bare", "-q")
 	r.git(r.root, "init", "-q", "-b", branch)
 	r.write("AGENTS.md", "## Commits\n\n```\nCo-Authored-By: One <one@example.com>\nCo-Authored-By: Two <two@example.com>\n```\n")
 	r.write("shell/app.ts", "1\n")
+	r.write("face/src/worker.ts", "1\n")
 	r.write(".gitignore", ".scratch/\n")
 	r.commit("Start")
 	r.git(r.root, "remote", "add", "origin", r.origin)
@@ -99,6 +102,10 @@ func (r *repo) run(ctx context.Context, c command, log io.Writer) result {
 		if r.red["workflow"] {
 			return result{code: 1, stdout: "--- FAIL: TestWorkflow/brief (2.00s)\n"}
 		}
+	case strings.HasPrefix(line, filepath.Join(r.install, "rewake")+" --version"):
+		return result{stdout: `{"version":"dev","contracts":{"speaks":{"host":"1","mirror":"1"},"requires":{}}}`}
+	case line == "bun src/main.tsx --contracts":
+		return result{stdout: r.shellContracts}
 	case strings.HasPrefix(line, "go build"):
 		out := c.args[slices.Index(c.args, "-o")+1]
 		if err := os.WriteFile(out, []byte("new build"), 0o755); err != nil {
@@ -116,7 +123,7 @@ func (r *repo) land(args ...string) (int, string) {
 		r.t.Fatal(err)
 	}
 	var out strings.Builder
-	l := &lander{call: c, run: r.run, out: &out, root: r.root, processes: func() [][]string { return nil }}
+	l := &lander{call: c, run: r.run, out: &out, root: r.root, processes: func() [][]string { return nil }, goDigest: goFiles}
 	code := l.land(context.Background())
 	return code, out.String()
 }

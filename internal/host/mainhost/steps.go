@@ -2,6 +2,8 @@ package mainhost
 
 import (
 	"fmt"
+
+	"github.com/praline-labs/rewake/internal/infra/parts"
 )
 
 // evKind is what reached the loop.
@@ -24,6 +26,7 @@ const (
 	kMark                       // main's closing mark went by
 	kEndLate                    // the shell's bound to finish after main passed
 	kTerminalGone               // main alone met the end of the person's terminal
+	kReloadLate                 // a reload asked of the shell had no answer in time
 )
 
 // ev is one event; the kind says which fields it carries.
@@ -71,7 +74,15 @@ func (h *Host) handle(e ev) bool {
 	case kCrashCheck:
 		return h.act(decide(evCrash, h.situation()), "the shell stopped")
 	case kDoor:
-		h.restart(e.msg, e.reply)
+		if e.msg.T == kindParts {
+			h.running(e.reply)
+		} else {
+			h.restart(e.msg, e.reply)
+		}
+	case kReloadLate:
+		if p := h.byGen(e.gen); p != nil && p == h.shell {
+			h.reloadLate()
+		}
 	case kParentGone:
 		return h.act(decide(evLost, h.situation()), "the window closed")
 	case kTerminalGone:
@@ -177,6 +188,8 @@ func (h *Host) message(gen int, msg Message) bool {
 		return h.act(decide(evLost, h.situation()), "the shell lost the terminal")
 	case kindReleased:
 		p.said, h.released = kindReleased, msg.State
+	case kindReloaded:
+		h.reloaded(Message{T: kindDone, Generation: p.gen, Part: msg.Part})
 	default:
 		p.send(Message{T: kindError, Why: fmt.Sprintf("no message %q in version %d", msg.T, Version)})
 	}
@@ -186,8 +199,12 @@ func (h *Host) message(gen int, msg Message) bool {
 // restart takes a restart asked for, by the shell's key (reply nil) or at the
 // door.
 func (h *Host) restart(msg Message, reply chan Message) {
-	if msg.Part != "" && msg.Part != "shell" {
-		answer(reply, Message{T: kindFailed, Why: fmt.Sprintf("no part %q to restart: the parts are shell", msg.Part)})
+	if msg.Part == parts.Face {
+		h.reload(msg.Part, reply)
+		return
+	}
+	if msg.Part != "" && msg.Part != parts.ShellPart {
+		answer(reply, Message{T: kindFailed, Why: fmt.Sprintf("no part %q to restart here: the host restarts the shell and reloads the face", msg.Part)})
 		return
 	}
 	if decide(evRestart, h.situation()) != doSwap {

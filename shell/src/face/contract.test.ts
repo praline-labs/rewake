@@ -122,7 +122,7 @@ self.onmessage = (e) => {
   host.reload();
   const told = await until((s) => s.notice !== undefined);
   expect(told.notice).toBe(
-    `the face on disk speaks contract ${contract + 1}, this shell ${contract}: a restart of the room loads it`,
+    `the face on disk speaks contract ${contract + 1}, this shell ${contract}: rewake restart shell loads it`,
   );
   expect(told.error).toBeUndefined();
   // The running face still hears the mirror and draws.

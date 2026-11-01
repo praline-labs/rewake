@@ -1,0 +1,44 @@
+import { expect, test } from "bun:test";
+import { contract } from "../../face/src/messages.ts";
+import { hintsFor } from "./hints.ts";
+import { version } from "./link.ts";
+import { bannerOf, contracts } from "./update.ts";
+
+test("the banner says what the room's plan asks of the person", () => {
+  const cases: [Parameters<typeof bannerOf>[0], string | undefined][] = [
+    [undefined, undefined],
+    [[], undefined],
+    [[{ part: "shell", class: "shell", why: "changed" }], "Ctrl+\\ r loads the updated shell"],
+    [[{ part: "rewake", class: "room", why: "changed" }], "room restart needed: rewake"],
+    [
+      [
+        { part: "shell", class: "shell", why: "changed" },
+        { part: "rewake", class: "room", why: "changed" },
+      ],
+      "room restart needed: rewake",
+    ],
+    // A part that reloads itself, or that new sessions take, asks nothing.
+    [[{ part: "face", class: "live", why: "changed" }], undefined],
+    [[{ part: "pi", class: "sessions", why: "changed" }], undefined],
+  ];
+  for (const [steps, want] of cases) {
+    const hint = bannerOf(steps);
+    expect(hint ? `${hint.keys} ${hint.does}` : undefined).toBe(want);
+  }
+});
+
+test("the banner stands right after where the keys go, never in the prefix's list", () => {
+  const update = { keys: "Ctrl+\\ r", does: "loads the updated shell" };
+  const base = { focus: "main", name: "main", prefix: false, zoomed: false, workers: 0 } as const;
+  const hints = hintsFor({ ...base, update });
+  expect(hints[0]?.keys).toBe("keys");
+  expect(hints[1]).toEqual(update);
+  expect(hintsFor({ ...base, prefix: true, update })).not.toContainEqual(update);
+});
+
+test("the shell says the contracts it loaded", () => {
+  expect(contracts()).toEqual({
+    shell: { requires: { host: String(version), face: String(contract) } },
+    face: { speaks: { face: String(contract) }, requires: { mirror: "1" } },
+  });
+});

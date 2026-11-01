@@ -33,7 +33,36 @@ type RoomView struct {
 	// Brief is the brief --brief named, with its text and comments; absent unless it was asked,
 	// asMain and it reads.
 	Brief *BriefView `json:"brief,omitempty"`
+
+	// Update are the parts the room needs restarted to run what is installed, as rewake restart
+	// with no part prints them; absent where the install has no manifest
+	// (docs/install.md#the-parts-and-what-an-update-restarts).
+	Update []UpdateStep `json:"update,omitempty"`
 }
+
+// UpdateStep is one part the room needs restarted.
+type UpdateStep struct {
+	// Part names the part: rewake, shell, face, a harness rewake ships.
+	Part string `json:"part"`
+
+	// Class is what the restart takes.
+	Class RestartClass `json:"class"`
+
+	// Why is why: changed, or the contract that no longer agrees.
+	Why string `json:"why"`
+}
+
+// RestartClass is what a part's restart takes: live, it reloads itself; shell, rewake restart
+// shell; sessions, each new session takes it; room, main ended and started again.
+type RestartClass string
+
+// The values of RestartClass.
+const (
+	RestartClassLive     RestartClass = "live"
+	RestartClassShell    RestartClass = "shell"
+	RestartClassSessions RestartClass = "sessions"
+	RestartClassRoom     RestartClass = "room"
+)
 
 // SpaceRow is a space not over.
 type SpaceRow struct {

@@ -97,7 +97,7 @@ func TestFileProblems(t *testing.T) {
 		var p packed
 		for _, path := range paths {
 			mode := 0o644
-			if strings.HasPrefix(path, "bin/") {
+			if strings.HasPrefix(path, "bin/") && path != manifestFile {
 				mode = 0o755
 			}
 			p.Files = append(p.Files, struct {
@@ -119,11 +119,12 @@ func TestFileProblems(t *testing.T) {
 	if problems := fileProblems(entry, flat); len(problems) != 1 || !strings.Contains(problems[0], "not executable") {
 		t.Errorf("a command that cannot run: %v", problems)
 	}
-	build := files("LICENSE", "bin/rewake", "bin/rewake-shell", "package.json")
+	// The manifest beside the executables is data, not one of them.
+	build := files("LICENSE", "bin/manifest.json", "bin/rewake", "bin/rewake-shell", "package.json")
 	if problems := fileProblems(packages[0], build); len(problems) > 0 {
 		t.Errorf("a platform build's exact set: %v", problems)
 	}
-	build.Files[2].Mode = 0o644
+	build.Files[3].Mode = 0o644
 	if problems := fileProblems(packages[0], build); len(problems) != 1 || !strings.Contains(problems[0], "bin/rewake-shell is not executable") {
 		t.Errorf("a shell that cannot run: %v", problems)
 	}

@@ -18,6 +18,7 @@ internal/infra/state/                         directory: checks, paths, atomic w
 internal/infra/build/                         the build id (SHA-256 of the image), the room's build lease and its own copy of its build
 internal/infra/build/buildtest/               for tests: a room made and its build recorded the way a launch of the test binary does
 internal/infra/buildtime/                     durations a build may shorten through -ldflags, for the suite
+internal/infra/parts/                         rewake's parts: the manifest beside an install, the digests, and the plan of what to restart
 internal/core/registry/                       session record, name publishing, liveness and listing
 internal/core/registry/registrytest/          for tests: the boot a session of this build carries
 internal/infra/proc/                          /proc: identity, liveness, job-control state, lineage, namespaces, owner and initial environment
@@ -48,7 +49,7 @@ internal/host/delivery/                       the delivery server: the serving l
 internal/host/terminal/                       a program's pseudo-terminal by the standard library, whether a file is a terminal, the person's terminal's modes, the screen the program draws with its input modes, keyboard protocols and title, and the raw stream with its preamble for a late client, the one package the emulator library enters
 internal/host/reviewcheckout/                 a reviewer's checkout from the brief's assignment to its release: create, bind, release the one before, and whose checkout it is at a brief's close and a run's end
 internal/host/stream/                         a host's relay between its program's pseudo-terminal, its emulator and its socket: the raw stream and the snapshot, shared by the space host and main's host
-internal/host/mainhost/                       main's host, the pane's process of a main at a terminal: main's pseudo-terminal, the shell as a replaceable child, the versioned channel between them, restart, crash and close told apart, main alone when no shell starts, the door rewake restart asks
+internal/host/mainhost/                       main's host, the pane's process of a main at a terminal: main's pseudo-terminal, the shell as a replaceable child, the versioned channel between them, restart, crash and close told apart, main alone when no shell starts, the door rewake restart asks, and the shell it runs as a part
 internal/host/spacehost/                      the space host: the worker's pseudo-terminal and screen, served through internal/host/stream; and opening a space for main (`Open`): the record, the host started, the wait for the worker's registration, the rollback
 internal/host/worktree/                       checkouts rewake makes for a launch: git worktree add, records, land, removal and what keeps one, a worker's release at its close; a reviewer's detached checkout
 scripts/                                      packaging scripts and the tests of the npm shim
@@ -57,8 +58,8 @@ test/workflow/record/                         the record format a suite run prin
 test/launch/                                  a space's worker command checked against every registered harness, with and without a worktree
 test/leaserig/                                the room's build lease raced between real builds of rewake, each paused at a named step
 tools/checksummary/                           summarizes a suite run into a few lines and summary.json
-tools/release/                                the release gate: checks, builds with pack.sh, publishes only when told, waits for the registry with --wait
-tools/land/                                   lands an accepted branch on v2: merges, runs a step's last-commit checks, pushes and installs rewake2's build, or resets on red
+tools/release/                                the release gate: checks, builds with pack.sh, writes each build's manifest, publishes only when told, waits for the registry with --wait
+tools/land/                                   lands an accepted branch on v2: merges, runs a step's last-commit checks, pushes, installs rewake2's build and its manifest and says what to restart, or resets on red
 tools/protogen/                               writes the Go and TypeScript types of three schemas, the mod protocol's, the shell's room view (internal/cli/room_view.schema.json) and the mirror's, whose TypeScript goes to the face (face/src/mirror.gen.ts); copies the mirror's feed into pi's extension and the mod; its test fails when a checked-in file differs
 ```
 

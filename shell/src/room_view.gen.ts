@@ -29,7 +29,26 @@ export interface RoomView {
   // brief is the brief --brief named, with its text and comments; absent unless it was asked,
   // asMain and it reads.
   brief?: BriefView
+  // update are the parts the room needs restarted to run what is installed, as rewake restart
+  // with no part prints them; absent where the install has no manifest
+  // (docs/install.md#the-parts-and-what-an-update-restarts).
+  update?: UpdateStep[]
 }
+
+// UpdateStep is one part the room needs restarted.
+export interface UpdateStep {
+  // part names the part: rewake, shell, face, a harness rewake ships.
+  part: string
+  // class is what the restart takes.
+  class: RestartClass
+  // why is why: changed, or the contract that no longer agrees.
+  why: string
+}
+
+// RestartClass is what a part's restart takes: live, it reloads itself; shell, rewake restart
+// shell; sessions, each new session takes it; room, main ended and started again.
+export type RestartClass = "live" | "shell" | "sessions" | "room"
+export const restartClassValues: readonly RestartClass[] = ["live", "shell", "sessions", "room"]
 
 // SpaceRow is a space not over.
 export interface SpaceRow {

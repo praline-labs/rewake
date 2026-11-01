@@ -144,7 +144,7 @@ export class FaceHost {
     if (theirs !== this.told) {
       this.told = theirs;
       this.noticed(
-        `the face on disk speaks contract ${theirs}, this shell ${contract}: a restart of the room loads it`,
+        `the face on disk speaks contract ${theirs}, this shell ${contract}: rewake restart shell loads it`,
       );
     }
     return false;

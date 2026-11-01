@@ -41,6 +41,12 @@ type shellProc struct {
 	releasing bool // it was asked to release the terminal
 	refused   string
 	said      string // the last of close, lost, released
+
+	// What it is, for the plan of an update: its digest or its file's,
+	// closed digested once taken, and the contracts its hello said.
+	digested     chan struct{}
+	digest, file string
+	requires     map[string]string
 }
 
 // startShell starts the next generation of the shell on the person's
@@ -60,7 +66,7 @@ func (h *Host) startShell(why string) (*shellProc, error) {
 		return nil, fmt.Errorf("could not open the shell's socket: %w", err)
 	}
 	h.gen++
-	p := &shellProc{gen: h.gen, why: why, conn: conn}
+	p := &shellProc{gen: h.gen, why: why, conn: conn, digested: make(chan struct{})}
 	cmd := exec.Command(h.cfg.Shell, h.cfg.ShellArgs...)
 	cmd.Stdin, cmd.Stdout = os.Stdin, os.Stdout
 	cmd.Stderr = (*tailWriter)(p)
@@ -71,6 +77,7 @@ func (h *Host) startShell(why string) (*shellProc, error) {
 		return nil, fmt.Errorf("could not start the shell %s: %w", h.cfg.Shell, err)
 	}
 	p.cmd = cmd
+	go p.takeDigest(h.cfg.Shell)
 	// The exit reaches the loop after the last of what the shell said: a
 	// shell writes released and exits at once, and its socket still holds the
 	// state while the process is gone. The socket is read on for drainWithin
@@ -94,17 +101,25 @@ func (h *Host) startShell(why string) (*shellProc, error) {
 // readShell reads a shell's hello, then its messages, until its socket ends.
 func (h *Host) readShell(p *shellProc) {
 	l := newLines(p.conn)
-	client, err := takeHello(p.conn, l)
+	hello, err := takeHello(p.conn, l)
 	if errors.Is(err, io.EOF) || errors.Is(err, os.ErrDeadlineExceeded) {
 		// It ended before its hello: its exit says why.
 		return
 	}
-	if err == nil && client != clientShell {
-		err = fmt.Errorf("a hello from %q on the shell's socket", client)
+	if err == nil && hello.Hello != clientShell {
+		err = fmt.Errorf("a hello from %q on the shell's socket", hello.Hello)
 	}
 	if err != nil {
 		h.post(ev{kind: kRefused, gen: p.gen, why: "the new shell was refused: " + err.Error()})
 		return
+	}
+	if hello.Contracts != nil {
+		p.mu.Lock()
+		p.requires = hello.Contracts.Requires
+		if p.requires == nil {
+			p.requires = map[string]string{}
+		}
+		p.mu.Unlock()
 	}
 	h.post(ev{kind: kHello, gen: p.gen})
 	for {

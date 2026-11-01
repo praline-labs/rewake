@@ -30,6 +30,8 @@ type gate struct {
 	// real one.
 	clock func() time.Time
 	pause func(ctx context.Context, d time.Duration) error
+	// goDigest is rewake's digest for a platform; nil is the real one.
+	goDigest func(ctx context.Context, root, goos, goarch string) (string, error)
 }
 
 func (g *gate) say(format string, args ...any) {
@@ -86,6 +88,7 @@ func (g *gate) release(ctx context.Context) int {
 		return g.refuse("nothing was published")
 	}
 	g.pass("packages built in %s", filepath.Join(g.root, "dist", "npm"))
+	g.writeManifests(ctx)
 
 	g.say("")
 	g.say("the packages:")

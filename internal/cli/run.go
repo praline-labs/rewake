@@ -49,6 +49,8 @@ func runParsed(ctx *Context, result parsed) int {
 	switch {
 	case result.Version:
 		build := thisBuild()
+		contracts := contractsOf(ctx.table.catalog)
+		build.Contracts = &contracts
 		if err := printValue(ctx, build, func() []string { return []string{build.Line()} }); err != nil {
 			return report(ctx, err)
 		}

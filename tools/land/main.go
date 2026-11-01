@@ -17,6 +17,8 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/praline-labs/rewake/internal/infra/parts"
 )
 
 func main() {
@@ -58,7 +60,9 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 		}
 		c.install = defaultInstall(home)
 	}
-	l := &lander{call: c, run: execute, out: stdout, processes: processes}
+	l := &lander{call: c, run: execute, out: stdout, processes: processes, goDigest: func(ctx context.Context, root string) (string, error) {
+		return parts.GoDigest(ctx, root, "", "")
+	}}
 	return l.land(ctx)
 }
 
@@ -84,8 +88,11 @@ Run from the main checkout with v2 checked out and a clean tree. The steps:
                 the new
       face      the same in face/, only when face/ changed
   - on green: git push origin v2, then go build of cmd/rewake into
-    <install>/rewake.next, renamed over <install>/rewake; the room runs it
-    once the owner restarts it;
+    <install>/rewake.next, renamed over <install>/rewake, only when the
+    digest of rewake's sources differs from the installed build's; then
+    <install>/manifest.json, the parts installed, and a last line of what
+    the room must restart to run them: "restart: room (...)", "restart:
+    shell (rewake restart shell; ...)" or "restart: nothing";
   - on red, or on an interrupt during the checks: v2 is reset to where it was — nothing was pushed — and the failing
     checks are named.
 

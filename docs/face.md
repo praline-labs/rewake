@@ -573,7 +573,7 @@ contract, the new worker is ended and the running face kept: a shell of contract
 face of 5 from its checkout had frozen the pane on the refusal until a restart
 ([traps.md](traps.md#a-face-froze-on-this-face-speaks-contract-5-the-shell-4-after-a-change-of-face)).
 The row under the input then says, for 10 s and once for each contract met,
-`the face on disk speaks contract 5, this shell 4: a restart of the room loads it`; a reload into
+`the face on disk speaks contract 5, this shell 4: rewake restart shell loads it`; a reload into
 the shell's contract again swaps as before. Any other first answer, a failure included, swaps them
 as a start does, so a face that fails to load still shows its error below; one that says nothing
 within 2 s is taken in, and its missed ping stops it. A start, the first or a stopped face's, has

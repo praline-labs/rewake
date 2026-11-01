@@ -142,8 +142,17 @@ the variables naming a session, so it runs as it is from a session: run with onl
 cleared, as the tool runs it, it wrote nothing into the room's state directory. On
 green it pushes `v2` and builds `cmd/rewake` into
 `~/.local/share/rewake2/rewake.next` (`--install <dir>` for another), renamed over `rewake` there:
-the owner's rule, a swap right after landing and green checks, and the room runs it once
-restarted. On red, or interrupted during the checks, it resets `v2` to where it was — nothing was pushed — and names the failing
+the owner's rule, a swap right after landing and green checks. It builds only when the digest of
+rewake's sources differs from the installed manifest's, since every build's bytes differ by its
+time and would ask for a room restart; a skipped build keeps the installed binary's file in the
+manifest. Then it writes `manifest.json` beside the build
+([install.md](install.md#the-parts-and-what-an-update-restarts)), with the contracts the built
+`rewake --version --json` and `bun src/main.tsx --contracts` in `shell/` say, and ends with what
+this landing needs restarted, the plan from the old manifest to the new: `restart: room (rewake
+changed)`, `restart: shell (rewake restart shell; shell changed)`, `restart: nothing`, or
+`restart: room (no manifest before this landing)`. A manifest that cannot be made leaves none,
+so the room's plan never compares with the build before, and the line says room. What the room
+needs now, after several landings, is `rewake restart` with no part. On red, or interrupted during the checks, it resets `v2` to where it was — nothing was pushed — and names the failing
 checks. It prints those lines and the path of a log under `.scratch/land/` with every command's
 output; `--no-push` is a dry run that resets `v2` after the checks, green or red. Exit 0 landed
 (with `--no-push`, green), 1 a refusal, a red check or a failed push or install, 2 a wrong call.

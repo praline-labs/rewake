@@ -17,6 +17,7 @@ import { briefs, mainPane, type Pane, paneOf, show, workers } from "./panes.ts";
 import { PathRow } from "./path.tsx";
 import { mainStrip, markOf, Strip, stripOf } from "./strip.tsx";
 import type { Theme } from "./theme.ts";
+import { banner } from "./update.ts";
 
 // View is what decides how the window looks: who has the keys, which worker
 // stands beside main, the zoom, the size, and whether the prefix waits.
@@ -97,6 +98,7 @@ export function Window(props: { env: Env; view: () => View }) {
         zoomed: view().zoomed,
         workers: workers().length,
         face: onBriefs() ? undefined : modeOf(focusedPane().id),
+        update: banner(),
       }}
       width={wide() ? lay().main : view().width}
       theme={theme}

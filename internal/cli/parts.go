@@ -1,0 +1,94 @@
+package cli
+
+import (
+	"sort"
+	"strconv"
+
+	"github.com/praline-labs/rewake/internal/adapter"
+	"github.com/praline-labs/rewake/internal/core/mirror"
+	"github.com/praline-labs/rewake/internal/host/mainhost"
+	"github.com/praline-labs/rewake/internal/infra/build"
+	"github.com/praline-labs/rewake/internal/infra/parts"
+	"github.com/praline-labs/rewake/internal/infra/state"
+)
+
+// Contracts are what this build speaks to the parts beside it and requires
+// of them (docs/install.md#the-parts-and-what-an-update-restarts); --version
+// --json carries them, so the tools that write a manifest ask the built
+// binary rather than read its sources.
+type Contracts struct {
+	Speaks   map[string]string `json:"speaks"`
+	Requires map[string]string `json:"requires"`
+}
+
+// contractsOf is this build's: the host's channel and the mirror's lines,
+// and the version of each harness rewake ships beside itself.
+func contractsOf(catalog adapter.Catalog) Contracts {
+	c := Contracts{
+		Speaks: map[string]string{
+			parts.HostContract:   strconv.Itoa(mainhost.Version),
+			parts.MirrorContract: strconv.Itoa(mirror.Version),
+		},
+		Requires: map[string]string{},
+	}
+	for _, harness := range catalog.All() {
+		if _, ok := harness.(adapter.Shipped); ok {
+			c.Requires[harness.ID()] = harness.Version().Pinned
+		}
+	}
+	return c
+}
+
+// ownPart is this build as a part. A command of a room runs as the room's
+// own copy, handed off to it when another build was called, so this is the
+// rewake the room runs.
+func ownPart(catalog adapter.Catalog) parts.Part {
+	id, _ := build.ID()
+	c := contractsOf(catalog)
+	return parts.Part{Name: parts.Rewake, Class: parts.Room, File: id, Speaks: c.Speaks, Requires: c.Requires}
+}
+
+// partNames are the parts rewake restart knows: every build's, each harness
+// it ships, and whatever the installed manifest lists.
+func partNames(catalog adapter.Catalog, installed parts.Manifest) []string {
+	seen := map[string]bool{parts.Rewake: true, parts.ShellPart: true, parts.Face: true}
+	for name := range contractsOf(catalog).Requires {
+		seen[name] = true
+	}
+	for _, p := range installed.Parts {
+		seen[p.Name] = true
+	}
+	names := make([]string, 0, len(seen))
+	for name := range seen {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
+
+// updateOf is the room's plan: the parts running — this build, and the shell
+// main's host draws with, if one answers — against the installed manifest.
+// problem says why there is no plan; running is what it compared.
+type updateOf struct {
+	installed parts.Manifest
+	running   []parts.Part
+	steps     []parts.Step
+	problem   string
+}
+
+func roomUpdate(catalog adapter.Catalog) updateOf {
+	u := updateOf{running: []parts.Part{ownPart(catalog)}}
+	if dir, err := state.Dir(); err == nil {
+		if shells, err := mainhost.Running(mainhost.HostSocket(dir)); err == nil {
+			u.running = append(u.running, shells...)
+		}
+	}
+	installed, err := parts.Read(parts.InstalledDir())
+	if err != nil {
+		u.problem = err.Error()
+		return u
+	}
+	u.installed = installed
+	u.steps = parts.Plan(u.running, installed)
+	return u
+}

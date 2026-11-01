@@ -110,6 +110,61 @@ second build: end its sessions, then `rm ~/.local/bin/rewake-dev` and
 `rm -rf ~/.local/share/rewake-dev ~/.rewake-dev`, and `~/.rewake-dev-worktrees` once nothing in
 the checkouts there is wanted (`rewake-dev worktree ls` lists them first).
 
+## The parts and what an update restarts
+
+Owner decision, November 1, 2026: every part of rewake ships in one release, any part can be
+restarted on its own for a quick reload, and an update says what it will restart. A build writes
+a manifest of its parts, `manifest.json` beside the installed `rewake`: `bin/manifest.json` in
+each platform package, written by `tools/release` after `scripts/pack.sh`, and
+`<install>/manifest.json` for the owner's install, written by `tools/land`
+([testing.md](testing.md)). It is `{"manifest":1,"parts":[…]}`, each part with its name, its
+restart class, a `digest` of what it is made of, a `file` (the SHA-256 of what it ships as) where
+it ships as one, `within` when it is compiled into another, and the contracts it `speaks` and
+`requires`. It is not a version of the room's state: one build per room stays as
+[rules/state.md](rules/state.md) says. The code is `internal/infra/parts`.
+
+| part | digest | class |
+|---|---|---|
+| `rewake` | the Go and embedded files of the module that `go list -deps ./cmd/rewake` names, `go.mod`, `go.sum`, the toolchain's version and the platform; `file` is the build id | room: end main and start it again, which ends its workers |
+| `shell` | `shell/` without `node_modules`, tests and hidden files; in a release also `file`, of `bin/rewake-shell` | shell: `rewake restart shell`, or Ctrl+\ then `r` |
+| `face` | `face/` the same way; in a release `within: shell` | live: it follows its files; `rewake restart face` reloads it by hand |
+| `pi` | `npm:@earendil-works/pi-coding-agent@<version>` | sessions: each new session takes it |
+
+The build time stays out of every digest, so two builds of one tree have one. The contracts,
+each said by the part itself (`rewake --version --json`, `rewake-shell --contracts`), never read
+from the sources: `host`, the host channel's version, spoken by rewake and required by the shell;
+`face`, the face's `contract`, spoken by the face and required by the shell; `mirror`, spoken by
+rewake and required by the face; and `pi`, the pinned version, spoken by pi and required by
+rewake. The room view and the space stream's mode bytes have no number: they change only with
+rewake, which is a room restart anyway, so after a landing that changes both rewake and the shell
+`restart shell` may load a shell the room's older view does not suit, while the plan says room
+(decided by main, November 1, 2026).
+
+### The running set
+
+Nothing records it in the room. `rewake` is the CLI's own build: a room's command runs as the
+room's own copy. The shell is what main's host started: the host takes its digest with the
+manifest's function when it starts it (the sources' digest for a checkout's `rewake-shell`, else
+the file's, with the manifest's `digest` added when the installed manifest describes that file),
+and its contracts from the shell's hello ([shell.md](shell.md#the-hosts-channel)), and serves
+both at its door. The face from sources and pi are not recorded: the face follows its files
+unless the shell's contract refuses it, and a pi session runs the version rewake requires.
+
+### The plan
+
+`parts.Plan` compares the running parts with the installed manifest: a part is the same when both
+digests match, else when both files do; one that changed restarts by its class, an unknown class
+as room, and a running shell that said no contracts gets its own step. Then every requirer must
+find its contract spoken at its value once the steps are taken; where it would not, the part
+that must move is raised to its class, and the reason names the contract (a face on disk that
+speaks 6 to a shell that requires 5 is a shell restart; a pi on disk that rewake does not pin is
+a room restart). `rewake restart` with no part prints the plan, one line per step, or `nothing to
+restart`; an install without a manifest — `go run`, a build by hand — has no plan, and
+`restart shell` works there as before. `rewake restart shell` and `restart face` refuse when the
+installed part would require what the running rewake does not speak; `restart rewake` and a
+harness rewake ships refuse, naming the room's restart. The shell shows the plan's shell and room
+steps in its hints row ([shell.md](shell.md#the-prefix-and-the-room)).
+
 ## Testing how a release installs
 
 `scripts/pack.sh [version]` builds the npm uploads into `dist/npm` — a build per platform plus
@@ -193,7 +248,8 @@ Every release goes through the gate, `tools/release`:
 
    It asks the registry for each of the three versions exactly — `2.0.0`,
    `2.0.0-linux-x64`, `2.0.0-linux-arm64` — and wants none of them there, builds them
-   with `scripts/pack.sh`, checks each one's `package.json` and what
+   with `scripts/pack.sh`, writes each platform package's `bin/manifest.json`
+   ([above](#the-parts-and-what-an-update-restarts)), checks each one's `package.json` and what
    `npm pack --dry-run --json` would upload against an allowlist in both directions,
    and wants the entry's `optionalDependencies` to be exactly the aliases to this
    release's builds. It reads the architecture of each platform binary and of the shell beside

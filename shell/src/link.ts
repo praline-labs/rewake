@@ -5,8 +5,18 @@
 // answers a refusal in a shape no version changes. The Go side is
 // internal/host/mainhost/wire.go.
 import { writeSync } from "node:fs";
+import { contract } from "../../face/src/messages.ts";
 
 export const version = 1;
+
+// requires is what this shell loaded and needs of the parts beside it: the
+// host's channel and the face's contract, as this process imported them. The
+// hello carries it, so the host knows the contracts of the shell it runs
+// whatever its files say now (docs/install.md, "The running set").
+export const requires = (): Record<string, string> => ({
+  host: String(version),
+  face: String(contract),
+});
 
 // MainRef is main's wrapper and the host socket that serves its stream.
 export type MainRef = { pid: number; socket: string };
@@ -18,14 +28,16 @@ export type FromHost =
   | { t: "release" }
   | { t: "closing" }
   | { t: "main-ended"; code: number }
-  | { t: "error"; why: string };
+  | { t: "error"; why: string }
+  | { t: "reload"; part: string };
 
 export type ToHost =
   | { t: "ready"; colors: string; cols: number; rows: number }
   | { t: "restart" }
   | { t: "close" }
   | { t: "lost" }
-  | { t: "released"; state: unknown };
+  | { t: "released"; state: unknown }
+  | { t: "reloaded"; part: string };
 
 // readLine is one line from the host: a message, or why the channel cannot
 // go on — a refusal of this shell's version, or a line that does not read.
@@ -68,7 +80,7 @@ export function openLink(
       end(`the host's channel failed: ${e}`);
     }
   };
-  write({ hello: "shell", v: version });
+  write({ hello: "shell", v: version, contracts: { requires: requires() } });
   void (async () => {
     const reader = Bun.file(fd).stream().getReader();
     const decoder = new TextDecoder();

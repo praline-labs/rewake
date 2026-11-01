@@ -1,0 +1,150 @@
+package parts
+
+import (
+	"bytes"
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
+	"io"
+	"io/fs"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"slices"
+	"strings"
+	"time"
+)
+
+// FileDigest is the SHA-256 of a file's content, as the build id is of an
+// executable's.
+func FileDigest(path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer func() { _ = f.Close() }()
+	sum := sha256.New()
+	if _, err := io.Copy(sum, f); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(sum.Sum(nil)), nil
+}
+
+// SourcesDigest is a digest over the files of a TypeScript part's directory
+// that it runs from: every file but node_modules, its tests and hidden ones.
+// Paths count with the content, so a rename is a change.
+func SourcesDigest(dir string) (string, error) {
+	var files []string
+	err := filepath.WalkDir(dir, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		name := entry.Name()
+		if entry.IsDir() {
+			if path != dir && (name == "node_modules" || strings.HasPrefix(name, ".")) {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if strings.HasPrefix(name, ".") || strings.Contains(name, ".test.") || !entry.Type().IsRegular() {
+			return nil
+		}
+		rel, err := filepath.Rel(dir, path)
+		if err != nil {
+			return err
+		}
+		files = append(files, filepath.ToSlash(rel))
+		return nil
+	})
+	if err != nil {
+		return "", err
+	}
+	return digestOf(dir, files, nil)
+}
+
+// ShellDigest is the digest of the shell a launch would start at path: a
+// checkout's rewake-shell, which runs its sources with bun, is the digest of
+// those sources; a compiled shell is its file's.
+func ShellDigest(path string) (digest, file string, err error) {
+	dir := filepath.Dir(path)
+	if filepath.Base(path) == "rewake-shell" {
+		if _, err := os.Stat(filepath.Join(dir, "src", "main.tsx")); err == nil {
+			digest, err := SourcesDigest(dir)
+			return digest, "", err
+		}
+	}
+	file, err = FileDigest(path)
+	return "", file, err
+}
+
+// GoDigest is a digest over what go build puts into ./cmd/rewake for a
+// platform: the Go and embedded files of every package of the module it
+// depends on, go.mod, go.sum and the toolchain's version. The build time and
+// the VCS stamp are left out, so two builds of one tree have one digest.
+// goos and goarch empty are this machine's.
+func GoDigest(ctx context.Context, root, goos, goarch string) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+	defer cancel()
+	list := exec.CommandContext(ctx, "go", "list", "-deps", "-json=Dir,Module,GoFiles,CgoFiles,EmbedFiles", "./cmd/rewake")
+	list.Dir = root
+	list.Env = os.Environ()
+	if goos != "" {
+		list.Env = append(list.Env, "GOOS="+goos, "GOARCH="+goarch)
+	}
+	var stderr bytes.Buffer
+	list.Stderr = &stderr
+	out, err := list.Output()
+	if err != nil {
+		return "", fmt.Errorf("go list: %v: %s", err, strings.TrimSpace(stderr.String()))
+	}
+	version := exec.CommandContext(ctx, "go", "env", "GOVERSION")
+	version.Dir = root
+	goVersion, err := version.Output()
+	if err != nil {
+		return "", fmt.Errorf("go env GOVERSION: %w", err)
+	}
+	files := []string{"go.mod", "go.sum"}
+	decoder := json.NewDecoder(bytes.NewReader(out))
+	for decoder.More() {
+		var pkg struct {
+			Dir                           string
+			Module                        *struct{ Main bool }
+			GoFiles, CgoFiles, EmbedFiles []string
+		}
+		if err := decoder.Decode(&pkg); err != nil {
+			return "", fmt.Errorf("go list's answer: %w", err)
+		}
+		if pkg.Module == nil || !pkg.Module.Main {
+			// The standard library is the toolchain's, other modules go.sum's.
+			continue
+		}
+		rel, err := filepath.Rel(root, pkg.Dir)
+		if err != nil {
+			return "", err
+		}
+		for _, name := range slices.Concat(pkg.GoFiles, pkg.CgoFiles, pkg.EmbedFiles) {
+			files = append(files, filepath.ToSlash(filepath.Join(rel, name)))
+		}
+	}
+	platform := strings.TrimSpace(string(goVersion)) + " " + goos + "/" + goarch
+	return digestOf(root, files, []byte(platform))
+}
+
+// digestOf hashes each file's path and content, in path order, after extra.
+func digestOf(root string, files []string, extra []byte) (string, error) {
+	slices.Sort(files)
+	files = slices.Compact(files)
+	sum := sha256.New()
+	sum.Write(extra)
+	for _, rel := range files {
+		data, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(rel)))
+		if err != nil {
+			return "", err
+		}
+		_, _ = fmt.Fprintf(sum, "\x00%s\x00%d\x00", rel, len(data))
+		sum.Write(data)
+	}
+	return hex.EncodeToString(sum.Sum(nil)), nil
+}

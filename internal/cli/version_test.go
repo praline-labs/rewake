@@ -117,7 +117,14 @@ func TestVersionPrintsTheBuild(t *testing.T) {
 		}
 		code, out, _ = run("--version", "--json")
 		var got Build
-		if err := json.Unmarshal([]byte(out), &got); code != ExitOK || err != nil || !reflect.DeepEqual(got, tc.build) {
+		err := json.Unmarshal([]byte(out), &got)
+		// The machine form adds the build's contracts, which the tools that
+		// write a manifest read from the built binary.
+		if code != ExitOK || err != nil || got.Contracts == nil || got.Contracts.Speaks["host"] == "" {
+			t.Fatalf("exit %d, %v: no contracts in %q", code, err, out)
+		}
+		got.Contracts = nil
+		if !reflect.DeepEqual(got, tc.build) {
 			t.Fatalf("exit %d, %v: %+v from %q", code, err, got, out)
 		}
 		// Each time is present only when known.

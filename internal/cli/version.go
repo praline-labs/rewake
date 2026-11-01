@@ -34,6 +34,9 @@ type Build struct {
 	// compares (docs/rules/state.md#the-rooms-lease); empty when the
 	// executable could not be read. The line leaves it out.
 	ID string `json:"build,omitempty"`
+	// Contracts are what the build speaks and requires of the parts beside
+	// it, under --json alone.
+	Contracts *Contracts `json:"contracts,omitempty"`
 }
 
 // built is the build time the build command passes in, in RFC 3339:

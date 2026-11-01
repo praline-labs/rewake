@@ -71,7 +71,7 @@ for target in linux-amd64:linux-x64 linux-arm64:linux-arm64; do
   $repository,
   "os": ["$goos"],
   "cpu": ["${platform##*-}"],
-  "files": ["bin/rewake", "bin/rewake-shell", "LICENSE"]
+  "files": ["bin/rewake", "bin/rewake-shell", "bin/manifest.json", "LICENSE"]
 }
 JSON
   cp "$root/LICENSE" "$dir/LICENSE"

@@ -24,6 +24,7 @@ import {
   faceShown,
   type KeptFaces,
   keptFaces,
+  reloadFaces,
   restoreFaces,
   takeMirrors,
   toggleFace,
@@ -57,6 +58,7 @@ import { connectHost } from "./sources.ts";
 import { showSessions, stripOf } from "./strip.tsx";
 import { themeOf } from "./theme.ts";
 import { outerTitle } from "./title.ts";
+import { contracts, takeUpdate } from "./update.ts";
 import { type Env, type View, Window } from "./window.tsx";
 
 const args = process.argv.slice(2);
@@ -64,6 +66,12 @@ if (args[0] === "--face-check") {
   const why = await checkFace();
   process.stdout.write(why ? `${why}\n` : `the face answers: ${workerUrl}\n`);
   process.exit(why ? 1 : 0);
+}
+// --contracts prints what this shell and its face speak and require, which
+// the tools that write a manifest read from the shell itself.
+if (args[0] === "--contracts") {
+  process.stdout.write(`${JSON.stringify(contracts())}\n`);
+  process.exit(0);
 }
 const split = args.indexOf("--");
 const room = args[args.indexOf("--room") + 1] ?? "default";
@@ -133,6 +141,14 @@ function fromHost(m: FromHost) {
       return void finish(m.code);
     case "error":
       process.stderr.write(`rewake-shell: the host says ${m.why}\n`);
+      return;
+    case "reload":
+      // rewake restart face: every face reloaded from its files, as the
+      // watch of them does.
+      if (m.part === "face") {
+        reloadFaces();
+        link.send({ t: "reloaded", part: m.part });
+      }
   }
 }
 
@@ -387,6 +403,7 @@ stopRoom = pollRoom(
       takeSpaces(shownSpaces(view), endedSpaces(view), closing, beginClosing);
       restore();
       showSessions(new Map(view.sessions.map((s) => [s.name, s])));
+      takeUpdate(view.update);
       takeMirrors(workers().map((p) => [p.id, stripOf(p.id).status?.mirror]));
     }
     takeBriefs(view, asked);
