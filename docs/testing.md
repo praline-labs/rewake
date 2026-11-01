@@ -14,7 +14,7 @@ before updating, and how to extend the suite. The commands of a commit and of a 
 
 | Tier | Runs | Proves | Does not prove | Costs |
 | --- | --- | --- | --- | --- |
-| The step's checks | the hook's formatters and linters, one `go test -race -shuffle=on ./...` | unit invariants: parsing, publishing races, liveness, inbox order and expiry, the context endpoint's framing, the import rule; the suite's own classifier and summarizer | anything end to end: every workflow scenario skips itself | about two minutes of the race run at `-p 4` on an idle machine, compilation aside; `core/mail` is the longest package. No network, no harness, no container |
+| The step's checks | the hook's formatters and linters, one `go test -race -shuffle=on ./...`, and where `shell/` or `face/` changed each one's `bun run check`: `tsc --noEmit`, then its own `bun test` | unit invariants: parsing, publishing races, liveness, inbox order and expiry, the context endpoint's framing, the import rule; the suite's own classifier and summarizer; the shell's drawing, input and face host, the face's drawing, copying and unfolding | anything end to end: every workflow scenario skips itself | about two minutes of the race run at `-p 4` on an idle machine, compilation aside; `core/mail` is the longest package. The shell's suite about ten seconds, the face's under one. No network, no harness, no container |
 | Workflow suite | a built rewake end to end against the fixture harness, in one column | that the shared service code delivers, groups, steers and reports as each scenario claims | that a real harness parses, renders or behaves as its fixture does | about half a minute for 24 scenarios, six cases at a time; no network |
 
 Two tiers are not built. **P**, a real harness of a named version against a local responder
@@ -133,7 +133,13 @@ conflict with the tree left as it was. Then the checks of a step's last commit, 
 after a red one: `go test -race -shuffle=on -timeout 20m ./...` with `-p 4`, or `-p 2` while the
 process list shows another `go test -race` or a run over a whole tree; the whole workflow suite
 with `-v`; and the shell's `bun install --frozen-lockfile && bun run check` when `shell/` or
-`face/` changed between the old `v2` and the new, the same in `face/` when `face/` changed. On
+`face/` changed between the old `v2` and the new, the same in `face/` when `face/` changed.
+`check` in each package is `tsc --noEmit && bun test`, so the shell's and the face's own suites
+run wherever the check does — landing, a step's last commit by `AGENTS.md`, a writer's hand — and
+not only by hand as before (brief 73, November 1, 2026). `bun test` runs in the package's folder,
+the shell's with the Solid preload of its `bunfig.toml`. Neither suite starts rewake's CLI or reads
+the variables naming a session, so it runs as it is from a session: run with only those four
+cleared, as the tool runs it, it wrote nothing into the room's state directory. On
 green it pushes `v2` and builds `cmd/rewake` into
 `~/.local/share/rewake2/rewake.next` (`--install <dir>` for another), renamed over `rewake` there:
 the owner's rule, a swap right after landing and green checks, and the room runs it once
