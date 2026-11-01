@@ -28,13 +28,13 @@ func roomCommand() *Command {
 		Hidden:  true,
 		Options: []Option{
 			jsonOption,
-			{Flag: "--wrapper", Value: "<pid>", Summary: "The pid of main's wrapper, a child of the shell calling this; proved, it makes the caller main's shell."},
+			{Flag: "--wrapper", Value: "<pid>", Summary: "The pid of main's wrapper, which main's host started beside the shell calling this; proved, it makes the caller main's shell."},
 			{Flag: "--briefs", Summary: "Add the room's briefs, to main's shell."},
 			{Flag: "--brief", Value: "<id>", Summary: "Add one brief with its text and comments, to main's shell."},
 		},
 		Examples: []string{"rewake room --json", "rewake room --json --briefs"},
 		Notes: []string{
-			"The shell is main's terminal, not a session, so it proves itself by the process tree: main's wrapper is the child of the shell that calls this. Telemetry and briefs, which only main reads, are carried only then (asMain).",
+			"The shell is main's terminal, not a session, so it proves itself by the process tree: main's wrapper and the shell that calls this are children of one host, main's in the pane. Telemetry and briefs, which only main reads, are carried only then (asMain).",
 		},
 		Access:  viewForm,
 		Handler: handleRoom,
@@ -105,10 +105,12 @@ func optionalNumber(call Call, flag string) (int, error) {
 	return number, nil
 }
 
-// provenMain is the name of the main whose wrapper runs as pid below the
+// provenMain is the name of the main whose wrapper runs as pid beside the
 // process that called, when there is one: the shell is main's terminal and
-// not a session, so what proves it main's is that it started main's
-// wrapper. Telemetry and briefs are for no other caller.
+// not a session, so what proves it main's is that main's host in the pane
+// started both — the wrapper's parent is the shell's own
+// (docs/shell.md#who-owns-which-pty). Main's harness, its tools and the
+// workers have other parents. Telemetry and briefs are for no other caller.
 func provenMain(sessions []registry.Session, pid int) (string, bool) {
 	if pid == 0 {
 		return "", false
@@ -117,8 +119,12 @@ func provenMain(sessions []registry.Session, pid int) (string, bool) {
 		if session.Role != role.Main.ID || session.ServicePID != pid {
 			continue
 		}
-		parent, start, err := proc.Default.Parent(pid)
-		if err != nil || parent != shellParent() || start != session.ServiceStart {
+		host, start, err := proc.Default.Parent(pid)
+		if err != nil || start != session.ServiceStart {
+			return "", false
+		}
+		callersHost, _, err := proc.Default.Parent(shellParent())
+		if err != nil || callersHost != host {
 			return "", false
 		}
 		return session.Name, true

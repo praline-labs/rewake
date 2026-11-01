@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/core/registry"
+	"github.com/praline-labs/rewake/internal/host/mainhost"
 	"github.com/praline-labs/rewake/internal/infra/build/buildtest"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/infra/state"
@@ -109,22 +110,30 @@ func TestScreenOfMainAsksForMain(t *testing.T) {
 	}
 }
 
-// With no shell a worker's pane alone comes from its space host, marked so;
-// main has no host, and is refused.
+// With no shell a worker's pane alone comes from its space host, marked so,
+// and main's from its host in the person's pane; main with no host is
+// refused.
 func TestScreenWithoutAShellFallsBackToTheSpaceHost(t *testing.T) {
 	dir := screenRoom(t)
 	writeSpaceFor(t, dir, "helper")
 	asked := listen(t, state.SpaceSocketPath(dir, strings.Repeat("a1", 16)), false, screenFrame)
 
 	code, out, errOut := run("screen", "helper")
-	if code != ExitOK || !strings.Contains(out, "pane alone, from its space host") || !strings.Contains(out, "ab世") {
+	if code != ExitOK || !strings.Contains(out, "pane alone, from its host") || !strings.Contains(out, "ab世") {
 		t.Fatalf("exit %d: %q %q", code, out, errOut)
 	}
 	if got := <-asked; got != "s" {
 		t.Fatalf("mode = %q", got)
 	}
-	if code, _, errOut := run("screen", "main"); code != ExitFailed || !strings.Contains(errOut, "no shell is running") {
-		t.Fatalf("main without a shell: %d %q", code, errOut)
+	if code, _, errOut := run("screen", "main"); code != ExitFailed || !strings.Contains(errOut, "the host that holds the pane is not answering") {
+		t.Fatalf("main without a shell or a host: %d %q", code, errOut)
+	}
+	asked = listen(t, mainhost.HostSocket(dir), false, screenFrame)
+	if code, out, errOut := run("screen", "main"); code != ExitOK || !strings.Contains(out, "main's pane alone, from its host") {
+		t.Fatalf("main from its host: %d %q %q", code, out, errOut)
+	}
+	if got := <-asked; got != "s" {
+		t.Fatalf("main's mode = %q", got)
 	}
 }
 

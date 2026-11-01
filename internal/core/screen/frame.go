@@ -21,7 +21,7 @@ const (
 const MaxAnswer = 4 << 20
 
 // The sources of a frame: the shell's window as the person has it, or the
-// worker's pane alone from its space host when no shell answers.
+// pane alone from the host that holds its terminal when no shell answers.
 const (
 	SourceShell = "shell"
 	SourceHost  = "host"

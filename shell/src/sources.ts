@@ -1,10 +1,9 @@
 // Where a pane's bytes come from (docs/shell.md, "Who owns which pty"):
-// main runs on a pty of the shell's own; a worker's pty is its space host's,
-// read over the host's socket in the raw mode.
-import type { Subprocess } from "bun";
+// main's pty is its host's, the process of the person's pane; a worker's is
+// its space host's. Each is read over its host's socket in the raw mode.
 
 export interface Source {
-  // write is the person's keys, or the widget's answers for main.
+  // write is the person's keys.
   write(data: Uint8Array): void;
   resize(cols: number, rows: number): void;
   close(): void;
@@ -34,70 +33,7 @@ class Queue {
   }
 }
 
-export type MainRun = Source & { child: Subprocess };
-
-// mainEnv is main's environment: the shell's own, for a terminal like the
-// person's, and hostColors, the person's default colours for the hosts.
-export function mainEnv(hostColors: string | undefined): Record<string, string> {
-  const env: Record<string, string> = {
-    ...(process.env as Record<string, string>),
-    TERM: "xterm-256color",
-    COLORTERM: "truecolor",
-  };
-  delete env.REWAKE_SHELL_CWD;
-  delete env.REWAKE_SHELL_SOCK;
-  // The person's colours reach every space host through main's environment,
-  // so a worker's program hears them from its host (docs/shell.md).
-  if (hostColors) env.REWAKE_HOST_COLORS = hostColors;
-  // pi copies through the machine's clipboard where it finds one, which never
-  // reaches the person's terminal from inside the shell (on WSL without
-  // WT_SESSION, PowerShell); this makes it send OSC 52 as well, which the
-  // scanner carries out. Main's workers inherit it like the colours.
-  env.PI_CLIPBOARD_OSC52 ??= "1";
-  return env;
-}
-
-// startMain runs main's command line on a pty of its own: a session and a
-// process group of its own, the pty its controlling terminal, so closing the
-// pty is a hangup main hears.
-export function startMain(
-  command: string[],
-  env: Record<string, string>,
-  cwd: string,
-  size: { cols: number; rows: number },
-  onData: (data: Uint8Array) => void,
-): MainRun {
-  let queue: Queue | undefined;
-  const child = Bun.spawn(command, {
-    cwd,
-    env,
-    terminal: {
-      ...size,
-      data(_terminal, data) {
-        onData(data);
-      },
-      drain() {
-        queue?.flush();
-      },
-    },
-  });
-  const pty = child.terminal!;
-  queue = new Queue((data) => pty.write(data));
-  return {
-    child,
-    write: (data) => {
-      if (!pty.closed) queue?.write(data);
-    },
-    resize: (cols, rows) => {
-      if (!pty.closed) pty.resize(cols, rows);
-    },
-    close: () => {
-      if (!pty.closed) pty.close();
-    },
-  };
-}
-
-// The socket's raw mode (internal/host/spacehost/bytes.go): the client
+// The socket's raw mode (internal/host/stream/bytes.go): the client
 // writes the mode byte; the host answers the accepting byte, then the
 // preamble and the live bytes. The client writes frames: a kind, a
 // big-endian length of two bytes, the payload.
@@ -116,10 +52,10 @@ function frame(kind: number, payload: Uint8Array): Uint8Array {
   return out;
 }
 
-// connectWorker attaches to a space host's socket. onData gets the preamble
+// connectHost attaches to a host's socket: main's host or a space host. onData gets the preamble
 // and the live bytes; onEnd is called once, when the stream ends for any
 // reason, after which the source writes nothing.
-export function connectWorker(
+export function connectHost(
   socket: string,
   size: { cols: number; rows: number },
   onData: (data: Uint8Array) => void,

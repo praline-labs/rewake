@@ -1,27 +1,26 @@
-package spacehost
+package stream
 
 import (
 	"encoding/json"
 	"fmt"
 	"image/color"
 	"net"
-	"os"
 	"time"
 
 	"github.com/praline-labs/rewake/internal/core/screen"
 	"github.com/praline-labs/rewake/internal/host/terminal"
 )
 
-// snapshot serves one client of the snapshot mode: the worker's screen as
+// snapshot serves one client of the snapshot mode: the program's screen as
 // the emulator holds it, one JSON line of a screen.Frame, then the end. It
-// is what rewake screen shows of a worker when no shell answers
-// (docs/screen.md); the client sends no frame, so the worker's size stays.
-func (r *relay) snapshot(conn net.Conn) {
+// is what rewake screen shows of a pane when no shell answers
+// (docs/screen.md); the client sends no frame, so the program's size stays.
+func (r *Relay) snapshot(conn net.Conn) {
 	defer func() { _ = conn.Close() }()
 	frame := frameOf(r.grid.Snapshot())
-	// The person's default colors, as the shell gave them to this host; the
+	// The person's default colors, as the shell gave them to the host; the
 	// palette is not passed to a host, so indexed colors are xterm's.
-	fg, bg := terminal.ParseDefaults(os.Getenv(terminal.DefaultsEnv))
+	fg, bg := terminal.ParseDefaults(r.defaults)
 	frame.Fg, frame.Bg = colorHex(fg), colorHex(bg)
 	data, err := frame.Marshal()
 	if err != nil {

@@ -12,6 +12,7 @@ import (
 	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/core/screen"
 	"github.com/praline-labs/rewake/internal/core/space"
+	"github.com/praline-labs/rewake/internal/host/mainhost"
 	"github.com/praline-labs/rewake/internal/host/worktree"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
@@ -37,7 +38,7 @@ type screenView struct {
 func (v screenView) lines() []string {
 	what := "window"
 	if v.Source == screen.SourceHost {
-		what = "pane alone, from its space host (no shell is running)"
+		what = "pane alone, from its host (no shell answers)"
 	}
 	out := []string{fmt.Sprintf("Rewake: %s's %s, %dx%d", v.Name, what, v.Cols, v.Rows)}
 	if v.PNG != "" {
@@ -62,7 +63,7 @@ func screenCommand() *Command {
 		Notes: []string{
 			"<name> is a worker, by its space name or its address from rewake list, or main (main, or main's own address). A view: any session of the room may take it, it writes nothing of the room, and the person's screen is not touched.",
 			"The shell draws the window off-screen at the size the person's window has now, in the layout it has now, with the named session in its place: the worker's pane with its status line and the bar under it, main's half beside it in a wide window. Main's window is main's, even while the shell shows a worker. Colors and attributes are in the picture and not in the text.",
-			"With no shell running (main started without a terminal), a worker's pane alone comes from its space host's emulator and is marked so: source host. Main has no host, and the call is refused with exit 1.",
+			"With no shell answering (main started without a terminal, or between two shells of a restart), the pane alone comes from the emulator of the host that holds its terminal and is marked so: source host — a worker's space host, or main's host in the person's pane. Main started without a terminal has no host, and the call is refused with exit 1.",
 			"The picture is drawn with a font that ships with rewake, 8 by 16 pixels a cell, wide glyphs and box drawing included; at most 400 by 200 cells. --png refuses a path inside rewake's state, through a symbolic link, or onto an existing file that is not a regular one; an existing regular file is replaced.",
 			"Exit 0 done; 1 the session could not be drawn (no shell and no host answering, the shell refused it, the picture could not be written); 2 a wrong call — no such session, a path refused.",
 		},
@@ -86,9 +87,6 @@ func handleScreen(ctx *Context, call Call) error {
 	}
 	frame, err := askShell(state.SocketPath(dir, "shell", ""), pane)
 	if errors.Is(err, errNoShell) {
-		if hostSocket == "" {
-			return failf("main's window is drawn by the shell, and no shell is running in this room: main has no space host to show its pane from")
-		}
 		frame, err = askHost(hostSocket)
 	}
 	if err != nil {
@@ -118,7 +116,8 @@ func handleScreen(ctx *Context, call Call) error {
 }
 
 // screenTarget is the pane the shell is asked for — main, or a space's id —
-// and the socket of the worker's space host, empty for main. A name is a
+// and the socket of the host that holds its terminal: the worker's space
+// host, or main's host in the person's pane. A name is a
 // space's, a worker's address, or a main's.
 func screenTarget(dir, name string) (pane, hostSocket string, err error) {
 	records, _, err := space.List(dir)
@@ -134,7 +133,7 @@ func screenTarget(dir, name string) (pane, hostSocket string, err error) {
 		}
 	}
 	if name == "main" {
-		return "main", "", nil
+		return "main", mainhost.HostSocket(dir), nil
 	}
 	sessions, err := registry.ListReadOnly(dir)
 	if err != nil {
@@ -142,7 +141,7 @@ func screenTarget(dir, name string) (pane, hostSocket string, err error) {
 	}
 	for _, session := range sessions {
 		if session.Name == name && session.Role == role.Main.ID {
-			return "main", "", nil
+			return "main", mainhost.HostSocket(dir), nil
 		}
 	}
 	return "", "", fmt.Errorf("no worker or main named %q in this room: rewake space list shows the workers, rewake list the sessions", name)

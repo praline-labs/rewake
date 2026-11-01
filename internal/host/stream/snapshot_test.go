@@ -1,4 +1,4 @@
-package spacehost
+package stream
 
 import (
 	"bufio"
@@ -38,7 +38,7 @@ func TestASnapshotAnswersTheScreenAsOneFrame(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, err := conn.Write([]byte{modeSnapshot}); err != nil {
+		if _, err := conn.Write([]byte{ModeSnapshot}); err != nil {
 			t.Fatal(err)
 		}
 		line, err := bufio.NewReader(conn).ReadBytes('\n')

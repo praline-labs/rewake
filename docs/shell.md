@@ -1,5 +1,5 @@
 ---
-description: rewake's shell — its layout and panes, who owns each pseudo-terminal, closing, the raw stream a worker's pane is fed, the space host's emulator, keys, colours, the bar, the strip, the briefs view, and how it ships.
+description: rewake's shell — its layout and panes, who owns each pseudo-terminal, main's host and its channel, restarting the shell, closing, the raw stream a pane is fed, the space host's emulator, keys, colours, the bar, the strip, the briefs view, and how it ships.
 ---
 
 # The rewake shell
@@ -17,22 +17,103 @@ screen.
 
 ## Who owns which pty
 
-- **Main's pty is the shell's.** The shell starts main's ordinary wrapper (`rewake claude
-  [args]`, the launch's options kept) in a pty of its own with `Bun.spawn` and `terminal`, so
-  main's run is that wrapper's and the shell is its terminal. Main's pane gets the widget's
-  answers to main's queries (source `response`), since no other emulator stands between them.
+The owner's decision of November 1, 2026: the shell can be replaced while main and its workers
+run on, and closing the window still ends everything.
+
+- **Main's pty is its host's.** The launch at the terminal stays the pane's process as **main's
+  host** (`internal/host/mainhost`). It starts main's ordinary wrapper (`rewake claude [args]`,
+  the launch's options kept) on a pty it owns, in a session of its own, so closing that pty is a
+  hangup main hears. It keeps main's screen in an emulator and serves the raw stream and the
+  snapshot on the room's `sock/host.sock`, the space host's code (`internal/host/stream`,
+  [below](#how-a-pane-is-fed-the-raw-stream)). The host answers main's queries, as a space host
+  answers its worker's.
+- **The shell is the host's child**, in the host's process group, on the person's terminal. It
+  attaches to main's stream as it attaches to a worker's. The host can replace it: a restart and
+  a crash are told apart from a close ([below](#restart-crash-and-close)).
 - **A worker's pty stays its space host's** ([space.md](space.md)); its pane is fed from the
-  host's socket ([below](#how-a-pane-is-fed-the-raw-stream)).
-- **Closing ends everything**: sessions must not live on unseen, so there is no detach and no
-  re-attach. The shell ends when main ends, and when its own terminal goes — a hangup, or its
-  input at an end. Ending, it closes main's pty, so main hears a hangup, and waits a bound for
-  main's group before SIGTERM and SIGKILL; main's run ends, and each space host, which reads that
-  run, ends its worker. A shell killed outright closes main's pty the same way, by the kernel.
-  OpenTUI's own handlers of SIGHUP and the other ending signals only destroy the renderer, and the
-  panes' ptys would keep the process alive with both sessions; so the shell makes its renderer with
-  no exit signals and follows its terminal itself — SIGHUP, SIGTERM, SIGINT, SIGQUIT, SIGPIPE, its
-  input at an end or failing, and its parent gone, since a closed window takes the shell's parent
-  with it.
+  host's socket in the same way.
+- **Closing ends everything**: sessions must not live on unseen, so there is no detach. The host
+  lives exactly as long as main's run, in the person's pane. When the window goes, or on a stop
+  signal, the host hangs main up and waits 5 s for main's group, then SIGTERM, 3 s, SIGKILL.
+  Main's run ends, and each space host, which reads that run, ends its worker. The host follows
+  the terminal itself: SIGHUP, SIGPIPE, SIGTERM, SIGINT, SIGQUIT, its parent gone, and what the
+  shell tells it. A host killed outright closes main's pty the same way, by the kernel.
+- **Who answers the person's terminal.** The shell asks the terminal for its colours, as before
+  ([below](#what-the-widget-lacks-and-what-the-shell-does-about-it)). The first shell's answer
+  seeds the host's emulator and main's `REWAKE_HOST_COLORS`; later shells change neither. The
+  widget's answers to main are dropped (source `response`), as for every host-fed pane.
+- **herdr** sees the host as the pane's foreground process. Main's wrapper reports main itself,
+  as before ([launch.md](launch.md#herdr)).
+
+### The host's channel
+
+The shell and the host speak JSON lines on a socket pair: the shell's end is the descriptor that
+`REWAKE_HOST_FD` names (3). The channel is versioned:
+
+- The first line is the client's hello, `{"hello":"shell","v":1}`.
+- A host that does not speak that version answers the fixed refusal,
+  `{"refused":"this host speaks 1, the client N","speaks":[1]}`, and closes. No version changes
+  this shape. A shell started without the channel, by an older rewake, refuses at once and says
+  that the two must be of one version.
+- Messages are objects with a kind `t`.
+  - The host sends `welcome {generation, why: first|requested|crashed, main?}`,
+    `main {pid, socket}`, `go {state?}`, `release`, `closing`, `main-ended {code}` and
+    `error {why}`.
+  - The shell sends `ready {colors, cols, rows}`, `restart`, `close`, `lost` and
+    `released {state}`.
+- `sock/host.sock` takes a mode byte: `b` main's raw stream, `s` main's snapshot (`rewake screen`
+  when no shell answers), and `c` the control door. On the door a client says
+  `{"hello":"cli","v":1}` and asks `{"t":"restart","part":"shell"}`. The host answers
+  `done {generation}` or `failed {why}` once the part is back or has failed. Another client of
+  this version can use the door later. The part is a word, so later parts join without a new
+  command.
+
+The first launch runs in this order:
+
+1. The shell gets `welcome`, then `go`.
+2. It draws, and answers `ready` with the terminal's colours and the size of main's pane.
+3. The host starts main at that size. After 5 s without an answer it starts main at 120x40 with
+   no colours.
+4. Main's session is registered: its role is main, and its wrapper's pid and start are the ones
+   the host started. Then the host takes the room's lease, listens on `sock/host.sock` and sends
+   `main`.
+5. Only then does the shell attach main's pane and prove itself main's shell to
+   `rewake room --wrapper`. Its parent and the wrapper's parent are the same host.
+
+### Restart, crash and close
+
+- **Restart**, by `rewake restart shell` from any session of the room, or by Ctrl+\ then `r`:
+  1. The host starts a new shell, resolved as a launch resolves it (`REWAKE_SHELL`, or
+     `rewake-shell` beside rewake). It must say hello within 10 s; if it does not, or its version
+     is refused, the old shell keeps running and the command fails.
+  2. The old shell gets `release`. It gives the screen back, hands over what the person had
+     chosen as `released {state}` and exits within 3 s, or is killed. The state is the focus, the
+     chosen worker, the zoom, each pane's face and the drafts typed in it. The host does not read
+     it.
+  3. The host draws one line on a blank alternate screen and discards the keys typed meanwhile:
+     they are not queued for the new shell. Then it sends `go` with the state.
+  4. The new shell attaches to main and to every open space from their preambles, and answers
+     `ready` within 10 s. Without that answer, **main runs alone**: the host copies main's screen
+     and the person's keys both ways in the plain terminal, says so on the bottom row, and the
+     grid's answers are dropped so the terminal is the one responder. A later restart takes the
+     terminal back, its modes reset, and its keys are discarded again.
+
+  A failed restart never ends main. What is lost: the widgets' scrollback (main and the workers
+  scroll their own history), a selection, the briefs' scroll, the face's scroll and its pending
+  prompts, keys typed during the swap, and up to a second of the strip.
+- **Crash**: the shell exits without having said `released`, `close` or `lost`. After 300 ms
+  the host checks that the window is still there: its parent is the same, and the terminal
+  answers its size, which a hung-up terminal does not. Then it starts one new shell, as a
+  restart does, with no state. That is one per run, never given back: a second crash closes the
+  room. So does a shell that never answers `ready`.
+- **Close**: the shell asks with `close` on SIGTERM, SIGINT or SIGQUIT. It tells the host `lost`
+  and exits on SIGHUP, SIGPIPE, the end of its input or its parent gone. A signal to the host,
+  or its parent gone, is the same. The host sends `closing`, so the shell shows the closing
+  screen, and hangs main up within the bounds above. When main has ended it sends `main-ended`;
+  the shell keeps the closing screen until the workers it showed are over, and exits. The host
+  then gives the terminal back: its saved modes, the normal screen, the mouse and keyboard modes
+  reset. If main's code is not 0 and the terminal is still there, it prints main's last lines. No
+  restart begins once main's closing mark has gone by.
 
 ### The closing screen
 
@@ -64,9 +145,9 @@ What begins it:
   its process is left to exit. The mark is not sent at `/exit`'s `command.run`: `/exit` with work
   running opens Claude Code's dialog "Background work is running" after that hook, and a layer
   then would hide the dialog.
-- **The fallbacks**: the room's listing reading main's run ended for a space the shell shows,
-  main's process ending, and the shell ending itself on SIGTERM, SIGINT or SIGQUIT; not when the
-  terminal is lost, with nowhere to draw.
+- **The fallbacks**: the room's listing reading main's run ended for a space the shell shows, and
+  the host's `closing` and `main-ended` ([above](#restart-crash-and-close)); not when the terminal
+  is lost, with nowhere to draw.
 
 Once main has ended, the layer stays until every worker the shell showed reads closed in the
 room's listing (polled every 200 ms, at most 10 s, the space host's own bounds for ending a
@@ -82,7 +163,8 @@ after the key, the normal screen with "has been suspended" showing for one frame
 
 ## How a pane is fed: the raw stream
 
-The space socket serves one mode, `b` (bytes):
+The space socket and main's `sock/host.sock` serve the same mode, `b` (bytes), from
+`internal/host/stream`:
 
 - On connect, the host writes a **preamble** built from its emulator, then every byte the program
   writes after it. The cut is made in `Grid.commit`, under the grid's lock: the snapshot and the
@@ -107,7 +189,7 @@ The space socket serves one mode, `b` (bytes):
   second later, on its widget reset and seeded anew.
 - **The host keeps answering the program's queries**, as it must while nobody is attached; the
   pane's widget answers too, so the shell drops what the widget sends with source `response` for a
-  host-fed pane — never for main's. A host-fed program hears the host's answer: DA1, `CSI ? u`,
+  host-fed pane, main's included. A host-fed program hears the host's answer: DA1, `CSI ? u`,
   OSC 10/11, XTVERSION as `libghostty`, DECRQM 2026 as known (reset, set inside a frame); kitty
   graphics and OSC 4 go unanswered, and the widget is not made a second responder. XTVERSION
   matters: Claude Code sends its mode queries, DECRQM 2026 among them, only after it hears a
@@ -193,8 +275,8 @@ wrapper in the shell does the same for main (`terminal.UTF8Locale`), whose worke
   empty `REWAKE_HOST_COLORS` and a transparent background are not a fault.
 - **The hosts are seeded too**, since a host-fed program hears the host's answer: the person's
   default colours reach every host before its program starts — `REWAKE_HOST_COLORS=fg;bg`
-  (XParseColor forms) in main's environment, which `space open` inherits and the space host reads
-  to seed its grid. A colour the terminal did not give is left empty. Unseeded, a worker on a light
+  (XParseColor forms) in main's environment, which main's host sets from the first shell's
+  `ready`, which `space open` inherits, and which the space host reads to seed its grid. A colour the terminal did not give is left empty. Unseeded, a worker on a light
   terminal would hear a black background while its pane shows white.
 - **Mouse.** The widget forwards the wheel, clicks and drags in the program's mode, and scrolls its
   own scrollback when the program takes no mouse. OpenTUI's own selection takes the drag, so the
@@ -230,7 +312,8 @@ wrapper in the shell does the same for main (`terminal.UTF8Locale`), whose worke
   briefs at the bar's end; `1`–`9` a worker, `0` or `m` main, each focused;
   ← → the focus to main or to the chosen worker; `z` zooms the focused program or ends the zoom;
   `b` shows the briefs in the worker's place ([below](#the-briefs)), and while they have the keys
-  goes back to what was chosen and focused before; `v` flips a dev worker's pane between rewake's
+  goes back to what was chosen and focused before; `r` restarts the shell
+  ([above](#restart-crash-and-close)); `v` flips a dev worker's pane between rewake's
   face and the native one ([face.md](face.md#the-face)); the prefix again sends Ctrl+\\ to the focused
   program, but not to the briefs; any other key cancels.
 - **The room** comes from one call of rewake's own, polled once a second (`shell/src/room.ts`):
@@ -523,11 +606,12 @@ outlives a worker being chosen over it, as a worker's screen does.
 ## How rewake starts the shell, and how it ships
 
 - `rewake claude [args]` and `rewake pi [args]` at a terminal: when standard input and output are
-  both terminals and the adapter offers spaces, the Go launcher execs the shell as
-  `<shell> --room <room> -- <rewake> <its own arguments>` with `REWAKE_SHELL_MAIN=1`, so no rewake
-  process stays between the person's terminal and the shell. The shell runs that command line on
-  its pty; that launch, seeing the variable, takes it out of its environment and runs main
-  ([launch.md](launch.md#the-shell)).
+  both terminals and the adapter offers spaces, the Go launcher becomes main's host
+  ([above](#who-owns-which-pty)). It runs the shell as `<shell> --room <room> -- <rewake> <its own
+  arguments>` with the channel on `REWAKE_HOST_FD`, and runs the same command line on its own pty
+  with `REWAKE_SHELL_MAIN=1`; that launch, seeing the variable, takes it out of its environment and
+  runs main ([launch.md](launch.md#the-shell)). The shell and rewake are released together: a
+  shell run by an older rewake has no channel and refuses to start.
 - **Shipping.** The person has no Bun. `bun build --compile` with `@opentui/solid/bun-plugin`
   gives one executable with the runtime and OpenTUI's native library inside. Bun is MIT, but the
   runtime it embeds carries JavaScriptCore, LGPL-2, which the dependency rule does not name; main

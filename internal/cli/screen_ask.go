@@ -60,7 +60,7 @@ func askShell(socket, pane string) (*screen.Frame, error) {
 func askHost(socket string) (*screen.Frame, error) {
 	conn, err := net.DialTimeout("unix", socket, screenDial)
 	if err != nil {
-		return nil, fmt.Errorf("the worker's space host is not answering (%v)", err)
+		return nil, fmt.Errorf("no shell answers, and the host that holds the pane is not answering (%v)", err)
 	}
 	defer func() { _ = conn.Close() }()
 	_ = conn.SetDeadline(time.Now().Add(screenAnswer))
@@ -69,7 +69,7 @@ func askHost(socket string) (*screen.Frame, error) {
 	}
 	var answer shellAnswer
 	if err := readLine(conn, &answer); err != nil {
-		return nil, fmt.Errorf("the space host did not answer: %w", err)
+		return nil, fmt.Errorf("the host did not answer: %w", err)
 	}
 	if answer.Error != "" {
 		return nil, errors.New(answer.Error)

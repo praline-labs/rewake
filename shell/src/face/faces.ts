@@ -162,6 +162,20 @@ export function endFaces() {
   for (const face of faces.values()) face.host.end();
 }
 
+// KeptFaces is what a shell let go by a restart hands its successor: which
+// face each pane shows and what was typed in it (docs/shell.md, "Restart,
+// crash and close").
+export type KeptFaces = { modes: [string, FaceMode][]; drafts: [string, string][] };
+export const keptFaces = (): KeptFaces => ({
+  modes: [...modes()],
+  drafts: [...drafts()].filter(([, text]) => text !== ""),
+});
+export function restoreFaces(kept: KeptFaces | undefined) {
+  if (!kept) return;
+  setModes(new Map(kept.modes));
+  setDrafts(new Map(kept.drafts));
+}
+
 // watchSources reloads the faces 150 ms after the last change of a file in
 // the directory of the copy run from disk.
 function watchSources() {

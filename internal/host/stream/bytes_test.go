@@ -1,4 +1,4 @@
-package spacehost
+package stream
 
 import (
 	"bytes"
@@ -46,10 +46,10 @@ func served(t *testing.T, program string) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	r := &relay{pty: pty, grid: grid}
-	go r.pump()
-	go r.answer()
-	go r.serve(listener)
+	r := New(pty, grid, "", nil)
+	go r.Pump()
+	go r.Answer()
+	go r.Serve(listener, nil)
 	t.Cleanup(func() {
 		_ = listener.Close()
 		_ = cmd.Process.Kill()
@@ -69,7 +69,7 @@ func attach(t *testing.T, socket string) net.Conn {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = conn.Close() })
-	if _, err := conn.Write([]byte{modeBytes}); err != nil {
+	if _, err := conn.Write([]byte{ModeBytes}); err != nil {
 		t.Fatal(err)
 	}
 	return conn
@@ -89,10 +89,10 @@ func TestTheRawStreamCarriesThePreambleThenLiveBytes(t *testing.T) {
 
 	conn := attach(t, socket)
 	got := readUntil(t, conn, []byte("\x1b[?2004h"))
-	if got[0] != accepted || !bytes.Contains(got, []byte("ready")) {
+	if got[0] != Accepted || !bytes.Contains(got, []byte("ready")) {
 		t.Fatalf("the stream began %q, want the accepting byte and the screen", got)
 	}
-	if _, err := conn.Write(append([]byte{frameInput, 0, 4}, "zq\r\n"...)); err != nil {
+	if _, err := conn.Write(append([]byte{FrameInput, 0, 4}, "zq\r\n"...)); err != nil {
 		t.Fatal(err)
 	}
 	readUntil(t, conn, []byte("zq"))
@@ -103,10 +103,10 @@ func TestTheRawStreamCarriesThePreambleThenLiveBytes(t *testing.T) {
 func TestAClientSizesTheWorker(t *testing.T) {
 	socket := served(t, `read line; stty size; exec cat`)
 	conn := attach(t, socket)
-	resize := []byte{frameResize, 0, 4, 0, 0, 0, 0}
+	resize := []byte{FrameResize, 0, 4, 0, 0, 0, 0}
 	binary.BigEndian.PutUint16(resize[3:], 40)
 	binary.BigEndian.PutUint16(resize[5:], 8)
-	if _, err := conn.Write(append(resize, append([]byte{frameInput, 0, 1}, '\r')...)); err != nil {
+	if _, err := conn.Write(append(resize, append([]byte{FrameInput, 0, 1}, '\r')...)); err != nil {
 		t.Fatal(err)
 	}
 	readUntil(t, conn, []byte("8 40"))

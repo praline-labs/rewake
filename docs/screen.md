@@ -36,10 +36,11 @@ The hints say the shadow window's own focus, the named session's keys, not the p
 
 ## The request
 
-The shell listens on `sock/shell.sock` of the room. The launcher that execs the shell passes the
+The shell listens on `sock/shell.sock` of the room. Main's host, which runs the shell, passes the
 path in `REWAKE_SHELL_SOCK` (`state.SocketPath(dir, "shell", "")`, taken out of main's
-environment); the room's folder is made by the main the shell starts, so the shell tries each
-time the room is polled until it can listen, and removes a stale file first (one main per room).
+environment); the room's folder is made by main's launch, so the shell tries each time the room
+is polled until it can listen, and removes a stale file first (one main per room, and a shell a
+restart let go stops listening first).
 One request a connection: a line `{"pane": "main"}` or `{"pane": "<space id>"}`, answered by one
 line, a frame or `{"error": "…"}`, and the end. A request over 4 KiB is dropped, the draw has 5 s,
 the CLI waits 2 s to connect and 10 s for the answer and reads at most 4 MiB. Requests are served
@@ -71,14 +72,17 @@ OSC 10/11, so a picture taken there names the two. The host path seeds `fg` and 
 `REWAKE_HOST_COLORS` as its emulator does; the palette is not passed to a host, so it always names
 `palette`.
 
-## No shell: the space host
+## No shell: the host
 
-When nothing listens at `sock/shell.sock` (main runs without a terminal) a worker's pane alone
-comes from its space host: mode `s` of the space socket ([space.md](space.md#the-stream-to-the-shell)),
+When nothing listens at `sock/shell.sock` (main runs without a terminal, or a restart is between
+two shells) a pane alone comes from the host that holds its terminal: main's from main's host,
+mode `s` of `sock/host.sock` ([shell.md](shell.md#the-hosts-channel)), a worker's from its space
+host: mode `s` of the space socket ([space.md](space.md#the-stream-to-the-shell)),
 which waits 5 s for the mode byte and answers one JSON line of the emulator's screen — styled rows, the cursor when visible, the
 default colors empty, indexed colors as xterm's palette — and closes. It takes no frame and sets
 no size, it reads under the grid's lock and writes after releasing it (`Grid.Snapshot`). The answer
-says `source: host`, and the text line says the pane is alone. Main has no host: refused, exit 1. A
+says `source: host`, and the text line says the pane is alone. Main started without a terminal
+has no host: refused, exit 1. A
 shell that answers with an error is not asked around.
 
 ## The picture

@@ -40,6 +40,9 @@ func TestMain(m *testing.M) {
 	// Re-executed as a harness by a scenario: be the harness and nothing
 	// else. Checked before anything else because the ordinary path would
 	// otherwise build a binary and run a suite inside the shim.
+	if os.Getenv(fakeShellEnv) != "" {
+		os.Exit(runFakeShell())
+	}
 	if os.Getenv(shimEnv) != "" {
 		recordShimCall(os.Args)
 		if os.Getenv(shimHarness) == "fixture" {
