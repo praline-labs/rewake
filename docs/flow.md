@@ -353,8 +353,9 @@ worker whose configuration directory has no login yet opens all the same, and th
 main the person is to type `/login` once in that pane ([launch.md](launch.md#claude-code)).
 
 Main sends `api-claude` a task, and its report comes back as in Acts 2 to 5. When main was
-started in the shell — at a terminal, always — main runs on the shell's own pty and each worker's pane is
-fed the raw bytes from its space host's socket; Ctrl+\\ then a key chooses the worker shown
+started in the shell — at a terminal, always — main runs on the pty of its host, the pane's process,
+and the shell feeds main's pane and each worker's from their hosts' sockets, so it can be restarted
+while they work; Ctrl+\\ then a key chooses the worker shown
 beside main, and everything else typed goes to the focused program ([shell.md](shell.md)).
 Without the shell the worker runs unseen.
 

@@ -266,23 +266,31 @@ both terminals and its adapter offers spaces, with no flag to turn it off — Cl
 pi's alike. Otherwise main runs plain: under a
 script or a pipe. The launch reads no harness flag, so
 `rewake claude -p` typed at a terminal runs inside the shell too (a known limit). The launch
-execs the shell — `REWAKE_SHELL`, or `rewake-shell` beside rewake, refused exit 1 when neither
-is there — as `<shell> --room <room> -- <rewake> <the same arguments>` with
-`REWAKE_SHELL_MAIN=1`. The shell runs that command line on a pty of its own; that launch
-sees the variable, takes it out of its environment and runs main as an ordinary launch whose
-adapter is told the run is drawn by rewake (`LaunchRequest.Shell`): Claude Code runs fullscreen,
-`CLAUDE_CODE_NO_FLICKER=1` unless the person set the variable, so it scrolls its own history with
-the wheel. The shell sets `REWAKE_HOST_COLORS` in main's environment from the terminal's
-answer, so workers' hosts are seeded too. Main's wrapper writes on its terminal one thing of its
-own, the shell's closing mark, when main's mod says Claude Code's session has ended, or pi's
-extension says pi quits ([shell.md](shell.md#who-owns-which-pty)). It ends when main ends, with main's code, and when its
-terminal goes: then it hangs main up and main's run's end ends every worker. A launch that failed
-inside the shell has its last lines printed once the shell leaves the screen.
+stays the pane's process as main's host (`internal/host/mainhost`, [shell.md](shell.md#who-owns-which-pty)).
+It runs the shell — `REWAKE_SHELL`, or `rewake-shell` beside rewake, refused exit 1 when neither
+is there — as its child, `<shell> --room <room> -- <rewake> <the same arguments>`, with the
+host's channel on `REWAKE_HOST_FD`. Once the shell has said the terminal's colours and the size
+of main's pane, the host runs the same command line on a pty of its own with
+`REWAKE_SHELL_MAIN=1`. That launch sees the variable, takes it out of its environment and runs
+main as an ordinary launch whose adapter is told the run is drawn by rewake
+(`LaunchRequest.Shell`): Claude Code runs fullscreen, `CLAUDE_CODE_NO_FLICKER=1` unless the person
+set the variable, so it scrolls its own history with the wheel. The host sets
+`REWAKE_HOST_COLORS` in main's environment from the first shell's answer, so workers' hosts are
+seeded too. Main's wrapper writes on its terminal one thing of its own, the closing mark, when
+main's mod says Claude Code's session has ended, or pi's extension says pi quits
+([shell.md](shell.md#the-closing-screen)). The host reads the mark too, and takes no restart
+after it.
+
+`rewake restart shell`, or Ctrl+\\ then `r`, replaces the shell while main and its workers run on
+([shell.md](shell.md#restart-crash-and-close)). The host ends when main ends, with main's code,
+and when its terminal goes or it gets a stop signal: then it hangs main up, and the end of main's
+run ends every worker. A launch that failed has its last lines printed once the host has given
+the terminal back.
 
 ### herdr
 
 herdr, a terminal workspace manager for coding agents, finds an agent by its pane's foreground
-process, which for main in the shell is `rewake-shell`. So main's wrapper reports main itself,
+process, which for main in the shell is main's host, rewake itself, with the shell in its group. So main's wrapper reports main itself,
 through herdr's own reporting command (`internal/host/herdr`). It does so only when `HERDR_ENV=1`
 and `HERDR_PANE_ID`, `HERDR_BIN_PATH` and `HERDR_SOCKET_PATH` are all set, and only for main.
 Workers run in no pane of herdr's, and carry none of its variables: the space host drops every

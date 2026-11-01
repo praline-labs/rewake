@@ -40,6 +40,7 @@ const table: Record<Context["focus"] | "prefix", Entry[]> = {
     { keys: "z", does: (c) => (c.zoomed ? "end the zoom" : "zoom") },
     { keys: "b", does: (c) => (c.focus === "briefs" ? "back" : "briefs"), when: hasWorkers },
     { keys: "v", does: otherFace, when: hasFace },
+    { keys: "r", does: "restart the shell" },
     {
       keys: "Ctrl+\\ again",
       does: (c) => `pass Ctrl+\\ to ${c.name}`,

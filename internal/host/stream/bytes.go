@@ -1,16 +1,16 @@
-package spacehost
+package stream
 
 import (
 	"net"
 	"time"
 )
 
-// bytes serves one client of the raw stream until it leaves or the worker's
+// bytes serves one client of the raw stream until it leaves or the program's
 // output ends: the accepting byte, the grid's preamble, then every byte the
 // grid's emulator takes after it, unframed (docs/shell.md). The client
 // writes frames of keys and sizes (relay.go). A client that stops reading, or falls too
 // far behind for the grid to keep its bytes, is dropped and attaches again.
-func (r *relay) bytes(conn net.Conn) {
+func (r *Relay) bytes(conn net.Conn) {
 	defer func() { _ = conn.Close() }()
 	stream := r.grid.Attach()
 	defer stream.Detach()
@@ -20,7 +20,7 @@ func (r *relay) bytes(conn net.Conn) {
 		stream.Detach()
 	}()
 	_ = conn.SetWriteDeadline(time.Now().Add(clientWrite))
-	if _, err := conn.Write(append([]byte{accepted}, stream.Preamble...)); err != nil {
+	if _, err := conn.Write(append([]byte{Accepted}, stream.Preamble...)); err != nil {
 		return
 	}
 	for p := range stream.Live {

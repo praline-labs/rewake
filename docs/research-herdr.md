@@ -15,7 +15,9 @@ Checked October 27, 2026 on herdr 0.9.5 (`herdr --version`), live:
 - herdr detects an agent by its pane's foreground process. A pane running main in rewake's shell
   has `rewake-shell` as its foreground process, with the harness inside the shell's own pty.
   `herdr pane process-info` shows only `rewake-shell`, and the pane is not detected; a plain
-  harness in the next pane is.
+  harness in the next pane is. Since November 1, 2026 the pane's foreground is main's host, the
+  `rewake` launch, with the shell in its group and the harness on the host's own pty
+  ([launch.md](launch.md#herdr)); not yet checked under herdr.
 - Every process in a pane inherits `HERDR_ENV=1`, `HERDR_PANE_ID`, `HERDR_BIN_PATH`,
   `HERDR_SOCKET_PATH`, `HERDR_TAB_ID` and `HERDR_WORKSPACE_ID`. A worker's wrapper, under a space
   host outside main's process tree, carried them then, inherited from main's environment; since

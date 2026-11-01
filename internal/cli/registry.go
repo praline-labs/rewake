@@ -44,7 +44,7 @@ func buildGroups(catalog adapter.Catalog) []Group {
 	for _, h := range catalog.All() {
 		run.Commands = append(run.Commands, launchCommand(h))
 	}
-	run.Commands = append(run.Commands, worktreeCommand(catalog), statuslineCommand(catalog), roomCommand())
+	run.Commands = append(run.Commands, worktreeCommand(catalog), statuslineCommand(catalog), roomCommand(), restartCommand())
 
 	talk := Group{
 		Title:   "TALK",
@@ -233,7 +233,7 @@ func buildGroups(catalog adapter.Catalog) []Group {
 // launchHelp is who a launch is and refuseNestedLaunch's rule, on every
 // launch page: main reading how to start a worker must not learn it only
 // from the refusal.
-const launchHelp = "Always main, in the room of the launch directory; refused with exit 1 while that directory has a main. On a terminal main runs in rewake's shell — main on the left, from 120 columns the worker chosen on the bar below on the right; Ctrl+\\ then a digit, n, p or m chooses, an arrow moves the focus, z zooms; closing the terminal ends main and its workers; the shell is REWAKE_SHELL, or rewake-shell beside rewake. Without a terminal, or on a harness whose main opens no spaces, main runs plain. Refused with exit 2 from a shell inside a rewake session: the owner starts main, from a terminal outside any, and main starts the workers."
+const launchHelp = "Always main, in the room of the launch directory; refused with exit 1 while that directory has a main. On a terminal main runs in rewake's shell — main on the left, from 120 columns the worker chosen on the bar below on the right; Ctrl+\\ then a digit, n, p or m chooses, an arrow moves the focus, z zooms; closing the terminal ends main and its workers, while rewake restart shell or Ctrl+\\ then r replaces the shell and keeps them; the shell is REWAKE_SHELL, or rewake-shell beside rewake. Without a terminal, or on a harness whose main opens no spaces, main runs plain. Refused with exit 2 from a shell inside a rewake session: the owner starts main, from a terminal outside any, and main starts the workers."
 
 // launchCommand builds the command that starts one harness.
 func launchCommand(h adapter.Harness) *Command {

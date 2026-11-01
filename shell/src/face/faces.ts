@@ -11,6 +11,7 @@ import { createSignal, untrack } from "solid-js";
 import type { FromFace, Pointing, ToFace } from "../../../face/src/messages.ts";
 import { faultOf } from "./check.ts";
 import { FaceHost, type FaceState } from "./host.ts";
+import { type KeptPastes, keptPastes, restorePastes } from "./paste.ts";
 
 export type FaceMode = "rewake" | "native";
 
@@ -160,6 +161,26 @@ export function reloadFaces() {
 
 export function endFaces() {
   for (const face of faces.values()) face.host.end();
+}
+
+// KeptFaces is what a shell let go by a restart hands its successor: which
+// face each pane shows, what was typed in it, and the pastes its markers
+// stand for (docs/shell.md, "Restart, crash and close").
+export type KeptFaces = {
+  modes: [string, FaceMode][];
+  drafts: [string, string][];
+  pastes?: [string, KeptPastes][];
+};
+export const keptFaces = (): KeptFaces => ({
+  modes: [...modes()],
+  drafts: [...drafts()].filter(([, text]) => text !== ""),
+  pastes: keptPastes(),
+});
+export function restoreFaces(kept: KeptFaces | undefined) {
+  if (!kept) return;
+  setModes(new Map(kept.modes));
+  setDrafts(new Map(kept.drafts));
+  restorePastes(kept.pastes);
 }
 
 // watchSources reloads the faces 150 ms after the last change of a file in

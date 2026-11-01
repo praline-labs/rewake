@@ -33,7 +33,7 @@ import {
   unfoldFace,
   unselectFace,
 } from "./faces.ts";
-import { cleaned, type Paste, Pastes, rowsFor } from "./paste.ts";
+import { cleaned, type Paste, pastesOf, rowsFor } from "./paste.ts";
 
 // pi's keys over OpenTUI's own, which already move by words (alt or ctrl
 // with an arrow, alt+b, alt+f), delete by words (ctrl+w, alt+Backspace,
@@ -48,15 +48,6 @@ const keys: KeyBinding[] = [
   { name: "home", action: "line-home" },
   { name: "end", action: "line-end" },
 ];
-
-// The pastes each pane's input holds markers for, kept while the face is
-// switched away, as its draft is.
-const held = new Map<string, Pastes>();
-const pastesOf = (id: string) => {
-  const p = held.get(id) ?? new Pastes();
-  held.set(id, p);
-  return p;
-};
 
 export function FaceInput(props: {
   id: string;

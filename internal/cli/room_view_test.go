@@ -3,6 +3,7 @@ package cli
 import (
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -20,7 +21,7 @@ func TestTheRoomViewCarriesAFailedBriefList(t *testing.T) {
 	lead := otherRun(t, dir, "lead")
 	markMain(t, dir, "lead")
 	as(t, lead)
-	shell := os.Getpid()
+	shell := siblingShell(t)
 	shellParent = func() int { return shell }
 	t.Cleanup(func() { shellParent = os.Getppid })
 	if code, _, errOut := run("brief", "new", "# Real brief\n"); code != ExitOK {
@@ -73,7 +74,7 @@ func TestTheRoomViewCarriesWhatOnlyMainReadsToMainsShell(t *testing.T) {
 	if err := taskbrief.Bind(taskbrief.Home{Room: dir}, 1, taskbrief.Author{Name: worker.Name, Epoch: worker.Epoch()}, taskbrief.Work); err != nil {
 		t.Fatal(err)
 	}
-	shell := os.Getpid()
+	shell := siblingShell(t)
 	shellParent = func() int { return shell }
 	t.Cleanup(func() { shellParent = os.Getppid })
 
@@ -119,10 +120,22 @@ func TestTheRoomViewCarriesWhatOnlyMainReadsToMainsShell(t *testing.T) {
 	if roomView(t, "--wrapper", strconv.Itoa(worker.ServicePID)).AsMain {
 		t.Error("a worker's pid proved main's shell")
 	}
-	shellParent = func() int { return shell + 1 }
+	shellParent = os.Getpid
 	if roomView(t, "--wrapper", strconv.Itoa(lead.ServicePID)).AsMain {
 		t.Error("a wrapper another process started proved main's shell")
 	}
+}
+
+// siblingShell is a process the test started, as main's host starts the
+// shell beside main's wrapper: its parent is the wrapper's.
+func siblingShell(t *testing.T) int {
+	t.Helper()
+	cmd := exec.Command("sleep", "60")
+	if err := cmd.Start(); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = cmd.Process.Kill(); _ = cmd.Wait() })
+	return cmd.Process.Pid
 }
 
 // The view's marks are the ones the verdict emits: the schema's enum and

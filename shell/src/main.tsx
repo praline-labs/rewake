@@ -3,28 +3,35 @@
 // key hints under main's, the bar choosing the worker under the worker's.
 // Below 120 columns the shown pane takes the whole width, the hints and the
 // bar under its status, and the bar switches the whole window.
-// Started by rewake --shell as
+// Started by main's host (internal/host/mainhost), the process of the
+// person's pane, as
 //   rewake-shell --room <room> -- <main's command line>
-// and by the release gate as rewake-shell --face-check, which starts the face
-// it carries and says whether it answers.
+// with the host's channel on REWAKE_HOST_FD; the host holds main's pty, so
+// the shell can be replaced while main runs (docs/shell.md). Started by the
+// release gate as rewake-shell --face-check, which starts the face it
+// carries and says whether it answers.
 
 import { createCliRenderer } from "@opentui/core";
-import { render, testRender, useTerminalDimensions } from "@opentui/solid";
+import { render, useTerminalDimensions } from "@opentui/solid";
 import { createEffect, createSignal } from "solid-js";
 import { takeBriefs } from "./briefs.tsx";
 import { askColors, seedOf } from "./colors.ts";
-import { endMain, tailText, watchTerminal } from "./ending.ts";
+import { watchTerminal } from "./ending.ts";
 import {
   checkFace,
   copyWith,
   endFaces,
   faceShown,
+  type KeptFaces,
+  keptFaces,
+  restoreFaces,
   takeMirrors,
   toggleFace,
   workerUrl,
 } from "./face/faces.ts";
 import { type Command, isSuspend, prefixHandler } from "./keys.ts";
 import { closingLayer } from "./lifting.ts";
+import { type FromHost, type MainRef, openLink } from "./link.ts";
 import { type PaneTerminal, paneHooks } from "./pane.ts";
 import {
   allPanes,
@@ -36,8 +43,6 @@ import {
   type Pane,
   paneOf,
   setChosen,
-  setFocused,
-  setWorkers,
   setZoomed,
   show,
   takeSpaces,
@@ -46,9 +51,9 @@ import {
   zoomed,
 } from "./panes.ts";
 import { endedSpaces, pollRoom, shownSpaces, spacesOver } from "./room.ts";
-import { Scanner } from "./scan.ts";
-import { type Frame, frameOf, listenScreen } from "./screen.ts";
-import { connectWorker, type MainRun, mainEnv, type Source, startMain } from "./sources.ts";
+import { listenScreen } from "./screen.ts";
+import { shadowOf } from "./shadow.tsx";
+import { connectHost } from "./sources.ts";
 import { showSessions, stripOf } from "./strip.tsx";
 import { themeOf } from "./theme.ts";
 import { outerTitle } from "./title.ts";
@@ -68,7 +73,13 @@ if (split < 0 || command.length === 0) {
   process.exit(2);
 }
 const rewake = command[0]!;
-const cwd = process.env.REWAKE_SHELL_CWD || process.cwd();
+const hostFd = Number(process.env.REWAKE_HOST_FD);
+if (!Number.isInteger(hostFd) || hostFd < 3) {
+  process.stderr.write(
+    "rewake-shell runs under main's host, which rewake starts: this rewake is older than the shell, and the two must be of one version\n",
+  );
+  process.exit(2);
+}
 
 // prefixWaits is a typed Ctrl+\ waiting for its command.
 const [prefixWaits, setPrefixWaits] = createSignal(false);
@@ -79,9 +90,12 @@ const workersBound = 10_000;
 let suspendSentAt = 0;
 const suspendWindow = 1000;
 
-let main: MainRun | undefined;
-let mainTail = "";
+// main is main's wrapper and its host's socket, once main is registered.
+let main: MainRef | undefined;
 let ending = false;
+// Kept is what a shell let go by a restart hands its successor.
+type Kept = { focused?: string; chosen?: string; zoomed?: boolean; faces?: KeptFaces };
+let kept: Kept | undefined;
 const {
   closing,
   begin: beginClosing,
@@ -89,13 +103,48 @@ const {
   remaining: closingRemaining,
 } = closingLayer(() => ending);
 let stopRoom = () => {};
+let stopScreen: (() => void) | undefined;
+// shown is the renderer once it draws: the host's channel may end before.
+let shown: { destroy(): void; closed: Promise<unknown> } | undefined;
 
+// The host gives the shell the terminal with go: before it, another shell
+// may still be drawing on it.
+const given = Promise.withResolvers<unknown>();
+const link = openLink(hostFd, fromHost, (why) => {
+  process.stderr.write(`rewake-shell: ${why}\n`);
+  leave(1);
+});
+
+function fromHost(m: FromHost) {
+  switch (m.t) {
+    case "welcome":
+      if (m.main) main = m.main;
+      return;
+    case "main":
+      main = m.main;
+      return attach(mainPane);
+    case "go":
+      return given.resolve(m.state);
+    case "release":
+      return void release();
+    case "closing":
+      return stopAll(true);
+    case "main-ended":
+      return void finish(m.code);
+    case "error":
+      process.stderr.write(`rewake-shell: the host says ${m.why}\n`);
+  }
+}
+
+kept = ((await given.promise) as Kept | undefined) ?? undefined;
+restoreFaces(kept?.faces);
 const renderer = await createCliRenderer({
   exitOnCtrlC: false,
   exitSignals: [],
   useMouse: true,
   prependInputHandlers: [prefixHandler(run, setPrefixWaits)],
 });
+shown = renderer;
 const colors = await askColors(renderer);
 const seed = seedOf(colors);
 paneHooks.standIn = seed.standIn;
@@ -125,55 +174,51 @@ function feed(pane: Pane, data: Uint8Array) {
   pane.shadow?.write(data);
 }
 
+// The pane's size as its program is told it.
+const sizeOf = (term: PaneTerminal) => ({
+  cols: Math.max(term.width, 20),
+  rows: Math.max(term.height, 5),
+});
+
 function startMainPane(term: PaneTerminal) {
-  mainPane.term = term;
-  if (seed.widget) term.write(seed.widget);
-  term.onData = (data) => {
-    if (isSuspend(data)) suspendSentAt = Date.now();
-    main?.write(data);
-  };
-  term.onTerminalResize = (cols, rows) => main?.resize(cols, rows);
-  main = startMain(
-    command,
-    mainEnv(seed.host),
-    cwd,
-    { cols: Math.max(term.width, 20), rows: Math.max(term.height, 5) },
-    (data) => {
-      mainTail = (mainTail + Buffer.from(data).toString("utf8")).slice(-16_384);
-      feed(mainPane, data);
-    },
-  );
-  void main.child.exited.then((code) => finish(code));
+  startPane(mainPane, term);
+  // The host starts main at this size, with the person's colours; a later
+  // shell's answer changes neither.
+  link.send({ t: "ready", colors: seed.host, ...sizeOf(term) });
 }
 
-// attach connects a worker's pane to its space host, again after a stream
-// that ended while the space is still open: a fresh preamble, on a widget
-// reset to the seeded colours.
+// attach connects a pane to its host — main's, or a worker's space host —
+// again after a stream that ended while the pane is still shown: a fresh
+// preamble, on a widget reset to the seeded colours.
 function attach(pane: Pane) {
   const term = pane.term;
-  if (!term || !pane.space || ending) return;
+  const socket = pane === mainPane ? main?.socket : pane.space?.socket;
+  if (!term || !socket || ending) return;
   pane.scanner.reset();
   term.write(`\x1bc${seed.widget}`);
   pane.shadow?.write(`\x1bc${seed.widget}`);
-  pane.source = connectWorker(
-    pane.space.socket,
-    { cols: Math.max(term.width, 20), rows: Math.max(term.height, 5) },
+  pane.source = connectHost(
+    socket,
+    sizeOf(term),
     (data) => feed(pane, data),
     () => {
       pane.source = undefined;
       setTimeout(() => {
-        if (workers().includes(pane)) attach(pane);
+        if (pane === mainPane || workers().includes(pane)) attach(pane);
       }, 1000);
     },
   );
 }
 
-function startWorkerPane(pane: Pane, term: PaneTerminal) {
+function startPane(pane: Pane, term: PaneTerminal) {
   pane.term = term;
+  if (pane === mainPane && seed.widget) term.write(seed.widget);
   // The widget answers the program's queries too; the host answers them
   // already, so the widget's answers to a host-fed program are dropped.
   term.onData = (data, source) => {
-    if (source !== "response") pane.source?.write(data);
+    if (source === "response") return;
+    if (pane === mainPane && isSuspend(data)) suspendSentAt = Date.now();
+    pane.source?.write(data);
   };
   term.onTerminalResize = (cols, rows) => pane.source?.resize(cols, rows);
   attach(pane);
@@ -217,11 +262,11 @@ function run(c: Command) {
       return toggleBriefs();
     case "face":
       return toggleFace(focused());
+    case "restart":
+      return link.send({ t: "restart" });
     // The prefix twice types it.
     case "prefix":
-      return (focused() === "main" ? main : paneOf(focused())?.source)?.write(
-        new Uint8Array([0x1c]),
-      );
+      return paneOf(focused())?.source?.write(new Uint8Array([0x1c]));
   }
 }
 
@@ -248,135 +293,84 @@ const liveEnv: Env = {
   live: true,
   closing,
   mainRef: startMainPane,
-  workerRef: startWorkerPane,
+  workerRef: startPane,
 };
 
-// finish ends the shell with main's code: main hung up and waited for, the
-// workers' streams closed, the screen given back. Unless the terminal is
-// lost, the closing layer shows from its start.
-async function finish(code?: number, lost = false) {
+// stopAll lets go of every stream, the room's poll and the faces; with
+// closing, main's end has begun and the closing layer shows.
+function stopAll(closing: boolean) {
+  if (closing) beginClosing();
   if (ending) return;
   ending = true;
-  if (!lost) beginClosing();
   stopRoom();
   stopScreen?.();
   endFaces();
-  for (const pane of workers()) pane.source?.close();
-  if (main) code = await endMain(main.child, main.close);
-  // Main's process ends only after its screen has gone, and the shell's
-  // own end followed within milliseconds, so the layer was never drawn and
-  // the workers ended unseen after it. It stays until the workers the
-  // shell showed are over, and a minimum time.
-  if (!lost) {
-    const ids = workers().map((p) => p.id);
-    await Promise.all([
-      spacesOver(rewake, room, ids, workersBound),
-      // Begun by a sign of main's, the layer may have shown long enough already.
-      new Promise((resolve) => setTimeout(resolve, closingRemaining())),
-    ]);
-  }
-  renderer.destroy();
-  await Promise.race([renderer.closed, new Promise((resolve) => setTimeout(resolve, 1000))]);
-  if (code !== 0 && process.stderr.isTTY) {
-    const said = tailText(mainTail);
-    if (said) process.stderr.write(`${said}\n`);
-  }
-  process.exit(code ?? 1);
+  for (const pane of allPanes()) pane.source?.close();
 }
 
-// The shadow window: the same drawing in a tree of its own that is never put
-// on the person's screen, with a widget beside every pane's that is fed the
-// same bytes. rewake screen asks it for a window with another session in
-// its place, so nothing on the person's screen changes (docs/screen.md).
-const [shadowView, setShadowView] = createSignal<View>({
-  focused: "main",
-  chosen: undefined,
-  zoomed: false,
-  width: renderer.width,
-  height: renderer.height,
-  prefix: false,
-});
-const seedShadow = (t: PaneTerminal) => {
-  if (seed.widget) t.write(seed.widget);
-};
-const shadowEnv: Env = {
-  ...base,
-  live: false,
-  closing: () => false,
-  mainRef: (t) => {
-    mainPane.shadow = t;
-    seedShadow(t);
-  },
-  workerRef: (pane, t) => {
-    pane.shadow = t;
-    seedShadow(t);
-  },
-};
-const shadow = await testRender(() => <Window env={shadowEnv} view={shadowView} />, {
-  width: renderer.width,
-  height: renderer.height,
-});
-// The shadow widgets are laid out whenever the person's are — a pane that
-// appears, the window's size, the zoom — so each keeps the size its program
-// draws for: the bytes they are fed are of that size, and a widget left at
-// its default would be fed a screen it cannot hold.
-const [windowSize, setWindowSize] = createSignal({
-  width: renderer.width,
-  height: renderer.height,
-});
-renderer.on("resize", (width: number, height: number) => setWindowSize({ width, height }));
-createEffect(() => {
-  workers();
-  const { width, height } = windowSize();
-  setShadowView((v) => ({ ...v, width, height, chosen: chosen(), zoomed: zoomed() }));
-  shadow.resize(width, height);
-  void shadow.renderOnce();
-});
+// finish follows main's end, which the host saw: the closing layer stays
+// until the workers the shell showed are over, and a minimum time — main's
+// process ends only after its screen has gone, so without it the layer was
+// never drawn and the workers ended unseen.
+async function finish(code: number) {
+  stopAll(true);
+  const ids = workers().map((p) => p.id);
+  await Promise.all([
+    spacesOver(rewake, room, ids, workersBound),
+    // Begun by a sign of main's, the layer may have shown long enough already.
+    new Promise((resolve) => setTimeout(resolve, closingRemaining())),
+  ]);
+  await leave(code);
+}
 
-// draw is the window with the pane in its place: main's own, or the worker's
-// beside main (or alone when the shell is narrow or zoomed).
-async function draw(id: string): Promise<Frame> {
-  const target = paneOf(id);
-  if (!target?.shadow) throw new Error(`no window ${id} to draw`);
-  const { width, height } = renderer;
-  setShadowView({
-    focused: id,
-    chosen: id === "main" ? chosen() : id,
+// release is a restart's: the screen given back, then what the person had
+// chosen handed to the host for the next shell.
+async function release() {
+  const state: Kept = {
+    focused: focused(),
+    chosen: chosen(),
     zoomed: zoomed(),
-    width,
-    height,
-    prefix: false,
-  });
-  if (shadow.renderer.width !== width || shadow.renderer.height !== height)
-    shadow.resize(width, height);
-  await shadow.renderOnce();
-  await Bun.sleep(30);
-  await shadow.renderOnce();
-  const { cursor } = target.shadow.screen();
-  return frameOf(shadow.captureSpans(), {
-    pane: id,
-    fg: colors?.defaultForeground ?? undefined,
-    bg: colors?.defaultBackground ?? undefined,
-    palette: colors?.palette,
-    // Under rewake's face the native cursor is covered; the face draws none.
-    cursor:
-      cursor.visible && !faceShown(id)
-        ? { x: target.shadow.screenX + cursor.x, y: target.shadow.screenY + cursor.y }
-        : undefined,
-  });
+    faces: keptFaces(),
+  };
+  stopAll(false);
+  await leave(undefined);
+  link.send({ t: "released", state });
+  process.exit(0);
 }
 
-// One picture at a time: the shadow window has one state.
-let drawing: Promise<unknown> = Promise.resolve();
-function takeScreen(id: string): Promise<Frame> {
-  const next = drawing.then(() => draw(id));
-  drawing = next.catch(() => {});
-  return next;
+// leave gives the screen back and, given a code, exits with it.
+async function leave(code: number | undefined) {
+  if (shown) {
+    shown.destroy();
+    await Promise.race([shown.closed, new Promise((resolve) => setTimeout(resolve, 1000))]);
+  }
+  if (code !== undefined) process.exit(code);
 }
-let stopScreen: (() => void) | undefined;
+
+// restore applies what the last shell handed over, on the first view of the
+// room, which shows the workers' panes again; one closed meanwhile is not
+// chosen.
+function restore() {
+  if (!kept) return;
+  const was = kept;
+  kept = undefined;
+  if (was.chosen === briefs ? workers().length > 0 : was.chosen !== "main" && paneOf(was.chosen))
+    setChosen(was.chosen);
+  setZoomed(was.zoomed ?? false);
+  show(was.focused);
+}
+
+const takeScreen = await shadowOf(renderer, base, colors);
 const screenPath = process.env.REWAKE_SHELL_SOCK;
 
-watchTerminal((_why, lost) => void finish(undefined, lost));
+// A stop signal asks the host to close; a terminal gone is told, and the
+// shell leaves, with nothing left to draw on.
+watchTerminal((_why, lost) => {
+  if (!lost) return link.send({ t: "close" });
+  link.send({ t: "lost" });
+  stopScreen?.();
+  process.exit(1);
+});
 renderer.on("selection", (selection: { getSelectedText?: () => string } | null) => {
   const text = selection?.getSelectedText?.() ?? "";
   if (text) renderer.copyToClipboardOSC52(text);
@@ -387,10 +381,11 @@ await render(() => <App />, renderer);
 stopRoom = pollRoom(
   rewake,
   room,
-  () => main?.child.pid,
+  () => main?.pid,
   (view, asked) => {
     if (view) {
       takeSpaces(shownSpaces(view), endedSpaces(view), closing, beginClosing);
+      restore();
       showSessions(new Map(view.sessions.map((s) => [s.name, s])));
       takeMirrors(workers().map((p) => [p.id, stripOf(p.id).status?.mirror]));
     }

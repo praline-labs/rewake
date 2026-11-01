@@ -9,6 +9,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/core/space"
+	"github.com/praline-labs/rewake/internal/host/stream"
 	"github.com/praline-labs/rewake/internal/host/terminal"
 	"github.com/praline-labs/rewake/internal/infra/build"
 	"github.com/praline-labs/rewake/internal/infra/proc"
@@ -104,9 +105,9 @@ func (h *host) start() error {
 	reaped := make(chan struct{})
 	var waited error
 	go func() { waited = cmd.Wait(); close(reaped) }()
-	r := &relay{pty: pty, grid: grid}
-	go r.pump()
-	go r.answer()
+	r := stream.New(pty, grid, os.Getenv(terminal.DefaultsEnv), nil)
+	go r.Pump()
+	go r.Answer()
 
 	workerRun, err := childRun(cmd.Process.Pid)
 	if err == nil {
@@ -116,11 +117,11 @@ func (h *host) start() error {
 		stopGroup(cmd.Process.Pid, reaped, stopping)
 		return h.never("the worker was started and stopped: its run could not be recorded: " + err.Error())
 	}
-	go r.serve(listener)
+	go r.Serve(listener, nil)
 	why := h.watch(reaped)
 	if why == "" {
 		why = "the worker exited by itself" + exitWords(waited)
-		if line := r.lastLine(); line != "" {
+		if line := r.LastLine(); line != "" {
 			why += "; its last line: " + line
 		}
 	}

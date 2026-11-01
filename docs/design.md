@@ -62,6 +62,11 @@ plain shell and from an agent's shell.
 worker's launch in a pseudo-terminal, serves it to the shell and ends it with main's run
 ([space.md](space.md)).
 
+**Main's host** — the launch of a main at a terminal, which stays the person's pane's process
+for as long as main runs. It runs main's wrapper on a pseudo-terminal it owns, keeps its screen,
+serves it on `sock/host.sock`, and runs rewake's shell as a child it can replace. `rewake restart
+shell` asks it at that socket ([shell.md](shell.md#who-owns-which-pty)).
+
 There's no separate daemon: nothing to start, stop, or recover, and there's no state where "the
 sessions exist but the daemon is dead". Exactly as many wrapper processes run as there are open
 sessions; a session without a wrapper doesn't take part in messaging.
@@ -103,6 +108,7 @@ verified main callers see them.
     inbox/<name>/pending/      this run's `rewake pending` marks; its last word on the work and a held answer (turn-outcomes.md)
     sock/<name>.<epoch>.sock   one inbound socket per run
     sock/shell.sock            the shell's: rewake screen asks it for a window (screen.md)
+    sock/host.sock             main's host's: main's raw stream and snapshot, and the door rewake restart asks (shell.md#the-hosts-channel)
     sock/<name>.<epoch>.reply.sock the wrapper's own: Claude Code's receipts for held lines
     sock/space.<id>.sock       a space host's: the worker's raw stream for the shell (space.md)
     control/<name>.<epoch>/    a main's compact or interrupt request and its answer (remote-control.md)
