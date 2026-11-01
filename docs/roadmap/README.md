@@ -14,23 +14,18 @@ The architecture pass of November 1, 2026 (the owner asked for every candidate, 
 order): deepening the modules the last stretch changed most, each step one module with its tests
 at its interface, the old tests that reached past it removed.
 
-1. A tool-call module in the face: one place says a call's heading, argument, fold, copied field
-   and result kind, for `tools.ts`, `parts.ts`, `fold.ts`, `results.ts`, `render.ts` and pi's
-   `toolmap.ts`.
-2. A sent letter as one module of `core/mail`: send, edit, withdraw and addendum hand it an
-   intent and a reference; it re-resolves, locks, checks standing, writes and returns an outcome.
-3. A turn's phase and retry attempt carried by the mirror model from the adapters' events, not
+1. A turn's phase and retry attempt carried by the mirror model from the adapters' events, not
    inferred in the face's `progress.ts`.
-4. The face's input rule from the mirror alone (mode and thinking level beside each other), and
+2. The face's input rule from the mirror alone (mode and thinking level beside each other), and
    the shell's `check.ts` derived from the face's `messages.ts`.
-5. A typed part reference in the face, owning what a row is and what a click on it does.
-6. Settling a letter with an outcome as an operation of `core/mail`, the delivery server keeping
+3. A typed part reference in the face, owning what a row is and what a click on it does.
+4. Settling a letter with an outcome as an operation of `core/mail`, the delivery server keeping
    only scheduling, the window and retries.
-7. One handle on a session's mail instead of `(dir, self, epoch)`; `mail.world` folded away.
-8. The face's worker as a module with an interface (post, socket, clock), tested in process.
-9. A command's form parsed once, answering both its access class and its run; a send kind
+5. One handle on a session's mail instead of `(dir, self, epoch)`; `mail.world` folded away.
+6. The face's worker as a module with an interface (post, socket, clock), tested in process.
+7. A command's form parsed once, answering both its access class and its run; a send kind
     owning its step after the write.
-10. Each owner's on-disk layout beside it (mail, brief, space), `infra/state` keeping the lease,
+8. Each owner's on-disk layout beside it (mail, brief, space), `infra/state` keeping the lease,
     the guard and atomic writes.
 
 rewake's face ([face.md](../face.md)), after its first slice — a dev worker on Claude Code and every
