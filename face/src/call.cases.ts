@@ -197,6 +197,28 @@ export const cases: Case[] = [
     },
   },
   {
+    what: "several edits that create the file",
+    tool: "MultiEdit",
+    input: {
+      file_path: "/new.ts",
+      old_string: "",
+      edits: [
+        { old_string: "", new_string: "a" },
+        { old_string: "a", new_string: "b" },
+      ],
+    },
+    call: {
+      name: "Update",
+      argument: "/new.ts",
+      result: "edit",
+      copy: given("/new.ts"),
+      edits: [
+        { old: "", new: "a" },
+        { old: "a", new: "b" },
+      ],
+    },
+  },
+  {
     what: "edits still streaming, none yet",
     tool: "MultiEdit",
     input: { edits: [] },

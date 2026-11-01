@@ -266,7 +266,7 @@ what is under it, `fold.ts` runs of calls, `markdown.ts` and
   brief 56 found it unclear what opens and how back).
 - **Call**: `● Name(argument)`, the name bold, the dot green when done, red on error, amber on a
   gap, faint while running. The names are the terminal's — `Update` (`Create` for an empty old
-  string), `Search`, `Fetch`, `Web Search`, `server - tool (MCP)` — and the argument a path (under
+  string of one edit; a list of edits is `Update` whatever it does, as 2.1.310's edit tool heads it), `Search`, `Fetch`, `Web Search`, `server - tool (MCP)` — and the argument a path (under
   the home directory as `~/…`), `pattern: "x", path: "y"`, a quoted query, a subagent's
   description, a skill's name, else the input as `key: value` pairs; a head is at most three rows.
 - **Permit**: under a call auto mode's classifier let run, after its result, a faint `⎿  Allowed by
@@ -476,7 +476,8 @@ terminal clipboard settings if paste fails`, `sent the code block (18 chars) …
   reply's markdown source; a code block's, its code alone; a call's head, its input as the head shows it (Bash's
   command, a file's path, a pattern, a URL, a query, a skill) or else the input as given; an open
   run's `⎿` row, its latest call's; an output's rows, the call's output; an edit's red rows its
-  old lines and green rows its new ones; a write's preview, the file's lines; a thinking block's
+  old lines and green rows its new ones; a write's preview, the file's lines, and the output drawn in its place when its input
+  does not read (brief 81); a thinking block's
   rows, its text as written. A folded run's line and a `… +N lines` row copy nothing: a click on
   them opens or folds (above, "Unfolding").
 - **Nothing lights as the pointer moves** (the owner's word, October 31, 2026: a light over the

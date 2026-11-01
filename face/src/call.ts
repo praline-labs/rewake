@@ -81,9 +81,12 @@ function nameOf(name: string, input: Input | undefined): string {
   const mcp = /^mcp__(.+?)__(.+)$/.exec(name);
   if (mcp) return `${mcp[1]} - ${mcp[2]} (MCP)`;
   switch (name) {
+    // Claude Code heads a call with a list of edits Update, whatever they
+    // do, and Create only an empty old string of its own (2.1.310's edit
+    // tool, read from its executable).
     case "Edit":
     case "MultiEdit":
-      return field(input, "old_string") === "" ? "Create" : "Update";
+      return input?.edits == null && field(input, "old_string") === "" ? "Create" : "Update";
     case "Grep":
     case "Glob":
       return "Search";
