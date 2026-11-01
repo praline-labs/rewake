@@ -4,41 +4,16 @@
 // output, an edit's old or new lines, a written file's lines. A row names its
 // part by a key (select.ts); the text is taken from the model when the click
 // comes, so the rows carry no copy of it.
+import { callOf } from "./call.ts";
 import { codeBlocks } from "./markdown.ts";
 import type { Item } from "./mirror.gen.ts";
-import { field, inputOf } from "./tools.ts";
-
-// The field a call's head shows of its input, the one a click copies.
-const shownField: Record<string, string> = {
-  Bash: "command",
-  Read: "file_path",
-  Edit: "file_path",
-  MultiEdit: "file_path",
-  Write: "file_path",
-  NotebookEdit: "notebook_path",
-  WebFetch: "url",
-  WebSearch: "query",
-  Skill: "skill",
-  Grep: "pattern",
-  Glob: "pattern",
-};
-
-function inputText(item: Item): string {
-  const input = inputOf(item);
-  const shown = field(input, shownField[item.name ?? ""] ?? "");
-  if (shown !== undefined) return shown;
-  return input ? JSON.stringify(input, null, 2) : item.text;
-}
 
 // edits is an edit's old or new strings, one after another.
-function edits(item: Item, key: "old_string" | "new_string"): string {
-  const input = inputOf(item);
-  const all: unknown[] = Array.isArray(input?.edits) ? input.edits : [input];
-  return all
-    .map((e) => field(e as Record<string, unknown> | undefined, key))
+const edits = (item: Item, key: "old" | "new") =>
+  (callOf(item).edits ?? [])
+    .map((e) => e[key])
     .filter((s): s is string => s !== undefined)
     .join("\n");
-}
 
 // partOf is the text of the part a key names and what to call it, none when
 // its item is gone or the part is empty.
@@ -57,18 +32,15 @@ export function partOf(items: Item[], key: string): { text: string; what: string
       case "thinking":
         return { text: item.text, what: "the thinking" };
       case "input":
-        return {
-          text: inputText(item),
-          what: item.name === "Bash" ? "the command" : "the call's input",
-        };
+        return callOf(item).copy;
       case "output":
         return { text: item.output ?? "", what: "the call's output" };
       case "old":
-        return { text: edits(item, "old_string"), what: "the old lines" };
+        return { text: edits(item, "old"), what: "the old lines" };
       case "new":
-        return { text: edits(item, "new_string"), what: "the new lines" };
+        return { text: edits(item, "new"), what: "the new lines" };
       case "content":
-        return { text: field(inputOf(item), "content") ?? "", what: "the file's lines" };
+        return { text: callOf(item).written?.content ?? "", what: "the file's lines" };
     }
     return undefined;
   })();

@@ -143,7 +143,6 @@ test("a click copies the whole part it is on", () => {
     text: JSON.stringify({ file_path: "/x", old_string: "old", new_string: "new" }),
     output: "The file was updated",
   };
-  expect(clicked([edit], "● Update(/x)")).toEqual({ text: "/x", what: "the call's input" });
   expect(clicked([edit], "     -old")).toEqual({ text: "old", what: "the old lines" });
   expect(clicked([edit], "     +new")).toEqual({ text: "new", what: "the new lines" });
   const mcp: Item = {

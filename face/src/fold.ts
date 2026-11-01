@@ -4,58 +4,16 @@
 // prompt, thinking or another tool ends a run, so each sits where it came; a
 // notice does not, and shows after it.
 
+import { callOf, type Op } from "./call.ts";
 import type { FaceLine, Span } from "./messages.ts";
 import type { Item } from "./mirror.gen.ts";
 import { partKey } from "./select.ts";
-import { field, hidden, inputOf, shortPath } from "./tools.ts";
+import { hidden } from "./tools.ts";
 import { clean, wrapSpans } from "./wrap.ts";
 
-type Op = "search" | "read" | "list" | "command";
-
-// The words a command is read by: its first word in each part of a pipeline
-// or a chain. One the sets do not name makes it a shell command.
-const searchWords = new Set(["find", "grep", "rg", "ag", "ack", "locate", "which", "whereis"]);
-const readWords = new Set(
-  "cat head tail less more wc stat file strings jq awk cut sort uniq tr".split(" "),
-);
-const listWords = new Set(["ls", "tree", "du"]);
-const neutralWords = new Set(["echo", "printf", "true", "false", ":"]);
-
-function commandOp(command: string): Op {
-  const words = command
-    .split(/&&|\|\||[;|\n]/)
-    .map(
-      (part) =>
-        part
-          .trim()
-          .replace(/^(\w+=\S*\s+)+/, "")
-          .split(/\s+/)[0] ?? "",
-    )
-    .filter((w) => w && !neutralWords.has(w));
-  if (
-    words.length === 0 ||
-    words.some((w) => !searchWords.has(w) && !readWords.has(w) && !listWords.has(w))
-  )
-    return "command";
-  if (words.some((w) => listWords.has(w))) return "list";
-  return words.some((w) => searchWords.has(w)) ? "search" : "read";
-}
-
 // opOf is what a call does in a run, or none when it does not fold.
-export function opOf(item: Item): Op | undefined {
-  if (item.kind !== "tool") return undefined;
-  switch (item.name) {
-    case "Read":
-      return "read";
-    case "Grep":
-    case "Glob":
-      return "search";
-    case "Bash":
-      return commandOp(field(inputOf(item), "command") ?? "");
-    default:
-      return undefined;
-  }
-}
+export const opOf = (item: Item): Op | undefined =>
+  item.kind === "tool" ? callOf(item).op : undefined;
 
 export type Entry = { item: Item } | { calls: Item[]; open: boolean };
 
@@ -118,8 +76,8 @@ function counts(calls: Item[]): [Op, number][] {
   for (const call of calls) {
     const op = opOf(call);
     if (!op) continue;
-    const path = call.name === "Read" ? field(inputOf(call), "file_path") : undefined;
-    if (path !== undefined) files.add(path);
+    const { file } = callOf(call);
+    if (file !== undefined) files.add(file);
     else n[op]++;
   }
   n.read += files.size;
@@ -149,22 +107,6 @@ function said(calls: Item[], tense: "done" | "doing"): Span[] {
       { text: " failed", tone: "error" },
     );
   return spans;
-}
-
-// hintOf is what a call works on: a path, a pattern or a command.
-function hintOf(call: Item): string {
-  const input = inputOf(call);
-  switch (call.name) {
-    case "Read":
-      return shortPath(field(input, "file_path") ?? "");
-    case "Grep":
-    case "Glob":
-      return JSON.stringify(field(input, "pattern") ?? "");
-    default:
-      return `$ ${clean(field(input, "command") ?? "")
-        .replace(/\s+/g, " ")
-        .trim()}`;
-  }
 }
 
 // lostLine marks an item, or a call within a run, that a gap lost on the way.
@@ -210,8 +152,8 @@ function drawnRun(
   if (!run.open)
     return parted(hang(wrapSpans(hinted(said(run.calls, "done")), width - 2), pad, pad), run.calls);
   const last = run.calls[run.calls.length - 1];
-  const running = [...run.calls].reverse().find((c) => c.status === "running" && c.name === "Bash");
-  const description = running && field(inputOf(running), "description");
+  const running = [...run.calls].reverse().find((c) => c.status === "running" && callOf(c).shell);
+  const description = running && callOf(running).description;
   const head: Span[] = description
     ? [{ text: `${clean(description).replace(/\s+/g, " ").trim()}…` }]
     : [
@@ -225,7 +167,7 @@ function drawnRun(
   const dot: Span = { text: "● ", tone: run.calls.some(failed) ? "error" : "faint", blink: true };
   const out = parted(hang(wrapSpans(hinted(head), width - 2), dot, pad), run.calls);
   if (last && !opened) {
-    const hint = wrapSpans([{ text: hintOf(last), tone: "faint" }], width - 5)[0] ?? [];
+    const hint = wrapSpans([{ text: callOf(last).hint, tone: "faint" }], width - 5)[0] ?? [];
     // A click on it copies what the latest call works on (parts.ts).
     out.push({ spans: [{ text: "  ⎿  ", gutter: true }, ...hint], part: partKey("input", last) });
   }

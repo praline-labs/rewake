@@ -490,7 +490,8 @@ October 31, 2026, pi 1.4.0, the owner's word: a pi worker is drawn by rewake's f
 ([face.md](face.md)) as a Claude Code session looks. rewake's extension feeds the face's model from
 pi's events, as the Claude Code mod does ([claude.md](claude.md#the-mirror)); the host only decodes
 the events with `mirror.Decode` and hands them on (`internal/adapter/pi/mirror.go`). The extension's
-side is `mirror.ts` (the events), `toolmap.ts` (the tools' names), tested by `mirror.test.ts`, and
+side is `mirror.ts` (the events), `toolmap.ts` (the tools' names, each form a row of the face's
+table of its vocabulary, [face.md](face.md#calls)), tested by `mirror.test.ts`, and
 `feed.ts`, the copy of the feed every adapter sends through ([face.md](face.md#the-feed)).
 
 - **Only when drawn.** The extension mirrors nothing until hello's answer says `mirror: true`;
@@ -623,7 +624,7 @@ side is `mirror.ts` (the events), `toolmap.ts` (the tools' names), tested by `mi
 | `edit`, several | `MultiEdit` | `edits` as `old_string`/`new_string` |
 | `grep` | `Grep` | `pattern`, `path`, `glob`, `ignoreCase` → `-i`, `context` → `-C`, `limit` → `head_limit` |
 | `find` | `Glob` | `pattern`, `path` |
-| `ls` | `Bash` | `ls <path>`, so it counts as a listed directory |
+| `ls` | `Bash` | `ls <path>`, so it counts as a listed directory: Claude Code 2.1.310 has no list tool and lists with its shell |
 | another | its own name | its own input, drawn by the face's generic rule |
 
 **[live]** October 31, 2026, this build in a private `REWAKE_DIR` and project under `/tmp`, the

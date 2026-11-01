@@ -1,62 +1,46 @@
 // The face's mirror of a pi session, run by go test (worktree_tool_test.go).
 import { expect, test } from "bun:test";
+import { cases } from "../../../face/src/call.cases.ts";
 import { facePrompt } from "./faced.ts";
 import { bounds, type MirrorEvent } from "./feed.ts";
 import { Mirror, serveMirror } from "./mirror.ts";
 import { facedTool, resultText } from "./toolmap.ts";
 
-test("pi's tools are named and given as their Claude Code kin, another as it is", () => {
-  expect(facedTool("bash", { command: "make", timeout: 5 })).toEqual({
-    name: "Bash",
-    input: { command: "make" },
-  });
-  expect(facedTool("read", { path: "a.go", offset: 2 })).toEqual({
-    name: "Read",
-    input: { file_path: "a.go", offset: 2 },
-  });
-  expect(facedTool("write", { path: "a", content: "x" })).toEqual({
-    name: "Write",
-    input: { file_path: "a", content: "x" },
-  });
-  expect(facedTool("edit", { path: "a", edits: [{ oldText: "x", newText: "y" }] })).toEqual({
-    name: "Edit",
-    input: { file_path: "a", old_string: "x", new_string: "y" },
-  });
-  expect(
-    facedTool("edit", {
+// Each of pi's tools as the face reads it: every form toolmap.ts makes is a
+// row of the face's table of its vocabulary (face/src/call.cases.ts), where
+// what the face draws of it is said; a listing is the shell's ls, as Claude
+// Code lists a directory, so it folds as a listed directory.
+const forms: [string, unknown][] = [
+  ["bash", { command: "make", timeout: 5 }],
+  ["read", { path: "a.go", offset: 2 }],
+  ["write", { path: "a", content: "x" }],
+  ["edit", { path: "a", edits: [{ oldText: "x", newText: "y" }] }],
+  [
+    "edit",
+    {
       path: "a",
       edits: [
         { oldText: "x", newText: "y" },
         { oldText: "p", newText: "q" },
       ],
-    }),
-  ).toEqual({
-    name: "MultiEdit",
-    input: {
-      file_path: "a",
-      edits: [
-        { old_string: "x", new_string: "y" },
-        { old_string: "p", new_string: "q" },
-      ],
     },
-  });
-  expect(facedTool("grep", { pattern: "x", path: "src", ignoreCase: true })).toEqual({
-    name: "Grep",
-    input: { pattern: "x", path: "src", "-i": true },
-  });
-  expect(facedTool("find", { pattern: "*.ts", path: "src", limit: 3 })).toEqual({
-    name: "Glob",
-    input: { pattern: "*.ts", path: "src" },
-  });
-  expect(facedTool("ls", { path: "src" })).toEqual({ name: "Bash", input: { command: "ls src" } });
-  expect(facedTool("ls", { path: "my dir" })).toEqual({
-    name: "Bash",
-    input: { command: "ls 'my dir'" },
-  });
-  expect(facedTool("ls", {})).toEqual({ name: "Bash", input: { command: "ls" } });
-  expect(facedTool("brief_tick", { n: 1 })).toEqual({ name: "brief_tick", input: { n: 1 } });
+  ],
   // A call's input while it streams is whatever parsed so far.
-  expect(facedTool("edit", undefined)).toEqual({ name: "MultiEdit", input: { edits: [] } });
+  ["edit", undefined],
+  ["grep", { pattern: "x", path: "src", ignoreCase: true }],
+  ["find", { pattern: "*.ts", path: "src", limit: 3 }],
+  ["ls", { path: "src" }],
+  ["ls", { path: "my dir" }],
+  ["ls", {}],
+  ["brief_tick", { n: 1 }],
+];
+
+test("pi's tools are named and given as rows of the face's vocabulary, another as it is", () => {
+  for (const [tool, args] of forms) {
+    const faced = facedTool(tool, args);
+    const row = cases.find((c) => c.tool === faced.name && Bun.deepEquals(c.input, faced.input));
+    expect([tool, args, row ? "a row" : faced]).toEqual([tool, args, "a row"]);
+  }
   expect(
     resultText({
       content: [{ type: "text", text: "a" }, { type: "image" }, { type: "text", text: "b" }],
