@@ -181,3 +181,38 @@ test("ctrl+o in a view scrolled up keeps the first part it shows on its row", ()
   f.take({ kind: "scroll", by: -100 });
   expect(f.shown()).toContain("     line 12");
 });
+
+// Review of bf5ecda: a run pi compacted inside goes on as the same turn, the
+// model keeping its start; the face took the working line after the
+// compaction for a turn beginning and counted the run's own items as the
+// turn before, saying Waiting… with no tokens while its reply streamed.
+test("a turn that goes on after a compaction inside it keeps its phase and its tokens", () => {
+  const since = epoch - 20_000;
+  const f = faced({ begin: { turn: "working", since } });
+  f.send(
+    { op: "add", item: { id: "r1", turn: "t1", kind: "text", status: "settled", text: "ok" } },
+    { op: "turn", turn: "compacting" },
+    { op: "turn", turn: "working", since },
+    {
+      op: "add",
+      item: { id: "r2", turn: "t1", kind: "text", status: "streaming", text: "x".repeat(400) },
+    },
+  );
+  f.hand.advance(1000);
+  const line = f.shown().find((l) => l.includes("Writing…")) ?? "";
+  expect(line).toContain("tokens");
+  // A face that saw the turn begin, a call running after the compaction.
+  const g = faced({ items: replies(["before"]) });
+  g.send(
+    { op: "turn", turn: "working", since: epoch },
+    { op: "add", item: { id: "r1", turn: "t1", kind: "text", status: "settled", text: "ok" } },
+    { op: "turn", turn: "compacting" },
+    { op: "turn", turn: "working", since: epoch },
+    {
+      op: "add",
+      item: { id: "c", turn: "t1", kind: "tool", name: "Bash", status: "running", text: "{}" },
+    },
+  );
+  g.hand.advance(1000);
+  expect(g.shown().some((l) => l.includes("Running Bash…"))).toBe(true);
+});

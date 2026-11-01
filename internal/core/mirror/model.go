@@ -246,54 +246,6 @@ func (m *Model) settle(id string, e Event) {
 	m.changed(at)
 }
 
-// turnTo moves the turn. Any turn event ends what was being put together of
-// that turn, and a turn's end leaves a block still streaming as a gap: its
-// settle was lost.
-func (m *Model) turnTo(e Event) {
-	for id, a := range m.parts {
-		if a.turn == e.Turn {
-			m.forget(id)
-			m.gap(m.byID[id])
-		}
-	}
-	// A turn that stopped working leaves nothing in flight: a call the engine
-	// refused before any hook saw it never gets its result.
-	if e.State != TurnStateWorking {
-		for _, at := range m.order {
-			if inFlight(at.item.Status) && (at.item.Turn == nil || *at.item.Turn == e.Turn) {
-				m.gap(at)
-			}
-		}
-	}
-	line := Line{Op: LineOpTurn, Turn: &e.State}
-	now := int(m.now().UnixMilli())
-	switch {
-	case e.State == TurnStateWorking:
-		if m.turn != TurnStateWorking {
-			m.since, m.worked = now, nil
-		}
-		line.Since = ptr(m.since)
-		m.retry = max(e.Retry, 0)
-		if m.retry > 0 {
-			line.Retry = ptr(m.retry)
-		}
-	case e.State == TurnStateIdle && m.turn == TurnStateWorking && m.since > 0:
-		m.worked = &worked{took: now - m.since, at: now, stopped: e.Status == ItemStatusError}
-		m.since = 0
-		line.Took, line.At = ptr(m.worked.took), ptr(m.worked.at)
-	default:
-		m.since = 0
-	}
-	if e.State != TurnStateWorking {
-		m.retry = 0
-	}
-	m.turn = e.State
-	if e.State == TurnStateIdle && e.Status == ItemStatusError {
-		line.Stopped = ptr(true)
-	}
-	m.send(line)
-}
-
 // A queued prompt is in flight: a lost link or the turn's end leaves it a
 // gap, and the bounds drop it last.
 func inFlight(s ItemStatus) bool {

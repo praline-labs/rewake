@@ -373,3 +373,42 @@ func TestTheModelCarriesTheTurnsRetryAttempt(t *testing.T) {
 		t.Fatalf("a resync keeps the count: %+v", begin)
 	}
 }
+
+// A compaction inside a working turn is part of it: the turn keeps its start
+// and its queued prompt, and its Done counts the compaction in; one outside
+// a turn leaves the last turn's Done as it was.
+func TestACompactionInsideATurnKeepsItsStartAndWhatItHolds(t *testing.T) {
+	m := New()
+	at := time.UnixMilli(1_000_000)
+	m.now = func() time.Time { return at }
+	c := m.subscribe()
+	lines(t, c)
+	m.Apply(
+		Event{Kind: EventTurn, Turn: "t1", State: TurnStateWorking},
+		Event{Kind: EventPrompt, ID: "q", Turn: "t1", Text: "also", Status: ItemStatusQueued},
+	)
+	at = at.Add(10 * time.Second)
+	m.Apply(Event{Kind: EventTurn, Turn: "t1", State: TurnStateCompacting})
+	at = at.Add(20 * time.Second)
+	m.Apply(Event{Kind: EventTurn, Turn: "t1", State: TurnStateWorking})
+	if got := itemOf(t, m, "q").Status; got != ItemStatusQueued {
+		t.Fatalf("the queued prompt after the compaction: %s", got)
+	}
+	if begin := lines(t, m.subscribe())[1]; begin.Since == nil || *begin.Since != 1_000_000 {
+		t.Fatalf("begin after the compaction: %+v", begin)
+	}
+	at = at.Add(5 * time.Second)
+	m.Apply(Event{Kind: EventTurn, Turn: "t1", State: TurnStateIdle})
+	turn := lines(t, c)
+	if end := turn[len(turn)-1]; end.Took == nil || *end.Took != 35_000 {
+		t.Fatalf("the turn's end: %+v", end)
+	}
+	m.Apply(
+		Event{Kind: EventTurn, Turn: "c1", State: TurnStateCompacting},
+		Event{Kind: EventTurn, Turn: "c1", State: TurnStateIdle},
+	)
+	begin := lines(t, m.subscribe())[1]
+	if begin.Took == nil || *begin.Took != 35_000 || begin.Since != nil {
+		t.Fatalf("begin after a compaction outside a turn: %+v", begin)
+	}
+}

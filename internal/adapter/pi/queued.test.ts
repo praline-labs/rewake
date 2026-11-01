@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import type { MirrorEvent } from "./feed.ts";
-import { Mirror, serveMirror } from "./mirror.ts";
+import { Mirror } from "./mirror.ts";
+import { serveMirror } from "./mirrorhooks.ts";
 
 // running is a pi at work whose queue holds what pending says, as pi's
 // events reach an extension.

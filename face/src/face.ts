@@ -54,6 +54,9 @@ export class Face {
   private posted = "";
   // progress follows the working turn from tick to tick.
   private readonly progress = new Tracker();
+  // began is the start of the working turn the tracker follows, as the
+  // model said it.
+  private began: number | undefined;
   // unfold is what the person opened, everything by the shell's key or a part
   // by a click; anchor is the row to keep where it stood on the screen once
   // the conversation is laid out again (parts.ts).
@@ -152,10 +155,14 @@ export class Face {
   }
 
   // turned follows the working turn's progress from the turn's start, which
-  // the model carries.
+  // the model carries. A compaction inside the turn leaves it going on: the
+  // model keeps its start, and the tracker its own.
   private turned(from: string, to: string) {
-    if (from !== to && to === "working")
-      this.progress.reset(this.model.since ?? this.timers.now(), this.model.items);
+    if (from === to || to !== "working") return;
+    const since = this.model.since;
+    if (from !== "compacting" || since === undefined || since !== this.began)
+      this.progress.reset(since ?? this.timers.now(), this.model.items);
+    this.began = since;
   }
 
   private clockAt(now: number): Clock {
@@ -348,6 +355,7 @@ export class Face {
       const was = this.model.turn;
       changed = this.model.apply(line);
       if (line.op === "turn") this.turned(was, this.model.turn);
+      if (line.op === "begin") this.began = this.model.since;
     }
     if (line.op === "end") this.link = "live";
     return changed;

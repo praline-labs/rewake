@@ -3,7 +3,8 @@ import { expect, test } from "bun:test";
 import { cases } from "../../../face/src/call.cases.ts";
 import { facePrompt } from "./faced.ts";
 import { bounds, type MirrorEvent } from "./feed.ts";
-import { Mirror, serveMirror } from "./mirror.ts";
+import { Mirror } from "./mirror.ts";
+import { serveMirror } from "./mirrorhooks.ts";
 import { facedTool, resultText } from "./toolmap.ts";
 
 // Each of pi's tools as the face reads it: every form toolmap.ts makes is a

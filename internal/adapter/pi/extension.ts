@@ -5,7 +5,8 @@ import { briefTools } from "./briefs.ts";
 import { faceInterrupt, facePrompt, faceThinking, serveLevel } from "./faced.ts";
 import { type MirrorEvent, Outbox } from "./feed.ts";
 import { management, type State } from "./management.ts";
-import { Mirror, serveMirror } from "./mirror.ts";
+import { Mirror } from "./mirror.ts";
+import { serveMirror } from "./mirrorhooks.ts";
 import { worktreeTools } from "./worktree.ts";
 
 export type Frame = {
