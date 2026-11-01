@@ -79,6 +79,11 @@ type Line struct {
 	// said it.
 	Mode *PermissionMode `json:"mode,omitempty"`
 
+	// Level is the session's thinking level, which the face's thinking input moves on, on begin
+	// and level; absent while the session has not said it, and from a session whose level the face
+	// does not move.
+	Level *ThinkingLevel `json:"level,omitempty"`
+
 	// Ok says whether the input was taken, on answer.
 	Ok *bool `json:"ok,omitempty"`
 
@@ -100,6 +105,7 @@ const (
 	LineOpSet    LineOp = "set"
 	LineOpTurn   LineOp = "turn"
 	LineOpMode   LineOp = "mode"
+	LineOpLevel  LineOp = "level"
 	LineOpDrop   LineOp = "drop"
 	LineOpAnswer LineOp = "answer"
 )
@@ -222,6 +228,21 @@ const (
 	PermissionModeAuto    PermissionMode = "auto"
 	PermissionModeBypass  PermissionMode = "bypass"
 	PermissionModeUnasked PermissionMode = "unasked"
+)
+
+// ThinkingLevel is how much the session's model thinks before it answers, in the words of the
+// harness that moves it, from not at all to the most.
+type ThinkingLevel string
+
+// The values of ThinkingLevel.
+const (
+	ThinkingLevelOff     ThinkingLevel = "off"
+	ThinkingLevelMinimal ThinkingLevel = "minimal"
+	ThinkingLevelLow     ThinkingLevel = "low"
+	ThinkingLevelMedium  ThinkingLevel = "medium"
+	ThinkingLevelHigh    ThinkingLevel = "high"
+	ThinkingLevelXhigh   ThinkingLevel = "xhigh"
+	ThinkingLevelMax     ThinkingLevel = "max"
 )
 
 // Input is one line the face sends: an input, answered by a line with its id. A face sends only

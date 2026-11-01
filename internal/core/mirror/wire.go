@@ -22,12 +22,14 @@ type WireEvent struct {
 	// Mode is the session's permission mode in its harness's own name,
 	// which Decode turns into the model's word by the adapter's table.
 	Mode string `json:"mode,omitempty"`
+	// Level is the session's thinking level, already in the model's words.
+	Level ThinkingLevel `json:"level,omitempty"`
 }
 
 // sentKinds are the events the model takes from a wire.
 var sentKinds = map[EventKind]bool{
 	EventPrompt: true, EventDelta: true, EventSettle: true, EventTool: true, EventInput: true, EventResult: true,
-	EventTurn: true, EventMode: true, EventNotice: true, EventLost: true, EventResync: true, EventTaken: true,
+	EventTurn: true, EventMode: true, EventLevel: true, EventNotice: true, EventLost: true, EventResync: true, EventTaken: true,
 }
 
 // sentStates are the states a turn event may say; unknown and ended are the
@@ -36,8 +38,9 @@ var sentStates = map[TurnState]bool{TurnStateWorking: true, TurnStateIdle: true,
 
 // Decode turns a batch's events into the model's. An event of a kind the
 // model does not take, or a turn event with no state it knows, is left out,
-// never guessed at; a mode modes does not name leaves the mode unsaid. modes
-// is nil for a harness that says no permission mode.
+// never guessed at; a mode modes does not name leaves the mode unsaid, and a
+// level the model has no word for the level. modes is nil for a harness that
+// says no permission mode.
 func Decode(sent []WireEvent, modes map[string]PermissionMode) []Event {
 	events := make([]Event, 0, len(sent))
 	for _, e := range sent {
@@ -46,8 +49,17 @@ func Decode(sent []WireEvent, modes map[string]PermissionMode) []Event {
 		}
 		events = append(events, Event{
 			Kind: e.Kind, ID: e.ID, Turn: e.Turn, Block: e.Block, Text: e.Text, Origin: e.Origin, Name: e.Name,
-			Status: e.Status, State: e.State, Part: e.Part, Of: e.Of, Lost: e.Lost, Retry: e.Retry, Permit: e.Permit, Mode: modes[e.Mode],
+			Status: e.Status, State: e.State, Part: e.Part, Of: e.Of, Lost: e.Lost, Retry: e.Retry, Permit: e.Permit, Mode: modes[e.Mode], Level: levelOf(e.Level),
 		})
 	}
 	return events
+}
+
+// levelOf is a level the model has a word for, else none.
+func levelOf(level ThinkingLevel) ThinkingLevel {
+	switch level {
+	case ThinkingLevelOff, ThinkingLevelMinimal, ThinkingLevelLow, ThinkingLevelMedium, ThinkingLevelHigh, ThinkingLevelXhigh, ThinkingLevelMax:
+		return level
+	}
+	return ""
 }

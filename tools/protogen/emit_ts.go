@@ -6,7 +6,7 @@ import (
 )
 
 // emitTS writes the mod's side: the paths, what each endpoint is asked and
-// answers, the bounds, and a type per definition. An optional field is marked
+// answers, the bounds, and a type per definition, an enum's with its values. An optional field is marked
 // with ?, as the Go side leaves it out when absent.
 func emitTS(s schema) []byte {
 	var b strings.Builder
@@ -44,6 +44,8 @@ func emitTS(s schema) []byte {
 				quoted[i] = fmt.Sprintf("%q", value)
 			}
 			fmt.Fprintf(&b, "export type %s = %s\n", d.name, strings.Join(quoted, " | "))
+			// The values again, for code that holds a value to the type at run time.
+			fmt.Fprintf(&b, "export const %sValues: readonly %s[] = [%s]\n", lowerFirst(d.name), d.name, strings.Join(quoted, ", "))
 		case len(d.fields) == 0:
 			fmt.Fprintf(&b, "export type %s = Record<string, never>\n", d.name)
 		default:
@@ -60,6 +62,10 @@ func emitTS(s schema) []byte {
 		}
 	}
 	return []byte(b.String())
+}
+
+func lowerFirst(name string) string {
+	return strings.ToLower(name[:1]) + name[1:]
 }
 
 func tsType(s shape) string {

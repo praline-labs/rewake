@@ -27,8 +27,10 @@ type Model struct {
 	bytes   int
 	dropped int
 	turn    TurnState
-	// mode is the session's permission mode, nil until the session says it.
+	// mode is the session's permission mode, and level its thinking level,
+	// each nil until the session says it.
 	mode  *PermissionMode
+	level *ThinkingLevel
 	parts map[string]*assembly
 	// born numbers the assemblies, so the oldest goes first past a bound.
 	born    int
@@ -164,6 +166,11 @@ func (m *Model) apply(e Event) {
 		if e.Mode != "" && (m.mode == nil || *m.mode != e.Mode) {
 			m.mode = ptr(e.Mode)
 			m.send(Line{Op: LineOpMode, Mode: m.mode})
+		}
+	case EventLevel:
+		if e.Level != "" && (m.level == nil || *m.level != e.Level) {
+			m.level = ptr(e.Level)
+			m.send(Line{Op: LineOpLevel, Level: m.level})
 		}
 	case EventLost:
 		m.forget(id)

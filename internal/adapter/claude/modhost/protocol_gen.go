@@ -340,6 +340,10 @@ type MirrorEvent struct {
 
 	// Mode is the session's permission mode as Claude Code names it, on a mode event.
 	Mode *string `json:"mode,omitempty"`
+
+	// Level is the thinking level the face's shift+tab moves, on a level event; the mod sends
+	// none, as the face moves no level of a Claude Code session (docs/face.md).
+	Level *string `json:"level,omitempty"`
 }
 
 // MirrorEventKind is a mirror event's kind.

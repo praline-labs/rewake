@@ -124,11 +124,8 @@ export function FaceView(props: {
   height: number;
   theme: Theme;
   // work is the run's room work, `brief 57 3/6` or `⧗ 3`, drawn on the
-  // input's top rule with the mode the face was told.
+  // input's top rule with the mode or the level the face was told.
   work?: string;
-  // level is the session's thinking level, the room view's effort, drawn at
-  // the rule's left where the face says shift+tab moves it.
-  level?: string;
   // live is the person's window: only it takes keys and sizes the face.
   live: boolean;
   active: () => boolean;
@@ -217,17 +214,7 @@ export function FaceView(props: {
         </Index>
       </box>
       <text height={1} wrapMode="none" fg={ruled} bg={bg} selectable={false}>
-        <For
-          each={withMore(
-            ruleParts(
-              props.width,
-              props.work,
-              face()?.mode,
-              face()?.cycles ? props.level : undefined,
-            ),
-            inputOf(props.id).above,
-          )}
-        >
+        <For each={withMore(ruleParts(props.width, props.work, face()), inputOf(props.id).above)}>
           {(part) => (
             <span style={{ fg: partColour(part, props.theme) ?? ruled, bg }}>{part.text}</span>
           )}
