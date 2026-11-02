@@ -77,3 +77,16 @@ func TestFixtureWrapperKilled(t *testing.T) {
 }
 
 const obsKilledWrapperChildren = "a fixture wrapper killed outright: the session half it started ends within three seconds"
+
+// endWithWrapper ends the session half once the wrapper that started it is
+// gone, as a harness's program ends with its wrapper: the backend asks for no
+// parent-death signal, which the exec of a wrapper handing its run over would
+// fire, so the half watches its parent's pid, which that exec keeps.
+func endWithWrapper() {
+	parent := os.Getppid()
+	for range time.Tick(200 * time.Millisecond) {
+		if os.Getppid() != parent {
+			os.Exit(0)
+		}
+	}
+}

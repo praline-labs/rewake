@@ -278,19 +278,6 @@ func fixtureSessionMain(launch fixtureLaunch) int {
 	return 0
 }
 
-// endWithWrapper ends the session half once the wrapper that started it is
-// gone, as a harness's program ends with its wrapper: the backend asks for no
-// parent-death signal, which the exec of a wrapper handing its run over would
-// fire, so the half watches its parent's pid, which that exec keeps.
-func endWithWrapper() {
-	parent := os.Getppid()
-	for range time.Tick(200 * time.Millisecond) {
-		if os.Getppid() != parent {
-			os.Exit(0)
-		}
-	}
-}
-
 func (s *fixtureSession) send(frame fixtureFrame) error {
 	raw, err := json.Marshal(frame)
 	if err != nil {
