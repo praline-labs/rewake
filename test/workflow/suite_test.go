@@ -188,7 +188,15 @@ const buildTimeout = 3 * time.Minute
 // buildRewake builds the binary under test into dir. Scenarios must never find
 // `rewake` on the developer's PATH: a green result obtained against somebody
 // else's build, of unknown age, proves nothing about this working tree.
-func buildRewake(dir string) (string, error) {
+func buildRewake(dir string) (string, error) { return buildRewakeWith(dir, "") }
+
+// buildRewakeWith is buildRewake with more -X values in its link flags: the
+// same tree as another build.
+func buildRewakeWith(dir, values string) (string, error) {
+	flags := slices.Clone(suiteFlags)
+	if values != "" {
+		flags[1] += " " + values
+	}
 	root, err := moduleRoot()
 	if err != nil {
 		return "", err
@@ -198,7 +206,7 @@ func buildRewake(dir string) (string, error) {
 	binary := filepath.Join(dir, "rewake")
 	// No VCS stamp: the suite asserts nothing about the build line, and a
 	// copy without .git would fail on the stamp.
-	build := exec.Command("go", append(append([]string{"build", "-buildvcs=false"}, suiteFlags...), "-o", binary, "./cmd/rewake")...)
+	build := exec.Command("go", append(append([]string{"build", "-buildvcs=false"}, flags...), "-o", binary, "./cmd/rewake")...)
 	build.Dir = root
 	build.Env = os.Environ()
 	// Through the same group machinery a case uses: `go build` starts

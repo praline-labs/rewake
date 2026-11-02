@@ -51,6 +51,7 @@ internal/host/reviewcheckout/                 a reviewer's checkout from the bri
 internal/host/stream/                         a host's relay between its program's pseudo-terminal, its emulator and its socket: the raw stream and the snapshot, shared by the space host and main's host
 internal/host/mainhost/                       main's host, the pane's process of a main at a terminal: main's pseudo-terminal, the shell as a replaceable child, the versioned channel between them, restart, crash and close told apart, main alone when no shell starts, the door rewake restart asks, and the shell it runs as a part
 internal/host/spacehost/                      the space host: the worker's pseudo-terminal and screen, served through internal/host/stream; and opening a space for main (`Open`): the record, the host started, the wait for the worker's registration, the rollback
+internal/host/switching/                      a switch of the running room to another build between its leader, rewake restart rewake, and the room's wrappers and hosts: asking, the drop, go or resume, and a parked image's wait (rules/state.md#switching-a-running-room)
 internal/host/worktree/                       checkouts rewake makes for a launch: git worktree add, records, land, removal and what keeps one, a worker's release at its close; a reviewer's detached checkout
 scripts/                                      packaging scripts and the tests of the npm shim
 test/workflow/                                the workflow suite: end-to-end scenarios against fixtures

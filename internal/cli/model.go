@@ -14,6 +14,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/host/launch"
+	"github.com/praline-labs/rewake/internal/infra/build"
 )
 
 // Option is a flag of a command, or a global flag.
@@ -133,6 +134,9 @@ type Context struct {
 	// copy passes on (handoff.go); empty for a form that is no command of a
 	// room — the guide, help, the version — which this build answers.
 	argv []string
+	// lease is the room's build lease a change form holds for its scope
+	// (access.go); nil outside one.
+	lease *build.Lease
 }
 
 // Call is one parsed invocation.

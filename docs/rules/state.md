@@ -1,5 +1,5 @@
 ---
-description: The state root and its levels, the build's identity, the room's lease and its lock order, the bootstrap, the room's own copy of its build, views and changes through the write seam, and the state of 1.x left alone.
+description: The state root and its levels, the build's identity, the room's lease and its lock order, the bootstrap, the room's own copy of its build, switching a running room to another build, views and changes through the write seam, and the state of 1.x left alone.
 ---
 
 # Rules: state and builds
@@ -125,7 +125,7 @@ has the writers' own bound (`shareWait`, ten seconds), which a switch that stall
 holding the lock exclusive uses up: then the launch is refused as busy.
 
 **Lock order.** The build lease comes before every other lock of the room — launch, name,
-mailbox, control, space, brief — and before a worktree is created; no path takes it while
+mailbox, control, space, brief, the switch's `.switch.lock` — and before a worktree is created; no path takes it while
 holding any of them, and there is no upgrade under a mailbox lock. No pruning and no name
 lock inside a mailbox section. The brief lock is taken with no other lock of the room held,
 and nothing is taken inside it ([briefs.md](../briefs.md#the-records)).
@@ -146,7 +146,9 @@ The fault seam names steps at the lease, so a test orders one process against an
 `bootstrap <level>` before each level is made, `lease switch` once a launch holding the
 lease shared has read a record not its own, `lease exclusive` once a launch holds it
 exclusive, `lease downgrade` before it turns shared, `leased` once the lease is held and
-authorized, and the note `lease release` before it goes.
+authorized, and the note `lease release` before it goes. A switch adds its own (below):
+`switch claimed`, `switch dropping`, `switch exclusive`, then inside the commit `switch marked`,
+`switch build` and `switch linked`.
 
 ### The bootstrap
 
@@ -168,7 +170,8 @@ included.
    A writer's `state.OpenLeaseLock(room)` opens the same file without `O_CREAT`: a room
    without its lock is a room without a build, and the writer refuses it as it found it.
 3. `state.WriteBuildRecord(room, id)`: `build`, written by rename and sync, only under the
-   exclusive lock.
+   exclusive lock. The one other writer of `build` is the commit of a switch,
+   `state.CommitSwitch`, through the same private primitive and under the same lock.
 
 So `infra/build` writes nothing itself.
 
@@ -200,7 +203,9 @@ launch).
 - **What is kept.** `bin/rewake`, the room's build, and `bin/origin`, one line naming the
   directory that image was installed in, where what rewake ships beside itself — the bundled
   pi — is found.
-- **Who writes it.** `build.Launch`, right after the lease is granted, shared and authorized,
+- **Who writes it.** `build.Launch` and `build.Follow` (an image that adopts a run after a
+  switch), and the commit of a switch, which links the staged copy in its place. `Launch`, right
+  after the lease is granted, shared and authorized,
   before any other lock of the room, so the lock order above is unchanged. When `bin/rewake`
   is missing or its id is not the launch's — a switched room, one made before this rule, a
   damaged copy — it is placed again, `origin` first; else nothing is written. The primitive
@@ -226,7 +231,8 @@ launch).
 - **What is left.** The copy lives and dies with the room's directory: a wiped base is a new
   bootstrap and a new copy, a copy removed under a running room leaves PATH falling through to
   the install, and the next launch of the room's build places it again. At most one binary per
-  room, none extra while the link shares the install's file. Nothing removes a room.
+  room, none extra while the link shares the install's file, but for a switch's staged copy,
+  `bin/rewake.<id>`, which the next commit removes when no live mark names it. Nothing removes a room.
 - **Not covered.** The upgrade to the first build with this rule still broke the rooms then
   running.
 
@@ -237,6 +243,94 @@ Tests:
 - `internal/host/launch/environment_test.go` `TestARunRunsItsRoomsCopy`
 - `internal/cli/handoff_test.go` `TestACommandOfAnOlderRoomIsHandedToItsCopy`
 - `test/workflow/pinned_build_test.go` `TestPinnedBuild`
+
+## Switching a running room
+
+`rewake restart rewake` switches a running room to the installed build without ending its
+sessions, when every long-lived process of the room can hand its run over: the first stage of
+updating a room without its restart. The lease keeps its rule: `build`
+changes only under the exclusive lock with no other holder. A switch adds what makes that
+happen while the sessions run, and what a crash at any step leaves sound. The code is
+`internal/infra/build/switch.go`, `internal/infra/state/switch.go`, `internal/host/switching`
+and `internal/cli/restart_rewake.go`.
+
+- **The leader** is the command, a change form, so it runs the room's build. Its target is the
+  `rewake` in the directory `bin/origin` names; the room's own build there is "nothing to
+  switch".
+- **The mark**, `<room>/switch`, is one attempt: the leader's pid and start, the target id, the
+  staged path, the leader's socket (`sock/switch.sock`), a phase — `asking`, `dropping`,
+  `committed`, `aborting` — and a deadline. Its changes are ordered by `.switch.lock`, taken
+  after the lease. The claim is the leader's first effect: a live mark of another attempt
+  refuses it before anything is staged. A mark `asking` is live while its leader runs; from
+  `dropping` on it is live until its deadline, whatever became of its leader, since something
+  may be parked. A stale mark holds nothing, and the next lease granted removes it.
+- **Staged and admitted.** The target is placed as `bin/rewake.<id>`, kept only when its id is
+  the target's, and asked its contracts (`--version --json`): every contract it speaks and
+  requires must equal the room's build's, or the attempt ends, naming the contract, and the room
+  needs its restart. Among them `handover` (the wrapper's handed run), `handover.<adapter>` (an
+  adapter's handed state), `switch` (the mark, the socket's messages, a parked image's
+  handover), `mod` and `extension`; each handed shape is pinned to its number by a test.
+- **Asking.** Every wrapper, space host and main's host looks at the mark every 250 ms and,
+  while it is asking, joins on the socket — again at the next look when nothing listened yet —
+  answering `ready`, `busy <why>` or `cannot <why>`. One `cannot` ends the attempt at once,
+  before anything stopped: "restart the room: … cannot". Busy ones are waited for 60 s.
+- **Dropping.** The mark turns `dropping` and each participant stops its delivery server and
+  execs its own image, parked: no lease, no effect, waiting for its order. Meanwhile a writer
+  that finds a dropping mark lets go of its shared lock and looks again every 50 ms, within the
+  writers' bound, then is refused as busy; a `send --question` waiting ends its wait as pending.
+  Each participant must say `parked` within 5 s; then the leader turns its lock exclusive within
+  5 s, as commands finish, or names the holders left.
+- **The commit**, `state.CommitSwitch`, only under the exclusive lock and only for the room's
+  own dropping mark: the mark `committed` first, then `build` — the commit point — then the
+  staged copy linked to `bin/rewake`, then the other staged copies removed. The leader keeps
+  its lock shared, unauthorized, while the parked images exec the staged copy and adopt; it
+  reports who was adopted and who was lost.
+- **Abort**, before the commit only: the mark `aborting`, under the lease taken shared again,
+  and each parked image resumes on the old build; the mark is removed once each holds the lease
+  again or its deadline passes. The command exits 1, the room unchanged.
+- **Launches never switch under a live mark.** One of the room's build goes on as a writer;
+  another is refused, "room R is switching to build X", and `switched()` reads the mark again
+  under the exclusive lock before it writes `build`.
+- **Adoption only follows.** A parked or handed-over image takes the lease with `build.Follow`:
+  `Acquire`, and the room's copy put in line with `build` whenever they differ. A parked image
+  whose leader is gone waits out a dropping mark, then the record alone decides: its own build
+  resumes it, the target sends it on, anything else ends it.
+
+| The leader dies… | What is left |
+|---|---|
+| while asking | nothing stopped; the mark goes stale with its leader |
+| while dropping, aborting, or in the commit before `build` | the mark stays live to its deadline, so no launch switches; the parked images find the old `build` and resume |
+| after `build`, before the copy is linked | `build` is the target and `bin/rewake` the old build: the first `Follow` or launch of the target places the copy |
+| after the commit | the parked images find the target and exec it; the committed mark keeps launches out until its deadline |
+
+A committed mark holds the room about 20 s after the commit, so a second switch in that time is
+refused. A switch run just after a delivery may find the session busy for a moment, and is run
+again. In stage 1 only the fixture's wrapper hands over: Claude Code's and pi's adapters, a
+mirror, a run that made a checkout, the space host and main's host answer `cannot`, so every
+real room is refused and keeps its build, and `rewake restart` with no part still plans `room`
+for a new rewake.
+
+Tests:
+- `internal/infra/build/switch_test.go` `TestASwitchCommitsOnlyWithNoOtherHolder`
+- `internal/infra/build/switch_test.go` `TestAWriterWaitsOutADroppingSwitchWithinItsBound`
+- `internal/infra/build/switch_test.go` `TestAStaleSwitchMarkIsIgnoredAndRemoved`
+- `internal/infra/build/switch_test.go` `TestTheCommitWritesTheBuildThenTheCopy`
+- `internal/infra/build/switch_launch_test.go` `TestALaunchNeverSwitchesUnderALiveMark`
+- `internal/infra/build/switch_launch_test.go` `TestAdoptionOnlyFollows`
+- `internal/infra/build/switch_launch_test.go` `TestFollowPutsTheCopyInLineWithTheBuild`
+- `internal/infra/build/switch_launch_test.go` `TestASecondAttemptIsRefusedBeforeItStages`
+- `internal/host/switching/join_test.go` `TestAParkedImageFollowsTheRecordWithoutItsLeader`
+- `internal/host/switching/join_test.go` `TestAParticipantJoinsALeaderThatServesLate`
+- `internal/host/handover_shape_test.go` `TestTheHandoverContractChangesWithItsShape`
+- `internal/adapter/fixture/handover_shape_test.go` `TestTheFixtureHandoverChangesWithItsShape`
+- `internal/adapter/claude/modhost/protocol_pin_test.go` `TestTheModContractChangesWithItsProtocol`
+- `internal/cli/restart_rewake_test.go` `TestRestartRewakeRefusesAnotherContract`
+- `internal/cli/restart_rewake_test.go` `TestRestartRewakeNamesWhoCannotHandOver`
+- `internal/cli/restart_rewake_test.go` `TestAQuestionEndsItsWaitAtADrop`
+- `test/leaserig/leader_test.go` `TestARoomWithNothingToAskSwitches`
+- `test/leaserig/leader_test.go` `TestALeaderKilledAtEachStepLeavesOneBuild`
+- `test/leaserig/leader_test.go` `TestAForeignLaunchDuringParkingCannotOverturnTheSwitch`
+- `test/workflow/fixture_switch_test.go` `TestFixtureSwitch`
 
 ## Views and changes
 

@@ -2,6 +2,7 @@ package mainhost
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"net"
 	"os"
@@ -13,6 +14,7 @@ import (
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/host/stream"
+	"github.com/praline-labs/rewake/internal/host/switching"
 	"github.com/praline-labs/rewake/internal/host/terminal"
 	"github.com/praline-labs/rewake/internal/infra/build"
 	"github.com/praline-labs/rewake/internal/infra/proc"
@@ -48,9 +50,11 @@ type mainRun struct {
 	// The loop's.
 	exited bool
 
-	mu       sync.Mutex
-	lease    *build.Lease
-	listener *state.Listener
+	mu    sync.Mutex
+	lease *build.Lease
+	// stopSwitching ends the host's answers to a switch of the room.
+	stopSwitching func()
+	listener      *state.Listener
 }
 
 // HostSocket is the room's door to main's host: main's raw stream and
@@ -143,8 +147,11 @@ func (h *Host) serveMain(m *mainRun) {
 		_, _ = os.Stderr.WriteString("rewake: main's stream could not be served: " + err.Error() + "\n")
 		return
 	}
+	// Main's host hands its run over to no image yet: a switch of the room
+	// while it serves is refused, and the room is restarted instead.
+	stop := switching.Watch(context.Background(), h.cfg.Dir, switching.CannotHandOver("main's host", "main's host does not hand its run over yet"))
 	m.mu.Lock()
-	m.lease, m.listener = lease, listener
+	m.lease, m.listener, m.stopSwitching = lease, listener, stop
 	m.mu.Unlock()
 	go m.relay.Serve(listener, map[byte]func(net.Conn){modeControl: h.door})
 	h.post(ev{kind: kRegistered, ref: &MainRef{PID: pid, Socket: path}})
@@ -201,6 +208,9 @@ func (m *mainRun) close() {
 	defer m.mu.Unlock()
 	if m.listener != nil {
 		_ = m.listener.Close()
+	}
+	if m.stopSwitching != nil {
+		m.stopSwitching()
 	}
 	if m.lease != nil {
 		m.lease.Release()

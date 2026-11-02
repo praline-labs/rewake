@@ -17,6 +17,8 @@ import (
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/core/worktype"
+	"github.com/praline-labs/rewake/internal/host/switching"
+	"github.com/praline-labs/rewake/internal/infra/build"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
@@ -32,8 +34,9 @@ import (
 // any argument (cli.Run) and removes it, so no child inherits it.
 const HandoverEnv = "REWAKE_HANDOVER"
 
-// handoverVersion is the version of Handover; an image adopts only its own.
-const handoverVersion = 1
+// HandoverVersion is the version of Handover; an image adopts only its own,
+// and a switch of the room admits only a build that takes the same.
+const HandoverVersion = 1
 
 // reexecMark is the file of the run's directory where the outcome of the last
 // request to re-execute is written, for whoever sent the signal.
@@ -64,6 +67,9 @@ type Handover struct {
 	Files []int `json:"files"`
 	// Count is how many execs this run has been through.
 	Count int `json:"count"`
+	// Park is set on an image a switch parked (host/switching): it holds no
+	// lease until its leader says go or resume.
+	Park *switching.Park `json:"park,omitempty"`
 
 	files []*os.File
 }
@@ -75,8 +81,8 @@ func ReadHandover(spec string) (*Handover, error) {
 	if err := json.Unmarshal([]byte(spec), &handover); err != nil {
 		return nil, fmt.Errorf("the wrapper's handover cannot be read: %w", err)
 	}
-	if handover.Version != handoverVersion {
-		return nil, fmt.Errorf("the wrapper's handover is version %d; this build takes %d", handover.Version, handoverVersion)
+	if handover.Version != HandoverVersion {
+		return nil, fmt.Errorf("the wrapper's handover is version %d; this build takes %d", handover.Version, HandoverVersion)
 	}
 	for _, fd := range handover.Files {
 		handover.files = append(handover.files, os.NewFile(uintptr(fd), "handover"))
@@ -94,6 +100,28 @@ func (h *Handover) Request(harness adapter.Harness) Request {
 		Role: role.Of(h.Role), RoleReason: h.RoleReason, Template: h.Template,
 		WorktreeEntry: h.WorktreeEntry, WorkType: workType, Handover: h,
 	}
+}
+
+// Continue execs executable with the handover, unparked: a parked image's
+// go, to the staged copy of the switch's target. It returns only on failure.
+func (h *Handover) Continue(executable string) error {
+	next := *h
+	next.Park = nil
+	raw, err := json.Marshal(next)
+	if err != nil {
+		return err
+	}
+	env := slices.DeleteFunc(os.Environ(), func(entry string) bool { return strings.HasPrefix(entry, HandoverEnv+"=") })
+	return syscall.Exec(executable, os.Args, append(env, HandoverEnv+"="+string(raw)))
+}
+
+// leaseFor is how a run takes the room's lease: a launch's, which may switch
+// the build, or an adoption's, which only follows it (build.Follow).
+func leaseFor(request Request) func(base, room string) (*build.Lease, error) {
+	if request.Handover != nil {
+		return build.Follow
+	}
+	return build.Launch
 }
 
 // claimOrAdopt claims the run's name, or takes the record an earlier image of
@@ -152,10 +180,14 @@ type reexec struct {
 	// an exec that failed.
 	handoff chan chan<- string
 	resume  chan struct{}
+	ctx     context.Context
 }
 
-// watch re-executes on each SIGUSR2 until ctx ends.
+// watch re-executes on each SIGUSR2, and answers every switch of the room
+// (host/switching), until ctx ends.
 func (r *reexec) watch(ctx context.Context) func() {
+	r.ctx = ctx
+	stopSwitching := switching.Watch(ctx, r.request.Dir, r)
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGUSR2)
 	go func() {
@@ -171,7 +203,7 @@ func (r *reexec) watch(ctx context.Context) func() {
 			}
 		}
 	}()
-	return func() { signal.Stop(signals) }
+	return func() { signal.Stop(signals); stopSwitching() }
 }
 
 // mark writes the outcome of a request where its sender looks.
@@ -179,22 +211,53 @@ func (r *reexec) mark(outcome string) {
 	_ = state.WriteFile(filepath.Join(r.runDir, reexecMark), []byte(outcome+"\n"), 0o600)
 }
 
-// try hands the run over and execs; it returns only when it did not.
-func (r *reexec) try(ctx context.Context) string {
-	handing, ok := r.service.(adapter.Handover)
-	switch {
+// refusal is why this run can never be handed over, or "".
+func (r *reexec) refusal() string {
+	switch _, ok := r.service.(adapter.Handover); {
 	case !ok:
 		return "this harness's adapter cannot hand its run over"
-	case r.session.Role == role.Main.ID:
-		return "main's wrapper is not part of the probe"
 	case r.request.Mirror:
 		return "the run serves a mirror, which is not handed over"
 	case r.request.OnClaimed != nil:
 		return "the run made a checkout, which its launch settles at its end"
 	}
-	if why := handing.Busy(); why != "" {
+	return ""
+}
+
+// Who names the run to a switch's leader.
+func (r *reexec) Who() string { return "session " + r.session.Name }
+
+// Answer is whether the run can be handed over now.
+func (r *reexec) Answer() (string, string) {
+	if why := r.refusal(); why != "" {
+		return switching.Cannot, why
+	}
+	if why := r.service.(adapter.Handover).Busy(); why != "" {
+		return switching.Busy, why
+	}
+	return switching.Ready, ""
+}
+
+// Drop hands the run over to its own image, parked for the switch.
+func (r *reexec) Drop(park switching.Park) string {
+	if kind, why := r.Answer(); kind != switching.Ready {
 		return why
 	}
+	return r.handOff(r.ctx, &park)
+}
+
+// try hands the run over and execs; it returns only when it did not.
+func (r *reexec) try(ctx context.Context) string {
+	if kind, why := r.Answer(); kind != switching.Ready {
+		return why
+	}
+	return r.handOff(ctx, nil)
+}
+
+// handOff stops the delivery server and execs, parked when park is set; it
+// returns only when it did not, and the server serves again.
+func (r *reexec) handOff(ctx context.Context, park *switching.Park) string {
+	handing := r.service.(adapter.Handover)
 	reply := make(chan string, 1)
 	select {
 	case r.handoff <- reply:
@@ -207,13 +270,14 @@ func (r *reexec) try(ctx context.Context) string {
 		return why
 	}
 	// The server has stopped: no notice goes out until an image serves again.
-	why := r.exec(handing)
+	why := r.exec(handing, park)
 	r.resume <- struct{}{}
 	return why
 }
 
-// exec replaces the image; it returns only on a failure, and changed nothing.
-func (r *reexec) exec(handing adapter.Handover) string {
+// exec replaces the image with its own; it returns only on a failure, and
+// changed nothing.
+func (r *reexec) exec(handing adapter.Handover, park *switching.Park) string {
 	handed, err := handing.HandOver()
 	if err != nil {
 		return err.Error()
@@ -224,10 +288,10 @@ func (r *reexec) exec(handing adapter.Handover) string {
 		}
 	}()
 	h := Handover{
-		Version: handoverVersion, Harness: r.request.Harness.ID(), Dir: r.request.Dir, Name: r.session.Name, Epoch: r.session.Epoch(),
+		Version: HandoverVersion, Harness: r.request.Harness.ID(), Dir: r.request.Dir, Name: r.session.Name, Epoch: r.session.Epoch(),
 		Args: r.request.Args, Intro: r.request.Intro, Command: r.request.Command, Role: r.session.Role, RoleReason: r.session.RoleReason,
 		Template: r.request.Template, WorktreeEntry: r.request.WorktreeEntry, WorkType: r.request.WorkType, WorkTypeText: r.request.WorkType.Text,
-		HarnessPID: r.harness.Pid, HarnessStart: r.start, Service: handed.State,
+		HarnessPID: r.harness.Pid, HarnessStart: r.start, Service: handed.State, Park: park,
 	}
 	if r.request.Handover != nil {
 		h.Count = r.request.Handover.Count
@@ -247,11 +311,9 @@ func (r *reexec) exec(handing adapter.Handover) string {
 	}
 	env := slices.DeleteFunc(os.Environ(), func(entry string) bool { return strings.HasPrefix(entry, HandoverEnv+"=") })
 	env = append(env, HandoverEnv+"="+string(raw))
-	executable, err := os.Executable()
-	if err != nil {
-		return err.Error()
-	}
-	return "the exec failed: " + syscall.Exec(executable, os.Args, env).Error()
+	// The image this process runs, which the install's path may no longer
+	// hold: an upgrade replaces that file under running sessions.
+	return "the exec failed: " + syscall.Exec("/proc/self/exe", os.Args, env).Error()
 }
 
 // adopted tells the sender that the new image runs the run.

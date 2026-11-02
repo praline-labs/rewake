@@ -14,7 +14,11 @@ Updating without losing the sessions. The owner decided this on November 1, 2026
 
 The next release is 3.0.0, not 2.12.0. It ships this whole feature in working order, step 1 below included; the plugin door comes after it. The owner, November 1, 2026: «чтобы 3.0.0 был "цельным" с этой фичой. Дверь для плагинов можно не включать в 3.0.0».
 
-1. **A Go update without a room restart.** Each long-lived process `exec`s the new build, keeping its pid, its children and its fds, and hands over the state that lives only in memory. It starts with a probe on one idle wrapper of the same build.
+1. **A Go update without a room restart.** Each long-lived process `exec`s the new build, keeping its pid, its children and its fds, and hands over the state that lives only in memory. Its first stage is in: the room's lease handed
+   over to another build by `rewake restart rewake`, which succeeds when every long-lived process
+   can hand over ([rules/state.md](../rules/state.md#switching-a-running-room)). Open: the hand-over
+   of Claude Code's and pi's runs, of the space host and of main's host, each of which still
+   answers `cannot`, so a real room is refused; then the plan's `rewake` line names the switch.
 2. **A door for plugins.** The parts' contracts and the manifest admit a part that is not rewake's own. A project's main can attach its own part, or a ready one, to rewake: a pane or a strip segment in the shell, a command, a tool for the sessions, a listener of the room's events. The seams stay generic and versioned, so that a plugin is one more client.
 
 rewake's face ([face.md](../face.md)), after its first slice — a dev worker on Claude Code and every

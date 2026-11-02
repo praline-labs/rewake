@@ -30,3 +30,12 @@ type HandedOver struct {
 	State json.RawMessage `json:"state"`
 	Files []*os.File      `json:"-"`
 }
+
+// Contracts is a harness whose running sessions hold contracts that a switch
+// of the room's build must keep (docs/rules/state.md#switching-a-running-room):
+// a loaded mod, an extension, the state its service hands over. rewake
+// --version --json speaks each, by name, and a switch admits only a build
+// that speaks the same versions.
+type Contracts interface {
+	Contracts() map[string]string
+}

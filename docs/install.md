@@ -143,8 +143,12 @@ hands it to `scripts/pack.sh` (`REWAKE_DIGEST_LINUX_X64`, `_ARM64`), `tools/land
 each said by the part itself (`rewake --version --json`, `rewake-shell --contracts`), never read
 from the sources: `host`, the host channel's version, spoken by rewake and required by the shell;
 `face`, the face's `contract`, spoken by the face and required by the shell; `mirror`, spoken by
-rewake and required by the face; and `pi`, the pinned version, spoken by pi and required by
-rewake. The room view and the space stream's mode bytes have no number: they change only with
+rewake and required by the face; `pi`, the pinned version, spoken by pi and required by
+rewake; and those a switch of the running room compares
+([rules/state.md](rules/state.md#switching-a-running-room)), all spoken by rewake: `handover`,
+the shape of a wrapper's handed run; `handover.<adapter>`, an adapter's handed state
+(`handover.fixture` in a test build); `switch`, the switch's mark and messages; `mod`, the
+protocol between Claude Code's mod and its host; and `extension`, pi's extension protocol. The room view and the space stream's mode bytes have no number: they change only with
 rewake, which is a room restart anyway, so after a landing that changes both rewake and the shell
 `restart shell` may load a shell the room's older view does not suit, while the plan says room
 (decided by main, November 1, 2026).
@@ -176,8 +180,13 @@ speaks 6 to a shell that requires 5 is a shell restart; a pi on disk that rewake
 a room restart). `rewake restart` with no part prints the plan, one line per step, or `nothing to
 restart`; an install without a manifest — `go run`, a build by hand — has no plan, and
 `restart shell` works there as before. `rewake restart shell` and `restart face` refuse when the
-installed part would require what the running rewake does not speak; `restart rewake` and a
-harness rewake ships refuse, naming the room's restart. The shell shows the plan's shell and room
+installed part would require what the running rewake does not speak; `restart rewake` switches the
+running room to the installed rewake when every session and host can hand its run over and the
+installed build speaks and requires the room's contracts at the same values; otherwise it is
+refused, naming who cannot or which contract, and the room keeps its build
+([rules/state.md](rules/state.md#switching-a-running-room)). Today only the fixture's wrapper hands
+over, so a real room is refused and the plan says `room` for a new rewake. A harness rewake ships
+refuses, naming the room's restart. The shell shows the plan's shell and room
 steps in its hints row ([shell.md](shell.md#the-prefix-and-the-room)).
 
 ## Updating from inside rewake

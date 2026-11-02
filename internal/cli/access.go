@@ -103,6 +103,8 @@ func (ctx *Context) within(class access, call Call, run func() int, refused func
 		return refused(err)
 	}
 	defer lease.Release()
+	ctx.lease = lease
+	defer func() { ctx.lease = nil }()
 	return run()
 }
 

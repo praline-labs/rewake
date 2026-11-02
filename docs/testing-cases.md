@@ -49,6 +49,13 @@ room's build is the first install's; a person's `rewake list` of the new build i
 room's copy, its stderr saying so; once the sessions end, a new launch takes the new build and
 the room's copy becomes it.
 
+`fixture-switch`: a running room switches to another build. A fixture main and worker start from
+an install of the case's own, which is then replaced by the same tree linked with another build
+time; the person's `rewake restart rewake` switches the room, both wrappers keep their pid, epoch
+and harness and run the new image, the room's build and copy are the new build, and a task sent
+across the switch gets exactly one report. With a space open, a second switch is refused naming
+the space host, which cannot hand over, and the room keeps its build.
+
 ## Launch, reports and what a main waits on
 
 `wrapped-launch` runs twice, in two rooms: a plain launch and one with `--command

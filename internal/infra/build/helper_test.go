@@ -15,6 +15,8 @@ import (
 	"syscall"
 	"testing"
 	"time"
+
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // holderEnv makes the test binary a holder of a room's lease instead of a
@@ -22,9 +24,11 @@ import (
 // processes. Its value is "writer <base> <room>", which takes the lease as
 // any writer does, or "shared <lock path>", which holds the file shared with
 // no build checked — a writer of another build — or "exclusive <lock path>",
-// a launch that stalled while it switched the build. Either prints "held" once it
-// holds, or "refused <why>", and holds until its stdin closes. "id" prints
-// the process's build id once a line arrives on its stdin.
+// a launch that stalled while it switched the build, or "marked <base> <room>
+// <phase>", a switch's leader that marked the room and let go of its lease.
+// Each prints "held" once it holds, or "refused <why>", and holds until its
+// stdin closes. "id" prints the process's build id once a line arrives on its
+// stdin.
 const holderEnv = "REWAKE_BUILD_TEST_HOLDER"
 
 func TestMain(m *testing.M) {
@@ -54,6 +58,24 @@ func runHolder(spec []string) int {
 			return 3
 		}
 		defer lease.Release()
+	case "marked":
+		// A leader that marked a switch of the room at a phase and let go of
+		// its lease, its mark left live for a minute.
+		shareWait = time.Second
+		lease, err := Acquire(spec[1], spec[2])
+		if err != nil {
+			fmt.Println("refused", strings.ReplaceAll(err.Error(), "\n", " "))
+			return 3
+		}
+		sw, err := Claim(lease, strings.Repeat("e", 64), "", time.Now().Add(time.Minute))
+		if err == nil && spec[3] != state.PhaseAsking {
+			err = sw.Phase(spec[3], time.Now().Add(time.Minute))
+		}
+		lease.Release()
+		if err != nil {
+			fmt.Println("refused", err)
+			return 3
+		}
 	case "shared", "exclusive":
 		how := syscall.LOCK_SH
 		if spec[0] == "exclusive" {

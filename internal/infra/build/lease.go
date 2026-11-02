@@ -99,6 +99,8 @@ type RefusedError struct {
 	Holders []Holder
 	// Busy says the shared lease was not taken within its bound.
 	Busy bool
+	// Switching is the live switch a launch did not overturn.
+	Switching *state.SwitchMark
 }
 
 // way is how past a refusal: the room's build stays while anything holds it.
@@ -107,6 +109,8 @@ const way = "end the room's sessions — main's end ends its workers — and lau
 func (e *RefusedError) Error() string {
 	room := filepath.Base(e.Room)
 	switch {
+	case e.Switching != nil:
+		return fmt.Sprintf("Rewake: room %s is switching to build %s, led by pid %d, and this is build %s, so nothing was changed; launch again once the switch ends.", room, Short(e.Switching.Target), e.Switching.Leader, Short(e.Own))
 	case e.Busy:
 		return fmt.Sprintf("Rewake: a launch is changing the build of room %s and has not finished within %s, so nothing was changed; run it again.", room, shareWait)
 	case len(e.Holders) > 0:
@@ -240,17 +244,23 @@ func enter(base, roomName string, launch bool) (string, error) {
 }
 
 func hold(lock *state.LeaseLock, room, own string, launch bool) (*Lease, error) {
-	if err := share(lock, room, own); err != nil {
+	seen, err := gate(lock, room, own)
+	if errors.Is(err, errGated) {
+		return nil, &RefusedError{Room: room, Own: own, Busy: true}
+	}
+	if err != nil {
 		return nil, err
 	}
-	theirs, err := state.ReadBuildRecord(room)
 	switch {
-	case err == nil && theirs == own:
+	case seen.record == nil && seen.theirs == own:
 		return grant(lock, room)
+	case launch && seen.live:
+		// A launch never switches the room while a switch holds it.
+		return nil, &RefusedError{Room: room, Own: own, Theirs: seen.theirs, Switching: &seen.mark}
 	case launch:
 		return switchBuild(lock, room, own)
 	}
-	return nil, &RefusedError{Room: room, Own: own, Theirs: theirs, Record: err}
+	return nil, &RefusedError{Room: room, Own: own, Theirs: seen.theirs, Record: seen.record}
 }
 
 // switchWait bounds a launch's retries to switch the room's build against
@@ -288,6 +298,9 @@ func switchBuild(lock *state.LeaseLock, room, own string) (*Lease, error) {
 		if record == nil && theirs == own {
 			return grant(lock, room)
 		}
+		if mark, live := LiveSwitch(room); live {
+			return nil, &RefusedError{Room: room, Own: own, Theirs: theirs, Switching: &mark}
+		}
 		if !time.Now().Before(deadline) {
 			return nil, &RefusedError{Room: room, Own: own, Theirs: theirs, Record: record, Holders: holdersOf(lock)}
 		}
@@ -306,6 +319,13 @@ const switchPause = 10 * time.Millisecond
 // the lock shared.
 func switched(lock *state.LeaseLock, room, own string) (*Lease, error) {
 	state.Step("lease exclusive")
+	// A switch marked before this launch held the lock exclusive is settled:
+	// its mark is written under the shared lock. While it holds the room, no
+	// launch writes the build.
+	if mark, live := LiveSwitch(room); live {
+		theirs, _ := state.ReadBuildRecord(room)
+		return nil, &RefusedError{Room: room, Own: own, Theirs: theirs, Switching: &mark}
+	}
 	// Read again under the exclusive lock: a launch of this same build may
 	// have written it meanwhile.
 	if current, err := state.ReadBuildRecord(room); err != nil || current != own {
@@ -337,6 +357,7 @@ func grant(lock *state.LeaseLock, room string) (*Lease, error) {
 	if err := state.Authorize(lock); err != nil {
 		return nil, err
 	}
+	clearStale(room)
 	state.Step("leased")
 	return &Lease{lock: lock, room: room, holds: 1}, nil
 }

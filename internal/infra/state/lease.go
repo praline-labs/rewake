@@ -261,7 +261,11 @@ func ReadBuildRecord(room string) (string, error) {
 // WriteBuildRecord writes the room's build, by rename and sync, under the
 // exclusive lock this lease lock holds: nobody else holds the lease, so no
 // writer depends on the record it replaces.
-func WriteBuildRecord(l *LeaseLock, id string) error {
+func WriteBuildRecord(l *LeaseLock, id string) error { return writeBuild(l, id) }
+
+// writeBuild is WriteBuildRecord, and a switch's commit (CommitSwitch), which
+// writes the build of its own attempt only.
+func writeBuild(l *LeaseLock, id string) error {
 	if !l.held || !l.exclusive {
 		return fmt.Errorf("the build record of %s is written only under the exclusive lease", l.room)
 	}

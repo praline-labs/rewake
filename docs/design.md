@@ -107,6 +107,9 @@ verified main callers see them.
     build.lock                 the room's build lease, flock(2): writers shared, a launch changing the build exclusive
     build                      the room's build id, the SHA-256 of the executable a launch established
     bin/rewake, bin/origin     the room's own copy of that build, which its sessions run, and the directory it was installed in (rules/state.md#the-rooms-own-copy)
+    switch, .switch.lock       the mark of a switch of the running room to another build, and the lock its changes take (rules/state.md#switching-a-running-room)
+    bin/rewake.<id>            a switch's staged copy of its target, removed by the next commit
+    sock/switch.sock           the switch's leader's socket, which the room's wrappers and hosts join
     directory                  the launch directory the room is named for
     .launch.lock               serializes role choice and name publication
     sessions/<name>.json       session record

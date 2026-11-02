@@ -6,6 +6,8 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/infra/build"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // questionKind is a task its sender waits for: send blocks until the session
@@ -40,7 +42,7 @@ func answerQuestion(ctx *Context, question sent) error {
 	watched := make(chan struct{})
 	go func() {
 		defer close(watched)
-		watchRefusal(wait, refusalWatch{box: question.box, letter: mail.Message{ID: model.ID, To: target.Name}}, refused, cancel)
+		watchRefusal(wait, refusalWatch{dir: question.dir, box: question.box, letter: mail.Message{ID: model.ID, To: target.Name}}, refused, cancel)
 	}()
 	defer func() { cancel(); <-watched }()
 
@@ -107,14 +109,17 @@ type refusal struct {
 }
 
 // refusalWatch names the question a wait watches, by its recipient and id,
-// and the box of the run that sent it.
+// the box of the run that sent it, and its room.
 type refusalWatch struct {
+	dir    string
 	box    mail.Box
 	letter mail.Message
 }
 
 // watchRefusal ends the wait for an answer once the question itself has
-// failed.
+// failed, and ends it unanswered when a switch of the room drops its holders
+// (docs/rules/state.md#switching-a-running-room): the wait holds the room's
+// lease, and the question stays open, its answer arriving as a report.
 func watchRefusal(ctx context.Context, w refusalWatch, refused chan<- refusal, stop func()) {
 	ticker := time.NewTicker(refusalPoll)
 	defer ticker.Stop()
@@ -122,6 +127,10 @@ func watchRefusal(ctx context.Context, w refusalWatch, refused chan<- refusal, s
 		// One that cannot be read is looked at again on the next tick.
 		if status, ok, err := w.box.StatusOf(w.letter); err == nil && ok && status.State == mail.Failed {
 			refused <- refusal{status: status}
+			stop()
+			return
+		}
+		if mark, live := build.LiveSwitch(w.dir); live && mark.Phase == state.PhaseDropping {
 			stop()
 			return
 		}

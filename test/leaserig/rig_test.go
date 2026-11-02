@@ -23,6 +23,9 @@ import (
 // version, another image.
 const builtAt = "2026-01-02T03:04:05Z"
 
+// builtAtC is the third build's.
+const builtAtC = "2026-01-03T03:04:05Z"
+
 // image is one built rewake: its path, its build id and its version.
 type image struct {
 	path, id, version string
@@ -30,6 +33,9 @@ type image struct {
 
 var (
 	buildA, buildB image
+	// buildC is a third build, of another build time: a launch foreign to
+	// both while A switches the room to B.
+	buildC image
 	// harness is a harness the binaries launch, as their guide names it: a
 	// launch here never gets past its lease, so which one does not matter.
 	harness string
@@ -46,6 +52,10 @@ func TestMain(m *testing.M) {
 			return 1
 		}
 		if buildB, err = compile(dir, "b", "-ldflags", "-X github.com/praline-labs/rewake/internal/cli.built="+builtAt); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			return 1
+		}
+		if buildC, err = compile(dir, "c", "-ldflags", "-X github.com/praline-labs/rewake/internal/cli.built="+builtAtC); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			return 1
 		}
@@ -121,7 +131,12 @@ type world struct {
 
 func newWorld(t *testing.T) *world {
 	t.Helper()
-	parent := t.TempDir()
+	// Short, so the sockets of the room fit a Unix socket's path.
+	parent, err := os.MkdirTemp("", "rig")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(parent) })
 	if err := os.Chmod(parent, 0o700); err != nil {
 		t.Fatal(err)
 	}

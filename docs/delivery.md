@@ -129,7 +129,9 @@ successful output cannot consume its answer. Ids belonging to plain tasks also h
 receipt: a mixed report remains for ordinary delivery once all active questions finish.
 Receipts and stale marks are swept by age with the other mailbox records.
 
-When the wait ends, send looks once more under the lock. Without an answer it prints
+The wait also ends early when a switch of the room to another build starts dropping its
+holders ([rules/state.md](rules/state.md#switching-a-running-room)): the waiting command holds
+the room's lease, which the switch needs alone. When the wait ends, send looks once more under the lock. Without an answer it prints
 `Rewake: no answer from <name> yet; it arrives later as its report` and exits 3; the `--json`
 detail keeps its longer wording. After the reservation is released, any report arriving
 around that last look is still queued for an ordinary `finished` notice.

@@ -1,6 +1,7 @@
 package spacehost
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -10,6 +11,7 @@ import (
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/core/space"
 	"github.com/praline-labs/rewake/internal/host/stream"
+	"github.com/praline-labs/rewake/internal/host/switching"
 	"github.com/praline-labs/rewake/internal/host/terminal"
 	"github.com/praline-labs/rewake/internal/infra/build"
 	"github.com/praline-labs/rewake/internal/infra/proc"
@@ -35,6 +37,9 @@ func serve(spec Spec) int {
 		return 1
 	}
 	defer lease.Release()
+	// A space host's state is handed over by no image yet: a switch of the
+	// room while it runs is refused, and the room is restarted instead.
+	defer switching.Watch(context.Background(), spec.Dir, switching.CannotHandOver("the space host of "+spec.ID, "a space host does not hand its run over yet"))()
 	h := &host{spec: spec}
 	if err := h.start(); err != nil {
 		return 1
