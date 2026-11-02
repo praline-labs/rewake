@@ -2,6 +2,7 @@ package pi
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -67,6 +68,11 @@ type link struct {
 	// asking counts the host's requests waiting for an answer that are not
 	// the poll of the state: an answer only this image would take (Busy).
 	asking int
+	// halt, while a handover holds the reader, takes what it read of a
+	// frame; frozen refuses the host's requests then (handover.go).
+	halt   chan []byte
+	resume chan struct{}
+	frozen bool
 }
 
 func newLink(conn net.Conn) *link {
@@ -74,20 +80,33 @@ func newLink(conn net.Conn) *link {
 }
 
 func readFrame(reader *bufio.Reader) (frame, error) {
-	var line []byte
+	got, _, err := readFrom(reader, nil)
+	return got, err
+}
+
+// readFrom reads the frame whose first bytes line holds. On a read's error it
+// answers what it took of the frame, which a halt for a handover keeps
+// (handover.go): the reader has nothing else.
+func readFrom(reader *bufio.Reader, line []byte) (frame, []byte, error) {
 	for {
-		part, more, err := reader.ReadLine()
-		if err != nil {
-			return frame{}, err
-		}
-		if len(line)+len(part) > maxFrame {
-			return frame{}, errors.New("extension frame exceeds its bound")
-		}
+		part, err := reader.ReadSlice('\n')
 		line = append(line, part...)
-		if !more {
-			break
+		if len(bytes.TrimRight(line, "\r\n")) > maxFrame {
+			return frame{}, nil, errors.New("extension frame exceeds its bound")
 		}
+		if errors.Is(err, bufio.ErrBufferFull) {
+			continue
+		}
+		if err != nil {
+			return frame{}, line, err
+		}
+		break
 	}
+	got, err := parseFrame(bytes.TrimRight(line, "\r\n"))
+	return got, nil, err
+}
+
+func parseFrame(line []byte) (frame, error) {
 	var got frame
 	if err := json.Unmarshal(line, &got); err != nil {
 		return frame{}, errors.New("invalid extension frame")
@@ -100,11 +119,17 @@ func readFrame(reader *bufio.Reader) (frame, error) {
 
 func (l *link) serve(reader *bufio.Reader, handle func(frame)) {
 	defer l.close()
+	var partial []byte
 	for {
-		got, err := readFrame(reader)
+		got, rest, err := readFrom(reader, partial)
 		if err != nil {
+			var halted bool
+			if partial, halted = l.halted(err, rest); halted {
+				continue
+			}
 			return
 		}
+		partial = nil
 		if got.Op != "answer" {
 			handle(got)
 			continue
@@ -140,6 +165,10 @@ func (l *link) ask(ctx context.Context, request frame) (frame, error) {
 	// A poll lost to an exec is asked again by the next image.
 	counted := request.Op != "state"
 	l.mu.Lock()
+	if l.frozen {
+		l.mu.Unlock()
+		return frame{}, errHanding
+	}
 	l.next++
 	request.ID = l.next
 	answer := make(chan frame, 1)

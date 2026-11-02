@@ -280,13 +280,20 @@ admitting only a build of the same `extension` protocol.
 What lives only in the image's memory keeps the switch waiting until it is gone, which an idle
 session makes it: an open turn (its end would find no start, and pi sends nothing again), an end
 being published (the extension waits for its acknowledgment), and a host request other than the
-state's poll awaiting its answer. A poll lost in the exec is asked again. The residue is the instant
-between the run's last answer of `ready` and the exec: a frame the extension writes then is read
-into the old image and lost with it; a `turn-start` lost so leaves its end with no start, and the
-extension's request fails at its five seconds, as on a disconnect. Main's run answers `cannot`, as
-on Claude Code. Tested in `handover_test.go` against the wire, with no pi: an open turn, a
-publication and a held wake each refuse, and after the exec a turn and a notice go through on the
-connection handed over, which never closed. No live pi ran: its login is the owner's.
+state's poll awaiting its answer. A poll lost in the exec is asked again.
+
+The snapshot is the run's quiescent point: the handover halts the reader with a read deadline, at a
+frame's boundary or inside one, refuses the host's requests, and looks at the run again; from then
+to the exec nothing the extension sends is taken by this image. It waits in the socket for the next
+image, and what the reader took of a frame goes over with the handover (`unread`, at most 64 KiB,
+or the switch waits), read first by the next image. Without the halt, a `turn-start` the old image
+acknowledged after the snapshot left its end with no start after the exec, and no report (found in
+review). An exec that fails starts the reader again (`HandedOver.Resume`). Main's run answers
+`cannot`, as on Claude Code. Tested in `handover_test.go` against the wire, with no pi: an open
+turn, a publication and a held wake each refuse; after the exec a turn and a notice go through on
+the connection handed over, which never closed; a frame half read at the snapshot and a start sent
+after it are answered by the next image. No live pi worker ran: a real worker opens in a space,
+whose host cannot hand over yet.
 
 ## Live acceptance on a real model (October 18, 2026)
 

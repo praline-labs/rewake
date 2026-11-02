@@ -137,6 +137,7 @@ func TestAnIdlePiRunHandsItsConnectionOver(t *testing.T) {
 // handover.pi, so a changed handedState raises handoverVersion.
 var handedShapes = map[int]string{
 	1: `Version int "version"; PID int "pid"; Start uint64 "start"; Thread string "thread"; Next int64 "next"`,
+	2: `Version int "version"; PID int "pid"; Start uint64 "start"; Thread string "thread"; Next int64 "next"; Unread []uint8 "unread,omitempty"`,
 }
 
 func TestThePiHandoverChangesWithItsShape(t *testing.T) {
@@ -148,5 +149,85 @@ func TestThePiHandoverChangesWithItsShape(t *testing.T) {
 	}
 	if got := strings.Join(fields, "; "); got != handedShapes[handoverVersion] {
 		t.Fatalf("handedState is\n%s\nand handover.pi %d pins\n%s\na changed handedState raises handoverVersion", got, handoverVersion, handedShapes[handoverVersion])
+	}
+}
+
+// What the extension sends after the snapshot is not taken by the image that
+// goes: the reader halts, a frame half read goes over with the handover, and
+// the rest waits in the socket, so the next image answers a turn's start the
+// old one never saw and publishes its end. A handover that does not exec
+// resumes the reader.
+func TestAFrameAfterTheSnapshotWaitsForTheNextImage(t *testing.T) {
+	ends := make(chan adapter.TurnEnd, 4)
+	through := uint64(7)
+	handler := adapter.TurnHandler{
+		Capture: func() *mail.ReadBoundary { return &mail.ReadBoundary{Through: through} },
+		Publish: func(_ context.Context, end adapter.TurnEnd) error { ends <- end; return nil },
+	}
+	rig := newRig(t, func(r *run) { r.ReportTurns(handler) })
+	l := rig.client(t, "conversation", func(l *link, got frame) { l.answer(got, frame{OK: true}) })
+	before := rig.run
+
+	failed, err := before.HandOver()
+	if err != nil {
+		t.Fatal(err)
+	}
+	failed.Resume()
+	for _, file := range failed.Files {
+		_ = file.Close()
+	}
+	askOK(t, l, frame{Op: "turn-start", Thread: "conversation", Turn: "t0"})
+	askOK(t, l, frame{Op: "turn-end", Thread: "conversation", Turn: "t0", Outcome: "answered", Text: "before"})
+	receive(t, ends)
+
+	half := make(chan frame, 1)
+	l.mu.Lock()
+	l.waiting[900] = half
+	l.mu.Unlock()
+	raw := `{"op":"state","id":900,"thread":"conversation","state":{"sequence":9,"activity":"idle"}}` + "\n"
+	if _, err := l.conn.Write([]byte(raw[:30])); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(50 * time.Millisecond)
+	handed, err := before.HandOver()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := l.conn.Write([]byte(raw[30:])); err != nil {
+		t.Fatal(err)
+	}
+	started := make(chan frame, 1)
+	go func() {
+		reply, _ := l.ask(context.Background(), frame{Op: "turn-start", Thread: "conversation", Turn: "late"})
+		started <- reply
+	}()
+	select {
+	case reply := <-started:
+		t.Fatalf("the image that goes answered a start sent after its snapshot: %+v", reply)
+	case <-time.After(200 * time.Millisecond):
+	}
+
+	aside := before.socket + ".aside"
+	if err := os.Rename(before.socket, aside); err != nil {
+		t.Fatal(err)
+	}
+	before.Close()
+	if err := os.Rename(aside, before.socket); err != nil {
+		t.Fatal(err)
+	}
+	through = 8
+	after := newRun(before.file, before.socket, "run-epoch")
+	after.ReportTurns(handler)
+	if err := after.Adopt(t.Context(), nil, handed); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(after.Close)
+	receive(t, half)
+	if reply := receive(t, started); !reply.OK {
+		t.Fatalf("the next image's answer to the start: %+v", reply)
+	}
+	askOK(t, l, frame{Op: "turn-end", Thread: "conversation", Turn: "late", Outcome: "answered", Text: "report"})
+	if end := receive(t, ends); end.Event != ID+"/late" || end.Boundary.Through != 8 {
+		t.Fatalf("the end of the start sent after the snapshot: %+v", end)
 	}
 }
