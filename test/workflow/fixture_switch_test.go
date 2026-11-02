@@ -19,19 +19,24 @@ import (
 // (docs/rules/state.md#switching-a-running-room), on the fixture column, whose
 // wrappers can hand their runs over.
 //
-//   - A plain main and a plain worker run build A from an install of their
-//     own; the install is then replaced by build B, the same tree linked with
-//     another build time, as an update replaces it.
-//   - The person's rewake restart rewake switches the room: both wrappers
-//     keep their pid, epoch and harness and run B, and the room's build and
-//     copy are B. A new task gets exactly one report.
-//   - With a space open, a switch back to A goes through: the space host and
-//     the space's worker each keep their pid and run A, the space stays open
-//     and its screen is the same, and a task gets one report.
+//   - Main, launched on a terminal as a person does, runs behind its host
+//     with the shell as the host's child; a plain worker runs beside it. Both
+//     run build A from an install of their own; the install is then replaced
+//     by build B, the same tree linked with another build time, as an update
+//     replaces it.
+//   - The person's rewake restart rewake switches the room: main's host keeps
+//     its pid and runs B, its shell keeps its channel and attaches to main's
+//     stream again; both wrappers keep their pid, epoch and harness and run
+//     B, and the room's build and copy are B. A new task gets exactly one
+//     report.
+//   - With a space open, a switch back to A goes through: main's host, the
+//     space host and the space's worker each keep their pid and run A, the
+//     space stays open and its screen is the same, and a task gets one
+//     report.
 //
-// What it does not prove: a real harness. A worker of Claude Code or pi hands
-// its run over when idle, proven by its adapter's tests; main's wrapper and
-// main's host cannot yet, so every real room is refused on them.
+// What it does not prove: a real harness. A run of Claude Code or pi hands
+// over when idle, proven by its adapter's tests; the shell here is this test
+// binary speaking the host's channel.
 func TestFixtureSwitch(t *testing.T) {
 	binary := enterScenario(t, "fixture-switch")
 	c := Start(t, Spec{Name: "fixture-switch", Harness: fixtureColumn.harness, Observations: fixtureSwitchObservations, Deadline: 180 * time.Second})
@@ -59,14 +64,22 @@ func TestFixtureSwitch(t *testing.T) {
 	room := filepath.Join(iso.StateDir, "v2", "rooms", iso.HomeRoom())
 
 	asks := newRequests(iso, "lead")
-	lead := startHarnessSession(t, c, iso, fixtureColumn.harness, "lead", "--main", asks.env(), shimInboxJSON+"=1")
-	worker := startHarnessSession(t, c, iso, fixtureColumn.harness, "worker", "--general")
-	if err := sessionsUp(c, lead, worker); err != nil {
+	shell, shellSaid := fakeShell(t, iso)
+	lead, window := startOnTerminal(t, c, iso, "lead", "--main", asks.env(), shimInboxJSON+"=1", "REWAKE_SHELL="+shell)
+	// Main's start on a terminal takes longer than a plain one: the worker
+	// stays up past the suite's ordinary lifetime.
+	worker := startHarnessSession(t, c, iso, fixtureColumn.harness, "worker", "--general", staysUp(iso, "worker"))
+	err = sessionsUp(c, worker)
+	if err == nil && !waitFor(c, 20*time.Second, func() bool { _, err := os.Stat(lead.ready); return err == nil && shellSaid("1 attached main") }) {
+		err = errors.New("main never became ready under its host, or the shell never attached to it")
+	}
+	if err != nil {
 		stopSession(t, c, worker)
-		stopSession(t, c, lead)
+		closeWindow(c, window, lead)
 		c.Contradicted(obsSwitchSwitched, "%v", err)
 		return
 	}
+	host := lead.process.cmd.Process.Pid
 	reports := func() int { return countReports(lead, worker, "finished") }
 	task := func(n int) {
 		if code, out, _ := asks.ask(c, "send", worker.name, fmt.Sprintf("%s %d", switchTask, n)); code != 0 {
@@ -90,15 +103,26 @@ func TestFixtureSwitch(t *testing.T) {
 		}
 	}
 	copied, _ := os.ReadFile(filepath.Join(room, "bin", "rewake"))
+	hostExe, _ := os.ReadFile(fmt.Sprintf("/proc/%d/exe", host))
 	switch {
 	case code != 0:
 		c.Contradicted(obsSwitchSwitched, "restart rewake exited %d: %s %s", code, out, errOut)
+	case lead.process.finished() || idOf(hostExe) != idOf(newer):
+		c.Contradicted(obsSwitchSwitched, "main's host %d ended %v, or runs %.12s; B is %.12s", host, lead.process.finished(), idOf(hostExe), idOf(newer))
 	case len(moved) > 0:
 		c.Contradicted(obsSwitchSwitched, "%s", strings.Join(moved, "; "))
 	case recordOf(room) != idOf(newer) || idOf(copied) != idOf(newer):
 		c.Contradicted(obsSwitchSwitched, "the room's build %.12s and its copy %.12s; B is %.12s", recordOf(room), idOf(copied), idOf(newer))
 	default:
 		c.Observed(obsSwitchSwitched, firstLine(out))
+	}
+	switch {
+	case !waitFor(c, 5*time.Second, func() bool { return shellSaid("1 reattached main") }):
+		c.Contradicted(obsSwitchShell, "the shell did not attach to main's stream again after the switch")
+	case shellSaid("2 welcome") || shellSaid("lost") || shellSaid("channel ended"):
+		c.Contradicted(obsSwitchShell, "the shell's channel did not go over: a second shell was welcomed, or the first lost its channel")
+	default:
+		c.Observed(obsSwitchShell, "one shell, generation 1, its channel kept and main's stream attached again")
 	}
 	task(2)
 	time.Sleep(time.Second)
@@ -127,8 +151,9 @@ func TestFixtureSwitch(t *testing.T) {
 	c.Await("the first switch's mark to end", func() bool { return !switchHolds(room) })
 	code, out, errOut = switchRoom(c, iso)
 	now := spaceRecordOf(iso, opened)
-	hostExe, _ := os.ReadFile(fmt.Sprintf("/proc/%d/exe", runPID(now.Host)))
+	spaceExe, _ := os.ReadFile(fmt.Sprintf("/proc/%d/exe", runPID(now.Host)))
 	workerExe, _ := os.ReadFile(fmt.Sprintf("/proc/%d/exe", runPID(now.Worker.Run)))
+	hostExe, _ = os.ReadFile(fmt.Sprintf("/proc/%d/exe", host))
 	shownAfter := screenText(iso, "api")
 	task(3)
 	switch {
@@ -138,8 +163,8 @@ func TestFixtureSwitch(t *testing.T) {
 		c.Contradicted(obsSwitchSpace, "restart rewake with a space open exited %d: %s %s", code, out, errOut)
 	case now.State != "open" || now.Host != was.Host || now.Worker.Run != was.Worker.Run || !runAlive(now.Host) || !runAlive(now.Worker.Run):
 		c.Contradicted(obsSwitchSpace, "the space is %s, its host %s and worker %s; they were %s and %s", now.State, now.Host, now.Worker.Run, was.Host, was.Worker.Run)
-	case idOf(hostExe) != idOf(original) || idOf(workerExe) != idOf(original):
-		c.Contradicted(obsSwitchSpace, "the space host runs %.12s and the worker %.12s; A is %.12s", idOf(hostExe), idOf(workerExe), idOf(original))
+	case idOf(spaceExe) != idOf(original) || idOf(workerExe) != idOf(original) || idOf(hostExe) != idOf(original):
+		c.Contradicted(obsSwitchSpace, "the space host runs %.12s, the worker %.12s and main's host %.12s; A is %.12s", idOf(spaceExe), idOf(workerExe), idOf(hostExe), idOf(original))
 	case recordOf(room) != idOf(original):
 		c.Contradicted(obsSwitchSpace, "the switch left the build %.12s", recordOf(room))
 	case !sameScreen(shown, shownAfter):
@@ -149,16 +174,9 @@ func TestFixtureSwitch(t *testing.T) {
 	default:
 		c.Observed(obsSwitchSpace, firstLine(out))
 	}
-	// A committed switch's leader cannot remove its socket, its lease
-	// revoked at the commit; the next attempt clears it. Nobody listens on it.
-	leftover := filepath.Join(room, "sock", "switch.sock")
-	if conn, err := net.Dial("unix", leftover); err == nil {
-		_ = conn.Close()
-		t.Errorf("something still listens on %s after the switch", leftover)
-	}
-	_ = os.Remove(leftover)
+	clearSwitchSocket(t, room)
 	stopSession(t, c, worker)
-	stopSession(t, c, lead)
+	closeWindow(c, window, lead)
 	if opened != "" {
 		// Main's end ends the space, as usual.
 		var record spaceRecordView
@@ -200,6 +218,19 @@ func sameScreen(before, after string) bool {
 	}
 	was, is := lines(before), lines(after)
 	return len(was) > 0 && slices.Equal(is, was)
+}
+
+// clearSwitchSocket removes what a committed switch leaves: its leader
+// cannot remove its socket, its lease revoked at the commit, and the next
+// attempt clears it. Nobody listens on it.
+func clearSwitchSocket(t *testing.T, room string) {
+	t.Helper()
+	leftover := filepath.Join(room, "sock", "switch.sock")
+	if conn, err := net.Dial("unix", leftover); err == nil {
+		_ = conn.Close()
+		t.Errorf("something still listens on %s after the switch", leftover)
+	}
+	_ = os.Remove(leftover)
 }
 
 // switchHolds says a switch's mark in the room has not reached its deadline.
@@ -261,7 +292,8 @@ func openSpace(t *testing.T, c *Case, iso *Isolation, asks *requests) string {
 }
 
 const (
-	obsSwitchSwitched = "rewake restart rewake switches an idle fixture room to another build: main's and the worker's wrappers keep their pid, epoch and harness and run the new build, which is the room's build and copy"
+	obsSwitchSwitched = "rewake restart rewake switches an idle fixture room to another build: main's host keeps its pid and runs the new build, main's and the worker's wrappers keep their pid, epoch and harness and run it, and it is the room's build and copy"
+	obsSwitchShell    = "the shell runs on through the switch of main's host: its channel goes over unbroken, no new shell is started, and it attaches to main's stream again"
 	obsSwitchReported = "after the switch, a new task is delivered and every task has exactly one report"
 	obsSwitchSpace    = "with a space open, the switch goes through: the space host and its worker keep their pid and run the new build, the space stays open with the same screen, and a task gets one report"
 	switchTask        = "fixture-switch: report back"
@@ -269,4 +301,4 @@ const (
 	switchBuilt = "2026-11-02T00:00:00Z"
 )
 
-var fixtureSwitchObservations = []string{obsSwitchSwitched, obsSwitchReported, obsSwitchSpace}
+var fixtureSwitchObservations = []string{obsSwitchSwitched, obsSwitchShell, obsSwitchReported, obsSwitchSpace}

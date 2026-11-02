@@ -49,14 +49,30 @@ room's build is the first install's; a person's `rewake list` of the new build i
 room's copy, its stderr saying so; once the sessions end, a new launch takes the new build and
 the room's copy becomes it.
 
-`fixture-switch`: a running room switches to another build. A fixture main and worker start from
-an install of the case's own, which is then replaced by the same tree linked with another build
-time; the person's `rewake restart rewake` switches the room, both wrappers keep their pid, epoch
-and harness and run the new image, the room's build and copy are the new build, and a task sent
-across the switch gets exactly one report. With a space open, a second switch back goes through:
-the space host and its worker keep their pid and run the first build, the space stays open with
-the same screen, no line of an adopting wrapper added, and a task gets one report. The committed switch's socket, which its leader
-cannot remove once its lease is revoked, is the scenario's to clear after checking nothing listens.
+`fixture-switch`: a running room switches to another build. A fixture main, launched on a
+terminal as a person does and so behind its host with the shell as the host's child, and a worker
+start from an install of the case's own, which is then replaced by the same tree linked with
+another build time; the person's `rewake restart rewake` switches the room: main's host keeps its
+pid and runs the new image, the shell keeps its channel, is not replaced, and attaches to main's
+stream again, both wrappers keep their pid, epoch and harness and run the new image, the room's
+build and copy are the new build, and a task sent across the switch gets exactly one report. With
+a space open, a second switch back goes through: main's host, the space host and its worker keep
+their pid and run the first build, the space stays open with the same screen, no line of an
+adopting wrapper added, and a task gets one report. The shell is the test binary speaking the
+host's channel, which attaches again a second after main's stream ends, as the real one does. The
+committed switch's socket, which its leader cannot remove once its lease is revoked, is the
+scenario's to clear after checking nothing listens.
+
+`fixture-main-switch`: a switch main asks for, and a window closed during one. Main, on a terminal
+behind its host, holds each turn open four seconds; from the turn the worker's arrival began it
+runs `rewake restart rewake`, which answers at once that the switch is deferred while the room
+keeps its build and main's turn is open; once main is idle the switch goes through, main's host and
+wrapper keep their pid and epoch and run the new build, and main reads the outcome as a note.
+`rewake restart shell`, asked of the adopted host, then answers generation 2. Last, with main idle,
+the person switches back and closes the window the moment main's host is seen parked — its
+handover, in `/proc/<pid>/environ`, names the park — so the shell's `lost` waits in its channel for
+the image that takes the run on: that image ends main's host, main and the shell, the switch has
+committed and holds the room no more, and the worker beside main runs on.
 
 `fixture-wrapper-killed`: a fixture wrapper killed outright takes its session half with it within
 three seconds. The fixture's program watches its parent's pid, since the backend asks for no

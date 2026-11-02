@@ -5,7 +5,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
@@ -31,16 +30,7 @@ func TestFixtureShellRestart(t *testing.T) {
 		Deadline:     120 * time.Second,
 	})
 	iso := Isolate(t, c, binary)
-	record := filepath.Join(iso.Home, "shell.record")
-	shell := filepath.Join(iso.ShimDir, "fake-shell")
-	script := "#!/bin/sh\nexec env " + fakeShellEnv + "=" + record + " \"$RW_SHIM_TEST_EXE\" -test.run=TestShimHelper -- \"$@\"\n"
-	if err := replaceScript(shell, script); err != nil {
-		t.Fatal(err)
-	}
-	shellSaid := func(line string) bool {
-		raw, _ := os.ReadFile(record)
-		return strings.Contains(string(raw), line)
-	}
+	shell, shellSaid := fakeShell(t, iso)
 	asks := newRequests(iso, "lead")
 	lead, window := startOnTerminal(t, c, iso, "lead", "--main", asks.env(), shimInboxJSON+"=1", "REWAKE_SHELL="+shell)
 	if !waitFor(c, 20*time.Second, func() bool { _, err := os.Stat(lead.ready); return err == nil && shellSaid("1 attached main") }) {

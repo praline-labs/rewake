@@ -7,9 +7,12 @@ import (
 	"io"
 	"net"
 	"os"
+	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
+	"testing"
 	"time"
 )
 
@@ -20,9 +23,10 @@ import (
 const fakeShellEnv = "RW_FAKE_SHELL"
 
 // runFakeShell speaks the host's channel as the real shell does, without a
-// screen: hello, ready on go, an attach to main's stream once main is known,
-// released on release, and lost when its terminal's input ends. It records
-// each step as "<generation> <step>" for the scenario to read.
+// screen: hello, ready on go, an attach to main's stream once main is known
+// and again a second after that stream ends, as a switch of the room's build
+// ends it, released on release, and lost when its terminal's input ends. It
+// records each step as "<generation> <step>" for the scenario to read.
 func runFakeShell() int {
 	record := os.Getenv(fakeShellEnv)
 	var mu sync.Mutex
@@ -64,11 +68,25 @@ func runFakeShell() int {
 		Socket string `json:"socket"`
 	}
 	var main *ref
+	// again attaches to the stream of to once more, a second after it ended.
+	var again func(to ref) func()
+	again = func(to ref) func() {
+		return func() {
+			for range 20 {
+				time.Sleep(time.Second)
+				if attachStream(to.Socket, again(to)) == nil {
+					note("%d reattached main %d", generation.Load(), to.PID)
+					return
+				}
+			}
+			note("%d never reattached main", generation.Load())
+		}
+	}
 	attach := func() {
 		if main == nil {
 			return
 		}
-		if err := attachStream(main.Socket); err != nil {
+		if err := attachStream(main.Socket, again(*main)); err != nil {
 			note("%d attach failed: %v", generation.Load(), err)
 			return
 		}
@@ -119,8 +137,9 @@ func runFakeShell() int {
 }
 
 // attachStream opens main's raw stream as the shell does — the mode byte,
-// the host's acceptance, the preamble — and keeps reading it.
-func attachStream(socket string) error {
+// the host's acceptance, the preamble — and keeps reading it; ended runs
+// once it ends.
+func attachStream(socket string, ended func()) error {
 	conn, err := net.DialTimeout("unix", socket, 2*time.Second)
 	if err != nil {
 		return err
@@ -135,6 +154,25 @@ func attachStream(socket string) error {
 		return fmt.Errorf("the host answered %q, %v", accepted, err)
 	}
 	_ = conn.SetDeadline(time.Time{})
-	go func() { _, _ = io.Copy(io.Discard, conn) }()
+	go func() {
+		_, _ = io.Copy(io.Discard, conn)
+		ended()
+	}()
 	return nil
+}
+
+// fakeShell is the script a launch takes as REWAKE_SHELL to run this test
+// binary as the shell, and said, whether the shell's record holds a line.
+func fakeShell(t *testing.T, iso *Isolation) (string, func(line string) bool) {
+	t.Helper()
+	record := filepath.Join(iso.Home, "shell.record")
+	shell := filepath.Join(iso.ShimDir, "fake-shell")
+	script := "#!/bin/sh\nexec env " + fakeShellEnv + "=" + record + " \"$RW_SHIM_TEST_EXE\" -test.run=TestShimHelper -- \"$@\"\n"
+	if err := replaceScript(shell, script); err != nil {
+		t.Fatal(err)
+	}
+	return shell, func(line string) bool {
+		raw, _ := os.ReadFile(record)
+		return strings.Contains(string(raw), line)
+	}
 }
