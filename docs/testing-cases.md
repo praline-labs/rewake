@@ -56,6 +56,11 @@ and harness and run the new image, the room's build and copy are the new build, 
 across the switch gets exactly one report. With a space open, a second switch is refused naming
 the space host, which cannot hand over, and the room keeps its build.
 
+`fixture-wrapper-killed`: a fixture wrapper killed outright takes its session half with it within
+three seconds. The fixture's program watches its parent's pid, since the backend asks for no
+parent-death signal, which the exec of a wrapper handing its run over would fire. The killed
+run's socket and record, which nothing removes, are the scenario's to clear.
+
 ## Launch, reports and what a main waits on
 
 `wrapped-launch` runs twice, in two rooms: a plain launch and one with `--command

@@ -262,6 +262,7 @@ func fixtureSessionStart(launch fixtureLaunch) (*fixtureSession, error) {
 }
 
 func fixtureSessionMain(launch fixtureLaunch) int {
+	go endWithWrapper()
 	s, err := fixtureSessionStart(launch)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "fixture: %v\n", err)
@@ -275,6 +276,19 @@ func fixtureSessionMain(launch fixtureLaunch) int {
 	// dropped socket is a withdrawal and not a departure.
 	time.Sleep(requestLifetime)
 	return 0
+}
+
+// endWithWrapper ends the session half once the wrapper that started it is
+// gone, as a harness's program ends with its wrapper: the backend asks for no
+// parent-death signal, which the exec of a wrapper handing its run over would
+// fire, so the half watches its parent's pid, which that exec keeps.
+func endWithWrapper() {
+	parent := os.Getppid()
+	for range time.Tick(200 * time.Millisecond) {
+		if os.Getppid() != parent {
+			os.Exit(0)
+		}
+	}
 }
 
 func (s *fixtureSession) send(frame fixtureFrame) error {

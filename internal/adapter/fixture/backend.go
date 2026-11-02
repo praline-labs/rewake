@@ -181,8 +181,9 @@ func (b *backend) spawn() error {
 	command.Stderr = os.Stderr
 	// No parent-death signal: the kernel sends it when the thread that forked
 	// the program ends, and an exec of the wrapper ends every thread but one
-	// (handover.go). A program whose wrapper was killed loses its connection
-	// and ends on its own.
+	// (handover.go). The fixture's program watches its parent's pid instead,
+	// which that exec keeps, and ends when its wrapper is gone
+	// (test/workflow's fixtureshim).
 	command.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	if err := command.Start(); err != nil {
 		if errors.Is(err, exec.ErrNotFound) {
