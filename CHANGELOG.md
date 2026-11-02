@@ -16,6 +16,11 @@ what a release restarts is computed from its manifest, never read from here
   one part while main and the workers run on.
 - Main's pseudo-terminal is held by a host in the person's pane, so a restart or one crash of the
   shell leaves main and its workers running.
+- `rewake restart rewake` moves a running room to a newly installed rewake without ending a
+  session: main's host, the space hosts and every wrapper exec the new build, keeping their
+  processes, terminals and mail. Run from main's own turn, the switch waits until every session
+  is idle, for up to ten minutes, and its outcome comes to main as a note. A new rewake that
+  changes a contract the room holds still needs the room's restart, and the plan says which.
 - A session's mail is one handle in the command line: reading the inbox, marking a turn pending,
   sending, editing and withdrawing a letter each take their mailbox lock themselves.
 - A worker and what it starts carry none of main's herdr variables.
