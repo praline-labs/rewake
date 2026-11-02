@@ -3,6 +3,7 @@ package workflow
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"testing"
@@ -40,10 +41,16 @@ func TestFixtureWrapperKilled(t *testing.T) {
 	// Whatever still runs goes before the case's own cleanup looks; so do the
 	// run's socket and record, which a wrapper killed outright cannot remove:
 	// the next launch of the name replaces the record, and the socket's path
-	// is the run's, so no later run meets it.
+	// is the run's, so no later run meets it. So does the temporary file of a
+	// write of the record the kill cut short: no reader takes it for a
+	// record, and nothing else in the room writes its records meanwhile.
 	defer func() {
 		_ = os.Remove(record.Socket)
 		_ = os.Remove(record.path)
+		cut, _ := filepath.Glob(filepath.Join(filepath.Dir(record.path), ".tmp-*"))
+		for _, temp := range cut {
+			_ = os.Remove(temp)
+		}
 		for _, pid := range children {
 			_ = syscall.Kill(pid, syscall.SIGKILL)
 		}
