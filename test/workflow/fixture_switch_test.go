@@ -142,7 +142,7 @@ func TestFixtureSwitch(t *testing.T) {
 		c.Contradicted(obsSwitchSpace, "the space host runs %.12s and the worker %.12s; A is %.12s", idOf(hostExe), idOf(workerExe), idOf(original))
 	case recordOf(room) != idOf(original):
 		c.Contradicted(obsSwitchSpace, "the switch left the build %.12s", recordOf(room))
-	case !keeps(shown, shownAfter):
+	case !sameScreen(shown, shownAfter):
 		c.Contradicted(obsSwitchSpace, "the worker's screen was\n%s\nand is\n%s", shown, shownAfter)
 	case reports() != 3 || distinctReplies(lead, worker) != 3:
 		c.Contradicted(obsSwitchSpace, "%d reports for three tasks", reports())
@@ -186,10 +186,9 @@ func screenText(iso *Isolation, name string) string {
 	return string(out)
 }
 
-// keeps says the screen after shows every line the screen before did, in
-// order, and only more lines after them: what the worker wrote meanwhile,
-// here its wrapper's line on adopting its run.
-func keeps(before, after string) bool {
+// sameScreen says two screens show the same lines: the worker wrote nothing
+// meanwhile, and its wrapper adopting its run announces nothing again.
+func sameScreen(before, after string) bool {
 	lines := func(screen string) []string {
 		var out []string
 		for _, line := range strings.Split(screen, "\n") {
@@ -200,7 +199,7 @@ func keeps(before, after string) bool {
 		return out
 	}
 	was, is := lines(before), lines(after)
-	return len(was) > 0 && len(is) >= len(was) && slices.Equal(is[:len(was)], was)
+	return len(was) > 0 && slices.Equal(is, was)
 }
 
 // switchHolds says a switch's mark in the room has not reached its deadline.

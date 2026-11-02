@@ -55,7 +55,7 @@ time; the person's `rewake restart rewake` switches the room, both wrappers keep
 and harness and run the new image, the room's build and copy are the new build, and a task sent
 across the switch gets exactly one report. With a space open, a second switch back goes through:
 the space host and its worker keep their pid and run the first build, the space stays open with
-the screen it showed, and a task gets one report. The committed switch's socket, which its leader
+the same screen, no line of an adopting wrapper added, and a task gets one report. The committed switch's socket, which its leader
 cannot remove once its lease is revoked, is the scenario's to clear after checking nothing listens.
 
 `fixture-wrapper-killed`: a fixture wrapper killed outright takes its session half with it within

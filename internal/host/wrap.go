@@ -245,12 +245,17 @@ func Run(ctx context.Context, request Request) (int, error) {
 	closeService := closeOnce(plan.Service)
 	defer closeService()
 	live.planned = plannedLive(request.Harness.Offers(), plan, controlDir)
-	_, _ = fmt.Fprintf(os.Stderr, "rewake: room %s, role %s: %s\n", session.Room, session.Role, session.RoleReason)
-	for _, note := range plan.Notes {
-		// Said once, on stderr, before the harness takes over the screen: these
-		// are things rewake decided not to do, and silence about them would look
-		// like it had done them.
-		_, _ = fmt.Fprintln(os.Stderr, "rewake: "+note)
+	if request.Handover == nil {
+		// An adopted image says nothing: its stderr is the harness's terminal,
+		// where a line drawn again lands inside the harness's own screen —
+		// pi's input box after a switch (found in review, November 2, 2026).
+		_, _ = fmt.Fprintf(os.Stderr, "rewake: room %s, role %s: %s\n", session.Room, session.Role, session.RoleReason)
+		for _, note := range plan.Notes {
+			// Said once, on stderr, before the harness takes over the screen:
+			// these are things rewake decided not to do, and silence about them
+			// would look like it had done them.
+			_, _ = fmt.Fprintln(os.Stderr, "rewake: "+note)
+		}
 	}
 
 	session.Socket = plan.Socket
