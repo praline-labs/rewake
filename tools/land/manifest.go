@@ -118,30 +118,40 @@ func writeManifest(dir string, m parts.Manifest) error {
 
 // planLine is what a room that ran the old install needs to run the new
 // one: the room's restart when any step asks for it, which loads every
-// other part too; else the shell's; else nothing.
+// other part too; else the switch of rewake and the shell's restart, each
+// that a step asks for; else nothing.
 func planLine(old, next parts.Manifest) string {
 	steps := parts.Plan(old.Parts, next)
-	for _, class := range []string{parts.Room, parts.Shell} {
-		var names []string
-		for _, s := range steps {
-			switch {
-			case s.Class != class:
-			case s.Why == "changed":
-				names = append(names, s.Part+" changed")
-			default:
-				names = append(names, s.Part+": "+s.Why)
-			}
-		}
-		if len(names) == 0 {
-			continue
-		}
-		if class == parts.Shell {
-			return fmt.Sprintf("restart: shell (rewake restart shell; %s)", strings.Join(names, "; "))
-		}
+	if names := stepNames(steps, parts.Room); len(names) > 0 {
 		return fmt.Sprintf("restart: room (%s)", strings.Join(names, "; "))
+	}
+	var restarts []string
+	for _, class := range []string{parts.Switch, parts.Shell} {
+		if names := stepNames(steps, class); len(names) > 0 {
+			part := map[string]string{parts.Switch: parts.Rewake, parts.Shell: parts.ShellPart}[class]
+			restarts = append(restarts, fmt.Sprintf("%s (%s; %s)", part, parts.Action(class, part), strings.Join(names, "; ")))
+		}
+	}
+	if len(restarts) > 0 {
+		return "restart: " + strings.Join(restarts, ", then ")
 	}
 	if slices.ContainsFunc(steps, func(s parts.Step) bool { return s.Class == parts.Live }) {
 		return "restart: nothing (the face reloads from its files)"
 	}
 	return "restart: nothing"
+}
+
+// stepNames says each step of class: its part, and why.
+func stepNames(steps []parts.Step, class string) []string {
+	var names []string
+	for _, s := range steps {
+		switch {
+		case s.Class != class:
+		case s.Why == "changed":
+			names = append(names, s.Part+" changed")
+		default:
+			names = append(names, s.Part+": "+s.Why)
+		}
+	}
+	return names
 }

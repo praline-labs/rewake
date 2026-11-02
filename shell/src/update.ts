@@ -24,7 +24,8 @@ export const helloContracts = (embedded: boolean) => {
 };
 
 // bannerOf is the hint a plan gives the person, or none: a restart of the
-// room before one of the shell, since it loads both; a part that reloads
+// room before anything, since it loads every part; then a switch of the
+// room's rewake, which keeps the sessions, before the shell's; a part that reloads
 // itself, or that new sessions take, asks nothing of the person. With no
 // such step, a newer release on npm, with the most installing it would ask
 // (docs/install.md, "Updating from inside rewake"); once it is installed the
@@ -32,6 +33,9 @@ export const helloContracts = (embedded: boolean) => {
 export function bannerOf(steps: UpdateStep[] | undefined, available?: Available): Hint | undefined {
   const room = (steps ?? []).filter((s) => s.class === "room").map((s) => s.part);
   if (room.length > 0) return { keys: "room restart needed:", does: room.join(", ") };
+  if ((steps ?? []).some((s) => s.class === "switch")) {
+    return { keys: "rewake restart rewake", does: "switches the room to the updated rewake" };
+  }
   const shell = (steps ?? []).filter((s) => s.class === "shell").map((s) => s.part);
   if (shell.length > 0) return { keys: "Ctrl+\\ r", does: `loads the updated ${shell.join(", ")}` };
   if (available) {

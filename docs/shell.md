@@ -404,13 +404,14 @@ wrapper in the shell does the same for main (`terminal.UTF8Locale`), whose worke
   (below); while the briefs show, also the briefs (below); and `update`, the room's plan of
   [install.md](install.md#the-plan), the same as `rewake restart` prints. A step of class shell
   shows in the hints row, right after the focus, in every context, as `Ctrl+\ r loads the updated
-  shell`; one of class room as `room restart needed: rewake`, which comes first since it loads
-  both. A live step or a sessions step asks nothing of the person and shows nothing; the banner
+  shell`; one of class switch as `rewake restart rewake switches the room to the updated rewake`,
+  which comes before it; one of class room as `room restart needed: rewake`, which comes first
+  since it loads every part. A live step or a sessions step asks nothing of the person and shows nothing; the banner
   clears once the running set is the installed one. With no step to show, the view's `available`
   — a newer release on npm, from the last check's record, in a build from npm only
   ([install.md](install.md#updating-from-inside-rewake)) — shows there as `3.1.0 available ·
   restarts: shell · rewake update`, `restarts` the most the plan to that release asks: `room`,
-  `shell` or `nothing`. Once it is installed, `available` goes and the plan's steps show
+  `switch`, `shell` or `nothing`. Once it is installed, `available` goes and the plan's steps show
   instead (`shell/src/update.ts`). The command is hidden like `statusline`:
   the shell is its only caller, and a documented command would promise agents a shape. The
   existing `list`, `space list` and `brief` `--json` forms stay as they are.

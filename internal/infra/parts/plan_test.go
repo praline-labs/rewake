@@ -65,6 +65,19 @@ func TestPlan(t *testing.T) {
 			[]Step{{Rewake, Room, "changed"}},
 		},
 		{
+			"rewake was rebuilt, its contracts kept: the room switches to it", running(nil),
+			installed(func(p map[string]*Part) { p[Rewake].Class, p[Rewake].Digest, p[Rewake].File = Switch, "go2", "bin2" }),
+			[]Step{{Rewake, Switch, "changed"}},
+		},
+		{
+			"rewake was rebuilt with a contract changed: a switch cannot carry it", running(nil),
+			installed(func(p map[string]*Part) {
+				p[Rewake].Class, p[Rewake].Digest, p[Rewake].File = Switch, "go2", "bin2"
+				p[Rewake].Speaks = map[string]string{"host": "1", "mirror": "1", "handover": "2"}
+			}),
+			[]Step{{Rewake, Room, "changed; a switch cannot carry it: the installed rewake speaks handover 2, and the room's speaks none"}},
+		},
+		{
 			"the face changed within its contract: it reloads itself", running(nil),
 			installed(func(p map[string]*Part) { p[Face].Digest = "fa2" }), nil,
 		},

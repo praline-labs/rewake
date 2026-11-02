@@ -67,19 +67,21 @@ type Available struct {
 	Restarts Restarts `json:"restarts"`
 }
 
-// Restarts is the most an update asks of the room: room, its restart; shell, rewake restart
-// shell; nothing, no restart the person makes.
+// Restarts is the most an update asks of the room: room, its restart; switch, rewake restart
+// rewake; shell, rewake restart shell; nothing, no restart the person makes.
 type Restarts string
 
 // The values of Restarts.
 const (
 	RestartsRoom    Restarts = "room"
+	RestartsSwitch  Restarts = "switch"
 	RestartsShell   Restarts = "shell"
 	RestartsNothing Restarts = "nothing"
 )
 
 // RestartClass is what a part's restart takes: live, it reloads itself; shell, rewake restart
-// shell; sessions, each new session takes it; room, main ended and started again.
+// shell; sessions, each new session takes it; switch, rewake restart rewake, the sessions
+// running on; room, main ended and started again.
 type RestartClass string
 
 // The values of RestartClass.
@@ -87,6 +89,7 @@ const (
 	RestartClassLive     RestartClass = "live"
 	RestartClassShell    RestartClass = "shell"
 	RestartClassSessions RestartClass = "sessions"
+	RestartClassSwitch   RestartClass = "switch"
 	RestartClassRoom     RestartClass = "room"
 )
 

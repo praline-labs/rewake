@@ -78,7 +78,7 @@ var digest string
 func ownPart(catalog adapter.Catalog) parts.Part {
 	id, _ := build.ID()
 	c := contractsOf(catalog)
-	return parts.Part{Name: parts.Rewake, Class: parts.Room, Digest: digest, File: id, Speaks: c.Speaks, Requires: c.Requires}
+	return parts.Part{Name: parts.Rewake, Class: parts.Switch, Digest: digest, File: id, Speaks: c.Speaks, Requires: c.Requires}
 }
 
 // partNames are the parts rewake restart knows: every build's, each harness

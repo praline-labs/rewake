@@ -32,6 +32,10 @@ const (
 	Shell = "shell"
 	// Sessions: each session takes the installed one when it starts.
 	Sessions = "sessions"
+	// Switch: rewake restart rewake, the running room switched to it while
+	// every session runs on, when the two builds agree on every contract
+	// (docs/rules/state.md#switching-a-running-room); else Room.
+	Switch = "switch"
 	// Room: main ended and started again, its workers with it.
 	Room = "room"
 )

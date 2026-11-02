@@ -23,6 +23,8 @@ type repo struct {
 	calls []string
 	// shellContracts is what the shell says of its contracts.
 	shellContracts string
+	// handover is the handover contract the built rewake speaks.
+	handover string
 }
 
 func newRepo(t *testing.T) *repo {
@@ -35,7 +37,7 @@ func newRepo(t *testing.T) *repo {
 	for _, name := range []string{"GIT_AUTHOR_EMAIL", "GIT_COMMITTER_EMAIL"} {
 		t.Setenv(name, "owner@example.com")
 	}
-	r := &repo{t: t, root: t.TempDir(), origin: t.TempDir(), install: t.TempDir(), red: map[string]bool{}, shellContracts: shellSays("1", "5")}
+	r := &repo{t: t, root: t.TempDir(), origin: t.TempDir(), install: t.TempDir(), red: map[string]bool{}, shellContracts: shellSays("1", "5"), handover: "1"}
 	r.git(r.origin, "init", "--bare", "-q")
 	r.git(r.root, "init", "-q", "-b", branch)
 	r.write("AGENTS.md", "## Commits\n\n```\nCo-Authored-By: One <one@example.com>\nCo-Authored-By: Two <two@example.com>\n```\n")
@@ -103,7 +105,7 @@ func (r *repo) run(ctx context.Context, c command, log io.Writer) result {
 			return result{code: 1, stdout: "--- FAIL: TestWorkflow/brief (2.00s)\n"}
 		}
 	case strings.HasPrefix(line, filepath.Join(r.install, "rewake")+" --version"):
-		return result{stdout: `{"version":"dev","contracts":{"speaks":{"host":"1","mirror":"1"},"requires":{}}}`}
+		return result{stdout: `{"version":"dev","contracts":{"speaks":{"host":"1","mirror":"1","handover":"` + r.handover + `"},"requires":{}}}`}
 	case line == "bun src/main.tsx --contracts":
 		return result{stdout: r.shellContracts}
 	case strings.HasPrefix(line, "go build"):

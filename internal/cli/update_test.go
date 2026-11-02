@@ -131,6 +131,8 @@ func TestRestartsOfAPlan(t *testing.T) {
 		{[]parts.Step{{Part: "face", Class: parts.Live}, {Part: "pi", Class: parts.Sessions}}, RestartsNothing},
 		{[]parts.Step{{Part: "shell", Class: parts.Shell}}, RestartsShell},
 		{[]parts.Step{{Part: "shell", Class: parts.Shell}, {Part: "rewake", Class: parts.Room}}, RestartsRoom},
+		{[]parts.Step{{Part: "shell", Class: parts.Shell}, {Part: "rewake", Class: parts.Switch}}, RestartsSwitch},
+		{[]parts.Step{{Part: "rewake", Class: parts.Switch}, {Part: "shell", Class: parts.Shell}}, RestartsSwitch},
 	} {
 		if got := restartsOf(c.steps); got != c.want {
 			t.Errorf("restartsOf(%v) = %s, want %s", c.steps, got, c.want)

@@ -44,13 +44,13 @@
     },
     "Restarts": {
       "type": "string",
-      "description": "is the most an update asks of the room: room, its restart; shell, rewake restart shell; nothing, no restart the person makes.",
-      "enum": ["room", "shell", "nothing"]
+      "description": "is the most an update asks of the room: room, its restart; switch, rewake restart rewake; shell, rewake restart shell; nothing, no restart the person makes.",
+      "enum": ["room", "switch", "shell", "nothing"]
     },
     "RestartClass": {
       "type": "string",
-      "description": "is what a part's restart takes: live, it reloads itself; shell, rewake restart shell; sessions, each new session takes it; room, main ended and started again.",
-      "enum": ["live", "shell", "sessions", "room"]
+      "description": "is what a part's restart takes: live, it reloads itself; shell, rewake restart shell; sessions, each new session takes it; switch, rewake restart rewake, the sessions running on; room, main ended and started again.",
+      "enum": ["live", "shell", "sessions", "switch", "room"]
     },
     "SpaceRow": {
       "type": "object",

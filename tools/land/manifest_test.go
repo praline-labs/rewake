@@ -41,26 +41,32 @@ func (r *repo) built() bool {
 
 // Each landing says what the room must restart to run it, from the manifest
 // before it to the one it writes; rewake is built only when its sources
-// changed, so a landing of the shell alone asks for no room restart.
+// changed, so a landing of the shell alone asks for no room restart, and a
+// changed rewake is switched to unless a contract the switch carries changed.
 func TestLandSaysWhatToRestart(t *testing.T) {
 	r := newRepo(t)
 	steps := []struct {
 		name, file string
 		contracts  string
+		handover   string
 		build      bool
 		want       string
 	}{
-		{"first", "a.go", "", true, "restart: room (no manifest before this landing)"},
-		{"shell", "shell/app.ts", "", false, "restart: shell (rewake restart shell; shell changed)"},
-		{"face", "face/src/worker.ts", "", false, "restart: nothing (the face reloads from its files)"},
-		{"go", "b.go", "", true, "restart: room (rewake changed)"},
-		{"facecontract", "face/src/messages.ts", shellSays("1", "6"), false, "restart: shell (rewake restart shell; shell: it requires face 5, and the installed face speaks 6)"},
-		{"nothing", "docs.md", "", false, "restart: nothing"},
+		{"first", "a.go", "", "", true, "restart: room (no manifest before this landing)"},
+		{"shell", "shell/app.ts", "", "", false, "restart: shell (rewake restart shell; shell changed)"},
+		{"face", "face/src/worker.ts", "", "", false, "restart: nothing (the face reloads from its files)"},
+		{"go", "b.go", "", "", true, "restart: rewake (rewake restart rewake; rewake changed)"},
+		{"handover", "c.go", "", "2", true, "restart: room (rewake: changed; a switch cannot carry it: the installed rewake speaks handover 2, and the room's speaks 1)"},
+		{"facecontract", "face/src/messages.ts", shellSays("1", "6"), "", false, "restart: shell (rewake restart shell; shell: it requires face 5, and the installed face speaks 6)"},
+		{"nothing", "docs.md", "", "", false, "restart: nothing"},
 	}
 	for i, step := range steps {
 		r.calls = nil
 		if step.contracts != "" {
 			r.shellContracts = step.contracts
+		}
+		if step.handover != "" {
+			r.handover = step.handover
 		}
 		r.branchOff("work"+step.name, step.file, step.name+"\n")
 		code, out := r.land("work" + step.name)

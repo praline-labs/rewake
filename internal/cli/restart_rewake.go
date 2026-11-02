@@ -8,13 +8,13 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sort"
 	"strings"
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/host/switching"
 	"github.com/praline-labs/rewake/internal/infra/build"
+	"github.com/praline-labs/rewake/internal/infra/parts"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -140,10 +140,7 @@ func admits(catalog adapter.Catalog, staged string) string {
 		return err.Error()
 	}
 	own := contractsOf(catalog)
-	if why := differ("speaks", own.Speaks, theirs.Speaks); why != "" {
-		return why
-	}
-	return differ("requires", own.Requires, theirs.Requires)
+	return parts.Admits(parts.Part{Speaks: own.Speaks, Requires: own.Requires}, parts.Part{Speaks: theirs.Speaks, Requires: theirs.Requires})
 }
 
 // contractsOfFile asks a build for its contracts, as the tools that write a
@@ -160,26 +157,6 @@ func contractsOfFile(path string) (Contracts, error) {
 		return Contracts{}, errors.New("the installed rewake names no contracts")
 	}
 	return *version.Contracts, nil
-}
-
-// differ names the first contract, in order, whose versions are not equal.
-func differ(verb string, own, theirs map[string]string) string {
-	names := make([]string, 0, len(own)+len(theirs))
-	for name := range own {
-		names = append(names, name)
-	}
-	for name := range theirs {
-		if _, ok := own[name]; !ok {
-			names = append(names, name)
-		}
-	}
-	sort.Strings(names)
-	for _, name := range names {
-		if own[name] != theirs[name] {
-			return "the installed rewake " + verb + " " + name + " " + orNone(theirs[name]) + ", and the room's " + verb + " " + orNone(own[name])
-		}
-	}
-	return ""
 }
 
 func listOrNone(names []string) string {

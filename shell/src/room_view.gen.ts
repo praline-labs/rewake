@@ -58,15 +58,16 @@ export interface Available {
   restarts: Restarts
 }
 
-// Restarts is the most an update asks of the room: room, its restart; shell, rewake restart
-// shell; nothing, no restart the person makes.
-export type Restarts = "room" | "shell" | "nothing"
-export const restartsValues: readonly Restarts[] = ["room", "shell", "nothing"]
+// Restarts is the most an update asks of the room: room, its restart; switch, rewake restart
+// rewake; shell, rewake restart shell; nothing, no restart the person makes.
+export type Restarts = "room" | "switch" | "shell" | "nothing"
+export const restartsValues: readonly Restarts[] = ["room", "switch", "shell", "nothing"]
 
 // RestartClass is what a part's restart takes: live, it reloads itself; shell, rewake restart
-// shell; sessions, each new session takes it; room, main ended and started again.
-export type RestartClass = "live" | "shell" | "sessions" | "room"
-export const restartClassValues: readonly RestartClass[] = ["live", "shell", "sessions", "room"]
+// shell; sessions, each new session takes it; switch, rewake restart rewake, the sessions
+// running on; room, main ended and started again.
+export type RestartClass = "live" | "shell" | "sessions" | "switch" | "room"
+export const restartClassValues: readonly RestartClass[] = ["live", "shell", "sessions", "switch", "room"]
 
 // SpaceRow is a space not over.
 export interface SpaceRow {

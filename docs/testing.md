@@ -149,8 +149,10 @@ time and would ask for a room restart; a skipped build keeps the installed binar
 manifest. Then it writes `manifest.json` beside the build
 ([install.md](install.md#the-parts-and-what-an-update-restarts)), with the contracts the built
 `rewake --version --json` and `bun src/main.tsx --contracts` in `shell/` say, and ends with what
-this landing needs restarted, the plan from the old manifest to the new: `restart: room (rewake
-changed)`, `restart: shell (rewake restart shell; shell changed)`, `restart: nothing`, or
+this landing needs restarted, the plan from the old manifest to the new: `restart: rewake
+(rewake restart rewake; rewake changed)`, `restart: room (rewake: changed; a switch cannot carry
+it: …)` when a contract a switch carries changed, `restart: shell (rewake restart shell; shell
+changed)`, the switch and the shell's restart joined by `, then `, `restart: nothing`, or
 `restart: room (no manifest before this landing)`. A manifest that cannot be made leaves none,
 so the room's plan never compares with the build before, and the line says room. What the room
 needs now, after several landings, is `rewake restart` with no part. On red, or interrupted during the checks, it resets `v2` to where it was — nothing was pushed — and names the failing

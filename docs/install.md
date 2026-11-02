@@ -128,7 +128,7 @@ it ships as one, `within` when it is compiled into another, and the contracts it
 
 | part | digest | class |
 |---|---|---|
-| `rewake` | the Go and embedded files of the module that `go list -deps ./cmd/rewake` names, `go.mod`, `go.sum`, the toolchain's version and the platform, with the release's line `var Version = "…"` of `internal/cli/registry.go` read as `var Version = ""`; `file` is the build id | room: end main and start it again, which ends its workers |
+| `rewake` | the Go and embedded files of the module that `go list -deps ./cmd/rewake` names, `go.mod`, `go.sum`, the toolchain's version and the platform, with the release's line `var Version = "…"` of `internal/cli/registry.go` read as `var Version = ""`; `file` is the build id | switch: `rewake restart rewake`, the running room switched to it while every session runs on; room — end main and start it again, which ends its workers — when the two builds differ on a contract |
 | `shell` | `shell/` without `node_modules`, tests and hidden files; in a release also `file`, of `bin/rewake-shell` | shell: `rewake restart shell`, or Ctrl+\ then `r` |
 | `face` | `face/` the same way; in a release `within: shell` | live: it follows its files; `rewake restart face` reloads it by hand |
 | `pi` | `npm:@earendil-works/pi-coding-agent@<version>` | sessions: each new session takes it |
@@ -184,9 +184,12 @@ installed part would require what the running rewake does not speak; `restart re
 running room to the installed rewake when every session and host can hand its run over and the
 installed build speaks and requires the room's contracts at the same values; otherwise it is
 refused, naming who cannot or which contract, and the room keeps its build
-([rules/state.md](rules/state.md#switching-a-running-room)). Today only the fixture's wrapper hands
-over, so a real room is refused and the plan says `room` for a new rewake. A harness rewake ships
-refuses, naming the room's restart. The shell shows the plan's shell and room
+([rules/state.md](rules/state.md#switching-a-running-room)). The plan says the same: a changed
+`rewake` is of class `switch`, `rewake restart rewake`, when the running and the installed build
+speak and require every contract at the same values (`parts.Admits`, which the switch itself
+checks), and of class `room` otherwise, its reason naming the contract; a rewake older than the
+class reads it as `room` (November 2, 2026). A harness rewake ships
+refuses, naming the room's restart. The shell shows the plan's shell, switch and room
 steps in its hints row ([shell.md](shell.md#the-prefix-and-the-room)).
 
 ## Updating from inside rewake
@@ -224,11 +227,11 @@ naming its rebuild, and keeps only the plan's banner. The code is `internal/infr
   holds that release, and the plan of the new install. The plan reads the install the command
   came from, taken before npm ran: npm 11.17 moves the running directory aside to replace it (seen
   on November 1, 2026). Installing restarts nothing: the room runs its own copy, and
-  `running` stays the old release until main restarts. An older release is a rollback. Main or
+  `running` stays the old release until main restarts or the room switches (`rewake restart rewake`). An older release is a rollback. Main or
   the person runs it; a worker is refused.
 - **The banner.** The room view's `available` is `{version, restarts}` when the record's latest is
   a release newer than both the installed and the running one; `restarts` is `room` when the plan to it
-  has a room step, else `shell`, else `nothing`
+  has a room step, else `switch` when it has a switch, else `shell`, else `nothing`
   ([shell.md](shell.md#the-prefix-and-the-room)). Once it is installed, the plan's banner takes
   over.
 - **The changelog.** `CHANGELOG.md` at the repository root, shipped in the entry: `## <version>`

@@ -48,7 +48,7 @@ func Make(m Made) (Manifest, error) {
 		return Manifest{}, fmt.Errorf("rewake-shell --contracts names no contracts: %q", m.Contracts)
 	}
 	rewake := m.Rewake
-	rewake.Name, rewake.Class = Rewake, Room
+	rewake.Name, rewake.Class = Rewake, Switch
 	rewake.Speaks, rewake.Requires = version.Contracts.Speaks, version.Contracts.Requires
 	sh := m.Shell
 	sh.Name, sh.Class, sh.Requires = ShellPart, Shell, shell.Shell.Requires

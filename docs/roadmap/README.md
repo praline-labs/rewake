@@ -18,8 +18,9 @@ The next release is 3.0.0, not 2.12.0. It ships this whole feature in working or
    over to another build by `rewake restart rewake`, which succeeds when every long-lived process
    can hand over ([rules/state.md](../rules/state.md#switching-a-running-room)), and a worker's
    run of Claude Code or pi hands over when idle, as do the space hosts, main's host and main's
-   wrapper, the switch deferred while main's turns come. Open: the plan's `rewake` line names the
-   switch.
+   wrapper, the switch deferred while main's turns come, and the plan names `rewake restart
+   rewake` for a new rewake that keeps the room's contracts. Open: its acceptance, a real room
+   switched live.
 2. **A door for plugins.** The parts' contracts and the manifest admit a part that is not rewake's own. A project's main can attach its own part, or a ready one, to rewake: a pane or a strip segment in the shell, a command, a tool for the sessions, a listener of the room's events. The seams stay generic and versioned, so that a plugin is one more client.
 
 rewake's face ([face.md](../face.md)), after its first slice — a dev worker on Claude Code and every

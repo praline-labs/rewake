@@ -25,6 +25,8 @@ func Action(class, part string) string {
 		return "rewake restart shell"
 	case Sessions:
 		return "new sessions take it"
+	case Switch:
+		return "rewake restart rewake"
 	}
 	return "restart the room: end main and start it again"
 }
@@ -32,7 +34,7 @@ func Action(class, part string) string {
 // ClassOf is a part's class, Room for one this rewake does not know.
 func ClassOf(p Part) string {
 	switch p.Class {
-	case Live, Shell, Sessions:
+	case Live, Shell, Sessions, Switch:
 		return p.Class
 	}
 	return Room
@@ -172,10 +174,51 @@ func (w *world) moving(name string) bool {
 	return slices.ContainsFunc(w.steps, func(s Step) bool { return s.Part == name })
 }
 
+// move adds the part's step. A switch carries only a running build whose
+// contracts the installed one keeps, so one that changes any is the room's
+// restart.
 func (w *world) move(name, why string) {
-	if !w.moving(name) {
-		w.steps = append(w.steps, Step{Part: name, Class: ClassOf(w.inst[name]), Why: why})
+	if w.moving(name) {
+		return
 	}
+	class := ClassOf(w.inst[name])
+	if class == Switch {
+		if r, ok := w.run[name]; !ok {
+			class = Room
+		} else if differs := Admits(r, w.inst[name]); differs != "" {
+			class, why = Room, why+"; a switch cannot carry it: "+differs
+		}
+	}
+	w.steps = append(w.steps, Step{Part: name, Class: class, Why: why})
+}
+
+// Admits says which contract a switch from the running rewake to the
+// installed one would break, or "" when there is none: a switch carries the
+// room's runs across, so the two must speak and require every contract at
+// the same values.
+func Admits(running, installed Part) string {
+	if why := differ("speaks", running.Speaks, installed.Speaks); why != "" {
+		return why
+	}
+	return differ("requires", running.Requires, installed.Requires)
+}
+
+// differ names the first contract, in order, whose versions are not equal.
+func differ(verb string, running, installed map[string]string) string {
+	names := slices.Sorted(maps.Keys(merged(running, installed)))
+	for _, name := range names {
+		if running[name] != installed[name] {
+			return "the installed rewake " + verb + " " + name + " " + orNone(installed[name]) + ", and the room's " + verb + " " + orNone(running[name])
+		}
+	}
+	return ""
+}
+
+func orNone(value string) string {
+	if value == "" {
+		return "none"
+	}
+	return value
 }
 
 // after is a part as it would run: the installed one when it moves, follows

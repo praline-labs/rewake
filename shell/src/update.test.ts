@@ -13,6 +13,13 @@ test("the banner says what the room's plan asks of the person", () => {
     [
       [
         { part: "shell", class: "shell", why: "changed" },
+        { part: "rewake", class: "switch", why: "changed" },
+      ],
+      "rewake restart rewake switches the room to the updated rewake",
+    ],
+    [
+      [
+        { part: "shell", class: "shell", why: "changed" },
         { part: "rewake", class: "room", why: "changed" },
       ],
       "room restart needed: rewake",

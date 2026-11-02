@@ -92,7 +92,9 @@ Run from the main checkout with v2 checked out and a clean tree. The steps:
     digest of rewake's sources differs from the installed build's; then
     <install>/manifest.json, the parts installed, and a last line of what
     the room must restart to run them: "restart: room (...)", "restart:
-    shell (rewake restart shell; ...)" or "restart: nothing";
+    rewake (rewake restart rewake; ...)", "restart: shell (rewake
+    restart shell; ...)", both of these joined by ", then ", or
+    "restart: nothing";
   - on red, or on an interrupt during the checks: v2 is reset to where it was — nothing was pushed — and the failing
     checks are named.
 

@@ -214,15 +214,20 @@ func availableOf(running []parts.Part) *Available {
 }
 
 // restartsOf is the most a plan asks of the room: a room step loads every
-// part, so it comes before the shell's.
+// part, so it comes first; a switch keeps the sessions, as a shell's restart
+// does, and comes before it, being the larger change.
 func restartsOf(steps []parts.Step) Restarts {
 	most := RestartsNothing
 	for _, step := range steps {
 		switch step.Class {
 		case parts.Room:
 			return RestartsRoom
+		case parts.Switch:
+			most = RestartsSwitch
 		case parts.Shell:
-			most = RestartsShell
+			if most == RestartsNothing {
+				most = RestartsShell
+			}
 		}
 	}
 	return most
