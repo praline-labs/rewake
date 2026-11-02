@@ -27,16 +27,37 @@ var builtNoticeScan string
 
 // One readiness worker per launch, and one discovery loop only for room main.
 // Notification/storage errors never enter the child or mailbox lifecycle paths.
-// The worker counts among workers until it returns.
-func startAvailability(parent context.Context, dir string, self registry.Session, ready <-chan struct{}, usable func() bool, workers *sync.WaitGroup) func() {
+// The worker counts among workers until it returns. Main's loop starts from
+// the state an earlier image handed over, and hands its own to a switch's
+// drop through the returned hand (notices_handover.go).
+func startAvailability(parent context.Context, dir string, self registry.Session, handover *Handover, ready <-chan struct{}, usable func() bool, workers *sync.WaitGroup) (func(), *noticeHand) {
 	ctx, cancel := context.WithCancel(parent)
 	done := make(chan struct{})
+	hand := newNoticeHand(handover)
 	spawn(workers, func() {
 		defer close(done)
-		select {
-		case <-ctx.Done():
+		// From the start, so a drop before the first scan hands on what an
+		// earlier image handed here. wait waits for c, holding still for a
+		// drop that takes the state meanwhile; false when ctx ended.
+		notices := noticesFrom(hand.handed)
+		wait := func(c <-chan time.Time, r <-chan struct{}) bool {
+			for {
+				select {
+				case <-ctx.Done():
+					return false
+				case <-c:
+					return true
+				case <-r:
+					return true
+				case reply := <-hand.take:
+					if !hand.hold(ctx.Done(), reply, notices) {
+						return false
+					}
+				}
+			}
+		}
+		if !wait(nil, ready) {
 			return
-		case <-ready:
 		}
 		ticker := time.NewTicker(250 * time.Millisecond)
 		defer ticker.Stop()
@@ -44,25 +65,20 @@ func startAvailability(parent context.Context, dir string, self registry.Session
 			if usable() && markMessagingReady(dir, self) == nil {
 				break
 			}
-			select {
-			case <-ctx.Done():
+			if !wait(ticker.C, nil) {
 				return
-			case <-ticker.C:
 			}
 		}
 		if ctx.Err() != nil || self.Role != role.Main.ID {
 			return
 		}
 		ticker.Reset(noticeScan)
-		notices := newSessionNotices()
 		for ctx.Err() == nil {
 			if usable() {
 				_ = notices.scan(ctx, dir, self)
 			}
-			select {
-			case <-ctx.Done():
+			if !wait(ticker.C, nil) {
 				return
-			case <-ticker.C:
 			}
 		}
 	})
@@ -74,7 +90,7 @@ func startAvailability(parent context.Context, dir string, self registry.Session
 		case <-done:
 		case <-time.After(500 * time.Millisecond):
 		}
-	}
+	}, hand
 }
 
 // markMessagingReady sets the mark on the record as it stands under the name's

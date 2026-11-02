@@ -422,8 +422,9 @@ review). The ends are the gap a capture opens: captured afresh in the next image
 would take what was read since its first capture, and its answer could answer a later task. An
 end is taken once its publication returns, or once the run is found gone; until then the run is
 busy. The adopting image reports the live set without the turn boundary and then the endpoint's
-proven state, as a start would. Main's run answers `cannot`: main's wrapper holds the workers'
-notices and turns often, and waits for its own stage. A run whose mod could not be loaded
+proven state, as a start would. Main's run hands over as a worker's does, with its notices and
+its place in the shell ([rules/state.md](rules/state.md#switching-a-running-room), November 2,
+2026). A run whose mod could not be loaded
 (`modless`) answers `cannot` too. Tested in `handover_test.go`, the end retried across the exec
 and the mod's next poll answered.
 

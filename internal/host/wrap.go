@@ -323,7 +323,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 	served := make(chan struct{})
 	serviceReady := make(chan struct{})
 	boundaryProven := availableAfterStart(session, request.Harness, live)
-	stopAvailability := startAvailability(serveCtx, request.Dir, session, serviceReady, func() bool {
+	stopAvailability, notices := startAvailability(serveCtx, request.Dir, session, request.Handover, serviceReady, func() bool {
 		if !proc.Alive(harness.Pid, harnessStart) || !boundaryProven() {
 			return false
 		}
@@ -341,7 +341,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 	}, &life.workers)
 	defer stopAvailability()
 	handover := &reexec{
-		request: request, session: session, runDir: runDir, service: plan.Service, harness: harness, start: harnessStart, model: model,
+		request: request, session: session, runDir: runDir, service: plan.Service, harness: harness, start: harnessStart, model: model, notices: notices,
 		handoff: make(chan chan<- string), resume: make(chan struct{}),
 	}
 	defer handover.watch(serveCtx)()

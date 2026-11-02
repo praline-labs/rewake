@@ -156,7 +156,7 @@ func TestAvailabilityWaitsForServiceAndTransportAndToleratesStorageFailure(t *te
 	peer := availabilityPeer(t, dir, "worker-fixture", role.General.ID, 1, false)
 	ready := make(chan struct{})
 	var usable atomic.Bool
-	stop := startAvailability(context.Background(), dir, peer, ready, usable.Load, nil)
+	stop, _ := startAvailability(context.Background(), dir, peer, nil, ready, usable.Load, nil)
 	defer stop()
 	usable.Store(true)
 	time.Sleep(30 * time.Millisecond)

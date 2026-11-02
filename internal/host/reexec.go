@@ -37,7 +37,7 @@ const HandoverEnv = "REWAKE_HANDOVER"
 
 // HandoverVersion is the version of Handover; an image adopts only its own,
 // and a switch of the room admits only a build that takes the same.
-const HandoverVersion = 4
+const HandoverVersion = 5
 
 // reexecMark is the file of the run's directory where the outcome of the last
 // request to re-execute is written, for whoever sent the signal.
@@ -78,6 +78,11 @@ type Handover struct {
 	// Signals are those a parked image caught and did not pass on, which
 	// the run of the next image forwards first (takeSignals).
 	Signals []int `json:"signals,omitempty"`
+	// Shell says the run is main's in rewake's shell, which its launch read
+	// from an environment it then cleared (Request.Shell).
+	Shell bool `json:"shell,omitempty"`
+	// Notices are main's notice state (notices_handover.go).
+	Notices *Notices `json:"notices,omitempty"`
 
 	files []*os.File
 	model *os.File
@@ -110,7 +115,7 @@ func (h *Handover) Request(harness adapter.Harness) Request {
 	return Request{
 		Harness: harness, Dir: h.Dir, Name: h.Name, Args: h.Args, Intro: h.Intro, Command: h.Command,
 		Role: role.Of(h.Role), RoleReason: h.RoleReason, Template: h.Template,
-		WorktreeEntry: h.WorktreeEntry, WorkType: workType, Mirror: h.Mirror, Handover: h,
+		WorktreeEntry: h.WorktreeEntry, WorkType: workType, Mirror: h.Mirror, Shell: h.Shell, Handover: h,
 	}
 }
 
@@ -165,6 +170,9 @@ func adoptHarness(request Request) (*os.Process, func(int), error) {
 	}
 	process, err := os.FindProcess(h.HarnessPID)
 	if request.Shell {
+		// Its suspends are answered again: the earlier image's catch went
+		// with it (startHarness).
+		go continueSuspends(catchSuspends(), h.HarnessPID)
 		return process, continueHarness, err
 	}
 	return process, followJob, err
@@ -193,6 +201,8 @@ type reexec struct {
 	start   uint64
 	// model is the face's model, nil for a run the face does not draw.
 	model *mirror.Model
+	// notices hands main's notice state over (notices_handover.go).
+	notices *noticeHand
 	// handoff asks the delivery server to stop; resume serves again after
 	// an exec that failed.
 	handoff chan chan<- string
@@ -235,9 +245,6 @@ func (r *reexec) refusal() string {
 		return "this harness's adapter cannot hand its run over"
 	case r.request.OnClaimed != nil:
 		return "the run made a checkout, which its launch settles at its end"
-	}
-	if _, ok := r.service.(adapter.WorkersOnly); ok && r.session.Role == role.Main.ID {
-		return "main's wrapper does not hand its run over yet"
 	}
 	return ""
 }
@@ -309,11 +316,17 @@ func (r *reexec) exec(handing adapter.Handover, park *switching.Park) string {
 			handed.Resume()
 		}
 	}()
+	notices, why := r.takeNotices()
+	if why != "" {
+		return why
+	}
+	defer r.giveNotices()
 	h := Handover{
 		Version: HandoverVersion, Harness: r.request.Harness.ID(), Dir: r.request.Dir, Name: r.session.Name, Epoch: r.session.Epoch(),
 		Args: r.request.Args, Intro: r.request.Intro, Command: r.request.Command, Role: r.session.Role, RoleReason: r.session.RoleReason,
 		Template: r.request.Template, WorktreeEntry: r.request.WorktreeEntry, WorkType: r.request.WorkType, WorkTypeText: r.request.WorkType.Text,
 		HarnessPID: r.harness.Pid, HarnessStart: r.start, Service: handed.State, Park: park, Mirror: r.request.Mirror,
+		Shell: r.request.Shell, Notices: notices,
 	}
 	// The model after the service's handover, which stopped what feeds it.
 	if r.model != nil {

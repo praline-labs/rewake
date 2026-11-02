@@ -288,8 +288,8 @@ to the exec nothing the extension sends is taken by this image. It waits in the 
 image, and what the reader took of a frame goes over with the handover (`unread`, at most 64 KiB,
 or the switch waits), read first by the next image. Without the halt, a `turn-start` the old image
 acknowledged after the snapshot left its end with no start after the exec, and no report (found in
-review). An exec that fails starts the reader again (`HandedOver.Resume`). Main's run answers
-`cannot`, as on Claude Code. Tested in `handover_test.go` against the wire, with no pi: an open
+review). An exec that fails starts the reader again (`HandedOver.Resume`). Main's run hands over
+as a worker's does, as on Claude Code (November 2, 2026). Tested in `handover_test.go` against the wire, with no pi: an open
 turn, a publication and a held wake each refuse; after the exec a turn and a notice go through on
 the connection handed over, which never closed; a frame half read at the snapshot and a start sent
 after it are answered by the next image. No live pi worker ran: a real worker opens in a space,

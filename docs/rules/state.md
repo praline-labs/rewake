@@ -339,11 +339,16 @@ master, the socket's listener and its emulator's checkpoint as a seed, in a memo
 shell's input frozen and its pump stopped at the snapshot; the worker, its child, runs on
 ([space.md](../space.md#a-switch-of-the-rooms-build), November 2, 2026). Main's host hands over
 main's terminal, the shell's channel and its loop, the shell and main's wrapper running on as its
-children ([shell.md](../shell.md#a-switch-of-the-rooms-build)). The fixture's wrappers, main's
-included, hand over as the switch's test. A real harness's main wrapper (`adapter.WorkersOnly`), a
-run that made a checkout and a Claude Code run without its mod answer `cannot`, so every real room
-is still refused and keeps its build, and `rewake restart` with no part still plans `room` for a
-new rewake.
+children ([shell.md](../shell.md#a-switch-of-the-rooms-build)). Main's wrapper hands over as a
+worker's does, when its harness is idle, and carries two things more: that it runs in rewake's
+shell, which its launch read from an environment it then cleared, so the next image answers
+main's suspends again; and its notice state, taken from the scan between two scans and given back
+to it after an exec that failed, so the next image tells main nothing twice — a receipt outlives
+the notice in the mailbox — and loses nothing it held (`internal/host/notices_handover.go`,
+November 2, 2026). Main's turns keep its wrapper busy often, and `rewake restart rewake` defers the
+switch until they end rather than being refused (the deferred leader, above). A run that made a
+checkout and a Claude Code run without its mod answer `cannot`. The fixture's wrappers hand over as
+the switch's test.
 
 **Signals across the exec.** Go overrides a SIGTERM the image inherited as ignored, so an
 ignore set before the exec does not cover the new image's start. The adopting image catches
@@ -368,7 +373,9 @@ Tests:
 - `internal/host/switching/join_test.go` `TestAParticipantJoinsALeaderThatServesLate`
 - `internal/host/handover_shape_test.go` `TestTheHandoverContractChangesWithItsShape`
 - `internal/host/handover_mirror_test.go` `TestAFaceReconnectsToTheModelHandedOver`
-- `internal/host/handover_mirror_test.go` `TestMainsWrapperOfARealHarnessCannotHandOver`
+- `internal/host/handover_mirror_test.go` `TestMainsWrapperHandsOverLikeAWorkers`
+- `internal/host/notices_handover_test.go` `TestMainsNoticesGoOverWithItsRun`
+- `internal/host/notices_handover_test.go` `TestADropTakesMainsNoticesAndAFailedExecResumesThem`
 - `internal/host/handover_mirror_test.go` `TestASignalBeforeTheRunsCatchWaitsForTheRun`
 - `internal/host/handover_signals_test.go` `TestASignalCaughtWhileParkedReachesTheNextImagesRun`
 - `internal/core/mirror/handover_test.go` `TestTheNextImageAdoptsTheModelAsItWas`

@@ -18,6 +18,7 @@ var handoverShapes = map[int]string{
 	2: "796297c6eb8b5400402eb92666cc885e0e20db78a0387bd3efa3b32d31fafa3d",
 	3: "e7798bc2d499a8ddc1b7ad123668267e34ba361b89e09ce13205d026fe457715",
 	4: "274bf26cc9e0d69010003232189c905abcb352e576528a3058f31e0d76f7a39b",
+	5: "1206b9c841cb19d5c2bb7e932273d4ead353cccdefd0cca985a8311912feedc2",
 }
 
 func TestTheHandoverContractChangesWithItsShape(t *testing.T) {
@@ -29,20 +30,30 @@ func TestTheHandoverContractChangesWithItsShape(t *testing.T) {
 }
 
 // shape is a type as JSON carries it: each exported field's name, shape and
-// tag, nested types included.
+// tag, nested types included. A struct met again inside itself, as a message
+// quoting a message, is its name: its shape is already written above.
 func shape(t reflect.Type) string {
+	return shapeIn(t, map[reflect.Type]bool{})
+}
+
+func shapeIn(t reflect.Type, open map[reflect.Type]bool) string {
 	switch t.Kind() {
 	case reflect.Pointer:
-		return "*" + shape(t.Elem())
+		return "*" + shapeIn(t.Elem(), open)
 	case reflect.Slice:
-		return "[]" + shape(t.Elem())
+		return "[]" + shapeIn(t.Elem(), open)
 	case reflect.Map:
-		return "map[" + shape(t.Key()) + "]" + shape(t.Elem())
+		return "map[" + shapeIn(t.Key(), open) + "]" + shapeIn(t.Elem(), open)
 	case reflect.Struct:
+		if open[t] {
+			return t.String()
+		}
+		open[t] = true
+		defer delete(open, t)
 		var fields []string
 		for index := range t.NumField() {
 			if field := t.Field(index); field.IsExported() {
-				fields = append(fields, fmt.Sprintf("%s %s %q", field.Name, shape(field.Type), field.Tag.Get("json")))
+				fields = append(fields, fmt.Sprintf("%s %s %q", field.Name, shapeIn(field.Type, open), field.Tag.Get("json")))
 			}
 		}
 		return "{" + strings.Join(fields, "; ") + "}"

@@ -110,6 +110,3 @@ func closeAll(files []*os.File) {
 		_ = file.Close()
 	}
 }
-
-// WorkersOnly: main's run is not handed over yet (adapter.WorkersOnly).
-func (r *modRun) WorkersOnly() {}

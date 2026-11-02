@@ -227,6 +227,3 @@ func (r *run) Adopt(ctx context.Context, _ func(string), handed adapter.HandedOv
 	r.serveControl()
 	return nil
 }
-
-// WorkersOnly: main's run is not handed over yet (adapter.WorkersOnly).
-func (r *run) WorkersOnly() {}

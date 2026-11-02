@@ -124,27 +124,13 @@ func TestAFaceReconnectsToTheModelHandedOver(t *testing.T) {
 	}
 }
 
-// workersOnly is a real harness's service: it hands a worker's run over.
-type workersOnly struct{ idle }
-
-func (workersOnly) WorkersOnly() {}
-
-// Main's wrapper of a real harness cannot hand over yet, idle or not, and a
-// worker's of the same harness can; the fixture's main can, as the switch's
-// test.
-func TestMainsWrapperOfARealHarnessCannotHandOver(t *testing.T) {
-	for _, test := range []struct {
-		role    string
-		service adapter.Service
-		want    string
-	}{
-		{role.Main.ID, workersOnly{}, switching.Cannot},
-		{role.Write.ID, workersOnly{}, switching.Ready},
-		{role.Main.ID, idle{}, switching.Ready},
-	} {
-		r := &reexec{session: registry.Session{Name: "s", Role: test.role}, service: test.service}
-		if kind, why := r.Answer(); kind != test.want {
-			t.Errorf("%s's %T answers %s %q, want %s", test.role, test.service, kind, why, test.want)
+// Main's wrapper hands over as a worker's does, once idle (November 2,
+// 2026): its notices go with it (notices_handover.go).
+func TestMainsWrapperHandsOverLikeAWorkers(t *testing.T) {
+	for _, name := range []string{role.Main.ID, role.Write.ID} {
+		r := &reexec{session: registry.Session{Name: "s", Role: name}, service: idle{}}
+		if kind, why := r.Answer(); kind != switching.Ready {
+			t.Errorf("%s's wrapper answers %s %q", name, kind, why)
 		}
 	}
 }
