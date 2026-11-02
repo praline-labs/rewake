@@ -262,7 +262,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 	// and installing the handlers, a SIGTERM meant for the wrapper would kill it
 	// outright: the harness would keep running with nobody serving its mailbox
 	// and its record left behind.
-	signals, restore := takeSignals()
+	signals, restore := takeSignals(request.Handover)
 	defer restore()
 
 	// A service whose handlers write the room counts them among the run's

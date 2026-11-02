@@ -17,6 +17,7 @@ var handoverShapes = map[int]string{
 	1: "a15c1ca7e2c400bd78be32764d513547e0dc1d21693149227891f9faedaea9de",
 	2: "796297c6eb8b5400402eb92666cc885e0e20db78a0387bd3efa3b32d31fafa3d",
 	3: "e7798bc2d499a8ddc1b7ad123668267e34ba361b89e09ce13205d026fe457715",
+	4: "274bf26cc9e0d69010003232189c905abcb352e576528a3058f31e0d76f7a39b",
 }
 
 func TestTheHandoverContractChangesWithItsShape(t *testing.T) {

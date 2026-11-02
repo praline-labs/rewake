@@ -37,7 +37,7 @@ const HandoverEnv = "REWAKE_HANDOVER"
 
 // HandoverVersion is the version of Handover; an image adopts only its own,
 // and a switch of the room admits only a build that takes the same.
-const HandoverVersion = 3
+const HandoverVersion = 4
 
 // reexecMark is the file of the run's directory where the outcome of the last
 // request to re-execute is written, for whoever sent the signal.
@@ -75,6 +75,9 @@ type Handover struct {
 	// the memory file its model is handed over in (startMirror), 0 for none.
 	Mirror bool `json:"mirror,omitempty"`
 	Model  int  `json:"model,omitempty"`
+	// Signals are those a parked image caught and did not pass on, which
+	// the run of the next image forwards first (takeSignals).
+	Signals []int `json:"signals,omitempty"`
 
 	files []*os.File
 	model *os.File
@@ -116,6 +119,9 @@ func (h *Handover) Request(harness adapter.Harness) Request {
 func (h *Handover) Continue(executable string) error {
 	next := *h
 	next.Park = nil
+	// What the parked image caught goes with the run: the handler that
+	// holds it does not outlive the exec.
+	next.Signals = append(slices.Clone(h.Signals), caughtSignals()...)
 	raw, err := json.Marshal(next)
 	if err != nil {
 		return err

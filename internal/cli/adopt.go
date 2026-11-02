@@ -61,8 +61,8 @@ func unpark(handover *host.Handover, stderr io.Writer) (code int, done bool) {
 	// Nothing of the run is served while parked, and a signal that ended the
 	// process here would orphan the harness and leave the run unadopted:
 	// adoptRun caught the signals, and the run forwards a SIGTERM that came
-	// while parked once it adopts the harness. The wait is bounded by the
-	// drop's deadline.
+	// while parked once it adopts the harness, here or, carried by Continue,
+	// in the target. The wait is bounded by the drop's deadline.
 	decided, err := switching.Wait(park, "session "+handover.Name)
 	if err != nil {
 		_, _ = fmt.Fprintln(stderr, "rewake: the run parked for a switch was lost: "+err.Error())

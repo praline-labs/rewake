@@ -156,7 +156,7 @@ func TestASignalBeforeTheRunsCatchWaitsForTheRun(t *testing.T) {
 	if err := syscall.Kill(os.Getpid(), syscall.SIGTERM); err != nil {
 		t.Fatal(err)
 	}
-	incoming, restore := takeSignals()
+	incoming, restore := takeSignals(nil)
 	defer restore()
 	select {
 	case got := <-incoming:

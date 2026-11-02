@@ -98,13 +98,42 @@ var caught struct {
 // adopted.
 func CatchSignals() { caught.incoming, caught.restore = catchSignals() }
 
-// takeSignals is what CatchSignals caught, or a catch of its own.
-func takeSignals() (chan os.Signal, func()) {
-	if incoming, restore := caught.incoming, caught.restore; incoming != nil {
+// takeSignals is what CatchSignals caught, or a catch of its own, with the
+// signals an earlier image caught and carried over (Handover.Continue) in
+// front.
+func takeSignals(h *Handover) (chan os.Signal, func()) {
+	incoming, restore := caught.incoming, caught.restore
+	if incoming != nil {
 		caught.incoming, caught.restore = nil, nil
-		return incoming, restore
+	} else {
+		incoming, restore = catchSignals()
 	}
-	return catchSignals()
+	if h != nil {
+		for _, carried := range h.Signals {
+			select {
+			case incoming <- syscall.Signal(carried):
+			default:
+			}
+		}
+	}
+	return incoming, restore
+}
+
+// caughtSignals empties what CatchSignals caught and the run has not taken,
+// for an exec to carry.
+func caughtSignals() []int {
+	var got []int
+	for caught.incoming != nil {
+		select {
+		case received := <-caught.incoming:
+			if value, ok := received.(syscall.Signal); ok {
+				got = append(got, int(value))
+			}
+		default:
+			return got
+		}
+	}
+	return got
 }
 
 // catchSignals starts listening before there is a child to forward to.

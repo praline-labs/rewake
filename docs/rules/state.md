@@ -322,7 +322,10 @@ a new rewake.
 ignore set before the exec does not cover the new image's start. The adopting image catches
 SIGTERM and SIGHUP, and drops the keyboard's SIGINT and SIGQUIT, as its first act
 (`host.CatchSignals` in `rewake adopt`); the run takes that catch and forwards to the harness what
-came meanwhile, as it would have.
+came meanwhile, as it would have. A parked image that execs the target carries what it caught in
+the handover's `signals` (`Handover.Continue`), and the next image's run takes those first: the
+handler that held them does not outlive the exec, and a SIGTERM caught while parked was lost at
+the commit (found in review, November 2, 2026).
 
 Tests:
 - `internal/infra/build/switch_test.go` `TestASwitchCommitsOnlyWithNoOtherHolder`
@@ -340,6 +343,7 @@ Tests:
 - `internal/host/handover_mirror_test.go` `TestAFaceReconnectsToTheModelHandedOver`
 - `internal/host/handover_mirror_test.go` `TestMainsWrapperOfARealHarnessCannotHandOver`
 - `internal/host/handover_mirror_test.go` `TestASignalBeforeTheRunsCatchWaitsForTheRun`
+- `internal/host/handover_signals_test.go` `TestASignalCaughtWhileParkedReachesTheNextImagesRun`
 - `internal/core/mirror/handover_test.go` `TestTheNextImageAdoptsTheModelAsItWas`
 - `internal/core/mirror/handover_test.go` `TestTheHandedModelChangesWithItsShape`
 - `internal/adapter/claude/handover_test.go` `TestAnIdleClaudeRunIsHandedOverAndTheModsNextPollAnswered`
