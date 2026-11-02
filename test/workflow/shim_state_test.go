@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -32,7 +34,12 @@ func shimReportState() int {
 				_ = os.Rename(target+".tmp", target)
 			}
 		}
-		if _, err := os.Stat(os.Getenv(shimExitFile)); err == nil {
+		if raw, err := os.ReadFile(os.Getenv(shimExitFile)); err == nil {
+			// A code written in the file is exited with, as by a harness
+			// that failed.
+			if code, err := strconv.Atoi(strings.TrimSpace(string(raw))); err == nil {
+				return code
+			}
 			return 0
 		}
 		time.Sleep(100 * time.Millisecond)

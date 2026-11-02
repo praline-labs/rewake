@@ -167,6 +167,21 @@ Claude Code and pi launches take the flag the same way (the owner's decisions of
   where it is, that the launch command runs there without `--worktree` to go on, and how
   to land, finish or remove it.
 
+## A checkout across a switch
+
+A switch of the room's build (`rewake restart rewake`,
+[rules/state.md](rules/state.md#switching-a-running-room)) replaces the image of a wrapper whose
+launch made a checkout, and the launch's frame that would have settled the checkout at the run's
+end goes with it. The new image finds the checkout again by its record, which names the session —
+its name, run and room — and the rewake process that made it: the wrapper itself, whose pid and
+start the exec keeps. At the run's end it settles the checkout as the launch would have: it stays,
+and the line says where, or after a failed run it is taken back when it holds nothing new. The
+handover carries nothing of it. A checkout the worker entered later through `worktree_enter` was
+made by another process, a `rewake worktree enter` of its own; no launch settles it, with a switch
+or without one, and its space's close finds it by the worker's run, which the exec keeps too, and
+releases it ([SP7](rules/space.md)). Before November 2, 2026 a run whose launch made a checkout
+refused every switch.
+
 ## A reviewer's checkout
 
 `rewake send <reviewer> "..." --brief <id> --review --commit <rev>` makes a checkout for a

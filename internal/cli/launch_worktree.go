@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/core/registry"
+	"github.com/praline-labs/rewake/internal/host"
 	"github.com/praline-labs/rewake/internal/host/launch"
 	"github.com/praline-labs/rewake/internal/host/worktree"
 )
@@ -93,6 +95,32 @@ func (c *launchCheckout) claimed(dir string) func(registry.Session) error {
 		}
 		return err
 	}
+}
+
+// adoptedCheckout is the checkout the launch of a run handed over made, read
+// back from its record: the exec ended the launch's frame, which would have
+// settled it at the run's end, and kept the process, which the record names as
+// the one that made it. A checkout the worker entered later through
+// worktree_enter was made by another process; its space releases it, as
+// without a switch. Nil when the launch made none, or when the records cannot
+// be read, which is said.
+func adoptedCheckout(h *host.Handover, harness adapter.Harness, stderr io.Writer) *launchCheckout {
+	root, err := worktree.Root()
+	var records []worktree.Record
+	if err == nil {
+		records, err = worktree.List(root)
+	}
+	if err != nil {
+		_, _ = fmt.Fprintf(stderr, "rewake: the worktrees could not be read after the run was handed over, so a checkout its launch made is not settled at its end: %v\n", err)
+		return nil
+	}
+	for _, record := range records {
+		owner := record.Session
+		if owner != nil && owner.Name == h.Name && owner.Epoch == h.Epoch && filepath.Clean(owner.Dir) == filepath.Clean(h.Dir) && record.MadeHere() {
+			return &launchCheckout{record: record, stderr: stderr, launch: "rewake " + harness.ID()}
+		}
+	}
+	return nil
 }
 
 // settle runs after the session. A checkout of a launch that failed, or whose

@@ -31,6 +31,7 @@ const (
 	kReloadLate                 // a reload asked of the shell had no answer in time
 	kSignal                     // a signal a switch's drop took while it stopped the producers
 	kDrop                       // a switch's leader said drop
+	kDigested                   // a shell's digest was taken
 )
 
 // ev is one event; the kind says which fields it carries.
@@ -110,6 +111,8 @@ func (h *Host) handle(e ev) bool {
 		h.ending = true
 	case kEndLate:
 		return true
+	case kDigested:
+		// Nothing to take: the loop publishes its reason after it.
 	}
 	return false
 }

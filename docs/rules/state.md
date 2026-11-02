@@ -353,10 +353,20 @@ looked at by a finished turn's end, and the latest end looked at, boot-clock tim
 next image would not take — so an announced letter no longer keeps the run busy: a turn that ended in an
 error or was stopped looks at nothing, and found live with a pi main, the run stayed busy for the
 whole of the switch's bound. What still keeps it busy is a notice the harness holds, one a late
-word may take back, and a letter waiting for its delivery (the owner's decision, November 2,
-2026). A run that made a
-checkout and a Claude Code run without its mod answer `cannot`. The fixture's wrappers hand over as
-the switch's test.
+word may still take back — within `mail.LateWordWindow` of its delivery, looked at when the
+switch asks: once only a new notice pruned the memory, and found live on November 2, 2026, a main
+sent one notice stayed busy through the whole of the switch's bound — and a letter waiting for its
+delivery (the owner's decision, November 2, 2026). Every memory a busy answer reads is looked at
+by its age when asked, not only on the next event: the mod endpoint's control requests and asks
+([claude.md](../claude.md#handing-the-run-over)) and main's host's reason, which taking the
+shell's digest publishes again. A Claude Code run without its mod answers `cannot`. A run whose
+launch made a checkout hands over as any other, and the handover does not name it: the adopting
+image finds it by its record — the session's name, run and room, and as its maker this process,
+whose pid and start the exec keeps (`worktree.Record.MadeHere`) — and settles it at the run's end
+as the launch would have, by the same rules and with the same lines on stderr
+([worktree.md](../worktree.md#a-checkout-across-a-switch)). Until November 2, 2026 such a run
+answered `cannot`, which the owner's first live switch met for every writer of the room. The
+fixture's wrappers hand over as the switch's test.
 
 **Signals across the exec.** Go overrides a SIGTERM the image inherited as ignored, so an
 ignore set before the exec does not cover the new image's start. The adopting image catches
@@ -408,7 +418,13 @@ Tests:
 - `internal/host/stream/handover_test.go` `TestAResumedRelayServesTheSameScreen`
 - `internal/host/terminal/checkpoint_test.go` `TestThePreambleCarriesTheStateLaterOutputUses`
 - `internal/host/terminal/checkpoint_test.go` `TestTheContinuationsTheCheckpointChanges`
+- `internal/host/delivery/held_late_test.go` `TestADeliveredNoticeKeepsTheRunBusyOnlyWithinTheWindow`
+- `internal/adapter/claude/modhost/management_test.go` `TestAnUnansweredRequestOfAnEarlierLoadKeepsNothingBusy`
+- `internal/core/ask/ask_test.go` `TestAnUnsettledRequestIsCountedOnlyUntilItGoes`
+- `internal/host/mainhost/drop_test.go` `TestTheDigestTakenWakesTheLoopForASwitch`
+- `internal/cli/adopt_worktree_test.go` `TestTheAdoptedRunFindsTheCheckoutItsLaunchMade`
 - `test/workflow/fixture_switch_test.go` `TestFixtureSwitch`
+- `test/workflow/fixture_switch_worktree_test.go` `TestFixtureSwitchWorktree`
 
 ## Views and changes
 

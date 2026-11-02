@@ -104,7 +104,7 @@ func (h *Host) startShell(why string) (*shellProc, error) {
 	p.start, _ = proc.StartTime(p.pid)
 	// The loop reaps it (children.go), never the process handle.
 	_ = cmd.Process.Release()
-	go p.takeDigest(h.cfg.Shell)
+	go h.digest(p)
 	go p.keepErr()
 	h.follow(p, newLines(conn), true)
 	h.after(helloWithin, ev{kind: kHelloLate, gen: p.gen})

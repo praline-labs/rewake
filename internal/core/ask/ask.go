@@ -121,13 +121,7 @@ func NewBroker() *Broker {
 func (b *Broker) Open(load string, offer Offer) (string, time.Time) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	// A request whose harness never settled it — a load replaced, a crash —
-	// goes a while after its deadline, so no poll is cut short by its going.
-	for id, r := range b.requests {
-		if b.now().After(r.deadline.Add(time.Minute)) {
-			delete(b.requests, id)
-		}
-	}
+	b.prune()
 	id := newID()
 	for b.requests[id] != nil {
 		id = newID()
@@ -135,6 +129,17 @@ func (b *Broker) Open(load string, offer Offer) (string, time.Time) {
 	deadline := b.now().Add(Lifetime)
 	b.requests[id] = &request{id: id, load: load, offer: offer, deadline: deadline, wake: make(chan struct{})}
 	return id, deadline
+}
+
+// prune forgets a request whose harness never settled it — a load replaced,
+// a crash — a while after its deadline, so no poll is cut short by its going.
+// The caller holds the lock.
+func (b *Broker) prune() {
+	for id, r := range b.requests {
+		if b.now().After(r.deadline.Add(time.Minute)) {
+			delete(b.requests, id)
+		}
+	}
 }
 
 // Drop forgets a request that was opened and never shown: its letter could
@@ -258,5 +263,8 @@ func newID() string {
 func (b *Broker) Count() int {
 	b.mu.Lock()
 	defer b.mu.Unlock()
+	// Only Open prunes otherwise: with no request since, one never settled
+	// would keep the run from a handover for good.
+	b.prune()
 	return len(b.requests)
 }

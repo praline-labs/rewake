@@ -11,6 +11,14 @@ import (
 // shell, which takes no reload, never does.
 const reloadWithin = 2 * time.Second
 
+// digest takes the shell's digest and wakes the loop, which publishes why it
+// cannot be handed over only after an event: the digest taken is none, and an
+// idle host went on saying its shell's parts were being read.
+func (h *Host) digest(p *shellProc) {
+	p.takeDigest(h.cfg.Shell)
+	h.post(ev{kind: kDigested})
+}
+
 // takeDigest takes the digest of the shell started from path, with the
 // manifest's function: its sources' when it runs from a checkout, else its
 // file's, completed by the installed manifest's digest when that manifest

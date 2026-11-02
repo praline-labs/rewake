@@ -62,7 +62,7 @@ func (s *Server) busy() string {
 	switch {
 	case s.closed:
 		return "the mod's endpoint is closing"
-	case s.management.queued != nil || len(s.management.requests) > 0:
+	case s.management.queued != nil || s.management.awaiting(s.current):
 		return "a control request is dispatched to the mod"
 	case s.asks.Count() > 0:
 		return "a permission request or a question of the worker is open"

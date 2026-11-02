@@ -3,6 +3,7 @@ package delivery
 import (
 	"context"
 	"maps"
+	"time"
 
 	"github.com/praline-labs/rewake/internal/core/mail"
 )
@@ -38,6 +39,9 @@ type Stop struct {
 // busy answers what this server holds that the disk does not and a handoff
 // cannot carry, "" when nothing.
 func (s *Server) busy() string {
+	// Only a new notice prunes otherwise: with none since, a notice past
+	// the window would keep the run busy for good.
+	s.pruneRecent(time.Now())
 	switch {
 	case len(s.held) > 0:
 		return "the harness holds a notice whose receipt only this image would take"

@@ -16,7 +16,10 @@ type command struct {
 	load       string
 	generation int
 	sent       bool
-	answer     chan control.Answer
+	// settled is set by the mod's final reply; the request stays to answer
+	// a repeated one.
+	settled bool
+	answer  chan control.Answer
 }
 
 type management struct {
@@ -26,6 +29,23 @@ type management struct {
 	requests map[string]*command
 	order    []string
 	observed observations
+}
+
+// awaiting says a request the mod took waits for its final reply, which only
+// this image would hear. One settled is kept only to answer a repeated reply,
+// and one of an earlier load or generation would be refused its reply; neither
+// keeps the run from a handover, or a run main ever compacted or interrupted
+// would stay busy until 64 more requests pushed it out.
+func (m *management) awaiting(current *loadState) bool {
+	if current == nil || !current.live {
+		return false
+	}
+	for _, pending := range m.requests {
+		if pending.sent && !pending.settled && pending.load == current.hello.LoadID && pending.generation == current.generation {
+			return true
+		}
+	}
+	return false
 }
 
 // StartControl keeps the file protocol with the run, counted until it stops.
@@ -171,6 +191,7 @@ func (s *Server) controlReply(w http.ResponseWriter, r *http.Request) {
 	}
 	answer := control.Answer{Outcome: result.Outcome, Reason: result.Reason, Detail: result.Detail, Open: result.Open, TokensBefore: tokenCount(result.TokensBefore), TokensAfter: tokenCount(result.TokensAfter)}
 	if result.Outcome != control.Requested && !result.Open {
+		pending.settled = true
 		s.outcomeLocked(pending.request, answer)
 	}
 	select {

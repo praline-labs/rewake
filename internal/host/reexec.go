@@ -243,11 +243,10 @@ func (r *reexec) mark(outcome string) {
 
 // refusal is why this run can never be handed over, or "".
 func (r *reexec) refusal() string {
-	switch _, ok := r.service.(adapter.Handover); {
-	case !ok:
+	// A checkout the launch made goes over too: the adopted image finds it
+	// by its record and settles it at the run's end (cli.adoptedCheckout).
+	if _, ok := r.service.(adapter.Handover); !ok {
 		return "this harness's adapter cannot hand its run over"
-	case r.request.OnClaimed != nil:
-		return "the run made a checkout, which its launch settles at its end"
 	}
 	return ""
 }

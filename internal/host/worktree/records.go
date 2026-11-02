@@ -54,6 +54,13 @@ func launcher() *Launch {
 	return &Launch{Epoch: strconv.Itoa(os.Getpid()) + "." + strconv.FormatUint(start, 10), PIDNamespace: proc.Namespace()}
 }
 
+// MadeHere says whether this process made the checkout: an exec keeps the
+// pid and its start, so a wrapper's later image still finds the checkout its
+// launch made, and not one another process made for the same session.
+func (r Record) MadeHere() bool {
+	return r.Launcher != nil && r.Launcher.Epoch == launcher().Epoch
+}
+
 // Judgeable says whether this process can tell if the launcher runs: only
 // from the same pid namespace, as for a session (registry.Session.Judgeable).
 // From another one — a sandbox — every pid but its own looks gone, and so

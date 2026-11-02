@@ -45,6 +45,11 @@ func adoptRun(catalog adapter.Catalog, spec string, stderr io.Writer) int {
 		return ConfirmCompletion(ctx, dir, self, result)
 	}
 	code, err := host.Run(context.Background(), request)
+	// Looked up once the harness is gone, as the launch settles it: a line
+	// said during the run would land inside a worker's screen.
+	if checkout := adoptedCheckout(handover, harness, stderr); checkout != nil {
+		checkout.settle(err != nil || code != 0)
+	}
 	if err != nil {
 		_, _ = fmt.Fprintln(stderr, "rewake: the run handed over could not be adopted: "+err.Error())
 		return ExitFailed

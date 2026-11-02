@@ -320,3 +320,32 @@ func TestASignalCaughtWhileParkedEndsTheAdoptedHost(t *testing.T) {
 		t.Fatalf("the hangup was taken as lost %v, phase %s", h.lost, h.phase)
 	}
 }
+
+// The loop publishes why it cannot be handed over after each event, and the
+// shell's digest taken must be one: with no other event since, an idle host
+// would answer a switch busy reading its shell's parts for good.
+func TestTheDigestTakenWakesTheLoopForASwitch(t *testing.T) {
+	s := newStillHost(t)
+	p := s.Host.shell
+	p.digested = make(chan struct{})
+	s.cfg.Shell = filepath.Join(t.TempDir(), "no-shell")
+	s.publish()
+	if kind, why := (participant{s.Host}).Answer(); kind != switching.Busy || !strings.Contains(why, "parts") {
+		t.Fatalf("before the digest: %s %s", kind, why)
+	}
+	go s.digest(p)
+	timeout := time.After(5 * time.Second)
+	for woken := false; !woken; {
+		select {
+		case e := <-s.events:
+			s.take(e)
+			woken = e.kind == kDigested
+		case <-timeout:
+			t.Fatal("the digest taken did not wake the loop")
+		}
+	}
+	s.publish()
+	if kind, why := (participant{s.Host}).Answer(); kind != switching.Ready {
+		t.Fatalf("after the digest: %s %s", kind, why)
+	}
+}

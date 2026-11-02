@@ -404,11 +404,11 @@ idle worker makes it (`handover.go`, `modhost/handover.go`; `handover.claude` na
 | Piece | Across the exec |
 |---|---|
 | The mod's endpoint | its listener as a file and the order of loads — the current hello and generation, the superseded, the admitted — so the mod's next poll is answered 200 and its next hello admitted as before |
-| A control request, an open ask | busy while any is open |
+| A control request, an open ask | busy while a control request the current load took waits for its final reply, or an ask is open; a request settled, or one of an earlier load or generation, counts no more, nor an ask its harness never settled a minute past its deadline (found live, November 2, 2026: a request once answered kept the run busy until 64 more came) |
 | The ends | busy while an end is captured and not yet taken by the core; one the core took is answered from its done journal whatever the next image captures; one sent after the snapshot is refused and captured first by the next image |
 | The reply socket | bound again by the next image, which keeps the run's pid and start, so its path is the same |
 | The lane's notices | busy while a word is queued, or a notice is within its late word's minute (`mail.LateWordWindow`): its receipts live only here |
-| The delivery server's held and recent letters | busy while any is (the host's own refusal) |
+| The delivery server's held and recent letters | busy while any is held, or a notice reported delivered is within its late word's minute (the host's own refusal) |
 | The mirror | its model in a memory file, which the next image serves; a face reconnects ([face.md](face.md#the-socket)) |
 
 The snapshot is the endpoint's quiescent point (November 2, 2026): it waits for every request

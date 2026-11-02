@@ -120,10 +120,19 @@ func TestControlCrossesFilesHeartbeatAndFinalOutcome(t *testing.T) {
 	case <-time.After(time.Second):
 		t.Fatal("control was not answered")
 	}
+	// Its outcome is still to come, which only this image would hear.
+	if server.Busy() == "" {
+		t.Fatal("ready for a handover while a compaction's outcome is to come")
+	}
 	before, after := 25000, 1000
 	initial.Outcome, initial.TokensBefore, initial.TokensAfter = control.Done, &before, &after
 	postValue(t, socket, PathModControl, initial)
 	postValue(t, socket, PathModControl, initial)
+	// Settled, it no longer keeps the run from a handover: it once did until
+	// 64 more requests came (found live, November 2, 2026).
+	if why := server.Busy(); why != "" {
+		t.Fatalf("busy after the request's final outcome: %s", why)
+	}
 	outcomes := server.SessionState().CompactionOutcomes
 	if len(outcomes) != 1 || outcomes[0].RequestedBy != "main" || outcomes[0].TokensAfter == nil || *outcomes[0].TokensAfter != 1000 {
 		t.Fatalf("final: %+v", outcomes)
@@ -277,5 +286,36 @@ func TestASampleCarriesTheDirectoryAndTheAccountsWindows(t *testing.T) {
 	postValue(t, socket, PathModState, sample)
 	if got := server.SessionState(); got.Cwd != nil || got.RateLimits != nil {
 		t.Fatalf("a sample without them: %+v", got)
+	}
+}
+
+// A request the mod took and never answered keeps the run from a handover
+// only while its load's generation is current: after a reload its reply
+// would be refused in this image too.
+func TestAnUnansweredRequestOfAnEarlierLoadKeepsNothingBusy(t *testing.T) {
+	server, socket := servingWith(t, func(server *Server) { server.cfg.Hold = 10 * time.Millisecond })
+	postValue(t, socket, PathHello, HelloRequest{LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
+	ctx, cancel := context.WithCancel(context.Background())
+	result := make(chan control.Answer, 1)
+	go func() { result <- server.carry(ctx, control.Request{ID: "r", From: "main", Action: control.Interrupt}) }()
+	var command *ControlCommand
+	for deadline := time.Now().Add(time.Second); command == nil && time.Now().Before(deadline); {
+		var answer AliveAnswer
+		if err := json.Unmarshal([]byte(postValue(t, socket, PathModAlive, AliveRequest{LoadID: "load", Generation: 1})), &answer); err != nil {
+			t.Fatal(err)
+		}
+		command = answer.Control
+	}
+	cancel()
+	<-result
+	if command == nil {
+		t.Fatal("no dispatched command")
+	}
+	if server.Busy() == "" {
+		t.Fatal("ready while the current load may still answer the request")
+	}
+	postValue(t, socket, PathHello, HelloRequest{LoadID: "new", LoadSeq: 1, SessionID: "conversation-1", HarnessVersion: "test"})
+	if why := server.Busy(); why != "" {
+		t.Fatalf("busy after a reload for a request of the earlier load: %s", why)
 	}
 }

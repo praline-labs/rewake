@@ -43,7 +43,7 @@ func (h *Host) adopt(handed *Handover, lost string) int {
 	if handed.Shell.Digested {
 		close(p.digested)
 	} else {
-		go p.takeDigest(h.cfg.Shell)
+		go h.digest(p)
 	}
 	h.shell = p
 	h.follow(p, l, false)

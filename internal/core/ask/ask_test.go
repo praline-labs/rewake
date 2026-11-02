@@ -157,6 +157,24 @@ func TestARequestExpiresAndBelongsToItsLoad(t *testing.T) {
 	}
 }
 
+// A request its harness never settled — a load replaced, a crash — is no
+// longer counted open a while after its deadline, though no new request came
+// to prune it: an open count keeps the run from a handover.
+func TestAnUnsettledRequestIsCountedOnlyUntilItGoes(t *testing.T) {
+	broker := NewBroker()
+	now := time.Now()
+	broker.now = func() time.Time { return now }
+	broker.Open("load-1", question)
+	now = now.Add(Lifetime)
+	if n := broker.Count(); n != 1 {
+		t.Fatalf("%d open at the deadline, want 1: a poll may still come", n)
+	}
+	now = now.Add(2 * time.Minute)
+	if n := broker.Count(); n != 0 {
+		t.Fatalf("%d open long past the deadline, want none", n)
+	}
+}
+
 func TestTheLetterNamesTheRequestAndTheCommand(t *testing.T) {
 	text := Letter("api", "3f9a", permission, time.Now().Add(Lifetime))
 	first, _, _ := strings.Cut(text, "\n")

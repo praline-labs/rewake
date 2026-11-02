@@ -149,3 +149,23 @@ func TestAHoldLeftByAKilledRunFailsWithTheNextOne(t *testing.T) {
 		}
 	}
 }
+
+// A notice reported delivered keeps the run from a handoff only while a late
+// word may still take it back: past the window it is forgotten, though no new
+// notice came to prune it. Seen live on November 2, 2026: a main sent one
+// notice stayed busy through ten minutes of a switch's retries.
+func TestADeliveredNoticeKeepsTheRunBusyOnlyWithinTheWindow(t *testing.T) {
+	f := startDelivering(t, mail.Task)
+	id := f.announced(t)
+	f.until(t, mail.Delivered)
+	f.stop()
+	if why := f.server.busy(); why == "" {
+		t.Fatal("ready within the window, while a late word may still take the notice back")
+	}
+	recent := f.server.recent[id]
+	recent.at = time.Now().Add(-2 * mail.LateWordWindow)
+	f.server.recent[id] = recent
+	if why := f.server.busy(); why != "" {
+		t.Fatalf("busy past the window: %s", why)
+	}
+}
