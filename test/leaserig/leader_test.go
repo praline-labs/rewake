@@ -12,8 +12,9 @@ import (
 // The switch of a running room (docs/rules/state.md#switching-a-running-room)
 // led by rewake restart rewake, between real processes: the room runs build A
 // from an install that an update then replaced with B, and the room's own
-// copy hands the command to A, which leads the room to B. No session of the
-// room runs, so the leader has no participant to ask.
+// copy hands the command to A, whose leader, a process of its own session,
+// leads the room to B. No session of the room runs, so the leader has no
+// participant to ask.
 
 // installed is a room of build A, launched from an install whose rewake is
 // then replaced by B, as an update does: the image the leader is called by.
@@ -106,7 +107,7 @@ func TestALeaderKilledAtEachStepLeavesOneBuild(t *testing.T) {
 		t.Run(c.step, func(t *testing.T) {
 			w := newWorld(t)
 			install := installed(t, w)
-			w.heldAt(install, "default", c.step, restart()...).kill()
+			w.heldAt(install, "default", c.step, restart()...).killAll()
 			if got, copied, phase := w.record("default"), w.copyID(), w.phase(); got != c.build || copied != c.copied || phase != c.phase {
 				t.Fatalf("killed at %s: build %s, copy %s, mark %s", c.step, short(got), copied, phase)
 			}

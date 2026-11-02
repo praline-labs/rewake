@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"testing"
@@ -246,6 +247,29 @@ func (p *process) let() {
 func (p *process) kill() {
 	_ = p.cmd.Process.Kill()
 	<-p.done
+}
+
+// killAll ends by SIGKILL every process started under the process's fault
+// plan, and waits for the process: rewake restart rewake hands its switch to
+// a leader of its own session, which inherits the plan and is the one held.
+func (p *process) killAll() {
+	entries, _ := os.ReadDir("/proc")
+	for _, e := range entries {
+		pid, err := strconv.Atoi(e.Name())
+		if err != nil {
+			continue
+		}
+		environ, err := os.ReadFile(filepath.Join("/proc", e.Name(), "environ"))
+		if err != nil {
+			continue
+		}
+		for _, entry := range strings.Split(string(environ), "\x00") {
+			if strings.HasPrefix(entry, "REWAKE_FAULT=") && strings.HasSuffix(entry, "@"+p.pause) {
+				_ = syscall.Kill(pid, syscall.SIGKILL)
+			}
+		}
+	}
+	p.kill()
 }
 
 func (p *process) pid() int { return p.cmd.Process.Pid }
