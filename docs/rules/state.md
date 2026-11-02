@@ -359,7 +359,9 @@ sent one notice stayed busy through the whole of the switch's bound — and a le
 delivery (the owner's decision, November 2, 2026). Every memory a busy answer reads is looked at
 by its age when asked, not only on the next event: the mod endpoint's control requests and asks
 ([claude.md](../claude.md#handing-the-run-over)) and main's host's reason, which taking the
-shell's digest publishes again. A Claude Code run without its mod answers `cannot`. A run whose
+shell's digest publishes again. A Claude Code run also stays busy while it holds the outcome of
+a compaction main has not read yet, which the handover does not carry, within main's own bound. A
+Claude Code run without its mod answers `cannot`. A run whose
 launch made a checkout hands over as any other, and the handover does not name it: the adopting
 image finds it by its record — the session's name, run and room, and as its maker this process,
 whose pid and start the exec keeps (`worktree.Record.MadeHere`) — and settles it at the run's end
@@ -421,6 +423,7 @@ Tests:
 - `internal/host/delivery/held_late_test.go` `TestADeliveredNoticeKeepsTheRunBusyOnlyWithinTheWindow`
 - `internal/adapter/claude/modhost/management_test.go` `TestAnUnansweredRequestOfAnEarlierLoadKeepsNothingBusy`
 - `internal/core/ask/ask_test.go` `TestAnUnsettledRequestIsCountedOnlyUntilItGoes`
+- `internal/adapter/claude/modhost/handover_outcome_test.go` `TestAnOutcomeMainHasNotReadKeepsTheRunBusy`
 - `internal/host/mainhost/drop_test.go` `TestTheDigestTakenWakesTheLoopForASwitch`
 - `internal/cli/adopt_worktree_test.go` `TestTheAdoptedRunFindsTheCheckoutItsLaunchMade`
 - `test/workflow/fixture_switch_test.go` `TestFixtureSwitch`

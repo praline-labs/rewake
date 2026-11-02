@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"os"
 	"slices"
+	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter"
+	"github.com/praline-labs/rewake/internal/core/control"
+	"github.com/praline-labs/rewake/internal/core/session"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -68,9 +71,38 @@ func (s *Server) busy() string {
 		return "a permission request or a question of the worker is open"
 	case s.untaken():
 		return "a turn's end is captured and not yet taken by the core"
+	case s.unread():
+		return "a compaction's outcome is not yet read by the main that asked for it"
 	}
 	return ""
 }
+
+// unread says a compaction outcome this image holds is still awaited by its
+// asker: main's wrapper reads it from the run's published snapshot and only
+// then forgets the compaction. The next image starts with no outcome, and
+// its first snapshot replaces the last one, so an outcome main had not read
+// would end in its 15-minute fallback instead (found in review, November 2,
+// 2026). A compaction asked for longer ago than that fallback holds nothing:
+// main has said its bound letter, or is gone and would say it when back.
+// The caller holds mu.
+func (s *Server) unread() bool {
+	if s.cfg.RoomDir == "" {
+		return false
+	}
+	outcomes := s.management.observed.view.Snapshot(session.Reading{Counted: true}).CompactionOutcomes
+	for _, outcome := range outcomes {
+		for _, pending := range control.PendingOf(s.cfg.RoomDir, outcome.RequestedBy) {
+			if pending.ID == outcome.Request && time.Since(pending.AskedAt) < unreadBound {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// unreadBound is main's wrapper's letterBound (internal/host), past which
+// it closes a compaction without its outcome.
+const unreadBound = 15 * time.Minute
 
 // effecting are the paths whose requests take an effect that lives in this
 // image: a load admitted, a turn's start or end captured, an ask opened, the

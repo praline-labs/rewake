@@ -62,4 +62,7 @@ type Config struct {
 	Work func() string
 	// WorkEvery is how often a held poll reads the work again, 2 s when zero.
 	WorkEvery time.Duration
+	// RoomDir is the room's directory, where a main keeps the compactions
+	// it waits for a letter of (control.PendingOf); empty reads none.
+	RoomDir string
 }

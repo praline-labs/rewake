@@ -333,6 +333,7 @@ func (claudeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, 
 			ControlDir: request.ControlDir, Epoch: request.Epoch,
 			Live: run.transition, Ended: runEnded,
 			Asked: askedOf(request), Dialog: dialogOf(request), Effort: flagValue(args, effortFlag), Window: windowTokens(flagValue(args, autocompactFlag)), Closing: request.Closing, Mirror: request.Mirror, Work: request.Work,
+			RoomDir: request.RoomDir,
 		})
 		service, live, turns, telemetry = run, run, run, run.server
 	}
