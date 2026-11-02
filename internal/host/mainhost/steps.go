@@ -2,7 +2,9 @@ package mainhost
 
 import (
 	"fmt"
+	"os"
 
+	"github.com/praline-labs/rewake/internal/host/switching"
 	"github.com/praline-labs/rewake/internal/infra/parts"
 )
 
@@ -27,6 +29,8 @@ const (
 	kEndLate                    // the shell's bound to finish after main passed
 	kTerminalGone               // main alone met the end of the person's terminal
 	kReloadLate                 // a reload asked of the shell had no answer in time
+	kSignal                     // a signal a switch's drop took while it stopped the producers
+	kDrop                       // a switch's leader said drop
 )
 
 // ev is one event; the kind says which fields it carries.
@@ -38,6 +42,9 @@ type ev struct {
 	reply chan Message
 	code  int
 	ref   *MainRef
+	sig   os.Signal
+	park  *switching.Park
+	drop  chan string
 }
 
 // handle takes one event; true ends the host.

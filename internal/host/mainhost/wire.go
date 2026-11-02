@@ -124,14 +124,25 @@ const (
 	kindError  = "error"
 )
 
-// lines reads one connection's lines.
-type lines struct{ r *bufio.Reader }
+// lines reads one connection's lines. held is the start of a line a read
+// deadline cut, which the next read goes on from.
+type lines struct {
+	r    *bufio.Reader
+	held []byte
+}
 
 func newLines(r io.Reader) *lines { return &lines{r: bufio.NewReaderSize(r, 64<<10)} }
 
+// unread is what was read from the connection and not yet taken as lines.
+func (l *lines) unread() []byte {
+	rest, _ := l.r.Peek(l.r.Buffered())
+	return append(append([]byte(nil), l.held...), rest...)
+}
+
 // next is the next line, without its end.
 func (l *lines) next() ([]byte, error) {
-	var line []byte
+	line := l.held
+	l.held = nil
 	for {
 		part, err := l.r.ReadSlice('\n')
 		line = append(line, part...)
@@ -143,6 +154,7 @@ func (l *lines) next() ([]byte, error) {
 				return nil, fmt.Errorf("a line over %d bytes", maxLine)
 			}
 		default:
+			l.held = line
 			return nil, err
 		}
 	}
@@ -169,12 +181,15 @@ func takeHello(conn net.Conn, l *lines) (Hello, error) {
 
 // writeLine writes v as one line, within a bound: a client that stops
 // reading is cut off rather than hold the host.
-func writeLine(conn net.Conn, v any) error {
+func writeLine(conn net.Conn, v any) error { return writeWithin(conn, v, 5*time.Second) }
+
+// writeWithin writes v as one line within d.
+func writeWithin(conn net.Conn, v any, d time.Duration) error {
 	data, err := json.Marshal(v)
 	if err != nil {
 		return err
 	}
-	_ = conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
+	_ = conn.SetWriteDeadline(time.Now().Add(d))
 	_, err = conn.Write(append(data, '\n'))
 	return err
 }

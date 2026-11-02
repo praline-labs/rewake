@@ -73,8 +73,6 @@ func enterShell(h adapter.Harness, id launchIdentity) (bool, error) {
 		return false, &UsageError{Message: err.Error()}
 	}
 	command := append([]string{self}, os.Args[1:]...)
-	stop := watchUpdates(dir)
-	defer stop()
 	code := mainhost.Run(mainhost.Config{
 		Shell: program,
 		// The room, for the shell's own reads of it, and main's command line,
@@ -86,6 +84,7 @@ func enterShell(h adapter.Harness, id launchIdentity) (bool, error) {
 		Base:      base,
 		Room:      id.room,
 		Dir:       dir,
+		Updates:   watchUpdates,
 	})
 	return false, &ExitCodeError{Code: code}
 }

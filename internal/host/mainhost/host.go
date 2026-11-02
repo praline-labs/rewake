@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"os"
 	"os/signal"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -57,12 +58,34 @@ type Config struct {
 	MainEnv []string
 	// Base and Room name the room; Dir is its directory.
 	Base, Room, Dir string
+	// Updates watches for a newer release while main runs, from the start
+	// of each image of the host to its stop.
+	Updates func(dir string) (stop func()) `json:"-"`
 }
 
-// Host is one host at work. Every field but the channels is the loop's.
+// Host is one host at work. Every field but the channels, the door's
+// handlers and the counts a switch reads is the loop's.
 type Host struct {
-	cfg    Config
-	events chan ev
+	cfg     Config
+	events  chan ev
+	signals chan os.Signal
+	// replay are signals an earlier image caught while parked, taken first.
+	replay []os.Signal
+	doors  doors
+	// timers counts the events after has yet to post; busy is the loop's
+	// own reason it cannot be handed over now, "" when it can (drop.go).
+	timers atomic.Int32
+	busy   atomic.Pointer[string]
+	// unreaped are the shells whose exit the loop has not taken.
+	unreaped map[int]*shellProc
+	// dropping: a switch's drop has stopped the producers (drop.go).
+	dropping bool
+	// count is how many switches this host has been through.
+	count int
+	// stopParent stops the parent's watch and waits for it; stopUpdates
+	// the watch for a release.
+	stopParent  func()
+	stopUpdates func()
 
 	phase   phase
 	crashed bool
@@ -93,30 +116,52 @@ type Host struct {
 	parent int
 }
 
+// hostSignals are the signals the host takes, from its first moment in each
+// image: a hangup during a switch's park still ends everything.
+var hostSignals = []os.Signal{syscall.SIGHUP, syscall.SIGPIPE, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGWINCH}
+
+func newHost(cfg Config, signals chan os.Signal) *Host {
+	return &Host{cfg: cfg, events: make(chan ev, 64), signals: signals, parent: os.Getppid(), code: 1, unreaped: map[int]*shellProc{}}
+}
+
 // Run runs the host until main has ended and the shell has finished, and
 // returns main's exit code.
 func Run(cfg Config) int {
-	h := &Host{cfg: cfg, events: make(chan ev, 64), parent: os.Getppid(), code: 1}
-	h.mode, _ = terminal.TakeMode(os.Stdin)
 	signals := make(chan os.Signal, 8)
-	signal.Notify(signals, syscall.SIGHUP, syscall.SIGPIPE, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGWINCH)
+	signal.Notify(signals, hostSignals...)
 	defer signal.Stop(signals)
-	go h.watchParent()
+	h := newHost(cfg, signals)
+	h.mode, _ = terminal.TakeMode(os.Stdin)
+	h.watchParent()
+	h.watchUpdates()
 
 	first, err := h.startShell("first")
 	if err != nil {
+		h.stopUpdates()
 		_, _ = os.Stderr.WriteString("rewake: " + err.Error() + "\n")
 		return 1
 	}
 	h.shell = first
 	h.after(firstReadyWait, ev{kind: kFirstWait})
+	return h.loop()
+}
+
+// loop takes the host's events and signals until the host ends.
+func (h *Host) loop() int {
+	for _, sig := range h.replay {
+		if h.signal(sig) {
+			return h.finish()
+		}
+	}
+	h.replay = nil
 	for {
+		h.publish()
 		select {
 		case e := <-h.events:
-			if done := h.handle(e); done {
+			if done := h.take(e); done {
 				return h.finish()
 			}
-		case sig := <-signals:
+		case sig := <-h.signals:
 			if h.signal(sig) {
 				return h.finish()
 			}
@@ -129,16 +174,44 @@ func (h *Host) post(e ev) { h.events <- e }
 
 // after posts e once d has passed.
 func (h *Host) after(d time.Duration, e ev) {
-	time.AfterFunc(d, func() { h.post(e) })
+	h.timers.Add(1)
+	time.AfterFunc(d, func() {
+		h.post(e)
+		h.timers.Add(-1)
+	})
 }
 
 // watchParent says when the host's parent leaves: a closed window takes it.
 func (h *Host) watchParent() {
-	for range time.Tick(time.Second) {
-		if os.Getppid() != h.parent {
-			h.post(ev{kind: kParentGone})
-			return
+	stop, done := make(chan struct{}), make(chan struct{})
+	h.stopParent = func() {
+		close(stop)
+		<-done
+	}
+	go func() {
+		defer close(done)
+		tick := time.NewTicker(time.Second)
+		defer tick.Stop()
+		for {
+			select {
+			case <-stop:
+				return
+			case <-tick.C:
+			}
+			if os.Getppid() != h.parent {
+				// A drop stopping this watch takes the post meanwhile.
+				h.post(ev{kind: kParentGone})
+				return
+			}
 		}
+	}()
+}
+
+// watchUpdates starts the watch for a release, if the launch gave one.
+func (h *Host) watchUpdates() {
+	h.stopUpdates = func() {}
+	if h.cfg.Updates != nil {
+		h.stopUpdates = h.cfg.Updates(h.cfg.Dir)
 	}
 }
 
@@ -172,6 +245,7 @@ func (h *Host) windowThere() bool {
 
 // finish gives the terminal back and says main's code.
 func (h *Host) finish() int {
+	h.stopUpdates()
 	h.solo.leave()
 	h.restoreTerminal()
 	// What a launch that failed said, read from the grid before it closes,

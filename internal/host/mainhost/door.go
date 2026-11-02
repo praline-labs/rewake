@@ -2,8 +2,11 @@ package mainhost
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/praline-labs/rewake/internal/infra/parts"
@@ -13,10 +16,20 @@ import (
 // request, its answer and the end. Version 1 takes a restart of a part, from
 // any session of the room — the socket's folder is the user's alone — and
 // answers once the part is back or has failed (docs/shell.md#the-hosts-channel);
-// and parts, answered with the parts the host runs.
+// and parts, answered with the parts the host runs. A switch's drop stops it
+// before its post, or lets it write the answer the loop gave (doors).
 func (h *Host) door(conn net.Conn) {
 	defer func() { _ = conn.Close() }()
 	_ = conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+	if !h.doors.enter(conn) {
+		return
+	}
+	posted := false
+	defer func() {
+		if !posted {
+			h.doors.leave(conn)
+		}
+	}()
 	l := newLines(conn)
 	hello, err := takeHello(conn, l)
 	if err != nil {
@@ -37,13 +50,77 @@ func (h *Host) door(conn net.Conn) {
 		return
 	}
 	reply := make(chan Message, 1)
+	h.doors.answering.Add(1)
+	defer h.doors.answering.Done()
 	h.post(ev{kind: kDoor, msg: msg, reply: reply})
+	h.doors.leave(conn)
+	posted = true
 	select {
 	case answer := <-reply:
-		_ = writeLine(conn, answer)
+		_ = writeWithin(conn, answer, doorWrite)
 	case <-time.After(doorWait):
 		_ = writeLine(conn, Message{T: kindFailed, Why: "the host did not finish the restart within " + doorWait.String()})
 	}
+}
+
+// doorWrite bounds the write of the door's answer: the client waits for it
+// in a read, and a switch's drop waits for it to be written.
+const doorWrite = time.Second
+
+// doors are the door's handlers as a switch's drop sees them: those before
+// their post, which a read deadline stops, and those past it, answering,
+// which only write what the loop gave them.
+type doors struct {
+	mu        sync.Mutex
+	stopped   bool
+	posting   map[net.Conn]struct{}
+	answering sync.WaitGroup
+}
+
+// enter counts a handler before its post; false once a drop stopped the
+// door, the client then reading an end.
+func (d *doors) enter(conn net.Conn) bool {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	if d.stopped {
+		return false
+	}
+	if d.posting == nil {
+		d.posting = map[net.Conn]struct{}{}
+	}
+	d.posting[conn] = struct{}{}
+	return true
+}
+
+// leave counts a handler out once it posted or returned without posting.
+func (d *doors) leave(conn net.Conn) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	delete(d.posting, conn)
+}
+
+// stop takes no new handler and cuts the reads of those before their post.
+func (d *doors) stop() {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	d.stopped = true
+	for conn := range d.posting {
+		_ = conn.SetReadDeadline(time.Unix(1, 0))
+	}
+}
+
+// still says no handler is before its post.
+func (d *doors) still() bool {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	return len(d.posting) == 0
+}
+
+// resume takes handlers again after a drop that did not exec.
+func (d *doors) resume() {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	d.stopped = false
 }
 
 // Ask asks the host whose socket is path to restart part, and returns the
@@ -85,6 +162,9 @@ func ask(path string, request Message) (Message, error) {
 		return Message{}, err
 	}
 	line, err := newLines(conn).next()
+	if errors.Is(err, io.EOF) {
+		return Message{}, errors.New("the host closed the request unanswered: a switch of the room's build may be under way; ask again once it has ended")
+	}
 	if err != nil {
 		return Message{}, fmt.Errorf("the host did not answer: %w", err)
 	}

@@ -287,7 +287,7 @@ and `internal/cli/restart_rewake.go`.
   the target's, and asked its contracts (`--version --json`): every contract it speaks and
   requires must equal the room's build's, or the attempt ends, naming the contract, and the room
   needs its restart. Among them `handover` (the wrapper's handed run), `handover.<adapter>` (an
-  adapter's handed state), `handover.space` (a space host's handed terminal), `switch` (the mark, the socket's messages, a parked image's
+  adapter's handed state), `handover.space` (a space host's handed terminal), `handover.mainhost` (main's host's handed terminal, shell and loop), `switch` (the mark, the socket's messages, a parked image's
   handover), `mod` and `extension`; each handed shape is pinned to its number by a test.
 - **Asking.** Every wrapper, space host and main's host looks at the mark every 250 ms and,
   while it is asking, joins on the socket — again at the next look when nothing listened yet —
@@ -337,12 +337,13 @@ again they landed inside a worker's screen (found in review, November 2, 2026). 
 hands over its worker's terminal: the pty
 master, the socket's listener and its emulator's checkpoint as a seed, in a memory file, with the
 shell's input frozen and its pump stopped at the snapshot; the worker, its child, runs on
-([space.md](../space.md#a-switch-of-the-rooms-build), November 2, 2026). The fixture's wrappers,
-main's included, hand over as the switch's test. A real harness's main wrapper
-(`adapter.WorkersOnly`), a run that made a checkout, a Claude Code run without its mod and main's
-host answer `cannot`, so every real
-room is still refused and keeps its build, and `rewake restart` with no part still plans `room` for
-a new rewake.
+([space.md](../space.md#a-switch-of-the-rooms-build), November 2, 2026). Main's host hands over
+main's terminal, the shell's channel and its loop, the shell and main's wrapper running on as its
+children ([shell.md](../shell.md#a-switch-of-the-rooms-build)). The fixture's wrappers, main's
+included, hand over as the switch's test. A real harness's main wrapper (`adapter.WorkersOnly`), a
+run that made a checkout and a Claude Code run without its mod answer `cannot`, so every real room
+is still refused and keeps its build, and `rewake restart` with no part still plans `room` for a
+new rewake.
 
 **Signals across the exec.** Go overrides a SIGTERM the image inherited as ignored, so an
 ignore set before the exec does not cover the new image's start. The adopting image catches

@@ -88,6 +88,10 @@ func New(pty *terminal.Plain, grid *terminal.Grid, defaults string, watch func([
 // Grid is the screen the relay feeds.
 func (r *Relay) Grid() *terminal.Grid { return r.grid.Load() }
 
+// Terminal is the program's terminal, which an adopted relay opened in an
+// earlier image.
+func (r *Relay) Terminal() *terminal.Plain { return r.pty }
+
 // Pump reads the master until the terminal closes or hangs up, or a
 // handover stops it.
 func (r *Relay) Pump() {

@@ -132,6 +132,44 @@ The first launch runs in this order:
   host the same as `lost` when the terminal's input ends or fails: no shell is there to say it,
   and a window that is not the host's controlling terminal sends no hangup.
 
+### A switch of the room's build
+
+`rewake restart rewake` moves the room to a new build while it runs
+([rules/state.md](rules/state.md#switching-a-running-room)), and main's host takes part as
+"main's host" (`internal/host/mainhost/drop.go`, November 2, 2026). The shell and main's wrapper
+are the host's children all through: their pids stay, and neither sees the exec.
+
+- **Ready** only when a shell draws and nothing is under way the exec would cut: phase running,
+  main registered, no restart, reload or new shell, not alone and not closing, the shell ready
+  with its parts read, every other shell's exit taken, and none of the host's own bounds (the
+  hello's, the ready's, a crash's settle…) still running. Otherwise `busy`, and the switch's
+  leader tries again. It never answers `cannot`. Main without a terminal has no host, and only
+  its wrapper takes part.
+- **The drop is an event of the loop.** First the producers of events stop, each only up to its
+  post: the door takes no new client, and a handler still reading its client's hello or request
+  has that read cut, so the client reads an end ("the host closed the request unanswered: a
+  switch … may be under way"); the relay stops through its handover, as a space host's does;
+  the shell's reader stops by a read deadline, keeping what it had read of the next line; the
+  parent's watch and the release watch stop. A handler that already posted is not waited for:
+  it waits on the loop (found in review, November 2, 2026).
+- **The drain.** What came meanwhile, and every signal caught, is taken as usual, a door's
+  request among them. If that left the host not ready — the shell said `close`, a restart began,
+  the window closed — everything resumes and the drop answers why. Then the door's handlers
+  write their answers, within 1 s each.
+- **The exec.** The host's own image, parked, gets main's terminal (pty master, `host.sock`'s
+  listener and the screen's seed in a memory file), the shell's socket with the bytes read from it
+  and not taken, the shell's standard error (an explicit pipe) with its tail, both children's pid
+  and start, and the loop's state: generation, crash spent, colours, size, the person's saved
+  terminal modes, the host's parent, main's reference and the shell's hello, contracts and
+  digest (`handover.mainhost`, pinned by a test). The shell's stream of main ends, and the shell
+  attaches again after a second; its channel never sees the exec.
+- **Children are waited, not reaped,** by `waitid(WNOWAIT)`; the loop reaps a child when it takes
+  its exit. An exit the exec cut off is still there for the next image's waiter.
+- **Signals.** The parked image and the adopting one take the host's signals first of all. One
+  caught while parked goes on to the next image and is its loop's first event, so a window closed
+  during a switch still ends everything through the table above. A parked image that is lost, or
+  cannot take the room's lease, closes as a close asked for does.
+
 ### The closing screen
 
 From the moment main's end begins until the shell exits, the whole screen is one spinner and

@@ -1,6 +1,8 @@
 package terminal
 
 import (
+	"encoding/json"
+	"fmt"
 	"os"
 	"syscall"
 	"unsafe"
@@ -14,6 +16,25 @@ import (
 
 // Mode is a terminal's line discipline as it was taken.
 type Mode struct{ t syscall.Termios }
+
+// MarshalJSON is the modes as bytes, for main's host's next image on the
+// same machine (internal/host/mainhost), which gives them back at its end.
+func (m Mode) MarshalJSON() ([]byte, error) {
+	return json.Marshal(unsafe.Slice((*byte)(unsafe.Pointer(&m.t)), unsafe.Sizeof(m.t)))
+}
+
+// UnmarshalJSON takes the modes MarshalJSON gave.
+func (m *Mode) UnmarshalJSON(raw []byte) error {
+	var b []byte
+	if err := json.Unmarshal(raw, &b); err != nil {
+		return err
+	}
+	if uintptr(len(b)) != unsafe.Sizeof(m.t) {
+		return fmt.Errorf("a terminal's modes of %d bytes, not %d", len(b), unsafe.Sizeof(m.t))
+	}
+	copy(unsafe.Slice((*byte)(unsafe.Pointer(&m.t)), len(b)), b)
+	return nil
+}
 
 // TakeMode is f's modes now, to give back with Restore.
 func TakeMode(f *os.File) (*Mode, error) {

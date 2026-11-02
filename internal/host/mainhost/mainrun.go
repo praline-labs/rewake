@@ -3,7 +3,6 @@ package mainhost
 import (
 	"bytes"
 	"context"
-	"errors"
 	"net"
 	"os"
 	"os/exec"
@@ -42,7 +41,8 @@ const registerPoll = 100 * time.Millisecond
 
 // mainRun is main's wrapper on the host's terminal.
 type mainRun struct {
-	cmd   *exec.Cmd
+	pid   int
+	start uint64
 	pty   *terminal.Plain
 	relay *stream.Relay
 	done  chan struct{}
@@ -99,17 +99,25 @@ func (h *Host) startMain() bool {
 		_ = grid.Close()
 		return h.failStart(err)
 	}
-	m.cmd = cmd
+	m.pid = cmd.Process.Pid
+	m.start, _ = proc.StartTime(m.pid)
+	// The loop reaps it (children.go), never the process handle.
+	_ = cmd.Process.Release()
 	h.main = m
 	go m.relay.Pump()
 	go m.relay.Answer()
-	go func() {
-		err := cmd.Wait()
-		close(m.done)
-		h.post(ev{kind: kMainExited, code: exitCode(err)})
-	}()
+	h.waitMain(m)
 	go h.serveMain(m)
 	return false
+}
+
+// waitMain posts main's exit, which the loop reaps as it takes it.
+func (h *Host) waitMain(m *mainRun) {
+	go func() {
+		waitExit(m.pid)
+		close(m.done)
+		h.post(ev{kind: kMainExited})
+	}()
 }
 
 // failStart ends the host when main could not start.
@@ -123,7 +131,7 @@ func (h *Host) failStart(err error) bool {
 // room made and this host's main its main, then takes the room's lease and
 // serves main's stream and the door on the host socket.
 func (h *Host) serveMain(m *mainRun) {
-	pid := m.cmd.Process.Pid
+	pid := m.pid
 	tick := time.NewTicker(registerPoll)
 	defer tick.Stop()
 	for !registered(h.cfg.Dir, pid) {
@@ -147,9 +155,9 @@ func (h *Host) serveMain(m *mainRun) {
 		_, _ = os.Stderr.WriteString("rewake: main's stream could not be served: " + err.Error() + "\n")
 		return
 	}
-	// Main's host hands its run over to no image yet: a switch of the room
-	// while it serves is refused, and the room is restarted instead.
-	stop := switching.Watch(context.Background(), h.cfg.Dir, switching.CannotHandOver("main's host", "main's host does not hand its run over yet"))
+	// Main's host hands its run over to its next image in a switch of the
+	// room's build (drop.go).
+	stop := switching.Watch(context.Background(), h.cfg.Dir, participant{h})
 	m.mu.Lock()
 	m.lease, m.listener, m.stopSwitching = lease, listener, stop
 	m.mu.Unlock()
@@ -183,11 +191,11 @@ func (m *mainRun) end() {
 	if m.waitDone(hangupWait) {
 		return
 	}
-	_ = syscall.Kill(-m.cmd.Process.Pid, syscall.SIGTERM)
+	_ = syscall.Kill(-m.pid, syscall.SIGTERM)
 	if m.waitDone(termWait) {
 		return
 	}
-	_ = syscall.Kill(-m.cmd.Process.Pid, syscall.SIGKILL)
+	_ = syscall.Kill(-m.pid, syscall.SIGKILL)
 }
 
 func (m *mainRun) waitDone(d time.Duration) bool {
@@ -245,16 +253,4 @@ func markWatcher(seen func()) func([]byte) {
 			carry = append(carry[:0], carry[len(carry)-keep:]...)
 		}
 	}
-}
-
-// exitCode is a wrapper's exit as a code: a signal's end is 1.
-func exitCode(err error) int {
-	var exit *exec.ExitError
-	switch {
-	case err == nil:
-		return 0
-	case errors.As(err, &exit) && exit.ExitCode() >= 0:
-		return exit.ExitCode()
-	}
-	return 1
 }
