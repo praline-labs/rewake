@@ -28,6 +28,10 @@ func OpenPlain(size Size) (*Plain, error) {
 	return &Plain{Master: master, side: side}, nil
 }
 
+// AdoptPlain is the terminal an earlier image of this process opened and
+// handed over, its program running on it: the side is the program's alone.
+func AdoptPlain(master *os.File) *Plain { return &Plain{Master: master} }
+
 // Prepare makes cmd run on the terminal: the terminal's side as its standard
 // streams and its controlling terminal, in a session of its own, with the
 // environment Environ gives. Start it after Prepare, then call ReleaseSide,

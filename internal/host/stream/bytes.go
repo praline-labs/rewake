@@ -12,7 +12,7 @@ import (
 // far behind for the grid to keep its bytes, is dropped and attaches again.
 func (r *Relay) bytes(conn net.Conn) {
 	defer func() { _ = conn.Close() }()
-	stream := r.grid.Attach()
+	stream := r.Grid().Attach()
 	defer stream.Detach()
 	go func() {
 		r.frames(conn)

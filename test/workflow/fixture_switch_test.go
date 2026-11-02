@@ -4,9 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -22,13 +25,13 @@ import (
 //   - The person's rewake restart rewake switches the room: both wrappers
 //     keep their pid, epoch and harness and run B, and the room's build and
 //     copy are B. A new task gets exactly one report.
-//   - With a space open, a switch back to A is refused naming the space host,
-//     which cannot hand over; the room stays on B and a task gets one report.
+//   - With a space open, a switch back to A goes through: the space host and
+//     the space's worker each keep their pid and run A, the space stays open
+//     and its screen is the same, and a task gets one report.
 //
 // What it does not prove: a real harness. A worker of Claude Code or pi hands
 // its run over when idle, proven by its adapter's tests; main's wrapper and
-// main's and a space's hosts cannot yet, so every real room is refused as the
-// space host is here.
+// main's host cannot yet, so every real room is refused on them.
 func TestFixtureSwitch(t *testing.T) {
 	binary := enterScenario(t, "fixture-switch")
 	c := Start(t, Spec{Name: "fixture-switch", Harness: fixtureColumn.harness, Observations: fixtureSwitchObservations, Deadline: 180 * time.Second})
@@ -106,25 +109,54 @@ func TestFixtureSwitch(t *testing.T) {
 	}
 
 	opened := openSpace(t, c, iso, asks)
+	var was spaceRecordView
+	var shown string
+	if opened != "" {
+		// A session of the suite lives 25 seconds (shimReportState): the
+		// worker's screen is taken once it shows anything.
+		waitFor(c, 5*time.Second, func() bool {
+			was = spaceRecordOf(iso, opened)
+			shown = screenText(iso, "api")
+			return was.State == "open" && strings.TrimSpace(shown) != ""
+		})
+	}
 	if err := replaceBinary(installed, original); err != nil {
 		t.Fatal(err)
 	}
 	// The committed mark holds the room until its deadline, whoever adopted.
 	c.Await("the first switch's mark to end", func() bool { return !switchHolds(room) })
-	code, _, errOut = switchRoom(c, iso)
+	code, out, errOut = switchRoom(c, iso)
+	now := spaceRecordOf(iso, opened)
+	hostExe, _ := os.ReadFile(fmt.Sprintf("/proc/%d/exe", runPID(now.Host)))
+	workerExe, _ := os.ReadFile(fmt.Sprintf("/proc/%d/exe", runPID(now.Worker.Run)))
+	shownAfter := screenText(iso, "api")
 	task(3)
 	switch {
 	case opened == "":
-		c.Contradicted(obsSwitchRefused, "the space did not open")
-	case code != 1 || !strings.Contains(errOut, "the space host of "+opened+" cannot"):
-		c.Contradicted(obsSwitchRefused, "restart rewake with a space open exited %d: %s", code, errOut)
-	case recordOf(room) != idOf(newer):
-		c.Contradicted(obsSwitchRefused, "the refused switch left the build %.12s", recordOf(room))
+		c.Contradicted(obsSwitchSpace, "the space did not open")
+	case code != 0:
+		c.Contradicted(obsSwitchSpace, "restart rewake with a space open exited %d: %s %s", code, out, errOut)
+	case now.State != "open" || now.Host != was.Host || now.Worker.Run != was.Worker.Run || !runAlive(now.Host) || !runAlive(now.Worker.Run):
+		c.Contradicted(obsSwitchSpace, "the space is %s, its host %s and worker %s; they were %s and %s", now.State, now.Host, now.Worker.Run, was.Host, was.Worker.Run)
+	case idOf(hostExe) != idOf(original) || idOf(workerExe) != idOf(original):
+		c.Contradicted(obsSwitchSpace, "the space host runs %.12s and the worker %.12s; A is %.12s", idOf(hostExe), idOf(workerExe), idOf(original))
+	case recordOf(room) != idOf(original):
+		c.Contradicted(obsSwitchSpace, "the switch left the build %.12s", recordOf(room))
+	case !keeps(shown, shownAfter):
+		c.Contradicted(obsSwitchSpace, "the worker's screen was\n%s\nand is\n%s", shown, shownAfter)
 	case reports() != 3 || distinctReplies(lead, worker) != 3:
-		c.Contradicted(obsSwitchRefused, "%d reports for three tasks", reports())
+		c.Contradicted(obsSwitchSpace, "%d reports for three tasks", reports())
 	default:
-		c.Observed(obsSwitchRefused, strings.TrimSpace(errOut))
+		c.Observed(obsSwitchSpace, firstLine(out))
 	}
+	// A committed switch's leader cannot remove its socket, its lease
+	// revoked at the commit; the next attempt clears it. Nobody listens on it.
+	leftover := filepath.Join(room, "sock", "switch.sock")
+	if conn, err := net.Dial("unix", leftover); err == nil {
+		_ = conn.Close()
+		t.Errorf("something still listens on %s after the switch", leftover)
+	}
+	_ = os.Remove(leftover)
 	stopSession(t, c, worker)
 	stopSession(t, c, lead)
 	if opened != "" {
@@ -135,6 +167,40 @@ func TestFixtureSwitch(t *testing.T) {
 			return record.State == "closed" && !runAlive(record.Worker.Run) && !runAlive(record.Host)
 		})
 	}
+}
+
+// runPID is the pid of a run's epoch, 0 for none.
+func runPID(run string) int {
+	pid, _, _ := strings.Cut(run, ".")
+	number, _ := strconv.Atoi(pid)
+	return number
+}
+
+// screenText is rewake screen's text of the space's worker by its name, from
+// its space host's snapshot: no shell runs here.
+func screenText(iso *Isolation, name string) string {
+	out, err := iso.Output(iso.Command("screen", name, "--text"))
+	if err != nil {
+		return ""
+	}
+	return string(out)
+}
+
+// keeps says the screen after shows every line the screen before did, in
+// order, and only more lines after them: what the worker wrote meanwhile,
+// here its wrapper's line on adopting its run.
+func keeps(before, after string) bool {
+	lines := func(screen string) []string {
+		var out []string
+		for _, line := range strings.Split(screen, "\n") {
+			if line = strings.TrimSpace(line); line != "" {
+				out = append(out, line)
+			}
+		}
+		return out
+	}
+	was, is := lines(before), lines(after)
+	return len(was) > 0 && len(is) >= len(was) && slices.Equal(is[:len(was)], was)
 }
 
 // switchHolds says a switch's mark in the room has not reached its deadline.
@@ -198,10 +264,10 @@ func openSpace(t *testing.T, c *Case, iso *Isolation, asks *requests) string {
 const (
 	obsSwitchSwitched = "rewake restart rewake switches an idle fixture room to another build: main's and the worker's wrappers keep their pid, epoch and harness and run the new build, which is the room's build and copy"
 	obsSwitchReported = "after the switch, a new task is delivered and every task has exactly one report"
-	obsSwitchRefused  = "with a space open, the switch is refused naming the space host, the room keeps its build, and a task gets one report"
+	obsSwitchSpace    = "with a space open, the switch goes through: the space host and its worker keep their pid and run the new build, the space stays open with the same screen, and a task gets one report"
 	switchTask        = "fixture-switch: report back"
 	// switchBuilt is build B's build time: the same tree, another image.
 	switchBuilt = "2026-11-02T00:00:00Z"
 )
 
-var fixtureSwitchObservations = []string{obsSwitchSwitched, obsSwitchReported, obsSwitchRefused}
+var fixtureSwitchObservations = []string{obsSwitchSwitched, obsSwitchReported, obsSwitchSpace}

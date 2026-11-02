@@ -17,7 +17,7 @@ import (
 // (docs/screen.md); the client sends no frame, so the program's size stays.
 func (r *Relay) snapshot(conn net.Conn) {
 	defer func() { _ = conn.Close() }()
-	frame := frameOf(r.grid.Snapshot())
+	frame := frameOf(r.Grid().Snapshot())
 	// The person's default colors, as the shell gave them to the host; the
 	// palette is not passed to a host, so indexed colors are xterm's.
 	fg, bg := terminal.ParseDefaults(r.defaults)

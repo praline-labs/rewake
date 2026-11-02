@@ -28,13 +28,12 @@ type vtEmulator struct {
 	osc   oscFilter
 	// title is the program's, whole (osc.go).
 	title string
-	// pen is the style text is written in now, followed from the program's
-	// SGR for a late client's preamble (replay.go): the library keeps it
-	// unexported.
-	pen uv.Style
 }
 
 func newVT(size Size) (emulator, error) {
+	if err := checkLibrary(); err != nil {
+		return nil, err
+	}
 	emu := vt.NewEmulator(size.Cols, size.Rows)
 	pipe, ok := emu.InputPipe().(io.Closer)
 	if !ok {
@@ -69,7 +68,6 @@ func newVT(size Size) (emulator, error) {
 		return true
 	})
 	v.keyboard()
-	v.followPen()
 	return v, nil
 }
 
@@ -93,6 +91,18 @@ func (v *vtEmulator) setMode(m ansi.Mode, on bool) {
 		v.mouse(MouseButton, on)
 	case ansi.ModeMouseAnyEvent:
 		v.mouse(MouseAny, on)
+	case ansi.ModeOrigin:
+		v.modes.Origin = on
+	case ansi.ModeAutoWrap:
+		v.modes.NoWrap = !on
+	case ansi.ModeLineFeedNewLine:
+		v.modes.NewLine = on
+	case ansi.ModeLeftRightMargin:
+		v.modes.Margins = on
+	case ansi.ModeUnicodeCore:
+		v.modes.Unicode = on
+	case ansi.ModeInBandResize:
+		v.modes.InBandResize = on
 	}
 }
 
@@ -110,6 +120,12 @@ func (v *vtEmulator) mouse(m MouseMode, on bool) {
 func (v *vtEmulator) write(p []byte) { _, _ = v.emu.Write(v.osc.filter(p)) }
 
 func (v *vtEmulator) resize(size Size) { v.emu.Resize(size.Cols, size.Rows) }
+
+func (v *vtEmulator) size() Size { return Size{Cols: v.emu.Width(), Rows: v.emu.Height()} }
+
+// inject writes p where the emulator's answers come out, after every answer
+// before it.
+func (v *vtEmulator) inject(p []byte) { _, _ = v.emu.InputPipe().Write(p) }
 
 func (v *vtEmulator) defaults(fg, bg color.Color) {
 	if fg != nil {
@@ -130,7 +146,7 @@ func (v *vtEmulator) look() look {
 	size := Size{Cols: v.emu.Width(), Rows: v.emu.Height()}
 	rows := make([][]Run, size.Rows)
 	for y := range rows {
-		rows[y] = v.row(y, size.Cols)
+		rows[y] = rowOf(v.emu.CellAt, y, size.Cols)
 	}
 	pos := v.emu.CursorPosition()
 	modes := v.modes
@@ -141,14 +157,14 @@ func (v *vtEmulator) look() look {
 	}
 }
 
-// row is one row as runs, walking the cells rather than parsing Render: the
+// rowOf is one row of a screen as runs, walking the cells rather than parsing Render: the
 // walk is the only way to the runs, and it is cheaper
 // (docs/shell.md#the-space-hosts-emulator, measured). A new run starts where the
 // style changes; a wide glyph is a run of its own counted as its width, the
 // cell after it, which only holds its place, skipped, so the preamble places
 // the next run by the emulator's width, not a client's guess. A wide glyph
 // cut by the right edge is drawn as a blank, so the runs add up to the width.
-func (v *vtEmulator) row(y, width int) []Run {
+func rowOf(cellAt func(x, y int) *uv.Cell, y, width int) []Run {
 	var runs []Run
 	var text strings.Builder
 	var open Run
@@ -161,7 +177,7 @@ func (v *vtEmulator) row(y, width int) []Run {
 		text.Reset()
 	}
 	for x := 0; x < width; {
-		cell := v.emu.CellAt(x, y)
+		cell := cellAt(x, y)
 		if cell != nil && cell.Width == 0 {
 			x++
 			continue

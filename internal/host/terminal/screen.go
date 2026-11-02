@@ -90,6 +90,19 @@ type Modes struct {
 	ModifyOtherKeys uint8
 	// AltScreen says the alternate screen is shown.
 	AltScreen bool
+
+	// What changes where later output goes, kept for the preamble beside
+	// the input modes: DECOM (mode 6) places the cursor within the
+	// margins; NoWrap is DECAWM (mode 7) reset; NewLine is LNM (20), a
+	// line feed that returns too; Margins is DECLRMM (69), left and right
+	// margins; Unicode is mode 2027, the widths of grapheme clusters;
+	// InBandResize is mode 2048, sizes reported in band.
+	Origin       bool
+	NoWrap       bool
+	NewLine      bool
+	Margins      bool
+	Unicode      bool
+	InBandResize bool
 }
 
 // look is the whole screen as the emulator holds it at one moment.

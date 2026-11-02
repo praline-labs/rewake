@@ -78,6 +78,42 @@ to any process of the user, as every room file is, and takes no request of the m
 instead, a snapshot: one JSON line of the emulator's screen and the end, no frames taken
 ([screen.md](screen.md#no-shell-the-host)).
 
+## A switch of the room's build
+
+The space host joins `rewake restart rewake` as the worker wrappers do
+([rules/state.md](rules/state.md#switching-a-running-room)): it answers `ready` once the space is
+open and its terminal served, `busy` while the space opens or once its watch decided to close it,
+since that close goes on in this image, and never `cannot`. On the drop its watch pauses between
+two ticks, and the relay (`internal/host/stream`, `Relay.HandOver`) stops where nothing moves:
+
+1. **The shell's input stops.** Every write of keys and every size goes through a gate held across
+   the whole write; the handover takes it within 2 s and freezes it, so a paste in flight is
+   written to its end and a frame read after is dropped whole, never begun. A write the worker
+   does not take within 2 s refuses the drop, and the relay runs on.
+2. **The listener stops accepting** and the clients' streams end; a shell connects again to the
+   same path, which never goes away, and waits in the backlog.
+3. **The pump stops** by a read deadline on the master: what the worker writes from now on waits
+   in the pty's buffer and reaches the next image's screen once.
+4. **The grid ends**, its held cluster committed and the answers to queries it already parsed
+   written to the worker, within 2 s.
+5. **The seed** is taken — the emulator's checkpoint as bytes with an unfinished sequence's
+   bytes ([shell.md](shell.md#the-space-hosts-emulator)) — with the size and the last 16 KiB the
+   worker wrote, for the close's last line, into a memory file.
+
+The master, the listener and the memory file are handed over open, with the worker's pid and
+start and the park, in the spec of a stage `adopt` (`handover.space`, pinned by
+`internal/host/spacehost/handover_shape_test.go`), and the host execs its own image parked. On
+go the parked image execs the switch's target; on resume, or when an exec fails, it serves what
+it handed over on its own build. Either way the next image takes the lease with `build.Follow`,
+seeds a new grid, starts the pump, serves the inherited listener, waits for the worker, still its
+child, and rebuilds its watch from the record and main's run on disk. The pid, its start and its
+parent stay, so the record's host run and SP9 hold without a write, the worker runs on without
+seeing it, and a close made meanwhile is read at the next tick (SP10). Nothing is written during
+the switch.
+
+Known limit: a parked image killed before it execs orphans the worker, as a killed space host
+does; `rewake space close` finishes it (`spacehost.FinishGone`).
+
 ## The record
 
 One JSON file per space, `spaces/<id>.json` in the room ([design.md](design.md#state-directory)),

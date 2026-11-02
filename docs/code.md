@@ -24,6 +24,7 @@ internal/core/registry/registrytest/          for tests: the boot a session of t
 internal/infra/proc/                          /proc: identity, liveness, job-control state, lineage, namespaces, owner and initial environment
 internal/infra/boottime/                      the boot clock, comparable across processes and never set back
 internal/infra/proxyenv/                      for tests: the proxy variables of an environment, carried into one built from nothing
+internal/infra/memfile/                       files in memory alone (memfd), for what an image hands the next across an exec
 internal/core/mail/                           message, status, sender-side write, turn ends; `Box` is one run's own mail (room, name, epoch), the one handle a command opens on it: its read, its pending mark, what it owes, its acts on the letters it sent (send, edit, withdraw, addendum, recall), each taking the lock itself, and what it is told of them, and `Locked` the operations that run under its mailbox lock, settling a letter with a result or by its status among them
 internal/core/mail/mailtest/                  for tests outside mail: the paths and bytes of its records, each checked against mail
 internal/core/control/                        a main's control request to a run and its answer, as files

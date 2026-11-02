@@ -268,7 +268,7 @@ and `internal/cli/restart_rewake.go`.
   the target's, and asked its contracts (`--version --json`): every contract it speaks and
   requires must equal the room's build's, or the attempt ends, naming the contract, and the room
   needs its restart. Among them `handover` (the wrapper's handed run), `handover.<adapter>` (an
-  adapter's handed state), `switch` (the mark, the socket's messages, a parked image's
+  adapter's handed state), `handover.space` (a space host's handed terminal), `switch` (the mark, the socket's messages, a parked image's
   handover), `mod` and `extension`; each handed shape is pinned to its number by a test.
 - **Asking.** Every wrapper, space host and main's host looks at the mark every 250 ms and,
   while it is asking, joins on the socket — again at the next look when nothing listened yet —
@@ -312,9 +312,13 @@ again. A worker's wrapper of Claude Code or pi hands over when idle (November 2,
 handed over and what keeps it busy is in [claude.md](../claude.md#handing-the-run-over) and
 [research-pi.md](../research-pi.md#handing-the-run-over-november-2-2026). A run's mirror goes over
 in a memory file, and its face reconnects to the next image
-([face.md](../face.md#the-socket)). The fixture's wrappers, main's included, hand over as the
-switch's test. A real harness's main wrapper (`adapter.WorkersOnly`), a run that made a checkout,
-a Claude Code run without its mod, the space host and main's host answer `cannot`, so every real
+([face.md](../face.md#the-socket)). A space host hands over its worker's terminal: the pty
+master, the socket's listener and its emulator's checkpoint as a seed, in a memory file, with the
+shell's input frozen and its pump stopped at the snapshot; the worker, its child, runs on
+([space.md](../space.md#a-switch-of-the-rooms-build), November 2, 2026). The fixture's wrappers,
+main's included, hand over as the switch's test. A real harness's main wrapper
+(`adapter.WorkersOnly`), a run that made a checkout, a Claude Code run without its mod and main's
+host answer `cannot`, so every real
 room is still refused and keeps its build, and `rewake restart` with no part still plans `room` for
 a new rewake.
 
@@ -358,6 +362,13 @@ Tests:
 - `test/leaserig/leader_test.go` `TestARoomWithNothingToAskSwitches`
 - `test/leaserig/leader_test.go` `TestALeaderKilledAtEachStepLeavesOneBuild`
 - `test/leaserig/leader_test.go` `TestAForeignLaunchDuringParkingCannotOverturnTheSwitch`
+- `internal/host/spacehost/handover_shape_test.go` `TestTheSpaceHandoverContractChangesWithItsShape`
+- `internal/host/stream/handover_test.go` `TestAHandoverKeepsTheScreenAndWhatTheProgramWritesMeanwhile`
+- `internal/host/stream/handover_test.go` `TestAPasteInFlightArrivesWholeAndInputAfterTheFreezeIsRefused`
+- `internal/host/stream/handover_test.go` `TestAHandoverIsRefusedWhileAWriteIsStuck`
+- `internal/host/stream/handover_test.go` `TestAResumedRelayServesTheSameScreen`
+- `internal/host/terminal/checkpoint_test.go` `TestThePreambleCarriesTheStateLaterOutputUses`
+- `internal/host/terminal/checkpoint_test.go` `TestTheContinuationsTheCheckpointChanges`
 - `test/workflow/fixture_switch_test.go` `TestFixtureSwitch`
 
 ## Views and changes

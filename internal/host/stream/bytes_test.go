@@ -18,6 +18,14 @@ import (
 // answers the socket its clients dial.
 func served(t *testing.T, program string) string {
 	t.Helper()
+	_, socket := relayed(t, program)
+	return socket
+}
+
+// relayed is served's relay with its socket. The listener leaves its path
+// on close, as the space host's does (state.Listener).
+func relayed(t *testing.T, program string) (*Relay, string) {
+	t.Helper()
 	pty, err := terminal.OpenPlain(terminal.Size{Cols: 60, Rows: 10})
 	if err != nil {
 		t.Fatal(err)
@@ -42,10 +50,11 @@ func served(t *testing.T, program string) string {
 		t.Fatal(err)
 	}
 	socket := filepath.Join(dir, "s")
-	listener, err := net.Listen("unix", socket)
+	listener, err := net.ListenUnix("unix", &net.UnixAddr{Name: socket, Net: "unix"})
 	if err != nil {
 		t.Fatal(err)
 	}
+	listener.SetUnlinkOnClose(false)
 	r := New(pty, grid, "", nil)
 	go r.Pump()
 	go r.Answer()
@@ -55,10 +64,10 @@ func served(t *testing.T, program string) string {
 		_ = cmd.Process.Kill()
 		_ = cmd.Wait()
 		_ = pty.Close()
-		_ = grid.Close()
+		_ = r.Grid().Close()
 		_ = os.RemoveAll(dir)
 	})
-	return socket
+	return r, socket
 }
 
 // attach dials socket in the raw mode.

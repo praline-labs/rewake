@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
+	"sync/atomic"
 	"time"
 
 	"github.com/praline-labs/rewake/internal/core/registry"
@@ -27,6 +29,16 @@ type host struct {
 	spec   Spec
 	record space.Record
 	run    string
+	// relay serves the worker's terminal, and worker is the worker's
+	// process, once started.
+	relay  *stream.Relay
+	worker int
+	// open says the record is open and the relay serves, and closing that
+	// the watch decided to close: what a switch is answered (handover.go).
+	open, closing atomic.Bool
+	// handoff takes a switch's drop into the watch, which hands over between
+	// two of its ticks.
+	handoff chan handoff
 }
 
 // serve is the space host's stage: it holds the room's lease for as long as
@@ -37,10 +49,8 @@ func serve(spec Spec) int {
 		return 1
 	}
 	defer lease.Release()
-	// A space host's state is handed over by no image yet: a switch of the
-	// room while it runs is refused, and the room is restarted instead.
-	defer switching.Watch(context.Background(), spec.Dir, switching.CannotHandOver("the space host of "+spec.ID, "a space host does not hand its run over yet"))()
-	h := &host{spec: spec}
+	h := &host{spec: spec, handoff: make(chan handoff)}
+	defer switching.Watch(context.Background(), spec.Dir, h)()
 	if err := h.start(); err != nil {
 		return 1
 	}
@@ -111,6 +121,8 @@ func (h *host) start() error {
 	var waited error
 	go func() { waited = cmd.Wait(); close(reaped) }()
 	r := stream.New(pty, grid, os.Getenv(terminal.DefaultsEnv), nil)
+	// A resume after an exec that failed replaced the grid.
+	defer func() { _ = r.Grid().Close() }()
 	go r.Pump()
 	go r.Answer()
 
@@ -122,15 +134,24 @@ func (h *host) start() error {
 		stopGroup(cmd.Process.Pid, reaped, stopping)
 		return h.never("the worker was started and stopped: its run could not be recorded: " + err.Error())
 	}
-	go r.Serve(listener, nil)
+	h.relay, h.worker = r, cmd.Process.Pid
+	return h.serving(listener, reaped, func() error { return waited })
+}
+
+// serving serves the worker's terminal and watches until the space closes,
+// then ends the worker; waited is its exit, read once reaped is closed.
+func (h *host) serving(listener net.Listener, reaped <-chan struct{}, waited func() error) error {
+	go h.relay.Serve(listener, nil)
+	h.open.Store(true)
 	why := h.watch(reaped)
+	h.closing.Store(true)
 	if why == "" {
-		why = "the worker exited by itself" + exitWords(waited)
-		if line := r.LastLine(); line != "" {
+		why = "the worker exited by itself" + exitWords(waited())
+		if line := h.relay.LastLine(); line != "" {
 			why += "; its last line: " + line
 		}
 	}
-	return h.finish(cmd.Process.Pid, reaped, why, stopping)
+	return h.finish(h.worker, reaped, why, stopping)
 }
 
 // finish ends the worker's process group and records the end it observed.
@@ -162,6 +183,11 @@ func (h *host) watch(reaped <-chan struct{}) string {
 		select {
 		case <-reaped:
 			return ""
+		case request := <-h.handoff:
+			// Returns only when the exec did not happen; the next tick reads
+			// what changed meanwhile.
+			request.reply <- h.handOff(request.park)
+			continue
 		case <-tick.C:
 		}
 		// rewake space close asks by the record alone: it moves the space to

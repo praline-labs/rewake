@@ -9,6 +9,7 @@ import (
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/core/mirror"
 	"github.com/praline-labs/rewake/internal/core/registry"
+	"github.com/praline-labs/rewake/internal/infra/memfile"
 )
 
 // startMirror serves the session's conversation to rewake's own face when the
@@ -49,7 +50,7 @@ func handModel(model *mirror.Model) (*os.File, error) {
 	if err != nil {
 		return nil, err
 	}
-	return memoryFile("rewake-model", raw)
+	return memfile.New("rewake-model", raw)
 }
 
 // adoptModel reads the model an earlier image handed over, and closes its file.

@@ -35,7 +35,7 @@ func (g *Grid) Attach() *Stream {
 	s.Live = s.live
 	g.mu.Lock()
 	defer g.mu.Unlock()
-	s.Preamble = append(g.emu.replay(), g.unfinished.bytes()...)
+	s.Preamble = append(g.emu.replay(false), g.unfinished.bytes()...)
 	if g.ended {
 		close(s.live)
 		return s

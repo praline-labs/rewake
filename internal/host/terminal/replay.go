@@ -5,64 +5,156 @@ import (
 	"strings"
 
 	uv "github.com/charmbracelet/ultraviolet"
-	"github.com/charmbracelet/x/ansi"
+	"github.com/charmbracelet/x/vt"
 )
 
-// replay is the screen and the input modes as bytes a fresh terminal takes
-// to stand where this emulator stands (docs/shell.md): the alternate
-// screen, the screen's cells, the cursor, the title, and every mode a key's
-// bytes depend on. A late client without the modes loses Shift+Enter.
-func (v *vtEmulator) replay() []byte {
+// replay is the state as bytes a fresh terminal takes to stand where this
+// emulator stands (docs/shell.md): both screens with their margins, saved
+// cursors and cursors (checkpoint.go), a pending wrap, the title, and every
+// mode. A late client without the input modes loses Shift+Enter; a next
+// image without the rest writes the program's later output elsewhere.
+//
+// A seed also carries the modes only the emulator acts on, grapheme
+// clustering and in-band size reports, which a client's terminal is not
+// given: under ?2048 it would report its own size to the program.
+func (v *vtEmulator) replay(seed bool) []byte {
+	c := v.checkpoint()
 	var b strings.Builder
-	alt := v.emu.IsAltScreen()
-	if alt {
-		b.WriteString("\x1b[?1049h")
-	}
 	b.WriteString("\x1b[0m\x1b[H\x1b[2J")
-	cols, rows := v.emu.Width(), v.emu.Height()
-	for y := range rows {
-		col := 0
-		for _, run := range v.row(y, cols) {
-			if run.Fg != (Color{}) || run.Bg != (Color{}) || run.Attrs != 0 || strings.TrimRight(run.Text, " ") != "" {
-				// Each run is placed, so a client measuring a glyph's width
-				// otherwise than this emulator is off by a run at most.
-				b.WriteString("\x1b[" + strconv.Itoa(y+1) + ";" + strconv.Itoa(col+1) + "H")
-				b.WriteString(sgr(run))
-				b.WriteString(run.Text)
-			}
-			col += run.Cols
+	// DECSLRM is taken only under DECLRMM, and the library keeps the left
+	// and right margins after DECLRMM is reset, so both are written and
+	// DECLRMM is reset afterwards when the program had.
+	b.WriteString("\x1b[?69h")
+	main, alt := c.screens[0], c.screens[1]
+	v.screenReplay(&b, main, true)
+	// The alternate screen is entered by 1047, which saves no cursor, so the
+	// main screen's saved cursor stays the one just set. Hidden, it is
+	// entered only for the margins and saved cursor the library keeps for
+	// its next entry.
+	if c.alt {
+		cursorReplay(&b, main.cursor, uv.Rectangle{})
+		b.WriteString("\x1b[?1047h")
+		v.screenReplay(&b, alt, true)
+	} else {
+		b.WriteString("\x1b[?1047h")
+		v.screenReplay(&b, alt, false)
+		b.WriteString("\x1b[?1047l")
+	}
+	if !v.modes.Margins {
+		b.WriteString("\x1b[?69l")
+	}
+	active := c.active()
+	placed := func(origin uv.Rectangle) {
+		cursorReplay(&b, active.cursor, origin)
+		if c.phantom {
+			pendingWrap(&b, active, origin)
 		}
 	}
-	b.WriteString(sgr(Run{Fg: colorOf(v.pen.Fg), Bg: colorOf(v.pen.Bg), Attrs: attrsOf(v.pen)}))
-	pos := v.emu.CursorPosition()
-	b.WriteString("\x1b[" + strconv.Itoa(pos.Y+1) + ";" + strconv.Itoa(pos.X+1) + "H")
-	if v.emu.CursorHidden() {
-		b.WriteString("\x1b[?25l")
-	} else {
-		b.WriteString("\x1b[?25h")
+	switch {
+	case !v.modes.Origin:
+		placed(uv.Rectangle{})
+	case active.cursor.In(active.scroll):
+		// DECOM before the cursor, which is then placed within the margins:
+		// a terminal homes the cursor when DECOM is set.
+		b.WriteString("\x1b[?6h")
+		placed(active.scroll)
+	default:
+		// Under DECOM no CUP reaches a cursor outside the margins. It is
+		// placed before, which the library keeps and a terminal that homes
+		// the cursor on DECOM does not, until the program moves it.
+		placed(uv.Rectangle{})
+		b.WriteString("\x1b[?6h")
+	}
+	if v.modes.NoWrap {
+		// After the pending wrap, which only autowrap makes.
+		b.WriteString("\x1b[?7l")
+	}
+	if v.modes.NewLine {
+		b.WriteString("\x1b[20h")
 	}
 	if v.title != "" {
 		b.WriteString("\x1b]2;" + v.title + "\x07")
 	}
 	b.WriteString(v.modes.replay())
+	if seed && v.modes.Unicode {
+		b.WriteString("\x1b[?2027h")
+	}
+	if seed && v.modes.InBandResize {
+		b.WriteString("\x1b[?2048h")
+	}
 	b.WriteString(v.kittyReplay())
 	return []byte(b.String())
 }
 
-// followPen keeps the pen beside the library's: a cut between an SGR and
-// the text after it is common in a pty read, and a client without the pen
-// writes that text plain. A pen restored by DECRC is not followed; the next
-// SGR sets it right.
-func (v *vtEmulator) followPen() {
-	// Called before the library's own handlers, which still run.
-	v.emu.RegisterCsiHandler('m', func(p ansi.Params) bool {
-		uv.ReadStyle(p, &v.pen)
-		return false
-	})
-	v.emu.RegisterEscHandler('c', func() bool {
-		v.pen = uv.Style{}
-		return false
-	})
+// screenReplay writes the shown screen's cells when cells is set, then its
+// margins and its saved cursor. The cells go first: margins would bend
+// their lines.
+func (v *vtEmulator) screenReplay(b *strings.Builder, s screenState, cells bool) {
+	size := v.size()
+	if cells {
+		for y := range size.Rows {
+			col := 0
+			for _, run := range rowOf(s.screen.CellAt, y, size.Cols) {
+				if run.Fg != (Color{}) || run.Bg != (Color{}) || run.Attrs != 0 || strings.TrimRight(run.Text, " ") != "" {
+					// Each run is placed, so a client measuring a glyph's
+					// width otherwise than this emulator is off by a run
+					// at most.
+					b.WriteString("\x1b[" + strconv.Itoa(y+1) + ";" + strconv.Itoa(col+1) + "H")
+					b.WriteString(sgr(run))
+					b.WriteString(run.Text)
+				}
+				col += run.Cols
+			}
+		}
+	}
+	// DECSTBM and DECSLRM; each homes the cursor.
+	b.WriteString("\x1b[" + strconv.Itoa(s.scroll.Min.Y+1) + ";" + strconv.Itoa(s.scroll.Max.Y) + "r")
+	b.WriteString("\x1b[" + strconv.Itoa(s.scroll.Min.X+1) + ";" + strconv.Itoa(s.scroll.Max.X) + "s")
+	cursorReplay(b, s.saved, uv.Rectangle{})
+	b.WriteString("\x1b7")
+}
+
+// cursorReplay places the cursor, within origin when DECOM is set, and
+// gives it its pen, its style and its visibility, all of which DECSC saves.
+func cursorReplay(b *strings.Builder, cur vt.Cursor, origin uv.Rectangle) {
+	b.WriteString("\x1b[" + strconv.Itoa(cur.Y-origin.Min.Y+1) + ";" + strconv.Itoa(cur.X-origin.Min.X+1) + "H")
+	b.WriteString(penReplay(cur.Pen))
+	shape := 2*int(cur.Style) + 1
+	if cur.Steady {
+		shape++
+	}
+	b.WriteString("\x1b[" + strconv.Itoa(shape) + " q")
+	if cur.Hidden {
+		b.WriteString("\x1b[?25l")
+	} else {
+		b.WriteString("\x1b[?25h")
+	}
+}
+
+// pendingWrap writes the last cell of the cursor's row again in its own
+// style, which leaves the cursor pending a wrap as the program left it: the
+// next glyph begins the next line rather than overwrite this one. Then the
+// pen again. The second half of a wide glyph is left as it is.
+func pendingWrap(b *strings.Builder, s screenState, origin uv.Rectangle) {
+	width := s.screen.Width()
+	cell := s.screen.CellAt(width-1, s.cursor.Y)
+	if cell == nil || cell.Width == 0 {
+		return
+	}
+	content := cell.Content
+	if content == "" {
+		content = " "
+	}
+	b.WriteString("\x1b[" + strconv.Itoa(s.cursor.Y-origin.Min.Y+1) + ";" + strconv.Itoa(width-origin.Min.X) + "H")
+	b.WriteString(penReplay(cell.Style) + content + penReplay(s.cursor.Pen))
+}
+
+// penReplay is a pen whole, from the defaults.
+func penReplay(pen uv.Style) string {
+	if pen.IsZero() {
+		return "\x1b[0m"
+	}
+	return "\x1b[0m" + pen.String()
 }
 
 // replay sets the modes that are on; a fresh terminal has every one off.

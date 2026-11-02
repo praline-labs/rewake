@@ -12,7 +12,7 @@ func TestAWideGlyphIsARunOfItsOwn(t *testing.T) {
 	vt := emulator.(*vtEmulator)
 	defer func() { _ = vt.stopReplies() }()
 	vt.write([]byte("✅x界ab"))
-	runs := vt.row(0, 8)
+	runs := rowOf(vt.emu.CellAt, 0, 8)
 	want := []Run{{Text: "✅", Cols: 2}, {Text: "x", Cols: 1}, {Text: "界", Cols: 2}, {Text: "ab ", Cols: 3}}
 	if len(runs) != len(want) {
 		t.Fatalf("runs %+v, want %+v", runs, want)
@@ -38,7 +38,7 @@ func TestATitleIsNeverDrawn(t *testing.T) {
 		vt := emulator.(*vtEmulator)
 		vt.write([]byte(stream[:cut]))
 		vt.write([]byte(stream[cut:]))
-		runs := vt.row(0, 20)
+		runs := rowOf(vt.emu.CellAt, 0, 20)
 		_ = vt.stopReplies()
 		if len(runs) == 0 || runs[0].Text[:2] != "XY" || vt.title != "✳ é" {
 			t.Fatalf("cut at %d: row %+v, title %q, want XY and ✳ é", cut, runs, vt.title)

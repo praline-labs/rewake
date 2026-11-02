@@ -115,7 +115,7 @@ func TestThePreambleCarriesEveryInputMode(t *testing.T) {
 	g.commit([]byte(program), false)
 	s := g.Attach()
 	for _, mode := range []string{
-		"\x1b[?1049h", "\x1b[?1h", "\x1b[?66h", "\x1b[?2004h", "\x1b[?1004h",
+		"\x1b[?1047h", "\x1b[?1h", "\x1b[?66h", "\x1b[?2004h", "\x1b[?1004h",
 		"\x1b[?1002h", "\x1b[?1006h", "\x1b[>4;2m", "\x1b[=1;1u\x1b[>3u\x1b[>11u", "\x1b]2;tïtle\x07",
 	} {
 		if !strings.Contains(string(s.Preamble), mode) {

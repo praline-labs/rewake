@@ -17,6 +17,10 @@ const (
 	// replyQueue bounds the answers waiting to be taken. Answers beyond it
 	// are dropped rather than stop the emulator in the middle of a write.
 	replyQueue = 64
+	// seeded follows a seed's answers on the reply pipe, which hands each
+	// write to one read whole and never joins two; the emulator never
+	// answers with a NUL.
+	seeded = "\x00rewake: seeded\x00"
 )
 
 // Grid is the screen a program draws, kept by the emulator from the
@@ -45,6 +49,7 @@ type Grid struct {
 	// dropped, never sent on a closed channel.
 	inMu    sync.RWMutex
 	over    bool
+	seeding bool
 	chunks  chan []byte
 	answers chan []byte
 	fed     chan struct{}
@@ -53,7 +58,23 @@ type Grid struct {
 }
 
 // NewGrid is the screen of a program on a terminal of size.
-func NewGrid(size Size) (*Grid, error) {
+func NewGrid(size Size) (*Grid, error) { return newGrid(size, false) }
+
+// NewSeededGrid is the screen of a program handed over by an image before
+// this one, seeded with what that image's grid held (Seed). The seed's
+// writing answers nothing: those answers, an in-band size report among them,
+// were the old image's to give, and the program heard them or never asked.
+func NewSeededGrid(size Size, seed []byte) (*Grid, error) {
+	g, err := newGrid(size, true)
+	if err != nil {
+		return nil, err
+	}
+	g.commit(seed, false)
+	g.emu.inject([]byte(seeded))
+	return g, nil
+}
+
+func newGrid(size Size, seeding bool) (*Grid, error) {
 	if err := size.check(); err != nil {
 		return nil, err
 	}
@@ -62,7 +83,7 @@ func NewGrid(size Size) (*Grid, error) {
 		return nil, err
 	}
 	g := &Grid{
-		emu: emu, chunks: make(chan []byte, 64),
+		emu: emu, seeding: seeding, chunks: make(chan []byte, 64),
 		answers: make(chan []byte, replyQueue), fed: make(chan struct{}),
 	}
 	g.wg.Add(2)
@@ -141,9 +162,12 @@ func (g *Grid) drain() {
 	defer close(g.answers)
 	r := g.emu.replies()
 	buf := make([]byte, replyRead)
+	skipping := g.seeding
 	for {
 		n, err := r.Read(buf)
-		if n > 0 {
+		if n > 0 && skipping {
+			skipping = string(buf[:n]) != seeded
+		} else if n > 0 {
 			select {
 			case g.answers <- append([]byte(nil), buf[:n]...):
 			default:
@@ -159,6 +183,22 @@ func (g *Grid) drain() {
 // report, the device's attributes — for whoever answers the program; closed
 // once the grid is.
 func (g *Grid) Answers() <-chan []byte { return g.answers }
+
+// Seed is what a grid of the next image is seeded with (NewSeededGrid): a
+// raw stream's preamble, taken once the grid is closed, so it holds the last
+// of the output.
+func (g *Grid) Seed() []byte {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	return append(g.emu.replay(true), g.unfinished.bytes()...)
+}
+
+// Size is the grid's size.
+func (g *Grid) Size() Size {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	return g.emu.size()
+}
 
 // Resize sizes the grid. The caller sizes the terminal after it: the program
 // draws for its new size only once the kernel tells it, and by then the grid

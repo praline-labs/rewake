@@ -26,10 +26,12 @@ import (
 // the stage it names; a worker never inherits it.
 const Env = "REWAKE_SPACE_HOST"
 
-// The stages a spec names.
+// The stages a spec names: the launcher's, the space host's, and the space
+// host's next image after a switch of the room's build (handover.go).
 const (
 	stageLaunch = "launch"
 	stageServe  = "serve"
+	stageAdopt  = "adopt"
 )
 
 // Spec is what the space host needs beyond the record: where the room is,
@@ -68,6 +70,9 @@ type Spec struct {
 	// Launcher is the launcher's pid, which the space host waits to see gone
 	// before it shows itself outside main's run.
 	Launcher int `json:"launcher,omitempty"`
+	// Handover is what an earlier image of the space host handed over, for
+	// the stage adopt.
+	Handover *Handover `json:"handover,omitempty"`
 }
 
 func (s Spec) encode() (string, error) {
@@ -116,6 +121,8 @@ func Stage(raw string) int {
 		return launch(spec)
 	case stageServe:
 		return serve(spec)
+	case stageAdopt:
+		return adopt(spec)
 	}
 	_, _ = fmt.Fprintf(os.Stderr, "rewake: %s names no stage %q\n", Env, spec.Stage)
 	return 2

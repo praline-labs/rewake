@@ -15,15 +15,18 @@ type emulator interface {
 	// come out of replies while it runs.
 	write(p []byte)
 	resize(size Size)
+	size() Size
 	// defaults sets the colors the program's queries of the default
 	// foreground and background are answered with; nil keeps one.
 	defaults(fg, bg color.Color)
 	// replay is the screen and the input modes as bytes for a fresh
-	// terminal (replay.go).
-	replay() []byte
+	// terminal (replay.go); for a seed, the emulator's own modes too.
+	replay(seed bool) []byte
 	// look is the whole screen, styled rows with the cursor.
 	look() look
 	replies() io.Reader
+	// inject writes into replies, after every answer before it.
+	inject(p []byte)
 	// stopReplies ends replies, so its reader returns.
 	stopReplies() error
 }

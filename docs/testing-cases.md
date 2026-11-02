@@ -53,8 +53,10 @@ the room's copy becomes it.
 an install of the case's own, which is then replaced by the same tree linked with another build
 time; the person's `rewake restart rewake` switches the room, both wrappers keep their pid, epoch
 and harness and run the new image, the room's build and copy are the new build, and a task sent
-across the switch gets exactly one report. With a space open, a second switch is refused naming
-the space host, which cannot hand over, and the room keeps its build.
+across the switch gets exactly one report. With a space open, a second switch back goes through:
+the space host and its worker keep their pid and run the first build, the space stays open with
+the screen it showed, and a task gets one report. The committed switch's socket, which its leader
+cannot remove once its lease is revoked, is the scenario's to clear after checking nothing listens.
 
 `fixture-wrapper-killed`: a fixture wrapper killed outright takes its session half with it within
 three seconds. The fixture's program watches its parent's pid, since the backend asks for no

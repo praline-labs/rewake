@@ -188,10 +188,11 @@ The space socket and main's `sock/host.sock` serve the same mode, `b` (bytes), f
   client's subscription are taken there, between two committed pieces, so the client gets exactly
   the bytes the emulator took after the snapshot. Not in `relay.pump`: `Grid.Write` queues, and
   the holder delays a suffix, so a read of the pty is not the emulator's boundary.
-- **The preamble:** the alternate screen if on, the screen as ANSI (each run placed, indexed
-  colours kept as indices), the pen text is written in now (a cut between an SGR and its text is
-  common; the emulator keeps the pen private, so rewake follows SGR itself, a pen restored by
-  DECRC excepted), the cursor's place and visibility, the title, and the input modes — DECCKM,
+- **The preamble** is the emulator's checkpoint as bytes (below, "The space host's emulator"):
+  both screens as ANSI (each run placed, indexed colours kept as indices) with their margins and
+  saved cursors, the cursor with its pen — a cut between an SGR and its text is common — its
+  style and visibility, a pending wrap, DECOM, autowrap, LNM and DECLRMM, the title, and the input
+  modes — DECCKM,
   DECNKM (the application keypad), bracketed paste 2004, focus 1004, mouse 9, 1000, 1002, 1003
   and 1006, modifyOtherKeys, and the kitty stack as one push per entry in order, so a later pop
   finds what the program pushed before. A client that attached late without the modes would lose
@@ -256,6 +257,26 @@ What the library does not do, and what the package does about it:
 - **What a run cannot carry is dropped**: concealed text is drawn as blanks; blink, the
   underline's style and colour, and hyperlinks are left out; a wide glyph cut at the right edge is
   drawn as blanks.
+
+**The checkpoint.** What changes the program's later output is more than the cells shown: the
+screen under the alternate one, each screen's margins and saved cursor, the cursor's pen and
+style, a pending wrap and the modes the library acts on. A preamble without them drew right and
+went wrong at the next newline, `ESC 8` or glyph at the right edge (found in review, November 2,
+2026). The library keeps that state unexported, and following it from the bytes would rewrite its
+rules, so `checkpoint.go` reads it from the library: the plain fields (`atPhantom`, the active
+screen, each screen's `scroll` and `saved`) by `reflect`, each screen through its own exported
+methods reached by `unsafe`. `newVT` refuses a library whose fields are gone or retyped, so an
+update of the pin fails every test of the package rather than draw a wrong screen. `replay`
+writes, in order: the main screen's cells, margins (DECSTBM, and DECSLRM under a DECLRMM it
+resets afterwards when the program had, since the library keeps the margins past it) and saved
+cursor; the alternate screen entered by 1047, which saves no cursor, with the same — a hidden one
+entered and left only for the margins and saved cursor the library keeps for its next entry; the
+cursor, placed within the margins when DECOM is set, and a pending wrap as the last cell written
+again; autowrap, LNM, the title, the input modes and the kitty stack. A seed for the next image of
+a host (`Grid.Seed`) adds grapheme clustering 2027 and in-band size reports 2048, which a client's
+widget is not given: under 2048 it would report its own size to the program. Left out: tab stops
+set by HTS and TBC, and the G0–G3 charsets; neither harness sends them, and a full reset puts both
+back.
 
 A post of keys is written with exactly one `write(2)` on the master's raw descriptor, at most
 4096 bytes, under one mutex: a key split across two writes reaches the program as two keys. A

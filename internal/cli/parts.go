@@ -8,6 +8,7 @@ import (
 	"github.com/praline-labs/rewake/internal/core/mirror"
 	"github.com/praline-labs/rewake/internal/host"
 	"github.com/praline-labs/rewake/internal/host/mainhost"
+	"github.com/praline-labs/rewake/internal/host/spacehost"
 	"github.com/praline-labs/rewake/internal/infra/build"
 	"github.com/praline-labs/rewake/internal/infra/parts"
 	"github.com/praline-labs/rewake/internal/infra/state"
@@ -24,11 +25,12 @@ type Contracts struct {
 
 // The contracts a running room holds across a switch of its build
 // (docs/rules/state.md#switching-a-running-room): the wrapper's handover and
-// the face's model it carries, and the switch's own mark, messages and parked
-// image.
+// the face's model it carries, the space host's, and the switch's own mark,
+// messages and parked image.
 const (
 	handoverContract       = "handover"
 	mirrorHandoverContract = "handover.mirror"
+	spaceHandoverContract  = "handover.space"
 	switchContract         = "switch"
 )
 
@@ -43,6 +45,7 @@ func contractsOf(catalog adapter.Catalog) Contracts {
 			parts.MirrorContract:   strconv.Itoa(mirror.Version),
 			handoverContract:       strconv.Itoa(host.HandoverVersion),
 			mirrorHandoverContract: strconv.Itoa(mirror.HandedVersion),
+			spaceHandoverContract:  strconv.Itoa(spacehost.HandoverVersion),
 			switchContract:         strconv.Itoa(state.SwitchVersion),
 		},
 		Requires: map[string]string{},

@@ -25,7 +25,9 @@ What a space guarantees about its worker, its record and its closing; how a spac
   ended" (`space.BeginClosingFor`), which the hosts read at their next tick (SP10's path); main's
   own end is final, so no work that would have gone on is stopped. A worker that ends
   by itself closes the space the same way, with its exit and its last line. Main's run read as
-  unknown ends nothing.
+  unknown ends nothing. A switch of the room's build pauses the reading while the space host is
+  parked, which the switch's drop and drain bound to about 10 s, and the next image's first tick
+  reads main's run and the record again ([space.md](../space.md#a-switch-of-the-rooms-build)).
   Tests:
   - `internal/host/spacehost/stop_test.go` `TestTheCloseSequenceEndsAWorkerThatIgnoresHangupAndTerm`
   - `test/workflow/fixture_space_test.go` `TestFixtureSpace`
