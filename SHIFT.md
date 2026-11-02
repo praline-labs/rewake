@@ -116,7 +116,7 @@ Open a document for numbers, commands and names: the map only points.
 - `docs/worktree-tools.md` — A worker entering a checkout mid-session, the worktree status tool and its close forecast, and main's list and land tools.
   sections: A template's `worktree = true` · `rewake worktree status` · The `worktree_status` tool · Main's `worktree_list` and `worktree_land` · A worker's entry: `enter_worktree = true` and `worktree_enter`
 - `docs/worktree.md` — Checkouts rewake makes for a launch: creation, records, land and finish, removal and what keeps one.
-  sections: The launch · A reviewer's checkout · Launches at once · Files git ignores: `.worktreeinclude` · Landing and finishing · Listing and removing
+  sections: The launch · A checkout across a switch · A reviewer's checkout · Launches at once · Files git ignores: `.worktreeinclude` · Landing and finishing · Listing and removing
 
 ### docs/roadmap/
 
