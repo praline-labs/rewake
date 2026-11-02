@@ -34,8 +34,9 @@ const (
 )
 
 // SwitchVersion is the version of the mark, of the leader's socket messages
-// and of a parked image's handover: the switch contract.
-const SwitchVersion = 1
+// and of a parked image's handover: the switch contract. 2 added the
+// attempt's own id.
+const SwitchVersion = 2
 
 // ErrNoSwitchMark is a room no switch is marked in.
 var ErrNoSwitchMark = errors.New("no switch is marked in the room")
@@ -46,9 +47,12 @@ var ErrSwitchClaimed = errors.New("a switch is already marked in the room")
 // SwitchMark is one attempt to switch a room's build, written by its leader.
 type SwitchMark struct {
 	Version int `json:"version"`
-	// Leader and LeaderStart name the attempt: the leader's pid and start.
+	// Leader and LeaderStart are the leader's pid and start, and Attempt the
+	// attempt's own id: a leader that tries again claims a new attempt, which
+	// a participant that answered the last one joins again.
 	Leader      int    `json:"leader"`
 	LeaderStart uint64 `json:"leaderStart"`
+	Attempt     string `json:"attempt"`
 	Target      string `json:"target"`
 	Staged      string `json:"staged"`
 	Socket      string `json:"socket"`
@@ -59,7 +63,7 @@ type SwitchMark struct {
 
 // Same says two marks are one attempt.
 func (m SwitchMark) Same(other SwitchMark) bool {
-	return m.Leader == other.Leader && m.LeaderStart == other.LeaderStart && m.Target == other.Target
+	return m.Leader == other.Leader && m.LeaderStart == other.LeaderStart && m.Attempt == other.Attempt && m.Target == other.Target
 }
 
 // Past says the mark's deadline has passed at now.

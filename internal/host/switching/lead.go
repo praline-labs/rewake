@@ -41,6 +41,10 @@ type Outcome struct {
 	// Why says why the room stays on its build, or what was lost after the
 	// commit.
 	Why string
+	// Busy says the attempt ended, the room on its build, only because a
+	// participant was busy: at the ask or at the drop. Another attempt may
+	// pass once it is idle.
+	Busy bool
 	// Adopted and Lost name the participants by who they said they are.
 	Adopted, Lost []string
 }
@@ -62,6 +66,7 @@ type event struct {
 type leader struct {
 	sw      *build.Switch
 	bounds  Bounds
+	stop    func() string
 	events  chan event
 	members map[int]*member
 }
@@ -70,7 +75,12 @@ type leader struct {
 // leaves its lease to the caller. Before the commit any refusal leaves the
 // room on its build with every participant holding its lease again; after
 // it, the room is the target's and a participant that does not adopt is lost.
-func Lead(sw *build.Switch, bounds Bounds) Outcome {
+func Lead(sw *build.Switch, bounds Bounds) Outcome { return LeadUntil(sw, bounds, nil) }
+
+// LeadUntil is Lead whose ask ends early once stop, polled while asking,
+// says why: the run the attempt was asked for has gone. Once dropping, the
+// attempt goes to its end within its bounds.
+func LeadUntil(sw *build.Switch, bounds Bounds, stop func() string) Outcome {
 	// The socket of an earlier attempt, whose leader's lease was revoked
 	// before it could remove it.
 	_ = state.Discard(sw.Mark.Socket)
@@ -80,7 +90,7 @@ func Lead(sw *build.Switch, bounds Bounds) Outcome {
 		return Outcome{Why: "the switch's socket could not be served: " + err.Error()}
 	}
 	defer func() { _ = listener.Close() }()
-	l := &leader{sw: sw, bounds: bounds, events: make(chan event, 64), members: map[int]*member{}}
+	l := &leader{sw: sw, bounds: bounds, stop: stop, events: make(chan event, 64), members: map[int]*member{}}
 	go l.accept(listener)
 	return l.run()
 }
@@ -142,19 +152,26 @@ func (l *leader) until(bound time.Duration, done func() bool) bool {
 func (l *leader) run() Outcome {
 	settled := time.Now().Add(l.bounds.Settle)
 	var refused string
+	busy := false
 	l.until(l.bounds.Ask, func() bool {
 		if why := l.with(Cannot); why != "" {
 			refused = "restart the room: " + why
 			return true
 		}
+		if l.stop != nil {
+			if why := l.stop(); why != "" {
+				refused = why
+				return true
+			}
+		}
 		return time.Now().After(settled) && l.with(Busy) == "" && l.all(Ready)
 	})
 	if refused == "" && (l.with(Busy) != "" || !l.all(Ready)) {
-		refused = "not every session was idle within " + l.bounds.Ask.String() + ": " + l.with(Busy)
+		refused, busy = "not every session was idle within "+l.bounds.Ask.String()+": "+l.with(Busy), true
 	}
 	if refused != "" {
 		_ = l.sw.End()
-		return Outcome{Why: refused}
+		return Outcome{Why: refused, Busy: busy}
 	}
 	if err := l.sw.Phase(state.PhaseDropping, time.Now().Add(l.bounds.Drop+l.bounds.Drain+hold)); err != nil {
 		_ = l.sw.End()
@@ -162,7 +179,12 @@ func (l *leader) run() Outcome {
 	}
 	l.order(Drop)
 	if !l.until(l.bounds.Drop, func() bool { return l.with(Busy) != "" || l.all(Parked) }) || l.with(Busy) != "" {
-		return l.abort("not every session could hand over: " + l.with(Busy) + l.missing(Parked))
+		// A drop refused as busy is a session that turned busy since it was
+		// ready; one silent past the bound is not.
+		busy := l.with(Busy) != ""
+		out := l.abort("not every session could hand over: " + l.with(Busy) + l.missing(Parked))
+		out.Busy = busy
+		return out
 	}
 	holders, err := l.sw.Exclusive(l.bounds.Drain)
 	switch {

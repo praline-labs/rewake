@@ -1,6 +1,8 @@
 package build
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
@@ -141,8 +143,12 @@ func Claim(lease *Lease, target, socket string, deadline time.Time) (*Switch, er
 	if err != nil {
 		return nil, err
 	}
+	attempt := make([]byte, 16)
+	if _, err := rand.Read(attempt); err != nil {
+		return nil, err
+	}
 	mark := state.SwitchMark{
-		Version: state.SwitchVersion, Leader: os.Getpid(), LeaderStart: start, Target: target,
+		Version: state.SwitchVersion, Leader: os.Getpid(), LeaderStart: start, Attempt: hex.EncodeToString(attempt), Target: target,
 		Staged: state.StagedPath(lease.room, target), Socket: socket, Phase: state.PhaseAsking, Deadline: deadline.UnixMilli(),
 	}
 	found, err := state.ClaimSwitch(lease.room, mark, func(m state.SwitchMark) bool { return !SwitchLive(m, time.Now()) })

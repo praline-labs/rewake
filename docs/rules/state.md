@@ -257,9 +257,11 @@ and `internal/cli/restart_rewake.go`.
 - **The leader** is the command, a change form, so it runs the room's build. Its target is the
   `rewake` in the directory `bin/origin` names; the room's own build there is "nothing to
   switch".
-- **The mark**, `<room>/switch`, is one attempt: the leader's pid and start, the target id, the
-  staged path, the leader's socket (`sock/switch.sock`), a phase — `asking`, `dropping`,
-  `committed`, `aborting` — and a deadline. Its changes are ordered by `.switch.lock`, taken
+- **The mark**, `<room>/switch`, is one attempt: the leader's pid and start, the attempt's own
+  random id — a leader that tries again claims a new attempt, which every participant joins
+  again (found in review, November 2, 2026) —, the target id, the staged path, the leader's
+  socket (`sock/switch.sock`), a phase — `asking`, `dropping`, `committed`, `aborting` — and a
+  deadline. Its changes are ordered by `.switch.lock`, taken
   after the lease. The claim is the leader's first effect: a live mark of another attempt
   refuses it before anything is staged. A mark `asking` is live while its leader runs; from
   `dropping` on it is live until its deadline, whatever became of its leader, since something

@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -110,5 +111,78 @@ func TestAParticipantJoinsALeaderThatServesLate(t *testing.T) {
 	_ = conn.SetReadDeadline(time.Now().Add(time.Second))
 	if err := newLine(conn).receive(&said); err != nil || said.Who != "session w1" || said.Answer != Cannot {
 		t.Errorf("the participant said %+v, %v", said, err)
+	}
+}
+
+// turning is a participant busy until it is told it is idle: main whose turn
+// was open on the first attempt and has ended by the next.
+type turning struct{ ready atomic.Bool }
+
+func (p *turning) Who() string { return "session main" }
+func (p *turning) Answer() (string, string) {
+	if p.ready.Load() {
+		return Ready, ""
+	}
+	return Busy, "main's turn is open"
+}
+func (p *turning) Drop(Park) string { return "not in this test" }
+
+// A leader that tries again after a busy attempt claims a new one, which a
+// participant that answered the last joins: with the attempt named by its
+// leader alone, the second claim was the one already joined and got no
+// participant (found in review, November 2, 2026).
+func TestAParticipantJoinsTheSameLeadersNextAttempt(t *testing.T) {
+	room := buildtest.Dir(t)
+	short, err := os.MkdirTemp("", "sw")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(short) })
+	start, _ := proc.StartTime(os.Getpid())
+	claim := func(attempt string) (state.SwitchMark, *net.UnixListener) {
+		mark := state.SwitchMark{
+			Version: state.SwitchVersion, Leader: os.Getpid(), LeaderStart: start, Attempt: attempt, Target: strings.Repeat("b", 64),
+			Socket: filepath.Join(short, "switch.sock"), Phase: state.PhaseAsking, Deadline: time.Now().Add(time.Minute).UnixMilli(),
+		}
+		if _, err := state.ClaimSwitch(room, mark, func(state.SwitchMark) bool { return true }); err != nil {
+			t.Fatal(err)
+		}
+		listener, err := net.ListenUnix("unix", &net.UnixAddr{Name: mark.Socket, Net: "unix"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		_ = listener.SetDeadline(time.Now().Add(4 * poll))
+		return mark, listener
+	}
+	p := &turning{}
+	stop := Watch(t.Context(), room, p)
+	defer stop()
+	first, listener := claim("1")
+	conn, err := listener.Accept()
+	if err != nil {
+		t.Fatalf("the participant did not join the first attempt: %v", err)
+	}
+	var said answer
+	_ = conn.SetReadDeadline(time.Now().Add(time.Second))
+	if err := newLine(conn).receive(&said); err != nil || said.Answer != Busy {
+		t.Fatalf("the participant said %+v, %v", said, err)
+	}
+	if err := state.EndSwitch(room, first); err != nil {
+		t.Fatal(err)
+	}
+	_ = conn.Close()
+	_ = listener.Close()
+	time.Sleep(2 * poll)
+	p.ready.Store(true)
+	_, listener = claim("2")
+	defer func() { _ = listener.Close() }()
+	conn, err = listener.Accept()
+	if err != nil {
+		t.Fatalf("the participant did not join the same leader's next attempt: %v", err)
+	}
+	defer func() { _ = conn.Close() }()
+	_ = conn.SetReadDeadline(time.Now().Add(time.Second))
+	if err := newLine(conn).receive(&said); err != nil || said.Answer != Ready {
+		t.Errorf("on the next attempt the participant said %+v, %v", said, err)
 	}
 }
