@@ -18,6 +18,7 @@ import (
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/core/worktype"
+	"github.com/praline-labs/rewake/internal/host/delivery"
 	"github.com/praline-labs/rewake/internal/host/switching"
 	"github.com/praline-labs/rewake/internal/infra/build"
 	"github.com/praline-labs/rewake/internal/infra/proc"
@@ -83,6 +84,8 @@ type Handover struct {
 	Shell bool `json:"shell,omitempty"`
 	// Notices are main's notice state (notices_handover.go).
 	Notices *Notices `json:"notices,omitempty"`
+	// Delivery is the delivery server's reminder state (delivery.Memory).
+	Delivery *delivery.Memory `json:"delivery,omitempty"`
 
 	files []*os.File
 	model *os.File
@@ -205,7 +208,7 @@ type reexec struct {
 	notices *noticeHand
 	// handoff asks the delivery server to stop; resume serves again after
 	// an exec that failed.
-	handoff chan chan<- string
+	handoff chan chan<- delivery.Stop
 	resume  chan struct{}
 	ctx     context.Context
 }
@@ -283,7 +286,7 @@ func (r *reexec) try(ctx context.Context) string {
 // returns only when it did not, and the server serves again.
 func (r *reexec) handOff(ctx context.Context, park *switching.Park) string {
 	handing := r.service.(adapter.Handover)
-	reply := make(chan string, 1)
+	reply := make(chan delivery.Stop, 1)
 	select {
 	case r.handoff <- reply:
 	case <-ctx.Done():
@@ -291,18 +294,19 @@ func (r *reexec) handOff(ctx context.Context, park *switching.Park) string {
 	case <-time.After(5 * time.Second):
 		return "the delivery server did not take the request"
 	}
-	if why := <-reply; why != "" {
-		return why
+	stop := <-reply
+	if stop.Why != "" {
+		return stop.Why
 	}
 	// The server has stopped: no notice goes out until an image serves again.
-	why := r.exec(handing, park)
+	why := r.exec(handing, park, stop.Memory)
 	r.resume <- struct{}{}
 	return why
 }
 
 // exec replaces the image with its own; it returns only on a failure, and
 // changed nothing.
-func (r *reexec) exec(handing adapter.Handover, park *switching.Park) string {
+func (r *reexec) exec(handing adapter.Handover, park *switching.Park, memory delivery.Memory) string {
 	handed, err := handing.HandOver()
 	if err != nil {
 		return err.Error()
@@ -326,7 +330,7 @@ func (r *reexec) exec(handing adapter.Handover, park *switching.Park) string {
 		Args: r.request.Args, Intro: r.request.Intro, Command: r.request.Command, Role: r.session.Role, RoleReason: r.session.RoleReason,
 		Template: r.request.Template, WorktreeEntry: r.request.WorktreeEntry, WorkType: r.request.WorkType, WorkTypeText: r.request.WorkType.Text,
 		HarnessPID: r.harness.Pid, HarnessStart: r.start, Service: handed.State, Park: park, Mirror: r.request.Mirror,
-		Shell: r.request.Shell, Notices: notices,
+		Shell: r.request.Shell, Notices: notices, Delivery: &memory,
 	}
 	// The model after the service's handover, which stopped what feeds it.
 	if r.model != nil {

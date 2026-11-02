@@ -77,7 +77,10 @@ type Server struct {
 	Ends <-chan int64
 	// Handoff asks the server to stop for an exec of the wrapper
 	// (handoff.go); each request is answered once. Nil asks never.
-	Handoff <-chan chan<- string
+	Handoff <-chan chan<- Stop
+	// Remembered is the reminder's memory the previous image of this run
+	// handed over (handoff.go), nil for a run's first.
+	Remembered *Memory
 
 	// attempts remembers when each pending message was last tried.
 	attempts map[string]time.Time
@@ -107,7 +110,8 @@ type Server struct {
 	followed bool
 	// announced is when each letter's notice was handed to the harness, on
 	// the boot clock, until a turn end has looked at it (reminder.go). Only
-	// in memory: a run's letters are owed only to that run.
+	// in memory: a run's letters are owed only to that run, whose next image
+	// takes it in the handover.
 	announced map[string]int64
 	// looked is the latest turn end the reminder has looked at, on the boot
 	// clock: a release the harness made before it, heard only after, is
@@ -190,7 +194,8 @@ func (s *Server) Serve(ctx context.Context) {
 }
 
 // begin is what a run does before its first pass, and all it knows: nothing of
-// an earlier run's memory survives, so whatever is owed is found on disk. It
+// an earlier run's memory survives, so whatever is owed is found on disk, but
+// for the reminder's, which its previous image handed over. It
 // answers false when the run is not to serve at all.
 func (s *Server) begin(ctx context.Context) bool {
 	s.attempts = map[string]time.Time{}
@@ -198,7 +203,7 @@ func (s *Server) begin(ctx context.Context) bool {
 	s.held = map[string][]mail.Message{}
 	s.recent = map[string]recentAnnouncement{}
 	s.arrivals = map[string]*arrival{}
-	s.announced = map[string]int64{}
+	s.remembered()
 	s.lockContext = ctx
 	if ctx.Err() != nil || !s.owned() {
 		// Canceled before it began, or the name already belongs to somebody

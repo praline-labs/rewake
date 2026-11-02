@@ -342,7 +342,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 	defer stopAvailability()
 	handover := &reexec{
 		request: request, session: session, runDir: runDir, service: plan.Service, harness: harness, start: harnessStart, model: model, notices: notices,
-		handoff: make(chan chan<- string), resume: make(chan struct{}),
+		handoff: make(chan chan<- delivery.Stop), resume: make(chan struct{}),
 	}
 	defer handover.watch(serveCtx)()
 	adopted(request, runDir)
@@ -375,6 +375,9 @@ func Run(ctx context.Context, request Request) (int, error) {
 			Deliver: wakeIfLive(plan.Wake, live),
 			Ends:    ends,
 			Handoff: handover.handoff,
+		}
+		if request.Handover != nil {
+			server.Remembered = request.Handover.Delivery
 		}
 		if reserver, ok := plan.Wake.(adapter.Reserver); ok {
 			server.Reserve = reserveIfLive(reserver, live)

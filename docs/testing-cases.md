@@ -74,6 +74,13 @@ handover, in `/proc/<pid>/environ`, names the park — so the shell's `lost` wai
 the image that takes the run on: that image ends main's host, main and the shell, the switch has
 committed and holds the room no more, and the worker beside main runs on.
 
+`fixture-switch-errored`: a switch right after a turn ended in an error, as one does on an API
+error, a limit or the person's Esc. A worker whose turns all fail takes a task in a turn that reads
+nothing: the task stays announced and unread, and no finished end looks at it. The person's
+`rewake restart rewake` goes through within 45 s, and the worker's wrapper keeps its pid and epoch
+and runs the new build. Found live with a pi main without a model, refused as busy for the whole
+of the switch's bound; the reminder carried across is the delivery server's own test.
+
 `fixture-wrapper-killed`: a fixture wrapper killed outright takes its session half with it within
 three seconds. The fixture's program watches its parent's pid, since the backend asks for no
 parent-death signal, which the exec of a wrapper handing its run over would fire. The killed

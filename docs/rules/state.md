@@ -346,7 +346,14 @@ main's suspends again; and its notice state, taken from the scan between two sca
 to it after an exec that failed, so the next image tells main nothing twice — a receipt outlives
 the notice in the mailbox — and loses nothing it held (`internal/host/notices_handover.go`,
 November 2, 2026). Main's turns keep its wrapper busy often, and `rewake restart rewake` defers the
-switch until they end rather than being refused (the deferred leader, above). A run that made a
+switch until they end rather than being refused (the deferred leader, above). Every wrapper's
+delivery server hands its reminder's memory over — which letters were announced and not yet
+looked at by a finished turn's end, and the latest end looked at, boot-clock times the exec keeps
+(`delivery.Memory`) — so an announced letter no longer keeps the run busy: a turn that ended in an
+error or was stopped looks at nothing, and found live with a pi main, the run stayed busy for the
+whole of the switch's bound. What still keeps it busy is a notice the harness holds, one a late
+word may take back, and a letter waiting for its delivery (the owner's decision, November 2,
+2026). A run that made a
 checkout and a Claude Code run without its mod answer `cannot`. The fixture's wrappers hand over as
 the switch's test.
 

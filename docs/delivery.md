@@ -294,7 +294,9 @@ end finds those letters before its window; the server also forgets every announc
 an end once it has looked, so a retry of the same end sends nothing. When each notice went out
 is kept in the server's memory only, on the boot clock (a status's `at` is the wall clock, and
 is rewritten): a reminder flag rides on the notice and reaches no letter, status or record. So a
-wrapper restarted loses those times and reminds of nothing from before — an accepted limit, as is
+wrapper restarted loses those times and reminds of nothing from before — an accepted limit; an
+image that adopts the run in a switch of the room's build takes them from the handover
+([rules/state.md](rules/state.md#switching-a-running-room), November 2, 2026) — as is
 a task announced in a turn that failed, was stopped or ended interim, which a later finish does
 not remind of either ([turn-outcomes.md](turn-outcomes.md#failed-turns)).
 
