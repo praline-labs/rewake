@@ -109,7 +109,7 @@ func TestRestartRewakeRefusesAnotherContract(t *testing.T) {
 	participant := &counting{}
 	defer switching.Watch(ctx, room, participant)()
 	for name, change := range map[string]func(*Contracts){
-		"handover 2":         func(c *Contracts) { c.Speaks[handoverContract] = "2" },
+		"handover 99":        func(c *Contracts) { c.Speaks[handoverContract] = "99" },
 		"handover.fixture 2": func(c *Contracts) { c.Speaks["handover.fixture"] = "2" },
 		"switch 2":           func(c *Contracts) { c.Speaks[switchContract] = "2" },
 	} {

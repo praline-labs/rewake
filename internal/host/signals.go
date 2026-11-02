@@ -82,6 +82,31 @@ func stopSelf() {
 	_ = syscall.Tgkill(os.Getpid(), syscall.Gettid(), syscall.SIGSTOP)
 }
 
+// caught holds what CatchSignals caught for the run to take.
+var caught struct {
+	incoming chan os.Signal
+	restore  func()
+}
+
+// CatchSignals catches the wrapper's signals first thing in an image that
+// adopts a run (cli's adoptRun), before the handover is read: the harness
+// runs all through the exec, and from the exec to the run's own catch the
+// runtime's default for SIGTERM would end the wrapper, leaving the harness
+// with nobody serving its mailbox. An ignored signal does not help: the
+// runtime installs its own handler for SIGTERM over an inherited ignore.
+// What it catches waits for the run, which forwards it once the harness is
+// adopted.
+func CatchSignals() { caught.incoming, caught.restore = catchSignals() }
+
+// takeSignals is what CatchSignals caught, or a catch of its own.
+func takeSignals() (chan os.Signal, func()) {
+	if incoming, restore := caught.incoming, caught.restore; incoming != nil {
+		caught.incoming, caught.restore = nil, nil
+		return incoming, restore
+	}
+	return catchSignals()
+}
+
 // catchSignals starts listening before there is a child to forward to.
 func catchSignals() (chan os.Signal, func()) {
 	incoming := make(chan os.Signal, 8)

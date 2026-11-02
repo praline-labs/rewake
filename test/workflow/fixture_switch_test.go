@@ -25,8 +25,10 @@ import (
 //   - With a space open, a switch back to A is refused naming the space host,
 //     which cannot hand over; the room stays on B and a task gets one report.
 //
-// What it does not prove: a real harness, whose adapters cannot hand over
-// yet, so every real room is refused as the space host is here.
+// What it does not prove: a real harness. A worker of Claude Code or pi hands
+// its run over when idle, proven by its adapter's tests; main's wrapper and
+// main's and a space's hosts cannot yet, so every real room is refused as the
+// space host is here.
 func TestFixtureSwitch(t *testing.T) {
 	binary := enterScenario(t, "fixture-switch")
 	c := Start(t, Spec{Name: "fixture-switch", Harness: fixtureColumn.harness, Observations: fixtureSwitchObservations, Deadline: 180 * time.Second})

@@ -68,6 +68,13 @@ func (s *Server) Close() error {
 	return err
 }
 
+// Faces counts the faces served now.
+func (s *Server) Faces() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return len(s.conns)
+}
+
 func (s *Server) accept() {
 	defer s.wg.Done()
 	for {

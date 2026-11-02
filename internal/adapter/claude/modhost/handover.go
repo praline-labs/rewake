@@ -16,8 +16,11 @@ import (
 // the admitted, the numbers — as Handed, so the unchanged mod's next poll is
 // answered as before the exec rather than with the 400 a fresh server gives a
 // load it never heard. What is not handed over keeps the exec from going
-// (Busy); each end's first capture is not handed over either (turns.go), the
-// one gap a feature has to close.
+// (Busy). The ends are not handed over: one the core took is answered from
+// its done journal however a copy of it is captured, so only an end whose
+// capture the core has not taken keeps the exec from going — captured afresh
+// in the next image, its boundary would take what was read since, and its
+// answer could answer a later task (docs/delivery-turn-end.md).
 
 // handedVersion is the version of Handed; a server adopts only its own.
 const handedVersion = 1
@@ -58,6 +61,8 @@ func (s *Server) Busy() string {
 		return "a control request is dispatched to the mod"
 	case s.asks.Count() > 0:
 		return "a permission request or a question of the worker is open"
+	case s.untaken():
+		return "a turn's end is captured and not yet taken by the core"
 	}
 	return ""
 }

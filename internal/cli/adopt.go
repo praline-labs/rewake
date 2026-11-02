@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"os/signal"
-	"syscall"
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/core/mail"
@@ -18,8 +16,10 @@ import (
 // adoptRun is a wrapper's new image after the exec of host/reexec.go: it runs
 // the launch the handover carries, with the callbacks handleLaunch gives one,
 // and takes the room's build lease again in host.Run, the earlier image's
-// having gone with it.
+// having gone with it. Its signals are caught before anything else
+// (host.CatchSignals): the harness runs on through the exec.
 func adoptRun(catalog adapter.Catalog, spec string, stderr io.Writer) int {
+	host.CatchSignals()
 	_ = os.Unsetenv(host.HandoverEnv)
 	handover, err := host.ReadHandover(spec)
 	if err != nil {
@@ -58,12 +58,12 @@ func adoptRun(catalog adapter.Catalog, spec string, stderr io.Writer) int {
 // goes on here, done false, and adopts the run on this build.
 func unpark(handover *host.Handover, stderr io.Writer) (code int, done bool) {
 	park := *handover.Park
-	// Nothing of the run is served while parked: a signal that would end the
-	// process here would orphan the harness and leave the run unadopted, and
-	// the wait is bounded by the drop's deadline.
-	signal.Ignore(syscall.SIGTERM, syscall.SIGINT, syscall.SIGHUP)
+	// Nothing of the run is served while parked, and a signal that ended the
+	// process here would orphan the harness and leave the run unadopted:
+	// adoptRun caught the signals, and the run forwards a SIGTERM that came
+	// while parked once it adopts the harness. The wait is bounded by the
+	// drop's deadline.
 	decided, err := switching.Wait(park, "session "+handover.Name)
-	signal.Reset(syscall.SIGTERM, syscall.SIGINT, syscall.SIGHUP)
 	if err != nil {
 		_, _ = fmt.Fprintln(stderr, "rewake: the run parked for a switch was lost: "+err.Error())
 		return ExitFailed, true

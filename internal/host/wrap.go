@@ -188,7 +188,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 		}
 	}
 
-	model, stopMirror, err := startMirror(request, name, epoch)
+	model, faces, stopMirror, err := startMirror(request, name, epoch)
 	if err != nil {
 		return 0, err
 	}
@@ -262,7 +262,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 	// and installing the handlers, a SIGTERM meant for the wrapper would kill it
 	// outright: the harness would keep running with nobody serving its mailbox
 	// and its record left behind.
-	signals, restore := catchSignals()
+	signals, restore := takeSignals()
 	defer restore()
 
 	// A service whose handlers write the room counts them among the run's
@@ -336,7 +336,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 	}, &life.workers)
 	defer stopAvailability()
 	handover := &reexec{
-		request: request, session: session, runDir: runDir, service: plan.Service, harness: harness, start: harnessStart,
+		request: request, session: session, runDir: runDir, service: plan.Service, harness: harness, start: harnessStart, faces: faces,
 		handoff: make(chan chan<- string), resume: make(chan struct{}),
 	}
 	defer handover.watch(serveCtx)()

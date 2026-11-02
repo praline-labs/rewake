@@ -67,7 +67,12 @@ func (r *run) handle(l *link, request frame) {
 		}
 		// Capture belongs to the reader; publication must not block answers to a
 		// wake the host sends while it handles this end.
-		go func() { defer r.leave(); l.answer(request, r.publish(l, completion)) }()
+		r.publishing.Add(1)
+		go func() {
+			defer r.leave()
+			defer r.publishing.Add(-1)
+			l.answer(request, r.publish(l, completion))
+		}()
 	case "mirror":
 		reply := r.mirrored(request)
 		r.leave()
@@ -94,7 +99,9 @@ func (r *run) startTurn(l *link, request frame) frame {
 	if request.Thread != thread {
 		return frame{Error: "the turn belongs to another conversation"}
 	}
+	l.mu.Lock()
 	l.turn, l.started = request.Turn, boottime.Now()
+	l.mu.Unlock()
 	if r.handler.Started != nil {
 		// The extension has no boot-clock timestamp. Do not turn the arrival
 		// time into evidence about a previous turn whose end was lost.
@@ -120,7 +127,9 @@ func (r *run) endTurn(l *link, request frame) (adapter.TurnEnd, error) {
 	if err := completion.Check(); err != nil {
 		return adapter.TurnEnd{}, err
 	}
+	l.mu.Lock()
 	l.turn, l.started = "", 0
+	l.mu.Unlock()
 	return completion, nil
 }
 

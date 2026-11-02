@@ -36,7 +36,7 @@ const HandoverEnv = "REWAKE_HANDOVER"
 
 // HandoverVersion is the version of Handover; an image adopts only its own,
 // and a switch of the room admits only a build that takes the same.
-const HandoverVersion = 1
+const HandoverVersion = 2
 
 // reexecMark is the file of the run's directory where the outcome of the last
 // request to re-execute is written, for whoever sent the signal.
@@ -70,6 +70,9 @@ type Handover struct {
 	// Park is set on an image a switch parked (host/switching): it holds no
 	// lease until its leader says go or resume.
 	Park *switching.Park `json:"park,omitempty"`
+	// Mirror says the run serves rewake's face; the next image serves it a
+	// model of its own (startMirror), as the model lives in memory only.
+	Mirror bool `json:"mirror,omitempty"`
 
 	files []*os.File
 }
@@ -98,7 +101,7 @@ func (h *Handover) Request(harness adapter.Harness) Request {
 	return Request{
 		Harness: harness, Dir: h.Dir, Name: h.Name, Args: h.Args, Intro: h.Intro, Command: h.Command,
 		Role: role.Of(h.Role), RoleReason: h.RoleReason, Template: h.Template,
-		WorktreeEntry: h.WorktreeEntry, WorkType: workType, Handover: h,
+		WorktreeEntry: h.WorktreeEntry, WorkType: workType, Mirror: h.Mirror, Handover: h,
 	}
 }
 
@@ -176,6 +179,8 @@ type reexec struct {
 	service adapter.Service
 	harness *os.Process
 	start   uint64
+	// faces counts the faces drawing the run's mirror, nil without one.
+	faces func() int
 	// handoff asks the delivery server to stop; resume serves again after
 	// an exec that failed.
 	handoff chan chan<- string
@@ -216,10 +221,11 @@ func (r *reexec) refusal() string {
 	switch _, ok := r.service.(adapter.Handover); {
 	case !ok:
 		return "this harness's adapter cannot hand its run over"
-	case r.request.Mirror:
-		return "the run serves a mirror, which is not handed over"
 	case r.request.OnClaimed != nil:
 		return "the run made a checkout, which its launch settles at its end"
+	}
+	if _, ok := r.service.(adapter.WorkersOnly); ok && r.session.Role == role.Main.ID {
+		return "main's wrapper does not hand its run over yet"
 	}
 	return ""
 }
@@ -234,6 +240,11 @@ func (r *reexec) Answer() (string, string) {
 	}
 	if why := r.service.(adapter.Handover).Busy(); why != "" {
 		return switching.Busy, why
+	}
+	// The next image draws the session from what it hears next: a face
+	// looking now would see the conversation go.
+	if r.faces != nil && r.faces() > 0 {
+		return switching.Busy, "rewake's face draws the session, whose model is not handed over"
 	}
 	return switching.Ready, ""
 }
@@ -291,7 +302,7 @@ func (r *reexec) exec(handing adapter.Handover, park *switching.Park) string {
 		Version: HandoverVersion, Harness: r.request.Harness.ID(), Dir: r.request.Dir, Name: r.session.Name, Epoch: r.session.Epoch(),
 		Args: r.request.Args, Intro: r.request.Intro, Command: r.request.Command, Role: r.session.Role, RoleReason: r.session.RoleReason,
 		Template: r.request.Template, WorktreeEntry: r.request.WorktreeEntry, WorkType: r.request.WorkType, WorkTypeText: r.request.WorkType.Text,
-		HarnessPID: r.harness.Pid, HarnessStart: r.start, Service: handed.State, Park: park,
+		HarnessPID: r.harness.Pid, HarnessStart: r.start, Service: handed.State, Park: park, Mirror: r.request.Mirror,
 	}
 	if r.request.Handover != nil {
 		h.Count = r.request.Handover.Count

@@ -136,6 +136,12 @@ sends `{id, kind: "prompt", text}`, `{id, kind: "interrupt", text: ""}` for the 
 Claude Code's the prompt alone), and any other input is refused. A face whose queue passes 4096 lines or 4 MiB past its snapshot is cut off rather than
 given a gap, and reconnects for a fresh snapshot.
 
+**A switch of the room's build** (November 2, 2026) does not hand the model over: it lives in
+memory by rule, and at up to 4 MiB it does not fit the exec's environment. The wrapper answers the
+switch busy while a face is attached, and the next image serves a fresh model on the same socket,
+beginning with a notice that rewake was updated and that what came before is in the native face; a
+face that connected in the moment before the exec loses its connection and reconnects to it.
+
 ## The dev worker
 
 `rewake space open <name> --alias <alias> --dev` records `worker.dev` in the space record (absent

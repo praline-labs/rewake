@@ -36,6 +36,14 @@ retry of the same event finds it and answers from it; the next end's window open
 A done journal is kept while its run lives; the live run's sweep removes those of ended runs
 a day later.
 
+**Across a switch of the room's build** (November 2, 2026), the wrapper's next image keeps the
+run, so a retry still finds the done journal; an end the core took is answered from it however the
+next image captures its copy. What the exec would lose is the first capture of an end not yet
+taken: captured afresh after the exec, its boundary would take what was read since, and its answer
+could answer a later task with an earlier result. So a run with such an end is busy and the switch
+waits for it ([claude.md](claude.md#handing-the-run-over)); pi's run is busy while a turn is open
+or its end is being published, and the fixture's while a turn is open.
+
 The end answers what it said (`mail.Outcome`), decided where it was published rather than
 inferred again from the adapter's end by whoever acts on it: held, with the reason the adapter
 continues the turn with; interim, published under a pending mark of its turn; or finished, with

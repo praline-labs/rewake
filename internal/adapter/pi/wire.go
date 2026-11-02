@@ -60,9 +60,13 @@ type link struct {
 	waiting map[int64]chan frame
 	closed  chan struct{}
 	once    sync.Once
-	// Only the reader touches the current turn.
+	// Only the reader writes the current turn, under mu, which Busy reads
+	// it under.
 	turn    string
 	started int64
+	// asking counts the host's requests waiting for an answer that are not
+	// the poll of the state: an answer only this image would take (Busy).
+	asking int
 }
 
 func newLink(conn net.Conn) *link {
@@ -133,13 +137,25 @@ func (l *link) send(got frame) error {
 }
 
 func (l *link) ask(ctx context.Context, request frame) (frame, error) {
+	// A poll lost to an exec is asked again by the next image.
+	counted := request.Op != "state"
 	l.mu.Lock()
 	l.next++
 	request.ID = l.next
 	answer := make(chan frame, 1)
 	l.waiting[request.ID] = answer
+	if counted {
+		l.asking++
+	}
 	l.mu.Unlock()
-	defer func() { l.mu.Lock(); delete(l.waiting, request.ID); l.mu.Unlock() }()
+	defer func() {
+		l.mu.Lock()
+		delete(l.waiting, request.ID)
+		if counted {
+			l.asking--
+		}
+		l.mu.Unlock()
+	}()
 	if err := l.send(request); err != nil {
 		return frame{}, err
 	}

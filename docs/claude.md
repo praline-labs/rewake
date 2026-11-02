@@ -393,6 +393,33 @@ the pills, and followed the working state (`main-claude · 20k/1M` after `⏵⏵
 cycle) ·` at 200 columns, 100 mid-turn). At 60 columns native's line was cut to `… · main-claude ·…`
 and at 40 to `⏵⏵ auto mode on (shift+tab to`, our part gone first, native's text the last to be cut.
 
+## Handing the run over
+
+A worker's run is handed over to the next image of its wrapper when a switch of the room's build
+asks ([rules/state.md](rules/state.md#switching-a-running-room)); the mod never sees it, and its
+files are not written again: the switch admits only a build of the same `mod` protocol. Each piece
+of the run's memory is handed over or keeps the switch waiting while it is not empty, which an
+idle worker makes it (`handover.go`, `modhost/handover.go`; `handover.claude` names the version):
+
+| Piece | Across the exec |
+|---|---|
+| The mod's endpoint | its listener as a file and the order of loads — the current hello and generation, the superseded, the admitted — so the mod's next poll is answered 200 and its next hello admitted as before |
+| A control request, an open ask | busy while any is open |
+| The ends | busy while an end is captured and not yet taken by the core; one the core took is answered from its done journal whatever the next image captures |
+| The reply socket | bound again by the next image, which keeps the run's pid and start, so its path is the same |
+| The lane's notices | busy while a word is queued, or a notice is within its late word's minute (`mail.LateWordWindow`): its receipts live only here |
+| The delivery server's held and recent letters | busy while any is (the host's own refusal) |
+| The mirror | not handed over ([face.md](face.md)): busy while a face is attached |
+
+The ends are the gap a capture opens: captured afresh in the next image, a resent end's boundary
+would take what was read since its first capture, and its answer could answer a later task. An
+end is taken once its publication returns, or once the run is found gone; until then the run is
+busy. The adopting image reports the live set without the turn boundary and then the endpoint's
+proven state, as a start would. Main's run answers `cannot`: main's wrapper holds the workers'
+notices and turns often, and waits for its own stage. A run whose mod could not be loaded
+(`modless`) answers `cannot` too. Tested in `handover_test.go`, the end retried across the exec
+and the mod's next poll answered.
+
 ## What the mod never does
 
 It reads no transcript file. A run the face does not draw sends no prompt text

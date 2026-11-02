@@ -20,10 +20,13 @@ const eventPrefix = "claude/"
 
 // capture is an end's first arrival: what the core is handed every time the
 // end is sent, and the digest of what the request carried, against which a
-// later request of the same end id is checked.
+// later request of the same end id is checked. taken says the core took it:
+// from then on its done journal answers a copy of the end however it is
+// captured, and until then the capture lives only in this image (Busy).
 type capture struct {
 	end    adapter.TurnEnd
 	digest [sha256.Size]byte
+	taken  bool
 }
 
 // ReportTurns takes where the run's turns go; called before Start.
@@ -87,14 +90,36 @@ func (s *Server) turnEnd(w http.ResponseWriter, r *http.Request) {
 	}
 	switch err := s.publish(r.Context(), completion); {
 	case errors.Is(err, adapter.ErrRunGone):
+		s.took(end.EndID)
 		refuse(w, http.StatusGone, err.Error())
 		return
 	case err != nil:
 		refuse(w, http.StatusServiceUnavailable, "the end was not taken yet; send it again: "+err.Error())
 		return
 	}
+	s.took(end.EndID)
 	endID := end.EndID
 	s.answer(w, r, Receipt{TurnID: end.TurnID, EndID: &endID})
+}
+
+// took marks an end's capture taken by the core, or by nobody for a run gone.
+func (s *Server) took(endID string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if known, ok := s.ends[endID]; ok {
+		known.taken = true
+	}
+}
+
+// untaken says a capture lives only in this image: an end whose first
+// arrival the core has not taken. Called under mu.
+func (s *Server) untaken() bool {
+	for _, known := range s.ends {
+		if !known.taken {
+			return true
+		}
+	}
+	return false
 }
 
 // publish runs the core's take of an end, counted among the run's workers

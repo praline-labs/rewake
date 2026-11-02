@@ -7,6 +7,7 @@ import (
 	"net"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter"
@@ -49,6 +50,9 @@ type run struct {
 	ready       chan struct{}
 	processOnce sync.Once
 	jobs        sync.WaitGroup
+	// publishing counts the ends being published, each answered to the
+	// extension only by this image (Busy).
+	publishing atomic.Int32
 }
 
 func newRun(file, socket, epoch string) *run {

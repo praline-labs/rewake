@@ -267,6 +267,27 @@ the alternate screen, before that dispose; on SIGTERM or SIGHUP it disposes firs
 (`dist/modes/interactive/interactive-mode.js`, `shutdown`). Its Ctrl+Z (`app.suspend`) stops the
 TUI and sends `SIGTSTP` to its group, as Claude Code does. Read on 1.3.0, October 24, 2026.
 
+## Handing the run over (November 2, 2026)
+
+A worker's run is handed over to the next image of its wrapper when a switch of the room's build
+asks ([rules/state.md](rules/state.md#switching-a-running-room)); `handover.pi` names the version
+(`handover.go`). Since the extension has no replay after a reconnect, the connection itself is
+handed over: the listener and the extension's connection go as files, with pi's pid and start, the
+thread and the next request number, and the next image serves the connection as its current one,
+its hello long answered. The extension never sees the exec; its files stay as written, the switch
+admitting only a build of the same `extension` protocol.
+
+What lives only in the image's memory keeps the switch waiting until it is gone, which an idle
+session makes it: an open turn (its end would find no start, and pi sends nothing again), an end
+being published (the extension waits for its acknowledgment), and a host request other than the
+state's poll awaiting its answer. A poll lost in the exec is asked again. The residue is the instant
+between the run's last answer of `ready` and the exec: a frame the extension writes then is read
+into the old image and lost with it; a `turn-start` lost so leaves its end with no start, and the
+extension's request fails at its five seconds, as on a disconnect. Main's run answers `cannot`, as
+on Claude Code. Tested in `handover_test.go` against the wire, with no pi: an open turn, a
+publication and a held wake each refuse, and after the exec a turn and a notice go through on the
+connection handed over, which never closed. No live pi ran: its login is the owner's.
+
 ## Live acceptance on a real model (October 18, 2026)
 
 Main's run of `.scratch/process/live-pi.sh` on the branch's build, pi 1.2.0 with the person's own

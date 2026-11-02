@@ -308,10 +308,21 @@ and `internal/cli/restart_rewake.go`.
 
 A committed mark holds the room about 20 s after the commit, so a second switch in that time is
 refused. A switch run just after a delivery may find the session busy for a moment, and is run
-again. In stage 1 only the fixture's wrapper hands over: Claude Code's and pi's adapters, a
-mirror, a run that made a checkout, the space host and main's host answer `cannot`, so every
-real room is refused and keeps its build, and `rewake restart` with no part still plans `room`
-for a new rewake.
+again. A worker's wrapper of Claude Code or pi hands over when idle (November 2, 2026): what is
+handed over and what keeps it busy is in [claude.md](../claude.md#handing-the-run-over) and
+[research-pi.md](../research-pi.md#handing-the-run-over-november-2-2026). A dev worker's mirror is
+not handed over: the run is busy while a face is attached, and the next image serves a fresh model
+([face.md](../face.md#the-socket)). The fixture's wrappers, main's included, hand over as the
+switch's test. A real harness's main wrapper (`adapter.WorkersOnly`), a run that made a checkout,
+a Claude Code run without its mod, the space host and main's host answer `cannot`, so every real
+room is still refused and keeps its build, and `rewake restart` with no part still plans `room` for
+a new rewake.
+
+**Signals across the exec.** Go overrides a SIGTERM the image inherited as ignored, so an
+ignore set before the exec does not cover the new image's start. The adopting image catches
+SIGTERM and SIGHUP, and drops the keyboard's SIGINT and SIGQUIT, as its first act
+(`host.CatchSignals` in `rewake adopt`); the run takes that catch and forwards to the harness what
+came meanwhile, as it would have.
 
 Tests:
 - `internal/infra/build/switch_test.go` `TestASwitchCommitsOnlyWithNoOtherHolder`
@@ -326,6 +337,13 @@ Tests:
 - `internal/host/switching/join_test.go` `TestAParkedImageFollowsTheRecordWithoutItsLeader`
 - `internal/host/switching/join_test.go` `TestAParticipantJoinsALeaderThatServesLate`
 - `internal/host/handover_shape_test.go` `TestTheHandoverContractChangesWithItsShape`
+- `internal/host/handover_mirror_test.go` `TestARunWithAMirrorWaitsOnlyForItsFaces`
+- `internal/host/handover_mirror_test.go` `TestMainsWrapperOfARealHarnessCannotHandOver`
+- `internal/host/handover_mirror_test.go` `TestASignalBeforeTheRunsCatchWaitsForTheRun`
+- `internal/adapter/claude/handover_test.go` `TestAnIdleClaudeRunIsHandedOverAndTheModsNextPollAnswered`
+- `internal/adapter/claude/handover_test.go` `TestTheClaudeHandoverChangesWithItsShape`
+- `internal/adapter/pi/handover_test.go` `TestAnIdlePiRunHandsItsConnectionOver`
+- `internal/adapter/pi/handover_test.go` `TestThePiHandoverChangesWithItsShape`
 - `internal/adapter/fixture/handover_shape_test.go` `TestTheFixtureHandoverChangesWithItsShape`
 - `internal/adapter/claude/modhost/protocol_pin_test.go` `TestTheModContractChangesWithItsProtocol`
 - `internal/cli/restart_rewake_test.go` `TestRestartRewakeRefusesAnotherContract`

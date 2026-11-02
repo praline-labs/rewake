@@ -25,6 +25,15 @@ type Handover interface {
 	Adopt(ctx context.Context, note func(string), handed HandedOver) error
 }
 
+// WorkersOnly is a Handover that carries a worker's run and not main's: main's
+// wrapper holds what a worker's does not — its notices of the workers, and
+// turns that come often enough to want the switch deferred rather than
+// refused — and a real harness's main waits for the stage that hands those
+// over, answering cannot.
+type WorkersOnly interface {
+	WorkersOnly()
+}
+
 // HandedOver is what a service hands over across an exec.
 type HandedOver struct {
 	State json.RawMessage `json:"state"`
