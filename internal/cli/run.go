@@ -27,6 +27,13 @@ func Run(catalog adapter.Catalog, argv []string, stdout, stderr io.Writer) int {
 	if spec, ok := os.LookupEnv(host.HandoverEnv); ok {
 		return adoptRun(catalog, spec, stderr)
 	}
+	// A deferred switch's leader, and its last image (switch_lead.go).
+	if spec, ok := os.LookupEnv(switchLeadEnv); ok && len(argv) == 0 {
+		return leadSwitch(catalog, spec)
+	}
+	if spec, ok := os.LookupEnv(switchOutcomeEnv); ok && len(argv) == 0 {
+		return deliverOutcome(spec)
+	}
 	t := newTable(catalog)
 	ctx := &Context{Stdout: stdout, Stderr: stderr, table: t}
 

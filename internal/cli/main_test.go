@@ -17,6 +17,10 @@ import (
 // session takes the room of its working directory, which here would be the
 // package's, and a test that means that room sets REWAKE_ROOM empty itself.
 func TestMain(m *testing.M) {
+	// A deferred switch's leader is this binary again (switch_lead.go).
+	if os.Getenv(switchLeadEnv) != "" || os.Getenv(switchOutcomeEnv) != "" {
+		os.Exit(Run(testCatalog(), nil, os.Stdout, os.Stderr))
+	}
 	reportsTurns = func(adapter.Harness) bool { return true }
 	if os.Getenv(state.RoomEnv) == "" {
 		_ = os.Setenv(state.RoomEnv, state.DefaultRoom)

@@ -254,9 +254,26 @@ happen while the sessions run, and what a crash at any step leaves sound. The co
 `internal/infra/build/switch.go`, `internal/infra/state/switch.go`, `internal/host/switching`
 and `internal/cli/restart_rewake.go`.
 
-- **The leader** is the command, a change form, so it runs the room's build. Its target is the
-  `rewake` in the directory `bin/origin` names; the room's own build there is "nothing to
-  switch".
+- **The command** is a change form, so it runs the room's build. Its target is the `rewake` in
+  the directory `bin/origin` names; the room's own build there is "nothing to switch", and one
+  whose contracts the room does not admit is refused at once. Otherwise it hands the switch to
+  **the leader**, a process of its own (`internal/cli/switch_lead.go`), and either returns —
+  asked from a session, whose own open turn would keep it busy for as long as it waited:
+  "the switch to build X runs once every session is idle, within 10m0s; its outcome comes to
+  main as a note" — or, asked by the person, waits for the outcome on a pipe and prints it
+  (owner's decision November 2, 2026; the deferral reviewed the same day).
+- **The deferred leader** holds `<room>/switch-request` by its flock for as long as it lives, so
+  one waits at a time ("a switch already waits for the room's sessions to be idle"); a request
+  no lock holds is a dead leader's, replaced by the next. It is bound to main's run when it was
+  asked, by name and epoch. Each attempt takes the room's lease with `Acquire`, claims, stages,
+  admits and leads, and lets the lease go at its end, so a leader waiting holds nothing a launch
+  meets. An attempt that ended only because a session was busy — at the ask or at the drop —
+  is tried again 5 s later, for 10 minutes from the asking; one whose main's run ended, while
+  waiting or asking, stops, and says nothing to a later main of the name. Its last image is the
+  room's copy, exec'd with the outcome, since after a commit only the new build writes in the
+  room: it takes a writer's lease with `Acquire`, puts the outcome to main as a note — under
+  main's mailbox lock, only while main's run is still the one asked for —, answers the pipe and
+  removes the request.
 - **The mark**, `<room>/switch`, is one attempt: the leader's pid and start, the attempt's own
   random id — a leader that tries again claims a new attempt, which every participant joins
   again (found in review, November 2, 2026) —, the target id, the staged path, the leader's

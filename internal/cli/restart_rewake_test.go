@@ -111,7 +111,7 @@ func TestRestartRewakeRefusesAnotherContract(t *testing.T) {
 	for name, change := range map[string]func(*Contracts){
 		"handover 99":        func(c *Contracts) { c.Speaks[handoverContract] = "99" },
 		"handover.fixture 2": func(c *Contracts) { c.Speaks["handover.fixture"] = "2" },
-		"switch 2":           func(c *Contracts) { c.Speaks[switchContract] = "2" },
+		"switch 99":          func(c *Contracts) { c.Speaks[switchContract] = "99" },
 	} {
 		installed(t, change)
 		code, _, errOut := run("restart", "rewake")
