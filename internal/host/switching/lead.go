@@ -182,7 +182,7 @@ func (l *leader) run() Outcome {
 		// A drop refused as busy is a session that turned busy since it was
 		// ready; one silent past the bound is not.
 		busy := l.with(Busy) != ""
-		out := l.abort("not every session could hand over: " + l.with(Busy) + l.missing(Parked))
+		out := l.abort("not every session could hand over: " + joined(l.with(Busy), l.missing(Parked)))
 		out.Busy = busy
 		return out
 	}
@@ -309,6 +309,11 @@ func (l *leader) missing(kind string) string {
 	}
 	sort.Strings(who)
 	return fmt.Sprintf("%s did not say %s", strings.Join(who, ", "), kind)
+}
+
+// joined is the non-empty parts of a refusal, separated.
+func joined(parts ...string) string {
+	return strings.Join(slices.DeleteFunc(parts, func(p string) bool { return p == "" }), "; ")
 }
 
 func names(holders []build.Holder) string {
