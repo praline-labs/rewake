@@ -7,7 +7,6 @@ import (
 
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/infra/build"
-	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // questionKind is a task its sender waits for: send blocks until the session
@@ -130,7 +129,7 @@ func watchRefusal(ctx context.Context, w refusalWatch, refused chan<- refusal, s
 			stop()
 			return
 		}
-		if mark, live := build.LiveSwitch(w.dir); live && mark.Phase == state.PhaseDropping {
+		if mark, live := build.LiveSwitch(w.dir); live && build.Draining(mark) {
 			stop()
 			return
 		}

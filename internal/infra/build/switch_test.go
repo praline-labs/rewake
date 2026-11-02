@@ -202,6 +202,46 @@ func TestAStaleSwitchMarkIsIgnoredAndRemoved(t *testing.T) {
 	}
 }
 
+// A leader killed while it drops leaves its parked images to recover: a
+// writer — the lease a parked image takes — is granted at once rather than
+// after the mark's deadline, when a launch could take the room first; and
+// until that deadline a launch of another build is still refused.
+func TestADroppingMarkWithoutItsLeaderGatesNoWriter(t *testing.T) {
+	base := newBase(t)
+	room := established(t, base, "default")
+	before := shareWait
+	shareWait = 2 * time.Second
+	t.Cleanup(func() { shareWait = before })
+	gone := state.SwitchMark{
+		Version: state.SwitchVersion, Leader: os.Getpid(), LeaderStart: 1, Target: strings.Repeat("b", 64),
+		Phase: state.PhaseDropping, Deadline: time.Now().Add(time.Minute).UnixMilli(),
+	}
+	lease, err := Acquire(base, "default")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = state.ClaimSwitch(room, gone, func(state.SwitchMark) bool { return true })
+	lease.Release()
+	if err != nil {
+		t.Fatal(err)
+	}
+	started := time.Now()
+	lease, err = Acquire(base, "default")
+	if err != nil {
+		t.Fatalf("a writer beside a dropping mark whose leader is gone: %v", err)
+	}
+	lease.Release()
+	if waited := time.Since(started); waited >= time.Second {
+		t.Fatalf("the writer waited %s for a leader that is gone", waited)
+	}
+	actAs(t, "build C")
+	_, err = AcquireLaunch(base, "default")
+	var refused *RefusedError
+	if !errors.As(err, &refused) || refused.Switching == nil {
+		t.Fatalf("a launch of another build under the mark: %v", err)
+	}
+}
+
 // The commit writes, in order, the committed mark, the build, then the room's
 // copy, and removes the copies no mark names: a crash after any step leaves
 // a live mark and one build.

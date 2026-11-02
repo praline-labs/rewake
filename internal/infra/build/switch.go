@@ -65,8 +65,16 @@ type seen struct {
 // errGated is a dropping switch that outlasted a writer's bound.
 var errGated = errors.New("the room's switch is dropping its holders")
 
+// Draining says a mark is a switch dropping the room's holders whose leader
+// still runs: only that leader takes the lock exclusive, so a writer lets it.
+// With the leader gone nothing will commit, and the parked images it left
+// recover at once, while the mark still keeps every launch out.
+func Draining(mark state.SwitchMark) bool {
+	return mark.Phase == state.PhaseDropping && proc.Alive(mark.Leader, mark.LeaderStart)
+}
+
 // gate takes the lock shared and reads the build, and while a switch is
-// dropping its holders lets go and waits, within the writers' bound, so the
+// draining the room lets go and waits, within the writers' bound, so the
 // switch can take the lock exclusive. It answers the build and the live mark
 // it found, with the lock held shared — but for a share refused, or errGated.
 func gate(lock *state.LeaseLock, room, own string) (seen, error) {
@@ -77,7 +85,7 @@ func gate(lock *state.LeaseLock, room, own string) (seen, error) {
 		}
 		theirs, record := state.ReadBuildRecord(room)
 		mark, live := LiveSwitch(room)
-		if !live || mark.Phase != state.PhaseDropping {
+		if !live || !Draining(mark) {
 			return seen{theirs: theirs, record: record, mark: mark, live: live}, nil
 		}
 		if err := lock.Unlock(); err != nil {

@@ -17,8 +17,8 @@ import (
 
 // A parked image whose leader is gone decides by the room's build alone: its
 // own build resumes it, the switch's target sends it on, anything else is
-// lost; and while a dropping mark still holds the room it waits, as the
-// leader may yet have been about to commit.
+// lost; and while a dropping mark's leader still runs it waits, as the leader
+// may yet have been about to commit, but not for one that is gone.
 func TestAParkedImageFollowsTheRecordWithoutItsLeader(t *testing.T) {
 	room := buildtest.Dir(t)
 	own, err := build.ID()
@@ -58,6 +58,18 @@ func TestAParkedImageFollowsTheRecordWithoutItsLeader(t *testing.T) {
 	decided, err := Wait(park, "session w1")
 	if decided != Go || err != nil || time.Since(started) < 300*time.Millisecond {
 		t.Errorf("under a dropping mark: %q, %v after %s", decided, err, time.Since(started))
+	}
+	// A leader gone while it dropped commits nothing: the image decides at
+	// once, while the mark still keeps launches out, and not at its deadline.
+	gone := mark
+	gone.LeaderStart, gone.Deadline = 1, time.Now().Add(time.Minute).UnixMilli()
+	if _, err := state.ClaimSwitch(room, gone, func(state.SwitchMark) bool { return true }); err != nil {
+		t.Fatal(err)
+	}
+	started = time.Now()
+	decided, err = Wait(park, "session w1")
+	if decided != Go || err != nil || time.Since(started) > time.Second {
+		t.Errorf("under a dropping mark whose leader is gone: %q, %v after %s", decided, err, time.Since(started))
 	}
 }
 

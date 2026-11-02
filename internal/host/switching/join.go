@@ -112,17 +112,18 @@ var ErrLost = errors.New("the room's build is neither this image's nor its switc
 
 // Wait is a parked image waiting for its leader: Go to exec the staged copy,
 // Resume to adopt its run again on its own build. A leader that is gone or
-// silent past the drop's deadline leaves it to the room's build: its own is
-// Resume, the target Go — the record alone decides.
+// silent leaves it to the room's build: its own is Resume, the target Go —
+// the record alone decides, at once, while the mark still keeps launches out
+// and the image's lease can be taken before it expires.
 func Wait(park Park, who string) (string, error) {
 	if decided, ok := ask(park, who); ok {
 		return decided, nil
 	}
-	// A dropping mark holds the room until its deadline: the leader may yet
-	// have been about to commit.
+	// A leader still running while it drops may yet commit; one that is gone
+	// cannot, and waiting out its mark would let a launch take the room first.
 	for {
 		mark, live := build.LiveSwitch(park.Room)
-		if !live || mark.Phase != state.PhaseDropping {
+		if !live || !build.Draining(mark) {
 			break
 		}
 		time.Sleep(50 * time.Millisecond)

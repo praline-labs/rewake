@@ -276,8 +276,8 @@ and `internal/cli/restart_rewake.go`.
   before anything stopped: "restart the room: … cannot". Busy ones are waited for 60 s.
 - **Dropping.** The mark turns `dropping` and each participant stops its delivery server and
   execs its own image, parked: no lease, no effect, waiting for its order. Meanwhile a writer
-  that finds a dropping mark lets go of its shared lock and looks again every 50 ms, within the
-  writers' bound, then is refused as busy; a `send --question` waiting ends its wait as pending.
+  that finds a dropping mark whose leader runs lets go of its shared lock and looks again every
+  50 ms, within the writers' bound, then is refused as busy; a `send --question` waiting ends its wait as pending.
   Each participant must say `parked` within 5 s; then the leader turns its lock exclusive within
   5 s, as commands finish, or names the holders left.
 - **The commit**, `state.CommitSwitch`, only under the exclusive lock and only for the room's
@@ -293,13 +293,16 @@ and `internal/cli/restart_rewake.go`.
   under the exclusive lock before it writes `build`.
 - **Adoption only follows.** A parked or handed-over image takes the lease with `build.Follow`:
   `Acquire`, and the room's copy put in line with `build` whenever they differ. A parked image
-  whose leader is gone waits out a dropping mark, then the record alone decides: its own build
-  resumes it, the target sends it on, anything else ends it.
+  whose leader is gone decides at once by the record alone — its own build resumes it, the target
+  sends it on, anything else ends it — and takes its lease while the mark still keeps launches
+  out: a dropping mark whose leader is gone gates no writer, since nothing will commit. Waiting
+  out the mark instead let a launch of a third build take the room first (found in review,
+  November 2, 2026).
 
 | The leader dies… | What is left |
 |---|---|
 | while asking | nothing stopped; the mark goes stale with its leader |
-| while dropping, aborting, or in the commit before `build` | the mark stays live to its deadline, so no launch switches; the parked images find the old `build` and resume |
+| while dropping, aborting, or in the commit before `build` | the mark stays live to its deadline, so no launch switches; the parked images find the old `build` and resume at once, within it |
 | after `build`, before the copy is linked | `build` is the target and `bin/rewake` the old build: the first `Follow` or launch of the target places the copy |
 | after the commit | the parked images find the target and exec it; the committed mark keeps launches out until its deadline |
 
@@ -314,6 +317,7 @@ Tests:
 - `internal/infra/build/switch_test.go` `TestASwitchCommitsOnlyWithNoOtherHolder`
 - `internal/infra/build/switch_test.go` `TestAWriterWaitsOutADroppingSwitchWithinItsBound`
 - `internal/infra/build/switch_test.go` `TestAStaleSwitchMarkIsIgnoredAndRemoved`
+- `internal/infra/build/switch_test.go` `TestADroppingMarkWithoutItsLeaderGatesNoWriter`
 - `internal/infra/build/switch_test.go` `TestTheCommitWritesTheBuildThenTheCopy`
 - `internal/infra/build/switch_launch_test.go` `TestALaunchNeverSwitchesUnderALiveMark`
 - `internal/infra/build/switch_launch_test.go` `TestAdoptionOnlyFollows`
