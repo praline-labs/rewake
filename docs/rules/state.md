@@ -310,8 +310,8 @@ A committed mark holds the room about 20 s after the commit, so a second switch 
 refused. A switch run just after a delivery may find the session busy for a moment, and is run
 again. A worker's wrapper of Claude Code or pi hands over when idle (November 2, 2026): what is
 handed over and what keeps it busy is in [claude.md](../claude.md#handing-the-run-over) and
-[research-pi.md](../research-pi.md#handing-the-run-over-november-2-2026). A dev worker's mirror is
-not handed over: the run is busy while a face is attached, and the next image serves a fresh model
+[research-pi.md](../research-pi.md#handing-the-run-over-november-2-2026). A run's mirror goes over
+in a memory file, and its face reconnects to the next image
 ([face.md](../face.md#the-socket)). The fixture's wrappers, main's included, hand over as the
 switch's test. A real harness's main wrapper (`adapter.WorkersOnly`), a run that made a checkout,
 a Claude Code run without its mod, the space host and main's host answer `cannot`, so every real
@@ -337,9 +337,11 @@ Tests:
 - `internal/host/switching/join_test.go` `TestAParkedImageFollowsTheRecordWithoutItsLeader`
 - `internal/host/switching/join_test.go` `TestAParticipantJoinsALeaderThatServesLate`
 - `internal/host/handover_shape_test.go` `TestTheHandoverContractChangesWithItsShape`
-- `internal/host/handover_mirror_test.go` `TestARunWithAMirrorWaitsOnlyForItsFaces`
+- `internal/host/handover_mirror_test.go` `TestAFaceReconnectsToTheModelHandedOver`
 - `internal/host/handover_mirror_test.go` `TestMainsWrapperOfARealHarnessCannotHandOver`
 - `internal/host/handover_mirror_test.go` `TestASignalBeforeTheRunsCatchWaitsForTheRun`
+- `internal/core/mirror/handover_test.go` `TestTheNextImageAdoptsTheModelAsItWas`
+- `internal/core/mirror/handover_test.go` `TestTheHandedModelChangesWithItsShape`
 - `internal/adapter/claude/handover_test.go` `TestAnIdleClaudeRunIsHandedOverAndTheModsNextPollAnswered`
 - `internal/adapter/claude/handover_test.go` `TestTheClaudeHandoverChangesWithItsShape`
 - `internal/adapter/pi/handover_test.go` `TestAnIdlePiRunHandsItsConnectionOver`

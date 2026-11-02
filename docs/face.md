@@ -136,11 +136,17 @@ sends `{id, kind: "prompt", text}`, `{id, kind: "interrupt", text: ""}` for the 
 Claude Code's the prompt alone), and any other input is refused. A face whose queue passes 4096 lines or 4 MiB past its snapshot is cut off rather than
 given a gap, and reconnects for a fresh snapshot.
 
-**A switch of the room's build** (November 2, 2026) does not hand the model over: it lives in
-memory by rule, and at up to 4 MiB it does not fit the exec's environment. The wrapper answers the
-switch busy while a face is attached, and the next image serves a fresh model on the same socket,
-beginning with a notice that rewake was updated and that what came before is in the native face; a
-face that connected in the moment before the exec loses its connection and reconnects to it.
+**A switch of the room's build** (November 2, 2026) hands the model over in memory: at up to 4 MiB
+it does not fit the exec's environment, so the wrapper writes it (`Model.Hand`,
+`internal/core/mirror/handover.go`) to a memory-backed file (`memfd_create`, never a file on disk)
+that the next image inherits by its descriptor, `Handover.model`, and adopts (`mirror.Adopted`)
+before it serves the socket again; `handover.mirror` names the version. Every count goes over, so
+the bounds go on as they were; the faces, the inputs and the clock are the next image's. A face
+attached keeps nothing waiting: the shell keeps one for every pi worker, and a gate on it refused
+every switch of a room with one (found in review, November 2, 2026). Its connection ends with the
+old image, and the face reconnects a second later (`face/src/link.ts`) to the same conversation. A
+model the next image cannot read is replaced by a fresh one that begins with a notice that rewake
+was updated and that what came before is in the native face.
 
 ## The dev worker
 

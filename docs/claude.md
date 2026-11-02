@@ -409,7 +409,7 @@ idle worker makes it (`handover.go`, `modhost/handover.go`; `handover.claude` na
 | The reply socket | bound again by the next image, which keeps the run's pid and start, so its path is the same |
 | The lane's notices | busy while a word is queued, or a notice is within its late word's minute (`mail.LateWordWindow`): its receipts live only here |
 | The delivery server's held and recent letters | busy while any is (the host's own refusal) |
-| The mirror | not handed over ([face.md](face.md)): busy while a face is attached |
+| The mirror | its model in a memory file, which the next image serves; a face reconnects ([face.md](face.md#the-socket)) |
 
 The snapshot is the endpoint's quiescent point (November 2, 2026): it waits for every request
 under way that takes an effect — a hello, a turn's start or end, an ask opened or settled, a control

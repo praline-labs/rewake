@@ -188,7 +188,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 		}
 	}
 
-	model, faces, stopMirror, err := startMirror(request, name, epoch)
+	model, stopMirror, err := startMirror(request, name, epoch)
 	if err != nil {
 		return 0, err
 	}
@@ -336,7 +336,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 	}, &life.workers)
 	defer stopAvailability()
 	handover := &reexec{
-		request: request, session: session, runDir: runDir, service: plan.Service, harness: harness, start: harnessStart, faces: faces,
+		request: request, session: session, runDir: runDir, service: plan.Service, harness: harness, start: harnessStart, model: model,
 		handoff: make(chan chan<- string), resume: make(chan struct{}),
 	}
 	defer handover.watch(serveCtx)()

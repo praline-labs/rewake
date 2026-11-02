@@ -24,10 +24,12 @@ type Contracts struct {
 
 // The contracts a running room holds across a switch of its build
 // (docs/rules/state.md#switching-a-running-room): the wrapper's handover and
-// the switch's own mark, messages and parked image.
+// the face's model it carries, and the switch's own mark, messages and parked
+// image.
 const (
-	handoverContract = "handover"
-	switchContract   = "switch"
+	handoverContract       = "handover"
+	mirrorHandoverContract = "handover.mirror"
+	switchContract         = "switch"
 )
 
 // contractsOf is this build's: the host's channel and the mirror's lines,
@@ -37,10 +39,11 @@ const (
 func contractsOf(catalog adapter.Catalog) Contracts {
 	c := Contracts{
 		Speaks: map[string]string{
-			parts.HostContract:   strconv.Itoa(mainhost.Version),
-			parts.MirrorContract: strconv.Itoa(mirror.Version),
-			handoverContract:     strconv.Itoa(host.HandoverVersion),
-			switchContract:       strconv.Itoa(state.SwitchVersion),
+			parts.HostContract:     strconv.Itoa(mainhost.Version),
+			parts.MirrorContract:   strconv.Itoa(mirror.Version),
+			handoverContract:       strconv.Itoa(host.HandoverVersion),
+			mirrorHandoverContract: strconv.Itoa(mirror.HandedVersion),
+			switchContract:         strconv.Itoa(state.SwitchVersion),
 		},
 		Requires: map[string]string{},
 	}

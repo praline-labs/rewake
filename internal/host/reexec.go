@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter"
+	"github.com/praline-labs/rewake/internal/core/mirror"
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/core/worktype"
@@ -36,7 +37,7 @@ const HandoverEnv = "REWAKE_HANDOVER"
 
 // HandoverVersion is the version of Handover; an image adopts only its own,
 // and a switch of the room admits only a build that takes the same.
-const HandoverVersion = 2
+const HandoverVersion = 3
 
 // reexecMark is the file of the run's directory where the outcome of the last
 // request to re-execute is written, for whoever sent the signal.
@@ -70,11 +71,13 @@ type Handover struct {
 	// Park is set on an image a switch parked (host/switching): it holds no
 	// lease until its leader says go or resume.
 	Park *switching.Park `json:"park,omitempty"`
-	// Mirror says the run serves rewake's face; the next image serves it a
-	// model of its own (startMirror), as the model lives in memory only.
+	// Mirror says the run serves rewake's face; Model is the descriptor of
+	// the memory file its model is handed over in (startMirror), 0 for none.
 	Mirror bool `json:"mirror,omitempty"`
+	Model  int  `json:"model,omitempty"`
 
 	files []*os.File
+	model *os.File
 }
 
 // ReadHandover reads the handover an earlier image left in the environment
@@ -89,6 +92,9 @@ func ReadHandover(spec string) (*Handover, error) {
 	}
 	for _, fd := range handover.Files {
 		handover.files = append(handover.files, os.NewFile(uintptr(fd), "handover"))
+	}
+	if handover.Model > 0 {
+		handover.model = os.NewFile(uintptr(handover.Model), "model")
 	}
 	return &handover, nil
 }
@@ -179,8 +185,8 @@ type reexec struct {
 	service adapter.Service
 	harness *os.Process
 	start   uint64
-	// faces counts the faces drawing the run's mirror, nil without one.
-	faces func() int
+	// model is the face's model, nil for a run the face does not draw.
+	model *mirror.Model
 	// handoff asks the delivery server to stop; resume serves again after
 	// an exec that failed.
 	handoff chan chan<- string
@@ -240,11 +246,6 @@ func (r *reexec) Answer() (string, string) {
 	}
 	if why := r.service.(adapter.Handover).Busy(); why != "" {
 		return switching.Busy, why
-	}
-	// The next image draws the session from what it hears next: a face
-	// looking now would see the conversation go.
-	if r.faces != nil && r.faces() > 0 {
-		return switching.Busy, "rewake's face draws the session, whose model is not handed over"
 	}
 	return switching.Ready, ""
 }
@@ -308,17 +309,27 @@ func (r *reexec) exec(handing adapter.Handover, park *switching.Park) string {
 		Template: r.request.Template, WorktreeEntry: r.request.WorktreeEntry, WorkType: r.request.WorkType, WorkTypeText: r.request.WorkType.Text,
 		HarnessPID: r.harness.Pid, HarnessStart: r.start, Service: handed.State, Park: park, Mirror: r.request.Mirror,
 	}
+	// The model after the service's handover, which stopped what feeds it.
+	if r.model != nil {
+		model, err := handModel(r.model)
+		if err != nil {
+			return "the face's model could not be handed over: " + err.Error()
+		}
+		defer func() { _ = model.Close() }()
+		if why := inherited(model); why != "" {
+			return why
+		}
+		h.Model = int(model.Fd())
+	}
 	if r.request.Handover != nil {
 		h.Count = r.request.Handover.Count
 	}
 	h.Count++
 	for _, file := range handed.Files {
-		fd := file.Fd()
-		// The copies carry close-on-exec, as every descriptor Go opens.
-		if _, _, errno := syscall.Syscall(syscall.SYS_FCNTL, fd, syscall.F_SETFD, 0); errno != 0 {
-			return "a descriptor could not be kept across the exec: " + errno.Error()
+		if why := inherited(file); why != "" {
+			return why
 		}
-		h.Files = append(h.Files, int(fd))
+		h.Files = append(h.Files, int(file.Fd()))
 	}
 	raw, err := json.Marshal(h)
 	if err != nil {
@@ -329,6 +340,15 @@ func (r *reexec) exec(handing adapter.Handover, park *switching.Park) string {
 	// The image this process runs, which the install's path may no longer
 	// hold: an upgrade replaces that file under running sessions.
 	return "the exec failed: " + syscall.Exec("/proc/self/exe", os.Args, env).Error()
+}
+
+// inherited clears a descriptor's close-on-exec, which every one Go opens
+// carries, so the next image has it.
+func inherited(file *os.File) string {
+	if _, _, errno := syscall.Syscall(syscall.SYS_FCNTL, file.Fd(), syscall.F_SETFD, 0); errno != 0 {
+		return "a descriptor could not be kept across the exec: " + errno.Error()
+	}
+	return ""
 }
 
 // adopted tells the sender that the new image runs the run.

@@ -1,11 +1,13 @@
 package host
 
 import (
+	"bufio"
 	"context"
+	"encoding/json"
+	"io"
 	"net"
 	"os"
 	"path/filepath"
-	"strings"
 	"syscall"
 	"testing"
 	"time"
@@ -35,11 +37,39 @@ type mirrored struct{ *fakeHarness }
 
 func (mirrored) Mirrors() {}
 
-// A run that serves rewake's face is handed over as any other, a model of
-// its own in the next image, which says what it does not hold; while a face
-// draws the session the switch waits, as the face would see the conversation
-// go.
-func TestARunWithAMirrorWaitsOnlyForItsFaces(t *testing.T) {
+// faceReads connects a face to the run's mirror and answers the texts of the
+// items its snapshot draws.
+func faceReads(t *testing.T, socket string) ([]string, net.Conn) {
+	t.Helper()
+	conn, err := net.Dial("unix", socket)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = conn.SetReadDeadline(time.Now().Add(3 * time.Second))
+	var texts []string
+	lines := bufio.NewScanner(conn)
+	lines.Buffer(nil, 1<<20)
+	for lines.Scan() {
+		var line mirror.Line
+		if err := json.Unmarshal(lines.Bytes(), &line); err != nil {
+			t.Fatal(err)
+		}
+		if line.Op == mirror.LineOpItem {
+			texts = append(texts, line.Item.Text)
+		}
+		if line.Op == mirror.LineOpEnd {
+			return texts, conn
+		}
+	}
+	t.Fatalf("the face's snapshot did not end: %v", lines.Err())
+	return nil, nil
+}
+
+// A run that serves rewake's face is handed over with a face attached: its
+// model goes to the next image in a memory file, and the face, whose
+// connection ended with the old image, reconnects and draws the conversation
+// as it was.
+func TestAFaceReconnectsToTheModelHandedOver(t *testing.T) {
 	base, err := os.MkdirTemp("", "hm")
 	if err != nil {
 		t.Fatal(err)
@@ -49,43 +79,48 @@ func TestARunWithAMirrorWaitsOnlyForItsFaces(t *testing.T) {
 	if err := state.EnsureSubdir(filepath.Join(room, "sock")); err != nil {
 		t.Fatal(err)
 	}
-	request := Request{Harness: mirrored{&fakeHarness{}}, Dir: room, Mirror: true, Handover: &Handover{Count: 1}}
-	model, faces, stop, err := startMirror(request, "api", "e1")
+	socket := registry.MirrorFor(room, "api", "e1")
+	request := Request{Harness: mirrored{&fakeHarness{}}, Dir: room, Mirror: true}
+	model, stop, err := startMirror(request, "api", "e1")
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(stop)
-	var notice string
-	for _, line := range model.Snapshot() {
-		if line.Op == mirror.LineOpItem && line.Item.Kind == mirror.ItemKindNotice {
-			notice = line.Item.Text
-		}
-	}
-	if !strings.Contains(notice, "native face") {
-		t.Fatalf("the adopted run's model begins with %q", notice)
+	model.Apply(mirror.Event{Kind: mirror.EventPrompt, ID: "p1", Text: "what came before"})
+	drawn, face := faceReads(t, socket)
+	if len(drawn) != 1 {
+		t.Fatalf("the face draws %q", drawn)
 	}
 
-	r := &reexec{request: request, service: idle{}, faces: faces}
+	r := &reexec{request: request, service: idle{}, model: model}
 	if kind, why := r.Answer(); kind != switching.Ready {
-		t.Fatalf("with no face, the run answers %s: %s", kind, why)
+		t.Fatalf("with a face attached, the run answers %s: %s", kind, why)
 	}
-	conn, err := net.Dial("unix", registry.MirrorFor(room, "api", "e1"))
+	file, err := handModel(model)
 	if err != nil {
 		t.Fatal(err)
 	}
-	deadline := time.Now().Add(2 * time.Second)
-	for faces() == 0 && time.Now().Before(deadline) {
-		time.Sleep(10 * time.Millisecond)
+	stop()
+	if _, err := io.ReadAll(face); err != nil {
+		t.Fatalf("the face's connection outlived its image: %v", err)
 	}
-	if kind, why := r.Answer(); kind != switching.Busy || !strings.Contains(why, "face") {
-		t.Fatalf("with a face attached, the run answers %s: %s", kind, why)
+	_ = face.Close()
+
+	request.Handover = &Handover{Count: 1, model: file}
+	adopted, stopAdopted, err := startMirror(request, "api", "e1")
+	if err != nil {
+		t.Fatal(err)
 	}
-	_ = conn.Close()
-	for faces() > 0 && time.Now().Before(deadline) {
-		time.Sleep(10 * time.Millisecond)
+	t.Cleanup(stopAdopted)
+	again, face := faceReads(t, socket)
+	_ = face.Close()
+	if len(again) != 1 || again[0] != "what came before" {
+		t.Fatalf("the face reconnected to the next image draws %q", again)
 	}
-	if kind, why := r.Answer(); kind != switching.Ready {
-		t.Fatalf("once the face left, the run answers %s: %s", kind, why)
+	adopted.Apply(mirror.Event{Kind: mirror.EventPrompt, ID: "p2", Text: "after"})
+	if after, face := faceReads(t, socket); len(after) != 2 {
+		t.Fatalf("after the handover the face draws %q", after)
+	} else {
+		_ = face.Close()
 	}
 }
 
