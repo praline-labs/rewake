@@ -293,9 +293,13 @@ func (r *reexec) exec(handing adapter.Handover, park *switching.Park) string {
 	if err != nil {
 		return err.Error()
 	}
+	// Reached only when the exec did not happen.
 	defer func() {
 		for _, file := range handed.Files {
 			_ = file.Close()
+		}
+		if handed.Resume != nil {
+			handed.Resume()
 		}
 	}()
 	h := Handover{

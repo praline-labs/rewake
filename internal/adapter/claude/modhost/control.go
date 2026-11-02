@@ -67,6 +67,10 @@ func (s *Server) dispatchText(ctx context.Context, request control.Request, text
 		s.mu.Unlock()
 		return control.Answer{Outcome: control.Refused, Reason: control.NotAnswering}
 	}
+	if s.frozen {
+		s.mu.Unlock()
+		return control.Answer{Outcome: control.Refused, Reason: control.Busy, Detail: errHanding.Error()}
+	}
 	if request.Action == control.Reply {
 		s.mu.Unlock()
 		return s.answerAsk(ctx, request)

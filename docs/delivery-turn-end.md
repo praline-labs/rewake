@@ -41,7 +41,8 @@ run, so a retry still finds the done journal; an end the core took is answered f
 next image captures its copy. What the exec would lose is the first capture of an end not yet
 taken: captured afresh after the exec, its boundary would take what was read since, and its answer
 could answer a later task with an earlier result. So a run with such an end is busy and the switch
-waits for it ([claude.md](claude.md#handing-the-run-over)); pi's run is busy while a turn is open
+waits for it, and from the snapshot to the exec no end is captured: it is refused and sent again to
+the next image ([claude.md](claude.md#handing-the-run-over)); pi's run is busy while a turn is open
 or its end is being published, and the fixture's while a turn is open.
 
 The end answers what it said (`mail.Outcome`), decided where it was published rather than

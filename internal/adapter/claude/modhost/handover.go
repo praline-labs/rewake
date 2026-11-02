@@ -54,6 +54,11 @@ type HandedLoad struct {
 func (s *Server) Busy() string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	return s.busy()
+}
+
+// busy is Busy under mu.
+func (s *Server) busy() string {
 	switch {
 	case s.closed:
 		return "the mod's endpoint is closing"
@@ -67,13 +72,56 @@ func (s *Server) Busy() string {
 	return ""
 }
 
-// HandOver answers the order of loads and a copy of the listener, changing
-// nothing: the server serves on until the exec replaces it.
+// effecting are the paths whose requests take an effect that lives in this
+// image: a load admitted, a turn's start or end captured, an ask opened, the
+// face's events. A handover waits for those under way and refuses the next,
+// which the mod sends again to the next image; a poll, a state or a status
+// line changes nothing handed over and is served throughout.
+var effecting = map[string]bool{
+	PathHello: true, PathTurnStart: true, PathTurnEnd: true, PathAskOpen: true,
+	PathAskSettle: true, PathModControl: true, PathMirrorEvents: true,
+}
+
+// errHanding refuses an effect between a handover's snapshot and its exec.
+var errHanding = errors.New("the run is being handed over to rewake's next image; send it again")
+
+// enterEffect takes a request's effect in unless a handover froze them,
+// holding effects for it until leaveEffect; any other request goes through.
+func (s *Server) enterEffect(path string) bool {
+	if !effecting[path] {
+		return true
+	}
+	s.effects.RLock()
+	s.mu.Lock()
+	frozen := s.frozen
+	s.mu.Unlock()
+	if frozen {
+		s.effects.RUnlock()
+		return false
+	}
+	return true
+}
+
+func (s *Server) leaveEffect(path string) {
+	if effecting[path] {
+		s.effects.RUnlock()
+	}
+}
+
+// HandOver answers the order of loads and a copy of the listener. It is the
+// endpoint's quiescent point: every effect under way is waited for, and none
+// is taken after it, so what it answers is all this image holds; until the
+// exec replaces the image, or Thaw after one that failed, an effect is
+// refused with 503 and the mod sends it again.
 func (s *Server) HandOver() (Handed, *os.File, error) {
-	if why := s.Busy(); why != "" {
+	s.effects.Lock()
+	defer s.effects.Unlock()
+	s.mu.Lock()
+	if why := s.busy(); why != "" {
+		s.mu.Unlock()
 		return Handed{}, nil, errors.New(why)
 	}
-	s.mu.Lock()
+	s.frozen = true
 	handed := Handed{Version: handedVersion, Harness: s.harness, Generation: s.generation, Transition: s.transition}
 	if s.current != nil {
 		handed.Current = &HandedLoad{Hello: s.current.hello, Generation: s.current.generation, Live: s.current.live}
@@ -88,7 +136,17 @@ func (s *Server) HandOver() (Handed, *os.File, error) {
 	slices.Sort(handed.Superseded)
 	slices.Sort(handed.Loads)
 	file, err := s.listener.File()
+	if err != nil {
+		s.Thaw()
+	}
 	return handed, file, err
+}
+
+// Thaw takes effects again after a handover whose exec failed.
+func (s *Server) Thaw() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.frozen = false
 }
 
 // Adopt serves the listener an earlier image handed over, in place of Start,

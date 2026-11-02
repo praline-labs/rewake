@@ -405,13 +405,20 @@ idle worker makes it (`handover.go`, `modhost/handover.go`; `handover.claude` na
 |---|---|
 | The mod's endpoint | its listener as a file and the order of loads — the current hello and generation, the superseded, the admitted — so the mod's next poll is answered 200 and its next hello admitted as before |
 | A control request, an open ask | busy while any is open |
-| The ends | busy while an end is captured and not yet taken by the core; one the core took is answered from its done journal whatever the next image captures |
+| The ends | busy while an end is captured and not yet taken by the core; one the core took is answered from its done journal whatever the next image captures; one sent after the snapshot is refused and captured first by the next image |
 | The reply socket | bound again by the next image, which keeps the run's pid and start, so its path is the same |
 | The lane's notices | busy while a word is queued, or a notice is within its late word's minute (`mail.LateWordWindow`): its receipts live only here |
 | The delivery server's held and recent letters | busy while any is (the host's own refusal) |
 | The mirror | not handed over ([face.md](face.md)): busy while a face is attached |
 
-The ends are the gap a capture opens: captured afresh in the next image, a resent end's boundary
+The snapshot is the endpoint's quiescent point (November 2, 2026): it waits for every request
+under way that takes an effect — a hello, a turn's start or end, an ask opened or settled, a control
+reply, the face's events — and from it to the exec refuses the next with 503, which the mod sends
+again and the next image takes; a control request meanwhile is refused as busy, and a poll, a
+state and the status line are served throughout. An exec
+that fails resumes them (`HandedOver.Resume`). Without it, an end captured after the snapshot was
+lost with the image and captured afresh after the exec, its boundary taking a later task (found in
+review). The ends are the gap a capture opens: captured afresh in the next image, a resent end's boundary
 would take what was read since its first capture, and its answer could answer a later task. An
 end is taken once its publication returns, or once the run is found gone; until then the run is
 busy. The adopting image reports the live set without the turn boundary and then the endpoint's

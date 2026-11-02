@@ -54,9 +54,10 @@ func (r *modRun) HandOver() (adapter.HandedOver, error) {
 	raw, err := json.Marshal(handedState{Version: handoverVersion, Server: handed})
 	if err != nil {
 		_ = listener.Close()
+		r.server.Thaw()
 		return adapter.HandedOver{}, err
 	}
-	return adapter.HandedOver{State: raw, Files: []*os.File{listener}}, nil
+	return adapter.HandedOver{State: raw, Files: []*os.File{listener}, Resume: r.server.Thaw}, nil
 }
 
 // Adopt runs the service on what an earlier image of the run handed over, in

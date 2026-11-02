@@ -38,6 +38,9 @@ type WorkersOnly interface {
 type HandedOver struct {
 	State json.RawMessage `json:"state"`
 	Files []*os.File      `json:"-"`
+	// Resume, when set, serves on after an exec that failed: HandOver
+	// stopped what would change the state it answered.
+	Resume func() `json:"-"`
 }
 
 // Contracts is a harness whose running sessions hold contracts that a switch

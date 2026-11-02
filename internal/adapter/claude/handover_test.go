@@ -245,3 +245,79 @@ func shapeOf(t reflect.Type) string {
 	}
 	return t.Kind().String()
 }
+
+// An end that comes after the handover's snapshot is not captured in the
+// image that goes: it is refused, the mod sends it again, and the next image
+// captures it first, so its boundary is the one the core takes once. After an
+// exec that failed, the run takes effects again.
+func TestAnEndAfterTheSnapshotIsCapturedByTheNextImage(t *testing.T) {
+	room := shortRoom(t)
+	privateHome(t)
+	request := adapter.LaunchRequest{
+		Name: "api", Epoch: "e1", Dir: room, RoomDir: room, Socket: filepath.Join(room, "sock", "api.e1.sock"),
+		RunDir: filepath.Join(room, "runs", "api.e1"), Role: role.Write, Work: func() string { return "work" },
+	}
+	if err := state.EnsureSubdir(request.RunDir); err != nil {
+		t.Fatal(err)
+	}
+	core := &takes{}
+	sets := make(chan []adapter.Capability, 16)
+	before := handedRun(t, request, core, sets)
+	if err := before.Start(context.Background(), func(string) {}); err != nil {
+		t.Fatal(err)
+	}
+	start, err := proc.StartTime(os.Getpid())
+	if err != nil {
+		t.Fatal(err)
+	}
+	before.HarnessStarted(adapter.RunProcess{PID: os.Getpid(), Start: start})
+	socket := modSocketPath(request)
+	if status, text := postMod(t, socket, modhost.PathHello, modhost.HelloRequest{LoadID: "load-1", SessionID: "conversation-1", HarnessVersion: "2.1.310"}); status != http.StatusOK {
+		t.Fatalf("the hello: %d %s", status, text)
+	}
+	answer := "earlier answer"
+	end := modhost.TurnEndRequest{LoadID: "load-1", Conversation: "conversation-1", TurnID: "turn-1", EndID: "end-1", Reason: modhost.EndReasonAnswered, Answer: &answer}
+	turn := modhost.TurnStartRequest{LoadID: "load-1", Conversation: "conversation-1", TurnID: "turn-1"}
+
+	failed, err := before.HandOver()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if status, _ := postMod(t, socket, modhost.PathTurnStart, turn); status != http.StatusServiceUnavailable {
+		t.Fatalf("a turn's start after the snapshot: %d", status)
+	}
+	failed.Resume()
+	closeAll(failed.Files)
+	if status, text := postMod(t, socket, modhost.PathTurnStart, turn); status != http.StatusOK {
+		t.Fatalf("a turn's start after an exec that failed: %d %s", status, text)
+	}
+
+	handed, err := before.HandOver()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if status, _ := postMod(t, socket, modhost.PathTurnEnd, end); status != http.StatusServiceUnavailable {
+		t.Fatalf("an end after the snapshot: %d", status)
+	}
+	aside := socket + ".aside"
+	if err := os.Rename(socket, aside); err != nil {
+		t.Fatal(err)
+	}
+	before.Close()
+	if err := os.Rename(aside, socket); err != nil {
+		t.Fatal(err)
+	}
+	after := handedRun(t, request, core, sets)
+	if err := after.Adopt(context.Background(), func(string) {}, handed); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(after.Close)
+	if status, text := postMod(t, socket, modhost.PathTurnEnd, end); status != http.StatusOK {
+		t.Fatalf("the end sent again to the next image: %d %s", status, text)
+	}
+	core.mu.Lock()
+	defer core.mu.Unlock()
+	if len(core.ends) != 1 || core.reads != 1 {
+		t.Fatalf("the core was handed %d ends over %d captures: an end after the snapshot was captured by the image that went", len(core.ends), core.reads)
+	}
+}

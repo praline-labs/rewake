@@ -53,6 +53,9 @@ type Server struct {
 	// is closed with it, so a request waiting for the harness gives up.
 	closed bool
 	stop   chan struct{}
+	// effects and frozen order the effects with a handover (handover.go).
+	effects sync.RWMutex
+	frozen  bool
 	// workers counts each admitted handler among the run's workers, so the
 	// room's lease outlasts a handler that outlasts Close.
 	workers adapter.Workers
@@ -290,6 +293,11 @@ func (s *Server) serve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer s.dismiss()
+	if !s.enterEffect(r.URL.Path) {
+		refuse(w, http.StatusServiceUnavailable, errHanding.Error())
+		return
+	}
+	defer s.leaveEffect(r.URL.Path)
 	s.handle(w, r)
 }
 
