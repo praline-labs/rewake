@@ -349,7 +349,8 @@ November 2, 2026). Main's turns keep its wrapper busy often, and `rewake restart
 switch until they end rather than being refused (the deferred leader, above). Every wrapper's
 delivery server hands its reminder's memory over — which letters were announced and not yet
 looked at by a finished turn's end, and the latest end looked at, boot-clock times the exec keeps
-(`delivery.Memory`) — so an announced letter no longer keeps the run busy: a turn that ended in an
+(`delivery.Memory`), after it has looked at every finished end still queued for it, which the
+next image would not take — so an announced letter no longer keeps the run busy: a turn that ended in an
 error or was stopped looks at nothing, and found live with a pi main, the run stayed busy for the
 whole of the switch's bound. What still keeps it busy is a notice the harness holds, one a late
 word may take back, and a letter waiting for its delivery (the owner's decision, November 2,

@@ -3,6 +3,7 @@ package delivery
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/praline-labs/rewake/internal/core/mail"
 )
@@ -38,7 +39,7 @@ func TestAnAnnouncedTaskGoesOverWithTheRunAndIsRemindedOnce(t *testing.T) {
 			// No finished end reaches Ends before the switch.
 
 			reply := make(chan Stop, 1)
-			if !s.handoff(reply) {
+			if !s.handoff(context.Background(), reply) {
 				t.Fatalf("the handoff was refused: %s", (<-reply).Why)
 			}
 			stop := <-reply
@@ -64,4 +65,81 @@ func TestAnAnnouncedTaskGoesOverWithTheRunAndIsRemindedOnce(t *testing.T) {
 			}
 		})
 	}
+}
+
+// A finished end the wrapper published before it asked for the handoff is
+// looked at by this image, in its real loop, whichever of the two the loop
+// takes first: the next image's channel starts empty, and the task its turn
+// left unread is reminded of once, not lost with the end (review 89).
+func TestAFinishedEndQueuedBeforeTheHandoffIsLookedAt(t *testing.T) {
+	// Both are ready when the loop selects, which it does at random.
+	for trial := range 16 {
+		dir := stateDir(t)
+		var notices []mail.Message
+		deliver := func(_ context.Context, m mail.Message) mail.Result {
+			notices = append(notices, m)
+			return mail.Result{State: mail.Delivered, Via: "socket"}
+		}
+		first := batchServer(dir)
+		first.Deliver = deliver
+		task := message("left unread at a finished turn")
+		task.Kind, task.ToEpoch = mail.Task, first.Epoch
+		if err := mail.Put(dir, task); err != nil {
+			t.Fatal(err)
+		}
+		if !first.begin(context.Background()) {
+			t.Fatal("the server did not begin")
+		}
+		first.drain(context.Background())
+
+		s := batchServer(dir)
+		s.Deliver, s.Remembered = deliver, &Memory{Announced: first.announced}
+		end := later(0)
+		ends := make(chan int64, 1)
+		ends <- end
+		handoff := make(chan chan<- Stop, 1)
+		reply := make(chan Stop, 1)
+		handoff <- reply
+		s.Ends, s.Handoff = ends, handoff
+		ctx, cancel := context.WithCancel(context.Background())
+		done := make(chan struct{})
+		go func() { s.Serve(ctx); close(done) }()
+		var stop Stop
+		select {
+		case stop = <-reply:
+		case <-time.After(5 * time.Second):
+			cancel()
+			t.Fatal("the handoff was never answered")
+		}
+		cancel()
+		<-done
+		if stop.Why != "" {
+			t.Fatalf("trial %d: the handoff was refused: %s", trial, stop.Why)
+		}
+
+		adopter := batchServer(dir)
+		adopter.Deliver, adopter.Remembered = deliver, &stop.Memory
+		if !adopter.begin(context.Background()) {
+			t.Fatal("the adopting server did not begin")
+		}
+		adopter.drain(context.Background())
+		reminded := reminders(notices, task.ID)
+		// The next finished end is not this turn's, and reminds of nothing new.
+		adopter.remind(context.Background(), later(end))
+		if len(ends) != 0 || reminded != 1 || reminders(notices, task.ID) != 1 {
+			t.Fatalf("trial %d: %d ends left behind, the handoff looked at %d, the task reminded of %d times before the next end and %d after; want the end looked at and one reminder",
+				trial, len(ends), stop.Memory.Looked, reminded, reminders(notices, task.ID))
+		}
+	}
+}
+
+// reminders counts the reminders among notices that name id.
+func reminders(notices []mail.Message, id string) int {
+	n := 0
+	for _, notice := range notices {
+		if notice.Reminder && len(notice.Batch) == 1 && notice.Batch[0].ID == id {
+			n++
+		}
+	}
+	return n
 }

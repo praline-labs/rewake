@@ -1,6 +1,7 @@
 package delivery
 
 import (
+	"context"
 	"maps"
 
 	"github.com/praline-labs/rewake/internal/core/mail"
@@ -58,7 +59,13 @@ func (s *Server) busy() string {
 // handoff answers a request to stop: true stops the server. What it hands
 // over is also what its begin takes again when the exec fails and it serves
 // on.
-func (s *Server) handoff(reply chan<- Stop) bool {
+func (s *Server) handoff(ctx context.Context, reply chan<- Stop) bool {
+	// A finished end published before the request may still wait behind it
+	// in Ends, which the next image does not take: this image looks at it
+	// first, and a reminder it owes goes out now.
+	for len(s.Ends) > 0 {
+		s.remind(ctx, <-s.Ends)
+	}
 	if why := s.busy(); why != "" {
 		reply <- Stop{Why: why}
 		return false

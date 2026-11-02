@@ -186,7 +186,7 @@ func (s *Server) Serve(ctx context.Context) {
 		case ended := <-s.Ends:
 			s.remind(ctx, ended)
 		case reply := <-s.Handoff:
-			if s.handoff(reply) {
+			if s.handoff(ctx, reply) {
 				return
 			}
 		}
