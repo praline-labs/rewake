@@ -62,6 +62,11 @@ no lock: later edits, commits and sessions change the answer, and it promises no
 
 ## The `worktree_status` tool
 
+The worktree tools, as the brief tools, are defined once — name, description, schema, arguments,
+refusals, bound and result text — in `internal/core/sessiontools/sessiontools.ts`, copied into
+both adapters by `go run ./tools/protogen` ([adding.md](adding.md#a-session-tool)); each harness
+keeps its bridge, below.
+
 The same name and contract in both harnesses: no input; it runs
 `$REWAKE_EXECUTABLE worktree status --json` by argv — no shell, nothing of the model's on the
 command line — and answers its JSON, or an error for a nonzero exit, a timeout, a cut answer or
@@ -81,8 +86,9 @@ The bound is 60 seconds: the view reads records and git, and holds no lock to wa
   timeout with exit code 0, so `killed` is read first.
 
 The tests: `internal/cli/worktree_status_test.go` (the forecast and the view),
-`internal/cli/space_worktree_test.go` (the resolution), the mod's `tests/worktree.test.ts`,
-pi's `worktree.test.ts`, and the workflow scenario `fixture-space-worktree`.
+`internal/cli/space_worktree_test.go` (the resolution), the shared `sessiontools.test.ts`, the
+mod's `tests/worktree.test.ts`, pi's `worktree.test.ts`, and the workflow scenario
+`fixture-space-worktree`.
 
 ## Main's `worktree_list` and `worktree_land`
 
@@ -91,7 +97,7 @@ Two tools registered only in main's session, by the role the launch names in `RE
 it, or of another role, is offered `worktree_status` alone). That chooses what a session is
 shown; it is not authorization: `rewake worktree ls` and `land` stay open to any session, as the
 CLI was. The same names and contracts in both harnesses (`mcp__rewake__worktree_list` and
-`rewake_worktree_list` in pi, and so for land), run by argv through `REWAKE_EXECUTABLE`.
+`worktree_list` in pi, and so for land), run by argv through `REWAKE_EXECUTABLE`.
 
 - **`worktree_list`**, no input: `rewake worktree ls --this-room --json`. `ls` lists every
   worktree under the root, of every repository and room, because the root is the owner's;
@@ -110,7 +116,8 @@ CLI was. The same names and contracts in both harnesses (`mcp__rewake__worktree_
   The tool's text asks main to land into the integration branch only on the owner's or a review's
   word; the tool does not enforce it.
 
-The tests: the mod's `tests/worktree.test.ts` and pi's `worktree.test.ts` (offer by role, argv,
+The tests: the shared `sessiontools.test.ts` (arguments and refused input, an empty `into`
+among it), the mod's `tests/worktree.test.ts` and pi's `worktree.test.ts` (offer by role, argv,
 bounds, refused input), `TestWorktreeLsThisRoomKeepsTheRoomsCheckouts`, `TestARunNamesItsRole`.
 
 ## A worker's entry: `enter_worktree = true` and `worktree_enter`

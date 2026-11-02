@@ -44,7 +44,7 @@ func enterOnce(t *testing.T, program, settings string) string {
 		"hooks/hooks.json":           `{"modules": ["./probe.ts"]}`,
 		"hooks/probe.ts":             enterProbe,
 	}
-	for _, name := range []string{"enter.ts", "worktree.ts"} {
+	for _, name := range []string{"enter.ts", "worktree.ts", "sessiontools.ts"} {
 		data, err := modFiles.ReadFile("mod/hooks/" + name)
 		if err != nil {
 			t.Fatal(err)

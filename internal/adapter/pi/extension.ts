@@ -1,13 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { createConnection, type Socket } from "node:net";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { briefTools } from "./briefs.ts";
 import { faceInterrupt, facePrompt, faceThinking, serveLevel } from "./faced.ts";
 import { type MirrorEvent, Outbox } from "./feed.ts";
 import { management, type State } from "./management.ts";
 import { Mirror } from "./mirror.ts";
 import { serveMirror } from "./mirrorhooks.ts";
-import { worktreeTools } from "./worktree.ts";
+import { briefTools, worktreeTools } from "./tools.ts";
 
 export type Frame = {
   op: string;

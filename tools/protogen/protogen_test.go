@@ -35,7 +35,10 @@ func TestTheCheckedInFilesMatchTheSchema(t *testing.T) {
 // files and their times alone.
 func TestARunRewritesOnlyWhatDiffers(t *testing.T) {
 	root := t.TempDir()
-	paths := append([]string{feedPath}, feedCopies...)
+	var paths []string
+	for _, module := range shareds {
+		paths = append(append(paths, module.source), module.copies...)
+	}
 	for _, t := range targets {
 		paths = append(paths, t.schema, t.ts, t.goFile)
 	}

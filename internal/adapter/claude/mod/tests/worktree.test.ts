@@ -1,11 +1,6 @@
 import { expect, test } from "claude-code/testing";
-import {
-  landTimeoutMs,
-  statusTimeoutMs,
-  worktreeLandToolName,
-  worktreeListToolName,
-  worktreeToolName,
-} from "../hooks/worktree.ts";
+import { landTimeoutMs, statusTimeoutMs } from "../hooks/sessiontools.ts";
+import { worktreeLandToolName, worktreeListToolName, worktreeToolName } from "../hooks/worktree.ts";
 import { epoch, socket, start, world } from "./world.ts";
 
 const env = {
@@ -140,17 +135,11 @@ test("list asks for this room's checkouts, land runs once with the name and the 
   expect(landTimeoutMs).toBeGreaterThan(60_000);
 });
 
-test("land refuses a name or a branch that would be read as a flag, without running anything", async ($, on) => {
+// Which inputs land refuses is the shared module's (sessiontools.test.ts).
+test("a land the input cannot make runs nothing and answers an error", async ($, on) => {
   const seen = stage(on, () => ({ value: { exitCode: 0, stdout: "{}", stderr: "" } }), asMain);
   await start($);
-  for (const input of [
-    {},
-    { name: "" },
-    { name: "--force" },
-    { name: "x", into: "-f" },
-    { name: "x", into: "" },
-    { name: 3 },
-  ]) {
+  for (const input of [{ name: "--force" }, { name: "x", into: "" }]) {
     const answer: any = await call($, worktreeLandToolName, input);
     expect(answer.isError).toBe(true);
   }

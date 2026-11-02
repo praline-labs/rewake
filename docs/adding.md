@@ -1,8 +1,8 @@
 ---
-description: The steps of adding a harness, a role or a message kind, and what each must touch; open before adding one.
+description: The steps of adding a harness, a role, a message kind or a session tool, and what each must touch; open before adding one.
 ---
 
-# Adding a harness, a role or a message kind
+# Adding a harness, a role, a message kind or a session tool
 
 ## A harness
 
@@ -38,3 +38,21 @@ text feeds both the briefing and the guide, and a copy of another role's fails a
 `internal/cli/send_<kind>.go` and its line in `sendKinds`; a kind the other places do not know
 is treated as a task (`mail.Owed`), so before adding one meant to behave differently, grep for
 `mail.Task`, `mail.Note` and their neighbours and decide each place.
+
+## A session tool
+
+A tool rewake offers a session in every harness — the brief and worktree tools — is a front end
+of one `rewake …` command, defined once in `internal/core/sessiontools/sessiontools.ts`: its name,
+label, description, input schema, the check of its input into the command's arguments or a
+refusal, its bound and the command it names in an error. The steps:
+
+1. Its `CommandTool` in that module, with the pure tests of its input in `sessiontools.test.ts`.
+2. `go run ./tools/protogen`, which copies the module into `internal/adapter/pi/sessiontools.ts`
+   and `internal/adapter/claude/mod/hooks/sessiontools.ts`; the generator's test fails when a
+   copy differs.
+3. In each adapter, its bridge offers the tool to the roles that see it: pi's `tools.ts`, and the
+   mod's `worktree.ts` or `briefs.ts`, registered at `session.start` in `rewake.ts`. Each
+   adapter's own tests hold the offer by role and how its runner reaches the command.
+
+A tool only one harness can serve — `worktree_enter`, built on Claude Code's own `EnterWorktree` —
+stays in that adapter.

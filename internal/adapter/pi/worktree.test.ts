@@ -1,6 +1,8 @@
-// The worktree_status tool's contract with pi, run by go test (worktree_tool_test.go).
+// The worktree tools' bridge to pi, run by go test (worktree_tool_test.go);
+// their inputs and texts are the shared module's (sessiontools.test.ts).
 import { expect, test } from "bun:test";
-import { landTimeoutMs, listArgs, statusArgs, statusTimeoutMs, worktreeTools } from "./worktree.ts";
+import { landTimeoutMs, listArgs, statusArgs, statusTimeoutMs } from "./sessiontools.ts";
+import { worktreeTools } from "./tools.ts";
 
 const status = '{"session":"api-pi","checkout":null,"close":{"outcome":"none"}}';
 
@@ -111,7 +113,7 @@ test("list asks for this room's checkouts, land passes the name and the branch a
   expect(landTimeoutMs).toBeGreaterThan(60_000);
 });
 
-test("land refuses a name or a branch that would be read as a flag, and shows a refusal as an error", async () => {
+test("a land the input cannot make runs nothing, and a refusal of the command is an error", async () => {
   const seen = asMain(async () => ({
     stdout: "",
     stderr: "main moved on",
@@ -119,14 +121,7 @@ test("land refuses a name or a branch that would be read as a flag, and shows a 
     killed: false,
   }));
   const land = byName(seen, "worktree_land");
-  for (const input of [
-    {},
-    { name: "" },
-    { name: "--force" },
-    { name: "x", into: "-f" },
-    { name: "x", into: "" },
-    { name: 3 },
-  ]) {
+  for (const input of [{ name: "--force" }, { name: "x", into: "" }]) {
     const result = await land.execute("c", input, undefined, undefined, { cwd: "/w" } as any);
     expect(result.isError).toBe(true);
   }

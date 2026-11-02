@@ -1,10 +1,6 @@
 import { expect, test } from "claude-code/testing";
-import {
-  briefCommentToolName,
-  briefReadToolName,
-  briefTickToolName,
-  briefTimeoutMs,
-} from "../hooks/briefs.ts";
+import { briefCommentToolName, briefReadToolName, briefTickToolName } from "../hooks/briefs.ts";
+import { briefTimeoutMs } from "../hooks/sessiontools.ts";
 import { epoch, socket, start, world } from "./world.ts";
 
 const env = {
@@ -83,18 +79,17 @@ test("each tool runs its rewake brief command by argv with the run's variables, 
   }
 });
 
-test("an input that is no positive integer or an empty text runs nothing", async ($, on) => {
+// Which inputs a tool refuses is the shared module's (sessiontools.test.ts).
+test("an input the tool refuses runs nothing and answers the refusal as an error", async ($, on) => {
   const seen = stage(on, ok(""));
   await start($);
-  const refused = [
-    await call($, briefReadToolName, { id: 0 }),
-    await call($, briefReadToolName, { id: "3" }),
-    await call($, briefTickToolName, { id: 3, item: 1.5, edition: 2 }),
-    await call($, briefTickToolName, { id: 3, item: 1 }),
-    await call($, briefTickToolName, { id: 3, item: 1, edition: 2, undo: "yes" }),
-    await call($, briefCommentToolName, { id: 3, text: "  " }),
-  ];
-  for (const answer of refused as any[]) expect(answer.isError).toBe(true);
+  const refused: any = await call($, briefReadToolName, { id: 0 });
+  expect(refused).toEqual({
+    isError: true,
+    result: "brief_read needs id, the brief's number from 1",
+  });
+  const empty: any = await call($, briefCommentToolName, { id: 3, text: "  " });
+  expect(empty.isError).toBe(true);
   expect(seen.runs).toEqual([]);
 });
 

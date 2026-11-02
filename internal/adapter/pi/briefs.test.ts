@@ -1,6 +1,8 @@
-// The brief tools' contract with pi, run by go test (worktree_tool_test.go).
+// The brief tools' bridge to pi, run by go test (worktree_tool_test.go); their
+// inputs and texts are the shared module's (sessiontools.test.ts).
 import { expect, test } from "bun:test";
-import { briefTimeoutMs, briefTools } from "./briefs.ts";
+import { briefTimeoutMs } from "./sessiontools.ts";
+import { briefTools } from "./tools.ts";
 
 const shown =
   "brief 3 · Login · edition 2 · revision 5 · 1 of 2 done · 0 comments\n\n- [x] #1 move it";
@@ -59,17 +61,17 @@ test("each tool runs its rewake brief command by argv and answers its lines", as
   }
 });
 
-test("an input that is no positive integer or an empty text runs nothing", async () => {
+test("an input the tool refuses runs nothing and answers the refusal as an error", async () => {
   const seen = stage(ok);
-  const results = [
-    await call(named(seen.tools, "brief_read"), { id: 0 }),
-    await call(named(seen.tools, "brief_read"), { id: "3" }),
-    await call(named(seen.tools, "brief_tick"), { id: 3, item: 1.5, edition: 2 }),
-    await call(named(seen.tools, "brief_tick"), { id: 3, item: 1 }),
-    await call(named(seen.tools, "brief_tick"), { id: 3, item: 1, edition: 2, undo: "yes" }),
-    await call(named(seen.tools, "brief_comment"), { id: 3, text: "  " }),
-  ];
-  for (const result of results) expect(result.isError).toBe(true);
+  const refused = await call(named(seen.tools, "brief_read"), { id: 0 });
+  expect(refused).toEqual({
+    content: [{ type: "text", text: "brief_read needs id, the brief's number from 1" }],
+    details: undefined,
+    isError: true,
+  });
+  expect((await call(named(seen.tools, "brief_comment"), { id: 3, text: "  " })).isError).toBe(
+    true,
+  );
   expect(seen.execs).toEqual([]);
 });
 
