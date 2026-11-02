@@ -26,6 +26,12 @@ func served(t *testing.T, program string) string {
 // on close, as the space host's does (state.Listener).
 func relayed(t *testing.T, program string) (*Relay, string) {
 	t.Helper()
+	return watched(t, program, nil)
+}
+
+// watched is relayed with watch called on each read of the program's output.
+func watched(t *testing.T, program string, watch func([]byte)) (*Relay, string) {
+	t.Helper()
 	pty, err := terminal.OpenPlain(terminal.Size{Cols: 60, Rows: 10})
 	if err != nil {
 		t.Fatal(err)
@@ -55,7 +61,7 @@ func relayed(t *testing.T, program string) (*Relay, string) {
 		t.Fatal(err)
 	}
 	listener.SetUnlinkOnClose(false)
-	r := New(pty, grid, "", nil)
+	r := New(pty, grid, "", watch)
 	go r.Pump()
 	go r.Answer()
 	go r.Serve(listener, nil)

@@ -94,11 +94,14 @@ two ticks, and the relay (`internal/host/stream`, `Relay.HandOver`) stops where 
    same path, which never goes away, and waits in the backlog.
 3. **The pump stops** by a read deadline on the master: what the worker writes from now on waits
    in the pty's buffer and reaches the next image's screen once.
-4. **The grid ends**, its held cluster committed and the answers to queries it already parsed
-   written to the worker, within 2 s.
+4. **The grid ends**, the answers to queries it already parsed written to the worker within 2 s;
+   the glyph cluster it held back for a mark is kept, not written: the mark may be in the pty's
+   buffer, and written now the cluster was split, "é" drawn "e" (found in review, November 2,
+   2026).
 5. **The seed** is taken — the emulator's checkpoint as bytes with an unfinished sequence's
-   bytes ([shell.md](shell.md#the-space-hosts-emulator)) — with the size and the last 16 KiB the
-   worker wrote, for the close's last line, into a memory file.
+   bytes ([shell.md](shell.md#the-space-hosts-emulator)) — with the size, the cluster held back,
+   which the next grid holds first, and the last 16 KiB the worker wrote, for the close's last
+   line, into a memory file.
 
 The master, the listener and the memory file are handed over open, with the worker's pid and
 start and the park, in the spec of a stage `adopt` (`handover.space`, pinned by

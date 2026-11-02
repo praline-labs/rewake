@@ -38,12 +38,14 @@ type Handover struct {
 	Screen   int `json:"screen"`
 }
 
-// Screen is what the screen file holds: the grid's size and seed, and the
-// program's last output for the line a closing space reports.
+// Screen is what the screen file holds: the grid's size and seed, the
+// glyph cluster it held back for a mark that may follow, and the program's
+// last output for the line a closing space reports.
 type Screen struct {
 	Version int           `json:"version"`
 	Size    terminal.Size `json:"size"`
 	Seed    []byte        `json:"seed"`
+	Held    []byte        `json:"held"`
 	Tail    []byte        `json:"tail"`
 }
 
@@ -110,32 +112,33 @@ func (r *Relay) HandOver(bound time.Duration) (*Handing, error) {
 	past := time.Unix(1, 0)
 	_ = accepting.SetDeadline(past)
 	<-served
+	// The pump ends the grid as it stops: the cluster held back for a mark
+	// goes over with the seed.
+	r.Grid().Keep()
 	_ = r.pty.Master.SetReadDeadline(past)
 	r.mu.Lock()
 	pumped, answered := r.pumped, r.answered
 	r.mu.Unlock()
 	<-pumped
 	grid := r.Grid()
-	if err := grid.Close(); err != nil {
-		return nil, r.stopped(grid, nil, fmt.Errorf("the program's screen could not be closed: %w", err))
+	held, err := grid.Stop()
+	h := &Handing{r: r, screen: Screen{Version: ScreenVersion, Size: grid.Size(), Seed: grid.Seed(), Held: held, Tail: r.lastTail()}}
+	if err != nil {
+		return nil, r.stopped(h, fmt.Errorf("the program's screen could not be closed: %w", err))
 	}
-	h := &Handing{r: r, screen: Screen{Version: ScreenVersion, Size: grid.Size(), Seed: grid.Seed(), Tail: r.lastTail()}}
 	select {
 	case <-answered:
 	case <-time.After(bound):
-		return nil, r.stopped(grid, h, errors.New("an answer to the program's query is still being written to it"))
+		return nil, r.stopped(h, errors.New("an answer to the program's query is still being written to it"))
 	}
 	if err := h.keepFiles(accepting); err != nil {
-		return nil, r.stopped(grid, h, err)
+		return nil, r.stopped(h, err)
 	}
 	return h, nil
 }
 
 // stopped resumes a relay HandOver stopped and did not hand over.
-func (r *Relay) stopped(grid *terminal.Grid, h *Handing, why error) error {
-	if h == nil {
-		h = &Handing{r: r, screen: Screen{Version: ScreenVersion, Size: grid.Size(), Seed: grid.Seed(), Tail: r.lastTail()}}
-	}
+func (r *Relay) stopped(h *Handing, why error) error {
 	if err := h.Resume(); err != nil {
 		return errors.Join(why, err)
 	}
@@ -194,7 +197,7 @@ func (h *Handing) Resume() error {
 
 // seed gives the relay a grid seeded from screen and reads the master again.
 func (r *Relay) seed(screen Screen) error {
-	grid, err := terminal.NewSeededGrid(screen.Size, screen.Seed)
+	grid, err := terminal.NewSeededGrid(screen.Size, screen.Seed, screen.Held)
 	if err != nil {
 		return fmt.Errorf("the program's screen could not be drawn again: %w", err)
 	}

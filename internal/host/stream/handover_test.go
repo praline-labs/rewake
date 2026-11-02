@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"testing"
 	"time"
@@ -123,6 +124,65 @@ func TestAHandoverKeepsTheScreenAndWhatTheProgramWritesMeanwhile(t *testing.T) {
 	}
 	if lines := n.Lines(1); len(lines) != 1 || lines[0] != "beforeduring" {
 		t.Fatalf("the next image's last line is %q", lines)
+	}
+}
+
+// A glyph cluster split across the handover is one cell after it, as
+// without one: the grid held "e" back for a mark, and the mark the program
+// wrote meanwhile waits in the kernel's buffer for the next image (found in
+// review, November 2, 2026).
+func TestAClusterSplitAtTheHandoverIsJoinedAfterIt(t *testing.T) {
+	dir := t.TempDir()
+	fifo, written := filepath.Join(dir, "go"), filepath.Join(dir, "written")
+	if err := syscall.Mkfifo(fifo, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	// The pump is held in its first read until the handover stopped it, so
+	// the mark is still in the kernel's buffer when the grid ends.
+	read, release := make(chan struct{}), make(chan struct{})
+	var once sync.Once
+	r, socket := watched(t, `printf e; read x < `+fifo+`; printf '\314\201X'; touch `+written+`; exec sleep 30`, func([]byte) {
+		once.Do(func() { close(read); <-release })
+	})
+	select {
+	case <-read:
+	case <-time.After(5 * time.Second):
+		t.Fatal("the program's first output was not read")
+	}
+	if err := os.WriteFile(fifo, []byte("\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	for deadline := time.Now().Add(5 * time.Second); ; time.Sleep(time.Millisecond) {
+		if _, err := os.Stat(written); err == nil {
+			break
+		} else if time.Now().After(deadline) {
+			t.Fatal("the program did not write the mark")
+		}
+	}
+	handed, failed := make(chan *Handing, 1), make(chan error, 1)
+	go func() {
+		h, err := r.HandOver(2 * time.Second)
+		if err != nil {
+			failed <- err
+			return
+		}
+		handed <- h
+	}()
+	// Long enough for the handover to stop the pump's next read.
+	time.Sleep(50 * time.Millisecond)
+	close(release)
+	var h *Handing
+	select {
+	case h = <-handed:
+	case err := <-failed:
+		t.Fatal(err)
+	case <-time.After(5 * time.Second):
+		t.Fatal("the handover did not end")
+	}
+	n := adopted(t, execed(t, r, h), socket)
+	shot := screenOf(t, n, "X")
+	if line := strings.TrimRight(strings.SplitN(text(shot), "\n", 2)[0], " "); line != "e\u0301X" {
+		t.Fatalf("the next image's screen begins %q, want the accented e, then X", line)
 	}
 }
 

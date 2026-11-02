@@ -364,6 +364,7 @@ Tests:
 - `test/leaserig/leader_test.go` `TestAForeignLaunchDuringParkingCannotOverturnTheSwitch`
 - `internal/host/spacehost/handover_shape_test.go` `TestTheSpaceHandoverContractChangesWithItsShape`
 - `internal/host/stream/handover_test.go` `TestAHandoverKeepsTheScreenAndWhatTheProgramWritesMeanwhile`
+- `internal/host/stream/handover_test.go` `TestAClusterSplitAtTheHandoverIsJoinedAfterIt`
 - `internal/host/stream/handover_test.go` `TestAPasteInFlightArrivesWholeAndInputAfterTheFreezeIsRefused`
 - `internal/host/stream/handover_test.go` `TestAHandoverIsRefusedWhileAWriteIsStuck`
 - `internal/host/stream/handover_test.go` `TestAResumedRelayServesTheSameScreen`

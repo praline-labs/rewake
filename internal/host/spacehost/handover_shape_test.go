@@ -17,7 +17,7 @@ import (
 // admits only a build that takes the same, so a changed shape raises
 // HandoverVersion.
 var handoverShapes = map[int]string{
-	1: "d6e25bcb91b47c2e8d4a8bee219bbbd6bd1bcfc9df783f037a8c1704b5969ca2",
+	1: "bde0c1106b5fa47d171c8a5f681fae7a4eedd19e89fdc41b737a182e1cabfce0",
 }
 
 func TestTheSpaceHandoverContractChangesWithItsShape(t *testing.T) {

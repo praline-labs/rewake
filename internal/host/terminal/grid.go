@@ -12,6 +12,10 @@ const (
 	// holdFor is how long the last glyph cluster of a write waits for a mark
 	// that may follow it in the next one (hold.go).
 	holdFor = 5 * time.Millisecond
+	// carryFor is how long the cluster a grid of an earlier image held waits
+	// for the first output this grid takes: the program's bytes written
+	// meanwhile wait in the kernel's buffer and come with the first read.
+	carryFor = time.Second
 	// replyRead is the most one read of the emulator's answers takes.
 	replyRead = 4096
 	// replyQueue bounds the answers waiting to be taken. Answers beyond it
@@ -50,22 +54,28 @@ type Grid struct {
 	inMu    sync.RWMutex
 	over    bool
 	seeding bool
-	chunks  chan []byte
-	answers chan []byte
-	fed     chan struct{}
-	wg      sync.WaitGroup
-	once    sync.Once
+	// keep says the output ends for a handover (Stop): what is held is
+	// kept, not written, and carried the held bytes a grid begins with.
+	keep, carried []byte
+	keeping       bool
+	chunks        chan []byte
+	answers       chan []byte
+	fed           chan struct{}
+	wg            sync.WaitGroup
+	once          sync.Once
 }
 
 // NewGrid is the screen of a program on a terminal of size.
-func NewGrid(size Size) (*Grid, error) { return newGrid(size, false) }
+func NewGrid(size Size) (*Grid, error) { return newGrid(size, false, nil) }
 
 // NewSeededGrid is the screen of a program handed over by an image before
-// this one, seeded with what that image's grid held (Seed). The seed's
-// writing answers nothing: those answers, an in-band size report among them,
-// were the old image's to give, and the program heard them or never asked.
-func NewSeededGrid(size Size, seed []byte) (*Grid, error) {
-	g, err := newGrid(size, true)
+// this one, seeded with what that image's grid had written (Seed) and
+// holding what it held back (Stop), which joins the program's next output as
+// it would have there. The seed's writing answers nothing: those answers, an
+// in-band size report among them, were the old image's to give, and the
+// program heard them or never asked.
+func NewSeededGrid(size Size, seed, held []byte) (*Grid, error) {
+	g, err := newGrid(size, true, held)
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +84,7 @@ func NewSeededGrid(size Size, seed []byte) (*Grid, error) {
 	return g, nil
 }
 
-func newGrid(size Size, seeding bool) (*Grid, error) {
+func newGrid(size Size, seeding bool, held []byte) (*Grid, error) {
 	if err := size.check(); err != nil {
 		return nil, err
 	}
@@ -85,6 +95,7 @@ func newGrid(size Size, seeding bool) (*Grid, error) {
 	g := &Grid{
 		emu: emu, seeding: seeding, chunks: make(chan []byte, 64),
 		answers: make(chan []byte, replyQueue), fed: make(chan struct{}),
+		carried: append([]byte(nil), held...),
 	}
 	g.wg.Add(2)
 	go g.feed()
@@ -116,9 +127,11 @@ func (g *Grid) End() {
 func (g *Grid) feed() {
 	defer g.wg.Done()
 	defer close(g.fed)
-	var h holder
-	timer := time.NewTimer(holdFor)
-	timer.Stop()
+	h := holder{held: g.carried}
+	timer := time.NewTimer(carryFor)
+	if !h.holding() {
+		timer.Stop()
+	}
 	for {
 		var expired <-chan time.Time
 		if h.holding() {
@@ -127,6 +140,9 @@ func (g *Grid) feed() {
 		select {
 		case chunk, ok := <-g.chunks:
 			if !ok {
+				if g.keeping {
+					g.keep = h.release()
+				}
 				g.commit(h.release(), true)
 				return
 			}
@@ -220,6 +236,25 @@ func (g *Grid) SetDefaults(fg, bg color.Color) {
 	g.mu.Lock()
 	g.emu.defaults(fg, bg)
 	g.mu.Unlock()
+}
+
+// Keep says the end of the output, whoever ends it, keeps what is held back
+// rather than write it, for Stop to give to a handover: the reader that is
+// stopped for one ends the output itself.
+func (g *Grid) Keep() {
+	g.inMu.Lock()
+	g.keeping = !g.over
+	g.inMu.Unlock()
+}
+
+// Stop is Close for a handover, after Keep: what was held back is answered,
+// not written, for the next image's grid to begin with (NewSeededGrid). A
+// mark that follows it in the program's next output joins it there, as it
+// would have here; written at the end, the cluster was split and the mark
+// lost (found in review, November 2, 2026).
+func (g *Grid) Stop() ([]byte, error) {
+	err := g.Close()
+	return g.keep, err
 }
 
 // Close ends the output, if not yet, writes what is held, then stops the

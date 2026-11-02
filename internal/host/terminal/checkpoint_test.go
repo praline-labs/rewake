@@ -178,7 +178,7 @@ func TestASeededGridHoldsTheStateHandedOver(t *testing.T) {
 	if err := g.Close(); err != nil {
 		t.Fatal(err)
 	}
-	next, err := NewSeededGrid(g.Size(), g.Seed())
+	next, err := NewSeededGrid(g.Size(), g.Seed(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -194,6 +194,51 @@ func TestASeededGridHoldsTheStateHandedOver(t *testing.T) {
 		}
 	case <-time.After(2 * time.Second):
 		t.Fatal("the seeded grid did not answer the program's query")
+	}
+}
+
+// The cluster a grid held back at a handover goes over uncommitted: the
+// mark the program writes next joins it on the next image's grid as it
+// would have on this one, and with nothing after it, it is written alone.
+func TestAClusterHeldAtAHandoverGoesOverUncommitted(t *testing.T) {
+	continuous := newTestGrid(t)
+	continuous.commit([]byte("e\u0301X"), false)
+	// A grid that holds "e" for longer than the 5 ms of a read's, so the
+	// test does not race the holder: one that took it over itself.
+	g, err := NewSeededGrid(Size{Cols: 20, Rows: 5}, nil, []byte("e"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	g.Keep()
+	held, err := g.Stop()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(held) != "e" {
+		t.Fatalf("the grid kept %q, want the cluster it held back", held)
+	}
+	next, err := NewSeededGrid(g.Size(), g.Seed(), held)
+	if err != nil {
+		t.Fatal(err)
+	}
+	next.Write([]byte("\u0301X"))
+	if err := next.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if diff := differs(gridState(continuous), gridState(next)); diff != "" {
+		t.Fatalf("the cluster was split across the handover: %s", diff)
+	}
+
+	alone, err := NewSeededGrid(g.Size(), g.Seed(), held)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = alone.Close() })
+	first := func() string { return strings.TrimSpace(gridState(alone).Rows[0][0][0].Text) }
+	for deadline := time.Now().Add(carryFor + 2*time.Second); first() != "e"; time.Sleep(10 * time.Millisecond) {
+		if time.Now().After(deadline) {
+			t.Fatalf("the carried cluster alone was not written: %q", first())
+		}
 	}
 }
 

@@ -241,6 +241,8 @@ What the library does not do, and what the package does about it:
   that arrives in the next read becomes a cell of its own (both versions). The feeder holds back
   the last cluster of a read, at most 64 bytes, and writes it with the next read or alone after
   5 ms (`hold.go`); a test fails when the library starts joining across writes, so the hold can go.
+  A handover keeps what is held (`Grid.Keep`, `Grid.Stop`) and the next image's grid begins
+  holding it, for its first read or 1 s.
 - **Its reply pipe is unbounded and blocking**, so a goroutine drains it into a queue of 64 and
   counts what does not fit: a program that floods queries and never reads its input loses answers
   and never stops the emulator in the middle of a write.
