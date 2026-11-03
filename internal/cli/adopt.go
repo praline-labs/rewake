@@ -2,6 +2,7 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -49,9 +50,12 @@ func adoptRun(catalog adapter.Catalog, spec string, stderr io.Writer) int {
 	if checkout := adoptedCheckout(handover, harness, stderr); checkout != nil {
 		checkout.settle(err != nil || code != 0)
 	}
-	if err != nil {
+	if held := (*host.Held)(nil); errors.As(err, &held) {
 		// Said as the adoption failed, while the harness it held ran on
-		// (host/unadopted.go).
+		// (host/unadopted.go); its code is the harness's.
+		return code
+	}
+	if err != nil {
 		return ExitFailed
 	}
 	return code

@@ -39,6 +39,9 @@ type liveSet struct {
 	owed     bool
 	names    []string
 	retrying bool
+	// withdrawn says the run serves nothing any more (withdraw): no report
+	// publishes a set again.
+	withdrawn bool
 	// done ends the retries with the run.
 	done     chan struct{}
 	stopOnce sync.Once
@@ -75,6 +78,27 @@ const (
 func (l *liveSet) report(set []adapter.Capability) {
 	l.writing.Lock()
 	defer l.writing.Unlock()
+	if l.withdrawn {
+		return
+	}
+	l.record(set)
+}
+
+// withdraw records the set empty for good, as a run that can no longer serve
+// what it proved: an adoption that failed holds its harness unserved
+// (unadopted.go), and a capability left in its record would have senders'
+// tasks admitted that no turn's end will ever report. A report of a service
+// that started in part comes after it and is not published; a failed write
+// is retried as any report's.
+func (l *liveSet) withdraw() {
+	l.writing.Lock()
+	defer l.writing.Unlock()
+	l.withdrawn = true
+	l.record(nil)
+}
+
+// record publishes set and takes it as the run's own view, under writing.
+func (l *liveSet) record(set []adapter.Capability) {
 	names := make([]string, 0, len(set))
 	for _, capability := range set {
 		names = append(names, string(capability))

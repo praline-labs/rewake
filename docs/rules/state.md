@@ -396,15 +396,21 @@ terminal, and an image that exits hangs that terminal up: on November 3, 2026 on
 failure ended main's Claude Code and with it the shell, the room and its writer
 ([traps.md](../traps.md#after-rewake-restart-rewake-mains-claude-code-ended-and-the-room-with-it)).
 An adoption that fails before it has its harness now keeps it: it closes what was handed over
-and what it started, so the mod's or the extension's next request finds nobody, and passes
-signals on and answers stops as a run does. It says on stderr what failed and that the run
-should be ended and started again. A run that failed under the lease, its plan or service
-refused, also marks the exec `not adopted: …` for its sender and leaves a worker's main a note
-(`host/unadopted.go`). A harness this build does not have, and a parked image whose wait or exec
-fails, hold no lease to write by and say it on stderr only (`cli/adopt.go`). The
-record, the lease and the run directory stay until the harness ends; then they go, and the image
-exits with the harness's code. Held, the run is served no more: no letter wakes it and none of
-its turns is reported. It is not repaired, since starting it again ends the conversation the
+and what it started, so the mod's or the extension's next request finds nobody. It passes on
+the signals of the catch the run took, which hold what came during the adoption, and answers stops
+as a run does. A second catch left a SIGTERM sent meanwhile on a channel nobody read, and the
+harness ran on (found in review, November 3, 2026). It says on stderr what failed and that the
+run should be ended and started again. A run that failed under the lease withdraws its live set
+for good. Admission reads that set, and the earlier image's `turn-boundary` left in the record
+had senders' tasks admitted that no turn's end would report (found in review, November 3, 2026).
+The withdrawal is retried as any report is, and a report of a service adopted in part is not
+published after it. Such a run, its plan or service refused, also marks the exec
+`not adopted: …` for its sender and leaves a worker's main a note (`host/unadopted.go`). A
+harness this build does not have, and a parked image whose wait or exec fails, hold no lease to
+write by: they say it on stderr only (`cli/adopt.go`), and their record stays for the next run
+to reclaim. Under the lease, the record, the lease and the run directory stay until the harness
+ends; then they go, and the image exits with the harness's code (`host.Held`). Held, the run is
+served no more: no letter wakes it and none of its turns is reported. It is not repaired, since starting it again ends the conversation the
 switch was meant to keep. The leader counts every participant that holds the lease as adopted,
 so its letter names a held run among them, and the note corrects it. A later switch is refused,
 the lease named as still held, until the person ends the run. A handover that cannot be read
@@ -460,6 +466,8 @@ Tests:
 - `internal/adapter/claude/adoption_test.go` `TestAnAdoptionPlansOnTheLiveSocket`
 - `internal/adapter/pi/adoption_test.go` `TestAnAdoptionPlansWithoutTheLaunchsSteps`
 - `internal/host/unadopted_test.go` `TestAFailedAdoptionHoldsTheHarness`
+- `internal/host/unadopted_hold_test.go` `TestAHeldRunWithdrawsItsLiveSet`
+- `internal/host/unadopted_hold_test.go` `TestAHeldRunForwardsASignalCaughtBeforeItsFailure`
 - `test/workflow/claude_adopt_test.go` `TestClaudeAdopt`
 - `test/workflow/fixture_switch_test.go` `TestFixtureSwitch`
 - `test/workflow/fixture_switch_worktree_test.go` `TestFixtureSwitchWorktree`

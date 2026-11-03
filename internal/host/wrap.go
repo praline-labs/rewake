@@ -58,6 +58,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 		}
 		lease = acquired
 	}
+	hold.leased = true
 	// The run's own hold outlasts the caller's: it goes once every worker
 	// the run started has stopped, whenever that is.
 	life := &lifetime{keep: lease.Keep()}
@@ -107,6 +108,12 @@ func Run(ctx context.Context, request Request) (int, error) {
 			removeSocket(session.Socket)
 		}
 	}()
+	// The live set is the run's from its claim: a held run withdraws it
+	// whatever failed after (unadopted.go).
+	live := newLiveSet(request.Dir, name, epoch)
+	live.workers = &life.workers
+	defer live.stop()
+	hold.live = live
 	// The run's directory comes before anything is prepared and goes at the
 	// run's end, once every worker of the run has stopped and before its hold
 	// on the lease goes (docs/rules/launch.md), on every path out.
@@ -141,10 +148,6 @@ func Run(ctx context.Context, request Request) (int, error) {
 		return hold.fail(err)
 	}
 	defer stopMirror()
-
-	live := newLiveSet(request.Dir, name, epoch)
-	live.workers = &life.workers
-	defer live.stop()
 
 	launchRequest := adapter.LaunchRequest{
 		Name:       name,
@@ -219,6 +222,8 @@ func Run(ctx context.Context, request Request) (int, error) {
 	// and its record left behind.
 	signals, restore := takeSignals(request.Handover)
 	defer restore()
+	// Taken once: a held run forwards what came meanwhile on this channel.
+	hold.signals = signals
 
 	// A service whose handlers write the room counts them among the run's
 	// workers: its close is bounded, and what outlasts it holds the lease.
