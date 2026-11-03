@@ -49,7 +49,7 @@
 //   - adopted_test.go: finding descendants that left their process group.
 //   - isolation_test.go: the private world of a case and its cleanup checks.
 //   - suite_test.go: TestMain, the switch, building the binary under test.
-//   - stub_scenario_test.go: the stage-0 scenario, the shape to copy.
+//   - batch_arrival_test.go: a small scenario, the shape to copy.
 //   - session_test.go: launching a session on a column's program and reading
 //     what it reports about itself.
 //   - shim_env_test.go: how a case tells a program what to be;

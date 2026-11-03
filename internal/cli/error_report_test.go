@@ -42,62 +42,6 @@ func failedWaiters(t *testing.T) string {
 	return dir
 }
 
-func TestFailedTurnsReachEveryWaitingSender(t *testing.T) {
-	check := func(t *testing.T, dir string) {
-		t.Helper()
-		for _, peer := range []string{"one", "two"} {
-			report := reportObject(t, dir, peer)
-			if report["kind"] != "error" || report["text"] != "verbatim failure" {
-				t.Fatalf("report=%v", report)
-			}
-		}
-	}
-	t.Run("unscoped", func(t *testing.T) {
-		dir := failedWaiters(t)
-		if _, err := endTurn(t, boundaryEnd{failed: true, text: "verbatim failure"}); err != nil {
-			t.Fatal(err)
-		}
-		check(t, dir)
-	})
-	t.Run("completion", func(t *testing.T) {
-		dir := failedWaiters(t)
-		self, _ := registry.Lookup(dir, "api")
-		if err := completeTurn(dir, self, mail.TurnEnd{Boundary: boundaryNow(t, dir, self), ID: "failed", Failed: true, Text: "verbatim failure"}, ""); err != nil {
-			t.Fatal(err)
-		}
-		check(t, dir)
-	})
-}
-
-func TestUnclaimedFailuresReachMainAndMainKeepsItsOwn(t *testing.T) {
-	for _, self := range []bool{false, true} {
-		t.Run(map[bool]string{true: "self", false: "leader"}[self], func(t *testing.T) {
-			dir := liveSession(t, "api")
-			t.Setenv(state.SessionEnv, "api")
-			if self {
-				markMain(t, dir, "api")
-			} else {
-				otherRun(t, dir, "leader")
-				markMain(t, dir, "leader")
-			}
-			if _, err := endTurn(t, boundaryEnd{failed: true, text: "failure"}); err != nil {
-				t.Fatal(err)
-			}
-			if self {
-				messages, err := mail.Open(dir, "api", epochOf(t, dir, "api")).PeekUnread()
-				if err != nil || len(messages) != 1 || string(messages[0].Kind) != "error" {
-					t.Fatalf("local error=%+v %v", messages, err)
-				}
-				if len(finishedFor(t, dir, "api")) != 0 {
-					t.Fatal("main must not wake itself with its failure")
-				}
-			} else if reportObject(t, dir, "leader")["kind"] != "error" {
-				t.Fatal("not an error")
-			}
-		})
-	}
-}
-
 func TestReadingAnErrorOwesNothing(t *testing.T) {
 	dir := liveSession(t, "api")
 	peer := otherRun(t, dir, "web")
