@@ -1,5 +1,5 @@
 ---
-description: What each of the 25 workflow scenarios in test/workflow claims — the sessions it starts, what the fixture plays and what it must see — and what none of them proves.
+description: What each of the 37 workflow scenarios in test/workflow claims — the sessions it starts, what the fixture plays and what it must see — and what none of them proves.
 ---
 
 # The workflow suite's cases
