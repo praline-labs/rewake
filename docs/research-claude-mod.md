@@ -804,3 +804,38 @@ adapter does (brief 69; [face.md](face.md), "The turn's times are the model's").
 
 So the mod sends no `retry`: a Claude Code worker's turn line stays `Waiting…`, its arrow up and
 its clock running, through the engine's retries, and ends as the turn does.
+
+## Background work and holding a turn's end (November 3, 2026, 2.1.310)
+
+Whether the mod can tell that a worker's own background work still runs when a turn ends, and
+whether it can hold the end while it asks the wrapper (brief 102). A probe mod beside a real
+Claude Code 2.1.310 in a private HOME, every request answered by a loopback stub of the messages
+API, no login; read against the `mods` skill of 2.1.310, the installed version. **[live]**
+
+- **What runs is said at the end.** `classic.Stop`, the mod's view of the settings hook, carries
+  `background_tasks`: a background Bash as `{type: "shell", status: "running", command}`, a
+  background subagent as `{type: "subagent", agent_type}`, a Monitor as `type: "shell"` with its
+  command, not as `monitor`; `[]` when nothing runs. `session_crons` lists what will wake the
+  session later. `classic.Stop` comes about 15 ms before `turn.complete`, which carries no such
+  field; `$.agent.list()` gives a subagent's `status` (`running`, `completed`), no shell or
+  Monitor.
+- **When it ends, a turn starts.** A finished background Bash or subagent, and each event of a
+  Monitor, starts a turn of its own: `prompt.submit` with `origin.kind: "task-notification"` and
+  the `<task-notification>` text, then `turn.start`; its `classic.Stop` lists what still runs.
+  There is no event of its own for a task's end; `classic.SubagentStop` of a background
+  subagent still lists itself as running.
+- **`classic.Stop` holds the end.** A hook awaiting a `$.http.fetch` held 20 s, inside the
+  skill's budget, since waiting inside `$` is not counted (one fetch is cut at 30 s). The session
+  stayed busy ("esc to interrupt"); a prompt typed meanwhile waited and ran as the next turn.
+  Answering `{block: reason}` continued **the same turn**: one more model request whose last
+  user text was `Stop hook feedback:\n<reason>`, a second `classic.Stop` with
+  `stop_hook_active: true`, then one `turn.complete` whose `answer` is the continuation's text.
+  The answer before the block is only in the first `classic.Stop`'s `last_assistant_message`.
+- **Esc during that hold** ended the turn at once: `turn.complete` with `reason: "aborted"`
+  70 ms later and the answer before the hold; the hook's later `$` calls were not seen, and its
+  block was dropped.
+- **`turn.complete` does not hold the session.** A hook awaiting 20 s after `next(e)` left the
+  session idle: a prompt typed meanwhile went to the model at once. The mod's `turn.start` and
+  `turn.complete` hooks of that next turn ran only after the hold ended. Esc then had nothing to
+  stop, and a `$.prompt.submit` after the hold started a turn of its own, new id, the model
+  reading `The probe102 plugin sent a message: …`: a whole turn, not a continuation.

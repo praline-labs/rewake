@@ -805,3 +805,27 @@ Then `rewake restart rewake` switched the room to a build whose Go alone differe
 descriptions and the strip's model name suffixed. pi's process, its wrapper and its host kept
 their pids; pi's next request carried the new descriptions of `brief_tick` and `worktree_status`,
 and the strip read `Stub ·B`, with no restart of pi.
+
+## Holding a run's end (November 3, 2026, 1.4.0)
+
+Whether the extension can hold a run's end while it asks the wrapper, and continue it (brief
+102). Read in `docs/extensions.md` and `dist/core/agent-session.js`
+(`_runBeforeSettleBoundary`, `abort`), then probed with an inline probe extension in the real
+interactive pi, a private HOME and agent directory, a loopback stub of the messages API, no
+login.
+
+- **`agent_before_settle`** comes after the last `agent_end` and before `agent_settled`; its
+  handlers are awaited, with no bound. One awaiting a 20 s fetch held the end with
+  `ctx.isIdle()` false and pi's working line drawn.
+- **A continuation.** Returning `{entries: [...e.entries, {type: "custom_message", content,
+  display: true}], continue: true}` made one more model request in the same run, the message as
+  its last user text, then one `agent_settled`. At the boundary `context.canContinue` is false
+  while the last message is the assistant's; the appended message makes it true.
+- **Typed during the hold**, a prompt is queued (`ctx.hasPendingMessages()` true) and runs once
+  the handler returns, in the same run.
+- **Esc during the hold** does not cut it: `abort()` marks the boundary aborted and waits for
+  idle, so the handler ran its full 20 s; then no continuation ran, and `agent_settled` came with
+  `aborted: true`.
+- **No background work.** pi starts nothing the model leaves running: its tools end inside the
+  turn, and no task list exists (`runInBackground` is only the MCP menu's). What still waits at
+  the end is queued messages, `ctx.hasPendingMessages()`.
