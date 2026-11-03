@@ -116,6 +116,61 @@ open for ever when forgotten.
   text, and when no read task or question in this run waits for a report; each refusal says
   why.
 
+### A stalled pending
+
+A worker that ends a turn pending and has nothing of its own left to wake it — the background
+run it named is another session's, or it forgot to start one — stays idle with the task open
+until somebody asks after it; on November 3, 2026 one did, until the owner asked. Since then a
+run is **stalled** (`mail.Box.Stalled`) when all of these hold:
+
+- its last word is an interim end of this run (`pending/interim.json`, not settled, its end
+  time known);
+- nothing has been heard of a turn since: no end on record after it — a stop, which leaves
+  the interim record as it was, among them — and no timed start after it;
+- a sender whose run lives still waits on one of its tasks;
+- its telemetry calls it idle and fresh right now, which is what tells a turn running from a
+  stall where the harness times no start (Claude Code's mod and pi report none).
+
+Main sees it so: the activity label reads `pending, idle <N>m` in `rewake list` and the state
+header ([session-state.md](session-state.md#activity)), and `rewake inbox --awaited` marks the
+task `pending, idle <N>m: <text>`, with `idleSince` in JSON. Past **ten minutes** idle
+(`delivery.StallBound`, as long as Claude Code lets one command run in the foreground, so a
+wait the turn could have held in place is not what it went idle on), the worker's own wrapper
+wakes it once, on the delivery server's one-second pass: a notify from the run to itself,
+announced as any other mail,
+
+```text
+Rewake: your pending "<its first line>" since 15:02 still holds open the task of <senders>, and you have been idle 10m with nothing waking you. Go on, or end the turn with the report; if the work still waits on something, run rewake pending "<what it waits for>" again before you end the turn.
+```
+
+The turn it starts ends as any other: unmarked, it is the report. Main, whose turns are
+reported to nobody, a run whose adapter publishes no state, a worker with no open wait, and a
+failed or stopped end — which write no interim record — are never reminded.
+
+- **Judged at the write.** The pass looks without the lock, and judges the stall again under
+  the mailbox lock before it writes: a report that settles the task, or a turn's end or timed
+  start, landing in between leaves no letter. Idle is the adapter's state as it stands, not the
+  last publication on disk, which lags it by up to a quarter second. A turn the harness starts
+  after that judgement, before its adapter hears of it, still gets the letter as mail.
+- **Once per mark.** The reminder is keyed by the interim end's operation in
+  `pending/stalled.json` (`{epoch, op, id, sent}`): the letter's id is drawn and written
+  before the letter, so a wrapper stopped between the two writes the same letter next time,
+  which `PutOnce` makes a no-op; `sent` ends it. A later interim end has another operation
+  and arms another reminder.
+- **Across a restart.** Everything the check reads is on disk, readable by an image of
+  another build: the interim record (its operation, its end on the boot clock, the text), the
+  marks, the end journals, the turn-start readings, the waits and `stalled.json`. An image
+  re-executed by `rewake restart` builds its delivery server the same way and goes on from
+  there: the idle time is the boot clock against the interim end, so it is neither reset nor
+  lost, and a stall reminded of before is not reminded of again. The adopted run's telemetry
+  starts empty and calls it idle again at the harness's next report — Claude Code's mod after
+  its next heartbeat, pi at the run's next one-second poll, the fixture in its Telemetry probe. A build without
+  the check ignores `stalled.json`. Seen live on November 3, 2026 with the fixture: a switch 16 s
+  into a 41 s bound woke the worker 41 s after its pending end, once, and its report settled the
+  task.
+- **The cost.** A worker whose own background work runs past ten minutes after a pending end
+  is woken once for nothing, and marks pending again.
+
 ## The confirmation
 
 After an interim turn end, rewake holds the next turn end that carries no mark, once, and

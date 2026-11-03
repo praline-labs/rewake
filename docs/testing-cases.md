@@ -1,5 +1,5 @@
 ---
-description: What each of the 37 workflow scenarios in test/workflow claims — the sessions it starts, what the fixture plays and what it must see — and what none of them proves.
+description: What each of the 38 workflow scenarios in test/workflow claims — the sessions it starts, what the fixture plays and what it must see — and what none of them proves.
 ---
 
 # The workflow suite's cases
@@ -117,6 +117,16 @@ third session, the worker ends unmarked again, is held once more about the secon
 ends the turn: the report must be the held answer and then the continuation, and it must settle
 the task.
 
+`stalled-pending` runs two sessions on a binary of its own, built with the bound of a stalled
+pending cut to twelve seconds. A worker reads main's task and ends that turn pending, then stays
+idle with nothing to wake it. Before the bound, main's `rewake list` must show the worker
+`pending, idle`, and `rewake inbox --awaited` the task as `pending, idle <1m` with the pending
+line. Past the bound the worker must read exactly one notify of its own quoting that line and
+naming main, and the turn it starts, ending unmarked, must be the `finished` report that settles
+the task, with no second reminder. No unit test holds this crossing: the fixture's activity
+reaching the snapshot, the wrapper's server judging it, the letter announced and the woken turn's
+report.
+
 `turn-reasons` runs five sessions: the path it holds — a turn's outcome and text in the
 program's end frame, the adapter's neutral completion and the wrapper's confirmation — is the
 fixture's own. A worker whose turns fail holds a task from main and one from a peer; each sender
@@ -142,7 +152,8 @@ asking changed nothing.
 (the fixture's request directory): it sends one task to each worker. One reports at once; the
 other runs `rewake pending` in its turn, so its task stays owed. main's `rewake inbox
 --awaited`, in both forms, must then list exactly that second task, by id, as `pending` with the
-interim's text, under `to <worker>`, and leave the first out. A note from main wakes the second
+interim's text — `pending, idle <1m` in the text form, the worker idle under its mark — under `to
+<worker>`, and leave the first out. A note from main wakes the second
 worker, whose next turn end reports; the view must then be `Rewake: nobody owes you a report.`
 
 `brief` runs a main, a worker and a reviewer, each running its commands when the scenario asks. main makes

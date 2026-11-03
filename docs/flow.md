@@ -301,6 +301,9 @@ session's waits.
    once more with `Rewake: 1 unread task still waiting` and the task's preview. Once per
    letter, and never after a failed, stopped or interim end
    ([delivery.md](delivery.md#the-notice)).
+   After an interim end the wrapper waits instead: a reader still idle under its pending mark
+   ten minutes later, with the task still open and no turn since, is woken once by a notify of
+   its own quoting the mark ([turn-outcomes.md](turn-outcomes.md#a-stalled-pending)).
 
 If that wake-up fails, the report remains available to ordinary `rewake inbox`
 in the addressed epoch. Its failed notification status keeps the diagnostic.

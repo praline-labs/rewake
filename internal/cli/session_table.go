@@ -144,7 +144,7 @@ func stateCells(snapshot *session.Snapshot) []string {
 	if snapshot.ModelName != nil {
 		model = snapshot.ModelName
 	}
-	verdict := snapshot.Judge()
+	verdict := verdictOf(snapshot)
 	activity := verdict.Label
 	if !snapshot.Fresh && !verdict.Stale {
 		activity += " (unavailable/stale)"

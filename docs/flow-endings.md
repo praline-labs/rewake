@@ -96,6 +96,7 @@ role.
 | the wrapper is killed while its session holds a line | the next session with the name fails it | `failed`, the session ended, if send still waits; a note once the name is taken again |
 | pi compacting | the extension answers `pending` | `pending`, then delivered once the compaction ends |
 | a finished turn left a task announced in it unread | one reminder wakes the reader, `Rewake: 1 unread task still waiting`; none again for that task | nothing; the report comes once the task is read and a turn ends |
+| a worker ended a turn pending and stays idle with nothing to wake it | main's views say `pending, idle <N>m`; after ten minutes its wrapper wakes it once with a notify quoting its pending line ([turn-outcomes.md](turn-outcomes.md#a-stalled-pending)) | `pending, idle <N>m` in `rewake list` and `inbox --awaited`; the report once the woken turn ends unmarked |
 
 How a report notes that the reader's conversation changed underneath it is in
 [delivery-turn-end.md](delivery-turn-end.md#reports-after-a-thread-change); how a failed,

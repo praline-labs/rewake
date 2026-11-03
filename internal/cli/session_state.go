@@ -5,6 +5,7 @@ import (
 	"math"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/registry"
@@ -27,10 +28,17 @@ func sessionSnapshot(dir, name, epoch string) *session.Snapshot {
 	// A boot clock reading means nothing outside this machine's processes.
 	value.CompactionEvents, value.CompactionOutcomes, value.PublishedBoot = nil, nil, 0
 	current, err := registry.LookupReadOnly(dir, name)
+	var idleSince *time.Time
 	if err != nil || current.Epoch() != epoch {
 		value.Stale()
+	} else if stall, ok, err := mail.Open(dir, name, epoch).Stalled(); err == nil && ok {
+		// A stall that cannot be read shows the activity alone, as before.
+		since := stall.IdleSince(time.Now())
+		idleSince = &since
 	}
-	return judged(value)
+	verdict := value.JudgePending(idleSince)
+	value.Verdict = &verdict
+	return &value
 }
 
 // judged is the snapshot as a reader is shown it, with the verdict on its
@@ -39,6 +47,15 @@ func judged(snapshot session.Snapshot) *session.Snapshot {
 	verdict := snapshot.Judge()
 	snapshot.Verdict = &verdict
 	return &snapshot
+}
+
+// verdictOf is the verdict the reader judged the snapshot to, with what it
+// found on disk beside it (sessionSnapshot), or the snapshot's own.
+func verdictOf(snapshot *session.Snapshot) session.Verdict {
+	if snapshot.Verdict != nil {
+		return *snapshot.Verdict
+	}
+	return snapshot.Judge()
 }
 
 type sessionView struct {
@@ -105,7 +122,7 @@ func stateLine(name string, snapshot *session.Snapshot, settings bool) string {
 	if snapshot.Compactions != nil {
 		count = strconv.FormatUint(*snapshot.Compactions, 10)
 	}
-	line := fmt.Sprintf("%s: %s | context %s used / %s", name, snapshot.Judge().Label, percent, window)
+	line := fmt.Sprintf("%s: %s | context %s used / %s", name, verdictOf(snapshot).Label, percent, window)
 	if snapshot.ContextAt != nil && !snapshot.ContextFresh {
 		line += " (stale)"
 	}

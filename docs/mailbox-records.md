@@ -23,6 +23,7 @@ mailbox, kept by hand.
 | `retention/<id>` | when a reserved report is released | its lifetime |
 | `journal/<op>.done` | a turn end recorded done: its run, operation, end time and the held end it took ([delivery-turn-end.md](delivery-turn-end.md#the-end-of-a-turn)) | a journal, by the fields it still needs |
 | `pending/kept.json`, `pending/interim.json` | a held answer; a run's last word on the work | their records |
+| `pending/stalled.json` | the one reminder of a stall: the interim end it is for and its letter's id ([turn-outcomes.md](turn-outcomes.md#a-stalled-pending)) | a record of another run or interim end, as none |
 | `pending/marks/<run>/<time>` | a pending mark | a mark that says what its name says |
 | `threads/<id>` | a delivery thread | readable |
 

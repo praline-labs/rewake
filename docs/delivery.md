@@ -304,6 +304,12 @@ image that adopts the run in a switch of the room's build takes them from the ha
 a task announced in a turn that failed, was stopped or ended interim, which a later finish does
 not remind of either ([turn-outcomes.md](turn-outcomes.md#failed-turns)).
 
+**A run idle under a pending mark is reminded once too**, by the same server on its one-second
+pass, but by a letter rather than a notice: ten minutes after an interim end with a task still
+open and no turn since, a notify from the run to itself, which is announced as any mail and
+kept on disk (`pending/stalled.json`), so a restarted wrapper neither loses nor repeats it
+([turn-outcomes.md](turn-outcomes.md#a-stalled-pending)).
+
 **Mail that asks for nothing waits for company.** A burst of letters seconds apart — workers
 restarted give main a departure and an availability each — wakes the recipient once. After the
 first collection, a pass whose mail is all of kinds that ask for nothing holds it: announced

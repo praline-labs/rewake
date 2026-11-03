@@ -230,6 +230,9 @@ type fixtureSession struct {
 	waiting map[int64]chan fixtureFrame
 	// turns counts the turns worked, for shimDropAfter.
 	turns int
+	// activity is the last activity reported, which a Telemetry probe
+	// answers: an adopted connection's first sample.
+	activity string
 }
 
 func fixtureSessionStart(launch fixtureLaunch) (*fixtureSession, error) {
@@ -370,6 +373,11 @@ func (s *fixtureSession) probe(frame, reply fixtureFrame) fixtureFrame {
 		s.turn.mu.Unlock()
 	case "telemetry":
 		reply.State = "none"
+		s.mu.Lock()
+		if s.activity != "" {
+			reply.State = s.activity
+		}
+		s.mu.Unlock()
 	case "control":
 		reply.State = "ready"
 	}

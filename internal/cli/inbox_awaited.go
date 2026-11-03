@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/core/session"
 )
 
 // awaitedView is one task or question this run sent and has no report on yet.
@@ -21,6 +22,9 @@ type awaitedView struct {
 	Text      string     `json:"text"`
 	// AddendumTo names the task this one adds to.
 	AddendumTo string `json:"addendumTo,omitempty"`
+	// IdleSince is when a pending recipient went idle, with no turn since:
+	// what would wake it is its own (docs/turn-outcomes.md).
+	IdleSince *time.Time `json:"idleSince,omitempty"`
 	// nested is an addendum listed under its task.
 	nested bool
 	coming bool
@@ -39,7 +43,7 @@ type awaitedModel struct {
 // showAwaited lists what this run sent and still waits on a report for, by
 // recipient — what a main session hands out, for one that lost track of it to a
 // compaction. It only reads: no lock, no record, nothing sent.
-func showAwaited(ctx *Context, box mail.Box) error {
+func showAwaited(ctx *Context, dir string, box mail.Box) error {
 	standings, err := box.Standings()
 	if err != nil {
 		// A partial list would show a task as answered, or lost and worth
@@ -48,11 +52,15 @@ func showAwaited(ctx *Context, box mail.Box) error {
 	}
 	model := awaitedModel{Session: box.Name(), Recipients: []awaitedRecipient{}}
 	index := map[string]int{}
+	idle := idleRecipients(dir)
 	for _, standing := range standings {
 		view := awaitedView{
 			ID: standing.ID, Kind: mail.KindOf(standing.Message), CreatedAt: standing.CreatedAt,
 			State: standing.Stage, Detail: standing.Detail, Text: standing.Text,
 			Gone: standing.GoneReason(), AddendumTo: standing.Under, nested: standing.Nested, coming: standing.Coming(),
+		}
+		if view.State == mail.StagePending && view.Gone == "" {
+			view.IdleSince = idle(standing.To, standing.ToEpoch)
 		}
 		at, ok := index[standing.To]
 		if !ok {
@@ -63,6 +71,33 @@ func showAwaited(ctx *Context, box mail.Box) error {
 		model.Recipients[at].Messages = append(model.Recipients[at].Messages, view)
 	}
 	return printValue(ctx, model, func() []string { return awaitedLines(model.Recipients) })
+}
+
+// idleRecipients answers when a recipient's run went idle under a pending
+// mark, nil when it is no stall (mail.Box.Stalled) or its telemetry does not
+// call it idle now — a harness that times no turn start shows a turn running
+// only there: each run looked at once. A stall that cannot be read is shown as
+// the pending it is.
+func idleRecipients(dir string) func(name, epoch string) *time.Time {
+	seen := map[string]*time.Time{}
+	return func(name, epoch string) *time.Time {
+		key := name + "\x00" + epoch
+		if since, ok := seen[key]; ok {
+			return since
+		}
+		var since *time.Time
+		verdict := session.Load(dir, name, epoch).Judge()
+		if verdict.Activity != session.ActivityIdle || verdict.Stale {
+			seen[key] = nil
+			return nil
+		}
+		if stall, ok, err := mail.Open(dir, name, epoch).Stalled(); err == nil && ok {
+			at := stall.IdleSince(time.Now())
+			since = &at
+		}
+		seen[key] = since
+		return since
+	}
 }
 
 func awaitedLines(recipients []awaitedRecipient) []string {
@@ -134,6 +169,9 @@ func awaitedState(recipient string, message awaitedView) string {
 	case mail.StageUnread:
 		return "delivered, unread"
 	case mail.StagePending:
+		if message.IdleSince != nil {
+			return detail("pending, idle " + session.IdleFor(time.Since(*message.IdleSince)))
+		}
 		return detail("pending")
 	case mail.StageStopped:
 		// The stop's own text says who stopped the turn: the person at the

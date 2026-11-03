@@ -7,6 +7,8 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/core/registry"
+	"github.com/praline-labs/rewake/internal/core/role"
+	"github.com/praline-labs/rewake/internal/core/session"
 	"github.com/praline-labs/rewake/internal/host/delivery"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 )
@@ -147,6 +149,18 @@ func (r *run) deliveryServer(ready chan struct{}, handoff chan chan<- delivery.S
 	}
 	if receiver, ok := r.plan.Wake.(adapter.Receiver); ok {
 		server.Receipts, server.Opened = receiver.Receipts(), receiver.Opened()
+	}
+	if !role.Of(r.session.Role).Silent && r.plan.Telemetry != nil {
+		// A run whose turns are reported to somebody is woken when it
+		// stalls under a pending mark, judged idle by its telemetry as it
+		// stands now: the snapshot on disk lags it by a publication, and
+		// neither real harness times the start of the turn that ends a stall.
+		telemetry := r.plan.Telemetry
+		server.Stall = delivery.StallBound
+		server.Idle = func() bool {
+			verdict := telemetry.SessionState().Judge()
+			return verdict.Activity == session.ActivityIdle && !verdict.Stale
+		}
 	}
 	return server
 }

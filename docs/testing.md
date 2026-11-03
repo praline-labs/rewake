@@ -92,8 +92,10 @@ what the program proved, and only that: a test switches liveness, never the offe
    started, by the peer's pid and start time, and only once.
 2. **Probes.** One probe with no side effect per served capability, answered within the
    readiness bound: Wake a probe notice acknowledged without showing it, TurnBoundary the turn
-   state, Telemetry the last sample or none, Control "ready" without acting. An answered probe
-   makes its capability live; a late or wrong answer leaves it out, the others not.
+   state, Telemetry the last activity reported or none, Control "ready" without acting. An
+   answered probe makes its capability live; a late or wrong answer leaves it out, the others
+   not. The Telemetry probe's activity is the connection's first sample, so a connection adopted
+   across an exec shows its activity at once, as a real harness's does after its next report.
 3. **Withdrawal.** A closed socket withdraws every live capability; a reconnect is a fresh
    hello and fresh probes from the same process; the program's exit ends the run.
 
@@ -248,6 +250,11 @@ proving nothing the shorter ones do not. A scenario that times something against
 takes the suite's constant (`suiteCap`, `suiteLetterWait`, …) rather than a number of its own.
 The linker ignores `-X` for a variable that does not exist, so a target renamed away leaves the
 suite's binary at the release value without a word.
+
+One wait is cut by a scenario of its own rather than the suite: `stalled-pending` builds its own
+binary with the bound of a stalled pending (`internal/host/delivery`, `builtStall`, ten minutes)
+at twelve seconds, while the suite's binary keeps the release's, so no other case that leaves a
+worker pending is woken by it.
 
 ### Before a publication to npm
 

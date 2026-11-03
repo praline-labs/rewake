@@ -44,10 +44,12 @@ func (b *backend) sendBrief(l *link) {
 }
 
 // probe sends one probe per served capability, all at once, and answers the
-// set whose probes came back right within the bound. A capability the hello
-// did not name is not probed.
-func (b *backend) probe(l *link, serves []string) map[string]bool {
+// set whose probes came back right within the bound, and the activity the
+// Telemetry probe's answer carried, if any. A capability the hello did not
+// name is not probed.
+func (b *backend) probe(l *link, serves []string) (map[string]bool, string) {
 	live := map[string]bool{}
+	var activity string
 	var mu sync.Mutex
 	var wg sync.WaitGroup
 	for _, capability := range Served {
@@ -62,12 +64,15 @@ func (b *backend) probe(l *link, serves []string) map[string]bool {
 			if err == nil && probeAnswered(capability, answer) {
 				mu.Lock()
 				live[capability] = true
+				if capability == Telemetry && answer.State != "none" {
+					activity = answer.State
+				}
 				mu.Unlock()
 			}
 		}()
 	}
 	wg.Wait()
-	return live
+	return live, activity
 }
 
 // probeAnswered says whether a probe's answer is the one its capability
