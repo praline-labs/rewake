@@ -106,7 +106,7 @@ Open a document for numbers, commands and names: the map only points.
 - `docs/traps.md` — What misbehaves in rewake and the harnesses it lives with, by symptom — roles and reports, tests next to a live session, arguments, delivery, main's host and its shell, a switch of the room's build — each entry dated, with its cause and what to do.
   sections: Roles and reports · Tests next to a live session · Arguments and continuing a conversation · Delivery and its proofs · Main's host and its shell · A switch of the room's build
 - `docs/turn-outcomes.md` — What each turn end reports — finished, error, stopped or pending — who it goes to, and the hold that keeps an interim end from closing a task.
-  sections: Failed turns · Interim turn ends (`rewake pending`) · The confirmation · Stops
+  sections: Failed turns · Unclaimed answers · Interim turn ends (`rewake pending`) · The confirmation · Stops
 - `docs/user-guide.md` — The person's guide — the few things only the person does: install, logins, starting main, the worker templates, a project's .rewake/, the shell's keys, stopping and restarting, where things live, upgrading.
   sections: Install · Log in · Start main · Worker templates · A project's `.rewake/` · The workers' own settings · The shell · Stop and restart · Where things live · Upgrading
 - `docs/worker-profile.md` — The Claude Code workers' profile: the service folder, login, onboarding and trust, rewake's defaults in settings.json and their upgrades, the run's own settings, memory.

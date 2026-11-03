@@ -367,6 +367,11 @@ suite has no mutants or controls; the fault seam's tests stay while they do not 
 may be removed when it gets in the way, one at a time — never a clean-up for its own sake.
 A brief to a writer or a reviewer states this criterion.
 
+A part restarted in a live room — the shell, rewake by a switch — is checked live from the
+build the room runs now to the new one, with main drawing and a worker working, not only from
+the new build to itself: on November 3, 2026 a shell restart checked new-to-new closed the
+owner's room on its first old-to-new crossing ([traps.md](traps.md)).
+
 ## Extending the suite
 
 **A scenario** declares its observations before it starts (`Start` with a `Spec`), so an
