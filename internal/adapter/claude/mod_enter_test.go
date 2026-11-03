@@ -16,9 +16,9 @@ import (
 // as the plugin rewake, writes what it answered and drops the prompt, so no
 // model is asked and no sign-in is needed.
 const enterProbe = `import type { Register } from "claude-code";
-import { serveWorktreeEnter } from "./enter.ts";
+import { guardEnterWorktree } from "./enter.ts";
 export const register: Register = (on) => {
-  serveWorktreeEnter(on);
+  guardEnterWorktree(on);
   on("session.start", async ($, e, next) => {
     const started = await next(e);
     let answer: unknown;
@@ -44,7 +44,7 @@ func enterOnce(t *testing.T, program, settings string) string {
 		"hooks/hooks.json":           `{"modules": ["./probe.ts"]}`,
 		"hooks/probe.ts":             enterProbe,
 	}
-	for _, name := range []string{"enter.ts", "worktree.ts", "sessiontools.ts"} {
+	for _, name := range []string{"enter.ts"} {
 		data, err := modFiles.ReadFile("mod/hooks/" + name)
 		if err != nil {
 			t.Fatal(err)

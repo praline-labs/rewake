@@ -20,6 +20,15 @@ func (s *Server) hello(w http.ResponseWriter, r *http.Request) {
 		refuse(w, http.StatusBadRequest, "a hello names its load, its session and the harness's version")
 		return
 	}
+	// A mod of another protocol is refused before it is bound: a mod of
+	// protocol 1 takes the refusal as final and serves nothing, and the
+	// room's restart writes the run's mod anew. A switch of the build plans
+	// that restart itself (contracts.go), so only a load that slipped past
+	// it meets this.
+	if hello.Protocol != Protocol {
+		refuse(w, http.StatusConflict, olderProtocol)
+		return
+	}
 	generation, err := s.bind(r.Context(), hello)
 	var superseded errSuperseded
 	switch {
@@ -35,13 +44,17 @@ func (s *Server) hello(w http.ResponseWriter, r *http.Request) {
 		// proves nothing, and nobody is there to take a refusal.
 		panic(http.ErrAbortHandler)
 	}
-	answer := HelloAnswer{Role: s.cfg.Role, Generation: generation}
+	tools, digest := s.table()
+	answer := HelloAnswer{Role: s.cfg.Role, Generation: generation, Tools: tools, ToolsDigest: digest}
 	if s.cfg.Mirror != nil {
 		on := true
 		answer.Mirror = &on
 	}
 	s.answer(w, r, answer)
 }
+
+// olderProtocol refuses a hello of a mod that speaks another protocol.
+const olderProtocol = "this mod speaks an older protocol of rewake: restart the room"
 
 // bind orders hello among the run's loads, writes its record and tells the
 // run, once the request's peer is checked again and the server is still

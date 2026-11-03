@@ -153,7 +153,10 @@ Read on the same installed 1.2.0 in `dist/core/extensions/types.d.ts`,
   `Already compacted` or `Nothing to compact (session too small)`. These map to
   `nothing to compact`. A request with no observed start after one second returns
   `requested`; its final outcome still follows. Other failures report a fixed explanation,
-  not an error that could contain conversation text.
+  not an error that could contain conversation text. Since extension 3 (November 3, 2026)
+  the extension sends the error's message raw in `native` and the wrapper reads it, on the
+  `control` answer and on `compaction-result` alike, with a code for a refusing check
+  ([remote-control.md](remote-control.md#the-agents-part)); the words are the wrapper's.
 - `session_compact` counts a completed manual or automatic compaction. The completion
   callback separately supplies `tokensBefore` and optional `estimatedTokensAfter` for a
   remote request's outcome. Native summary text is never sent to the wrapper. Counts are
@@ -163,7 +166,10 @@ Read on the same installed 1.2.0 in `dist/core/extensions/types.d.ts`,
   `agent_settled` with an aborted outcome; no settled event means an open failure, not
   proof that the turn stopped. The stopped report names its initiator. A native custom
   message, appended without starting a turn, leaves that same actor in the next turn's
-  history. An idle session refuses interrupt as `no turn running`.
+  history. An idle session refuses interrupt as `no turn running`. Since extension 3 the
+  wrapper does all but the abort: it names the turn its `turn-start` opened, the extension
+  aborts it and answers `requested`, the `turn-end` the wrapper hears settles it, and its
+  `trace` op has the extension send that custom message (`rewake_interrupt`).
 
 The prompt cache's lifetime, read on the bundled 1.3.0 on October 23, 2026. No provider tells pi
 when its cache expires. A model's `promptCache` names the provider's best-effort lifetime in
@@ -176,10 +182,14 @@ seconds per retention tier, `short` and `long`, "a missing tier means the lifeti
 `getPromptCacheTtlMs` of `dist/core/cache-warmer.js` reads it (`dist/core/sdk.js` builds the
 request without one; only compaction sends `none`). An assistant message's `timestamp` is when its
 request started (`pi-ai/dist/types.d.ts`), which is when the provider read or wrote the cache. The
-extension therefore reckons `expiresAt` as the last assistant message's `timestamp` plus the tier's
+wrapper therefore reckons `expiresAt` as the last assistant message's `timestamp` plus the tier's
 lifetime, where the model in use is the one that answered and names that tier; the host carries it
 as `cacheLife` with `ttl` as `5m`, `1h` or the seconds, and `warm` while the reckoned expiry is
-ahead. Known limit: pi's cache warming (`cacheWarming` in settings) re-sends a request to keep the
+ahead. Since extension 3 (November 3, 2026) the reckoning is the wrapper's (`native.go`): it reads
+the retention from the run's planned environment, projects a reading once, when it is first seen,
+with the model of that moment, and keeps the last with input, so a placeholder with no input
+counts, or the same reading after another model was chosen, leaves it; another conversation
+starts with none, and the observation goes to the next image with the run (`handedState.Cache`). Known limit: pi's cache warming (`cacheWarming` in settings) re-sends a request to keep the
 cache alive; in its default `streaming` mode it stops when the run settles, but in `idle` mode it
 goes on up to 30 minutes, which the extension does not see — the cell then shows less time left
 than there is.
@@ -225,15 +235,18 @@ harness pid and rechecks its process start time before accepting the first frame
 
 | Direction | Operation | Fields and acknowledgment |
 |---|---|---|
-| Extension to host | `hello` | `protocol: 2`, `thread`, initial `state`; success makes Wake, TurnBoundary and Telemetry live, plus Control when its directory exists and Spaces on a main's run; the answer's `mirror: true` (October 31, 2026, optional) says rewake's face draws the run |
-| Extension to host | `mirror` | `thread`, `events`: a batch of the face's neutral events ([below](#the-face-of-a-pi-worker)); answer `ok`, or `error` for a run the face does not draw (October 31, 2026) |
+| Extension to host | `hello` | `protocol: 3` (from November 3, 2026; 2 before), `thread`, initial `state`; success makes Wake, TurnBoundary and Telemetry live, plus Control when its directory exists and Spaces on a main's run; the answer's `mirror: true` (October 31, 2026, optional) says rewake's face draws the run, and its `tools` (November 3, 2026) are the table the run's role is offered, each `name`, `label`, `description`, `inputSchema`. A hello of another protocol is answered with the `error` "this extension speaks an older protocol of rewake: restart the room" |
+| Host to extension | `tools` | `thread`, `tools`: the table again, sent once by an image that adopted the run, since it may offer another; the extension registers what is added or changed and hides what is dropped, and answers `ok` (November 3, 2026) |
+| Extension to host | `tool-plan` | `tool`, `arguments`: a call of a rewake tool; answer the `argv` and `timeoutMs` to run, or `refused`, the text the model reads (November 3, 2026) |
+| Extension to host | `tool-result` | `tool`, `ran`: the command's raw end, `exitCode`, `stdout`, `stderr`, `killed`, `stdoutCut` past 1 MiB, or a start's `error`; answer the result's `text` and `isError` (November 3, 2026) |
+| Extension to host | `events` | `thread`, `events`: a batch of pi's own events, raw, with `part` and `lost` lines, which the wrapper's translator makes the face's neutral events of ([below](#the-face-of-a-pi-worker)); answer `ok`, or `error` for a run the face does not draw (November 3, 2026; before it `mirror`, the neutral events made in the extension, from October 31, 2026) |
 | Host to extension | `prompt` | `thread`, `text`: a prompt typed in rewake's face; answer `ok` and whether it was `steered`, or `error` while compacting, for an empty text or a run not drawn (October 31, 2026) |
 | Host to extension | `interrupt` | `thread`: the person's Esc in rewake's face; the extension calls `ctx.abort()` and answers `ok`, or `error` while pi is idle or compacting or for a run not drawn; an older extension answers `unknown host operation` (October 31, 2026) |
 | Extension to host | `closing` | `thread`; sent at `session_shutdown` whose `reason` is `"quit"`, before the link closes, waited for at most one second; a main's run in rewake's shell calls `LaunchRequest.Closing` (October 24, 2026) |
 | Host to extension | `wake` | `thread`, `notice`; answer says `ok` and whether it was `steered`, or `pending` while compacting |
 | Extension to host | `turn-start` | `thread`, `turn`; acknowledgment precedes model work |
 | Extension to host | `turn-end` | `thread`, `turn`, `outcome`, `text` (the final text, or pi's error message when a failed turn has none); acknowledgment follows publication |
-| Either | `state` | host asks with `thread`; extension answers or pushes `state` with sequence, activity, model, effort, tokens, window, percent, compacting and (from October 23, 2026, optional) `cache`: the last assistant message's `usage` as `read`, `write`, `input` (`cacheRead`, `cacheWrite`, `input`), kept from `message_end`, `null` before the first response, so an older extension leaves it out; with it, where the model names a lifetime for the request's tier, `ttl` (seconds) and `expiresAt` (epoch milliseconds), the host's `cacheLife` (October 23, 2026, optional) |
+| Either | `state` | host asks with `thread`; extension answers or pushes `state` with `sequence`, `idle`, `compacting` and `native`, what the session read unconverted (extension 3, November 3, 2026): `contextUsage` (`ctx.getContextUsage()`), `model` (`ctx.model` less `headers` and `baseUrl`, which may carry credentials), `thinkingLevel`, and `lastAssistant`, the last assistant message's `usage`, `provider`, `model` and `timestamp`, sampled at each of its `message_end`s, `null` before the first; the wrapper projects it (`native.go`) |
 | Host to extension | `control` | `thread`, `action`, `request`, `from`, optional `focus`; answer carries outcome, reason, detail, open and token counts where known |
 | Extension to host | `compacted` | `thread`, event `sequence`, optional remote `request` and `from`; acknowledgment follows counting |
 | Extension to host | `compaction-result` | `thread`, `request`, `from`, outcome and optional token counts; acknowledgment follows retaining the outcome for main's letter |
@@ -267,15 +280,39 @@ the alternate screen, before that dispose; on SIGTERM or SIGHUP it disposes firs
 (`dist/modes/interactive/interactive-mode.js`, `shutdown`). Its Ctrl+Z (`app.suspend`) stops the
 TUI and sends `SIGTSTP` to its group, as Claude Code does. Read on 1.3.0, October 24, 2026.
 
+## Tools registered from the wrapper's table (November 3, 2026, 1.4.0)
+
+rewake's tools come to the extension as data ([worktree-tools.md](worktree-tools.md)), so a
+change of one reaches a running pi with the wrapper's restart. That rests on pi 1.4.0's
+registration, read in `dist/core/extensions/loader.js` and `dist/core/agent-session.js` and
+probed through the SDK with an inline extension, no model and no login, on November 3, 2026:
+
+- `pi.registerTool` is valid after the extension's load: the loader does `tools.set(name, …)`,
+  so a name registered again replaces its tool, and calls `refreshTools()`, which rebuilds the
+  registry and sets `agent.state.tools`, the tools the next request declares. The probe saw a
+  tool registered at `session_start` with the description `first`, then `second` after a second
+  registration.
+- `exposure: "hidden"` takes the tool out of `agent.state.tools` (the probe: none), and a
+  registration again without it brings it back activated, as pi documents for a tool whose
+  exposure turns `direct`. A tool cannot be unregistered; a dropped one is so hidden.
+- `pi.exec(command, args, {signal, timeout, cwd})` takes no environment: the child inherits pi's,
+  which the launch gave the run's `REWAKE_*` variables. It reports a child it killed with
+  `killed: true` and exit code 0.
+
 ## Handing the run over (November 2, 2026)
 
 A worker's run is handed over to the next image of its wrapper when a switch of the room's build
 asks ([rules/state.md](rules/state.md#switching-a-running-room)); `handover.pi` names the version
 (`handover.go`). Since the extension has no replay after a reconnect, the connection itself is
 handed over: the listener and the extension's connection go as files, with pi's pid and start, the
-thread and the next request number, and the next image serves the connection as its current one,
-its hello long answered. The extension never sees the exec; its files stay as written, the switch
-admitting only a build of the same `extension` protocol.
+thread, the next request number and the last cache observation with input, and the next image serves the connection as its current one,
+its hello long answered. The translator of pi's raw events (`translate.go`), whose open blocks,
+calls, queue and parts an event in flight still needs, goes as a third file, a memfd
+`rewake-pi-mirror` of its state as JSON read under 64 MiB (`handover.pi` 3, brief 94): inline in
+the environment it could pass the exec's bound, as the mirror's model would. The extension never sees the exec; its files stay as written, the switch
+admitting only a build of the same `extension` protocol. The adopting image sends the extension its own tool table
+once (`tools`), so a changed tool reaches the running pi; a tool call's plan or end read while the
+reader is halted waits in the socket for the next image, which answers it alike.
 
 What lives only in the image's memory keeps the switch waiting until it is gone, which an idle
 session makes it: an open turn (its end would find no start, and pi sends nothing again), an end
@@ -523,14 +560,19 @@ and hide or replace pi's own working row, header and footer.
 ## The face of a pi worker
 
 October 31, 2026, pi 1.4.0, the owner's word: a pi worker is drawn by rewake's face
-([face.md](face.md)) as a Claude Code session looks. rewake's extension feeds the face's model from
-pi's events, as the Claude Code mod does ([claude.md](claude.md#the-mirror)); the host only decodes
-the events with `mirror.Decode` and hands them on (`internal/adapter/pi/mirror.go`). The extension's
-side is `mirror.ts` (the model of the events), `mirrorhooks.ts` (pi's events it hears), `toolmap.ts` (the tools' names, each form a row of the face's
-table of its vocabulary, [face.md](face.md#calls)), tested by `mirror.test.ts` and `compaction.test.ts`, and
-`feed.ts`, the copy of the feed every adapter sends through ([face.md](face.md#the-feed)).
+([face.md](face.md)) as a Claude Code session looks. Since November 3, 2026 (brief 94,
+`hello.protocol` 3) the extension translates nothing: `forward.ts` hears pi's events and forwards
+each as pi gave it, `{event: <pi's name>, ...its fields}`, less the partial message a delta grows,
+through `stream.ts` (below, "The stream"); the wrapper translates them into the mirror's neutral
+events in Go (`internal/adapter/pi/translate*.go`, tested by `translate_test.go` and
+`translate_more_test.go`), names the tools as their Claude Code kin (`translate_tools.go`, each
+form a row of the face's table of its vocabulary, [face.md](face.md#calls), held so by
+`translate_vocab_test.go`) and hands them to the model (`mirror.go`). A change of what the face
+draws of pi is a Go change, live after `rewake restart rewake`; the translator's state crosses the
+handover in a memfd of its own ([rules/state.md](rules/state.md)). What follows is what the
+translator makes of pi's events.
 
-- **Only when drawn.** The extension mirrors nothing until hello's answer says `mirror: true`;
+- **Only when drawn.** The extension forwards nothing until hello's answer says `mirror: true`;
   every worker's launch sets it (`adapter.FacedWorkersHarness`), main's does not yet. An older
   extension never sends `mirror` and answers a `prompt` with `unknown host operation`.
 - **The events.** `input` is a `prompt`, its `source` its origin: `interactive` is the person's,
@@ -567,7 +609,8 @@ table of its vocabulary, [face.md](face.md#calls)), tested by `mirror.test.ts` a
   going on) put the queue back into pi's editor. An extension hears no change of the queue
   (`queue_update` reaches the session's own listeners only), and the queue holds the text after
   the input handlers and a prompt template changed it; `ctx.hasPendingMessages()` says whether
-  anything waits. So the extension (`queued.ts`) sends a steered prompt `queued` and says `taken`
+  anything waits (the extension forwards it as `turn_start`'s and `message_start`'s `pending`). So
+  the translator (`translate_queue.go`) sends a steered prompt `queued` and says `taken`
   as a user message begins: the queued prompt of the message's text, the first of the same texts.
   A message of no queued text is nobody's: an input handler may have consumed one prompt and
   transformed the next, so the oldest is no evidence (review of 8e94ba1). One still queued when pi's queue is found
@@ -609,9 +652,10 @@ table of its vocabulary, [face.md](face.md#calls)), tested by `mirror.test.ts` a
   for the session alone, clamped to the model: the session emits `thinking_level_changed`, on which
   pi's screen redraws its footer and border, and extensions hear `thinking_level_select`; no status
   line is said. rewake's extension answers the face's `thinking` input so (`faceThinking` in
-  `faced.ts`, its order repeated in `levelsOf`, tested by `interrupt.test.ts`), and says the level
-  to the face's mirror once the face draws the run and on every `thinking_level_select` and
-  `model_select` (`serveLevel`, brief 75), pi's level names being the mirror's; the face's rule
+  `faced.ts`, its order repeated in `levelsOf`, tested by `interrupt.test.ts`). The wrapper says the
+  level to the face's mirror from the state the extension samples, its raw `thinkingLevel`, as the
+  sample changes (`mirrorLevel`; until brief 94 the extension said it on every
+  `thinking_level_select` and `model_select`), pi's level names being the mirror's; the face's rule
   shows it from there ([face.md](face.md), "The look"). Its telemetry still sends it as `effort`.
 - **An aborted or failed message** ends as pi's screen ends it (`interactive-mode.js`,
   `message_end`; `components/assistant-message.js`, read on 1.4.0): a block that was streaming
@@ -656,8 +700,8 @@ table of its vocabulary, [face.md](face.md#calls)), tested by `mirror.test.ts` a
   says `session_before_compact` once it has something to compact, then `session_compact` when it
   is done or `session_compact_failed` when it failed, was aborted (Esc, `abortCompaction`) or an
   extension cancelled it; a manual one with nothing to compact says only `session_compact_failed`.
-  The extension's mirror hears these three and returns nothing, so it never cancels a compaction
-  or gives it a summary. At the start it sends `turn` `compacting`, on the run going on or on one
+  The extension's forwarder hears these three and returns nothing, so it never cancels a
+  compaction or gives it a summary. At the start the translator sends `turn` `compacting`, on the run going on or on one
   of its own outside a run; at the end it sends `working` for a run that goes on, else `idle`; an
   end with no start sends nothing. The face draws `Compacting…` and then what follows
   ([face.md](face.md), "The look"); the wrapper's model keeps a working turn's start through a
@@ -666,10 +710,25 @@ table of its vocabulary, [face.md](face.md#calls)), tested by `mirror.test.ts` a
   call on the screen, said in its status as `Tool output: expanded`; ctrl+t hides or shows
   thinking (`pi-coding-agent/docs/keybindings.md`, read October 31, 2026, pi 1.4.0). The face's ctrl+o opens its
   folds the same way ([face.md](face.md), "Unfolding").
-- **The feed** bounds, queues and batches the events as for every adapter
-  ([face.md](face.md#the-feed)); a call's input or output past 36 KiB keeps its head ½ and tail ¼
-  of that, as the mod's and the model's do (the tail was ½ until November 1, 2026). Nothing waits
-  for it, and a throw in the mirror is dropped: pi's work is never held.
+- **The stream** (`stream.ts`, brief 94) is bounded, ordered and never waits: a handler only
+  pushes, and a throw in one is dropped, so pi's work is never held. It holds 256 KiB of serialized
+  events; past it the oldest delta goes first, then the oldest event, each leaving a `lost` marker
+  `{deltas, events}` where it stood, neighbouring markers merged. 50 ms after a push, while the
+  link is up, the oldest lines go as one `events` request of at most 48 KiB, one in flight; one
+  refused or unanswered in 5 s stands as lost at the front. An event past 40 KiB goes as `part`
+  lines of its JSON text, put together by the wrapper. An event whose lines would pass 192 KiB, a
+  tool's 40 KiB, has its longest strings cut first, then its longest arrays keep their head (a
+  call of many short hunks); one that still would is lost, a `lost` marker where it would stand, so
+  nothing held passes the bound. The wrapper resyncs the model for an event whose parts cannot be
+  put together — more than 16, broken into by another event, a text that is no event — and passes
+  over the rest of one a `lost` marker counted (review of b832ce0, November 3, 2026: a call of
+  1,500 hunks was held at 829,556 bytes and its 21 parts vanished without a resync).
+  `message_end` carries its content blocks only when it ended `aborted` or `error`, without a
+  thinking block's signature, and no usage; an image's data never goes. The wrapper, for a lost
+  delta, leaves a call's input to its end, which says it whole, and for a lost event resyncs the
+  model. A text or thinking block is open from its `text_start` or `thinking_start`, so an aborted
+  or failed end gives the face a block whose every delta the stream dropped (review of b832ce0). A call's input is said at most every 100 ms, read as far as its JSON goes; past 36 KiB a
+  call's input or output keeps its head ½ and tail ¼ of that, as the mod's and the model's do.
 
 | pi tool | drawn as | input |
 |---|---|---|
@@ -733,3 +792,16 @@ then `[compaction] Compacted from 3,185 tokens`): the face drew `Compacting…` 
 8:59 AM`, the compaction counted in, where the turn's own work took about 3 s. Its first turn did
 not compact, nor did any turn of a worker under a reserve of 268500 (about 3k tokens, under its
 threshold); why the first turn did not was not traced.
+
+**[live]** November 3, 2026 (brief 94), this build (extension 3), a private HOME, `REWAKE_DIR` and
+project under `/tmp` with no `HERDR_*`, `CLAUDE*`, `ANTHROPIC*` or `REWAKE_*` variables, the shell
+from its sources, a Claude Code 2.1.310 main and worker and a pi worker on pi 1.4.0 through
+`REWAKE_PI`, no login: a stand-in provider on `127.0.0.1` speaking `anthropic-messages`, pi's
+`models.json` naming it, answered pi's first request of a task with a `bash` call of `ls` and then
+a short reply with cache usage. The face drew the call as `Listed 1 directory`, the reply, `Done in
+12s`, the input rule `◆ medium` and the Хвост `brief 1 0/2`; the strip read `dev rewake · Stub
+medium thinking · 72%` and `13k/200k`, the context counted from pi's own reading after the turn.
+Then `rewake restart rewake` switched the room to a build whose Go alone differed: two tools'
+descriptions and the strip's model name suffixed. pi's process, its wrapper and its host kept
+their pids; pi's next request carried the new descriptions of `brief_tick` and `worktree_status`,
+and the strip read `Stub ·B`, with no restart of pi.

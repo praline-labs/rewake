@@ -1,30 +1,20 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import type { Frame, Link, Turn } from "./extension.ts";
 
+// State is what the session read of itself, unconverted: the wrapper names
+// and converts it (telemetry.go), so a change of what the Статус shows is the
+// wrapper's alone. lastAssistant is the last assistant message's usage and
+// whose it was, as pi reported it.
 export type State = {
   sequence: number;
-  activity: "idle" | "working";
-  model: string | null;
-  modelName: string | null;
-  effort: string | null;
-  // thinking is whether the model thinks: its thinking level is not off; null
-  // for a model without reasoning, whose level means nothing.
-  thinking: boolean | null;
-  tokens: number | null;
-  window: number | null;
-  percent: number | null;
+  idle: boolean;
   compacting: boolean;
-  cache: Cache | null;
-};
-// ttl is the lifetime in seconds of the tier the request was sent with and
-// expiresAt when it ends (epoch milliseconds), both absent where the model names
-// no lifetime for that tier.
-type Cache = {
-  read: number;
-  write: number;
-  input: number;
-  ttl?: number | null;
-  expiresAt?: number | null;
+  native: {
+    contextUsage: unknown;
+    model: unknown;
+    thinkingLevel: unknown;
+    lastAssistant: unknown;
+  };
 };
 type Pending = {
   frame: Frame;
@@ -33,41 +23,17 @@ type Pending = {
   timer: ReturnType<typeof setTimeout>;
 };
 
-// What the provider reported for an assistant message, as pi normalises it:
-// input is the part neither read from nor written to the cache. Whatever the
-// stop reason: a response cut short or failed after its input usage arrived
-// still sent that request, and a placeholder with no input counts has none to
-// show, so the caller keeps the last observation.
-export function cacheOf(message: {
-  role: string;
-  usage?: { input?: number; cacheRead?: number; cacheWrite?: number };
-}): Cache | null {
-  if (message.role !== "assistant" || !message.usage) return null;
-  const { input = 0, cacheRead = 0, cacheWrite = 0 } = message.usage;
-  if (!(input >= 0 && cacheRead >= 0 && cacheWrite >= 0) || input + cacheRead + cacheWrite <= 0)
-    return null;
-  return { read: cacheRead, write: cacheWrite, input };
+// thrown is what a native call threw, as its message.
+export function thrown(error: unknown): { error: string } {
+  return { error: error instanceof Error ? error.message : String(error) };
 }
 
-// lifeOf is how long the cache the message's request read or wrote lives. pi's
-// own requests name no retention, so the tier is "long" when
-// PI_CACHE_RETENTION=long and "short" otherwise, as pi's cache warmer reads it;
-// the model's promptCache gives the tier's best-effort lifetime in seconds,
-// unset where the provider's is not known. The provider counts it from the
-// request, the message's timestamp, not from the end of the answer. A model
-// other than the one that answered says nothing of this cache.
-export function lifeOf(
-  message: { provider?: string; model?: string; timestamp?: number },
-  model:
-    | { provider: string; id: string; promptCache?: { short?: number; long?: number } }
-    | undefined,
-  retention: string | undefined,
-): Pick<Cache, "ttl" | "expiresAt"> {
-  const ttl = model?.promptCache?.[retention === "long" ? "long" : "short"];
-  const at = message.timestamp;
-  if (!model || model.provider !== message.provider || model.id !== message.model) return {};
-  if (!(typeof ttl === "number" && ttl > 0 && typeof at === "number" && at > 0)) return {};
-  return { ttl, expiresAt: at + ttl * 1000 };
+// modelOf is the model as pi holds it, less what may carry credentials: its
+// headers and its address.
+export function modelOf(model: object | undefined): unknown {
+  if (!model) return null;
+  const { headers: _headers, baseUrl: _baseUrl, ...rest } = model as Record<string, unknown>;
+  return rest;
 }
 
 export function management(
@@ -80,33 +46,24 @@ export function management(
   let sequence = 0;
   let compactions = 0;
   let compacting = false;
-  let cache: State["cache"] = null;
+  let lastAssistant: unknown = null;
   let compact: Pending | undefined;
-  let interrupt: (Pending & { turn: Turn }) | undefined;
+  // interrupting is the turn an interrupt stopped, in flight until it settles.
+  let interrupting: Turn | undefined;
 
   function sample(): State {
     const ctx = context();
-    const usage = ctx?.getContextUsage();
     return {
       sequence: ++sequence,
-      activity: ctx?.isIdle() ? "idle" : "working",
-      model: ctx?.model?.id ?? null,
-      modelName: ctx?.model?.name || null,
-      effort: ctx?.thinkingLevel ?? null,
-      thinking: ctx?.model?.reasoning && ctx.thinkingLevel ? ctx.thinkingLevel !== "off" : null,
-      tokens: usage?.tokens ?? null,
-      window: usage?.contextWindow ?? ctx?.model?.contextWindow ?? null,
-      percent: usage?.percent ?? null,
+      idle: ctx?.isIdle() === true,
       compacting: compacting || !!compact,
-      cache,
+      native: {
+        contextUsage: ctx?.getContextUsage() ?? null,
+        model: modelOf(ctx?.model),
+        thinkingLevel: ctx?.thinkingLevel ?? null,
+        lastAssistant,
+      },
     };
-  }
-
-  function usageSeen(message: Parameters<typeof cacheOf>[0] & Parameters<typeof lifeOf>[0]) {
-    const seen = cacheOf(message);
-    if (!seen) return;
-    cache = { ...seen, ...lifeOf(message, context()?.model, process.env.PI_CACHE_RETENTION) };
-    changed();
   }
 
   function changed() {
@@ -136,6 +93,9 @@ export function management(
     answer(pending, fields);
   }
 
+  // A command is carried out natively after the check made just before its
+  // call, and answered as it resolved: the wrapper words the reply, waits for
+  // an interrupted turn to settle and names who stopped it (control.go).
   function startCompact(link: Link, frame: Frame, ctx: ExtensionContext): Promise<Partial<Frame>> {
     return new Promise((resolve) => {
       const pending: Pending = {
@@ -151,124 +111,75 @@ export function management(
         // running turn, and holding compact prevents a wake during that await.
         ctx.compact({
           customInstructions: frame.focus || undefined,
+          // The result as pi gave it, less the summary it carries.
           onComplete: (result) =>
             finished(pending, {
               outcome: "done",
-              tokensBefore: result.tokensBefore,
-              tokensAfter: result.estimatedTokensAfter,
+              native: {
+                tokensBefore: result.tokensBefore,
+                estimatedTokensAfter: result.estimatedTokensAfter,
+              },
             }),
-          onError: (error) => {
-            const empty = /already compacted|nothing to compact|session too small/i.test(
-              error.message,
-            );
-            finished(pending, {
-              outcome: empty ? "refused" : "failed",
-              reason: empty ? "nothing to compact" : "cut short",
-              detail: empty ? undefined : "native compaction failed or was interrupted",
-            });
-          },
+          onError: (error) => finished(pending, { outcome: "failed", native: thrown(error) }),
         });
-      } catch {
-        finished(pending, {
-          outcome: "failed",
-          detail: "native compaction could not be requested",
-        });
-      }
-    });
-  }
-
-  function startInterrupt(
-    link: Link,
-    frame: Frame,
-    ctx: ExtensionContext,
-    running: Turn,
-  ): Promise<Partial<Frame>> {
-    return new Promise((resolve) => {
-      const pending = {
-        frame,
-        link,
-        resolve,
-        turn: running,
-        timer: setTimeout(
-          () =>
-            resolve({
-              outcome: "failed",
-              open: true,
-              reason: "cut short",
-              detail: "the turn has not settled after interrupt",
-            }),
-          3000,
-        ),
-      };
-      interrupt = pending;
-      running.interrupted = `${frame.from} interrupted this turn with rewake interrupt`;
-      try {
-        ctx.abort();
-      } catch {
-        interrupt = undefined;
-        running.interrupted = undefined;
-        answer(pending, { outcome: "failed", detail: "native interrupt could not be requested" });
+      } catch (error) {
+        finished(pending, { outcome: "failed", native: thrown(error) });
       }
     });
   }
 
   async function control(link: Link, frame: Frame): Promise<Partial<Frame>> {
     const ctx = context();
-    if (!ctx || current() !== link) return { outcome: "refused", reason: "not answering" };
-    if (!frame.request || !frame.from)
-      return { outcome: "refused", detail: "control needs a request and sender" };
-    if (compacting || compact || interrupt)
-      return { outcome: "refused", reason: "another request in flight" };
+    if (!ctx || current() !== link) return { outcome: "refused", code: "conversation" };
+    if (compacting || compact || interrupting) return { outcome: "refused", code: "busy" };
     if (frame.action === "compact") {
-      if (!ctx.isIdle()) return { outcome: "refused", reason: "in a turn" };
+      if (!ctx.isIdle()) return { outcome: "refused", code: "turn" };
       return startCompact(link, frame, ctx);
     }
     if (frame.action === "interrupt") {
       const running = turn();
       if (!running || running.link !== link || ctx.isIdle())
-        return { outcome: "refused", reason: "no turn running" };
-      return startInterrupt(link, frame, ctx, running);
+        return { outcome: "refused", code: "idle" };
+      if (frame.turn !== undefined && frame.turn !== running.id)
+        return { outcome: "refused", code: "turn" };
+      interrupting = running;
+      try {
+        ctx.abort();
+      } catch (error) {
+        interrupting = undefined;
+        return { outcome: "failed", native: thrown(error) };
+      }
+      return { outcome: "requested" };
     }
-    return { outcome: "refused", detail: "unknown control action" };
+    return { outcome: "refused" };
   }
 
-  function settled(ended: Turn, aborted: boolean) {
-    const pending = interrupt;
-    if (pending?.turn !== ended) return;
-    interrupt = undefined;
-    if (aborted) {
-      ended.text = ended.interrupted!;
-      // Keep the actor in native history without starting another turn.
-      try {
-        pi.sendMessage(
-          { customType: "rewake_interrupt", content: ended.text, display: true },
-          { triggerTurn: false, deliverAs: "steer" },
-        );
-        answer(pending, { outcome: "done" });
-      } catch {
-        answer(pending, {
-          outcome: "failed",
-          detail: "the turn stopped, but its interruption trace could not be recorded",
-        });
-      }
-    } else {
-      answer(pending, { outcome: "refused", reason: "no turn running" });
+  // trace puts an interrupt's actor into pi's history without starting a
+  // turn, once the wrapper heard the interrupted turn's end.
+  function trace(text: string): Partial<Frame> {
+    try {
+      pi.sendMessage(
+        { customType: "rewake_interrupt", content: text, display: true },
+        { triggerTurn: false, deliverAs: "steer" },
+      );
+      return { ok: true };
+    } catch (error) {
+      return { error: String(error) };
     }
+  }
+
+  // A turn's settling frees an interrupt of it; the wrapper matches the end
+  // it hears to the interrupt.
+  function settled(ended: Turn) {
+    if (interrupting === ended) interrupting = undefined;
   }
 
   function reset() {
-    for (const pending of [compact, interrupt]) {
-      if (pending)
-        answer(pending, {
-          outcome: "failed",
-          open: true,
-          detail: "the conversation closed before its control outcome",
-        });
-    }
+    if (compact) answer(compact, { outcome: "failed", code: "closed" });
     compact = undefined;
-    interrupt = undefined;
+    interrupting = undefined;
     compacting = false;
-    cache = null;
+    lastAssistant = null;
   }
 
   pi.on("session_before_compact", async () => {
@@ -293,8 +204,16 @@ export function management(
     compacting = false;
     changed();
   });
-  pi.on("message_end", async (event) => usageSeen(event.message));
+  // Each assistant message's usage is sampled at its end, a placeholder's
+  // and a failed one's too: the wrapper tells which is the cache.
+  pi.on("message_end", async (event) => {
+    const message = event.message;
+    if (message.role !== "assistant") return;
+    const { usage, provider, model, timestamp } = message;
+    lastAssistant = { usage, provider, model, timestamp };
+    changed();
+  });
   pi.on("model_select", async () => changed());
   pi.on("thinking_level_select", async () => changed());
-  return { sample, changed, control, settled, reset, busy: () => compacting || !!compact };
+  return { sample, changed, control, trace, settled, reset, busy: () => compacting || !!compact };
 }

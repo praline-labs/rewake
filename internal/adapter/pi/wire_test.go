@@ -83,7 +83,7 @@ func (rig *rig) client(t *testing.T, thread string, handle func(*link, frame)) *
 			l.answer(got, frame{OK: true})
 		}
 	})
-	reply, err := l.ask(t.Context(), frame{Op: "hello", Protocol: protocolVersion, State: &sample{Sequence: 1, Activity: "idle"}, Thread: thread})
+	reply, err := l.ask(t.Context(), frame{Op: "hello", Protocol: protocolVersion, State: &sample{Sequence: 1, Idle: true}, Thread: thread})
 	if err != nil || !reply.OK {
 		t.Fatalf("hello: %+v, %v", reply, err)
 	}
@@ -178,7 +178,7 @@ func TestBadHelloAndWrongPeerNeverBecomeLive(t *testing.T) {
 			}
 			defer func() { _ = conn.Close() }()
 			l := newLink(conn)
-			hello := frame{Op: "hello", ID: 1, Protocol: protocolVersion, State: &sample{Sequence: 1, Activity: "idle"}, Thread: "conversation"}
+			hello := frame{Op: "hello", ID: 1, Protocol: protocolVersion, State: &sample{Sequence: 1, Idle: true}, Thread: "conversation"}
 			if which == "protocol" {
 				hello.Protocol = 1
 			}
@@ -277,7 +277,7 @@ func TestHelloIsAcknowledgedBeforeWakeBecomesLive(t *testing.T) {
 	}
 	defer func() { _ = conn.Close() }()
 	l := newLink(conn)
-	if err := l.send(frame{Op: "hello", ID: 1, Protocol: protocolVersion, State: &sample{Sequence: 1, Activity: "idle"}, Thread: "conversation"}); err != nil {
+	if err := l.send(frame{Op: "hello", ID: 1, Protocol: protocolVersion, State: &sample{Sequence: 1, Idle: true}, Thread: "conversation"}); err != nil {
 		t.Fatal(err)
 	}
 	_ = conn.SetReadDeadline(time.Now().Add(3 * time.Second))

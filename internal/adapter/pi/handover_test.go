@@ -2,6 +2,7 @@ package pi
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"reflect"
@@ -42,9 +43,12 @@ func TestAnIdlePiRunHandsItsConnectionOver(t *testing.T) {
 		Publish: func(_ context.Context, end adapter.TurnEnd) error { <-gate; ends <- end; return nil },
 	}
 	rig := newRig(t, func(r *run) { r.ReportTurns(handler) })
-	wakes := make(chan frame, 4)
+	wakes, tables := make(chan frame, 4), make(chan frame, 4)
 	held := make(chan struct{})
 	l := rig.client(t, "conversation", func(l *link, got frame) {
+		if got.Op == "tools" {
+			tables <- got
+		}
 		if got.Op == "wake" {
 			wakes <- got
 			<-held
@@ -84,9 +88,15 @@ func TestAnIdlePiRunHandsItsConnectionOver(t *testing.T) {
 		t.Fatalf("idle, Busy says %q", why)
 	}
 
+	// What the face's translator holds goes over in its memory file: a
+	// block streaming in the old image settles under its id in the next.
+	opened := before.translate.take([]raw{{Event: "agent_start"}, {Event: "message_update", Type: "text_delta", Delta: "Hel"}})
 	handed, err := before.HandOver()
 	if err != nil {
 		t.Fatal(err)
+	}
+	if len(handed.Files) != 3 {
+		t.Fatalf("handed over %d files", len(handed.Files))
 	}
 	// The exec: the old image's descriptors go, the socket's path and the
 	// copies handed over stay.
@@ -113,8 +123,15 @@ func TestAnIdlePiRunHandsItsConnectionOver(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(after.Close)
+	if settled := after.translate.take([]raw{{Event: "message_update", Type: "text_end", Content: json.RawMessage(`"Hello"`)}}); len(settled) != 1 || len(opened) != 2 || settled[0].ID != opened[1].ID || settled[0].Turn != opened[0].Turn {
+		t.Fatalf("the block streaming across the handover: %+v, then %+v", opened, settled)
+	}
 	if caps := receive(t, live); len(caps) != 3 {
 		t.Fatalf("the adopted run's live set: %v", caps)
+	}
+	// The next image may offer another table: it sends its own.
+	if table := receive(t, tables); table.Thread != "conversation" || len(table.Tools) == 0 {
+		t.Fatalf("the adopted run's table: %+v", table)
 	}
 	askOK(t, l, frame{Op: "turn-start", Thread: "conversation", Turn: "t2"})
 	askOK(t, l, frame{Op: "turn-end", Thread: "conversation", Turn: "t2", Outcome: "answered", Text: "after"})
@@ -138,18 +155,28 @@ func TestAnIdlePiRunHandsItsConnectionOver(t *testing.T) {
 var handedShapes = map[int]string{
 	1: `Version int "version"; PID int "pid"; Start uint64 "start"; Thread string "thread"; Next int64 "next"`,
 	2: `Version int "version"; PID int "pid"; Start uint64 "start"; Thread string "thread"; Next int64 "next"; Unread []uint8 "unread,omitempty"`,
+	3: `Version int "version"; PID int "pid"; Start uint64 "start"; Thread string "thread"; Next int64 "next"; Unread []uint8 "unread,omitempty"; Cache *pi.cacheSeen "cache,omitempty" {Thread string "thread"; Of json.RawMessage "of,omitempty"; Read int64 "read"; Write int64 "write"; Input int64 "input"; TTL int64 "ttl,omitempty"; ExpiresAt int64 "expiresAt,omitempty"}; Translator int "translator"`,
 }
 
 func TestThePiHandoverChangesWithItsShape(t *testing.T) {
-	typ := reflect.TypeFor[handedState]()
+	if got := shapeOf(reflect.TypeFor[handedState]()); got != handedShapes[handoverVersion] {
+		t.Fatalf("handedState is\n%s\nand handover.pi %d pins\n%s\na changed handedState raises handoverVersion", got, handoverVersion, handedShapes[handoverVersion])
+	}
+}
+
+// shapeOf is a struct's fields, and those of a struct of this package one
+// holds, so a changed field of what the handover nests changes it too.
+func shapeOf(typ reflect.Type) string {
 	fields := make([]string, 0, typ.NumField())
 	for index := range typ.NumField() {
 		field := typ.Field(index)
-		fields = append(fields, fmt.Sprintf("%s %s %q", field.Name, field.Type, field.Tag.Get("json")))
+		shape := fmt.Sprintf("%s %s %q", field.Name, field.Type, field.Tag.Get("json"))
+		if nested := field.Type; nested.Kind() == reflect.Pointer && nested.Elem().Kind() == reflect.Struct && nested.Elem().PkgPath() == typ.PkgPath() {
+			shape += " {" + shapeOf(nested.Elem()) + "}"
+		}
+		fields = append(fields, shape)
 	}
-	if got := strings.Join(fields, "; "); got != handedShapes[handoverVersion] {
-		t.Fatalf("handedState is\n%s\nand handover.pi %d pins\n%s\na changed handedState raises handoverVersion", got, handoverVersion, handedShapes[handoverVersion])
-	}
+	return strings.Join(fields, "; ")
 }
 
 // What the extension sends after the snapshot is not taken by the image that

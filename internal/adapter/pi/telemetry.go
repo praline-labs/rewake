@@ -2,8 +2,7 @@ package pi
 
 import (
 	"context"
-	"math"
-	"strconv"
+	"encoding/json"
 	"time"
 
 	"github.com/praline-labs/rewake/internal/core/session"
@@ -11,56 +10,12 @@ import (
 
 // A sample's sequence orders event pushes and answers to polls on one
 // connection. A late poll answer cannot replace a newer pushed observation.
+// Native is what the session read of itself, as pi answered it (native.go).
 type sample struct {
-	Sequence  uint64  `json:"sequence"`
-	Activity  string  `json:"activity"`
-	Model     *string `json:"model"`
-	ModelName *string `json:"modelName"`
-	Effort    *string `json:"effort"`
-	// Thinking is whether the model's thinking level is on; absent from an
-	// extension that predates it and for a model without reasoning.
-	Thinking   *bool    `json:"thinking,omitempty"`
-	Tokens     *int64   `json:"tokens"`
-	Window     *int64   `json:"window"`
-	Percent    *float64 `json:"percent"`
-	Compacting bool     `json:"compacting"`
-	// Cache is the last assistant message's usage; absent from an extension
-	// that predates it and before the first response.
-	Cache *cacheUsage `json:"cache,omitempty"`
-}
-
-type cacheUsage struct {
-	Read  int64 `json:"read"`
-	Write int64 `json:"write"`
-	Input int64 `json:"input"`
-	// TTL is the lifetime in seconds of the tier the request was sent with,
-	// and ExpiresAt its end in epoch milliseconds: the extension's reckoning
-	// from the model's promptCache, absent where the model names none.
-	TTL       *int64 `json:"ttl,omitempty"`
-	ExpiresAt *int64 `json:"expiresAt,omitempty"`
-}
-
-// life is the cache's lifetime as the snapshot carries it; nil where the
-// extension had none to tell. pi gives no expiry and no warm flag of its own:
-// warm is whether the reckoned expiry is still ahead at now.
-func (c *cacheUsage) life(now time.Time) *session.CacheLife {
-	if c.TTL == nil || c.ExpiresAt == nil || *c.TTL <= 0 || *c.ExpiresAt <= 0 {
-		return nil
-	}
-	at := time.UnixMilli(*c.ExpiresAt)
-	return &session.CacheLife{TTL: tierName(*c.TTL), ExpiresAt: &at, Warm: now.Before(at)}
-}
-
-// tierName writes a lifetime as the status line of Claude Code names its
-// tiers: 5m, 1h, else seconds.
-func tierName(seconds int64) string {
-	switch {
-	case seconds%3600 == 0:
-		return strconv.FormatInt(seconds/3600, 10) + "h"
-	case seconds%60 == 0:
-		return strconv.FormatInt(seconds/60, 10) + "m"
-	}
-	return strconv.FormatInt(seconds, 10) + "s"
+	Sequence   uint64          `json:"sequence"`
+	Idle       bool            `json:"idle"`
+	Compacting bool            `json:"compacting"`
+	Native     json.RawMessage `json:"native,omitempty"`
 }
 
 // observations is what the run keeps of its samples beside the session's
@@ -70,6 +25,11 @@ type observations struct {
 	view     *session.Observer
 	link     *link
 	sequence uint64
+	// cache is the last assistant message's cache usage that had input.
+	cache *cacheSeen
+	// model is the last sample's model, whose levels the face's shift+tab
+	// cycles (levelsOf).
+	model *nativeModel
 }
 
 // sampleExpiry is how long a sample stays fresh: the run polls every second.
@@ -88,23 +48,13 @@ func (r *run) observeLocked(l *link, thread string, value *sample) bool {
 	if r.observed.link == l && value.Sequence <= r.observed.sequence {
 		return false
 	}
-	if value.Activity != "working" && value.Activity != "idle" {
-		return false
+	activity := "working"
+	if value.Idle {
+		activity = "idle"
 	}
 	compacting := value.Compacting
-	observed := session.Sample{
-		Thread: thread, Activity: value.Activity, Compacting: &compacting,
-		Context:  &session.Context{Used: value.Tokens, Window: value.Window},
-		Settings: &session.Settings{Model: value.Model, ModelName: value.ModelName, Effort: value.Effort, Thinking: value.Thinking},
-	}
-	if value.Percent != nil && *value.Percent >= 0 && !math.IsNaN(*value.Percent) && !math.IsInf(*value.Percent, 0) {
-		percent := int(math.Round(math.Min(100, *value.Percent)))
-		observed.Context.Percent = &percent
-	}
-	if value.Cache != nil {
-		observed.Cache = session.NewCache(value.Cache.Read, value.Cache.Write, value.Cache.Input)
-		observed.CacheLife = value.Cache.life(time.Now())
-	}
+	observed := session.Sample{Thread: thread, Activity: activity, Compacting: &compacting}
+	r.projectLocked(thread, value.Native, time.Now(), &observed)
 	r.observed.view.Sample(observed)
 	r.observed.link, r.observed.sequence = l, value.Sequence
 	return true

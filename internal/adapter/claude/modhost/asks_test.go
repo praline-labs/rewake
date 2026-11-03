@@ -29,7 +29,7 @@ func askServing(t *testing.T) (*Server, string, *[]asking.Offer) {
 		}
 	})
 	server.StartControl(context.Background())
-	postValue(t, socket, PathHello, HelloRequest{LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
+	postValue(t, socket, PathHello, HelloRequest{Protocol: Protocol, LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
 	return server, socket, &told
 }
 
@@ -118,7 +118,7 @@ func TestMainHearsWhoAnsweredFirst(t *testing.T) {
 // A run main does not answer for, or a load not admitted, opens nothing.
 func TestARequestOpensOnlyForAWorkersAdmittedLoad(t *testing.T) {
 	_, socket := serving(t)
-	postValue(t, socket, PathHello, HelloRequest{LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
+	postValue(t, socket, PathHello, HelloRequest{Protocol: Protocol, LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
 	open := AskOpenRequest{LoadID: "load", Kind: AskKindQuestion, Questions: []AskQuestion{{Question: "Which?", Options: []AskOption{{Label: "A"}}}}}
 	if status, _, _ := post(socket, PathAskOpen, mustJSON(open)); status != http.StatusConflict {
 		t.Fatalf("main's own run opened a request: %d", status)

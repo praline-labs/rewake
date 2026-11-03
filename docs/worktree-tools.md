@@ -62,33 +62,53 @@ no lock: later edits, commits and sessions change the answer, and it promises no
 
 ## The `worktree_status` tool
 
-The worktree tools, as the brief tools, are defined once — name, description, schema, arguments,
-refusals, bound and result text — in `internal/core/sessiontools/sessiontools.ts`, copied into
-both adapters by `go run ./tools/protogen` ([adding.md](adding.md#a-session-tool)); each harness
-keeps its bridge, below.
+The worktree tools, as the brief tools, are defined once in Go — name, description, schema,
+arguments, refusals, bound and result text — in `internal/core/sessiontools`
+([adding.md](adding.md#a-session-tool)), and go to the agent as data (November 3, 2026, brief 94):
+the hello's answer carries the table the run's role is offered, which the agent registers. A call
+runs in three steps: the agent asks the wrapper to **plan** it, and the wrapper checks the
+arguments and answers the argv, the run's variables and the bound, or the refusal the model
+reads; the agent **runs** the command natively, so Esc stops it as any call of the session's; it
+sends the raw **end** — exit code, output, error output, killed, cut, a start's error — and the
+wrapper answers the result's text. The wrapper keeps nothing of a call. So a changed description,
+schema, rule or wording reaches a running session with `rewake restart rewake`, no agent restart:
+the mod gets the new table on its next poll (`toolsDigest`), pi's extension right after the
+adoption. When the wrapper does not answer at all, the agent answers its one fixed text,
+"rewake could not answer this call: …". Each harness keeps only its bridge, below.
 
 The same name and contract in both harnesses: no input; it runs
 `$REWAKE_EXECUTABLE worktree status --json` by argv — no shell, nothing of the model's on the
 command line — and answers its JSON, or an error for a nonzero exit, a timeout, a cut answer or
 a command that could not start. `REWAKE_EXECUTABLE` is the path of the room's own copy of its
 build ([rules/state.md](rules/state.md#the-rooms-own-copy)), set by every launch over an inherited value
-([environment](design.md#environment-the-harness-receives)); without it no tool is registered.
+([environment](design.md#environment-the-harness-receives)); without it every call is refused.
 The bound is 60 seconds: the view reads records and git, and holds no lock to wait on.
 
-- **Claude Code**: the mod registers it at `session.start` as `mcp__rewake__worktree_status`
-  and serves it from a `tool.call` hook that answers in place of the engine's core; it calls
-  `$.process.run(argv, {cwd, env, timeoutMs})` with the run's `REWAKE_DIR`, `REWAKE_ROOM`,
-  `REWAKE_SESSION` and `REWAKE_EPOCH` set over the harness's environment, each named literally,
-  as the engine requires. A `.catch` turns a failed hook into an error result. Mod API of
-  2.1.302, from the `mods` skill.
-- **pi**: the extension calls `pi.registerTool` and `pi.exec(executable, args, {cwd, signal,
-  timeout})`, whose child inherits pi's environment. pi 1.3.0 reports a child it killed at the
-  timeout with exit code 0, so `killed` is read first.
+- **Claude Code** (`mod/hooks/tools.ts`, `modhost/tools.go`): the mod registers each tool of the
+  hello's table with `$.tool.register` once the hello is answered at `session.start`, as
+  `mcp__rewake__worktree_status` and so on, and serves every call from one `tool.call` hook on
+  `/^mcp__rewake__/` that answers in place of the engine's core: `tool/plan`, then
+  `$.process.run(argv, {cwd, env, timeoutMs})` with the plan's variables — the run's
+  `REWAKE_DIR`, `REWAKE_ROOM`, `REWAKE_SESSION` and `REWAKE_EPOCH` — over the harness's
+  environment, then `tool/result`, cut within its 1 MiB bound and marked cut. A table a poll
+  brings registers a new or reshaped tool again, which replaces it, and serves a changed
+  description from a `tool.describe` hook with `$.ui.invalidate("tool.describe")`, so the next
+  turn reads it; a dropped tool stays registered and its plan is refused. A plan or a result
+  refused in a switch's freeze (503), or met with no server, is sent again after 250 ms, doubling
+  to 2 s. A `.catch` turns a failed hook into the fixed text. Mod API of 2.1.310, from the
+  `mods` skill.
+- **pi** (`tools.ts`, `pi/tools.go`): the extension registers the table with `pi.registerTool`
+  once the hello is answered, and again, from a `tools` frame, after an adoption; a name the
+  table drops is registered again with `exposure: "hidden"`. A call asks `tool-plan`, runs
+  `pi.exec(argv[0], rest, {cwd, signal, timeout})` — pi's exec takes no environment, so the child
+  inherits pi's, which the launch gave the run's variables — unless the call's abort came while it
+  was planned, so a cancelled tick writes nothing, and sends `tool-result`. pi reports a child it
+  killed at the timeout with exit code 0, so the wrapper reads `killed` first.
 
 The tests: `internal/cli/worktree_status_test.go` (the forecast and the view),
-`internal/cli/space_worktree_test.go` (the resolution), the shared `sessiontools.test.ts`, the
-mod's `tests/worktree.test.ts`, pi's `worktree.test.ts`, and the workflow scenario
-`fixture-space-worktree`.
+`internal/cli/space_worktree_test.go` (the resolution), `internal/core/sessiontools`'s tests,
+`modhost/tools_test.go`, the mod's `tests/tools.test.ts`, pi's `tools_test.go` and
+`tools.test.ts`, and the workflow scenario `fixture-space-worktree`.
 
 ## Main's `worktree_list` and `worktree_land`
 
@@ -116,9 +136,9 @@ CLI was. The same names and contracts in both harnesses (`mcp__rewake__worktree_
   The tool's text asks main to land into the integration branch only on the owner's or a review's
   word; the tool does not enforce it.
 
-The tests: the shared `sessiontools.test.ts` (arguments and refused input, an empty `into`
-among it), the mod's `tests/worktree.test.ts` and pi's `worktree.test.ts` (offer by role, argv,
-bounds, refused input), `TestWorktreeLsThisRoomKeepsTheRoomsCheckouts`, `TestARunNamesItsRole`.
+The tests: `internal/core/sessiontools`'s (offer by role, arguments and refused input, an empty
+`into` among it, argv and bounds), the adapters' tool tests above,
+`TestWorktreeLsThisRoomKeepsTheRoomsCheckouts`, `TestARunNamesItsRole`.
 
 ## A worker's entry: `enter_worktree = true` and `worktree_enter`
 
@@ -156,11 +176,13 @@ format or protocol changes.
   started in it — and refuses another name: "one checkout per worker". A claim that fails takes
   the checkout back as a failed launch's is. The answer is `outcome`, `checkout` (as status
   has it) and `skipped`.
-- **The tool** `mcp__rewake__worktree_enter` (`name?`), registered only where
-  `REWAKE_WORKTREE_ENTER` is `1`: runs that command by argv through `REWAKE_EXECUTABLE`, cwd
-  the session's, bound 120 seconds; then, unless the session's root already lies in the
-  checkout, calls `$.tool.call({tool: "EnterWorktree", path})` and answers rewake's JSON with
-  Claude Code's message. Claude Code asks a person before it moves a session into a checkout
+- **The tool** `mcp__rewake__worktree_enter` (`name?`), in the table only of a run whose mod's
+  hello says `enter`, which it does where `REWAKE_WORKTREE_ENTER` is `1`: planned and run as
+  the others, that command by argv through `REWAKE_EXECUTABLE` with `REWAKE_WORKTREE_ENTER=1`,
+  cwd the session's, bound 120 seconds. The wrapper's answer to its result names the checkout
+  (`enterWorktree`); unless the session's root already lies in it, the mod calls
+  `$.tool.call({tool: "EnterWorktree", path})` and posts what came of it raw to `tool/native`,
+  whose answer is rewake's JSON with Claude Code's message, both worded by the wrapper. Claude Code asks a person before it moves a session into a checkout
   outside `.claude/worktrees`, whatever the allow rules say (seen live, 2.1.302), and nobody may be
   at a worker's screen: a `tool.check` hook on `EnterWorktree` asks the engine first and, for
   rewake's own call (`next.origin.plugin === "rewake"`) in a run that may enter, turns only the
@@ -195,5 +217,6 @@ The tests: `internal/cli/worktree_enter_test.go`, `TestATemplatesEntryIsItsOneCh
 `TestRaisingResolvesTheWorktreeOnce` (`internal/host/launch`),
 `TestRunSettingsWithEntry`, `TestTheBriefingFollowsTheRunsEntry`,
 `TestACheckoutClaimedBeforeAnyPollIsKeptWhenMainEndsFirst` (both
-flags), the mod's `tests/enter.test.ts`, and the workflow scenario
+flags), `TestTheMoveIsWordedAsClaudeCodeAnswered`, the mod's `tests/enter.test.ts` (the guard)
+and `tests/tools.test.ts` (the move), and the workflow scenario
 `fixture-space-worktree-enter` (the fixture offers entry by running the command).

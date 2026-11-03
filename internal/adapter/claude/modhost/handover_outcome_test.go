@@ -29,7 +29,7 @@ func TestAnOutcomeMainHasNotReadKeepsTheRunBusy(t *testing.T) {
 		t.Fatal(err)
 	}
 	release()
-	postValue(t, socket, PathHello, HelloRequest{LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
+	postValue(t, socket, PathHello, HelloRequest{Protocol: Protocol, LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
 	postValue(t, socket, PathModState, testState())
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -51,7 +51,7 @@ func TestAnOutcomeMainHasNotReadKeepsTheRunBusy(t *testing.T) {
 	if got := <-returned; got.Outcome != control.Requested {
 		t.Fatalf("the acknowledgement: %+v", got)
 	}
-	reply.Outcome, reply.Detail = control.Failed, "native compaction failed"
+	reply.Outcome, reply.Native = control.Failed, json.RawMessage(`{"error":"native compaction failed"}`)
 	postValue(t, socket, PathModControl, reply)
 
 	if why := before.Busy(); why == "" {

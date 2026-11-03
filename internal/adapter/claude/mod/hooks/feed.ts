@@ -1,21 +1,20 @@
-// A copy of internal/core/mirror/feed.ts, written by go run ./tools/protogen: edit that file.
-// The feed of a session's mirror (docs/face.md, "The feed"): the one module
-// every adapter's harness side sends its conversation through, in the
-// mirror's neutral events. An adapter maps its harness's events to these and
-// pushes them; the feed bounds their texts, holds them in a bounded outbox and
-// posts them in batches, one in flight. Pushing never waits and never throws
-// into the harness's work.
+// The feed of a session's mirror (docs/face.md, "The feed"): the mod sends
+// its conversation through it in the mirror's neutral events (mirror.ts maps
+// Claude Code's events to these and pushes them); the feed bounds their texts,
+// holds them in a bounded outbox and posts them in batches, one in flight.
+// Pushing never waits and never throws into the harness's work. pi's
+// extension sends its own events raw instead (internal/adapter/pi/stream.ts),
+// and the wrapper translates them.
 //
 // The outbox is bounded in UTF-8 bytes of the events serialized: past its
 // bound the oldest deltas go first, which the block's settle heals, then the
 // oldest other events, each item leaving a lost marker, and when the markers
 // fill their reserve they collapse into one resync. A text is cut as the
-// model's clip cuts one (clip.go): its head within half the bound, its tail
-// within a quarter, the cut mark between.
+// model's clip cuts one (internal/core/mirror/clip.go): its head within half
+// the bound, its tail within a quarter, the cut mark between.
 //
-// It names no harness and uses no runtime's own library: it runs inside a
-// harness's extension host, which may have neither Node nor a module loader
-// beyond static relative imports.
+// It uses no runtime's own library: the mod's host has neither Node nor a
+// module loader beyond static relative imports.
 
 export type Block = "text" | "thinking";
 

@@ -5,6 +5,7 @@ import (
 
 	asking "github.com/praline-labs/rewake/internal/core/ask"
 	"github.com/praline-labs/rewake/internal/core/mirror"
+	"github.com/praline-labs/rewake/internal/core/sessiontools"
 )
 
 // Config is what a run's mod endpoint serves.
@@ -62,6 +63,10 @@ type Config struct {
 	Work func() string
 	// WorkEvery is how often a held poll reads the work again, 2 s when zero.
 	WorkEvery time.Duration
+	// Tools is the run as its tools' commands answer for it: the rewake its
+	// room runs, the state directory, room, session, epoch and role. Whether
+	// it may enter a checkout is the current load's hello's to say.
+	Tools sessiontools.Run
 	// RoomDir is the room's directory, where a main keeps the compactions
 	// it waits for a letter of (control.PendingOf); empty reads none.
 	RoomDir string

@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"net/http"
+	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/infra/boottime"
@@ -64,6 +65,9 @@ func (s *Server) turnStart(w http.ResponseWriter, r *http.Request) {
 		s.refuseEffect(w, status, err)
 		return
 	}
+	s.mu.Lock()
+	s.management.turn = start.TurnID
+	s.mu.Unlock()
 	if handler.Started != nil {
 		handler.Started(start.Conversation, start.TurnID, 0)
 	}
@@ -83,10 +87,13 @@ func (s *Server) turnEnd(w http.ResponseWriter, r *http.Request) {
 		refuse(w, http.StatusBadRequest, "a turn's end names its load, its conversation, its turn, its end and a reason the protocol knows")
 		return
 	}
-	completion, status, err := s.captured(r.Context(), end, reason)
+	completion, traced, status, err := s.captured(r.Context(), end, reason)
 	if err != nil {
 		s.refuseEffect(w, status, err)
 		return
+	}
+	if traced != nil {
+		s.traceLater(end.Conversation, completion.Answer, traced)
 	}
 	switch err := s.publish(r.Context(), completion); {
 	case errors.Is(err, adapter.ErrRunGone):
@@ -135,12 +142,14 @@ func (s *Server) publish(ctx context.Context, end adapter.TurnEnd) error {
 }
 
 // captured is the end the request names: its first capture, made now if this
-// is its first arrival. It is decided under the lock that Close takes, after
+// is its first arrival. A first arrival of a turn main interrupted answers
+// with the actor in place of the turn's own answer, and traced to settle the
+// interrupt once the mod put the actor into the history (control.go). It is decided under the lock that Close takes, after
 // the peer is checked again, for a capture made before as for a new one: a
 // request that finds the server closing captures and publishes nothing, so no
 // capture comes after the run's read clock closes, and one past this point
 // is counted among the run's workers until its publication returns.
-func (s *Server) captured(ctx context.Context, end TurnEndRequest, reason adapter.EndReason) (adapter.TurnEnd, int, error) {
+func (s *Server) captured(ctx context.Context, end TurnEndRequest, reason adapter.EndReason) (adapter.TurnEnd, func(bool), int, error) {
 	answer := ""
 	if end.Answer != nil {
 		answer = *end.Answer
@@ -152,18 +161,26 @@ func (s *Server) captured(ctx context.Context, end TurnEndRequest, reason adapte
 		s.deciding()
 	}
 	if err := s.fromHarness(ctx); err != nil {
-		return adapter.TurnEnd{}, http.StatusForbidden, err
+		return adapter.TurnEnd{}, nil, http.StatusForbidden, err
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if status, err := s.open(end.LoadID); err != nil {
-		return adapter.TurnEnd{}, status, err
+		return adapter.TurnEnd{}, nil, status, err
 	}
 	if known, ok := s.ends[end.EndID]; ok {
 		if known.digest != digest {
-			return adapter.TurnEnd{}, http.StatusConflict, errors.New("an end of this id was sent before with other content; it is not taken again")
+			return adapter.TurnEnd{}, nil, http.StatusConflict, errors.New("an end of this id was sent before with other content; it is not taken again")
 		}
-		return known.end, 0, nil
+		return known.end, nil, 0, nil
+	}
+	m := &s.management
+	if m.turn == end.TurnID {
+		m.turn = ""
+	}
+	actor, traced := m.interrupts.Ended(end.TurnID, reason == adapter.Aborted, time.Now())
+	if actor != "" {
+		answer = actor
 	}
 	completion := adapter.TurnEnd{
 		Event: eventPrefix + end.EndID, Reason: reason, Answer: answer, Thread: end.Conversation,
@@ -173,7 +190,7 @@ func (s *Server) captured(ctx context.Context, end TurnEndRequest, reason adapte
 	}
 	completion.Ended = boottime.Now()
 	s.ends[end.EndID] = &capture{end: completion, digest: digest}
-	return completion, 0, nil
+	return completion, traced, 0, nil
 }
 
 // effect is the start's decision to take effect: the peer checked again and

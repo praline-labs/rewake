@@ -2,7 +2,6 @@ package modhost
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/praline-labs/rewake/internal/core/session"
 )
@@ -22,6 +21,9 @@ type observations struct {
 	dialog     *string
 	// told says main was told of the dialog the last sample names.
 	told bool
+	// cache is the last main-loop response's cache usage that had input,
+	// kept across samples and handed to the next image (Handed.Cache).
+	cache *session.Cache
 }
 
 // newObservations is a run's observations, nothing seen yet beside what its
@@ -96,8 +98,14 @@ func (s *Server) tellDialog(message string) {
 
 func (s *Server) observeLocked(sample StateRequest) {
 	observed := &s.management.observed
-	if sample.Effort != nil {
-		observed.view.Effort("request", *sample.Effort)
+	native := project(sample.Native)
+	if native.effort != "" {
+		observed.view.Effort("request", native.effort)
+	}
+	// A step without usage, or a placeholder's with no input, leaves the last
+	// response's standing, so the Статус does not show the cache as gone.
+	if native.cache != nil {
+		observed.cache = native.cache
 	}
 	observed.view.Compacted(sample.LoadID, uint64(sample.Compactions), sample.From, sample.Request)
 	var dialog, waiting string
@@ -111,48 +119,17 @@ func (s *Server) observeLocked(sample StateRequest) {
 	if sample.Waiting != nil {
 		waiting = string(*sample.Waiting)
 	}
-	cwd := ""
-	if sample.Cwd != nil {
-		cwd = *sample.Cwd
-	}
 	compacting := sample.Compacting
-	var cache *session.Cache
-	if sample.CacheRead != nil && sample.CacheWrite != nil && sample.CacheInput != nil {
-		cache = session.NewCache(int64(*sample.CacheRead), int64(*sample.CacheWrite), int64(*sample.CacheInput))
-	}
 	observed.view.Sample(session.Sample{
-		Thread: sample.Conversation, Activity: sample.Activity, Compacting: &compacting, Cache: cache, Cwd: cwd,
-		Context:  &session.Context{Used: tokenCount(sample.Tokens), Window: tokenCount(sample.Window), Percent: sample.Percent},
-		Settings: &session.Settings{Model: sample.Model},
-		Dialog:   dialog, Waiting: waiting, RateLimits: limitsOf(sample.RateLimits),
+		Thread: sample.Conversation, Activity: sample.Activity, Compacting: &compacting, Cache: observed.cache, Cwd: native.cwd,
+		Context: native.context, Settings: &session.Settings{Model: native.model},
+		Dialog: dialog, Waiting: waiting, RateLimits: native.rateLimits,
 	})
 	observed.thread, observed.sequence, observed.generation = sample.Conversation, sample.Sequence, sample.Generation
-}
-
-// limitsOf is the account's windows as the session's snapshot keeps them;
-// a window without a kind or outside 0–100 percent is not one.
-func limitsOf(windows []RateLimit) []session.RateLimit {
-	var limits []session.RateLimit
-	for _, window := range windows {
-		if window.Kind == "" || window.Percent < 0 || window.Percent > 100 {
-			continue
-		}
-		limit := session.RateLimit{Kind: window.Kind, Percent: window.Percent}
-		if window.ResetsAt != nil && *window.ResetsAt > 0 {
-			at := time.Unix(int64(*window.ResetsAt), 0)
-			limit.ResetsAt = &at
-		}
-		limits = append(limits, limit)
+	s.management.turn = ""
+	if sample.Turn != nil {
+		s.management.turn = *sample.Turn
 	}
-	return limits
-}
-
-func tokenCount(value *int) *int64 {
-	if value == nil {
-		return nil
-	}
-	count := int64(*value)
-	return &count
 }
 
 // SessionState reads only cached observations; a native call never blocks

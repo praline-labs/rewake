@@ -60,19 +60,19 @@ after the turn's end — does nothing, so nothing comes back. A settle replaces 
 its parts arrived in order; a missing part, a `lost` for the id or the turn's end leaves the item a
 gap with what streamed. A `resync` marks everything in flight as a gap, leaves the turn unknown until
 the next turn event and adds a notice counting what was lost. How Claude Code's mod maps its events
-is [claude.md](claude.md#the-mirror); pi's extension, with its tools named as their Claude Code
-kin, [research-pi.md](research-pi.md#the-face-of-a-pi-worker). Both send through one feed.
+is [claude.md](claude.md#the-mirror); pi's, with its tools named as their Claude Code kin,
+[research-pi.md](research-pi.md#the-face-of-a-pi-worker). The mod sends the neutral events through
+the feed below; pi's extension forwards pi's own events raw, and the wrapper translates them in Go.
 
 ## The feed
 
-Every adapter's harness side sends its events through one TypeScript module, the feed:
-`internal/core/mirror/feed.ts`, which names no harness and uses no runtime's own library. Each
-adapter embeds files of its own folder alone, and Claude Code's hooks worker imports no file outside
-the mod, so `go run ./tools/protogen` copies it into `internal/adapter/pi/feed.ts` and
-`internal/adapter/claude/mod/hooks/feed.ts` under a line naming the source; the generator's test
-fails when a copy differs. An adapter only maps its harness's events to the neutral ones and pushes
-them; the feed does the rest, its tests (`feed.test.ts`, run by `go test ./internal/core/mirror/`)
-through that one interface:
+The mod sends its events through one TypeScript module, the feed,
+`internal/adapter/claude/mod/hooks/feed.ts`, which uses no runtime's own library. Until November 3,
+2026 it lived in `internal/core/mirror/` and `tools/protogen` copied it into both adapters; since
+brief 94 pi's extension forwards its events raw through a stream of its own
+([research-pi.md](research-pi.md#the-face-of-a-pi-worker), "The stream"), so the feed is the mod's
+file. `mirror.ts` only maps Claude Code's events to the neutral ones and pushes them; the feed does
+the rest, its tests (`tests/feed.test.ts`, run by `claude plugin test`) through that one interface:
 
 - **Texts.** Every size is the UTF-8 bytes of the event as JSON. A text past its budget is cut as the
   model's clip cuts one: its head within half the budget, the mark `… cut …`, its tail within a
@@ -88,12 +88,11 @@ through that one interface:
   most 48 KiB, one in flight; a batch refused or unanswered in 5 s is never sent again and counts in
   the next `resync`.
 
-The host decodes a batch's events with `mirror.Decode` (`internal/core/mirror/wire.go`), one
-decoder for every adapter: a kind the model does not take, or a turn's state it does not know, is
-left out, and a permission mode is named in the model's words by the adapter's own table; a level
-comes in the model's words already, and one it has no word for is left unsaid. The
-wire is each adapter's (the mod's `protocol.schema.json`, pi's frame); its events are the same
-fields on both.
+The host decodes a batch's events with `mirror.Decode` (`internal/core/mirror/wire.go`), which pi's
+translator's level goes through too: a kind the model does not take, or a turn's state it does not
+know, is left out, and a permission mode is named in the model's words by the adapter's own table; a
+level comes in the model's words already, and one it has no word for is left unsaid. The wire is
+each adapter's: the mod's `protocol.schema.json` carries the neutral events, pi's frame pi's own.
 
 ## The socket
 
@@ -191,10 +190,11 @@ pi's own Esc stops its run: the face sends `interrupt` and the harness stops as 
 refusal said under the input (`not interrupted: …`). Esc while idle, or to a session that takes no
 interrupt (a Claude Code dev worker), does nothing. shift+tab moves the session's thinking level to
 the next, as pi's own `app.thinking.cycle` does, where the session takes `thinking` (pi alone): the
-face sends `thinking`, pi's extension sets the next of the model's levels, and pi's own screen and
-the strip hear it as any change of the level; a refusal is said under the input (`not changed:
-Current model does not support thinking`); to any other session it does nothing, and it never
-reaches the pty (brief 62). `rewake screen`
+face sends `thinking`, the wrapper reads the model's levels off pi's last state (`levelsOf`,
+`internal/adapter/pi/native.go`, since extension 3), pi's extension sets the next of them after
+the level pi runs at, and pi's own screen and the strip hear it as any change of the level; a
+refusal is said under the input (`not changed: the current model does not support thinking`); to
+any other session it does nothing, and it never reaches the pty (brief 62). `rewake screen`
 takes the window as the person sees it: the shadow window draws the face too.
 
 ### The input
@@ -372,7 +372,8 @@ extensions neither), and a long prompt opened whole.
 ### Calls
 
 The face knows tools by Claude Code's names and input fields, whichever harness it draws: an
-adapter renames its harness's tools into them (pi's `toolmap.ts`, [research-pi.md](research-pi.md#the-face-of-a-pi-worker)).
+adapter renames its harness's tools into them (pi's in Go, `internal/adapter/pi/translate_tools.go`,
+[research-pi.md](research-pi.md#the-face-of-a-pi-worker)).
 That vocabulary is read in one module, `face/src/call.ts`: `callOf(item)` parses a call's input
 once and says all the face draws of it — whether it is drawn at all, the head's name and argument,
 what it does in a run (search, read, list, command) and the file a read counts, what an open run

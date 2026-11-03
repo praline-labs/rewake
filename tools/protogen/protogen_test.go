@@ -36,9 +36,6 @@ func TestTheCheckedInFilesMatchTheSchema(t *testing.T) {
 func TestARunRewritesOnlyWhatDiffers(t *testing.T) {
 	root := t.TempDir()
 	var paths []string
-	for _, module := range shareds {
-		paths = append(append(paths, module.source), module.copies...)
-	}
 	for _, t := range targets {
 		paths = append(paths, t.schema, t.ts, t.goFile)
 	}
@@ -93,6 +90,7 @@ func TestTheGeneratorRefusesWhatItDoesNotRead(t *testing.T) {
 		"a name twice":       {`{"type": "object", "description": "x", "properties": {"s": {"type": "string", "description": "s."}, "s": {"type": "string", "description": "s."}}, ` + closed + `}`, `names "s" twice`},
 		"a number":           {`{"type": "object", "description": "x", "properties": {"f": {"type": "number", "description": "f."}}, ` + closed + `}`, "a string, an integer, a boolean"},
 		"an enum as request": {`{"type": "string", "description": "x", "enum": ["a"]}`, "reference object definitions"},
+		"a typed raw value":  {`{"type": "object", "description": "x", "properties": {"r": {"type": "string", "x-raw": true, "description": "r."}}, ` + closed + `}`, "x-raw and a description, nothing else"},
 	} {
 		t.Run(name, func(t *testing.T) {
 			_, err := parseSchema([]byte(small(c.def)))
@@ -149,7 +147,8 @@ func TestAnOptionalFieldStaysApartFromItsZero(t *testing.T) {
 		"index": {"type": "integer", "description": "is optional."},
 		"cols": {"type": "integer", "description": "is required."},
 		"kinds": {"type": "array", "items": {"$ref": "#/$defs/Kind"}, "description": "is optional."},
-		"kind": {"$ref": "#/$defs/Kind", "description": "is optional."}},
+		"kind": {"$ref": "#/$defs/Kind", "description": "is optional."},
+		"native": {"x-raw": true, "description": "is optional and raw."}},
 		"required": ["cols"], "additionalProperties": false}`)))
 	if err != nil {
 		t.Fatal(err)
@@ -165,13 +164,15 @@ func TestAnOptionalFieldStaysApartFromItsZero(t *testing.T) {
 		"Kinds []Kind `json:\"kinds,omitempty\"`",
 		"Kind *Kind `json:\"kind,omitempty\"`",
 		`KindOne Kind = "one"`,
+		"Native json.RawMessage `json:\"native,omitempty\"`",
+		`import "encoding/json"`,
 	} {
 		if !strings.Contains(string(source), want) {
 			t.Errorf("the Go side lacks %q:\n%s", want, source)
 		}
 	}
 	ts := string(emitTS(s))
-	for _, want := range []string{"  index?: number\n", "  cols: number\n", "  kinds?: Kind[]\n", "  kind?: Kind\n", `export type Kind = "one" | "two"`, `export const kindValues: readonly Kind[] = ["one", "two"]`} {
+	for _, want := range []string{"  index?: number\n", "  cols: number\n", "  kinds?: Kind[]\n", "  kind?: Kind\n", "  native?: unknown\n", `export type Kind = "one" | "two"`, `export const kindValues: readonly Kind[] = ["one", "two"]`} {
 		if !strings.Contains(ts, want) {
 			t.Errorf("the TypeScript side lacks %q:\n%s", want, ts)
 		}

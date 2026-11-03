@@ -11,16 +11,18 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter"
+	"github.com/praline-labs/rewake/internal/core/control"
 	"github.com/praline-labs/rewake/internal/core/mirror"
 	"github.com/praline-labs/rewake/internal/core/session"
+	"github.com/praline-labs/rewake/internal/core/sessiontools"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
-//go:embed extension.ts management.ts tools.ts sessiontools.ts mirror.ts mirrorhooks.ts faced.ts queued.ts feed.ts toolmap.ts
+//go:embed extension.ts management.ts tools.ts stream.ts forward.ts faced.ts
 var extensions embed.FS
 
 // modules are the extension's files, written beside it for each run.
-var modules = []string{"extension.ts", "management.ts", "tools.ts", "sessiontools.ts", "mirror.ts", "mirrorhooks.ts", "faced.ts", "queued.ts", "feed.ts", "toolmap.ts"}
+var modules = []string{"extension.ts", "management.ts", "tools.ts", "stream.ts", "forward.ts", "faced.ts"}
 
 type run struct {
 	file, socket, controlDir string
@@ -30,10 +32,19 @@ type run struct {
 	// onClosing is LaunchRequest.Closing, nil outside rewake's shell: the
 	// extension's closing frame, at pi's quit, calls it.
 	onClosing func()
+	// tools is the run as its tools' commands answer for it (tools.go).
+	tools sessiontools.Run
+	// retention is the run's PI_CACHE_RETENTION, the cache tier pi asks for.
+	retention string
 	// mirror is LaunchRequest.Mirror, the model rewake's face draws, nil for
 	// a run it does not draw.
-	mirror      *mirror.Model
-	observed    observations
+	mirror *mirror.Model
+	// translate turns pi's events into the model's (translate.go).
+	translate *translator
+	observed  observations
+	// interrupts are who stopped which turn, until it ends (control.go); a
+	// handover waits for an open turn, so none outlives this image.
+	interrupts  control.Interrupts
 	ctx         context.Context
 	cancel      context.CancelFunc
 	listener    *state.Listener
@@ -57,7 +68,7 @@ type run struct {
 
 func newRun(file, socket, epoch string) *run {
 	return &run{
-		file: file, socket: socket, links: make(map[*link]struct{}), ready: make(chan struct{}),
+		file: file, socket: socket, links: make(map[*link]struct{}), ready: make(chan struct{}), translate: newTranslator(),
 		observed: observations{view: session.NewObserver(session.ObserverConfig{Epoch: epoch, Expiry: sampleExpiry})},
 	}
 }

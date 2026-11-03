@@ -25,6 +25,8 @@ export class Heartbeat {
     // shown is the room work the load shows, which each poll names.
     private readonly shown: () => string | undefined,
     private readonly received?: (answer: AliveAnswer, generation: number) => void,
+    // digest names the tool table the load holds, which each poll names.
+    private readonly digest?: () => string | undefined,
   ) {}
 
   // begin runs a chain for a generation a hello answered; a retried hello
@@ -48,7 +50,12 @@ export class Heartbeat {
     if (this.superseded || generation !== this.newest) {
       return;
     }
-    const request: AliveRequest = { loadId: this.loadId, generation, work: this.shown() };
+    const request: AliveRequest = {
+      loadId: this.loadId,
+      generation,
+      work: this.shown(),
+      toolsDigest: this.digest?.(),
+    };
     let status = 0;
     let text = "";
     try {

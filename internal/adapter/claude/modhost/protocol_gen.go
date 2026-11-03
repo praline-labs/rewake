@@ -2,6 +2,8 @@
 
 package modhost
 
+import "encoding/json"
+
 // The paths of the protocol's endpoints, each a POST.
 const (
 	// PathHello is the first request of every load of the mod. Asked HelloRequest, answered
@@ -33,6 +35,20 @@ const (
 	// (docs/face.md); 409 refuses a load or generation that is not the run's current one, and the
 	// batch is dropped, never sent again. Asked MirrorBatch, answered Done.
 	PathMirrorEvents = "/v1/mirror/events"
+	// PathToolPlan asks the command of a call of one of rewake's tools the hello answer listed
+	// (docs/worktree-tools.md): the wrapper checks the arguments and answers the argv, the run's
+	// variables and the bound, or why nothing runs; it keeps nothing of the call. Asked
+	// ToolPlanRequest, answered ToolPlan.
+	PathToolPlan = "/v1/tool/plan"
+	// PathToolResult carries what the harness said of a planned command, unworded, within
+	// maxEndBodyBytes, and is answered with the call's result as the model reads it; for
+	// worktree_enter, a result that succeeded names the checkout to move the session into. Asked
+	// ToolResultRequest, answered ToolAnswer.
+	PathToolResult = "/v1/tool/result"
+	// PathToolNative carries what the harness said of the move into a checkout worktree_enter
+	// made, unworded, and is answered with the call's result as the model reads it. Asked
+	// ToolNativeRequest, answered ToolAnswer.
+	PathToolNative = "/v1/tool/native"
 	// PathSessionClosing says the harness has begun to end its process, from main's mod at /exit
 	// and at session.end with an exit reason, before the harness's screen goes or as soon after as
 	// the harness tells; a main in rewake's shell has its closing screen started by it
@@ -62,15 +78,20 @@ const (
 
 // The protocol's bounds.
 const (
+	// Protocol is the protocol's version, which every hello names: a wrapper refuses a hello of
+	// another with 409, since a loaded mod keeps speaking the one it was loaded with until the
+	// room restarts.
+	Protocol = 2
 	// MaxBodyBytes is the largest request body the endpoint reads; a longer one is refused before
 	// it is parsed.
 	MaxBodyBytes = 65536
 	// MaxWaitSeconds is the longest the endpoint holds a request before it answers, since the
 	// mod's fetch gives up after 30 seconds; a longer wait is a loop of polls.
 	MaxWaitSeconds = 20
-	// MaxEndBodyBytes is the largest turn/end body the endpoint reads, in place of maxBodyBytes,
-	// counted in the UTF-8 bytes of the whole JSON body: a turn's answer can be longer than the
-	// other requests, and the mod cuts one that would pass it, saying how much it left out.
+	// MaxEndBodyBytes is the largest turn/end or tool/result body the endpoint reads, in place of
+	// maxBodyBytes, counted in the UTF-8 bytes of the whole JSON body: a turn's answer and a
+	// command's output can be longer than the other requests, and the mod cuts one that would pass
+	// it, saying how much it left out or marking the output cut.
 	MaxEndBodyBytes = 1048576
 	// AliveHoldSeconds is how long the endpoint holds a mod/alive poll before it answers; the mod
 	// sends the next at once.
@@ -419,6 +440,139 @@ const (
 	MirrorTurnCompacting MirrorTurn = "compacting"
 )
 
+// ToolEntry is one of rewake's tools as the load registers it: the wrapper's words, sent as
+// data so a change reaches a running session with the wrapper's restart.
+type ToolEntry struct {
+	// Name is the tool's name; the model sees mcp__rewake__<name>.
+	Name string `json:"name"`
+
+	// Description is what the model reads of it.
+	Description string `json:"description"`
+
+	// InputSchema is its input's JSON Schema.
+	InputSchema json.RawMessage `json:"inputSchema"`
+}
+
+// ToolPlanRequest is a call of one of rewake's tools, as the model made it.
+type ToolPlanRequest struct {
+	// LoadID is the admitted load asking.
+	LoadID string `json:"loadId"`
+
+	// Tool is the tool's name, without the mcp__rewake__ prefix.
+	Tool string `json:"tool"`
+
+	// Arguments are the call's arguments as the model wrote them, less the keys the harness
+	// carries beside them.
+	Arguments json.RawMessage `json:"arguments"`
+}
+
+// ToolPlan is a call's command, run by argv with no shell, its variables set over the harness's
+// environment, in the session's directory; or why none runs.
+type ToolPlan struct {
+	// Argv is the command, argv[0] the rewake the run's room runs.
+	Argv []string `json:"argv,omitempty"`
+
+	// Env are the run's variables the command answers for.
+	Env []EnvVar `json:"env,omitempty"`
+
+	// TimeoutMs bounds the command; past it the harness stops it.
+	TimeoutMs *int `json:"timeoutMs,omitempty"`
+
+	// Refused is why nothing runs, the call's error result as the model reads it; absent with a
+	// command.
+	Refused *string `json:"refused,omitempty"`
+}
+
+// EnvVar is one variable of a command's environment.
+type EnvVar struct {
+	// Name is its name.
+	Name string `json:"name"`
+
+	// Value is its value.
+	Value string `json:"value"`
+}
+
+// ToolResultRequest is what the harness said of a planned command.
+type ToolResultRequest struct {
+	// LoadID is the admitted load telling.
+	LoadID string `json:"loadId"`
+
+	// Tool is the tool's name.
+	Tool string `json:"tool"`
+
+	// Ran is the harness's report.
+	Ran ToolRan `json:"ran"`
+}
+
+// ToolRan is a command's end as the harness reported it, unworded.
+type ToolRan struct {
+	// ExitCode is its exit code, absent when the harness named none.
+	ExitCode *int `json:"exitCode,omitempty"`
+
+	// Stdout is its standard output, cut by the mod to what the body takes.
+	Stdout string `json:"stdout"`
+
+	// Stderr is its standard error, cut by the mod to what the body takes.
+	Stderr string `json:"stderr"`
+
+	// StdoutCut says the harness or the mod cut the standard output.
+	StdoutCut *bool `json:"stdoutCut,omitempty"`
+
+	// Error is why it did not run to its end, as the harness threw it: it could not start, or ran
+	// past its bound.
+	Error *string `json:"error,omitempty"`
+}
+
+// ToolAnswer is a call's result as the model reads it.
+type ToolAnswer struct {
+	// Text is the result's text.
+	Text string `json:"text"`
+
+	// IsError says the call failed.
+	IsError bool `json:"isError"`
+
+	// EnterWorktree is, for worktree_enter, the checkout rewake made and claimed, which the load
+	// moves the session into and then reports at tool/native; text is then what tool/native
+	// carries back.
+	EnterWorktree *string `json:"enterWorktree,omitempty"`
+}
+
+// ToolNativeRequest is what came of moving the session into the checkout worktree_enter made.
+type ToolNativeRequest struct {
+	// LoadID is the admitted load telling.
+	LoadID string `json:"loadId"`
+
+	// Tool is the tool's name.
+	Tool string `json:"tool"`
+
+	// Made is the text tool/result answered with the checkout.
+	Made string `json:"made"`
+
+	// Path is the checkout.
+	Path string `json:"path"`
+
+	// Inside says the session already works in it, so no move was made.
+	Inside bool `json:"inside"`
+
+	// Moved is the harness's answer to the move, absent when none was made.
+	Moved *NativeCall `json:"moved,omitempty"`
+}
+
+// NativeCall is a harness call's answer, unworded.
+type NativeCall struct {
+	// Deny is the refusal a hook or the engine answered.
+	Deny *string `json:"deny,omitempty"`
+
+	// IsError says the call reported an error.
+	IsError *bool `json:"isError,omitempty"`
+
+	// Text is the call's text.
+	Text *string `json:"text,omitempty"`
+
+	// Error is what the call threw.
+	Error *string `json:"error,omitempty"`
+}
+
 // Done is the answer of an endpoint that did what was asked and has nothing to say.
 type Done struct{}
 
@@ -439,6 +593,14 @@ type HelloRequest struct {
 	// above the run's current load's, the same number is that load's retry, and a lower one is
 	// refused 410 as superseded.
 	LoadSeq int `json:"loadSeq"`
+
+	// Protocol is the protocol the mod speaks, the bound protocol it was generated with; a hello
+	// of a mod of protocol 1 has none.
+	Protocol int `json:"protocol"`
+
+	// Enter says the run's environment lets it enter a checkout of its own (REWAKE_WORKTREE_ENTER
+	// is 1), so the wrapper lists worktree_enter; absent otherwise.
+	Enter *bool `json:"enter,omitempty"`
 }
 
 // HelloAnswer is what the run is, for this load.
@@ -453,6 +615,13 @@ type HelloAnswer struct {
 	// Mirror says rewake's own face draws the session: the load sends its conversation to
 	// mirror/events, in memory only (docs/face.md); absent otherwise.
 	Mirror *bool `json:"mirror,omitempty"`
+
+	// Tools are rewake's tools this run is offered, which the load registers, each under its name.
+	Tools []ToolEntry `json:"tools"`
+
+	// ToolsDigest names the table tools is: a poll names the one the load holds, and one whose
+	// table is not the run's is answered at once with the run's.
+	ToolsDigest string `json:"toolsDigest"`
 }
 
 // AliveRequest is one poll of a load's heartbeat.
@@ -466,6 +635,10 @@ type AliveRequest struct {
 	// Work is the room work the load shows at the input, empty for none: a poll whose work is not
 	// the run's is answered at once, and one without it at the hold's end.
 	Work *string `json:"work,omitempty"`
+
+	// ToolsDigest names the tool table the load holds: a poll whose table is not the run's is
+	// answered at once with the run's.
+	ToolsDigest *string `json:"toolsDigest,omitempty"`
 }
 
 // EndedRequest names the other runs whose ends the harness's store keeps.
@@ -549,7 +722,8 @@ type ControlCommand struct {
 	// ID identifies the request.
 	ID string `json:"id"`
 
-	// Action is compact, interrupt, or prompt from rewake's own face.
+	// Action is compact, interrupt, prompt from rewake's own face, or trace: text the host puts
+	// into the conversation's history as an interruption's actor once the interrupted turn ended.
 	Action string `json:"action"`
 
 	// From names the requester.
@@ -561,7 +735,11 @@ type ControlCommand struct {
 	// Conversation names the selected conversation.
 	Conversation string `json:"conversation"`
 
-	// Text is a prompt's text, typed as the person; absent for any other action.
+	// Turn is the turn an interrupt stops, as the host knows it; the mod refuses with code turn
+	// when it is not the one running.
+	Turn *string `json:"turn,omitempty"`
+
+	// Text is a prompt's text, typed as the person, or a trace's; absent for any other action.
 	Text *string `json:"text,omitempty"`
 }
 
@@ -574,6 +752,13 @@ type AliveAnswer struct {
 	// with their ticks and the reports it waits on, empty for none; absent where the host reads
 	// none.
 	Work *string `json:"work,omitempty"`
+
+	// Tools is the run's tool table, when the poll named another: the load registers a tool new or
+	// of a changed schema again and describes each by it.
+	Tools []ToolEntry `json:"tools,omitempty"`
+
+	// ToolsDigest names tools, absent with it.
+	ToolsDigest *string `json:"toolsDigest,omitempty"`
 }
 
 // StateRequest is a complete current observation, without transcript content.
@@ -593,31 +778,9 @@ type StateRequest struct {
 	// Activity is working or idle.
 	Activity string `json:"activity"`
 
-	// Model is the configured model, absent when unknown.
-	Model *string `json:"model,omitempty"`
-
-	// Effort is the reasoning effort the latest main-loop request of this load asked for, absent
-	// until one is seen.
-	Effort *string `json:"effort,omitempty"`
-
-	// Tokens is current input context usage, absent when unknown.
-	Tokens *int `json:"tokens,omitempty"`
-
-	// Window is the context window, absent when unknown.
-	Window *int `json:"window,omitempty"`
-
-	// Percent is the filled percentage, absent when unknown.
-	Percent *int `json:"percent,omitempty"`
-
-	// CacheRead is the input tokens the prompt cache served on the latest main-loop response of
-	// this load, absent until one reports usage.
-	CacheRead *int `json:"cacheRead,omitempty"`
-
-	// CacheWrite is the input tokens that response wrote to the prompt cache.
-	CacheWrite *int `json:"cacheWrite,omitempty"`
-
-	// CacheInput is the input tokens that response neither read from nor wrote to the cache.
-	CacheInput *int `json:"cacheInput,omitempty"`
+	// Turn is the main loop's running turn, absent while idle: the host names the turn an
+	// interrupt stops from it and from turn/start.
+	Turn *string `json:"turn,omitempty"`
 
 	// Compacting says a native compaction is in progress.
 	Compacting bool `json:"compacting"`
@@ -639,29 +802,15 @@ type StateRequest struct {
 	// a permission, or the model's own question — absent when none.
 	Waiting *AskKind `json:"waiting,omitempty"`
 
-	// Cwd is the directory the session runs in now, the harness's own working directory, which a
-	// worktree entry moves; absent when unknown.
-	Cwd *string `json:"cwd,omitempty"`
-
-	// RateLimits are the account's rate-limit windows the last response reported, absent or empty
-	// off a subscription or before the first reading.
-	RateLimits []RateLimit `json:"rateLimits,omitempty"`
+	// Native is what the session read of itself, unconverted, which the host projects into the
+	// session's state (modhost/native.go): {model: $.session.model(), cwd: $.session.cwd(), usage:
+	// $.session.usage(), step: {usage, effort}} with step the last main-loop step's usage and the
+	// effort its request asked for; a part that could not be read is absent.
+	Native json.RawMessage `json:"native,omitempty"`
 }
 
-// RateLimit is one rate-limit window of the account, as the harness reported it.
-type RateLimit struct {
-	// Kind is the window: five_hour, seven_day, or another the harness names.
-	Kind string `json:"kind"`
-
-	// Percent is how much of the window is used, in whole percent.
-	Percent int `json:"percent"`
-
-	// ResetsAt is when the window resets, in seconds since the epoch, absent when the harness does
-	// not say.
-	ResetsAt *int `json:"resetsAt,omitempty"`
-}
-
-// ControlReply is an initial or final result for a dispatched command.
+// ControlReply is an initial or final result for a dispatched command, as native as the mod has
+// it: the host words it (modhost/control.go).
 type ControlReply struct {
 	// LoadID names the current load.
 	LoadID string `json:"loadId"`
@@ -675,18 +824,23 @@ type ControlReply struct {
 	// Outcome is requested, done, refused or failed.
 	Outcome string `json:"outcome"`
 
-	// Reason is the fixed control reason, when known.
-	Reason string `json:"reason"`
+	// Code names the local check that refused the command, absent for any other outcome.
+	Code *ControlCode `json:"code,omitempty"`
 
-	// Detail explains the outcome without transcript content.
-	Detail string `json:"detail"`
-
-	// Open says the native outcome is not yet known.
-	Open bool `json:"open"`
-
-	// TokensBefore is context usage before compaction, when supplied.
-	TokensBefore *int `json:"tokensBefore,omitempty"`
-
-	// TokensAfter is context usage after compaction, when supplied.
-	TokensAfter *int `json:"tokensAfter,omitempty"`
+	// Native is the native call's result as it resolved, $.session.compact's {skip?,
+	// tokensBefore?, tokensAfter?}, or {error} with the message of what it threw; absent where
+	// nothing native ran.
+	Native json.RawMessage `json:"native,omitempty"`
 }
+
+// ControlCode is the local check that refused a command just before its native call, which the
+// host words (control.Refusal).
+type ControlCode string
+
+// The values of ControlCode.
+const (
+	ControlCodeConversation ControlCode = "conversation"
+	ControlCodeBusy         ControlCode = "busy"
+	ControlCodeTurn         ControlCode = "turn"
+	ControlCodeIdle         ControlCode = "idle"
+)

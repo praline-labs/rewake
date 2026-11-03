@@ -2,6 +2,8 @@ package pi
 
 import (
 	"context"
+	"encoding/json"
+	"regexp"
 	"time"
 
 	"github.com/praline-labs/rewake/internal/core/control"
@@ -18,6 +20,10 @@ func (r *run) serveControl() {
 	}()
 }
 
+// carry asks the extension to carry a request out and words its reply. An
+// interrupt names the turn this image matched to its start, attributed to
+// the asker before it goes out, and waits for that turn's end (turns.go) up
+// to control.SettleWait.
 func (r *run) carry(ctx context.Context, request control.Request) control.Answer {
 	l, thread := r.connection()
 	if l == nil {
@@ -29,19 +35,86 @@ func (r *run) carry(ctx context.Context, request control.Request) control.Answer
 	if request.Conversation != "" && request.Conversation != thread {
 		return r.controlAnswer(request, control.Answer{Outcome: control.Refused, Reason: control.NotSelected})
 	}
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-	reply, err := l.ask(ctx, frame{Op: "control", Thread: thread, Action: request.Action, Request: request.ID, From: request.From, Focus: request.Focus})
+	sent := time.Now()
+	ask := frame{Op: "control", Thread: thread, Action: request.Action, Request: request.ID, From: request.From, Focus: request.Focus}
+	if request.Action == control.Interrupt {
+		l.mu.Lock()
+		ask.Turn = l.turn
+		l.mu.Unlock()
+		if ask.Turn == "" {
+			return control.Answer{Outcome: control.Refused, Reason: control.NoTurn}
+		}
+		r.interrupts.Record(request, ask.Turn, sent)
+	}
+	asking, cancel := context.WithTimeout(ctx, 5*time.Second)
+	reply, err := l.ask(asking, ask)
+	cancel()
 	if err != nil {
 		return control.Answer{Outcome: control.Failed, Reason: control.CutShort, Detail: "the extension did not acknowledge the control request; its outcome is unknown", Open: true}
 	}
-	answer := control.Answer{Outcome: reply.Outcome, Reason: reply.Reason, Detail: reply.Detail, Open: reply.Open, TokensBefore: reply.TokensBefore, TokensAfter: reply.TokensAfter}
-	switch answer.Outcome {
-	case control.Done, control.Refused, control.Failed, control.Started, control.Requested:
-	default:
-		return control.Answer{Outcome: control.Failed, Detail: "the extension returned an unknown control outcome", Open: true}
+	answer := worded(request.Action, reply)
+	if request.Action == control.Interrupt {
+		if answer.Outcome != control.Requested {
+			r.interrupts.Forget(request.ID)
+			return answer
+		}
+		return r.interrupts.Wait(ctx, request.ID, sent.Add(control.SettleWait), r.ctx.Done())
 	}
 	return r.controlAnswer(request, answer)
+}
+
+// worded is what a reply of the extension says of action: a refusal by the
+// code of the check that made it, the native result read here.
+func worded(action string, reply frame) control.Answer {
+	if reply.Code != "" || reply.Outcome == control.Refused {
+		return control.Refusal(action, reply.Code)
+	}
+	switch reply.Outcome {
+	case control.Started, control.Requested:
+		return control.Answer{Outcome: reply.Outcome}
+	case control.Failed:
+		if action != control.Compact {
+			return control.Answer{Outcome: control.Failed, Detail: "native interrupt could not be requested"}
+		}
+		var failed struct {
+			Error string `json:"error"`
+		}
+		_ = json.Unmarshal(reply.Native, &failed)
+		if nothingToCompact.MatchString(failed.Error) {
+			return control.Answer{Outcome: control.Refused, Reason: control.NothingToCompact}
+		}
+		return control.Answer{Outcome: control.Failed, Reason: control.CutShort, Detail: "native compaction failed or was interrupted"}
+	case control.Done:
+		var compacted struct {
+			TokensBefore *float64 `json:"tokensBefore"`
+			TokensAfter  *float64 `json:"estimatedTokensAfter"`
+		}
+		_ = json.Unmarshal(reply.Native, &compacted)
+		return control.Answer{Outcome: control.Done, TokensBefore: tokenCount(compacted.TokensBefore), TokensAfter: tokenCount(compacted.TokensAfter)}
+	}
+	return control.Answer{Outcome: control.Failed, Detail: "the extension returned an unknown control outcome", Open: true}
+}
+
+// nothingToCompact is how pi's compaction says the conversation is too short
+// for one, read on its error's text.
+var nothingToCompact = regexp.MustCompile(`(?i)already compacted|nothing to compact|session too small`)
+
+func tokenCount(value *float64) *int64 {
+	if value == nil || *value < 0 {
+		return nil
+	}
+	count := int64(*value)
+	return &count
+}
+
+// traced has the extension put an interrupted turn's actor into pi's
+// history once its end was published, and settles the interrupt by whether
+// it could.
+func (r *run) traced(l *link, thread, actor string, settled func(bool)) {
+	ctx, cancel := context.WithTimeout(r.ctx, 5*time.Second)
+	defer cancel()
+	answer, err := l.ask(ctx, frame{Op: "trace", Thread: thread, Text: actor})
+	settled(err == nil && answer.OK)
 }
 
 func (r *run) controlAnswer(request control.Request, answer control.Answer) control.Answer {
@@ -87,7 +160,7 @@ func (r *run) compacted(l *link, request frame) frame {
 		default:
 			return frame{Error: "unknown compaction outcome"}
 		}
-		r.outcomeLocked(request.Request, request.From, control.Answer{Outcome: request.Outcome, Reason: request.Reason, Detail: request.Detail, TokensBefore: request.TokensBefore, TokensAfter: request.TokensAfter})
+		r.outcomeLocked(request.Request, request.From, worded(control.Compact, request))
 	}
 	return frame{OK: true}
 }

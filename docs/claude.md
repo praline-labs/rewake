@@ -42,7 +42,7 @@ The mod's files are embedded from `internal/adapter/claude/mod/`, each named in 
 of `mod.go`, since a pattern skips the manifest's dot directory: the manifest `rewake`
 (`.claude-plugin/plugin.json`), `hooks/hooks.json`, the one module `hooks/rewake.ts` and the
 files it imports — `outbox.ts`, `heartbeat.ts`, `management.ts`, `asks.ts`, `calls.ts`,
-`dialogs.ts`, `closing.ts`, `worktree.ts`, `sessiontools.ts`, `briefs.ts`, `enter.ts`, `mirror.ts`, `permits.ts`, `feed.ts` — and
+`dialogs.ts`, `closing.ts`, `tools.ts`, `enter.ts`, `mirror.ts`, `permits.ts`, `feed.ts` — and
 the generated `protocol.gen.ts`. The run's service
 writes them into `<run dir>/mod` before the harness starts, and the launch passes
 `--plugin-dir <run dir>/mod` to that launch only. Nothing in the person's settings changes (L1);
@@ -104,7 +104,7 @@ Each wrapper answers its own run's mod — main's and every worker's alike.
 
 **Bounds.** `$.http.fetch` gives up after 30 s, so no request is held longer than 20 s
 (`maxWaitSeconds`); a wait is a loop of polls. A request body is at most 64 KiB (`maxBodyBytes`),
-a turn's end 1 MiB, its answer cut by the mod past that and saying so
+a turn's end and a tool's result 1 MiB, cut by the mod past that and saying so
 ([the size](claude-turns.md#the-mods-side)).
 
 **Endpoints.** Every one a `POST` with a JSON body under `/v1/`, answered 200 with its answer or
@@ -112,9 +112,10 @@ another status with a refusal:
 
 | Path | Caller | What it carries | Where |
 |---|---|---|---|
-| `hello` | every load, at `session.start` | the session id, the harness version, the load's id and number; answered with the run's role, whether it hosts spaces, whether the face draws it (`mirror`), the heartbeat's generation | [the live set](claude-turns.md#the-live-set) |
+| `hello` | every load, at `session.start` | the protocol the mod speaks, the session id, the harness version, the load's id and number, whether the run may enter a checkout (`enter`); answered with the run's role, whether it hosts spaces, whether the face draws it (`mirror`), the heartbeat's generation, the tool table and its digest; a mod of another protocol is refused 409 | [the live set](claude-turns.md#the-live-set), [the protocol's number](#the-protocols-number) |
 | `turn/start`, `turn/end` | every role's mod, for its own conversation | a turn's start; its end under an end id, retried until its receipt | [claude-turns.md](claude-turns.md) |
-| `mod/alive` | every admitted load, in a loop | the heartbeat; it also carries at most one control command to the mod, and the run's room work for [the band](#the-band) | [the live set](claude-turns.md#the-live-set), [control](#control) |
+| `mod/alive` | every admitted load, in a loop | the heartbeat, naming the digest of the tool table the load holds; it also carries at most one control command to the mod, the run's room work for [the band](#the-band), and the run's table when the load holds another | [the live set](claude-turns.md#the-live-set), [control](#control), [the tools](#the-tools) |
+| `tool/plan`, `tool/result`, `tool/native` | every admitted load, per call of a rewake tool | a call's arguments, answered with its argv, variables and bound or a refusal; its raw end, answered with the result's text; `worktree_enter`'s move as Claude Code answered it, answered with the text. Stateless: served through a switch's freeze too | [the tools](#the-tools) |
 | `mod/ended` | every admitted load, once | the epochs of other runs whose ends the store keeps; answered with those rewake proves ended | [the outbox](claude-turns.md#the-mods-side) |
 | `mod/state` | every admitted load | native state samples | [telemetry](#telemetry) |
 | `mod/control` | every admitted load | a control command's acknowledgement and final outcome | [control](#control) |
@@ -126,7 +127,8 @@ another status with a refusal:
 **One description.** The protocol is one JSON schema,
 `internal/adapter/claude/mod/protocol.schema.json`. A small generator of rewake's own,
 `tools/protogen`, reads the subset the schema uses — objects, strings, integers, booleans,
-arrays, enums, references — and writes the TypeScript types the mod imports
+arrays, enums, references, and `x-raw` for a value carried unread, a tool's schema or a call's
+arguments (`json.RawMessage`, `unknown`) — and writes the TypeScript types the mod imports
 (`protocol.gen.ts`) and the Go types `modhost` decodes into (`protocol_gen.go`). A test
 regenerates both in memory and fails when a checked-in file differs, so neither side can drift
 from the schema. An additive field is a change of the protocol all the same: a newer mod's field
@@ -135,6 +137,18 @@ The reviewer's acceptance of an added field checks the direction that does happe
 reading what an older one left on disk, a missing field read as before. The fields added through
 October 26, 2026 — the cache telemetry and `cacheLife`, `status/line`, `worker.type`,
 `configuredModelName`, `worker.label`, `thinking` — were accepted so on October 28, 2026.
+
+### The protocol's number
+
+The schema's `protocol` bound is the protocol's number, `modhost.Protocol` in Go and
+`bounds.protocol` in the mod, and the `mod` contract a switch of the room's build compares
+(`contracts.go`): a loaded mod keeps speaking the protocol it was loaded with, so a build of
+another number plans the room's restart and says why. A test pins each number to the digest of
+the generated `protocol_gen.go`, so a changed schema raises it. The hello names the number, and
+the wrapper refuses a hello of another with 409 "this mod speaks an older protocol of rewake:
+restart the room", which a mod of protocol 1 takes as final: it serves nothing until the room's
+restart writes the run's mod anew. Protocol 2, November 3, 2026 (brief 94), brought the tools as
+data; protocol 1's hello named no number.
 
 ### The peer
 
@@ -168,15 +182,27 @@ start, so that is a documented limit, not a refusal.
 ## The tools
 
 The mod registers no mail tools: a session reads and sends through the shell commands. Its tools
-answer with rewake's own `rewake worktree …` command, run by argv through the room's own copy of
-its build (`REWAKE_EXECUTABLE`, [rules/state.md](rules/state.md#the-rooms-own-copy)):
+answer with rewake's own `rewake worktree …` and `rewake brief …` commands, run by argv through
+the room's own copy of its build (`REWAKE_EXECUTABLE`,
+[rules/state.md](rules/state.md#the-rooms-own-copy)). The mod holds none of them: it registers the
+table the hello's answer carries, asks the wrapper to plan each call, runs it with
+`$.process.run`, and posts the raw end for the wrapper to word (`hooks/tools.ts`,
+`modhost/tools.go`). A new table on a poll registers a reshaped tool again and serves a changed
+description from `tool.describe`, so a change of a tool reaches a running session with
+`rewake restart rewake` (seen live on November 3, 2026, Claude Code 2.1.310: after the restart a
+running main's and worker's next request carried the changed descriptions, the same Claude Code
+processes, the strip's projection changed too; with `ENABLE_TOOL_SEARCH=false`, since tool search
+keeps the mod's tools out of the request):
 
 - `worktree_status` on every run: the checkout the session works in and what a space's close
   would do with it;
+- `brief_read`, `brief_tick` and `brief_comment` on every run but main's
+  ([briefs.md](briefs.md#the-tools));
 - `worktree_list` and `worktree_land` on a run whose `REWAKE_ROLE` is `main` — a choice of what
   is shown, not an authorization;
 - `worktree_enter` on a worker whose template says `enter_worktree = true`
-  (`REWAKE_WORKTREE_ENTER`), with the model's own `EnterWorktree` refused there.
+  (`REWAKE_WORKTREE_ENTER`, which the hello reports as `enter`), with the model's own
+  `EnterWorktree` refused there (`hooks/enter.ts`).
 
 Their contracts, shared with pi's extension, are in [worktree-tools.md](worktree-tools.md).
 
@@ -203,7 +229,13 @@ The mod samples native context and the configured model after its hello, on `ses
 (which comes only at a turn's end), at the main turn's start and end, after each main-loop
 `turn.step`'s response, at compaction boundaries, and after each heartbeat answer, so a long
 turn's fill grows as it runs. It sends complete samples through `mod/state`, with the load,
-heartbeat generation, selected conversation and a load-local sequence. The host accepts only its
+heartbeat generation, selected conversation and a load-local sequence. What the session read of
+itself goes unconverted in `native` (brief 94, November 3, 2026): `$.session.model()`,
+`$.session.cwd()`, `$.session.usage()` as Claude Code answers it, and the last main-loop step's
+`usage` and the `effort` its request asked for; a read that failed is absent. The host names and
+converts it (`modhost/native.go`), each part on its own, so a part whose shape a release changes
+is unknown and the rest still counts, and a change of what the Статус shows is the wrapper's alone,
+reaching a running room with `rewake restart rewake`. The host accepts only its
 current live generation and newer samples; unknown tokens clear an older reading. It hands each
 sample, and each status line, to the session's observer (`core/session.Observer`), which merges
 them into the published snapshot ([session-state.md](session-state.md#persistence-and-freshness));
@@ -236,15 +268,17 @@ which the host tells main of once
 ([permission-requests.md](permission-requests.md#a-dialog-nobody-is-asked-about)). Every sample
 carries the session's directory now (`cwd`, `$.session.cwd()`: a worktree entry moves it, a `cd`
 in Bash does not) and the account's rate-limit windows as `$.session.usage()` reports them
-(`rateLimits`: `kind`, `percent` rounded, `resetsAt` in epoch seconds); the host keeps
-`Snapshot.Cwd` and `Snapshot.RateLimits`, dropping a window without a kind or outside 0–100, and
+(`rateLimits`: `kind`, `percentUsed`, `resetsAt` as ISO 8601); the host keeps
+`Snapshot.Cwd` and `Snapshot.RateLimits`, the percent rounded, dropping a window without a kind or outside 0–100, and
 the room view gives the shell the pane's path and its `5h`/`7d` windows
 ([shell.md](shell.md#the-strip)). A lapse makes every field stale until a new generation supplies a sample.
 
 **The prompt cache** is the usage the API reported for the latest main-loop `turn.step` response
-(`usage.cache_read_input_tokens`, `cache_creation_input_tokens`, `input_tokens`): the mod sends
-`cacheRead`, `cacheWrite` and `cacheInput` with every sample; a response with no usage and a
-subagent's leave the last. The host publishes `Snapshot.Cache` (`cache` of the telemetry): the
+with input (`usage.cache_read_input_tokens`, `cache_creation_input_tokens`, `input_tokens`): the
+mod sends the last step's `usage` as reported with every sample, and the host keeps the last one
+with input, so a response with no usage, a placeholder's with none, and a subagent's leave it; it
+goes to the next image with the run (`Handed.Cache`), since by then the mod's last step may be a
+placeholder's. The host publishes `Snapshot.Cache` (`cache` of the telemetry): the
 raw counts and `hitPercent`, the share of all the request's input tokens — read, written and
 neither — that the cache served. It is the last request's, not a running total, since that is
 what says whether the prefix is still warm; providers count input differently, so the harness's
@@ -294,21 +328,31 @@ Compact with an optional focus, and interrupt; clear is not offered; a drawn run
 face's prompt ([the mirror](#the-mirror)). `control.Serve` reads the
 run's control directory ([remote-control.md](remote-control.md)); the host queues the request for
 the current load and generation and wakes its held `mod/alive` poll. An answer to the poll
-carries at most one command, dispatched once; the poll chain renews at once while the command
+carries at most one command, the oldest queued, dispatched once; the poll chain renews at once while the command
 runs separately (`management.ts`, outside the heartbeat's awaited chain, since a compaction may
 take minutes). `mod/control` carries its first and final answers, matched to that dispatched id
 and generation. These endpoints use the same peer checks as the hello; no journal or durable
 outbox is added for control.
 
-Compaction refuses a running main turn or another operation in flight. The mod answers
-`requested`, passes the focus to native compaction, and later answers `done` with native
-before/after counts when supplied, or a refusal or failure. The host keeps that final result in
-the compaction outcomes for main's letter; it never sends the summary.
+Since protocol 2 the mod words nothing ([remote-control.md](remote-control.md#the-agents-part)):
+`mod/control` carries `{outcome, code?, native?}`, and the host words it (`modhost/control.go`,
+`worded`). Compaction is refused with code `turn` in a running main turn, `busy` beside another
+operation in flight. The mod answers `requested`, passes the focus to native compaction, and
+later answers `done` with what `$.session.compact` resolved, less its messages — `{skip?,
+tokensBefore?, tokensAfter?}` — or `failed` with what it threw. The host reads a skip as a
+refusal with its words, keeps the final result in the compaction outcomes for main's letter, and
+never sees the summary.
 
-Interrupt names the running main turn and waits for its matching `aborted` completion. The
-stopped report names the requester, and the mod appends that actor to native history without
-starting a turn. A normally completed turn refuses the interrupt. A missing end after three
-seconds gives an open failure; an end heard later still carries the actor.
+Interrupt is the host's to settle ([remote-control.md](remote-control.md#the-agents-part)). The
+host names the running main turn — set by `turn/start` and by each state's `turn`, which the
+mod sends while a main turn runs, cleared by its captured end — and refuses `no turn running`
+itself when it knows none. The mod aborts it if it is its running turn, else refuses with code
+`turn` (`idle` with none), and answers `requested`. The outbox's aborted end of that turn
+settles it: the host captures it with the actor's words as its answer, queues a `trace` command
+whose text the mod appends to native history without starting a turn (`$.session.append`), and
+answers `done` once the mod says it did. A normally completed turn refuses the interrupt. A
+missing end three seconds after the dispatch gives an open failure; an end heard later, by the
+next image too, still carries the actor and its trace.
 
 The host waits five seconds for a control acknowledgement. A command not dispatched by then is
 removed and refused; one already dispatched has an unknown outcome and is not repeated. An old
@@ -324,8 +368,8 @@ hello answer, and `mirror.ts` then passes its conversation to the wrapper's mode
 prompts (`prompt.submit`), the main loop's text and thinking chunks as `turn.step` yields them, each
 tool call with its input and result (`tool.call` observed through `next`), and the turn's state. It
 reads no transcript file. A hook only pushes to the feed's outbox and returns; the `turn.step`
-generator yields every chunk unchanged before queueing it. The feed (`hooks/feed.ts`, the copy of
-[face.md](face.md#the-feed)'s module) bounds, queues and batches every event; its bounds are the
+generator yields every chunk unchanged before queueing it. The feed (`hooks/feed.ts`,
+[face.md](face.md#the-feed)) bounds, queues and batches every event; its bounds are the
 protocol's `maxMirror*` ones, which a mod test holds equal. What a step holds until it stops, its
 open blocks and its tools' inputs together, is at most 1 MiB, each input 256 KiB, counted in UTF-8
 bytes. The host decodes the events with `mirror.Decode`, naming Claude Code's permission modes in
@@ -414,12 +458,18 @@ idle worker makes it (`handover.go`, `modhost/handover.go`; `handover.claude` na
 | The lane's notices | busy while a word is queued, or a notice is within its late word's minute (`mail.LateWordWindow`): its receipts live only here |
 | The delivery server's held and recent letters | busy while any is held, or a notice reported delivered is within its late word's minute (the host's own refusal) |
 | The mirror | its model in a memory file, which the next image serves; a face reconnects ([face.md](face.md#the-socket)) |
+| The cache | the last response's cache usage that had input, inline (`Handed.Cache`): the mod sends only its last step's ([telemetry](#telemetry)) |
+| The interrupts | the running main turn as the host knows it, who interrupted which turn, and the conversation the last state named, inline (`Handed.Turn`, `Handed.Interrupts`, `Handed.Conversation`): an end heard by the next image still carries its actor and its trace, appended to the conversation the session moved to ([control](#control)); an interrupt waiting on its turn's end keeps the switch waiting at most its three seconds |
 
 The snapshot is the endpoint's quiescent point (November 2, 2026): it waits for every request
 under way that takes an effect — a hello, a turn's start or end, an ask opened or settled, a control
-reply, the face's events — and from it to the exec refuses the next with 503, which the mod sends
-again and the next image takes; a control request meanwhile is refused as busy, and a poll, a
-state and the status line are served throughout. An exec
+reply, the face's events, a state — and from it to the exec refuses the next with 503, which the mod
+sends again and the next image takes; a control request meanwhile is refused as busy, and a poll
+and the status line are served throughout. A state is an effect since brief 94 (review of
+b832ce0, November 3, 2026): it changes the cache observation, the running turn and the
+conversation handed over, and one acknowledged after the snapshot was lost with the image while
+the mod's next step replaced the usage it carried; the mod sends a state refused with 503 again,
+as read, after 1, 2, 4 and 8 s, its later samples waiting behind it, and lets it go after that. An exec
 that fails resumes them (`HandedOver.Resume`). Without it, an end captured after the snapshot was
 lost with the image and captured afresh after the exec, its boundary taking a later task (found in
 review). The ends are the gap a capture opens: captured afresh in the next image, a resent end's boundary

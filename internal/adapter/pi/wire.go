@@ -11,44 +11,58 @@ import (
 	"sync"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/core/mirror"
+	"github.com/praline-labs/rewake/internal/core/sessiontools"
 )
 
 // Both peers number their own requests. Only answer frames consume a waiter;
 // a request from the other side may carry the same id.
 type frame struct {
-	Op           string  `json:"op"`
-	ID           int64   `json:"id,omitempty"`
-	Protocol     int     `json:"protocol,omitempty"`
-	Thread       string  `json:"thread,omitempty"`
-	Turn         string  `json:"turn,omitempty"`
-	Outcome      string  `json:"outcome,omitempty"`
-	Text         string  `json:"text,omitempty"`
-	Notice       string  `json:"notice,omitempty"`
-	OK           bool    `json:"ok,omitempty"`
-	Error        string  `json:"error,omitempty"`
-	Steered      bool    `json:"steered,omitempty"`
-	State        *sample `json:"state,omitempty"`
-	Sequence     uint64  `json:"sequence,omitempty"`
-	Pending      bool    `json:"pending,omitempty"`
-	Action       string  `json:"action,omitempty"`
-	Request      string  `json:"request,omitempty"`
-	From         string  `json:"from,omitempty"`
-	Focus        string  `json:"focus,omitempty"`
-	Reason       string  `json:"reason,omitempty"`
-	Detail       string  `json:"detail,omitempty"`
-	Open         bool    `json:"open,omitempty"`
-	TokensBefore *int64  `json:"tokensBefore,omitempty"`
-	TokensAfter  *int64  `json:"tokensAfter,omitempty"`
+	Op       string  `json:"op"`
+	ID       int64   `json:"id,omitempty"`
+	Protocol int     `json:"protocol,omitempty"`
+	Thread   string  `json:"thread,omitempty"`
+	Turn     string  `json:"turn,omitempty"`
+	Outcome  string  `json:"outcome,omitempty"`
+	Text     string  `json:"text,omitempty"`
+	Notice   string  `json:"notice,omitempty"`
+	OK       bool    `json:"ok,omitempty"`
+	Error    string  `json:"error,omitempty"`
+	Steered  bool    `json:"steered,omitempty"`
+	State    *sample `json:"state,omitempty"`
+	Sequence uint64  `json:"sequence,omitempty"`
+	Pending  bool    `json:"pending,omitempty"`
+	Action   string  `json:"action,omitempty"`
+	Request  string  `json:"request,omitempty"`
+	From     string  `json:"from,omitempty"`
+	Focus    string  `json:"focus,omitempty"`
+	// Code names the extension's check that refused a control command, and
+	// Native the raw result of its native call; the host words both
+	// (control.go). Levels are the thinking levels the face's shift+tab
+	// cycles (native.go).
+	Code   string          `json:"code,omitempty"`
+	Native json.RawMessage `json:"native,omitempty"`
+	Levels []string        `json:"levels,omitempty"`
 	// Mirror, in hello's answer, says rewake's face draws the run; Events
-	// are the conversation a mirror frame carries (mirror.go).
-	Mirror bool               `json:"mirror,omitempty"`
-	Events []mirror.WireEvent `json:"events,omitempty"`
+	// are pi's own events an events frame carries (translate.go).
+	Mirror bool  `json:"mirror,omitempty"`
+	Events []raw `json:"events,omitempty"`
+	// The tools (tools.go): the table, in hello's answer and a tools frame;
+	// a call's plan, asked by tool-plan with the call's arguments and
+	// answered by its argv and bound or a refusal; its raw end, which
+	// tool-result carries and whose answer is the text and isError.
+	Tools     []toolEntry       `json:"tools,omitempty"`
+	Tool      string            `json:"tool,omitempty"`
+	Arguments json.RawMessage   `json:"arguments,omitempty"`
+	Argv      []string          `json:"argv,omitempty"`
+	TimeoutMs int64             `json:"timeoutMs,omitempty"`
+	Refused   string            `json:"refused,omitempty"`
+	Ran       *sessiontools.Ran `json:"ran,omitempty"`
+	IsError   bool              `json:"isError,omitempty"`
 }
 
 const (
 	maxFrame        = 4 << 20
-	protocolVersion = 2
+	protocolVersion = 3
 )
 
 var errClosed = errors.New("the extension connection closed")

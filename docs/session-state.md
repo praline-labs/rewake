@@ -149,7 +149,9 @@ sender's name lock or cleans up registry records, and goes once through `PutOnce
 
 The mod reports the native context use, the model's window and the percentage, the
 configured model, activity, compaction state and the prompt cache, sampled after its hello,
-measurements, turn and compaction events, and each heartbeat answer; its observations stay
+measurements, turn and compaction events, and each heartbeat answer, as Claude Code answered
+them; the wrapper names and converts them, and keeps the last response's cache usage that had
+input across samples and a switch. Its observations stay
 fresh only while the current mod's heartbeat holds ([claude.md](claude.md#telemetry)).
 The window and percentage are the harness's, unless the launch limited the window below the
 model's: that window is shown, and the percentage is of it. A fresh conversation or a
@@ -175,7 +177,8 @@ there; one main asked for is still counted from its result.
 ## pi source
 
 The per-run extension reads native context usage, window and percentage, model and thinking
-level, pushes changes and answers a one-second poll
+level and the last assistant message's usage, pushes changes and answers a one-second poll, all
+as pi answered them; the wrapper projects them and keeps the last cache usage that had input
 ([research-pi.md](research-pi.md#telemetry-and-remote-control)). The thinking level is live: the
 extension pushes a change on `thinking_level_select`, before the next request. `thinking` is
 whether that level is other than `off`, told only for a model with reasoning

@@ -1,24 +1,24 @@
 // What the person does in rewake's face, handed to pi (docs/face.md, "The
-// face"): a prompt typed there, Esc and shift+tab, and the thinking level
-// shift+tab moves, told to the face.
+// face"): a prompt typed there, Esc and shift+tab. on is the hello's answer:
+// rewake's face draws this run. The face hears pi's thinking level from the
+// session's state, which the wrapper reads (native.go).
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import type { Mirror } from "./mirror.ts";
 
 // facePrompt hands a prompt typed in the face to pi as the person's: a turn
 // while pi is idle, steered into the run going on while it works, as pi's
-// own editor queues one. pi takes it in or shows its own error.
+// own editor queues one. pi takes it in or shows its own error; the wrapper
+// knows it as the face's when pi hears it as its input.
 export function facePrompt(
   pi: ExtensionAPI,
-  mirror: Mirror,
+  on: boolean,
   idle: boolean,
   compacting: boolean,
   text: unknown,
 ): { ok?: boolean; steered?: boolean; error?: string } {
-  if (!mirror.on) return { error: "rewake's face does not draw this session" };
+  if (!on) return { error: "rewake's face does not draw this session" };
   if (typeof text !== "string" || text.trim() === "") return { error: "a prompt needs a text" };
   if (compacting) return { error: "pi is compacting its context; send it again once that is done" };
   try {
-    mirror.sent(text);
     pi.sendUserMessage(text, idle ? undefined : { deliverAs: "steer" });
     return { ok: true, steered: !idle };
   } catch {
@@ -31,11 +31,11 @@ export function facePrompt(
 // queued to steer it goes back to pi's editor. Nothing else ever calls it from
 // the face, and an idle pi is left alone.
 export function faceInterrupt(
-  mirror: Mirror,
+  on: boolean,
   ctx: { isIdle: () => boolean; abort: () => void },
   compacting: boolean,
 ): { ok?: boolean; error?: string } {
-  if (!mirror.on) return { error: "rewake's face does not draw this session" };
+  if (!on) return { error: "rewake's face does not draw this session" };
   if (compacting) return { error: "pi is compacting its context" };
   if (ctx.isIdle()) return { error: "pi is not working" };
   try {
@@ -46,56 +46,23 @@ export function faceInterrupt(
   }
 }
 
-// levels are pi's thinking levels in the order its shift+tab cycles them:
-// a model that reasons has those its map does not take away, xhigh and max
-// only where it names them, and one that does not has off alone (pi-ai's
-// getSupportedThinkingLevels, read on 1.4.0).
-const levels = ["off", "minimal", "low", "medium", "high", "xhigh", "max"] as const;
-type Level = (typeof levels)[number];
-type Thinker = { reasoning?: boolean; thinkingLevelMap?: Partial<Record<string, unknown>> };
-
-export function levelsOf(model: Thinker | undefined): Level[] {
-  if (!model?.reasoning) return ["off"];
-  return levels.filter((level) => {
-    const mapped = model.thinkingLevelMap?.[level];
-    if (mapped === null) return false;
-    return level === "xhigh" || level === "max" ? mapped !== undefined : true;
-  });
-}
-
 // faceThinking moves pi's thinking level on at the person's shift+tab in the
-// face, as pi's own app.thinking.cycle does: the next of the model's levels,
+// face, as pi's own app.thinking.cycle does: the next of the levels the
+// wrapper read off the model (native.go, levelsOf) after the one pi runs at,
 // for this session alone. pi's screen and rewake's telemetry hear it as any
 // change of the level.
 export function faceThinking(
   pi: Pick<ExtensionAPI, "getThinkingLevel" | "setThinkingLevel">,
-  mirror: Mirror,
-  model: Thinker | undefined,
+  on: boolean,
+  levels: string[] | undefined,
 ): { ok?: boolean; error?: string } {
-  if (!mirror.on) return { error: "rewake's face does not draw this session" };
-  if (!model?.reasoning) return { error: "Current model does not support thinking" };
+  if (!on) return { error: "rewake's face does not draw this session" };
+  if (!levels?.length) return { error: "a thinking cycle needs its levels" };
   try {
-    const cycle = levelsOf(model);
-    const next = cycle[(cycle.indexOf(pi.getThinkingLevel() as Level) + 1) % cycle.length];
-    if (next) pi.setThinkingLevel(next);
+    const next = levels[(levels.indexOf(pi.getThinkingLevel()) + 1) % levels.length];
+    if (next) pi.setThinkingLevel(next as never);
     return { ok: true };
   } catch {
     return { error: "pi did not change the thinking level" };
   }
-}
-
-// serveLevel tells the face pi's thinking level, which the face's rule shows
-// and its shift+tab moves: say once the face draws this run, and on each
-// change of the level or of the model, which may clamp it. pi's own level
-// names are the mirror's. Whatever it throws is dropped, as the mirror's
-// observers do.
-export function serveLevel(pi: Pick<ExtensionAPI, "on" | "getThinkingLevel">, mirror: Mirror) {
-  const say = () => {
-    try {
-      mirror.push({ kind: "level", level: pi.getThinkingLevel() });
-    } catch {}
-  };
-  pi.on("thinking_level_select", async () => say());
-  pi.on("model_select", async () => say());
-  return say;
 }

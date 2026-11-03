@@ -12,20 +12,19 @@ import type {
   TurnEndRequest,
   TurnStartRequest,
 } from "../protocol.gen.ts";
-import { paths } from "../protocol.gen.ts";
+import { bounds, paths } from "../protocol.gen.ts";
 import { Asks } from "./asks.ts";
 import { Band, serveBand } from "./band.ts";
-import { briefToolsFor, serveBriefs } from "./briefs.ts";
 import { exitReasons, tellClosing } from "./closing.ts";
 import { serveDialogs } from "./dialogs.ts";
-import { serveWorktreeEnter, worktreeEnterTool } from "./enter.ts";
+import { guardEnterWorktree } from "./enter.ts";
 import { Heartbeat } from "./heartbeat.ts";
 import { Management } from "./management.ts";
 import { Mirror, type MirrorOutbox, serveMirror } from "./mirror.ts";
 import type { Host } from "./outbox.ts";
 import { cut, listed, loadKey, newId, nextDelay, Outbox } from "./outbox.ts";
 import { Permits } from "./permits.ts";
-import { serveWorktreeStatus, worktreeToolsFor } from "./worktree.ts";
+import { serveTools, Tools } from "./tools.ts";
 
 // The harness's reasons, mapped to the protocol's.
 const reasons: Record<string, EndReason> = {
@@ -116,6 +115,8 @@ interface Load {
   // the hello was: the face's mode goes before any event.
   permits?: Permits;
   admitted: () => void;
+  // take registers the tool table an answer carries (tools.ts).
+  take: (answer: Pick<HelloAnswer, "tools" | "toolsDigest">) => Promise<void>;
   // run is the wrapper's answer to this load's hello: undefined until it
   // comes, and when no wrapper answered, which later steps read as "not live".
   run?: HelloAnswer;
@@ -137,6 +138,7 @@ async function hello(load: Load, request: HelloRequest, delay: number, renumbere
     if (answer.ok) {
       load.run = JSON.parse(answer.text) as HelloAnswer;
       load.asks.role = load.run.role;
+      await load.take(load.run);
       if (load.run.mirror) load.permits ??= new Permits();
       load.management.admit(load.run.generation);
       load.heartbeat.begin(load.run.generation);
@@ -176,6 +178,7 @@ export const register: Register = (on) => {
   let load: Load | undefined;
   const mirror = new Mirror(() => load, loadId);
   const band = new Band();
+  const tools = new Tools();
 
   on("session.start", async ($, e, next) => {
     const started = await next(e);
@@ -185,15 +188,6 @@ export const register: Register = (on) => {
       return started;
     }
     band.begin(() => $.ui.invalidate("ui.render"));
-    if (await $.env.get("REWAKE_EXECUTABLE")) {
-      const role = await $.env.get("REWAKE_ROLE");
-      for (const tool of [...worktreeToolsFor(role), ...briefToolsFor(role)]) {
-        await $.tool.register(tool).catch(() => undefined);
-      }
-      if ((await $.env.get("REWAKE_WORKTREE_ENTER")) === "1") {
-        await $.tool.register(worktreeEnterTool).catch(() => undefined);
-      }
-    }
     const epoch = (await $.env.get("REWAKE_EPOCH")) ?? "";
     const host: Host = {
       post: (path, request) =>
@@ -236,6 +230,14 @@ export const register: Register = (on) => {
       ),
       asks: new Asks(host, loadId),
       admitted: () => mirror.admit(),
+      // A table registered from the first hello's answer is listed by turn
+      // one; a later one, from a switch's next image, by the next turn.
+      take: async (answer) => {
+        const described = await tools.take(answer.tools, answer.toolsDigest, (tool) =>
+          $.tool.register(tool),
+        );
+        if (described) await $.ui.invalidate("tool.describe");
+      },
       // A lapsed generation's chain says the load's latest hello again.
       heartbeat: new Heartbeat(
         host,
@@ -248,9 +250,11 @@ export const register: Register = (on) => {
         () => band.shown,
         (answer, generation) => {
           band.told(answer.work);
+          void current.take(answer).catch(() => undefined);
           current.management.changed();
           if (answer.control) void current.management.control(answer.control, generation);
         },
+        () => tools.digest,
       ),
     };
     let latest: HelloRequest | undefined;
@@ -264,7 +268,9 @@ export const register: Register = (on) => {
         sessionId: await $.session.id(),
         harnessVersion: (await $.session.version()).version,
         loadSeq: await takeLoadSeq(host, epoch),
+        protocol: bounds.protocol,
       };
+      if ((await $.env.get("REWAKE_WORKTREE_ENTER")) === "1") latest.enter = true;
       await hello(load, latest, 0);
     } catch {
       // What the harness would not tell leaves the load unadmitted.
@@ -306,11 +312,11 @@ export const register: Register = (on) => {
   on("turn.step", async function* ($, e, next) {
     if (e.agentId === undefined) load?.asks.ended();
     if (e.agentId === undefined) load?.management.waits();
-    if (e.agentId === undefined) load?.management.effortSeen(e.effort);
+    if (e.agentId === undefined) load?.management.stepStarted(e.effort);
     const step =
       e.agentId === undefined ? yield* mirror.step(e.turnId, e.index, next(e)) : yield* next(e);
     if (e.agentId === undefined) {
-      load?.management.usageSeen(step.usage);
+      load?.management.stepEnded(step.usage);
       load?.management.changed();
     }
     return step;
@@ -325,8 +331,8 @@ export const register: Register = (on) => {
     }
     load.asks.ended();
     mirror.turn(e.turnId, "idle");
-    const actor = await load.management.ended(e.turnId, e.reason === "aborted");
-    let answer = actor ?? e.answer;
+    load.management.ended(e.turnId);
+    let answer = e.answer;
     if (answer === "" && e.reason === "refusal") {
       answer = e.refusal?.explanation ?? "";
     }
@@ -362,9 +368,8 @@ export const register: Register = (on) => {
     return next(e);
   });
 
-  serveWorktreeStatus(on);
-  serveWorktreeEnter(on);
-  serveBriefs(on);
+  serveTools(on, tools, () => (load?.run ? { host: load.host, loadId } : undefined));
+  guardEnterWorktree(on);
 
   on("session.measure", async ($, e, next) => {
     const measured = await next(e);

@@ -27,7 +27,7 @@ import (
 // handoverVersion is the version of handedState; an image adopts only its
 // own, and a switch of the room admits only a build that takes the same
 // (Contracts).
-const handoverVersion = 1
+const handoverVersion = 2
 
 type handedState struct {
 	Version int            `json:"version"`

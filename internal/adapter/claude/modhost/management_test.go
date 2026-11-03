@@ -26,14 +26,28 @@ func postValue(t *testing.T, socket, path string, value any) string {
 	return answer
 }
 
+// testState is a sample whose native part is the model and the window's
+// figures as Claude Code answers them.
 func testState() StateRequest {
-	tokens, window, percent, model := 25000, 100000, 25, "test-model"
-	return StateRequest{LoadID: "load", Generation: 1, Sequence: 1, Conversation: "conversation-1", Activity: "idle", Model: &model, Tokens: &tokens, Window: &window, Percent: &percent}
+	return withNative(StateRequest{LoadID: "load", Generation: 1, Sequence: 1, Conversation: "conversation-1", Activity: "idle"}, map[string]any{
+		"model": "test-model",
+		"usage": map[string]any{"context": map[string]any{"tokens": 25000, "window": 100000, "percent": 25}, "rateLimits": []any{}},
+	})
+}
+
+// withNative is sample with native as its native part.
+func withNative(sample StateRequest, native map[string]any) StateRequest {
+	raw, err := json.Marshal(native)
+	if err != nil {
+		panic(err)
+	}
+	sample.Native = raw
+	return sample
 }
 
 func TestStateIsCurrentGenerationOrderedAndUnknownAfterCompaction(t *testing.T) {
 	server, socket := serving(t)
-	postValue(t, socket, PathHello, HelloRequest{LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
+	postValue(t, socket, PathHello, HelloRequest{Protocol: Protocol, LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
 	sample := testState()
 	postValue(t, socket, PathModState, sample)
 	got := server.SessionState()
@@ -42,7 +56,7 @@ func TestStateIsCurrentGenerationOrderedAndUnknownAfterCompaction(t *testing.T) 
 	}
 	sample.Sequence = 2
 	sample.Compactions = 1
-	sample.Tokens, sample.Percent = nil, nil
+	sample = withNative(sample, map[string]any{"model": "test-model", "usage": map[string]any{"context": map[string]any{"window": 100000}}})
 	sample.Request, sample.From = "r1", "main"
 	postValue(t, socket, PathModState, sample)
 	postValue(t, socket, PathModState, testState())
@@ -50,7 +64,7 @@ func TestStateIsCurrentGenerationOrderedAndUnknownAfterCompaction(t *testing.T) 
 	if got.ContextUsed != nil || got.FilledPercent != nil || *got.Compactions != 1 || len(got.CompactionEvents) != 1 || got.CompactionEvents[0].Request != "r1" {
 		t.Fatalf("completion or stale sample: %+v", got)
 	}
-	postValue(t, socket, PathHello, HelloRequest{LoadID: "new", LoadSeq: 1, SessionID: "conversation-1", HarnessVersion: "test"})
+	postValue(t, socket, PathHello, HelloRequest{Protocol: Protocol, LoadID: "new", LoadSeq: 1, SessionID: "conversation-1", HarnessVersion: "test"})
 	if server.SessionState().Fresh {
 		t.Fatal("old load's snapshot stayed fresh")
 	}
@@ -86,7 +100,7 @@ func TestControlCrossesFilesHeartbeatAndFinalOutcome(t *testing.T) {
 		}
 	})
 	server.StartControl(context.Background())
-	postValue(t, socket, PathHello, HelloRequest{LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
+	postValue(t, socket, PathHello, HelloRequest{Protocol: Protocol, LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
 	postValue(t, socket, PathModState, testState())
 	result := make(chan control.Answer, 1)
 	go func() {
@@ -124,8 +138,7 @@ func TestControlCrossesFilesHeartbeatAndFinalOutcome(t *testing.T) {
 	if server.Busy() == "" {
 		t.Fatal("ready for a handover while a compaction's outcome is to come")
 	}
-	before, after := 25000, 1000
-	initial.Outcome, initial.TokensBefore, initial.TokensAfter = control.Done, &before, &after
+	initial.Outcome, initial.Native = control.Done, json.RawMessage(`{"tokensBefore":25000,"tokensAfter":1000}`)
 	postValue(t, socket, PathModControl, initial)
 	postValue(t, socket, PathModControl, initial)
 	// Settled, it no longer keeps the run from a handover: it once did until
@@ -137,8 +150,9 @@ func TestControlCrossesFilesHeartbeatAndFinalOutcome(t *testing.T) {
 	if len(outcomes) != 1 || outcomes[0].RequestedBy != "main" || outcomes[0].TokensAfter == nil || *outcomes[0].TokensAfter != 1000 {
 		t.Fatalf("final: %+v", outcomes)
 	}
-	if reply := postValue(t, socket, PathModAlive, AliveRequest{LoadID: "load", Generation: 1}); reply != "{}\n" {
-		t.Fatalf("command was dispatched twice: %s", reply)
+	var again AliveAnswer
+	if err := json.Unmarshal([]byte(postValue(t, socket, PathModAlive, AliveRequest{LoadID: "load", Generation: 1})), &again); err != nil || again.Control != nil {
+		t.Fatalf("command was dispatched twice: %+v %v", again.Control, err)
 	}
 }
 
@@ -148,7 +162,7 @@ func TestControlRefusesUnadmittedAndWrongConversation(t *testing.T) {
 	if answer := server.carry(context.Background(), request); answer.Reason != control.NotAnswering {
 		t.Fatalf("before hello: %+v", answer)
 	}
-	postValue(t, socket, PathHello, HelloRequest{LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
+	postValue(t, socket, PathHello, HelloRequest{Protocol: Protocol, LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
 	request.Conversation = "other"
 	if answer := server.carry(context.Background(), request); answer.Reason != control.NotSelected {
 		t.Fatalf("wrong conversation: %+v", answer)
@@ -161,7 +175,7 @@ func TestControlRefusesUnadmittedAndWrongConversation(t *testing.T) {
 
 func TestCanceledUndispatchedCommandCannotRunLater(t *testing.T) {
 	server, socket := serving(t)
-	postValue(t, socket, PathHello, HelloRequest{LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
+	postValue(t, socket, PathHello, HelloRequest{Protocol: Protocol, LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	answer := server.carry(ctx, control.Request{ID: "r", From: "main", Action: control.Compact})
@@ -175,7 +189,7 @@ func TestCanceledUndispatchedCommandCannotRunLater(t *testing.T) {
 
 func TestDispatchedControlWithoutAcknowledgementIsUnknown(t *testing.T) {
 	server, socket := servingWith(t, func(server *Server) { server.cfg.Hold = 10 * time.Millisecond })
-	postValue(t, socket, PathHello, HelloRequest{LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
+	postValue(t, socket, PathHello, HelloRequest{Protocol: Protocol, LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	result := make(chan control.Answer, 1)
@@ -206,7 +220,7 @@ func TestDispatchedControlWithoutAcknowledgementIsUnknown(t *testing.T) {
 	if outcomes := server.SessionState().CompactionOutcomes; len(outcomes) != 1 || outcomes[0].Outcome != control.Done {
 		t.Fatalf("late outcome: %+v", outcomes)
 	}
-	postValue(t, socket, PathHello, HelloRequest{LoadID: "new", LoadSeq: 1, SessionID: "conversation-1", HarnessVersion: "test"})
+	postValue(t, socket, PathHello, HelloRequest{Protocol: Protocol, LoadID: "new", LoadSeq: 1, SessionID: "conversation-1", HarnessVersion: "test"})
 	body, _ := json.Marshal(ControlReply{LoadID: "load", Generation: 1, ID: "r", Outcome: control.Done})
 	if status, _, _ := post(socket, PathModControl, body); status != http.StatusConflict {
 		t.Fatalf("old generation outcome: %d", status)
@@ -228,7 +242,7 @@ func TestADialogIsToldToMainOncePerDialog(t *testing.T) {
 			return nil
 		}
 	})
-	postValue(t, socket, PathHello, HelloRequest{LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
+	postValue(t, socket, PathHello, HelloRequest{Protocol: Protocol, LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
 	sample, waiting := testState(), "Claude needs your permission"
 	for sequence, dialog := range []*string{&waiting, &waiting, &waiting, nil, &waiting} {
 		sample.Sequence, sample.Dialog = sequence+1, dialog
@@ -246,7 +260,7 @@ func TestADialogIsToldToMainOncePerDialog(t *testing.T) {
 // gone with the first sample that does not.
 func TestAHeldDialogsKindLastsWhileSamplesNameIt(t *testing.T) {
 	server, socket := serving(t)
-	postValue(t, socket, PathHello, HelloRequest{LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
+	postValue(t, socket, PathHello, HelloRequest{Protocol: Protocol, LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
 	sample := testState()
 	permission, question := AskKindPermission, AskKindQuestion
 	for sequence, round := range []struct {
@@ -261,28 +275,36 @@ func TestAHeldDialogsKindLastsWhileSamplesNameIt(t *testing.T) {
 	}
 }
 
-// A sample's directory and the account's windows reach the snapshot; a
-// window without a kind or past a whole percent is no window, and a newer
-// sample without them says the session no longer knows them.
+// A sample's directory and the account's windows, as Claude Code answers
+// them, reach the snapshot in whole percent and seconds; a window without a
+// kind or past a whole percent is no window, and a newer sample without them
+// says the session no longer knows them.
 func TestASampleCarriesTheDirectoryAndTheAccountsWindows(t *testing.T) {
 	server, socket := serving(t)
-	postValue(t, socket, PathHello, HelloRequest{LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
-	sample := testState()
-	cwd, resets := "/work/wt", 1_790_000_000
-	sample.Cwd = &cwd
-	sample.RateLimits = []RateLimit{{Kind: "five_hour", Percent: 37, ResetsAt: &resets}, {Kind: "seven_day", Percent: 9}, {Kind: "", Percent: 5}, {Kind: "odd", Percent: 101}}
+	postValue(t, socket, PathHello, HelloRequest{Protocol: Protocol, LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
+	resets := time.Unix(1_790_000_000, 0)
+	sample := withNative(testState(), map[string]any{"cwd": "/work/wt", "usage": map[string]any{
+		"context": map[string]any{"window": 100000},
+		"rateLimits": []any{
+			map[string]any{"kind": "five_hour", "percentUsed": 36.6, "resetsAt": resets.Add(400 * time.Millisecond).UTC().Format(time.RFC3339Nano)},
+			map[string]any{"kind": "seven_day", "percentUsed": 9},
+			map[string]any{"kind": "", "percentUsed": 5},
+			map[string]any{"kind": "odd", "percentUsed": 101},
+		},
+	}})
 	postValue(t, socket, PathModState, sample)
 	got := server.SessionState()
-	if got.Cwd == nil || *got.Cwd != cwd || len(got.RateLimits) != 2 {
+	if got.Cwd == nil || *got.Cwd != "/work/wt" || len(got.RateLimits) != 2 {
 		t.Fatalf("the sample: %+v", got)
 	}
-	if five := got.RateLimits[0]; five.Kind != "five_hour" || five.Percent != 37 || five.ResetsAt == nil || five.ResetsAt.Unix() != int64(resets) {
+	if five := got.RateLimits[0]; five.Kind != "five_hour" || five.Percent != 37 || five.ResetsAt == nil || !five.ResetsAt.Equal(resets) {
 		t.Fatalf("the five hours: %+v", five)
 	}
 	if seven := got.RateLimits[1]; seven.Kind != "seven_day" || seven.ResetsAt != nil {
 		t.Fatalf("the seven days: %+v", seven)
 	}
-	sample.Sequence, sample.Cwd, sample.RateLimits = 2, nil, nil
+	sample = withNative(sample, map[string]any{"usage": map[string]any{"context": map[string]any{"window": 100000}}})
+	sample.Sequence = 2
 	postValue(t, socket, PathModState, sample)
 	if got := server.SessionState(); got.Cwd != nil || got.RateLimits != nil {
 		t.Fatalf("a sample without them: %+v", got)
@@ -294,7 +316,8 @@ func TestASampleCarriesTheDirectoryAndTheAccountsWindows(t *testing.T) {
 // would be refused in this image too.
 func TestAnUnansweredRequestOfAnEarlierLoadKeepsNothingBusy(t *testing.T) {
 	server, socket := servingWith(t, func(server *Server) { server.cfg.Hold = 10 * time.Millisecond })
-	postValue(t, socket, PathHello, HelloRequest{LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
+	postValue(t, socket, PathHello, HelloRequest{Protocol: Protocol, LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
+	postValue(t, socket, PathTurnStart, TurnStartRequest{LoadID: "load", Conversation: "conversation-1", TurnID: "t"})
 	ctx, cancel := context.WithCancel(context.Background())
 	result := make(chan control.Answer, 1)
 	go func() { result <- server.carry(ctx, control.Request{ID: "r", From: "main", Action: control.Interrupt}) }()
@@ -314,7 +337,7 @@ func TestAnUnansweredRequestOfAnEarlierLoadKeepsNothingBusy(t *testing.T) {
 	if server.Busy() == "" {
 		t.Fatal("ready while the current load may still answer the request")
 	}
-	postValue(t, socket, PathHello, HelloRequest{LoadID: "new", LoadSeq: 1, SessionID: "conversation-1", HarnessVersion: "test"})
+	postValue(t, socket, PathHello, HelloRequest{Protocol: Protocol, LoadID: "new", LoadSeq: 1, SessionID: "conversation-1", HarnessVersion: "test"})
 	if why := server.Busy(); why != "" {
 		t.Fatalf("busy after a reload for a request of the earlier load: %s", why)
 	}

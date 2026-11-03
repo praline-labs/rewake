@@ -28,12 +28,6 @@ import (
 // handedVersion is the version of Handed; a server adopts only its own.
 const handedVersion = 1
 
-// Protocol is the version of the mod↔host protocol, protocol_gen.go: a
-// loaded mod keeps speaking the one it was loaded with, so a switch of the
-// room's build admits only a build that speaks the same (adapter.Contracts).
-// TestTheModContractChangesWithItsProtocol holds it to the generated file.
-const Protocol = 1
-
 // Handed is the endpoint's order of loads as one image hands it to the next.
 type Handed struct {
 	Version    int                `json:"version"`
@@ -43,6 +37,17 @@ type Handed struct {
 	Loads      []string           `json:"loads,omitempty"`
 	Generation int                `json:"generation"`
 	Transition uint64             `json:"transition"`
+	// Cache is the last response's cache usage that had input: the mod
+	// sends only its last step's, which may be a placeholder's by now.
+	Cache *session.Cache `json:"cache,omitempty"`
+	// Turn is the main loop's running turn as the host knows it, and
+	// Interrupts who stopped which turn: an end heard by the next image still
+	// carries its actor and its trace.
+	Turn       string                `json:"turn,omitempty"`
+	Interrupts []control.Attribution `json:"interrupts,omitempty"`
+	// Conversation is the one the last state named, which a command, a late
+	// trace among them, is matched against until the next state names one.
+	Conversation string `json:"conversation,omitempty"`
 }
 
 // HandedLoad is the current load: its hello and its generation's state.
@@ -65,7 +70,7 @@ func (s *Server) busy() string {
 	switch {
 	case s.closed:
 		return "the mod's endpoint is closing"
-	case s.management.queued != nil || s.management.awaiting(s.current):
+	case len(s.management.queued) > 0 || s.management.awaiting(s.current):
 		return "a control request is dispatched to the mod"
 	case s.asks.Count() > 0:
 		return "a permission request or a question of the worker is open"
@@ -106,12 +111,14 @@ const unreadBound = 15 * time.Minute
 
 // effecting are the paths whose requests take an effect that lives in this
 // image: a load admitted, a turn's start or end captured, an ask opened, the
-// face's events. A handover waits for those under way and refuses the next,
-// which the mod sends again to the next image; a poll, a state or a status
-// line changes nothing handed over and is served throughout.
+// face's events, a state, which changes the cache observation, the running
+// turn and the conversation handed over. A handover waits for those under
+// way and refuses the next, which the mod sends again to the next image; a
+// poll or a status line changes nothing handed over and is served
+// throughout.
 var effecting = map[string]bool{
 	PathHello: true, PathTurnStart: true, PathTurnEnd: true, PathAskOpen: true,
-	PathAskSettle: true, PathModControl: true, PathMirrorEvents: true,
+	PathAskSettle: true, PathModControl: true, PathMirrorEvents: true, PathModState: true,
 }
 
 // errHanding refuses an effect between a handover's snapshot and its exec.
@@ -154,7 +161,10 @@ func (s *Server) HandOver() (Handed, *os.File, error) {
 		return Handed{}, nil, errors.New(why)
 	}
 	s.frozen = true
-	handed := Handed{Version: handedVersion, Harness: s.harness, Generation: s.generation, Transition: s.transition}
+	handed := Handed{
+		Version: handedVersion, Harness: s.harness, Generation: s.generation, Transition: s.transition, Cache: s.management.observed.cache,
+		Turn: s.management.turn, Interrupts: s.management.interrupts.Handed(), Conversation: s.management.observed.thread,
+	}
 	if s.current != nil {
 		handed.Current = &HandedLoad{Hello: s.current.hello, Generation: s.current.generation, Live: s.current.live}
 	}
@@ -196,6 +206,9 @@ func (s *Server) Adopt(handed Handed, listener *os.File) error {
 	}
 	s.mu.Lock()
 	s.generation, s.transition = handed.Generation, handed.Transition
+	s.management.observed.cache, s.management.observed.thread = handed.Cache, handed.Conversation
+	s.management.turn = handed.Turn
+	s.management.interrupts.Adopt(handed.Interrupts)
 	for _, load := range handed.Superseded {
 		s.superseded[load] = true
 	}

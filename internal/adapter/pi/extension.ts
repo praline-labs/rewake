@@ -1,12 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { createConnection, type Socket } from "node:net";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { faceInterrupt, facePrompt, faceThinking, serveLevel } from "./faced.ts";
-import { type MirrorEvent, Outbox } from "./feed.ts";
-import { management, type State } from "./management.ts";
-import { Mirror } from "./mirror.ts";
-import { serveMirror } from "./mirrorhooks.ts";
-import { briefTools, worktreeTools } from "./tools.ts";
+import { faceInterrupt, facePrompt, faceThinking } from "./faced.ts";
+import { forward } from "./forward.ts";
+import { management, type State, thrown } from "./management.ts";
+import { type Forwarded, Stream } from "./stream.ts";
+import { type ToolFields, Tools } from "./tools.ts";
 
 export type Frame = {
   op: string;
@@ -27,15 +26,17 @@ export type Frame = {
   request?: string;
   from?: string;
   focus?: string;
-  reason?: string;
-  detail?: string;
-  open?: boolean;
-  tokensBefore?: number;
-  tokensAfter?: number;
-  // mirror, in hello's answer, says rewake's face draws this run.
+  // code names the check that refused a control command, native its raw
+  // result; the wrapper words both (control.go).
+  code?: string;
+  native?: unknown;
+  // levels are the thinking levels a shift+tab of the face cycles, in order.
+  levels?: string[];
+  // mirror, in hello's answer, says rewake's face draws this run, and
+  // events carry pi's own events for it.
   mirror?: boolean;
-  events?: MirrorEvent[];
-};
+  events?: Forwarded[];
+} & ToolFields;
 type Waiter = {
   resolve: (frame: Frame) => void;
   reject: (error: Error) => void;
@@ -48,14 +49,12 @@ export type Link = {
   next: number;
   waiting: Map<number, Waiter>;
 };
-export type Turn = { id: string; link: Link; text: string; reason: string; interrupted?: string };
+export type Turn = { id: string; link: Link; text: string; reason: string };
 
 const maxFrame = 4 << 20;
 const socketPath = process.env.REWAKE_PI_SOCKET;
 
 export default function (pi: ExtensionAPI) {
-  worktreeTools(pi);
-  briefTools(pi);
   let context: ExtensionContext | undefined;
   let active = false;
   let current: Link | undefined;
@@ -75,19 +74,24 @@ export default function (pi: ExtensionAPI) {
       });
     },
   );
-  // The face's mirror waits in its outbox while the link is down.
-  const outbox = new Outbox({
-    ready: () => mirror.on && !!current?.ready,
+  // pi's events for the face wait in the stream while the link is down.
+  const stream = new Stream({
+    ready: () => stream.on && !!current?.ready,
     post: async (events) => {
       const link = current;
       if (!link?.ready) return false;
-      return !!(await ask(link, { op: "mirror", thread: link.thread, events })).ok;
+      return !!(await ask(link, { op: "events", thread: link.thread, events })).ok;
     },
     after: (ms, run) => setTimeout(run, ms).unref(),
   });
-  const mirror = new Mirror(outbox);
-  serveMirror(pi, mirror);
-  const sayLevel = serveLevel(pi, mirror);
+  // A call's plan and end wait out a handover in the socket, so their bound
+  // is longer than a request's.
+  const tools = new Tools(pi, (fields) => {
+    const link = current;
+    if (!link?.ready) return Promise.reject(new Error("the session has no connection to rewake"));
+    return ask(link, fields, 30000);
+  });
+  forward(pi, stream);
 
   function warn(message: string) {
     if (context?.hasUI) context.ui.notify(`rewake: ${message}`, "warning");
@@ -156,7 +160,7 @@ export default function (pi: ExtensionAPI) {
     ) {
       respond({
         outcome: "refused",
-        reason: "not the selected conversation",
+        code: "conversation",
         error: "the delivery conversation is no longer current",
       });
       return;
@@ -166,28 +170,31 @@ export default function (pi: ExtensionAPI) {
       return;
     }
     if (frame.op === "prompt") {
-      respond(facePrompt(pi, mirror, context.isIdle(), managed.busy(), frame.text));
+      respond(facePrompt(pi, stream.on, context.isIdle(), managed.busy(), frame.text));
       return;
     }
     if (frame.op === "interrupt") {
-      respond(faceInterrupt(mirror, context, managed.busy()));
+      respond(faceInterrupt(stream.on, context, managed.busy()));
       return;
     }
     if (frame.op === "thinking") {
-      respond(faceThinking(pi, mirror, context.model));
+      respond(faceThinking(pi, stream.on, frame.levels));
+      return;
+    }
+    if (frame.op === "tools") {
+      tools.take(frame.tools);
+      respond({ ok: true });
       return;
     }
     if (frame.op === "control") {
       void managed
         .control(link, frame)
         .then(respond)
-        .catch(() =>
-          respond({
-            outcome: "failed",
-            open: true,
-            detail: "native control did not return an outcome",
-          }),
-        );
+        .catch((error) => respond({ outcome: "failed", native: thrown(error) }));
+      return;
+    }
+    if (frame.op === "trace") {
+      respond(managed.trace(frame.text ?? ""));
       return;
     }
     let reply: Partial<Frame>;
@@ -272,7 +279,7 @@ export default function (pi: ExtensionAPI) {
       try {
         const reply = await ask(link, {
           op: "hello",
-          protocol: 2,
+          protocol: 3,
           thread,
           state: managed.sample(),
         });
@@ -283,9 +290,9 @@ export default function (pi: ExtensionAPI) {
         }
         link.ready = true;
         delay = 250;
-        mirror.on = reply.mirror === true;
-        sayLevel();
-        outbox.kick();
+        tools.take(reply.tools);
+        stream.on = reply.mirror === true;
+        stream.kick();
       } catch {
         close(link);
         warn("mail connection unavailable; reconnecting while this session runs");
@@ -369,7 +376,7 @@ export default function (pi: ExtensionAPI) {
         : ended.reason === "stop"
           ? "answered"
           : "failed";
-    managed.settled(ended, outcome === "aborted");
+    managed.settled(ended);
     try {
       const reply = await ask(
         ended.link,

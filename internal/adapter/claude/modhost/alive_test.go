@@ -90,7 +90,7 @@ func heartbeating(t *testing.T, hold time.Duration) (*Server, string, *timers, *
 }
 
 func helloOf(load string, seq int) []byte {
-	data, _ := json.Marshal(HelloRequest{LoadID: load, SessionID: "conversation-1", HarnessVersion: "2.1.296", LoadSeq: seq})
+	data, _ := json.Marshal(HelloRequest{Protocol: Protocol, LoadID: load, SessionID: "conversation-1", HarnessVersion: "2.1.296", LoadSeq: seq})
 	return data
 }
 

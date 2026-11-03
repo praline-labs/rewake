@@ -3,6 +3,7 @@ package pi
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"net"
 	"strings"
 	"testing"
@@ -22,7 +23,7 @@ func hello(t *testing.T, rig *rig, handle func(*link, frame)) (*link, frame) {
 	l := newLink(conn)
 	t.Cleanup(l.close)
 	go l.serve(bufio.NewReader(conn), func(got frame) { handle(l, got) })
-	reply, err := l.ask(t.Context(), frame{Op: "hello", Protocol: protocolVersion, State: &sample{Sequence: 1, Activity: "idle"}, Thread: "conversation"})
+	reply, err := l.ask(t.Context(), frame{Op: "hello", Protocol: protocolVersion, State: &sample{Sequence: 1, Idle: true}, Thread: "conversation"})
 	if err != nil || !reply.OK {
 		t.Fatalf("hello: %+v, %v", reply, err)
 	}
@@ -48,9 +49,9 @@ func TestEveryPiWorkerIsDrawnByTheFace(t *testing.T) {
 	}
 }
 
-// A run the face draws says so in hello's answer and takes the extension's
-// events into the model, a kind it does not know left out; one it does not
-// draw says nothing and takes none.
+// A run the face draws says so in hello's answer and takes pi's events into
+// the model, translated; one it does not draw says nothing and takes none.
+// The thinking level a sample reads reaches the face too.
 func TestTheMirrorReachesTheModelOfARunTheFaceDraws(t *testing.T) {
 	model := mirror.New()
 	rig := newRig(t, func(r *run) { r.mirror = model })
@@ -58,23 +59,32 @@ func TestTheMirrorReachesTheModelOfARunTheFaceDraws(t *testing.T) {
 	if !reply.Mirror {
 		t.Fatal("the hello answer of a drawn run does not say mirror")
 	}
-	askOK(t, l, frame{Op: "mirror", Thread: "conversation", Events: []mirror.WireEvent{
-		{Kind: "turn", Turn: "t", State: "working"},
-		{Kind: "tool", ID: "c1", Turn: "t", Name: "Bash"},
-		{Kind: "input", ID: "c1", Text: `{"command":"ls"}`},
-		{Kind: "result", ID: "c1", Status: "refused", Text: "no", Permit: &mirror.Permit{By: mirror.PermitByHook}},
-		{Kind: "mode", Text: "auto"},
-		{Kind: "delta", ID: "b1", Turn: "t", Block: "text", Text: "Hel"},
-		{Kind: "settle", ID: "b1", Turn: "t", Block: "text", Of: 1, Text: "Hello"},
-		{Kind: "notice", ID: "n1", Turn: "t", Status: "error", Text: "Operation aborted"},
-		{Kind: "turn", Turn: "t", State: "idle"},
-	}})
+	var events []raw
+	for _, line := range []string{
+		`{"event":"agent_start"}`,
+		`{"event":"tool_execution_start","toolCallId":"c1","toolName":"bash","args":{"command":"ls"}}`,
+		`{"event":"tool_call","toolCallId":"c1"}`,
+		`{"event":"tool_execution_end","toolCallId":"c1","result":{"content":[{"type":"text","text":"no"}]},"isError":true}`,
+		`{"event":"message_update","type":"text_delta","contentIndex":0,"delta":"Hel"}`,
+		`{"event":"message_update","type":"text_end","contentIndex":0,"content":"Hello"}`,
+		`{"event":"message_end","role":"assistant","stopReason":"aborted","content":[{"type":"text","text":"Hello"}]}`,
+		`{"event":"a kind pi may add"}`,
+		`{"event":"agent_settled","aborted":true}`,
+	} {
+		var event raw
+		if err := json.Unmarshal([]byte(line), &event); err != nil {
+			t.Fatal(err)
+		}
+		events = append(events, event)
+	}
+	askOK(t, l, frame{Op: "events", Thread: "conversation", Events: events})
 	got := items(model)
 	if len(got) != 3 || got[2].Kind != mirror.ItemKindNotice || got[2].Status != mirror.ItemStatusError || got[0].Status != mirror.ItemStatusRefused || got[0].Permit == nil || got[0].Permit.By != mirror.PermitByHook || got[0].Text != `{"command":"ls"}` || got[1].Text != "Hello" || got[1].Status != mirror.ItemStatusSettled {
 		t.Fatalf("the model holds %+v", got)
 	}
+	askOK(t, l, frame{Op: "state", Thread: "conversation", State: &sample{Sequence: 2, Idle: true, Native: nativeOf(map[string]any{"thinkingLevel": "high"})}})
 	for _, line := range model.Snapshot() {
-		if line.Op == mirror.LineOpBegin && (line.Mode != nil || *line.Turn != mirror.TurnStateIdle) {
+		if line.Op == mirror.LineOpBegin && (line.Mode != nil || *line.Turn != mirror.TurnStateIdle || line.Level == nil || *line.Level != mirror.ThinkingLevelHigh) {
 			t.Fatalf("the model's state: %+v", line)
 		}
 	}
@@ -84,7 +94,7 @@ func TestTheMirrorReachesTheModelOfARunTheFaceDraws(t *testing.T) {
 	if plainReply.Mirror {
 		t.Fatal("a run the face does not draw asks for its conversation")
 	}
-	if reply, err := pl.ask(t.Context(), frame{Op: "mirror", Thread: "conversation", Events: []mirror.WireEvent{{Kind: "delta", ID: "b"}}}); err != nil || reply.OK {
+	if reply, err := pl.ask(t.Context(), frame{Op: "events", Thread: "conversation", Events: events[:1]}); err != nil || reply.OK {
 		t.Fatalf("a batch to a run the face does not draw: %+v %v", reply, err)
 	}
 }
@@ -102,7 +112,7 @@ func TestAFacePromptEscAndShiftTabReachTheExtension(t *testing.T) {
 		t.Fatal("a prompt before the extension connected was taken")
 	}
 	prompts := make(chan frame, 2)
-	hello(t, rig, func(l *link, got frame) {
+	l, _ := hello(t, rig, func(l *link, got frame) {
 		prompts <- got
 		if got.Text == "busy" {
 			l.answer(got, frame{Error: "pi is compacting its context"})
@@ -128,10 +138,11 @@ func TestAFacePromptEscAndShiftTabReachTheExtension(t *testing.T) {
 	if got := receive(t, prompts); got.Op != "interrupt" || got.Thread != "conversation" || got.Text != "" {
 		t.Fatalf("the interrupt on the wire: %+v", got)
 	}
+	askOK(t, l, frame{Op: "state", Thread: "conversation", State: &sample{Sequence: 2, Idle: true, Native: nativeOf(map[string]any{"model": cached})}})
 	if err := model.Input(t.Context(), mirror.Input{Kind: mirror.InputKindThinking}); err != nil {
 		t.Fatal(err)
 	}
-	if got := receive(t, prompts); got.Op != "thinking" || got.Thread != "conversation" || got.Text != "" {
+	if got := receive(t, prompts); got.Op != "thinking" || got.Thread != "conversation" || got.Text != "" || len(got.Levels) == 0 {
 		t.Fatalf("the shift+tab on the wire: %+v", got)
 	}
 }

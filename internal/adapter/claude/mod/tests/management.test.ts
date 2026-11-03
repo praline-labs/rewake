@@ -30,23 +30,24 @@ const results = (run: any) =>
 const states = (run: any) =>
   run.sent.filter((one: any) => one.path === "/v1/mod/state").map((one: any) => one.body);
 
-test("context is sampled initially, on measurement and after the main turn; missing usage stays unknown", async ($, on) => {
+test("what the session read is sampled initially, on measurement and after the main turn, as read", async ($, on) => {
   let usage: any = { window: 200000, tokens: 50000, percent: 25 };
   const run = world(on, { usage: () => usage });
   on("session.measure", () => ({ changed: ["context"] }));
   await start($);
   await run.clock.settle();
   expect(states(run).at(-1)).toMatchObject({
-    tokens: 50000,
-    window: 200000,
-    percent: 25,
-    model: "test-model",
+    native: {
+      usage: { context: { tokens: 50000, window: 200000, percent: 25 }, rateLimits: [] },
+      model: "test-model",
+      step: {},
+    },
     activity: "idle",
   });
   usage = { window: 200000 };
   await $.session.measure({ context: usage, rateLimits: [], changed: ["context"] } as any);
   await run.clock.settle();
-  expect(states(run).at(-1).tokens).toBeUndefined();
+  expect(states(run).at(-1).native.usage.context).toEqual({ window: 200000 });
   await $.turn.start({ turnId: "t" } as any);
   await run.clock.settle();
   expect(states(run).at(-1).activity).toBe("working");
@@ -55,16 +56,57 @@ test("context is sampled initially, on measurement and after the main turn; miss
   expect(states(run).at(-1).activity).toBe("idle");
 });
 
+// Review of b832ce0: a handover refuses a state between its snapshot and the
+// exec, and the next image takes it; the step's usage it carries may be
+// replaced before another sample, so it goes again as it was, the samples
+// after it waiting behind.
+test("a state a handover refused is sent again as it was, and the next waits behind it", async ($, on) => {
+  const refused = { status: 503, text: '{"error":"handing over"}' };
+  const run = world(on, { replies: { "/v1/mod/state": [refused, { status: 200, text: "{}" }] } });
+  const raws = () => run.sent.filter((one) => one.path === "/v1/mod/state").map((one) => one.raw);
+  await start($);
+  await run.clock.settle();
+  await $.turn.start({ turnId: "t" } as any);
+  await run.clock.settle();
+  expect(raws()).toHaveLength(1);
+  await run.clock.advance(1000);
+  await run.clock.settle();
+  const sent = raws().map((raw) => JSON.parse(raw));
+  expect(raws()[1]).toBe(raws()[0]);
+  expect(sent.length).toBeGreaterThan(2);
+  expect(sent.at(-1).sequence).toBeGreaterThan(sent[0].sequence);
+  expect(sent.at(-1).activity).toBe("working");
+});
+
+// A state refused for good goes once; one a handover keeps refusing goes
+// five times over 15 s and is let go.
+for (const [status, times] of [
+  [409, 1],
+  [503, 5],
+] as const) {
+  test(`a state refused with ${status} is sent ${times} times`, async ($, on) => {
+    const run = world(on, { replies: { "/v1/mod/state": [{ status, text: "{}" }] } });
+    await start($);
+    await run.clock.settle();
+    for (let waited = 0; waited < 30_000; waited += 1000) {
+      await run.clock.advance(1000);
+      await run.clock.settle();
+    }
+    const first = states(run)[0].sequence;
+    expect(states(run).filter((one: any) => one.sequence === first)).toHaveLength(times);
+  });
+}
+
 // Brief 60: a sample names where the session runs now, which a worktree
-// entry moves, and the account's windows in whole percent with their resets.
-test("a sample carries the session's directory and the account's rate limits", async ($, on) => {
+// entry moves, and the account's windows; the host converts them (brief 94).
+test("a sample carries the session's directory and the account's rate limits as read", async ($, on) => {
   let cwd = "/work";
   let limits: unknown[] = [];
   const run = world(on, { cwd: () => cwd, limits: () => limits });
   await start($);
   await run.clock.settle();
-  expect(states(run).at(-1).cwd).toBe("/work");
-  expect(states(run).at(-1).rateLimits).toBeUndefined();
+  expect(states(run).at(-1).native.cwd).toBe("/work");
+  expect(states(run).at(-1).native.usage.rateLimits).toEqual([]);
   cwd = "/work/.claude/worktrees/wt";
   limits = [
     { kind: "five_hour", percentUsed: 37.4, resetsAt: "2026-10-31T13:00:00Z" },
@@ -72,14 +114,11 @@ test("a sample carries the session's directory and the account's rate limits", a
   ];
   await $.turn.start({ turnId: "t" } as any);
   await run.clock.settle();
-  expect(states(run).at(-1)).toMatchObject({
+  expect(states(run).at(-1).native).toMatchObject({
     cwd: "/work/.claude/worktrees/wt",
-    rateLimits: [
-      { kind: "five_hour", percent: 37, resetsAt: Date.parse("2026-10-31T13:00:00Z") / 1000 },
-      { kind: "seven_day", percent: 9 },
-    ],
+    usage: { rateLimits: limits },
   });
-  expect(states(run).at(-1).rateLimits[1].resetsAt).toBeUndefined();
+  expect(Object.keys(states(run).at(-1))).not.toContain("rateLimits");
 });
 
 test("remote compact carries focus, returns requested while the heartbeat continues, then counts completion once", async ($, on) => {
@@ -100,7 +139,7 @@ test("remote compact carries focus, returns requested while the heartbeat contin
   expect(states(run).at(-1).compacting).toBe(true);
   await run.clock.advance(15000);
   expect(results(run).map((one: any) => one.outcome)).toEqual(["requested", "done"]);
-  expect(results(run).at(-1)).toMatchObject({ tokensBefore: 25000, tokensAfter: 1000 });
+  expect(results(run).at(-1).native).toEqual({ tokensBefore: 25000, tokensAfter: 1000 });
   expect(states(run).at(-1)).toMatchObject({
     compactions: 1,
     compacting: false,
@@ -120,7 +159,7 @@ test("compact refuses a running turn without calling native compact", async ($, 
   await $.turn.start({ turnId: "t" } as any);
   await run.clock.settle();
   expect(calls).toBe(0);
-  expect(results(run).at(-1)).toMatchObject({ outcome: "refused", reason: "in a turn" });
+  expect(results(run).at(-1)).toMatchObject({ outcome: "refused", code: "turn" });
 });
 
 test("native compaction counts only a main conversation completion, and a skip counts nothing", async ($, on) => {
@@ -145,8 +184,23 @@ test("native compaction counts only a main conversation completion, and a skip c
   });
 });
 
-test("interrupt waits for the matching aborted end and keeps its actor in the report and native history", async ($, on) => {
-  const run = world(on, { replies: { "/v1/mod/alive": orders(() => run, command("interrupt")) } });
+// The mod aborts the turn the host names and answers requested; the host
+// matches the end it hears on the outbox and sends the actor back as a trace.
+test("interrupt aborts the turn the host names, and a trace is appended to native history", async ($, on) => {
+  const run = world(on, {
+    replies: {
+      "/v1/mod/alive": [
+        ...orders(() => run, command("interrupt", { turn: "t" })),
+        ...orders(
+          () => run,
+          command("trace", {
+            id: "trace-1",
+            text: "main interrupted this turn with rewake interrupt",
+          }),
+        ),
+      ],
+    },
+  });
   const history = mock.session(on);
   const aborts: string[] = [];
   on("turn.abort", (_: any, e: any) => {
@@ -157,15 +211,34 @@ test("interrupt waits for the matching aborted end and keeps its actor in the re
   await $.turn.start({ turnId: "t" } as any);
   await run.clock.settle();
   expect(aborts).toEqual(["t"]);
-  expect(results(run)).toEqual([]);
-  await complete($, "sub", { agentId: "child", reason: "aborted" });
-  expect(results(run)).toEqual([]);
+  expect(results(run)).toEqual([
+    expect.objectContaining({ id: "request-1", outcome: "requested" }),
+  ]);
+  expect(states(run).at(-1).turn).toBe("t");
   await complete($, "t", { reason: "aborted", answer: "" });
-  expect(results(run).at(-1).outcome).toBe("done");
-  expect(run.ends().at(-1)!.body.answer).toBe("main interrupted this turn with rewake interrupt");
+  expect(run.ends().at(-1)!.body).toMatchObject({ turnId: "t", reason: "aborted" });
+  expect(states(run).at(-1).turn).toBeUndefined();
+  await run.clock.advance(holdMs);
+  expect(results(run).at(-1)).toMatchObject({ id: "trace-1", outcome: "done" });
   expect(JSON.stringify(history.appended())).toContain(
     "main interrupted this turn with rewake interrupt",
   );
+});
+
+test("an interrupt naming a turn that is not the running one aborts nothing", async ($, on) => {
+  const run = world(on, {
+    replies: { "/v1/mod/alive": orders(() => run, command("interrupt", { turn: "old" })) },
+  });
+  let calls = 0;
+  on("turn.abort", () => {
+    calls++;
+    return { value: undefined };
+  });
+  await start($);
+  await $.turn.start({ turnId: "t" } as any);
+  await run.clock.settle();
+  expect(calls).toBe(0);
+  expect(results(run).at(-1)).toMatchObject({ outcome: "refused", code: "turn" });
 });
 
 for (const action of ["interrupt", "compact"]) {
@@ -175,10 +248,7 @@ for (const action of ["interrupt", "compact"]) {
     });
     await start($);
     await run.clock.settle();
-    expect(results(run).at(-1)).toMatchObject({
-      outcome: "refused",
-      reason: "not the selected conversation",
-    });
+    expect(results(run).at(-1)).toMatchObject({ outcome: "refused", code: "conversation" });
   });
 }
 
@@ -192,21 +262,30 @@ test("interrupt without a main turn is refused without aborting", async ($, on) 
   await start($);
   await run.clock.settle();
   expect(calls).toBe(0);
-  expect(results(run).at(-1)).toMatchObject({ outcome: "refused", reason: "no turn running" });
+  expect(results(run).at(-1)).toMatchObject({ outcome: "refused", code: "idle" });
 });
 
-test("an interrupt without an end stays unknown, and a normal end never claims it stopped the turn", async ($, on) => {
-  const run = world(on, { replies: { "/v1/mod/alive": orders(() => run, command("interrupt")) } });
-  const history = mock.session(on);
-  on("turn.abort", () => ({ value: undefined }));
+test("an interrupt whose abort is refused answers what it said, and frees the guard", async ($, on) => {
+  const run = world(on, {
+    replies: {
+      "/v1/mod/alive": [
+        ...orders(() => run, command("interrupt")),
+        ...orders(() => run, command("interrupt", { id: "request-2" })),
+      ],
+    },
+  });
+  let refuse = true;
+  on("turn.abort", () => (refuse ? { deny: "no such turn" } : { value: undefined }));
   await start($);
   await $.turn.start({ turnId: "t" } as any);
-  await run.clock.advance(3000);
-  expect(results(run).at(-1)).toMatchObject({ outcome: "failed", open: true });
-  await complete($, "t");
-  expect(results(run).at(-1)).toMatchObject({ outcome: "refused", reason: "no turn running" });
-  expect(run.ends().at(-1)!.body.answer).toBe("done t");
-  expect(history.appended()).toEqual([]);
+  await run.clock.settle();
+  expect(results(run).at(-1)).toMatchObject({
+    outcome: "failed",
+    native: { error: expect.stringContaining("no such turn") },
+  });
+  refuse = false;
+  await run.clock.advance(holdMs);
+  expect(results(run).at(-1)).toMatchObject({ id: "request-2", outcome: "requested" });
 });
 
 test("a skipped remote compaction has a final refusal and no completion count", async ($, on) => {
@@ -214,7 +293,8 @@ test("a skipped remote compaction has a final refusal and no completion count", 
   on("session.compact", () => ({ skip: "nothing to compact" }));
   await start($);
   await run.clock.settle();
-  expect(results(run).map((one: any) => one.outcome)).toEqual(["requested", "refused"]);
+  expect(results(run).map((one: any) => one.outcome)).toEqual(["requested", "done"]);
+  expect(results(run).at(-1).native).toEqual({ skip: "nothing to compact" });
   expect(states(run).at(-1)).toMatchObject({ compactions: 0, compacting: false });
 });
 
@@ -244,7 +324,7 @@ test("effort is the main loop's latest request's, and each main-loop step is sam
   };
   await start($);
   await run.clock.settle();
-  expect(states(run).at(-1).effort).toBeUndefined();
+  expect(states(run).at(-1).native.step.effort).toBeUndefined();
   const before = states(run).length;
   await step({ effort: "max", agentId: "child" });
   await run.clock.settle();
@@ -252,17 +332,17 @@ test("effort is the main loop's latest request's, and each main-loop step is sam
   await step({ effort: "low" });
   await run.clock.settle();
   const count = states(run).length;
-  expect(states(run).at(-1).effort).toBe("low");
+  expect(states(run).at(-1).native.step.effort).toBe("low");
   await step({ effort: "low", index: 1 });
   await run.clock.settle();
   expect(states(run).length).toBe(count + 1);
-  expect(states(run).at(-1).effort).toBe("low");
+  expect(states(run).at(-1).native.step.effort).toBe("low");
   await step({ effort: "high", index: 2 });
   await run.clock.settle();
-  expect(states(run).at(-1).effort).toBe("high");
+  expect(states(run).at(-1).native.step.effort).toBe("high");
 });
 
-test("the cache is the latest main-loop response's usage; a response without usage and a subagent's leave it", async ($, on) => {
+test("a sample carries the last main-loop step's usage as reported; a subagent's leaves it", async ($, on) => {
   const run = world(on);
   let usage: any = null;
   on("turn.step", async function* (_: any, e: any) {
@@ -289,7 +369,7 @@ test("the cache is the latest main-loop response's usage; a response without usa
   };
   await start($);
   await run.clock.settle();
-  expect(states(run).at(-1).cacheRead).toBeUndefined();
+  expect(states(run).at(-1).native.step.usage).toBeUndefined();
   usage = {
     model: "m",
     input_tokens: 50,
@@ -297,15 +377,18 @@ test("the cache is the latest main-loop response's usage; a response without usa
     cache_read_input_tokens: 900,
     cache_creation_input_tokens: 50,
   };
+  const reported = usage;
   await step({});
   await run.clock.settle();
-  expect(states(run).at(-1)).toMatchObject({ cacheRead: 900, cacheWrite: 50, cacheInput: 50 });
+  expect(states(run).at(-1).native.step.usage).toEqual(reported);
   usage = { ...usage, cache_read_input_tokens: 1 };
   await step({ agentId: "child" });
+  await run.clock.settle();
+  expect(states(run).at(-1).native.step.usage).toEqual(reported);
   usage = null;
   await step({ index: 1 });
   await run.clock.settle();
-  expect(states(run).at(-1)).toMatchObject({ cacheRead: 900, cacheWrite: 50, cacheInput: 50 });
+  expect(states(run).at(-1).native.step.usage).toBeNull();
 });
 
 test("a prompt of rewake's face is submitted as the person's from the clock and answered done", async ($, on) => {

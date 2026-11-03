@@ -1,6 +1,6 @@
 // The mirror's feed through its interface: events in, batches, lost and
-// resync markers and cut texts out. Run by go test (feed_test.go).
-import { expect, test } from "bun:test";
+// resync markers and cut texts out.
+import { expect, test } from "claude-code/testing";
 import {
   bounds,
   type Carrier,
@@ -13,9 +13,9 @@ import {
   settles,
   textBudget,
   utf8Size,
-} from "./feed.ts";
+} from "../hooks/feed.ts";
 
-const wire = (value: unknown) => Buffer.byteLength(JSON.stringify(value));
+const wire = (value: unknown) => new TextEncoder().encode(JSON.stringify(value)).length;
 
 // A text of every kind of character the size counts apart: escaped, a
 // control character, two and four UTF-8 bytes.

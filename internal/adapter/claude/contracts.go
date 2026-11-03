@@ -8,7 +8,9 @@ import (
 
 // Contracts is the mod↔host protocol, which a loaded mod keeps speaking
 // across a switch of the room's build, and the run's handed state, which the
-// next image adopts (adapter.Contracts).
+// next image adopts (adapter.Contracts). The protocol is the schema's bound,
+// modhost.Protocol in protocol_gen.go, and
+// TestTheModContractChangesWithItsProtocol holds it to the generated file.
 func (claudeHarness) Contracts() map[string]string {
 	return map[string]string{"mod": strconv.Itoa(modhost.Protocol), "handover." + ID: strconv.Itoa(handoverVersion)}
 }

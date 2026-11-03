@@ -30,7 +30,7 @@ func helloFrom(t *testing.T, socket string) modhost.HelloAnswer {
 			return (&net.Dialer{}).DialContext(ctx, "unix", socket)
 		},
 	}}
-	body, _ := json.Marshal(modhost.HelloRequest{LoadID: "load-1", SessionID: "conversation-1", HarnessVersion: "2.1.296"})
+	body, _ := json.Marshal(modhost.HelloRequest{Protocol: modhost.Protocol, LoadID: "load-1", SessionID: "conversation-1", HarnessVersion: "2.1.296"})
 	answer, err := client.Post("http://rewake"+modhost.PathHello, "application/json", bytes.NewReader(body))
 	if err != nil {
 		t.Fatal(err)

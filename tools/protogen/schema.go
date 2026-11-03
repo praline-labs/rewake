@@ -49,7 +49,10 @@ type field struct {
 
 // shape is what a field holds: a scalar or a definition, or an array of one.
 type shape struct {
-	scalar string // "string", "integer" or "boolean"; empty for a reference
+	// scalar is "string", "integer", "boolean", or "raw" for a value the
+	// protocol carries as the harness gave it, unread (x-raw); empty for a
+	// reference.
+	scalar string
 	ref    string // a definition's name; empty for a scalar
 	array  bool
 }
@@ -87,6 +90,7 @@ type (
 		Required             []string        `json:"required"`
 		AdditionalProperties *bool           `json:"additionalProperties"`
 		Items                json.RawMessage `json:"items"`
+		Raw                  bool            `json:"x-raw"`
 	}
 )
 
@@ -235,7 +239,7 @@ func parseField(name string, text json.RawMessage) (field, error) {
 	}
 	f := field{name: name, description: node.Description}
 	if node.Kind == "array" {
-		if node.Items == nil || node.Ref != "" || node.Enum != nil || node.Properties != nil || node.Required != nil || node.AdditionalProperties != nil {
+		if node.Items == nil || node.Ref != "" || node.Raw || node.Enum != nil || node.Properties != nil || node.Required != nil || node.AdditionalProperties != nil {
 			return field{}, errors.New("an array property has a type, items and a description, nothing else")
 		}
 		var item rawNode
@@ -262,6 +266,12 @@ func parseShape(node rawNode) (shape, error) {
 		return shape{}, errors.New("an object, an enum or an array is a definition of its own, referenced by $ref")
 	}
 	switch {
+	// A raw value is any JSON: the agent forwards what its harness gave
+	// unconverted, and the wrapper reads it (docs/claude.md#the-protocol).
+	case node.Raw && node.Ref == "" && node.Kind == "":
+		return shape{scalar: "raw"}, nil
+	case node.Raw:
+		return shape{}, errors.New("a raw property has x-raw and a description, nothing else")
 	case node.Ref != "" && node.Kind == "":
 		name, ok := strings.CutPrefix(node.Ref, refPrefix)
 		if !ok {
@@ -271,7 +281,7 @@ func parseShape(node rawNode) (shape, error) {
 	case node.Ref == "" && (node.Kind == "string" || node.Kind == "integer" || node.Kind == "boolean"):
 		return shape{scalar: node.Kind}, nil
 	}
-	return shape{}, errors.New("a property is a string, an integer, a boolean, an array or a $ref")
+	return shape{}, errors.New("a property is a string, an integer, a boolean, an array, a $ref or x-raw")
 }
 
 func (s schema) find(name string) (def, bool) {

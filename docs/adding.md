@@ -27,6 +27,9 @@ Meant to be one move:
 3. Its private subtree's rule in the `depguard` settings of `.golangci.yml`: copy one
    adapter's rule (`adapter-claude`) for the new package and exclude the subtree from
    `adapter-new`.
+4. If it ships an in-agent half, an entry in `agents` of `internal/adapter/purity_test.go` and a
+   pin of its wire as the other adapters' `wire_words_test.go` do: the half runs natively and
+   carries, and the wrapper decides ([rules/adapter-api.md](rules/adapter-api.md#what-an-agents-half-keeps)).
 
 Everything else follows: the launch command, the guide entry, its own `--help` page, the step
 in FLOW, the `harnesses` field of the machine form. A harness cannot be half-registered —
@@ -44,17 +47,17 @@ is treated as a task (`mail.Owed`), so before adding one meant to behave differe
 ## A session tool
 
 A tool rewake offers a session in every harness — the brief and worktree tools — is a front end
-of one `rewake …` command, defined once in `internal/core/sessiontools/sessiontools.ts`: its name,
-label, description, input schema, the check of its input into the command's arguments or a
-refusal, its bound and the command it names in an error. The steps:
+of one `rewake …` command, defined once in Go, `internal/core/sessiontools`: its name, label,
+description, input schema, the check of its input into the command's arguments or a refusal, its
+bound and the wording of its raw end. The agents hold no copy: they register the table the
+wrapper sends and run what it plans ([worktree-tools.md](worktree-tools.md#the-worktree_status-tool)).
+The steps:
 
-1. Its `CommandTool` in that module, with the pure tests of its input in `sessiontools.test.ts`.
-2. `go run ./tools/protogen`, which copies the module into `internal/adapter/pi/sessiontools.ts`
-   and `internal/adapter/claude/mod/hooks/sessiontools.ts`; the generator's test fails when a
-   copy differs.
-3. In each adapter, its bridge offers the tool to the roles that see it: pi's `tools.ts`, and the
-   mod's `worktree.ts` or `briefs.ts`, registered at `session.start` in `rewake.ts`. Each
-   adapter's own tests hold the offer by role and how its runner reaches the command.
+1. Its `Tool` in `table.go`, its arguments' check in `args.go`, and the roles that see it in
+   `Offered`, with their tests in `table_test.go` and `call_test.go`.
+2. Nothing in the adapters: the table reaches a running session with the wrapper's restart. An
+   adapter's own tests hold its bridge, not each tool.
 
 A tool only one harness can serve — `worktree_enter`, built on Claude Code's own `EnterWorktree` —
-stays in that adapter.
+is offered only to that harness's run, and its native step stays in that adapter: the mod's move
+and its `tool/native` answer.

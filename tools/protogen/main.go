@@ -1,10 +1,7 @@
 // Command protogen writes the types of the mod's protocol from its one JSON
 // schema: TypeScript for the mod, Go for its endpoint
-// (docs/claude.md#the-protocol); and it copies the TypeScript modules every
-// adapter's harness side shares — the mirror's feed (docs/face.md, "The
-// feed") and the session tools (docs/code.md) — into each adapter that
-// embeds them. Run it from the module root after editing a schema or a shared
-// module:
+// (docs/claude.md#the-protocol). Run it from the module root after editing a
+// schema:
 //
 //	go run ./tools/protogen
 //
@@ -47,22 +44,6 @@ var targets = []target{
 	{schemaPath, tsPath, goPath, "modhost"},
 	{"internal/cli/room_view.schema.json", "shell/src/room_view.gen.ts", "internal/cli/room_view_gen.go", "cli"},
 	{"internal/core/mirror/mirror.schema.json", "face/src/mirror.gen.ts", "internal/core/mirror/mirror_gen.go", "mirror"},
-}
-
-// shared is a TypeScript module both adapters' harness sides use, and the
-// copies written from it. Each adapter embeds files of its own folder alone,
-// and the mod's host imports no file outside the mod, so each folder holds a
-// copy, marked as one and written from the source.
-type shared struct {
-	source string
-	copies []string
-}
-
-// The mirror's feed, which both send through, and the session tools both
-// offer.
-var shareds = []shared{
-	{"internal/core/mirror/feed.ts", []string{"internal/adapter/pi/feed.ts", "internal/adapter/claude/mod/hooks/feed.ts"}},
-	{"internal/core/sessiontools/sessiontools.ts", []string{"internal/adapter/pi/sessiontools.ts", "internal/adapter/claude/mod/hooks/sessiontools.ts"}},
 }
 
 func main() {
@@ -117,20 +98,5 @@ func generateAt(root string) ([]generated, error) {
 		}
 		files = append(files, generated{path: t.ts, content: emitTS(schema)}, generated{path: t.goFile, content: goSource})
 	}
-	for _, module := range shareds {
-		text, err := os.ReadFile(filepath.Join(root, module.source))
-		if err != nil {
-			return nil, err
-		}
-		for _, path := range module.copies {
-			files = append(files, generated{path: path, content: copyOf(module.source, text)})
-		}
-	}
 	return files, nil
-}
-
-// copyOf is a shared module as a copy holds it, under a line naming its source.
-func copyOf(source string, text []byte) []byte {
-	header := "// A copy of " + source + ", written by go run ./tools/protogen: edit that file.\n"
-	return append([]byte(header), text...)
 }
