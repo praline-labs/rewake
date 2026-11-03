@@ -4,9 +4,9 @@ The words this project gives a meaning of its own. One article per term; a new t
 article when it settles, a changed meaning rewrites its article.
 
 ## Room
-Variants: rooms
+Variants: rooms, комната
 Means: the sessions started from one launch directory: one main and the workers it raised.
-Where: the room's state lives under `v2/rooms/<room>` of the state directory.
+Where: the room's state lives under `v2/rooms/<room>` of the state directory; the owner says «комната» for that folder: письма, брифы, кто жив.
 
 ## main
 Means: the orchestrator session of a room: it hands out tasks, reads the reports and decides; it writes no product code itself. `rewake claude` or `rewake pi` started by a person always starts a main.
@@ -21,7 +21,8 @@ Means: a named recipe for a worker — harness, model, effort and role — raise
 Where: the owner says «шаблон воркера».
 
 ## Shell
-Means: the terminal screen of a main started at a terminal: main's pane and a worker's side by side, the strip under each, the bar and the hints.
+Variants: оболочка
+Means: the program on bun that draws the Экран of a main started at a terminal; a child of main's Место, restarted without ending a session.
 Avoid: host mode
 Where: `shell/`, on OpenTUI and Solid.
 
@@ -78,3 +79,56 @@ Means: the folder of a session's mailbox holding the letters already read.
 
 ## `.scratch/`
 Means: the git-ignored folder for the working files of a delegation or a review — briefs, reports, decision files; `.scratch/process/` is main's and survives a compaction and a reboot.
+
+## Экран
+Means: все, что человек видит в терминале main: два Окна, у каждого Шапка, Хвост и Статус, внизу Подсказки и Навигация; его рисует Оболочка.
+Where: слово владельца; в документах — the shell's screen ([docs/shell.md](docs/shell.md)).
+
+## Окно
+Variants: окно main, окно воркера
+Means: часть Экрана с сессией: слева main, справа выбранный в Навигации воркер.
+Avoid: панель
+Where: в документах — pane.
+
+## Шапка
+Means: верхняя строка над Окном: путь, ветка и имя сессии, у воркера еще тип.
+Where: в документах — the pane's top row.
+
+## Хвост
+Means: строка над вводом в Окне, работа комнаты: брифы с галочками, ⧗ ожидаемые отчеты; у claude ее рисует mod, у pi — plugin вместе с уровнем thinking.
+Where: в документах — the mod's tail и pi's input rule.
+
+## Статус
+Means: строка под Окном: модель, effort, ttl кеша, контекст; у main еще лимиты 5h/7d и ⧗N.
+Avoid: статуслиния — так зовется своя строка Claude Code, в rewake выключенная
+Where: в документах — the strip.
+
+## Подсказки
+Means: нижняя строка Экрана слева: неочевидные клавиши и плашка обновления.
+Where: в документах — the hints row.
+
+## Навигация
+Means: нижняя строка Экрана справа: вкладки воркеров и [briefs]; без воркеров ее нет.
+Where: в документах — the bar.
+
+## Место
+Variants: место main, место воркера
+Means: Go-процесс, который держит терминал сессии: у main он же запускает Оболочку и Обертку main, у воркера это space host.
+Avoid: хост — у владельца так зовется внешняя машина
+Where: в коде и документах — main's host (`internal/host/mainhost`) и space host (`internal/host/spacehost`).
+
+## Обертка
+Means: Go-процесс одной сессии: почта, доставка, отчеты о ходах, Статус; запускает Агента и держит Go-половину Коннектора.
+Where: в документах — the wrapper (`internal/host`).
+
+## Коннектор
+Means: связь Обертки с Агентом из двух половин через сокет: Go-адаптер в Обертке и mod внутри claude или plugin (расширение rewake) внутри pi.
+Where: `internal/adapter/claude` с модом, `internal/adapter/pi` с расширением; в документах — the adapter.
+
+## Агент
+Means: сам claude или pi, которого запускает Обертка.
+Where: в документах — the harness.
+
+## Ядро
+Means: не отдельный процесс, а Go-код внутри каждой Обертки: почта и доставка, реестр, брифы, отчеты, переключение сборки; общее состояние лежит в Комнате.
+Where: `internal/core`.
