@@ -303,6 +303,15 @@ What the library does not do, and what the package does about it:
   and never stops the emulator in the middle of a write.
 - **Closing the emulator races its reply reader**, so the package closes the pipe's write end and
   never the emulator.
+- **It cuts a row when the screen narrows**, keeping nothing of the cut, and marks no row the
+  program's autowrap broke. Main starts at the shell's window size and its pane is narrowed when a
+  worker's space opens, so a line main wrote across the window lost its end in the host's grid and
+  in every later preamble: after `rewake restart shell` the third line of main's intro was gone
+  (live, 2026-11-03). `reflow.go` wraps a narrowed primary screen as a terminal does: a row longer
+  than the new width goes onto rows below it, a row that fills the old width and has text after it
+  is taken as broken and joined to that text first, the rows that no longer fit leave from the
+  top, the cursor is kept on its text. Widening does not join rows again, and the alternate screen
+  is cut, its program drawing it again at the new size.
 - **Its damage tracking is never cleared**, so the package diffs the rows itself.
 - **Rows are read by walking cells**, not by parsing `Render()`: measured on a 200x50 screen, a
   repaint of about 35 KB through `Write` took 1.5 ms, `Render()` 0.9 ms, and the walk of all

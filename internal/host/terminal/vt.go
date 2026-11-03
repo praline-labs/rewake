@@ -119,8 +119,6 @@ func (v *vtEmulator) mouse(m MouseMode, on bool) {
 
 func (v *vtEmulator) write(p []byte) { _, _ = v.emu.Write(v.osc.filter(p)) }
 
-func (v *vtEmulator) resize(size Size) { v.emu.Resize(size.Cols, size.Rows) }
-
 func (v *vtEmulator) size() Size { return Size{Cols: v.emu.Width(), Rows: v.emu.Height()} }
 
 // inject writes p where the emulator's answers come out, after every answer
