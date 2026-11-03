@@ -459,13 +459,17 @@ idle worker makes it (`handover.go`, `modhost/handover.go`; `handover.claude` na
 | The delivery server's held and recent letters | busy while any is held, or a notice reported delivered is within its late word's minute (the host's own refusal) |
 | The mirror | its model in a memory file, which the next image serves; a face reconnects ([face.md](face.md#the-socket)) |
 | The cache | the last response's cache usage that had input, inline (`Handed.Cache`): the mod sends only its last step's ([telemetry](#telemetry)) |
-| The interrupts | the running main turn as the host knows it, and who interrupted which turn, inline (`Handed.Turn`, `Handed.Interrupts`): an end heard by the next image still carries its actor and its trace ([control](#control)); an interrupt waiting on its turn's end keeps the switch waiting at most its three seconds |
+| The interrupts | the running main turn as the host knows it, who interrupted which turn, and the conversation the last state named, inline (`Handed.Turn`, `Handed.Interrupts`, `Handed.Conversation`): an end heard by the next image still carries its actor and its trace, appended to the conversation the session moved to ([control](#control)); an interrupt waiting on its turn's end keeps the switch waiting at most its three seconds |
 
 The snapshot is the endpoint's quiescent point (November 2, 2026): it waits for every request
 under way that takes an effect — a hello, a turn's start or end, an ask opened or settled, a control
-reply, the face's events — and from it to the exec refuses the next with 503, which the mod sends
-again and the next image takes; a control request meanwhile is refused as busy, and a poll, a
-state and the status line are served throughout. An exec
+reply, the face's events, a state — and from it to the exec refuses the next with 503, which the mod
+sends again and the next image takes; a control request meanwhile is refused as busy, and a poll
+and the status line are served throughout. A state is an effect since brief 94 (review of
+b832ce0, November 3, 2026): it changes the cache observation, the running turn and the
+conversation handed over, and one acknowledged after the snapshot was lost with the image while
+the mod's next step replaced the usage it carried; the mod sends a state refused with 503 again,
+as read, after 1, 2, 4 and 8 s, its later samples waiting behind it, and lets it go after that. An exec
 that fails resumes them (`HandedOver.Resume`). Without it, an end captured after the snapshot was
 lost with the image and captured afresh after the exec, its boundary taking a later task (found in
 review). The ends are the gap a capture opens: captured afresh in the next image, a resent end's boundary

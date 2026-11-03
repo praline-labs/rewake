@@ -56,6 +56,47 @@ test("what the session read is sampled initially, on measurement and after the m
   expect(states(run).at(-1).activity).toBe("idle");
 });
 
+// Review of b832ce0: a handover refuses a state between its snapshot and the
+// exec, and the next image takes it; the step's usage it carries may be
+// replaced before another sample, so it goes again as it was, the samples
+// after it waiting behind.
+test("a state a handover refused is sent again as it was, and the next waits behind it", async ($, on) => {
+  const refused = { status: 503, text: '{"error":"handing over"}' };
+  const run = world(on, { replies: { "/v1/mod/state": [refused, { status: 200, text: "{}" }] } });
+  const raws = () => run.sent.filter((one) => one.path === "/v1/mod/state").map((one) => one.raw);
+  await start($);
+  await run.clock.settle();
+  await $.turn.start({ turnId: "t" } as any);
+  await run.clock.settle();
+  expect(raws()).toHaveLength(1);
+  await run.clock.advance(1000);
+  await run.clock.settle();
+  const sent = raws().map((raw) => JSON.parse(raw));
+  expect(raws()[1]).toBe(raws()[0]);
+  expect(sent.length).toBeGreaterThan(2);
+  expect(sent.at(-1).sequence).toBeGreaterThan(sent[0].sequence);
+  expect(sent.at(-1).activity).toBe("working");
+});
+
+// A state refused for good goes once; one a handover keeps refusing goes
+// five times over 15 s and is let go.
+for (const [status, times] of [
+  [409, 1],
+  [503, 5],
+] as const) {
+  test(`a state refused with ${status} is sent ${times} times`, async ($, on) => {
+    const run = world(on, { replies: { "/v1/mod/state": [{ status, text: "{}" }] } });
+    await start($);
+    await run.clock.settle();
+    for (let waited = 0; waited < 30_000; waited += 1000) {
+      await run.clock.advance(1000);
+      await run.clock.settle();
+    }
+    const first = states(run)[0].sequence;
+    expect(states(run).filter((one: any) => one.sequence === first)).toHaveLength(times);
+  });
+}
+
 // Brief 60: a sample names where the session runs now, which a worktree
 // entry moves, and the account's windows; the host converts them (brief 94).
 test("a sample carries the session's directory and the account's rate limits as read", async ($, on) => {

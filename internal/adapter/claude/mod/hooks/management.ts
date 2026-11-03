@@ -13,6 +13,7 @@ import type {
 } from "../protocol.gen.ts";
 import { paths } from "../protocol.gen.ts";
 import type { Host } from "./outbox.ts";
+import { lastRetryMs, nextDelay } from "./outbox.ts";
 
 export interface Native {
   id: () => Promise<string>;
@@ -156,11 +157,25 @@ export class Management {
           native,
           ...state,
         };
-        await this.host.post(paths.modState, request);
+        await this.post(request);
       })
       .catch(() => {
         /* A later native event or heartbeat samples again. */
       });
+  }
+
+  // post sends a sample until the host takes it. A handover refuses one
+  // between its snapshot and the exec with a 503, and the next image takes
+  // it: the step's usage it carries may be replaced before the next sample.
+  // Later samples wait behind it, in order; one of a generation the load no
+  // longer holds is let go, and so is one still refused after 15 s.
+  private async post(request: StateRequest) {
+    for (let delay = nextDelay(0); ; delay = nextDelay(delay)) {
+      const answer = await this.host.post(paths.modState, request);
+      if (answer.status !== 503 || request.generation !== this.generation) return;
+      if (delay === lastRetryMs) return;
+      await new Promise<void>((resolve) => this.host.after(delay, resolve));
+    }
   }
 
   compactStarted() {

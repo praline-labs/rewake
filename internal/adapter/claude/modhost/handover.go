@@ -45,6 +45,9 @@ type Handed struct {
 	// carries its actor and its trace.
 	Turn       string                `json:"turn,omitempty"`
 	Interrupts []control.Attribution `json:"interrupts,omitempty"`
+	// Conversation is the one the last state named, which a command, a late
+	// trace among them, is matched against until the next state names one.
+	Conversation string `json:"conversation,omitempty"`
 }
 
 // HandedLoad is the current load: its hello and its generation's state.
@@ -108,12 +111,14 @@ const unreadBound = 15 * time.Minute
 
 // effecting are the paths whose requests take an effect that lives in this
 // image: a load admitted, a turn's start or end captured, an ask opened, the
-// face's events. A handover waits for those under way and refuses the next,
-// which the mod sends again to the next image; a poll, a state or a status
-// line changes nothing handed over and is served throughout.
+// face's events, a state, which changes the cache observation, the running
+// turn and the conversation handed over. A handover waits for those under
+// way and refuses the next, which the mod sends again to the next image; a
+// poll or a status line changes nothing handed over and is served
+// throughout.
 var effecting = map[string]bool{
 	PathHello: true, PathTurnStart: true, PathTurnEnd: true, PathAskOpen: true,
-	PathAskSettle: true, PathModControl: true, PathMirrorEvents: true,
+	PathAskSettle: true, PathModControl: true, PathMirrorEvents: true, PathModState: true,
 }
 
 // errHanding refuses an effect between a handover's snapshot and its exec.
@@ -158,7 +163,7 @@ func (s *Server) HandOver() (Handed, *os.File, error) {
 	s.frozen = true
 	handed := Handed{
 		Version: handedVersion, Harness: s.harness, Generation: s.generation, Transition: s.transition, Cache: s.management.observed.cache,
-		Turn: s.management.turn, Interrupts: s.management.interrupts.Handed(),
+		Turn: s.management.turn, Interrupts: s.management.interrupts.Handed(), Conversation: s.management.observed.thread,
 	}
 	if s.current != nil {
 		handed.Current = &HandedLoad{Hello: s.current.hello, Generation: s.current.generation, Live: s.current.live}
@@ -201,7 +206,7 @@ func (s *Server) Adopt(handed Handed, listener *os.File) error {
 	}
 	s.mu.Lock()
 	s.generation, s.transition = handed.Generation, handed.Transition
-	s.management.observed.cache = handed.Cache
+	s.management.observed.cache, s.management.observed.thread = handed.Cache, handed.Conversation
 	s.management.turn = handed.Turn
 	s.management.interrupts.Adopt(handed.Interrupts)
 	for _, load := range handed.Superseded {
