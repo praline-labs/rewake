@@ -10,6 +10,10 @@ path — a turn end, its `finished` report, and how waits are recorded and settl
 [delivery-turn-end.md](delivery-turn-end.md#the-end-of-a-turn); the rules are O1 and O2 of
 [rules/turns.md](rules/turns.md).
 
+A report of any kind — finished, error, stopped or pending — that answers a task given with
+`--brief` is printed by `rewake inbox` with the brief's state under it, and its notice ends with
+`(brief N x/y)`; the report itself is unchanged ([briefs.md](briefs.md#the-commands)).
+
 ## Failed turns
 
 After a failed or interrupted turn, a session is woken only by new mail: what was already

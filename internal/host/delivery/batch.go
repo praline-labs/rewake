@@ -67,6 +67,7 @@ func (s *Server) deliverGroup(ctx context.Context, pending []mail.Message) {
 	if len(ready) == 0 || !s.owned() {
 		return
 	}
+	s.noteBriefs(ready)
 	message := announcement(ready)
 	var result mail.Result
 	handed := boottime.Now()

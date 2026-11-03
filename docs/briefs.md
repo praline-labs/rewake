@@ -180,6 +180,21 @@ The `brief` group of the command table, with `--json` on each, examples parsed a
   to any other the letter is shown and the brief is one line, that it was given to an earlier run
   and main can give it again with `--brief` (`"earlierRun": true` under `--json`). A notice never
   carries it.
+- **What main reads.** Decided by the owner, November 3, 2026: a report on a task given with
+  `--brief` carries the brief's state, so a finding left only in a comment is not missed.
+  `rewake inbox` prints under the report, read at that moment (`internal/core/reportbrief`):
+  `── brief 96 · 8/8`, `unticked:` none or each open item by number and text, and `comments since
+  the task:` each with author, capacity and time, in full, those made after the task was sent, by
+  anyone. The tie is read, not stored: the report's `inReplyTo` names the tasks the worker read,
+  found in its mailbox (`mail.TasksAnswered`), and a task's `brief` field names the brief; a
+  report on several tasks of several briefs has a block each. A closed brief shows its last state
+  (`· closed`); one that cannot be read leaves the report as it is with one line saying so; a
+  task swept from the worker's mailbox, or a report on a plain task, has no block. The unclaimed
+  answer ([turn-outcomes.md](turn-outcomes.md#unclaimed-answers)) names no task and has none.
+  Under `--json` the message gains `briefState`, a list of `{id, done, total, closed?,
+  unticked: [{n, text, done}], comments: [{from, capacity?, at, text}], error?}`. The notice of
+  such a report ends its preview with `(brief 96 7/8)`, read when the notice is made
+  ([delivery.md](delivery.md#the-notice)). Nothing is written to disk.
 - **An edit tells nobody.** "Only then" is the owner's: main that wants a worker to see a new
   text sends a letter, with `--brief` again.
 - `rewake edit` of a task with a brief keeps the brief in its replacement; `withdraw` leaves the

@@ -8,6 +8,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/registry"
+	"github.com/praline-labs/rewake/internal/core/reportbrief"
 	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/core/session"
 	"github.com/praline-labs/rewake/internal/infra/state"
@@ -56,6 +57,9 @@ type messageView struct {
 	// BriefView is the brief the letter gives, as it reads now; under --json
 	// it stands where the letter's record has the brief's id.
 	BriefView *letterBrief `json:"brief,omitempty"`
+	// BriefState is the state of the brief each task a report answers gave,
+	// as it reads now (internal/core/reportbrief); none for any other letter.
+	BriefState []reportbrief.Block `json:"briefState,omitempty"`
 	mail.Message
 }
 

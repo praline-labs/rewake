@@ -59,7 +59,7 @@ func handleInbox(ctx *Context, call Call) error {
 		if peek {
 			return writeInboxPeek(ctx, session.Name, views)
 		}
-		return writeInbox(ctx, inboxModel{Session: session.Name, Messages: withBriefs(dir, views, session.Name, box.Epoch())})
+		return writeInbox(ctx, inboxModel{Session: session.Name, Messages: withBriefStates(dir, withBriefs(dir, views, session.Name, box.Epoch()))})
 	})
 	return readFailure(err, session.Name, selected, peek)
 }
@@ -115,6 +115,7 @@ func inboxLines(messages []messageView) []string {
 		lines = append(lines, letterHead(message)...)
 		lines = append(lines, letterBody(message))
 		lines = append(lines, briefLetterLines(message.BriefView)...)
+		lines = append(lines, briefStateLines(message.BriefState)...)
 	}
 	return lines
 }
