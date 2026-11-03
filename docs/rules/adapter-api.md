@@ -85,6 +85,12 @@ type Harness interface {
 - `Launch` turns a neutral description — name, role, room, the briefing, the working
   directory, a conversation id, the endpoint's address — and the run directory the host owns,
   where the adapter may write what lives exactly as long as the run, into the plan of one run.
+- With `LaunchRequest.Adopting` the run's harness already runs, started by an earlier image of
+  the wrapper that handed it over ([state.md](state.md#switching-a-running-room)). Launch then
+  answers only the service, its wake and the socket on the request's paths. It checks nothing
+  and writes nothing that prepares a start, and it does not refuse: a refusal ends a running
+  session. Its command, arguments, environment and notes are not read (November 3, 2026, when
+  Claude Code's check of a stale socket refused its own live one).
 - A briefing that needs a sentence about its own harness — how a session on it commits — gets
   it from the adapter, as `brief.Context.Harness`, a section after the role's own; the role
   texts and the CLI's help name no harness. A help text that needs one takes it from the
@@ -360,7 +366,8 @@ the minimum ("Claude Code 2.1.280 is installed; rewake needs 2.1.287 or later");
 version can be read it refuses, exit 1, saying how the version was asked and what came of it;
 at or above it the launch goes on. A version newer than any a live check ran on is not refused
 and not noted. A gate is a minimum or nothing — an adapter without one reads nothing — and
-never an exact version. Claude Code's minimum is 2.1.287, pi's 1.2.0.
+never an exact version. Claude Code's minimum is 2.1.287, pi's 1.2.0. An adoption reads no
+version: its harness runs already, and the program on `PATH` may have changed since it started.
 
 The one exact version is a copy shipped with rewake (owner decision, October 19, 2026): pi is
 installed and updated with rewake, so the room never runs a pi rewake was not checked with.

@@ -28,8 +28,7 @@ func adoptRun(catalog adapter.Catalog, spec string, stderr io.Writer) int {
 	}
 	harness, ok := catalog.Find(handover.Harness)
 	if !ok {
-		_, _ = fmt.Fprintf(stderr, "rewake: the run handed over is of harness %s, which this build does not have\n", handover.Harness)
-		return ExitFailed
+		return holdUnadopted(handover, "it is of harness "+handover.Harness+", which this build does not have", stderr)
 	}
 	if handover.Park != nil {
 		if code, done := unpark(handover, stderr); done {
@@ -51,10 +50,22 @@ func adoptRun(catalog adapter.Catalog, spec string, stderr io.Writer) int {
 		checkout.settle(err != nil || code != 0)
 	}
 	if err != nil {
-		_, _ = fmt.Fprintln(stderr, "rewake: the run handed over could not be adopted: "+err.Error())
+		// Said as the adoption failed, while the harness it held ran on
+		// (host/unadopted.go).
 		return ExitFailed
 	}
 	return code
+}
+
+// holdUnadopted keeps the harness of a run this image cannot adopt running,
+// unserved, until it ends: exiting would end it with the terminal's hangup
+// (host.Hold). Nothing here holds the room's lease to tell main by.
+func holdUnadopted(handover *host.Handover, why string, stderr io.Writer) int {
+	_, _ = fmt.Fprintln(stderr, "rewake: the run handed over could not be adopted: "+why+"; its harness runs on unserved: no letter wakes it and none of its turns is reported. End it and start it again.")
+	if code, held := handover.Hold(); held {
+		return code
+	}
+	return ExitFailed
 }
 
 // unpark is a parked image of a switch (host/switching): it holds no lease
@@ -70,13 +81,11 @@ func unpark(handover *host.Handover, stderr io.Writer) (code int, done bool) {
 	// in the target. The wait is bounded by the drop's deadline.
 	decided, err := switching.Wait(park, "session "+handover.Name)
 	if err != nil {
-		_, _ = fmt.Fprintln(stderr, "rewake: the run parked for a switch was lost: "+err.Error())
-		return ExitFailed, true
+		return holdUnadopted(handover, "the switch it was parked for was lost: "+err.Error(), stderr), true
 	}
 	if decided == switching.Go {
 		err := handover.Continue(park.Staged)
-		_, _ = fmt.Fprintln(stderr, "rewake: the run parked for a switch could not exec the new build: "+err.Error())
-		return ExitFailed, true
+		return holdUnadopted(handover, "the new build could not be executed: "+err.Error(), stderr), true
 	}
 	handover.Park = nil
 	return 0, false

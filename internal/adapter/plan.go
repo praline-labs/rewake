@@ -103,6 +103,14 @@ type LaunchRequest struct {
 	// plus the rewake variables that name the run. The adapter starts the
 	// harness with it, adding only its own.
 	Env []string
+	// Adopting says the plan is for a run an earlier image of this wrapper
+	// started and handed over: its harness runs already, on what that
+	// launch planned. Launch then builds only what the run serves with — the
+	// service Adopt runs on, its wake and the plan's socket — and refuses
+	// nothing and changes nothing a start of the harness would: a check
+	// meant for a harness not yet started fails on the one running, and its
+	// refusal ends the session (docs/claude.md#handing-the-run-over).
+	Adopting bool
 }
 
 // VersionGate is how a launch learns whether the installed harness is one the

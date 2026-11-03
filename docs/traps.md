@@ -1,5 +1,5 @@
 ---
-description: What misbehaves in rewake and the harnesses it lives with, by symptom — roles and reports, tests next to a live session, arguments, delivery — each entry dated, with its cause and what to do.
+description: What misbehaves in rewake and the harnesses it lives with, by symptom — roles and reports, tests next to a live session, arguments, delivery, a switch of the room's build — each entry dated, with its cause and what to do.
 ---
 
 # Traps in rewake and its harnesses
@@ -349,3 +349,27 @@ directory, so a plan read beside it found no manifest. The plan after an install
 the command came from, taken before npm ran ([install.md](install.md#updating-from-inside-rewake)).
 
 *November 1, 2026, in the live check of a local registry.*
+
+## A switch of the room's build
+
+### After `rewake restart rewake` main's Claude Code ended, and the room with it
+
+The switch committed, then main's wrapper on the new build printed `rewake: the run handed over
+could not be adopted: …/sock/<id>.sock is a live socket; another session is using this name` and
+exited; its exit hung up main's terminal, and Claude Code, the shell, the room and the writer
+ended. The adopted image ran the whole of a launch's plan again against a harness already
+running: Claude Code's adapter refuses a messaging socket something listens on, as another
+session's, and the one listening was the run's own Claude Code. Every Claude Code run, main or
+worker, failed so; pi has no such check, and the live checks of the switch had run pi and the
+fixture only. The adapter's plan also wrote the worker profile again, and the host ran the
+version gate, which the next build's pinned pi could have refused.
+
+An adoption now plans only what the run is served with (`LaunchRequest.Adopting`,
+[claude.md](claude.md#what-an-adoption-repeats)), and an adoption that fails anyway no longer
+exits under its harness: it holds it, unserved, and a worker's main is told
+([rules/state.md](rules/state.md#switching-a-running-room)). `TestClaudeAdopt` in the workflow
+suite runs the real adapter against a stand-in listening on the socket, and failed on the old
+code with the owner's line.
+
+*November 3, 2026, in the owner's room; checked live in a private room with a Claude Code main,
+a Claude Code worker and a pi worker.*

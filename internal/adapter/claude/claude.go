@@ -4,11 +4,9 @@ package claude
 
 import (
 	"fmt"
-	"path/filepath"
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter"
-	"github.com/praline-labs/rewake/internal/adapter/claude/modhost"
 	"github.com/praline-labs/rewake/internal/core/ask"
 	"github.com/praline-labs/rewake/internal/core/brief"
 	"github.com/praline-labs/rewake/internal/core/registry"
@@ -218,6 +216,9 @@ func conversationRefusal(args []string) error {
 }
 
 func (claudeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, error) {
+	if request.Adopting {
+		return adoptionPlan(request), nil
+	}
 	args := append([]string{}, request.Args...)
 	if adapter.HasFlag(args, worktreeFlag) {
 		// The launch command takes the flag before a launch is planned; one
@@ -246,17 +247,13 @@ func (claudeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, 
 		args = adapter.AddFlags(args, socketFlag, socket)
 	}
 
-	args, notes, err := adapter.ApplyDefaults(args, claudeDefaults())
+	args, notes, err := withDefaults(request, args)
 	if err != nil {
 		return adapter.LaunchPlan{}, err
 	}
-	if request.Role.ID != role.Main.ID && !adapter.HasFlag(args, autocompactFlag) {
-		args = adapter.AddFlags(args, autocompactFlag, defaultWindow)
-	}
-	reply := replyPath(request, socket, owns)
-	if len(reply) > maxSocketPath {
-		notes = append(notes, "not hearing back about held messages: the socket path "+reply+" is longer than a unix socket allows")
-		reply = ""
+	reply, note := replyOf(request, socket, owns)
+	if note != "" {
+		notes = append(notes, note)
 	}
 	worker, err := workerProfile(request, args)
 	if err != nil {
@@ -301,10 +298,6 @@ func (claudeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, 
 
 	wake := newLane(socket, reply, owns)
 	wake.room = request.RoomDir
-	var service adapter.Service
-	var live adapter.LiveReporter
-	var turns adapter.TurnBoundary
-	var telemetry adapter.Telemetry
 	env := request.Env
 	if request.Shell {
 		env = fullscreen(env)
@@ -315,27 +308,13 @@ func (claudeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, 
 	if worker.configDir != "" {
 		env = withEnv(env, configDirEnv, worker.configDir)
 	}
-	modSocket := modSocketPath(request)
-	switch {
-	case len(modSocket) > maxSocketPath:
-		service = modless{lane: wake, cause: "its socket path " + modSocket + " is longer than a unix socket allows; start it with a shorter session name, or point REWAKE_DIR, the state directory, at a shorter path"}
-	case request.RunDir == "" || request.Socket == "":
-		service = modless{lane: wake, cause: "the launch has no run directory or inbox socket of rewake's to load it from"}
-	default:
+	served := serve(request, args, wake)
+	if served.modSocket != "" {
 		// The mod is this run's alone: written into its directory, loaded
 		// by this launch's flag, its socket named in this launch's
 		// environment.
 		args = adapter.AddFlags(args, pluginDirFlag, modDir(request.RunDir))
-		env = modEnv(env, modSocket)
-		run := &modRun{lane: wake, dir: modDir(request.RunDir), socket: modSocket, hostsSpaces: request.Role.Spaces, controls: request.ControlDir != ""}
-		run.server = modhost.New(modhost.Config{
-			Socket: modSocket, Role: request.Role.ID, Record: filepath.Join(request.RunDir, "hello.json"), Wait: harnessWait,
-			ControlDir: request.ControlDir, Epoch: request.Epoch,
-			Live: run.transition, Ended: runEnded,
-			Asked: askedOf(request), Dialog: dialogOf(request), Effort: flagValue(args, effortFlag), Window: windowTokens(flagValue(args, autocompactFlag)), Closing: request.Closing, Mirror: request.Mirror, Work: request.Work,
-			RoomDir: request.RoomDir,
-		})
-		service, live, turns, telemetry = run, run, run, run.server
+		env = modEnv(env, served.modSocket)
 	}
 	return adapter.LaunchPlan{
 		Command:      request.Program("claude"),
@@ -344,11 +323,11 @@ func (claudeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, 
 		Socket:       socket,
 		OwnsSocket:   owns,
 		Notes:        notes,
-		Service:      service,
+		Service:      served.service,
 		Wake:         wake,
-		Live:         live,
-		TurnBoundary: turns,
-		Telemetry:    telemetry,
+		Live:         served.live,
+		TurnBoundary: served.turns,
+		Telemetry:    served.telemetry,
 	}, nil
 }
 

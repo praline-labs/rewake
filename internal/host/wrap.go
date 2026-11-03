@@ -18,78 +18,24 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/core/control"
-	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/core/space"
 	"github.com/praline-labs/rewake/internal/core/work"
-	"github.com/praline-labs/rewake/internal/core/worktype"
 	"github.com/praline-labs/rewake/internal/host/delivery"
 	"github.com/praline-labs/rewake/internal/host/launch"
 	"github.com/praline-labs/rewake/internal/host/terminal"
-	"github.com/praline-labs/rewake/internal/infra/build"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
-
-// Request is one launch.
-type Request struct {
-	// Harness is what to run.
-	Harness adapter.Harness
-	// Dir is the room-scoped state directory.
-	Dir string
-	// Name is the requested prefix; empty uses the role and picks a free address.
-	Name string
-	// Args are the caller's arguments for the harness.
-	Args []string
-	// Intro asks for the briefing that tells the agent it runs under rewake.
-	Intro bool
-	// Command is the program to start in place of the harness's own.
-	Command string
-	// Shell says the harness runs in rewake's shell, on the shell's
-	// terminal (docs/shell.md): an ordinary run here, drawn by the shell,
-	// its stops continued at once.
-	Shell bool
-
-	// Role is explicit when its ID is set; empty always uses general.
-	Role role.Role
-	// Template is the alias the worker's space was opened with
-	// (adapter.LaunchRequest.Template).
-	Template string
-	// WorktreeEntry says that template lets the worker enter a checkout
-	// (adapter.LaunchRequest.WorktreeEntry).
-	WorktreeEntry bool
-	// Mirror asks for rewake's own face (adapter.LaunchRequest.Mirror).
-	Mirror bool
-	// WorkType is the kind of work the worker was raised for
-	// (adapter.LaunchRequest.WorkType).
-	WorkType worktype.Type
-	// RoleReason says why the launch has its role, for the record and the
-	// briefing; empty says the role was selected with its flag.
-	RoleReason string
-	// OnTurn publishes a turn's end the run's TurnBoundary reported, and
-	// answers what the published end said.
-	OnTurn func(context.Context, registry.Session, adapter.TurnEnd) (mail.Outcome, error)
-	// OnConfirm runs an end the adapter may hold open, beside OnTurn
-	// (adapter.TurnHandler.Confirm); a held one answers its reason in Held.
-	OnConfirm func(context.Context, registry.Session, adapter.TurnEnd) (mail.Outcome, error)
-	// OnClaimed hears the session once its name is claimed, before the
-	// harness is planned: whatever was prepared for the launch learns whose
-	// it is. An error ends the launch.
-	OnClaimed func(registry.Session) error
-	// Lease is the room's build lease the caller took for this launch and
-	// keeps until Run returns; nil has Run take its own. Run adds a hold of
-	// its own either way, which lasts until the run's workers have stopped.
-	Lease *build.Lease
-	// Handover is the run an earlier image of this wrapper handed over
-	// (reexec.go): Run adopts it instead of claiming and starting.
-	Handover *Handover
-}
 
 // Run starts the harness, serves its mailbox until it exits, and returns the
 // exit code of the harness itself: rewake is in the middle, and a caller
 // scripting around it should see what the program said.
 func Run(ctx context.Context, request Request) (int, error) {
+	// An adoption that fails before it has the harness holds it rather than
+	// return under it (unadopted.go); a launch just fails.
+	hold := &unadopted{request: request}
 	// The build lease comes first and goes last: every lock, callback,
 	// worker and cleanup of the run is inside it. A caller hands over the one it took
 	// rather than holding it shared while this asks for it exclusive.
@@ -98,13 +44,13 @@ func Run(ctx context.Context, request Request) (int, error) {
 	// read two levels up.
 	base, err := state.BaseForRoom(request.Dir)
 	if err != nil {
-		return 0, err
+		return hold.fail(err)
 	}
 	lease := request.Lease
 	if lease == nil {
 		acquired, err := leaseFor(request)(base, filepath.Base(request.Dir))
 		if err != nil {
-			return 0, err
+			return hold.fail(err)
 		}
 		defer acquired.Release()
 		if note := acquired.Note(); note != "" {
@@ -119,35 +65,36 @@ func Run(ctx context.Context, request Request) (int, error) {
 	self := os.Getpid()
 	selfStart, err := proc.StartTime(self)
 	if err != nil {
-		return 0, fmt.Errorf("could not read the start time of this process: %w", err)
+		return hold.fail(fmt.Errorf("could not read the start time of this process: %w", err))
 	}
 
 	// A run is named by the boot too: after a restart of the machine the same
 	// pid and start can name another process.
 	boot, err := registry.CurrentBoot()
 	if err != nil {
-		return 0, fmt.Errorf("could not read the machine's boot id, which names this run: %w", err)
+		return hold.fail(fmt.Errorf("could not read the machine's boot id, which names this run: %w", err))
 	}
 
 	cwd, err := os.Getwd()
 	if err != nil {
-		return 0, err
+		return hold.fail(err)
 	}
 	// The version is read before the run is claimed, so a refusal leaves no
 	// record, no session and no socket behind.
 	version, start, err := readVersion(request, cwd)
 	if err != nil {
-		return 0, err
+		return hold.fail(err)
 	}
 	// The name is claimed before anything is prepared. Preparing first means a
 	// launch that loses the race has already touched what belongs to the session
 	// that won — its socket file, for one.
 	session, err := claimOrAdopt(request, self, selfStart, boot, cwd)
 	if err != nil {
-		return 0, err
+		return hold.fail(err)
 	}
 	name := session.Name
 	epoch := session.Epoch()
+	hold.name, hold.epoch, hold.part = name, epoch, session.Role
 	defer func() {
 		// Ownership is settled once, before anything is removed. Asking again
 		// afterwards always answered no — the record had just been deleted — so
@@ -166,12 +113,13 @@ func Run(ctx context.Context, request Request) (int, error) {
 	reclaimRuns(request.Dir)
 	runDir, err := makeRunDir(request.Dir, name, epoch)
 	if err != nil {
-		return 0, err
+		return hold.fail(err)
 	}
 	life.atEnd(func() { _ = state.RemoveAll(runDir) })
+	hold.runDir = runDir
 	if request.OnClaimed != nil {
 		if err := request.OnClaimed(session); err != nil {
-			return 0, err
+			return hold.fail(err)
 		}
 	}
 
@@ -190,7 +138,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 
 	model, stopMirror, err := startMirror(request, name, epoch)
 	if err != nil {
-		return 0, err
+		return hold.fail(err)
 	}
 	defer stopMirror()
 
@@ -223,6 +171,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 		WorkType:      request.WorkType,
 		Mirror:        model,
 		Work:          func() string { return work.Of(launch.QuietBriefHome(request.Dir), name, epoch) },
+		Adopting:      request.Handover != nil,
 	}
 	launchRequest.Env = launch.SessionEnv(launchRequest, request.Harness.EnvNotInherited())
 	if request.Shell {
@@ -238,12 +187,13 @@ func Run(ctx context.Context, request Request) (int, error) {
 	}
 	plan, err := request.Harness.Launch(launchRequest)
 	if err != nil {
-		return 0, err
+		return hold.fail(err)
 	}
 	// The plan is the run's from here: whatever fails next, its service is
 	// closed once, before the run's directory goes.
 	closeService := closeOnce(plan.Service)
 	defer closeService()
+	hold.close = closeService
 	live.planned = plannedLive(request.Harness.Offers(), plan, controlDir)
 	if request.Handover == nil {
 		// An adopted image says nothing: its stderr is the harness's terminal,
@@ -261,7 +211,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 	session.Socket = plan.Socket
 	session.OwnsSocket = plan.OwnsSocket
 	if err := registry.Update(request.Dir, session); err != nil {
-		return 0, err
+		return hold.fail(err)
 	}
 	// Signals are caught before the child exists. In the gap between starting it
 	// and installing the handlers, a SIGTERM meant for the wrapper would kill it
@@ -280,19 +230,19 @@ func Run(ctx context.Context, request Request) (int, error) {
 	ends := make(chan int64, 8)
 	stopServing, err := startServing(ctx, request, session, name, epoch, plan, live, closeService, ends)
 	if err != nil {
-		return 0, err
+		return hold.fail(err)
 	}
 	defer stopServing()
 	if err := refuseWithheld(session, request.Harness, plan); err != nil {
-		return 0, err
+		return hold.fail(err)
 	}
 	if err := awaitBoundary(ctx, session, request.Harness, live); err != nil {
-		return 0, err
+		return hold.fail(err)
 	}
 
 	harness, onStop, err := runHarness(request, plan)
 	if err != nil {
-		return 0, err
+		return hold.fail(err)
 	}
 
 	process, _ := plan.Service.(adapter.ProcessService)

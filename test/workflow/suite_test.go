@@ -48,6 +48,9 @@ func TestMain(m *testing.M) {
 		if os.Getenv(shimHarness) == "fixture" {
 			os.Exit(runFixture(os.Args))
 		}
+		if os.Getenv(shimHarness) == "claude" {
+			os.Exit(runClaudeStandIn(os.Args))
+		}
 		fmt.Fprintf(os.Stderr, "workflow: %s=%q names no harness this suite plays\n", shimHarness, os.Getenv(shimHarness))
 		os.Exit(2)
 	}

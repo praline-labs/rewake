@@ -381,6 +381,35 @@ the handover's `signals` (`Handover.Continue`), and the next image's run takes t
 handler that held them does not outlive the exec, and a SIGTERM caught while parked was lost at
 the commit (found in review, November 2, 2026).
 
+**An adoption is not a launch.** The adopting image goes through the wrapper's run again, so
+each step a launch takes says whether it holds for a harness already running (November 3, 2026).
+The adapter is asked for an adoption's plan (`LaunchRequest.Adopting`): the service, the wake and
+the socket the run is served with, with no check of the harness's start and no write it made.
+The host reads no version, since the harness on `PATH` may have changed since the start. What
+Claude Code's adoption repeats is [claude.md](../claude.md#what-an-adoption-repeats); pi's
+plans its extension's endpoint again and no longer makes its agent directory or reads its intro.
+Before this, every Claude Code run met its launch's refusal of a live messaging socket, and the
+image exited.
+
+**A failed adoption holds its harness.** The harness is the wrapper's child on the wrapper's
+terminal, and an image that exits hangs that terminal up: on November 3, 2026 one adoption's
+failure ended main's Claude Code and with it the shell, the room and its writer
+([traps.md](../traps.md#after-rewake-restart-rewake-mains-claude-code-ended-and-the-room-with-it)).
+An adoption that fails before it has its harness now keeps it: it closes what was handed over
+and what it started, so the mod's or the extension's next request finds nobody, and passes
+signals on and answers stops as a run does. It says on stderr what failed and that the run
+should be ended and started again. A run that failed under the lease, its plan or service
+refused, also marks the exec `not adopted: …` for its sender and leaves a worker's main a note
+(`host/unadopted.go`). A harness this build does not have, and a parked image whose wait or exec
+fails, hold no lease to write by and say it on stderr only (`cli/adopt.go`). The
+record, the lease and the run directory stay until the harness ends; then they go, and the image
+exits with the harness's code. Held, the run is served no more: no letter wakes it and none of
+its turns is reported. It is not repaired, since starting it again ends the conversation the
+switch was meant to keep. The leader counts every participant that holds the lease as adopted,
+so its letter names a held run among them, and the note corrects it. A later switch is refused,
+the lease named as still held, until the person ends the run. A handover that cannot be read
+still exits: it names no harness to hold.
+
 Tests:
 - `internal/infra/build/switch_test.go` `TestASwitchCommitsOnlyWithNoOtherHolder`
 - `internal/infra/build/switch_test.go` `TestAWriterWaitsOutADroppingSwitchWithinItsBound`
@@ -428,6 +457,10 @@ Tests:
 - `internal/adapter/claude/modhost/handover_outcome_test.go` `TestAnOutcomeMainHasNotReadKeepsTheRunBusy`
 - `internal/host/mainhost/drop_test.go` `TestTheDigestTakenWakesTheLoopForASwitch`
 - `internal/cli/adopt_worktree_test.go` `TestTheAdoptedRunFindsTheCheckoutItsLaunchMade`
+- `internal/adapter/claude/adoption_test.go` `TestAnAdoptionPlansOnTheLiveSocket`
+- `internal/adapter/pi/adoption_test.go` `TestAnAdoptionPlansWithoutTheLaunchsSteps`
+- `internal/host/unadopted_test.go` `TestAFailedAdoptionHoldsTheHarness`
+- `test/workflow/claude_adopt_test.go` `TestClaudeAdopt`
 - `test/workflow/fixture_switch_test.go` `TestFixtureSwitch`
 - `test/workflow/fixture_switch_worktree_test.go` `TestFixtureSwitchWorktree`
 

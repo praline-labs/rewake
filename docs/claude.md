@@ -429,6 +429,40 @@ its place in the shell ([rules/state.md](rules/state.md#switching-a-running-room
 (`modless`) answers `cannot` too. Tested in `handover_test.go`, the end retried across the exec
 and the mod's next poll answered.
 
+### What an adoption repeats
+
+The adopting image runs the wrapper's run again with the handover, and the adapter's `Launch`
+with `LaunchRequest.Adopting` (November 3, 2026). Its Claude Code already runs, on the arguments
+and environment the first image planned, so the plan builds only what the run is served with:
+the lane, the mod's server and the plan's socket (`adoptionPlan`, `adoption.go`). It refuses
+nothing and writes nothing a start would. A check meant for a harness not yet started fails on
+the one running. Until then the stale socket's check refused the run's own live socket, and the
+wrapper's exit ended the session and, for main, the room
+([traps.md](traps.md#after-rewake-restart-rewake-mains-claude-code-ended-and-the-room-with-it)).
+
+| Step of a launch | On an adoption |
+|---|---|
+| The stale messaging socket's check (`removeStaleSocket`) | not run: the socket is the run's own, and live |
+| The worker profile: the service folder, its settings and state, the memory directory | not written; the harness keeps what its launch pointed it at |
+| The briefing, and the refusals of arguments, a continued conversation and the run's checkout | not run |
+| The mod's files in the run directory, `--plugin-dir` | not written: the run keeps its directory, and the switch admits only a build of the same `mod` protocol |
+| `--settings` with the status line | not built: it is only an argument; the status line runs the room's `bin/rewake`, which the commit links to the new build |
+| The mod's endpoint | adopted: its listener and the order of loads (above) |
+| The lane: its reply socket and the sweep (`sweepReplies`) | run: the reply socket, closed by the exec, is bound again at the same path; the sweep removes only sockets whose dial is refused, never the handed listener |
+| The defaults (`ApplyDefaults`, the worker's compaction window) | computed again for what the service reports, never passed on; a default changed since the start shows until the status line reports the run's own |
+| The version gate | not run, by the host for every harness: the program on `PATH` may have changed since the start, and a refusal would end a running session |
+| The role line, the intro, the launch's notes | not said again ([rules/state.md](rules/state.md#switching-a-running-room)) |
+| The registry's claim, the run and control directories | the run's own record adopted, its epoch kept; the directories exist |
+
+An adoption that still fails holds its Claude Code unserved rather than exit under it
+([rules/state.md](rules/state.md#switching-a-running-room)). Tested by
+`adoption_test.go` `TestAnAdoptionPlansOnTheLiveSocket`, and end to end by the workflow suite's
+`TestClaudeAdopt`: the real adapter's launch, handover and adoption against a stand-in that
+listens on the messaging socket as Claude Code does, a letter delivered before and after the
+exec. Run live on November 3, 2026 (2.1.310, without a login) with a Claude Code main, a Claude
+Code worker and a pi worker: each kept its wrapper's and its harness's pids on the new build, and
+letters reached both workers after it.
+
 ## What the mod never does
 
 It reads no transcript file. A run the face does not draw sends no prompt text
