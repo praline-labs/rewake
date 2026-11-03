@@ -23,3 +23,11 @@ func TestAReportsPreviewEndsWithTheBriefsNote(t *testing.T) {
 		t.Errorf("a note shows the brief: %q", got)
 	}
 }
+
+// A note too long for the line is left off rather than cutting the author's text.
+func TestAnOverlongBriefNoteIsLeftOff(t *testing.T) {
+	got := mail.Notice(mail.Message{From: "writer", Kind: mail.Finished, Text: "login moved"}.WithBriefNote(strings.Repeat("brief 9 1/2, ", 8)))
+	if !strings.HasSuffix(got, "\n  ↳ login moved") {
+		t.Errorf("notice=%q", got)
+	}
+}

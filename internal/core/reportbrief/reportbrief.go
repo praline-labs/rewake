@@ -102,14 +102,20 @@ func (b Block) Note() string {
 	return fmt.Sprintf("brief %d %d/%d", b.ID, b.Done, b.Total)
 }
 
+// maxNoted is how many briefs a preview names; the rest are counted.
+const maxNoted = 2
+
 // Notes joins the notes of the blocks, for a report that answers several
-// briefs.
+// briefs: the first two, then "+N", so the line keeps the author's text.
 func Notes(blocks []Block) string {
 	var notes []string
 	for _, block := range blocks {
 		if note := block.Note(); note != "" {
 			notes = append(notes, note)
 		}
+	}
+	if len(notes) > maxNoted {
+		notes = append(notes[:maxNoted], fmt.Sprintf("+%d", len(notes)-maxNoted))
 	}
 	return strings.Join(notes, ", ")
 }

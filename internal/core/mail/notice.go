@@ -57,6 +57,10 @@ func Notice(message Message) string {
 // (the owner, October 16, 2026; docs/delivery.md#the-notice).
 const previewOnly = " (a preview only: run rewake inbox)"
 
+// maxBriefSuffix bounds the brief note's cells, a bit under half the line, so
+// the author's text always keeps its first words; a longer note is left off.
+const maxBriefSuffix = 44
+
 // shownPreview is the preview line of the letter a notice shows. A task's or
 // a question's ends with previewOnly, which the bound never cuts: the
 // author's text is cut first.
@@ -64,8 +68,7 @@ const previewOnly = " (a preview only: run rewake inbox)"
 // A report on a brief's task ends with the brief's note in brackets, bounded
 // the same way: an open item shows without reading (docs/delivery.md#the-notice).
 func shownPreview(text string, kind Kind, briefNote string) string {
-	if briefNote != "" && IsReportKind(kind) {
-		suffix := " (" + briefNote + ")"
+	if suffix := " (" + briefNote + ")"; briefNote != "" && IsReportKind(kind) && textCells(suffix) <= maxBriefSuffix {
 		first := previewWithin(text, previewCells-textCells(suffix))
 		if first == "" {
 			return ""
