@@ -18,9 +18,9 @@ writer and the person see them, and its verdict still reaches main as the report
 shows who wrote it and in what capacity, so the models reading it know its author («показывать
 там, кто сделал комментарий, чтобы модели получали инфу о авторе комментария»). The word is not the
 briefing, the launch text of `internal/core/brief`; the code lives in `internal/core/taskbrief`
-(the records), `internal/cli/brief*.go` and `send_brief.go` (the commands), and the tools, defined once in
-`internal/core/sessiontools/sessiontools.ts` and served by `internal/adapter/claude/mod/hooks/briefs.ts`
-and `internal/adapter/pi/tools.ts`. The shell's
+(the records), `internal/cli/brief*.go` and `send_brief.go` (the commands), and the tools, defined once in Go,
+`internal/core/sessiontools`, and served as data by each adapter's bridge
+([worktree-tools.md](worktree-tools.md#the-worktree_status-tool)). The shell's
 view is in [shell.md](shell.md#the-briefs).
 
 ## The records
@@ -375,23 +375,22 @@ is an error result.
 | `mcp__rewake__brief_tick` / `brief_tick` | `id`, `item`, `edition`, `undo?` | `brief tick <id> <item> --edition=<edition> [--undo]` | the item's number, text and state; a reviewer's refusal as an error |
 | `mcp__rewake__brief_comment` / `brief_comment` | `id`, `text` | `brief comment <id> -- <text>` | the comment's number among the comments |
 
-Each tool's description, schema, arguments, refusals and result text are defined once, in
-`internal/core/sessiontools/sessiontools.ts`, which `go run ./tools/protogen` copies into both
-adapters ([adding.md](adding.md#a-session-tool)). The tool refuses before any process starts an `id`, `item` or `edition` that is not a positive
+Each tool's description, schema, arguments, refusals and result text are defined once, in Go,
+`internal/core/sessiontools` ([adding.md](adding.md#a-session-tool)), and go to the agent as data:
+the wrapper plans a call and words its raw end, the agent runs it
+([worktree-tools.md](worktree-tools.md#the-worktree_status-tool)). The plan refuses before any process starts an `id`, `item` or `edition` that is not a positive
 integer and an empty `text`; the `--` keeps a comment that begins with a dash from being read as a
 flag. The right is the CLI's check, so the tool and a command the model types from its shell answer
 alike.
 
-- **Claude Code**: registered at `session.start` beside the worktree tools, served from a
-  `tool.call` hook with `$.process.run` and a `.catch` that turns a failed hook into an error
-  result, through the worktree tools' `serveCommand`; the module `hooks/briefs.ts`, named in
-  `mod.go`'s `embed` line. Built on the mod API of 2.1.310 (the `mods` skill).
-- **pi**: `pi.registerTool` and `pi.exec`, `killed` read first, as for the worktree tools; the
-  bridge `tools.ts`, in `run.go`'s `embed` line and module list. pi names a tool as registered, so its
-  three are `brief_read`, `brief_tick` and `brief_comment`, as its `worktree_status` is.
-- **No protocol of their own**: the mod↔host schema and pi's wire know no brief. Rejected: `brief/*`
-  endpoints on the mod socket with the peer check — a second path beside the CLI, and pi would need
-  wire operations of its own for the same thing.
+- **Both harnesses** register them from the hello's table beside the worktree tools and serve
+  them through the same bridge, the mod's `hooks/tools.ts` and pi's `tools.ts`. pi names a tool as
+  registered, so its three are `brief_read`, `brief_tick` and `brief_comment`, as its
+  `worktree_status` is.
+- **No protocol of their own**: the mod↔host schema and pi's wire know no brief, only the tools'
+  plan and result, which carry any tool. Rejected: `brief/*` endpoints on the mod socket with the
+  peer check — a second path beside the CLI, and pi would need wire operations of its own for the
+  same thing.
 
 ## Tests
 
@@ -409,9 +408,9 @@ barred link, one outside the catalogue and the bound of skills given
 (`adapter/skills_test.go`, each adapter's `skills_test.go`), the never-list
 (`launch/alias_briefs_test.go`), the commands and their `--json` (`cli/brief_skills_test.go`),
 the read rule (`claude/run_settings_test.go`); the
-tools' arguments and refused input once, in `core/sessiontools/sessiontools.test.ts`, and each
-harness's bridge — offer by role, argv, bound, errors — in the mod's `tests/briefs.test.ts` and
-pi's `briefs.test.ts`; and
+tools' offer by role, arguments, refused input, argv, bounds and wording once, in
+`core/sessiontools`'s tests, and each harness's bridge in the tests of
+[worktree-tools.md](worktree-tools.md#the-worktree_status-tool); and
 one workflow scenario, `brief`: main makes a brief, sends it, the fixture worker reads it with
 its task, ticks and comments, a reviewer given it with `--review` is refused a tick and comments,
 and main's `show` sees the tick and both comments with their capacities; and one, `brief-skill`:

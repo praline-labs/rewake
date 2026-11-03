@@ -120,7 +120,7 @@ func TestAnIdleClaudeRunIsHandedOverAndTheModsNextPollAnswered(t *testing.T) {
 	before.HarnessStarted(adapter.RunProcess{PID: os.Getpid(), Start: start})
 	socket := modSocketPath(request)
 	var hello modhost.HelloAnswer
-	status, text := postMod(t, socket, modhost.PathHello, modhost.HelloRequest{LoadID: "load-1", SessionID: "conversation-1", HarnessVersion: "2.1.310"})
+	status, text := postMod(t, socket, modhost.PathHello, modhost.HelloRequest{Protocol: modhost.Protocol, LoadID: "load-1", SessionID: "conversation-1", HarnessVersion: "2.1.310"})
 	if status != http.StatusOK || json.Unmarshal([]byte(text), &hello) != nil {
 		t.Fatalf("the hello: %d %s", status, text)
 	}
@@ -217,6 +217,7 @@ func TestAnIdleClaudeRunIsHandedOverAndTheModsNextPollAnswered(t *testing.T) {
 // handoverVersion.
 var handedShapes = map[int]string{
 	1: "136c3efd43a1edacab1737b21292751682ae4a0f157a4db611675ec7d3748816",
+	2: "7b4d1e68e18a746de87630af74ea02b3bac99800a218bd8c12418c7d12093720",
 }
 
 func TestTheClaudeHandoverChangesWithItsShape(t *testing.T) {
@@ -272,7 +273,7 @@ func TestAnEndAfterTheSnapshotIsCapturedByTheNextImage(t *testing.T) {
 	}
 	before.HarnessStarted(adapter.RunProcess{PID: os.Getpid(), Start: start})
 	socket := modSocketPath(request)
-	if status, text := postMod(t, socket, modhost.PathHello, modhost.HelloRequest{LoadID: "load-1", SessionID: "conversation-1", HarnessVersion: "2.1.310"}); status != http.StatusOK {
+	if status, text := postMod(t, socket, modhost.PathHello, modhost.HelloRequest{Protocol: modhost.Protocol, LoadID: "load-1", SessionID: "conversation-1", HarnessVersion: "2.1.310"}); status != http.StatusOK {
 		t.Fatalf("the hello: %d %s", status, text)
 	}
 	answer := "earlier answer"

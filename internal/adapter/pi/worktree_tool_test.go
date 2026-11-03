@@ -11,8 +11,8 @@ import (
 	"time"
 )
 
-// The worktree and brief tools' contract with pi, and the face's mirror: argv, directory, bound,
-// and every failure shown as an error (worktree.test.ts, briefs.test.ts).
+// The session tools' bridge to pi, its management and the face's mirror (tools.test.ts,
+// management.test.ts, mirror.test.ts and the rest).
 func TestTheWorktreeToolKeepsItsContract(t *testing.T) {
 	bun, err := exec.LookPath("bun")
 	if err != nil {
@@ -20,7 +20,7 @@ func TestTheWorktreeToolKeepsItsContract(t *testing.T) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
-	command := exec.CommandContext(ctx, bun, "test", "./worktree.test.ts", "./management.test.ts", "./briefs.test.ts", "./mirror.test.ts", "./interrupt.test.ts", "./queued.test.ts", "./compaction.test.ts")
+	command := exec.CommandContext(ctx, bun, "test", "./tools.test.ts", "./management.test.ts", "./mirror.test.ts", "./interrupt.test.ts", "./queued.test.ts", "./compaction.test.ts")
 	command.Env = withoutRewakeEnv()
 	out, err := command.CombinedOutput()
 	if err != nil || !strings.Contains(string(out), " 0 fail") {

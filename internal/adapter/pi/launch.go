@@ -10,6 +10,7 @@ import (
 	"github.com/praline-labs/rewake/internal/core/brief"
 	"github.com/praline-labs/rewake/internal/core/mirror"
 	"github.com/praline-labs/rewake/internal/core/role"
+	"github.com/praline-labs/rewake/internal/core/sessiontools"
 )
 
 func (harness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, error) {
@@ -104,6 +105,7 @@ func (harness) Serve(request adapter.LaunchRequest) adapter.ServicePlan {
 	run := newRun(extensionPath(request), request.Socket, request.Epoch)
 	run.controlDir = request.ControlDir
 	run.hostsSpaces, run.onClosing = request.Role.Spaces, request.Closing
+	run.tools = sessiontools.Run{Executable: request.Executable, Dir: request.Dir, Room: request.Room, Session: request.Name, Epoch: request.Epoch, Role: request.Role.ID}
 	if request.Mirror != nil {
 		run.mirror = request.Mirror
 		run.mirror.Take(run.input, mirror.InputKindPrompt, mirror.InputKindInterrupt, mirror.InputKindThinking)

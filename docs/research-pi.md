@@ -225,7 +225,10 @@ harness pid and rechecks its process start time before accepting the first frame
 
 | Direction | Operation | Fields and acknowledgment |
 |---|---|---|
-| Extension to host | `hello` | `protocol: 2`, `thread`, initial `state`; success makes Wake, TurnBoundary and Telemetry live, plus Control when its directory exists and Spaces on a main's run; the answer's `mirror: true` (October 31, 2026, optional) says rewake's face draws the run |
+| Extension to host | `hello` | `protocol: 3` (from November 3, 2026; 2 before), `thread`, initial `state`; success makes Wake, TurnBoundary and Telemetry live, plus Control when its directory exists and Spaces on a main's run; the answer's `mirror: true` (October 31, 2026, optional) says rewake's face draws the run, and its `tools` (November 3, 2026) are the table the run's role is offered, each `name`, `label`, `description`, `inputSchema`. A hello of another protocol is answered with the `error` "this extension speaks an older protocol of rewake: restart the room" |
+| Host to extension | `tools` | `thread`, `tools`: the table again, sent once by an image that adopted the run, since it may offer another; the extension registers what is added or changed and hides what is dropped, and answers `ok` (November 3, 2026) |
+| Extension to host | `tool-plan` | `tool`, `arguments`: a call of a rewake tool; answer the `argv` and `timeoutMs` to run, or `refused`, the text the model reads (November 3, 2026) |
+| Extension to host | `tool-result` | `tool`, `ran`: the command's raw end, `exitCode`, `stdout`, `stderr`, `killed`, `stdoutCut` past 1 MiB, or a start's `error`; answer the result's `text` and `isError` (November 3, 2026) |
 | Extension to host | `mirror` | `thread`, `events`: a batch of the face's neutral events ([below](#the-face-of-a-pi-worker)); answer `ok`, or `error` for a run the face does not draw (October 31, 2026) |
 | Host to extension | `prompt` | `thread`, `text`: a prompt typed in rewake's face; answer `ok` and whether it was `steered`, or `error` while compacting, for an empty text or a run not drawn (October 31, 2026) |
 | Host to extension | `interrupt` | `thread`: the person's Esc in rewake's face; the extension calls `ctx.abort()` and answers `ok`, or `error` while pi is idle or compacting or for a run not drawn; an older extension answers `unknown host operation` (October 31, 2026) |
@@ -267,6 +270,25 @@ the alternate screen, before that dispose; on SIGTERM or SIGHUP it disposes firs
 (`dist/modes/interactive/interactive-mode.js`, `shutdown`). Its Ctrl+Z (`app.suspend`) stops the
 TUI and sends `SIGTSTP` to its group, as Claude Code does. Read on 1.3.0, October 24, 2026.
 
+## Tools registered from the wrapper's table (November 3, 2026, 1.4.0)
+
+rewake's tools come to the extension as data ([worktree-tools.md](worktree-tools.md)), so a
+change of one reaches a running pi with the wrapper's restart. That rests on pi 1.4.0's
+registration, read in `dist/core/extensions/loader.js` and `dist/core/agent-session.js` and
+probed through the SDK with an inline extension, no model and no login, on November 3, 2026:
+
+- `pi.registerTool` is valid after the extension's load: the loader does `tools.set(name, …)`,
+  so a name registered again replaces its tool, and calls `refreshTools()`, which rebuilds the
+  registry and sets `agent.state.tools`, the tools the next request declares. The probe saw a
+  tool registered at `session_start` with the description `first`, then `second` after a second
+  registration.
+- `exposure: "hidden"` takes the tool out of `agent.state.tools` (the probe: none), and a
+  registration again without it brings it back activated, as pi documents for a tool whose
+  exposure turns `direct`. A tool cannot be unregistered; a dropped one is so hidden.
+- `pi.exec(command, args, {signal, timeout, cwd})` takes no environment: the child inherits pi's,
+  which the launch gave the run's `REWAKE_*` variables. It reports a child it killed with
+  `killed: true` and exit code 0.
+
 ## Handing the run over (November 2, 2026)
 
 A worker's run is handed over to the next image of its wrapper when a switch of the room's build
@@ -275,7 +297,9 @@ asks ([rules/state.md](rules/state.md#switching-a-running-room)); `handover.pi` 
 handed over: the listener and the extension's connection go as files, with pi's pid and start, the
 thread and the next request number, and the next image serves the connection as its current one,
 its hello long answered. The extension never sees the exec; its files stay as written, the switch
-admitting only a build of the same `extension` protocol.
+admitting only a build of the same `extension` protocol. The adopting image sends the extension its own tool table
+once (`tools`), so a changed tool reaches the running pi; a tool call's plan or end read while the
+reader is halted waits in the socket for the next image, which answers it alike.
 
 What lives only in the image's memory keeps the switch waiting until it is gone, which an idle
 session makes it: an open turn (its end would find no start, and pi sends nothing again), an end

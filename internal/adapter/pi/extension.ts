@@ -6,7 +6,7 @@ import { type MirrorEvent, Outbox } from "./feed.ts";
 import { management, type State } from "./management.ts";
 import { Mirror } from "./mirror.ts";
 import { serveMirror } from "./mirrorhooks.ts";
-import { briefTools, worktreeTools } from "./tools.ts";
+import { type ToolFields, Tools } from "./tools.ts";
 
 export type Frame = {
   op: string;
@@ -35,7 +35,7 @@ export type Frame = {
   // mirror, in hello's answer, says rewake's face draws this run.
   mirror?: boolean;
   events?: MirrorEvent[];
-};
+} & ToolFields;
 type Waiter = {
   resolve: (frame: Frame) => void;
   reject: (error: Error) => void;
@@ -54,8 +54,6 @@ const maxFrame = 4 << 20;
 const socketPath = process.env.REWAKE_PI_SOCKET;
 
 export default function (pi: ExtensionAPI) {
-  worktreeTools(pi);
-  briefTools(pi);
   let context: ExtensionContext | undefined;
   let active = false;
   let current: Link | undefined;
@@ -84,6 +82,13 @@ export default function (pi: ExtensionAPI) {
       return !!(await ask(link, { op: "mirror", thread: link.thread, events })).ok;
     },
     after: (ms, run) => setTimeout(run, ms).unref(),
+  });
+  // A call's plan and end wait out a handover in the socket, so their bound
+  // is longer than a request's.
+  const tools = new Tools(pi, (fields) => {
+    const link = current;
+    if (!link?.ready) return Promise.reject(new Error("the session has no connection to rewake"));
+    return ask(link, fields, 30000);
   });
   const mirror = new Mirror(outbox);
   serveMirror(pi, mirror);
@@ -175,6 +180,11 @@ export default function (pi: ExtensionAPI) {
     }
     if (frame.op === "thinking") {
       respond(faceThinking(pi, mirror, context.model));
+      return;
+    }
+    if (frame.op === "tools") {
+      tools.take(frame.tools);
+      respond({ ok: true });
       return;
     }
     if (frame.op === "control") {
@@ -272,7 +282,7 @@ export default function (pi: ExtensionAPI) {
       try {
         const reply = await ask(link, {
           op: "hello",
-          protocol: 2,
+          protocol: 3,
           thread,
           state: managed.sample(),
         });
@@ -283,6 +293,7 @@ export default function (pi: ExtensionAPI) {
         }
         link.ready = true;
         delay = 250;
+        tools.take(reply.tools);
         mirror.on = reply.mirror === true;
         sayLevel();
         outbox.kick();

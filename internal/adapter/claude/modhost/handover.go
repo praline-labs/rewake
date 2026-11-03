@@ -28,12 +28,6 @@ import (
 // handedVersion is the version of Handed; a server adopts only its own.
 const handedVersion = 1
 
-// Protocol is the version of the mod↔host protocol, protocol_gen.go: a
-// loaded mod keeps speaking the one it was loaded with, so a switch of the
-// room's build admits only a build that speaks the same (adapter.Contracts).
-// TestTheModContractChangesWithItsProtocol holds it to the generated file.
-const Protocol = 1
-
 // Handed is the endpoint's order of loads as one image hands it to the next.
 type Handed struct {
 	Version    int                `json:"version"`

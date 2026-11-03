@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/core/mirror"
+	"github.com/praline-labs/rewake/internal/core/sessiontools"
 )
 
 // Both peers number their own requests. Only answer frames consume a waiter;
@@ -44,11 +45,23 @@ type frame struct {
 	// are the conversation a mirror frame carries (mirror.go).
 	Mirror bool               `json:"mirror,omitempty"`
 	Events []mirror.WireEvent `json:"events,omitempty"`
+	// The tools (tools.go): the table, in hello's answer and a tools frame;
+	// a call's plan, asked by tool-plan with the call's arguments and
+	// answered by its argv and bound or a refusal; its raw end, which
+	// tool-result carries and whose answer is the text and isError.
+	Tools     []toolEntry       `json:"tools,omitempty"`
+	Tool      string            `json:"tool,omitempty"`
+	Arguments json.RawMessage   `json:"arguments,omitempty"`
+	Argv      []string          `json:"argv,omitempty"`
+	TimeoutMs int64             `json:"timeoutMs,omitempty"`
+	Refused   string            `json:"refused,omitempty"`
+	Ran       *sessiontools.Ran `json:"ran,omitempty"`
+	IsError   bool              `json:"isError,omitempty"`
 }
 
 const (
 	maxFrame        = 4 << 20
-	protocolVersion = 2
+	protocolVersion = 3
 )
 
 var errClosed = errors.New("the extension connection closed")

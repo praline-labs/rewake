@@ -58,11 +58,9 @@ type shared struct {
 	copies []string
 }
 
-// The mirror's feed, which both send through, and the session tools both
-// offer.
+// The mirror's feed, which both send through.
 var shareds = []shared{
 	{"internal/core/mirror/feed.ts", []string{"internal/adapter/pi/feed.ts", "internal/adapter/claude/mod/hooks/feed.ts"}},
-	{"internal/core/sessiontools/sessiontools.ts", []string{"internal/adapter/pi/sessiontools.ts", "internal/adapter/claude/mod/hooks/sessiontools.ts"}},
 }
 
 func main() {

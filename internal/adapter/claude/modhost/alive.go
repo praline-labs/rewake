@@ -153,8 +153,8 @@ func (s *Server) alive(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	work, moved := s.workFor(poll)
-	if command := s.takeCommand(poll); command != nil || moved {
-		s.answer(w, r, AliveAnswer{Control: command, Work: work})
+	if command := s.takeCommand(poll); command != nil || moved || s.otherTable(poll) {
+		s.answer(w, r, s.aliveAnswer(poll, command, work))
 		return
 	}
 	timer := time.NewTimer(s.hold())
@@ -184,7 +184,25 @@ hold:
 		}
 	}
 	work, _ = s.workFor(poll)
-	s.answer(w, r, AliveAnswer{Control: s.takeCommand(poll), Work: work})
+	s.answer(w, r, s.aliveAnswer(poll, s.takeCommand(poll), work))
+}
+
+// aliveAnswer carries the run's tool table to a load that holds another.
+func (s *Server) aliveAnswer(poll AliveRequest, command *ControlCommand, work *string) AliveAnswer {
+	answer := AliveAnswer{Control: command, Work: work}
+	if tools, digest := s.table(); poll.ToolsDigest == nil || *poll.ToolsDigest != digest {
+		answer.Tools, answer.ToolsDigest = tools, &digest
+	}
+	return answer
+}
+
+// otherTable says the polling load registered another table than the
+// run's, which it hears at once: the image it registered from was replaced
+// by a switch. A load that names none, its hello's answer not yet taken,
+// hears the table at the hold's end.
+func (s *Server) otherTable(poll AliveRequest) bool {
+	_, digest := s.table()
+	return poll.ToolsDigest != nil && *poll.ToolsDigest != digest
 }
 
 // workFor is the run's room work for an answer, and whether it is not what

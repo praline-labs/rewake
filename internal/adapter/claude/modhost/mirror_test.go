@@ -19,7 +19,7 @@ func TestMirrorEventsReachTheModelOfTheCurrentLoadOnly(t *testing.T) {
 	model := mirror.New()
 	_, socket := servingWith(t, func(server *Server) { server.cfg.Mirror = model })
 	var hello HelloAnswer
-	if err := json.Unmarshal([]byte(postValue(t, socket, PathHello, HelloRequest{LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})), &hello); err != nil {
+	if err := json.Unmarshal([]byte(postValue(t, socket, PathHello, HelloRequest{Protocol: Protocol, LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})), &hello); err != nil {
 		t.Fatal(err)
 	}
 	if hello.Mirror == nil || !*hello.Mirror {
@@ -37,7 +37,7 @@ func TestMirrorEventsReachTheModelOfTheCurrentLoadOnly(t *testing.T) {
 
 	_, plain := serving(t)
 	var plainHello HelloAnswer
-	if err := json.Unmarshal([]byte(postValue(t, plain, PathHello, HelloRequest{LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})), &plainHello); err != nil {
+	if err := json.Unmarshal([]byte(postValue(t, plain, PathHello, HelloRequest{Protocol: Protocol, LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})), &plainHello); err != nil {
 		t.Fatal(err)
 	}
 	if plainHello.Mirror != nil {
@@ -53,7 +53,7 @@ func TestMirrorEventsReachTheModelOfTheCurrentLoadOnly(t *testing.T) {
 func TestAModeAndAPermitReachTheModelInItsWords(t *testing.T) {
 	model := mirror.New()
 	_, socket := servingWith(t, func(server *Server) { server.cfg.Mirror = model })
-	postValue(t, socket, PathHello, HelloRequest{LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
+	postValue(t, socket, PathHello, HelloRequest{Protocol: Protocol, LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
 	for _, step := range []struct {
 		claude string
 		want   mirror.PermissionMode
@@ -105,7 +105,7 @@ func TestAFacePromptRidesTheHeartbeat(t *testing.T) {
 		model.Take(server.Prompt, mirror.InputKindPrompt)
 		server.cfg.Hold = 10 * time.Millisecond
 	})
-	postValue(t, socket, PathHello, HelloRequest{LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
+	postValue(t, socket, PathHello, HelloRequest{Protocol: Protocol, LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
 	result := make(chan error, 1)
 	go func() {
 		result <- model.Input(context.Background(), mirror.Input{ID: "i1", Kind: mirror.InputKindPrompt, Text: "go on"})

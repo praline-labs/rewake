@@ -15,7 +15,7 @@ func TestTheLaunchTheSamplesAndTheStatusLineReachTheObserver(t *testing.T) {
 	if got := server.SessionState(); got.Effort == nil || *got.Effort != "high" || got.EffortSource != session.EffortFromLaunch {
 		t.Fatalf("before anything: %v %q", got.Effort, got.EffortSource)
 	}
-	postValue(t, socket, PathHello, HelloRequest{LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
+	postValue(t, socket, PathHello, HelloRequest{Protocol: Protocol, LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
 	sample := testState()
 	low := "low"
 	sample.Effort = &low

@@ -6,6 +6,7 @@ import (
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/adapter/claude/modhost"
 	"github.com/praline-labs/rewake/internal/core/role"
+	"github.com/praline-labs/rewake/internal/core/sessiontools"
 )
 
 // The run's service, which Launch composes and an adoption plans alone
@@ -65,6 +66,10 @@ func serve(request adapter.LaunchRequest, args []string, wake *lane) served {
 		Live: run.transition, Ended: runEnded,
 		Asked: askedOf(request), Dialog: dialogOf(request), Effort: flagValue(args, effortFlag), Window: windowTokens(flagValue(args, autocompactFlag)), Closing: request.Closing, Mirror: request.Mirror, Work: request.Work,
 		RoomDir: request.RoomDir,
+		Tools: sessiontools.Run{
+			Executable: request.Executable, Dir: request.Dir, Room: request.Room, Session: request.Name,
+			Epoch: request.Epoch, Role: request.Role.ID,
+		},
 	})
 	return served{service: run, live: run, turns: run, telemetry: run.server, modSocket: modSocket}
 }

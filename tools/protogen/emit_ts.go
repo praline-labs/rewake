@@ -69,7 +69,7 @@ func lowerFirst(name string) string {
 }
 
 func tsType(s shape) string {
-	base := map[string]string{"string": "string", "integer": "number", "boolean": "boolean"}[s.scalar]
+	base := map[string]string{"string": "string", "integer": "number", "boolean": "boolean", "raw": "unknown"}[s.scalar]
 	if s.ref != "" {
 		base = s.ref
 	}

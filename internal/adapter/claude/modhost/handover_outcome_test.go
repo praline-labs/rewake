@@ -29,7 +29,7 @@ func TestAnOutcomeMainHasNotReadKeepsTheRunBusy(t *testing.T) {
 		t.Fatal(err)
 	}
 	release()
-	postValue(t, socket, PathHello, HelloRequest{LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
+	postValue(t, socket, PathHello, HelloRequest{Protocol: Protocol, LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
 	postValue(t, socket, PathModState, testState())
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

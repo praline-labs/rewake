@@ -21,8 +21,15 @@ func (r *run) serve(l *link) {
 	if err != nil {
 		return
 	}
-	if hello.Op != "hello" || hello.Protocol != protocolVersion || hello.Thread == "" || hello.State == nil || hello.State.Sequence == 0 || (hello.State.Activity != "working" && hello.State.Activity != "idle") {
-		l.answer(hello, frame{Error: "expected protocol 2 hello with a conversation and state"})
+	// An extension of another protocol is refused with the host's reason: an
+	// old one warns and tries again, harmlessly, until the room's restart
+	// writes the run's extension anew.
+	if hello.Op == "hello" && hello.Protocol != protocolVersion {
+		l.answer(hello, frame{Error: olderProtocol})
+		return
+	}
+	if hello.Op != "hello" || hello.Thread == "" || hello.State == nil || hello.State.Sequence == 0 || (hello.State.Activity != "working" && hello.State.Activity != "idle") {
+		l.answer(hello, frame{Error: "expected a hello with a conversation and state"})
 		return
 	}
 	if r.handler.Publish == nil || r.handler.Capture == nil {
@@ -31,7 +38,7 @@ func (r *run) serve(l *link) {
 	}
 	// Put hello's acknowledgment on the wire before publishing live Wake:
 	// delivery can start as soon as the live callback records the capability.
-	l.answer(hello, frame{OK: true, Mirror: r.mirror != nil})
+	l.answer(hello, frame{OK: true, Mirror: r.mirror != nil, Tools: r.table()})
 	if !r.change(l, hello) {
 		return
 	}
@@ -77,6 +84,14 @@ func (r *run) handle(l *link, request frame) {
 		reply := r.mirrored(request)
 		r.leave()
 		l.answer(request, reply)
+	case "tool-plan":
+		reply := r.toolPlan(request)
+		r.leave()
+		l.answer(request, reply)
+	case "tool-result":
+		reply := r.toolResult(request)
+		r.leave()
+		l.answer(request, reply)
 	case "closing":
 		// pi quits: the shell's closing screen and the workers' close start
 		// now rather than at the process's end (docs/shell.md).
@@ -90,6 +105,9 @@ func (r *run) handle(l *link, request frame) {
 		l.answer(request, frame{Error: "unknown extension operation"})
 	}
 }
+
+// olderProtocol refuses a hello of an extension of another protocol.
+const olderProtocol = "this extension speaks an older protocol of rewake: restart the room"
 
 func (r *run) startTurn(l *link, request frame) frame {
 	if request.Turn == "" || l.turn != "" {

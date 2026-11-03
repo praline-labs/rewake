@@ -218,6 +218,7 @@ func (r *run) Adopt(ctx context.Context, _ func(string), handed adapter.HandedOv
 		return errors.New("pi's run closed while its connection was adopted")
 	}
 	go r.pollState(l, got.Thread)
+	go r.sendTools(l, got.Thread)
 	go func() {
 		defer r.disconnect(l)
 		// What the last image read of a frame comes first.

@@ -21,6 +21,9 @@ const width = 96
 func emitGo(s schema) ([]byte, error) {
 	var b strings.Builder
 	fmt.Fprintf(&b, "// %s\n\npackage %s\n", s.header(), s.goPackage)
+	if s.carriesRaw() {
+		b.WriteString("\nimport \"encoding/json\"\n")
+	}
 	if len(s.endpoints) > 0 {
 		b.WriteString("\n// The paths of the protocol's endpoints, each a POST.\nconst (\n")
 		for _, e := range s.endpoints {
@@ -77,17 +80,32 @@ func emitGo(s schema) ([]byte, error) {
 }
 
 func goType(f field) string {
-	base := map[string]string{"string": "string", "integer": "int", "boolean": "bool"}[f.shape.scalar]
+	base := map[string]string{"string": "string", "integer": "int", "boolean": "bool", "raw": "json.RawMessage"}[f.shape.scalar]
 	if f.shape.ref != "" {
 		base = f.shape.ref
 	}
 	switch {
+	// A raw value is a slice already: absent is nil.
+	case f.shape.scalar == "raw" && !f.shape.array:
+		return base
 	case f.shape.array:
 		return "[]" + base
 	case !f.required:
 		return "*" + base
 	}
 	return base
+}
+
+// carriesRaw says a field of the schema is raw, so the Go side imports json.
+func (s schema) carriesRaw() bool {
+	for _, d := range s.defs {
+		for _, f := range d.fields {
+			if f.shape.scalar == "raw" {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // initialisms are the words Go spells in capitals.

@@ -42,9 +42,12 @@ func TestAnIdlePiRunHandsItsConnectionOver(t *testing.T) {
 		Publish: func(_ context.Context, end adapter.TurnEnd) error { <-gate; ends <- end; return nil },
 	}
 	rig := newRig(t, func(r *run) { r.ReportTurns(handler) })
-	wakes := make(chan frame, 4)
+	wakes, tables := make(chan frame, 4), make(chan frame, 4)
 	held := make(chan struct{})
 	l := rig.client(t, "conversation", func(l *link, got frame) {
+		if got.Op == "tools" {
+			tables <- got
+		}
 		if got.Op == "wake" {
 			wakes <- got
 			<-held
@@ -115,6 +118,10 @@ func TestAnIdlePiRunHandsItsConnectionOver(t *testing.T) {
 	t.Cleanup(after.Close)
 	if caps := receive(t, live); len(caps) != 3 {
 		t.Fatalf("the adopted run's live set: %v", caps)
+	}
+	// The next image may offer another table: it sends its own.
+	if table := receive(t, tables); table.Thread != "conversation" || len(table.Tools) == 0 {
+		t.Fatalf("the adopted run's table: %+v", table)
 	}
 	askOK(t, l, frame{Op: "turn-start", Thread: "conversation", Turn: "t2"})
 	askOK(t, l, frame{Op: "turn-end", Thread: "conversation", Turn: "t2", Outcome: "answered", Text: "after"})

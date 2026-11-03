@@ -13,14 +13,15 @@ import (
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/core/mirror"
 	"github.com/praline-labs/rewake/internal/core/session"
+	"github.com/praline-labs/rewake/internal/core/sessiontools"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
-//go:embed extension.ts management.ts tools.ts sessiontools.ts mirror.ts mirrorhooks.ts faced.ts queued.ts feed.ts toolmap.ts
+//go:embed extension.ts management.ts tools.ts mirror.ts mirrorhooks.ts faced.ts queued.ts feed.ts toolmap.ts
 var extensions embed.FS
 
 // modules are the extension's files, written beside it for each run.
-var modules = []string{"extension.ts", "management.ts", "tools.ts", "sessiontools.ts", "mirror.ts", "mirrorhooks.ts", "faced.ts", "queued.ts", "feed.ts", "toolmap.ts"}
+var modules = []string{"extension.ts", "management.ts", "tools.ts", "mirror.ts", "mirrorhooks.ts", "faced.ts", "queued.ts", "feed.ts", "toolmap.ts"}
 
 type run struct {
 	file, socket, controlDir string
@@ -30,6 +31,8 @@ type run struct {
 	// onClosing is LaunchRequest.Closing, nil outside rewake's shell: the
 	// extension's closing frame, at pi's quit, calls it.
 	onClosing func()
+	// tools is the run as its tools' commands answer for it (tools.go).
+	tools sessiontools.Run
 	// mirror is LaunchRequest.Mirror, the model rewake's face draws, nil for
 	// a run it does not draw.
 	mirror      *mirror.Model

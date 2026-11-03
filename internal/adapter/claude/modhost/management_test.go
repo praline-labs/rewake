@@ -33,7 +33,7 @@ func testState() StateRequest {
 
 func TestStateIsCurrentGenerationOrderedAndUnknownAfterCompaction(t *testing.T) {
 	server, socket := serving(t)
-	postValue(t, socket, PathHello, HelloRequest{LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
+	postValue(t, socket, PathHello, HelloRequest{Protocol: Protocol, LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
 	sample := testState()
 	postValue(t, socket, PathModState, sample)
 	got := server.SessionState()
@@ -50,7 +50,7 @@ func TestStateIsCurrentGenerationOrderedAndUnknownAfterCompaction(t *testing.T) 
 	if got.ContextUsed != nil || got.FilledPercent != nil || *got.Compactions != 1 || len(got.CompactionEvents) != 1 || got.CompactionEvents[0].Request != "r1" {
 		t.Fatalf("completion or stale sample: %+v", got)
 	}
-	postValue(t, socket, PathHello, HelloRequest{LoadID: "new", LoadSeq: 1, SessionID: "conversation-1", HarnessVersion: "test"})
+	postValue(t, socket, PathHello, HelloRequest{Protocol: Protocol, LoadID: "new", LoadSeq: 1, SessionID: "conversation-1", HarnessVersion: "test"})
 	if server.SessionState().Fresh {
 		t.Fatal("old load's snapshot stayed fresh")
 	}
@@ -86,7 +86,7 @@ func TestControlCrossesFilesHeartbeatAndFinalOutcome(t *testing.T) {
 		}
 	})
 	server.StartControl(context.Background())
-	postValue(t, socket, PathHello, HelloRequest{LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
+	postValue(t, socket, PathHello, HelloRequest{Protocol: Protocol, LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
 	postValue(t, socket, PathModState, testState())
 	result := make(chan control.Answer, 1)
 	go func() {
@@ -137,8 +137,9 @@ func TestControlCrossesFilesHeartbeatAndFinalOutcome(t *testing.T) {
 	if len(outcomes) != 1 || outcomes[0].RequestedBy != "main" || outcomes[0].TokensAfter == nil || *outcomes[0].TokensAfter != 1000 {
 		t.Fatalf("final: %+v", outcomes)
 	}
-	if reply := postValue(t, socket, PathModAlive, AliveRequest{LoadID: "load", Generation: 1}); reply != "{}\n" {
-		t.Fatalf("command was dispatched twice: %s", reply)
+	var again AliveAnswer
+	if err := json.Unmarshal([]byte(postValue(t, socket, PathModAlive, AliveRequest{LoadID: "load", Generation: 1})), &again); err != nil || again.Control != nil {
+		t.Fatalf("command was dispatched twice: %+v %v", again.Control, err)
 	}
 }
 
@@ -148,7 +149,7 @@ func TestControlRefusesUnadmittedAndWrongConversation(t *testing.T) {
 	if answer := server.carry(context.Background(), request); answer.Reason != control.NotAnswering {
 		t.Fatalf("before hello: %+v", answer)
 	}
-	postValue(t, socket, PathHello, HelloRequest{LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
+	postValue(t, socket, PathHello, HelloRequest{Protocol: Protocol, LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
 	request.Conversation = "other"
 	if answer := server.carry(context.Background(), request); answer.Reason != control.NotSelected {
 		t.Fatalf("wrong conversation: %+v", answer)
@@ -161,7 +162,7 @@ func TestControlRefusesUnadmittedAndWrongConversation(t *testing.T) {
 
 func TestCanceledUndispatchedCommandCannotRunLater(t *testing.T) {
 	server, socket := serving(t)
-	postValue(t, socket, PathHello, HelloRequest{LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
+	postValue(t, socket, PathHello, HelloRequest{Protocol: Protocol, LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	answer := server.carry(ctx, control.Request{ID: "r", From: "main", Action: control.Compact})
@@ -175,7 +176,7 @@ func TestCanceledUndispatchedCommandCannotRunLater(t *testing.T) {
 
 func TestDispatchedControlWithoutAcknowledgementIsUnknown(t *testing.T) {
 	server, socket := servingWith(t, func(server *Server) { server.cfg.Hold = 10 * time.Millisecond })
-	postValue(t, socket, PathHello, HelloRequest{LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
+	postValue(t, socket, PathHello, HelloRequest{Protocol: Protocol, LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	result := make(chan control.Answer, 1)
@@ -206,7 +207,7 @@ func TestDispatchedControlWithoutAcknowledgementIsUnknown(t *testing.T) {
 	if outcomes := server.SessionState().CompactionOutcomes; len(outcomes) != 1 || outcomes[0].Outcome != control.Done {
 		t.Fatalf("late outcome: %+v", outcomes)
 	}
-	postValue(t, socket, PathHello, HelloRequest{LoadID: "new", LoadSeq: 1, SessionID: "conversation-1", HarnessVersion: "test"})
+	postValue(t, socket, PathHello, HelloRequest{Protocol: Protocol, LoadID: "new", LoadSeq: 1, SessionID: "conversation-1", HarnessVersion: "test"})
 	body, _ := json.Marshal(ControlReply{LoadID: "load", Generation: 1, ID: "r", Outcome: control.Done})
 	if status, _, _ := post(socket, PathModControl, body); status != http.StatusConflict {
 		t.Fatalf("old generation outcome: %d", status)
@@ -228,7 +229,7 @@ func TestADialogIsToldToMainOncePerDialog(t *testing.T) {
 			return nil
 		}
 	})
-	postValue(t, socket, PathHello, HelloRequest{LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
+	postValue(t, socket, PathHello, HelloRequest{Protocol: Protocol, LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
 	sample, waiting := testState(), "Claude needs your permission"
 	for sequence, dialog := range []*string{&waiting, &waiting, &waiting, nil, &waiting} {
 		sample.Sequence, sample.Dialog = sequence+1, dialog
@@ -246,7 +247,7 @@ func TestADialogIsToldToMainOncePerDialog(t *testing.T) {
 // gone with the first sample that does not.
 func TestAHeldDialogsKindLastsWhileSamplesNameIt(t *testing.T) {
 	server, socket := serving(t)
-	postValue(t, socket, PathHello, HelloRequest{LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
+	postValue(t, socket, PathHello, HelloRequest{Protocol: Protocol, LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
 	sample := testState()
 	permission, question := AskKindPermission, AskKindQuestion
 	for sequence, round := range []struct {
@@ -266,7 +267,7 @@ func TestAHeldDialogsKindLastsWhileSamplesNameIt(t *testing.T) {
 // sample without them says the session no longer knows them.
 func TestASampleCarriesTheDirectoryAndTheAccountsWindows(t *testing.T) {
 	server, socket := serving(t)
-	postValue(t, socket, PathHello, HelloRequest{LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
+	postValue(t, socket, PathHello, HelloRequest{Protocol: Protocol, LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
 	sample := testState()
 	cwd, resets := "/work/wt", 1_790_000_000
 	sample.Cwd = &cwd
@@ -294,7 +295,7 @@ func TestASampleCarriesTheDirectoryAndTheAccountsWindows(t *testing.T) {
 // would be refused in this image too.
 func TestAnUnansweredRequestOfAnEarlierLoadKeepsNothingBusy(t *testing.T) {
 	server, socket := servingWith(t, func(server *Server) { server.cfg.Hold = 10 * time.Millisecond })
-	postValue(t, socket, PathHello, HelloRequest{LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
+	postValue(t, socket, PathHello, HelloRequest{Protocol: Protocol, LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
 	ctx, cancel := context.WithCancel(context.Background())
 	result := make(chan control.Answer, 1)
 	go func() { result <- server.carry(ctx, control.Request{ID: "r", From: "main", Action: control.Interrupt}) }()
@@ -314,7 +315,7 @@ func TestAnUnansweredRequestOfAnEarlierLoadKeepsNothingBusy(t *testing.T) {
 	if server.Busy() == "" {
 		t.Fatal("ready while the current load may still answer the request")
 	}
-	postValue(t, socket, PathHello, HelloRequest{LoadID: "new", LoadSeq: 1, SessionID: "conversation-1", HarnessVersion: "test"})
+	postValue(t, socket, PathHello, HelloRequest{Protocol: Protocol, LoadID: "new", LoadSeq: 1, SessionID: "conversation-1", HarnessVersion: "test"})
 	if why := server.Busy(); why != "" {
 		t.Fatalf("busy after a reload for a request of the earlier load: %s", why)
 	}

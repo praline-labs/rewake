@@ -42,7 +42,7 @@ The mod's files are embedded from `internal/adapter/claude/mod/`, each named in 
 of `mod.go`, since a pattern skips the manifest's dot directory: the manifest `rewake`
 (`.claude-plugin/plugin.json`), `hooks/hooks.json`, the one module `hooks/rewake.ts` and the
 files it imports — `outbox.ts`, `heartbeat.ts`, `management.ts`, `asks.ts`, `calls.ts`,
-`dialogs.ts`, `closing.ts`, `worktree.ts`, `sessiontools.ts`, `briefs.ts`, `enter.ts`, `mirror.ts`, `permits.ts`, `feed.ts` — and
+`dialogs.ts`, `closing.ts`, `tools.ts`, `enter.ts`, `mirror.ts`, `permits.ts`, `feed.ts` — and
 the generated `protocol.gen.ts`. The run's service
 writes them into `<run dir>/mod` before the harness starts, and the launch passes
 `--plugin-dir <run dir>/mod` to that launch only. Nothing in the person's settings changes (L1);
@@ -104,7 +104,7 @@ Each wrapper answers its own run's mod — main's and every worker's alike.
 
 **Bounds.** `$.http.fetch` gives up after 30 s, so no request is held longer than 20 s
 (`maxWaitSeconds`); a wait is a loop of polls. A request body is at most 64 KiB (`maxBodyBytes`),
-a turn's end 1 MiB, its answer cut by the mod past that and saying so
+a turn's end and a tool's result 1 MiB, cut by the mod past that and saying so
 ([the size](claude-turns.md#the-mods-side)).
 
 **Endpoints.** Every one a `POST` with a JSON body under `/v1/`, answered 200 with its answer or
@@ -112,9 +112,10 @@ another status with a refusal:
 
 | Path | Caller | What it carries | Where |
 |---|---|---|---|
-| `hello` | every load, at `session.start` | the session id, the harness version, the load's id and number; answered with the run's role, whether it hosts spaces, whether the face draws it (`mirror`), the heartbeat's generation | [the live set](claude-turns.md#the-live-set) |
+| `hello` | every load, at `session.start` | the protocol the mod speaks, the session id, the harness version, the load's id and number, whether the run may enter a checkout (`enter`); answered with the run's role, whether it hosts spaces, whether the face draws it (`mirror`), the heartbeat's generation, the tool table and its digest; a mod of another protocol is refused 409 | [the live set](claude-turns.md#the-live-set), [the protocol's number](#the-protocols-number) |
 | `turn/start`, `turn/end` | every role's mod, for its own conversation | a turn's start; its end under an end id, retried until its receipt | [claude-turns.md](claude-turns.md) |
-| `mod/alive` | every admitted load, in a loop | the heartbeat; it also carries at most one control command to the mod, and the run's room work for [the band](#the-band) | [the live set](claude-turns.md#the-live-set), [control](#control) |
+| `mod/alive` | every admitted load, in a loop | the heartbeat, naming the digest of the tool table the load holds; it also carries at most one control command to the mod, the run's room work for [the band](#the-band), and the run's table when the load holds another | [the live set](claude-turns.md#the-live-set), [control](#control), [the tools](#the-tools) |
+| `tool/plan`, `tool/result`, `tool/native` | every admitted load, per call of a rewake tool | a call's arguments, answered with its argv, variables and bound or a refusal; its raw end, answered with the result's text; `worktree_enter`'s move as Claude Code answered it, answered with the text. Stateless: served through a switch's freeze too | [the tools](#the-tools) |
 | `mod/ended` | every admitted load, once | the epochs of other runs whose ends the store keeps; answered with those rewake proves ended | [the outbox](claude-turns.md#the-mods-side) |
 | `mod/state` | every admitted load | native state samples | [telemetry](#telemetry) |
 | `mod/control` | every admitted load | a control command's acknowledgement and final outcome | [control](#control) |
@@ -126,7 +127,8 @@ another status with a refusal:
 **One description.** The protocol is one JSON schema,
 `internal/adapter/claude/mod/protocol.schema.json`. A small generator of rewake's own,
 `tools/protogen`, reads the subset the schema uses — objects, strings, integers, booleans,
-arrays, enums, references — and writes the TypeScript types the mod imports
+arrays, enums, references, and `x-raw` for a value carried unread, a tool's schema or a call's
+arguments (`json.RawMessage`, `unknown`) — and writes the TypeScript types the mod imports
 (`protocol.gen.ts`) and the Go types `modhost` decodes into (`protocol_gen.go`). A test
 regenerates both in memory and fails when a checked-in file differs, so neither side can drift
 from the schema. An additive field is a change of the protocol all the same: a newer mod's field
@@ -135,6 +137,18 @@ The reviewer's acceptance of an added field checks the direction that does happe
 reading what an older one left on disk, a missing field read as before. The fields added through
 October 26, 2026 — the cache telemetry and `cacheLife`, `status/line`, `worker.type`,
 `configuredModelName`, `worker.label`, `thinking` — were accepted so on October 28, 2026.
+
+### The protocol's number
+
+The schema's `protocol` bound is the protocol's number, `modhost.Protocol` in Go and
+`bounds.protocol` in the mod, and the `mod` contract a switch of the room's build compares
+(`contracts.go`): a loaded mod keeps speaking the protocol it was loaded with, so a build of
+another number plans the room's restart and says why. A test pins each number to the digest of
+the generated `protocol_gen.go`, so a changed schema raises it. The hello names the number, and
+the wrapper refuses a hello of another with 409 "this mod speaks an older protocol of rewake:
+restart the room", which a mod of protocol 1 takes as final: it serves nothing until the room's
+restart writes the run's mod anew. Protocol 2, November 3, 2026 (brief 94), brought the tools as
+data; protocol 1's hello named no number.
 
 ### The peer
 
@@ -168,15 +182,24 @@ start, so that is a documented limit, not a refusal.
 ## The tools
 
 The mod registers no mail tools: a session reads and sends through the shell commands. Its tools
-answer with rewake's own `rewake worktree …` command, run by argv through the room's own copy of
-its build (`REWAKE_EXECUTABLE`, [rules/state.md](rules/state.md#the-rooms-own-copy)):
+answer with rewake's own `rewake worktree …` and `rewake brief …` commands, run by argv through
+the room's own copy of its build (`REWAKE_EXECUTABLE`,
+[rules/state.md](rules/state.md#the-rooms-own-copy)). The mod holds none of them: it registers the
+table the hello's answer carries, asks the wrapper to plan each call, runs it with
+`$.process.run`, and posts the raw end for the wrapper to word (`hooks/tools.ts`,
+`modhost/tools.go`). A new table on a poll registers a reshaped tool again and serves a changed
+description from `tool.describe`, so a change of a tool reaches a running session with
+`rewake restart rewake`:
 
 - `worktree_status` on every run: the checkout the session works in and what a space's close
   would do with it;
+- `brief_read`, `brief_tick` and `brief_comment` on every run but main's
+  ([briefs.md](briefs.md#the-tools));
 - `worktree_list` and `worktree_land` on a run whose `REWAKE_ROLE` is `main` — a choice of what
   is shown, not an authorization;
 - `worktree_enter` on a worker whose template says `enter_worktree = true`
-  (`REWAKE_WORKTREE_ENTER`), with the model's own `EnterWorktree` refused there.
+  (`REWAKE_WORKTREE_ENTER`, which the hello reports as `enter`), with the model's own
+  `EnterWorktree` refused there (`hooks/enter.ts`).
 
 Their contracts, shared with pi's extension, are in [worktree-tools.md](worktree-tools.md).
 

@@ -47,7 +47,7 @@ func TestMain(m *testing.M) {
 }
 
 func validHello(load string) []byte {
-	data, _ := json.Marshal(HelloRequest{LoadID: load, SessionID: "conversation-1", HarnessVersion: "2.1.296"})
+	data, _ := json.Marshal(HelloRequest{Protocol: Protocol, LoadID: load, SessionID: "conversation-1", HarnessVersion: "2.1.296"})
 	return data
 }
 
@@ -115,7 +115,7 @@ func TestTheHarnessesHelloBindsItsLoad(t *testing.T) {
 		t.Fatalf("the harness's hello: %d %s %v", status, text, err)
 	}
 	var answer HelloAnswer
-	if err := json.Unmarshal([]byte(text), &answer); err != nil || answer != (HelloAnswer{Role: "main", Generation: 1}) {
+	if err := json.Unmarshal([]byte(text), &answer); err != nil || answer.Role != "main" || answer.Generation != 1 || answer.Mirror != nil {
 		t.Fatalf("the answer: %s", text)
 	}
 	if _, _, err := post(socket, PathHello, validHello("second")); err != nil {
@@ -222,6 +222,8 @@ func TestARequestIsTheSchemasOrRefused(t *testing.T) {
 		{"an unknown field", PathHello, []byte(`{"loadId":"l","sessionId":"s","harnessVersion":"v","serves":"all"}`), http.StatusBadRequest},
 		{"an empty load", PathHello, []byte(`{"loadId":"","sessionId":"s","harnessVersion":"v"}`), http.StatusBadRequest},
 		{"a missing version", PathHello, []byte(`{"loadId":"l","sessionId":"s"}`), http.StatusBadRequest},
+		// A mod of protocol 1 names none, and takes a 409 as final.
+		{"an older protocol", PathHello, []byte(`{"loadId":"l","sessionId":"s","harnessVersion":"v","loadSeq":1}`), http.StatusConflict},
 		{"two values", PathHello, []byte(`{"loadId":"l","sessionId":"s","harnessVersion":"v"} {}`), http.StatusBadRequest},
 		{"not JSON", PathHello, []byte(`hello`), http.StatusBadRequest},
 		{"an unknown path", "/v1/elsewhere", []byte(`{}`), http.StatusNotFound},
