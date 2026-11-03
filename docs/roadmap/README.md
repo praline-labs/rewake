@@ -12,16 +12,9 @@ what it taught goes into the living documents.
 
 Updating without losing the sessions. The owner decided this on November 1, 2026, on the design https://claude.ai/artifact/DK7YF2q9kQsbLjez2JMUgt. A Go host in the person's pane now holds main's pty, and `rewake restart shell` keeps main and the workers ([shell.md](../shell.md)); the manifest of the parts, `rewake restart <part>`, the banner, `rewake update` and the changelog are in ([install.md](../install.md#the-parts-and-what-an-update-restarts)).
 
-The next release is 3.0.0, not 2.12.0. It ships this whole feature in working order, step 1 below included; the plugin door comes after it. The owner, November 1, 2026: «чтобы 3.0.0 был "цельным" с этой фичой. Дверь для плагинов можно не включать в 3.0.0».
+The next release is 3.0.0, not 2.12.0. It ships this whole feature in working order: a new rewake reaches a running room by `rewake restart rewake` without ending a session ([rules/state.md](../rules/state.md#switching-a-running-room)), accepted live in the owner's room on November 3, 2026; the plugin door comes after it. The owner, November 1, 2026: «чтобы 3.0.0 был "цельным" с этой фичой. Дверь для плагинов можно не включать в 3.0.0».
 
-1. **A Go update without a room restart.** Each long-lived process `exec`s the new build, keeping its pid, its children and its fds, and hands over the state that lives only in memory. Its first stage is in: the room's lease handed
-   over to another build by `rewake restart rewake`, which succeeds when every long-lived process
-   can hand over ([rules/state.md](../rules/state.md#switching-a-running-room)), and a worker's
-   run of Claude Code or pi hands over when idle, as do the space hosts, main's host and main's
-   wrapper, the switch deferred while main's turns come, and the plan names `rewake restart
-   rewake` for a new rewake that keeps the room's contracts. Open: its acceptance, a real room
-   switched live.
-2. **A door for plugins.** The parts' contracts and the manifest admit a part that is not rewake's own. A project's main can attach its own part, or a ready one, to rewake: a pane or a strip segment in the shell, a command, a tool for the sessions, a listener of the room's events. The seams stay generic and versioned, so that a plugin is one more client.
+1. **A door for plugins.** The parts' contracts and the manifest admit a part that is not rewake's own. A project's main can attach its own part, or a ready one, to rewake: a pane or a strip segment in the shell, a command, a tool for the sessions, a listener of the room's events. The seams stay generic and versioned, so that a plugin is one more client.
 
 rewake's face ([face.md](../face.md)), after its first slice — a dev worker on Claude Code and every
 pi worker, read with a prompt back, the switch and hot reload:
