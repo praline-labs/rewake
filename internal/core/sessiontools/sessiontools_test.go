@@ -1,6 +1,3 @@
-// Package sessiontools holds the session tools every adapter offers, defined
-// once in sessiontools.ts and copied into each by tools/protogen; it has no
-// Go of its own but the run of the module's tests.
 package sessiontools
 
 import (
@@ -13,8 +10,8 @@ import (
 	"time"
 )
 
-// The tools hold their contract, the same in every harness: each input's
-// arguments or refusal, and the result texts (sessiontools.test.ts).
+// The TypeScript copy the agents of protocol 1 embed holds the same contract
+// (sessiontools.test.ts) until the tools reach them as data.
 func TestTheSessionToolsKeepTheirContract(t *testing.T) {
 	bun, err := exec.LookPath("bun")
 	if err != nil {
