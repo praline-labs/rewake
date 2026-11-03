@@ -49,6 +49,45 @@ test("a leave of a screen nothing was drawn on is no sign", () => {
   expect(seenIn("\x1b[?1049l\x1b[?1049h\x1b[2J\x1b[H\x1b[?25l\x1b[?1049l")).toEqual([]);
 });
 
+// Found by the review of the fix above: each case is what the terminal widget
+// itself shows for the bytes.
+test("setting the screen the program is on again keeps what it drew", () => {
+  expect(seenIn("\x1b[?1047hMAIN\x1b[?1047h\x1b[?1047l")).toEqual([
+    { entered: true },
+    { left: true },
+  ]);
+});
+
+test("CAN and SUB cancel a string, and what follows is drawn", () => {
+  for (const cancel of ["\x18", "\x1a"]) {
+    expect(seenIn(`\x1b[?1049hOLD\x1b[?1049l\x1b[?1049h\x1bPz${cancel}MAIN\x1b\\`)).toEqual([
+      { entered: true },
+      { left: true },
+      { entered: true },
+    ]);
+  }
+  expect(seenIn("\x1b[?1049h\x1b]2;t\x18MAIN")).toEqual([{ entered: true }]);
+});
+
+test("BEL ends an OSC, not a DCS", () => {
+  expect(seenIn("\x1b[?1049h\x1bPz\x07PAYLOAD\x1b\\\x1b[?1049l")).toEqual([]);
+  expect(seenIn("\x1b[?1049h\x1b]2;t\x07MAIN")).toEqual([{ title: "t" }, { entered: true }]);
+});
+
+// The parser keeps its state and not a long payload, so a string past any
+// limit reads the same whole and in reads of 32 KiB.
+test("a DCS longer than a mebibyte stays no drawing across reads", () => {
+  const text = `\x1b[?1049h\x1bPz${"x".repeat((1 << 20) + 65536)}\x1b\\\x1b[?1049l`;
+  const whole = new Scanner().scan(bytes(text));
+  const cut = new Scanner();
+  const pieces: Seen[] = [];
+  for (let at = 0; at < text.length; at += 32768) {
+    pieces.push(...cut.scan(bytes(text.slice(at, at + 32768))));
+  }
+  expect(whole).toEqual([]);
+  expect(pieces).toEqual([]);
+});
+
 test("a copy, the title and the closing mark still come across reads", () => {
   const copy = Buffer.from("a long selection").toString("base64");
   expect(seenIn(`\x1b]52;c;${copy}\x1b\\\x1b]2;main\x07\x1b]6262;rewake-closing\x07`)).toEqual([
