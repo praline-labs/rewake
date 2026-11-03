@@ -27,6 +27,9 @@ Meant to be one move:
 3. Its private subtree's rule in the `depguard` settings of `.golangci.yml`: copy one
    adapter's rule (`adapter-claude`) for the new package and exclude the subtree from
    `adapter-new`.
+4. If it ships an in-agent half, an entry in `agents` of `internal/adapter/purity_test.go` and a
+   pin of its wire as the other adapters' `wire_words_test.go` do: the half runs natively and
+   carries, and the wrapper decides ([rules/adapter-api.md](rules/adapter-api.md#what-an-agents-half-keeps)).
 
 Everything else follows: the launch command, the guide entry, its own `--help` page, the step
 in FLOW, the `harnesses` field of the machine form. A harness cannot be half-registered —

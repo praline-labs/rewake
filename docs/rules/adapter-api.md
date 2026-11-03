@@ -218,6 +218,23 @@ keeps in the agent only the native call, its check and its guard, and words the 
 `control.Refusal` for the agent's code, and `control.Interrupts` for who stopped which turn and
 its settling on the turn's end ([remote-control.md](../remote-control.md#the-agents-part)).
 
+### What an agent's half keeps
+
+Since November 3, 2026 (brief 94) a harness's in-agent half — Claude Code's mod, pi's extension —
+runs natively, makes the check just before a native call, holds a call, renders, and carries
+what it read with its order, bounds and receipts; what the Статус shows, what the face is told, a
+tool's description and argument rule, and a control reply's words are the wrapper's, so a change
+of them reaches a running room by `rewake restart rewake`, with no restart of the agent. Three
+tests hold it, smoke tests rather than analyzers: each adapter pins its wire word by word (the
+mod's endpoints and the fields their requests reach, `modhost/wire_words_test.go`; pi's frame and
+ops, `pi/wire_words_test.go`), so a new field fails until it is listed, and a reading the wrapper
+would project goes raw inside `native`; and `internal/adapter/purity_test.go` scans the files each
+agent ships, as its adapter's `embed` line names them, for a Статус key, a mirror kind or the
+face's tool vocabulary in an agent that forwards its events raw, a description or a reply's words
+given as a literal, an import outside what it ships, and more than one tool registration site,
+which must read the wrapper's table. Its negative examples seed each slip into a copy of a real
+agent file. A permission decision's reason, the asks' wording, stands by name in its list.
+
 ### Spaces
 
 A main run that hosts spaces: it opens a worker in a pseudo-terminal the space host holds,
