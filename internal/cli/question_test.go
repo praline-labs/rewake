@@ -29,6 +29,12 @@ func TestAQuestionPrintsTheAnswer(t *testing.T) {
 			found, _ := filepath.Glob(filepath.Join(state.InboxPath(dir, "api"), "*.json"))
 			if len(found) == 1 {
 				id := strings.TrimSuffix(filepath.Base(found[0]), ".json")
+				// The receiver's delivery comes first, as its wrapper's does:
+				// without it the command spends its delivery budget before it
+				// looks for the answer.
+				if err := mail.WriteStatus(dir, "api", id, mail.Result{State: mail.Delivered}); err != nil {
+					t.Error(err)
+				}
 				answered <- rawUnread(t, dir, "web", map[string]any{
 					"from": "api", "kind": "finished", "toEpoch": web.Epoch(),
 					"inReplyTo": []string{id}, "text": "port 8088",
