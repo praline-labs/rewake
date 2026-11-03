@@ -159,8 +159,9 @@ advice of a plan's step come from it. The shell's banner reads only each step's 
 room view and words the person's key for it itself, so it holds no list of parts.
 
 The handover contracts of the space host and of main's host (`handover.space`, `handover.mainhost`)
-are each `<handover version>.<screen file version>`, from `stream.Contract`: a raise of either is a
-contract a switch refuses.
+are made by `stream.Contract` from the handover's version and the screen file's: the handover's own
+number while the screen file is at its first version, `<handover>.<screen>` after. A raise of either
+is a contract a switch refuses, and today's value is the one before the screen was named.
 
 ### The running set
 

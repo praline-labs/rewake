@@ -2,7 +2,6 @@ package cli
 
 import (
 	"maps"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -28,9 +27,9 @@ func TestEveryContractTheBuildSpeaksIsWhatASwitchCompares(t *testing.T) {
 	}
 }
 
-// The hosts that carry a relay speak their handover's version together with
-// the screen file's: a raise of the screen's version alone is a contract the
-// switch refuses.
+// The hosts that carry a relay speak what stream.Contract makes of their
+// handover's version, which the screen file's version enters: a raise of the
+// screen's alone is a contract the switch refuses.
 func TestTheHostContractsCarryTheScreensVersion(t *testing.T) {
 	speaks := contractsOf(testCatalog()).Speaks
 	for name, want := range map[string]string{
@@ -39,9 +38,6 @@ func TestTheHostContractsCarryTheScreensVersion(t *testing.T) {
 	} {
 		if speaks[name] != want {
 			t.Errorf("%s is %q, want %q", name, speaks[name], want)
-		}
-		if !strings.HasSuffix(want, "."+strconv.Itoa(stream.ScreenVersion)) {
-			t.Errorf("%s names no screen version: %q", name, want)
 		}
 	}
 }

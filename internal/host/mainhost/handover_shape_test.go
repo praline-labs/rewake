@@ -17,7 +17,7 @@ import (
 // build that takes the same, so a changed shape raises HandoverVersion, or
 // ScreenVersion for the screen's: the contract is both.
 var handoverShapes = map[string]string{
-	"1.1": "e5d0ef7e5f7959dbd966e8c3b4c3e554e1c018363bb07aef862c7bd7d7d4e8fe",
+	"1": "e5d0ef7e5f7959dbd966e8c3b4c3e554e1c018363bb07aef862c7bd7d7d4e8fe",
 }
 
 func TestTheMainHostHandoverContractChangesWithItsShape(t *testing.T) {
