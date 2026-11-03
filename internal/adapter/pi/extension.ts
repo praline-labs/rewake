@@ -3,7 +3,7 @@ import { createConnection, type Socket } from "node:net";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { faceInterrupt, facePrompt, faceThinking, serveLevel } from "./faced.ts";
 import { type MirrorEvent, Outbox } from "./feed.ts";
-import { management, type State } from "./management.ts";
+import { management, type State, thrown } from "./management.ts";
 import { Mirror } from "./mirror.ts";
 import { serveMirror } from "./mirrorhooks.ts";
 import { type ToolFields, Tools } from "./tools.ts";
@@ -27,11 +27,12 @@ export type Frame = {
   request?: string;
   from?: string;
   focus?: string;
-  reason?: string;
-  detail?: string;
-  open?: boolean;
-  tokensBefore?: number;
-  tokensAfter?: number;
+  // code names the check that refused a control command, native its raw
+  // result; the wrapper words both (control.go).
+  code?: string;
+  native?: unknown;
+  // levels are the thinking levels a shift+tab of the face cycles, in order.
+  levels?: string[];
   // mirror, in hello's answer, says rewake's face draws this run.
   mirror?: boolean;
   events?: MirrorEvent[];
@@ -48,7 +49,7 @@ export type Link = {
   next: number;
   waiting: Map<number, Waiter>;
 };
-export type Turn = { id: string; link: Link; text: string; reason: string; interrupted?: string };
+export type Turn = { id: string; link: Link; text: string; reason: string };
 
 const maxFrame = 4 << 20;
 const socketPath = process.env.REWAKE_PI_SOCKET;
@@ -161,7 +162,7 @@ export default function (pi: ExtensionAPI) {
     ) {
       respond({
         outcome: "refused",
-        reason: "not the selected conversation",
+        code: "conversation",
         error: "the delivery conversation is no longer current",
       });
       return;
@@ -179,7 +180,7 @@ export default function (pi: ExtensionAPI) {
       return;
     }
     if (frame.op === "thinking") {
-      respond(faceThinking(pi, mirror, context.model));
+      respond(faceThinking(pi, mirror, frame.levels));
       return;
     }
     if (frame.op === "tools") {
@@ -191,13 +192,11 @@ export default function (pi: ExtensionAPI) {
       void managed
         .control(link, frame)
         .then(respond)
-        .catch(() =>
-          respond({
-            outcome: "failed",
-            open: true,
-            detail: "native control did not return an outcome",
-          }),
-        );
+        .catch((error) => respond({ outcome: "failed", native: thrown(error) }));
+      return;
+    }
+    if (frame.op === "trace") {
+      respond(managed.trace(frame.text ?? ""));
       return;
     }
     let reply: Partial<Frame>;
@@ -380,7 +379,7 @@ export default function (pi: ExtensionAPI) {
         : ended.reason === "stop"
           ? "answered"
           : "failed";
-    managed.settled(ended, outcome === "aborted");
+    managed.settled(ended);
     try {
       const reply = await ask(
         ended.link,

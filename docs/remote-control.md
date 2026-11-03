@@ -148,6 +148,22 @@ request to the harness:
   `requested` after one second, and records the final result with native before and
   estimated-after counts. Automatic compaction being disabled does not disable this manual
   request. A missing acknowledgment leaves an open outcome and is not repeated.
+
+### The agent's part
+
+Since mod protocol 2 and extension 3 the two executors stay apart, since the native calls
+differ — Claude Code's `$.session.compact` returns a promise, pi's `ctx.compact` aborts first
+and completes through a callback — but each keeps only what must run inside the agent: the
+native call, the check made just before it, and the one-in-flight guard at the call. Its reply
+is `{outcome, code?, native?}`: `code` names the check that refused (`conversation`, `busy`,
+`turn`, `idle`, and pi's `closed` for a conversation that closed under a compaction), `native`
+is the call's result as it resolved, less any transcript (`{skip?, tokensBefore?,
+tokensAfter?}`, pi's `{tokensBefore, estimatedTokensAfter}`), or `{error}` with what it threw.
+The wrapper words every reply: `control.Refusal` maps a code to the table's reasons, the same
+for both, and each adapter reads its harness's native result — Claude Code's skip as a refusal
+with its words, pi's error text matching "already compacted", "nothing to compact" or "session
+too small" as `nothing to compact`. A change of the words is a Go change that reaches a running
+room by `rewake restart rewake`.
 - **The fixture** serves both verbs through its program, and the shared command and letter
   workflow case (`fixture-steered`,
   [testing-cases.md](testing-cases.md#a-stop-and-steering-a-session)).
@@ -158,6 +174,22 @@ interrupt" instead of the person-at-the-keyboard text, and routing is unchanged:
 to the sessions waiting on that worker. The same words go into the harness's own history
 without starting a turn. Main's `rewake inbox --awaited` shows the task as `stopped:` followed
 by the stop's own text, so it names who stopped the turn.
+
+The wrapper does this for both harnesses (`control.Interrupts`). It names the running turn —
+the one its `turn/start` or the mod's newest state names, the one pi's `turn-start` opened —
+and records who interrupts it before the command goes out, so an end that comes at once finds
+it; with no turn known it refuses `no turn running` itself. The agent aborts the turn if it is
+the one named, else refuses `turn`, and answers `requested`. The end heard on the mail path —
+the mod's outbox `turn/end`, pi's `turn-end`, never the face's stream — settles it: aborted,
+the wrapper puts the actor's words in place of that end's answer and has the agent append them
+to its history (the mod's `trace` command, pi's `trace` op), and answers `done`, or `failed`
+"the turn stopped, but its interruption trace could not be recorded"; ended otherwise, `no turn
+running`; no end within 3 seconds of the dispatch, an open `failed` "the turn has not settled
+after interrupt". An end heard later still carries the actor and its trace: the attribution is
+kept until its turn ends or an hour passes, at most 8, and Claude Code's goes with the run to
+the wrapper's next image (`Handed.Interrupts`); pi's never needs to, since a handover waits for
+an open turn. The trace is appended once the end was heard, so a turn started by then has it
+in its next request rather than before it.
 
 Main's wrapper sends a notice "Rewake: context compacted (compaction N)." for each compaction
 of a worker, and skips one whose cue names this main as the asker: the letter carries the

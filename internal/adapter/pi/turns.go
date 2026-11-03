@@ -66,19 +66,23 @@ func (r *run) handle(l *link, request frame) {
 		r.leave()
 		l.answer(request, reply)
 	case "turn-end":
-		completion, err := r.endTurn(l, request)
+		completion, settled, err := r.endTurn(l, request)
 		if err != nil {
 			r.leave()
 			l.answer(request, frame{Error: err.Error()})
 			return
 		}
 		// Capture belongs to the reader; publication must not block answers to a
-		// wake the host sends while it handles this end.
+		// wake the host sends while it handles this end, nor the trace of an
+		// interrupt, which is asked of the extension once the end is answered.
 		r.publishing.Add(1)
 		go func() {
 			defer r.leave()
 			defer r.publishing.Add(-1)
 			l.answer(request, r.publish(l, completion))
+			if settled != nil {
+				r.traced(l, completion.Thread, completion.Answer, settled)
+			}
 		}()
 	case "mirror":
 		reply := r.mirrored(request)
@@ -128,27 +132,35 @@ func (r *run) startTurn(l *link, request frame) frame {
 	return frame{OK: true}
 }
 
-func (r *run) endTurn(l *link, request frame) (adapter.TurnEnd, error) {
+// endTurn captures the end of the turn the link started. Main's interrupt
+// of it puts the actor in place of the turn's own answer, and answers
+// settled, to be called once the extension traced the actor in pi's history.
+func (r *run) endTurn(l *link, request frame) (adapter.TurnEnd, func(bool), error) {
 	_, thread := r.connection()
 	if request.Turn == "" || request.Turn != l.turn || request.Thread != thread {
-		return adapter.TurnEnd{}, errors.New("the end has no matching start in this conversation")
+		return adapter.TurnEnd{}, nil, errors.New("the end has no matching start in this conversation")
 	}
 	reason := adapter.EndReason(request.Outcome)
 	if reason != adapter.Answered && reason != adapter.Aborted && reason != adapter.Failed {
-		return adapter.TurnEnd{}, errors.New("unknown turn outcome")
+		return adapter.TurnEnd{}, nil, errors.New("unknown turn outcome")
 	}
-	completion := adapter.TurnEnd{Event: ID + "/" + request.Turn, Thread: thread, Reason: reason, Answer: request.Text, Started: l.started}
+	answer := request.Text
+	actor, settled := r.interrupts.Ended(request.Turn, reason == adapter.Aborted, time.Now())
+	if actor != "" {
+		answer = actor
+	}
+	completion := adapter.TurnEnd{Event: ID + "/" + request.Turn, Thread: thread, Reason: reason, Answer: answer, Started: l.started}
 	if r.handler.Capture != nil {
 		completion.Boundary = r.handler.Capture()
 	}
 	completion.Ended = boottime.Now()
 	if err := completion.Check(); err != nil {
-		return adapter.TurnEnd{}, err
+		return adapter.TurnEnd{}, nil, err
 	}
 	l.mu.Lock()
 	l.turn, l.started = "", 0
 	l.mu.Unlock()
-	return completion, nil
+	return completion, settled, nil
 }
 
 func (r *run) publish(l *link, completion adapter.TurnEnd) frame {

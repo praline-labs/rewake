@@ -585,7 +585,8 @@ export interface Receipt {
 export interface ControlCommand {
   // id identifies the request.
   id: string
-  // action is compact, interrupt, or prompt from rewake's own face.
+  // action is compact, interrupt, prompt from rewake's own face, or trace: text the host puts
+  // into the conversation's history as an interruption's actor once the interrupted turn ended.
   action: string
   // from names the requester.
   from: string
@@ -593,7 +594,10 @@ export interface ControlCommand {
   focus: string
   // conversation names the selected conversation.
   conversation: string
-  // text is a prompt's text, typed as the person; absent for any other action.
+  // turn is the turn an interrupt stops, as the host knows it; the mod refuses with code turn
+  // when it is not the one running.
+  turn?: string
+  // text is a prompt's text, typed as the person, or a trace's; absent for any other action.
   text?: string
 }
 
@@ -624,6 +628,9 @@ export interface StateRequest {
   conversation: string
   // activity is working or idle.
   activity: string
+  // turn is the main loop's running turn, absent while idle: the host names the turn an
+  // interrupt stops from it and from turn/start.
+  turn?: string
   // compacting says a native compaction is in progress.
   compacting: boolean
   // compactions counts completed compactions observed by this load.
@@ -645,7 +652,8 @@ export interface StateRequest {
   native?: unknown
 }
 
-// ControlReply is an initial or final result for a dispatched command.
+// ControlReply is an initial or final result for a dispatched command, as native as the mod has
+// it: the host words it (modhost/control.go).
 export interface ControlReply {
   // loadId names the current load.
   loadId: string
@@ -655,14 +663,15 @@ export interface ControlReply {
   id: string
   // outcome is requested, done, refused or failed.
   outcome: string
-  // reason is the fixed control reason, when known.
-  reason: string
-  // detail explains the outcome without transcript content.
-  detail: string
-  // open says the native outcome is not yet known.
-  open: boolean
-  // tokensBefore is context usage before compaction, when supplied.
-  tokensBefore?: number
-  // tokensAfter is context usage after compaction, when supplied.
-  tokensAfter?: number
+  // code names the local check that refused the command, absent for any other outcome.
+  code?: ControlCode
+  // native is the native call's result as it resolved, $.session.compact's {skip?,
+  // tokensBefore?, tokensAfter?}, or {error} with the message of what it threw; absent where
+  // nothing native ran.
+  native?: unknown
 }
+
+// ControlCode is the local check that refused a command just before its native call, which the
+// host words (control.Refusal).
+export type ControlCode = "conversation" | "busy" | "turn" | "idle"
+export const controlCodeValues: readonly ControlCode[] = ["conversation", "busy", "turn", "idle"]

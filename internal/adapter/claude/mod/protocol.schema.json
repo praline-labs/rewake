@@ -570,11 +570,12 @@
       "description": "is one command for the current heartbeat generation.",
       "properties": {
         "id": {"type": "string", "description": "identifies the request."},
-        "action": {"type": "string", "description": "is compact, interrupt, or prompt from rewake's own face."},
+        "action": {"type": "string", "description": "is compact, interrupt, prompt from rewake's own face, or trace: text the host puts into the conversation's history as an interruption's actor once the interrupted turn ended."},
         "from": {"type": "string", "description": "names the requester."},
         "focus": {"type": "string", "description": "is the optional compaction focus."},
         "conversation": {"type": "string", "description": "names the selected conversation."},
-        "text": {"type": "string", "description": "is a prompt's text, typed as the person; absent for any other action."}
+        "turn": {"type": "string", "description": "is the turn an interrupt stops, as the host knows it; the mod refuses with code turn when it is not the one running."},
+        "text": {"type": "string", "description": "is a prompt's text, typed as the person, or a trace's; absent for any other action."}
       },
       "required": ["id", "action", "from", "focus", "conversation"],
       "additionalProperties": false
@@ -600,6 +601,7 @@
         "sequence": {"type": "integer", "description": "orders samples within the load."},
         "conversation": {"type": "string", "description": "is the selected conversation."},
         "activity": {"type": "string", "description": "is working or idle."},
+        "turn": {"type": "string", "description": "is the main loop's running turn, absent while idle: the host names the turn an interrupt stops from it and from turn/start."},
         "compacting": {"type": "boolean", "description": "says a native compaction is in progress."},
         "compactions": {"type": "integer", "description": "counts completed compactions observed by this load."},
         "request": {"type": "string", "description": "names the latest completed compaction request, empty for native compaction."},
@@ -613,20 +615,22 @@
     },
     "ControlReply": {
       "type": "object",
-      "description": "is an initial or final result for a dispatched command.",
+      "description": "is an initial or final result for a dispatched command, as native as the mod has it: the host words it (modhost/control.go).",
       "properties": {
         "loadId": {"type": "string", "description": "names the current load."},
         "generation": {"type": "integer", "description": "names its live heartbeat generation."},
         "id": {"type": "string", "description": "identifies the command."},
         "outcome": {"type": "string", "description": "is requested, done, refused or failed."},
-        "reason": {"type": "string", "description": "is the fixed control reason, when known."},
-        "detail": {"type": "string", "description": "explains the outcome without transcript content."},
-        "open": {"type": "boolean", "description": "says the native outcome is not yet known."},
-        "tokensBefore": {"type": "integer", "description": "is context usage before compaction, when supplied."},
-        "tokensAfter": {"type": "integer", "description": "is context usage after compaction, when supplied."}
+        "code": {"$ref": "#/$defs/ControlCode", "description": "names the local check that refused the command, absent for any other outcome."},
+        "native": {"x-raw": true, "description": "is the native call's result as it resolved, $.session.compact's {skip?, tokensBefore?, tokensAfter?}, or {error} with the message of what it threw; absent where nothing native ran."}
       },
-      "required": ["loadId", "generation", "id", "outcome", "reason", "detail", "open"],
+      "required": ["loadId", "generation", "id", "outcome"],
       "additionalProperties": false
+    },
+    "ControlCode": {
+      "type": "string",
+      "description": "is the local check that refused a command just before its native call, which the host words (control.Refusal).",
+      "enum": ["conversation", "busy", "turn", "idle"]
     }
   }
 }

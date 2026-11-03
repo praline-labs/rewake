@@ -33,7 +33,8 @@ func (r *run) mirrored(request frame) frame {
 // input carries an input of rewake's face to pi: a prompt typed there as
 // the person's, which the extension mirrors once pi hears it as its input;
 // the person's Esc, which stops the run as pi's own Esc does; or their
-// shift+tab, which moves the thinking level on as pi's own does.
+// shift+tab, which moves the thinking level on as pi's own does, through the
+// levels read here off the last sample's model.
 func (r *run) input(ctx context.Context, input mirror.Input) error {
 	l, thread := r.connection()
 	if l == nil {
@@ -44,7 +45,13 @@ func (r *run) input(ctx context.Context, input mirror.Input) error {
 	case mirror.InputKindInterrupt:
 		request = frame{Op: "interrupt", Thread: thread}
 	case mirror.InputKindThinking:
-		request = frame{Op: "thinking", Thread: thread}
+		r.mu.Lock()
+		model := r.observed.model
+		r.mu.Unlock()
+		if model == nil || !model.Reasoning {
+			return errors.New("the current model does not support thinking")
+		}
+		request = frame{Op: "thinking", Thread: thread, Levels: levelsOf(model)}
 	}
 	answer, err := l.ask(ctx, request)
 	if err != nil {

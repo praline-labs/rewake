@@ -191,10 +191,11 @@ pi's own Esc stops its run: the face sends `interrupt` and the harness stops as 
 refusal said under the input (`not interrupted: …`). Esc while idle, or to a session that takes no
 interrupt (a Claude Code dev worker), does nothing. shift+tab moves the session's thinking level to
 the next, as pi's own `app.thinking.cycle` does, where the session takes `thinking` (pi alone): the
-face sends `thinking`, pi's extension sets the next of the model's levels, and pi's own screen and
-the strip hear it as any change of the level; a refusal is said under the input (`not changed:
-Current model does not support thinking`); to any other session it does nothing, and it never
-reaches the pty (brief 62). `rewake screen`
+face sends `thinking`, the wrapper reads the model's levels off pi's last state (`levelsOf`,
+`internal/adapter/pi/native.go`, since extension 3), pi's extension sets the next of them after
+the level pi runs at, and pi's own screen and the strip hear it as any change of the level; a
+refusal is said under the input (`not changed: the current model does not support thinking`); to
+any other session it does nothing, and it never reaches the pty (brief 62). `rewake screen`
 takes the window as the person sees it: the shadow window draws the face too.
 
 ### The input

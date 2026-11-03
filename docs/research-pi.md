@@ -153,7 +153,10 @@ Read on the same installed 1.2.0 in `dist/core/extensions/types.d.ts`,
   `Already compacted` or `Nothing to compact (session too small)`. These map to
   `nothing to compact`. A request with no observed start after one second returns
   `requested`; its final outcome still follows. Other failures report a fixed explanation,
-  not an error that could contain conversation text.
+  not an error that could contain conversation text. Since extension 3 (November 3, 2026)
+  the extension sends the error's message raw in `native` and the wrapper reads it, on the
+  `control` answer and on `compaction-result` alike, with a code for a refusing check
+  ([remote-control.md](remote-control.md#the-agents-part)); the words are the wrapper's.
 - `session_compact` counts a completed manual or automatic compaction. The completion
   callback separately supplies `tokensBefore` and optional `estimatedTokensAfter` for a
   remote request's outcome. Native summary text is never sent to the wrapper. Counts are
@@ -163,7 +166,10 @@ Read on the same installed 1.2.0 in `dist/core/extensions/types.d.ts`,
   `agent_settled` with an aborted outcome; no settled event means an open failure, not
   proof that the turn stopped. The stopped report names its initiator. A native custom
   message, appended without starting a turn, leaves that same actor in the next turn's
-  history. An idle session refuses interrupt as `no turn running`.
+  history. An idle session refuses interrupt as `no turn running`. Since extension 3 the
+  wrapper does all but the abort: it names the turn its `turn-start` opened, the extension
+  aborts it and answers `requested`, the `turn-end` the wrapper hears settles it, and its
+  `trace` op has the extension send that custom message (`rewake_interrupt`).
 
 The prompt cache's lifetime, read on the bundled 1.3.0 on October 23, 2026. No provider tells pi
 when its cache expires. A model's `promptCache` names the provider's best-effort lifetime in

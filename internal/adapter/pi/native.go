@@ -33,6 +33,9 @@ type nativeModel struct {
 		Short *float64 `json:"short"`
 		Long  *float64 `json:"long"`
 	} `json:"promptCache"`
+	// ThinkingLevelMap maps a level to the provider's, null where the model
+	// takes it away.
+	ThinkingLevelMap map[string]json.RawMessage `json:"thinkingLevelMap"`
 }
 
 // assistantUsage is a message's usage as pi normalises it: input is the part
@@ -93,6 +96,7 @@ func (r *run) projectLocked(thread string, raw json.RawMessage, now time.Time, o
 		settings.Effort = &level
 	}
 	observed.Settings = settings
+	r.observed.model = model
 	observed.Context = contextOf(parts.ContextUsage, model)
 	seen := r.cacheLocked(thread, parts.LastAssistant, model)
 	observed.Cache = session.NewCache(seen.Read, seen.Write, seen.Input)
@@ -192,4 +196,28 @@ func tierName(seconds int64) string {
 		return strconv.FormatInt(seconds/60, 10) + "m"
 	}
 	return strconv.FormatInt(seconds, 10) + "s"
+}
+
+// thinkingLevels are pi's thinking levels in the order its shift+tab cycles
+// them (pi-ai's getSupportedThinkingLevels, read on 1.4.0).
+var thinkingLevels = []string{"off", "minimal", "low", "medium", "high", "xhigh", "max"}
+
+// levelsOf are the levels a model's thinking cycles through: a model that
+// reasons has those its map does not take away, xhigh and max only where it
+// names them; one that does not, or is unknown, has off alone.
+func levelsOf(model *nativeModel) []string {
+	if model == nil || !model.Reasoning {
+		return []string{"off"}
+	}
+	var levels []string
+	for _, level := range thinkingLevels {
+		mapped, named := model.ThinkingLevelMap[level]
+		switch {
+		case named && string(bytes.TrimSpace(mapped)) == "null":
+		case !named && (level == "xhigh" || level == "max"):
+		default:
+			levels = append(levels, level)
+		}
+	}
+	return levels
 }

@@ -2,6 +2,7 @@ package pi
 
 import (
 	"context"
+	"encoding/json"
 	"path/filepath"
 	"testing"
 	"time"
@@ -82,7 +83,7 @@ func TestControlDirectoryCarriesFocusAndRemembersCompletion(t *testing.T) {
 	askOK(t, l, completion)
 	askOK(t, l, completion)
 	before, after := int64(42000), int64(2000)
-	result := frame{Op: "compaction-result", Thread: "conversation", Request: request.ID, From: request.From, Outcome: control.Done, TokensBefore: &before, TokensAfter: &after}
+	result := frame{Op: "compaction-result", Thread: "conversation", Request: request.ID, From: request.From, Outcome: control.Done, Native: json.RawMessage(`{"tokensBefore":42000,"estimatedTokensAfter":2000}`)}
 	askOK(t, l, result)
 	askOK(t, l, result)
 	got := rig.run.SessionState()
@@ -112,7 +113,7 @@ func TestControlDoesNotRepeatUnknownRequestsAndCompactionDefersWake(t *testing.T
 	}
 	ctx, cancel := context.WithTimeout(t.Context(), 50*time.Millisecond)
 	defer cancel()
-	answer := rig.run.carry(ctx, control.Request{ID: control.NewID(), Action: control.Interrupt, From: "main"})
+	answer := rig.run.carry(ctx, control.Request{ID: control.NewID(), Action: control.Compact, From: "main"})
 	if answer.Outcome != control.Failed || !answer.Open {
 		t.Fatalf("lost control acknowledgment: %+v", answer)
 	}

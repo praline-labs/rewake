@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/adapter"
+	"github.com/praline-labs/rewake/internal/core/control"
 	"github.com/praline-labs/rewake/internal/core/mirror"
 	"github.com/praline-labs/rewake/internal/core/session"
 	"github.com/praline-labs/rewake/internal/core/sessiontools"
@@ -37,8 +38,11 @@ type run struct {
 	retention string
 	// mirror is LaunchRequest.Mirror, the model rewake's face draws, nil for
 	// a run it does not draw.
-	mirror      *mirror.Model
-	observed    observations
+	mirror   *mirror.Model
+	observed observations
+	// interrupts are who stopped which turn, until it ends (control.go); a
+	// handover waits for an open turn, so none outlives this image.
+	interrupts  control.Interrupts
 	ctx         context.Context
 	cancel      context.CancelFunc
 	listener    *state.Listener

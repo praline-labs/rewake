@@ -102,7 +102,7 @@ func TestAFacePromptEscAndShiftTabReachTheExtension(t *testing.T) {
 		t.Fatal("a prompt before the extension connected was taken")
 	}
 	prompts := make(chan frame, 2)
-	hello(t, rig, func(l *link, got frame) {
+	l, _ := hello(t, rig, func(l *link, got frame) {
 		prompts <- got
 		if got.Text == "busy" {
 			l.answer(got, frame{Error: "pi is compacting its context"})
@@ -128,10 +128,11 @@ func TestAFacePromptEscAndShiftTabReachTheExtension(t *testing.T) {
 	if got := receive(t, prompts); got.Op != "interrupt" || got.Thread != "conversation" || got.Text != "" {
 		t.Fatalf("the interrupt on the wire: %+v", got)
 	}
+	askOK(t, l, frame{Op: "state", Thread: "conversation", State: &sample{Sequence: 2, Idle: true, Native: nativeOf(map[string]any{"model": cached})}})
 	if err := model.Input(t.Context(), mirror.Input{Kind: mirror.InputKindThinking}); err != nil {
 		t.Fatal(err)
 	}
-	if got := receive(t, prompts); got.Op != "thinking" || got.Thread != "conversation" || got.Text != "" {
+	if got := receive(t, prompts); got.Op != "thinking" || got.Thread != "conversation" || got.Text != "" || len(got.Levels) == 0 {
 		t.Fatalf("the shift+tab on the wire: %+v", got)
 	}
 }

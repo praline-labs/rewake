@@ -40,6 +40,11 @@ type Handed struct {
 	// Cache is the last response's cache usage that had input: the mod
 	// sends only its last step's, which may be a placeholder's by now.
 	Cache *session.Cache `json:"cache,omitempty"`
+	// Turn is the main loop's running turn as the host knows it, and
+	// Interrupts who stopped which turn: an end heard by the next image still
+	// carries its actor and its trace.
+	Turn       string                `json:"turn,omitempty"`
+	Interrupts []control.Attribution `json:"interrupts,omitempty"`
 }
 
 // HandedLoad is the current load: its hello and its generation's state.
@@ -62,7 +67,7 @@ func (s *Server) busy() string {
 	switch {
 	case s.closed:
 		return "the mod's endpoint is closing"
-	case s.management.queued != nil || s.management.awaiting(s.current):
+	case len(s.management.queued) > 0 || s.management.awaiting(s.current):
 		return "a control request is dispatched to the mod"
 	case s.asks.Count() > 0:
 		return "a permission request or a question of the worker is open"
@@ -151,7 +156,10 @@ func (s *Server) HandOver() (Handed, *os.File, error) {
 		return Handed{}, nil, errors.New(why)
 	}
 	s.frozen = true
-	handed := Handed{Version: handedVersion, Harness: s.harness, Generation: s.generation, Transition: s.transition, Cache: s.management.observed.cache}
+	handed := Handed{
+		Version: handedVersion, Harness: s.harness, Generation: s.generation, Transition: s.transition, Cache: s.management.observed.cache,
+		Turn: s.management.turn, Interrupts: s.management.interrupts.Handed(),
+	}
 	if s.current != nil {
 		handed.Current = &HandedLoad{Hello: s.current.hello, Generation: s.current.generation, Live: s.current.live}
 	}
@@ -194,6 +202,8 @@ func (s *Server) Adopt(handed Handed, listener *os.File) error {
 	s.mu.Lock()
 	s.generation, s.transition = handed.Generation, handed.Transition
 	s.management.observed.cache = handed.Cache
+	s.management.turn = handed.Turn
+	s.management.interrupts.Adopt(handed.Interrupts)
 	for _, load := range handed.Superseded {
 		s.superseded[load] = true
 	}

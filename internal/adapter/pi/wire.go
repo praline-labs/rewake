@@ -18,29 +18,31 @@ import (
 // Both peers number their own requests. Only answer frames consume a waiter;
 // a request from the other side may carry the same id.
 type frame struct {
-	Op           string  `json:"op"`
-	ID           int64   `json:"id,omitempty"`
-	Protocol     int     `json:"protocol,omitempty"`
-	Thread       string  `json:"thread,omitempty"`
-	Turn         string  `json:"turn,omitempty"`
-	Outcome      string  `json:"outcome,omitempty"`
-	Text         string  `json:"text,omitempty"`
-	Notice       string  `json:"notice,omitempty"`
-	OK           bool    `json:"ok,omitempty"`
-	Error        string  `json:"error,omitempty"`
-	Steered      bool    `json:"steered,omitempty"`
-	State        *sample `json:"state,omitempty"`
-	Sequence     uint64  `json:"sequence,omitempty"`
-	Pending      bool    `json:"pending,omitempty"`
-	Action       string  `json:"action,omitempty"`
-	Request      string  `json:"request,omitempty"`
-	From         string  `json:"from,omitempty"`
-	Focus        string  `json:"focus,omitempty"`
-	Reason       string  `json:"reason,omitempty"`
-	Detail       string  `json:"detail,omitempty"`
-	Open         bool    `json:"open,omitempty"`
-	TokensBefore *int64  `json:"tokensBefore,omitempty"`
-	TokensAfter  *int64  `json:"tokensAfter,omitempty"`
+	Op       string  `json:"op"`
+	ID       int64   `json:"id,omitempty"`
+	Protocol int     `json:"protocol,omitempty"`
+	Thread   string  `json:"thread,omitempty"`
+	Turn     string  `json:"turn,omitempty"`
+	Outcome  string  `json:"outcome,omitempty"`
+	Text     string  `json:"text,omitempty"`
+	Notice   string  `json:"notice,omitempty"`
+	OK       bool    `json:"ok,omitempty"`
+	Error    string  `json:"error,omitempty"`
+	Steered  bool    `json:"steered,omitempty"`
+	State    *sample `json:"state,omitempty"`
+	Sequence uint64  `json:"sequence,omitempty"`
+	Pending  bool    `json:"pending,omitempty"`
+	Action   string  `json:"action,omitempty"`
+	Request  string  `json:"request,omitempty"`
+	From     string  `json:"from,omitempty"`
+	Focus    string  `json:"focus,omitempty"`
+	// Code names the extension's check that refused a control command, and
+	// Native the raw result of its native call; the host words both
+	// (control.go). Levels are the thinking levels the face's shift+tab
+	// cycles (native.go).
+	Code   string          `json:"code,omitempty"`
+	Native json.RawMessage `json:"native,omitempty"`
+	Levels []string        `json:"levels,omitempty"`
 	// Mirror, in hello's answer, says rewake's face draws the run; Events
 	// are the conversation a mirror frame carries (mirror.go).
 	Mirror bool               `json:"mirror,omitempty"`

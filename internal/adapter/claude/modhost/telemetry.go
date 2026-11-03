@@ -126,6 +126,10 @@ func (s *Server) observeLocked(sample StateRequest) {
 		Dialog: dialog, Waiting: waiting, RateLimits: native.rateLimits,
 	})
 	observed.thread, observed.sequence, observed.generation = sample.Conversation, sample.Sequence, sample.Generation
+	s.management.turn = ""
+	if sample.Turn != nil {
+		s.management.turn = *sample.Turn
+	}
 }
 
 // SessionState reads only cached observations; a native call never blocks

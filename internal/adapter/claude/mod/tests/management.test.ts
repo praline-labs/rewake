@@ -98,7 +98,7 @@ test("remote compact carries focus, returns requested while the heartbeat contin
   expect(states(run).at(-1).compacting).toBe(true);
   await run.clock.advance(15000);
   expect(results(run).map((one: any) => one.outcome)).toEqual(["requested", "done"]);
-  expect(results(run).at(-1)).toMatchObject({ tokensBefore: 25000, tokensAfter: 1000 });
+  expect(results(run).at(-1).native).toEqual({ tokensBefore: 25000, tokensAfter: 1000 });
   expect(states(run).at(-1)).toMatchObject({
     compactions: 1,
     compacting: false,
@@ -118,7 +118,7 @@ test("compact refuses a running turn without calling native compact", async ($, 
   await $.turn.start({ turnId: "t" } as any);
   await run.clock.settle();
   expect(calls).toBe(0);
-  expect(results(run).at(-1)).toMatchObject({ outcome: "refused", reason: "in a turn" });
+  expect(results(run).at(-1)).toMatchObject({ outcome: "refused", code: "turn" });
 });
 
 test("native compaction counts only a main conversation completion, and a skip counts nothing", async ($, on) => {
@@ -143,8 +143,23 @@ test("native compaction counts only a main conversation completion, and a skip c
   });
 });
 
-test("interrupt waits for the matching aborted end and keeps its actor in the report and native history", async ($, on) => {
-  const run = world(on, { replies: { "/v1/mod/alive": orders(() => run, command("interrupt")) } });
+// The mod aborts the turn the host names and answers requested; the host
+// matches the end it hears on the outbox and sends the actor back as a trace.
+test("interrupt aborts the turn the host names, and a trace is appended to native history", async ($, on) => {
+  const run = world(on, {
+    replies: {
+      "/v1/mod/alive": [
+        ...orders(() => run, command("interrupt", { turn: "t" })),
+        ...orders(
+          () => run,
+          command("trace", {
+            id: "trace-1",
+            text: "main interrupted this turn with rewake interrupt",
+          }),
+        ),
+      ],
+    },
+  });
   const history = mock.session(on);
   const aborts: string[] = [];
   on("turn.abort", (_: any, e: any) => {
@@ -155,15 +170,34 @@ test("interrupt waits for the matching aborted end and keeps its actor in the re
   await $.turn.start({ turnId: "t" } as any);
   await run.clock.settle();
   expect(aborts).toEqual(["t"]);
-  expect(results(run)).toEqual([]);
-  await complete($, "sub", { agentId: "child", reason: "aborted" });
-  expect(results(run)).toEqual([]);
+  expect(results(run)).toEqual([
+    expect.objectContaining({ id: "request-1", outcome: "requested" }),
+  ]);
+  expect(states(run).at(-1).turn).toBe("t");
   await complete($, "t", { reason: "aborted", answer: "" });
-  expect(results(run).at(-1).outcome).toBe("done");
-  expect(run.ends().at(-1)!.body.answer).toBe("main interrupted this turn with rewake interrupt");
+  expect(run.ends().at(-1)!.body).toMatchObject({ turnId: "t", reason: "aborted" });
+  expect(states(run).at(-1).turn).toBeUndefined();
+  await run.clock.advance(holdMs);
+  expect(results(run).at(-1)).toMatchObject({ id: "trace-1", outcome: "done" });
   expect(JSON.stringify(history.appended())).toContain(
     "main interrupted this turn with rewake interrupt",
   );
+});
+
+test("an interrupt naming a turn that is not the running one aborts nothing", async ($, on) => {
+  const run = world(on, {
+    replies: { "/v1/mod/alive": orders(() => run, command("interrupt", { turn: "old" })) },
+  });
+  let calls = 0;
+  on("turn.abort", () => {
+    calls++;
+    return { value: undefined };
+  });
+  await start($);
+  await $.turn.start({ turnId: "t" } as any);
+  await run.clock.settle();
+  expect(calls).toBe(0);
+  expect(results(run).at(-1)).toMatchObject({ outcome: "refused", code: "turn" });
 });
 
 for (const action of ["interrupt", "compact"]) {
@@ -173,10 +207,7 @@ for (const action of ["interrupt", "compact"]) {
     });
     await start($);
     await run.clock.settle();
-    expect(results(run).at(-1)).toMatchObject({
-      outcome: "refused",
-      reason: "not the selected conversation",
-    });
+    expect(results(run).at(-1)).toMatchObject({ outcome: "refused", code: "conversation" });
   });
 }
 
@@ -190,21 +221,30 @@ test("interrupt without a main turn is refused without aborting", async ($, on) 
   await start($);
   await run.clock.settle();
   expect(calls).toBe(0);
-  expect(results(run).at(-1)).toMatchObject({ outcome: "refused", reason: "no turn running" });
+  expect(results(run).at(-1)).toMatchObject({ outcome: "refused", code: "idle" });
 });
 
-test("an interrupt without an end stays unknown, and a normal end never claims it stopped the turn", async ($, on) => {
-  const run = world(on, { replies: { "/v1/mod/alive": orders(() => run, command("interrupt")) } });
-  const history = mock.session(on);
-  on("turn.abort", () => ({ value: undefined }));
+test("an interrupt whose abort is refused answers what it said, and frees the guard", async ($, on) => {
+  const run = world(on, {
+    replies: {
+      "/v1/mod/alive": [
+        ...orders(() => run, command("interrupt")),
+        ...orders(() => run, command("interrupt", { id: "request-2" })),
+      ],
+    },
+  });
+  let refuse = true;
+  on("turn.abort", () => (refuse ? { deny: "no such turn" } : { value: undefined }));
   await start($);
   await $.turn.start({ turnId: "t" } as any);
-  await run.clock.advance(3000);
-  expect(results(run).at(-1)).toMatchObject({ outcome: "failed", open: true });
-  await complete($, "t");
-  expect(results(run).at(-1)).toMatchObject({ outcome: "refused", reason: "no turn running" });
-  expect(run.ends().at(-1)!.body.answer).toBe("done t");
-  expect(history.appended()).toEqual([]);
+  await run.clock.settle();
+  expect(results(run).at(-1)).toMatchObject({
+    outcome: "failed",
+    native: { error: expect.stringContaining("no such turn") },
+  });
+  refuse = false;
+  await run.clock.advance(holdMs);
+  expect(results(run).at(-1)).toMatchObject({ id: "request-2", outcome: "requested" });
 });
 
 test("a skipped remote compaction has a final refusal and no completion count", async ($, on) => {
@@ -212,7 +252,8 @@ test("a skipped remote compaction has a final refusal and no completion count", 
   on("session.compact", () => ({ skip: "nothing to compact" }));
   await start($);
   await run.clock.settle();
-  expect(results(run).map((one: any) => one.outcome)).toEqual(["requested", "refused"]);
+  expect(results(run).map((one: any) => one.outcome)).toEqual(["requested", "done"]);
+  expect(results(run).at(-1).native).toEqual({ skip: "nothing to compact" });
   expect(states(run).at(-1)).toMatchObject({ compactions: 0, compacting: false });
 });
 

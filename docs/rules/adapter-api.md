@@ -213,7 +213,10 @@ Each verb is offered and answered on its own: compact, with a focus where the ha
 one for a single compaction, and interrupt the running turn. Requests travel as files in the
 run's control directory (`core/control`); the adapter decides how it hears them. A verb the
 adapter does not offer is refused by the CLI before a file is written
-([remote-control.md](../remote-control.md)).
+([remote-control.md](../remote-control.md)). An adapter whose agent carries the request out
+keeps in the agent only the native call, its check and its guard, and words the reply in Go:
+`control.Refusal` for the agent's code, and `control.Interrupts` for who stopped which turn and
+its settling on the turn's end ([remote-control.md](../remote-control.md#the-agents-part)).
 
 ### Spaces
 

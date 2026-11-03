@@ -3,19 +3,29 @@
 import { expect, test } from "bun:test";
 import { management } from "./management.ts";
 
-function staged(ctx: object) {
+function staged(ctx: object, running?: () => unknown) {
   const handlers = new Map<string, (e: unknown) => unknown>();
-  const pi = { on: (name: string, handle: (e: unknown) => unknown) => handlers.set(name, handle) };
+  const traced: unknown[] = [];
+  const pi = {
+    on: (name: string, handle: (e: unknown) => unknown) => handlers.set(name, handle),
+    sendMessage: (message: unknown, options: unknown) => traced.push([message, options]),
+  };
   const sent: any[] = [];
   const link = { ready: true, thread: "conversation" };
   const managed = management(
     pi as never,
     () => ctx as never,
     () => link as never,
-    () => undefined,
+    () => running?.() as never,
     (_link, fields) => sent.push(fields),
   );
-  return { managed, sent, emit: (name: string, e: unknown) => handlers.get(name)?.(e) };
+  return {
+    managed,
+    sent,
+    link,
+    traced,
+    emit: (name: string, e: unknown) => handlers.get(name)?.(e),
+  };
 }
 
 const model = {
@@ -86,4 +96,68 @@ test("each assistant message's end is sampled with its usage as reported, a plac
   expect(sent[0].state).toMatchObject({ idle: false, native: { contextUsage: null, model: null } });
   managed.reset();
   expect(managed.sample().native.lastAssistant).toBeNull();
+});
+
+// The extension carries a command out after its check and answers as pi
+// resolved; the wrapper words it (control.go).
+test("a command is refused by the code of its check, and carried out as pi resolves it", async () => {
+  let idle = false;
+  let aborted = 0;
+  let compacting: { onComplete: (r: unknown) => void; onError: (e: Error) => void } | undefined;
+  const ctx = {
+    isIdle: () => idle,
+    getContextUsage: () => undefined,
+    abort: () => aborted++,
+    compact: (options: never) => {
+      compacting = options;
+    },
+  };
+  let running: unknown;
+  const { managed, link, sent, traced } = staged(ctx, () => running);
+  const control = (frame: object) =>
+    managed.control(
+      link as never,
+      { op: "control", id: 1, request: "r", from: "main", ...frame } as never,
+    );
+  expect(await control({ action: "compact" })).toEqual({ outcome: "refused", code: "turn" });
+  expect(await control({ action: "interrupt" })).toEqual({ outcome: "refused", code: "idle" });
+  running = { id: "t1", link };
+  expect(await control({ action: "interrupt", turn: "t0" })).toEqual({
+    outcome: "refused",
+    code: "turn",
+  });
+  expect(await control({ action: "interrupt", turn: "t1" })).toEqual({ outcome: "requested" });
+  expect(aborted).toBe(1);
+  expect(await control({ action: "compact" })).toEqual({ outcome: "refused", code: "busy" });
+  expect(managed.trace("main interrupted this turn with rewake interrupt")).toEqual({ ok: true });
+  expect(traced).toEqual([
+    [
+      {
+        customType: "rewake_interrupt",
+        content: "main interrupted this turn with rewake interrupt",
+        display: true,
+      },
+      { triggerTurn: false, deliverAs: "steer" },
+    ],
+  ]);
+  managed.settled(running as never);
+  running = undefined;
+  idle = true;
+  const compacted = control({ action: "compact" });
+  compacting!.onComplete({
+    summary: "the conversation",
+    tokensBefore: 9000,
+    estimatedTokensAfter: 900,
+  });
+  expect(await compacted).toEqual({
+    outcome: "done",
+    native: { tokensBefore: 9000, estimatedTokensAfter: 900 },
+  });
+  expect(JSON.stringify(sent)).not.toContain("the conversation");
+  const failed = control({ action: "compact" });
+  compacting!.onError(new Error("Nothing to compact"));
+  expect(await failed).toEqual({ outcome: "failed", native: { error: "Nothing to compact" } });
+  const closed = control({ action: "compact" });
+  managed.reset();
+  expect(await closed).toEqual({ outcome: "failed", code: "closed" });
 });

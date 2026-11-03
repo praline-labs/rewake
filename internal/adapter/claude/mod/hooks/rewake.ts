@@ -331,8 +331,8 @@ export const register: Register = (on) => {
     }
     load.asks.ended();
     mirror.turn(e.turnId, "idle");
-    const actor = await load.management.ended(e.turnId, e.reason === "aborted");
-    let answer = actor ?? e.answer;
+    load.management.ended(e.turnId);
+    let answer = e.answer;
     if (answer === "" && e.reason === "refusal") {
       answer = e.refusal?.explanation ?? "";
     }

@@ -27,7 +27,7 @@ internal/infra/proxyenv/                      for tests: the proxy variables of 
 internal/infra/memfile/                       files in memory alone (memfd), for what an image hands the next across an exec
 internal/core/mail/                           message, status, sender-side write, turn ends; `Box` is one run's own mail (room, name, epoch), the one handle a command opens on it: its read, its pending mark, what it owes, its acts on the letters it sent (send, edit, withdraw, addendum, recall), each taking the lock itself, and what it is told of them, and `Locked` the operations that run under its mailbox lock, settling a letter with a result or by its status among them
 internal/core/mail/mailtest/                  for tests outside mail: the paths and bytes of its records, each checked against mail
-internal/core/control/                        a main's control request to a run and its answer, as files
+internal/core/control/                        a main's control request to a run and its answer, as files; the words of an agent's refusal code and the interrupt's attribution and settling
 internal/core/ask/                            a worker's permission requests and questions, held in its wrapper while main answers them
 internal/core/role/                           the role catalogue: flag, briefing line, reporting duty
 internal/core/brief/                          text injected into an agent, independent of transport

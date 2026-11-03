@@ -23,6 +23,11 @@ type Pending = {
   timer: ReturnType<typeof setTimeout>;
 };
 
+// thrown is what a native call threw, as its message.
+export function thrown(error: unknown): { error: string } {
+  return { error: error instanceof Error ? error.message : String(error) };
+}
+
 // modelOf is the model as pi holds it, less what may carry credentials: its
 // headers and its address.
 export function modelOf(model: object | undefined): unknown {
@@ -43,7 +48,8 @@ export function management(
   let compacting = false;
   let lastAssistant: unknown = null;
   let compact: Pending | undefined;
-  let interrupt: (Pending & { turn: Turn }) | undefined;
+  // interrupting is the turn an interrupt stopped, in flight until it settles.
+  let interrupting: Turn | undefined;
 
   function sample(): State {
     const ctx = context();
@@ -87,6 +93,9 @@ export function management(
     answer(pending, fields);
   }
 
+  // A command is carried out natively after the check made just before its
+  // call, and answered as it resolved: the wrapper words the reply, waits for
+  // an interrupted turn to settle and names who stopped it (control.go).
   function startCompact(link: Link, frame: Frame, ctx: ExtensionContext): Promise<Partial<Frame>> {
     return new Promise((resolve) => {
       const pending: Pending = {
@@ -102,122 +111,73 @@ export function management(
         // running turn, and holding compact prevents a wake during that await.
         ctx.compact({
           customInstructions: frame.focus || undefined,
+          // The result as pi gave it, less the summary it carries.
           onComplete: (result) =>
             finished(pending, {
               outcome: "done",
-              tokensBefore: result.tokensBefore,
-              tokensAfter: result.estimatedTokensAfter,
+              native: {
+                tokensBefore: result.tokensBefore,
+                estimatedTokensAfter: result.estimatedTokensAfter,
+              },
             }),
-          onError: (error) => {
-            const empty = /already compacted|nothing to compact|session too small/i.test(
-              error.message,
-            );
-            finished(pending, {
-              outcome: empty ? "refused" : "failed",
-              reason: empty ? "nothing to compact" : "cut short",
-              detail: empty ? undefined : "native compaction failed or was interrupted",
-            });
-          },
+          onError: (error) => finished(pending, { outcome: "failed", native: thrown(error) }),
         });
-      } catch {
-        finished(pending, {
-          outcome: "failed",
-          detail: "native compaction could not be requested",
-        });
-      }
-    });
-  }
-
-  function startInterrupt(
-    link: Link,
-    frame: Frame,
-    ctx: ExtensionContext,
-    running: Turn,
-  ): Promise<Partial<Frame>> {
-    return new Promise((resolve) => {
-      const pending = {
-        frame,
-        link,
-        resolve,
-        turn: running,
-        timer: setTimeout(
-          () =>
-            resolve({
-              outcome: "failed",
-              open: true,
-              reason: "cut short",
-              detail: "the turn has not settled after interrupt",
-            }),
-          3000,
-        ),
-      };
-      interrupt = pending;
-      running.interrupted = `${frame.from} interrupted this turn with rewake interrupt`;
-      try {
-        ctx.abort();
-      } catch {
-        interrupt = undefined;
-        running.interrupted = undefined;
-        answer(pending, { outcome: "failed", detail: "native interrupt could not be requested" });
+      } catch (error) {
+        finished(pending, { outcome: "failed", native: thrown(error) });
       }
     });
   }
 
   async function control(link: Link, frame: Frame): Promise<Partial<Frame>> {
     const ctx = context();
-    if (!ctx || current() !== link) return { outcome: "refused", reason: "not answering" };
-    if (!frame.request || !frame.from)
-      return { outcome: "refused", detail: "control needs a request and sender" };
-    if (compacting || compact || interrupt)
-      return { outcome: "refused", reason: "another request in flight" };
+    if (!ctx || current() !== link) return { outcome: "refused", code: "conversation" };
+    if (compacting || compact || interrupting) return { outcome: "refused", code: "busy" };
     if (frame.action === "compact") {
-      if (!ctx.isIdle()) return { outcome: "refused", reason: "in a turn" };
+      if (!ctx.isIdle()) return { outcome: "refused", code: "turn" };
       return startCompact(link, frame, ctx);
     }
     if (frame.action === "interrupt") {
       const running = turn();
       if (!running || running.link !== link || ctx.isIdle())
-        return { outcome: "refused", reason: "no turn running" };
-      return startInterrupt(link, frame, ctx, running);
+        return { outcome: "refused", code: "idle" };
+      if (frame.turn !== undefined && frame.turn !== running.id)
+        return { outcome: "refused", code: "turn" };
+      interrupting = running;
+      try {
+        ctx.abort();
+      } catch (error) {
+        interrupting = undefined;
+        return { outcome: "failed", native: thrown(error) };
+      }
+      return { outcome: "requested" };
     }
-    return { outcome: "refused", detail: "unknown control action" };
+    return { outcome: "refused" };
   }
 
-  function settled(ended: Turn, aborted: boolean) {
-    const pending = interrupt;
-    if (pending?.turn !== ended) return;
-    interrupt = undefined;
-    if (aborted) {
-      ended.text = ended.interrupted!;
-      // Keep the actor in native history without starting another turn.
-      try {
-        pi.sendMessage(
-          { customType: "rewake_interrupt", content: ended.text, display: true },
-          { triggerTurn: false, deliverAs: "steer" },
-        );
-        answer(pending, { outcome: "done" });
-      } catch {
-        answer(pending, {
-          outcome: "failed",
-          detail: "the turn stopped, but its interruption trace could not be recorded",
-        });
-      }
-    } else {
-      answer(pending, { outcome: "refused", reason: "no turn running" });
+  // trace puts an interrupt's actor into pi's history without starting a
+  // turn, once the wrapper heard the interrupted turn's end.
+  function trace(text: string): Partial<Frame> {
+    try {
+      pi.sendMessage(
+        { customType: "rewake_interrupt", content: text, display: true },
+        { triggerTurn: false, deliverAs: "steer" },
+      );
+      return { ok: true };
+    } catch (error) {
+      return { error: String(error) };
     }
+  }
+
+  // A turn's settling frees an interrupt of it; the wrapper matches the end
+  // it hears to the interrupt.
+  function settled(ended: Turn) {
+    if (interrupting === ended) interrupting = undefined;
   }
 
   function reset() {
-    for (const pending of [compact, interrupt]) {
-      if (pending)
-        answer(pending, {
-          outcome: "failed",
-          open: true,
-          detail: "the conversation closed before its control outcome",
-        });
-    }
+    if (compact) answer(compact, { outcome: "failed", code: "closed" });
     compact = undefined;
-    interrupt = undefined;
+    interrupting = undefined;
     compacting = false;
     lastAssistant = null;
   }
@@ -255,5 +215,5 @@ export function management(
   });
   pi.on("model_select", async () => changed());
   pi.on("thinking_level_select", async () => changed());
-  return { sample, changed, control, settled, reset, busy: () => compacting || !!compact };
+  return { sample, changed, control, trace, settled, reset, busy: () => compacting || !!compact };
 }

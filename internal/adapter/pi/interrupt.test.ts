@@ -3,7 +3,7 @@
 // so (dist/modes/interactive/interactive-mode.js, message_end, and
 // components/assistant-message.js, read on 1.4.0), and the face draws it the same.
 import { expect, test } from "bun:test";
-import { faceInterrupt, faceThinking, levelsOf, serveLevel } from "./faced.ts";
+import { faceInterrupt, faceThinking, serveLevel } from "./faced.ts";
 import type { MirrorEvent } from "./feed.ts";
 import { Mirror } from "./mirror.ts";
 import { serveMirror } from "./mirrorhooks.ts";
@@ -48,14 +48,12 @@ test("Esc stops a working pi through its own abort, and leaves an idle one alone
   expect(aborted).toBe(1);
 });
 
-// pi's shift+tab moves the level to the next its model takes and wraps
-// round to off (core/agent-session.js cycleThinkingLevel, read on 1.4.0).
+// pi's shift+tab moves the level to the next of those the wrapper read off
+// its model and wraps round to off (core/agent-session.js
+// cycleThinkingLevel, read on 1.4.0; native.go, levelsOf).
 test("shift+tab moves pi's thinking level on as pi's own does", () => {
   const { mirror } = mirrored();
-  const reasoning = { reasoning: true, thinkingLevelMap: { minimal: null, xhigh: "xhigh" } };
-  expect(levelsOf(reasoning)).toEqual(["off", "low", "medium", "high", "xhigh"]);
-  expect(levelsOf({ reasoning: true })).toEqual(["off", "minimal", "low", "medium", "high"]);
-  expect(levelsOf({ reasoning: false })).toEqual(["off"]);
+  const levels = ["off", "low", "medium", "high", "xhigh"];
   let level = "high";
   const pi = {
     getThinkingLevel: () => level as never,
@@ -63,7 +61,7 @@ test("shift+tab moves pi's thinking level on as pi's own does", () => {
       level = to;
     },
   };
-  const cycled = () => faceThinking(pi, mirror, reasoning);
+  const cycled = () => faceThinking(pi, mirror, levels);
   expect(cycled()).toEqual({ ok: true });
   expect(level).toBe("xhigh");
   cycled();
@@ -74,9 +72,7 @@ test("shift+tab moves pi's thinking level on as pi's own does", () => {
   level = "minimal";
   cycled();
   expect(level).toBe("off");
-  expect(faceThinking(pi, mirror, { reasoning: false }).error).toBe(
-    "Current model does not support thinking",
-  );
+  expect(faceThinking(pi, mirror, undefined).error).toBeDefined();
   mirror.on = false;
   expect(cycled().error).toContain("does not draw");
   expect(level).toBe("off");

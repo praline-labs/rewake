@@ -325,21 +325,31 @@ Compact with an optional focus, and interrupt; clear is not offered; a drawn run
 face's prompt ([the mirror](#the-mirror)). `control.Serve` reads the
 run's control directory ([remote-control.md](remote-control.md)); the host queues the request for
 the current load and generation and wakes its held `mod/alive` poll. An answer to the poll
-carries at most one command, dispatched once; the poll chain renews at once while the command
+carries at most one command, the oldest queued, dispatched once; the poll chain renews at once while the command
 runs separately (`management.ts`, outside the heartbeat's awaited chain, since a compaction may
 take minutes). `mod/control` carries its first and final answers, matched to that dispatched id
 and generation. These endpoints use the same peer checks as the hello; no journal or durable
 outbox is added for control.
 
-Compaction refuses a running main turn or another operation in flight. The mod answers
-`requested`, passes the focus to native compaction, and later answers `done` with native
-before/after counts when supplied, or a refusal or failure. The host keeps that final result in
-the compaction outcomes for main's letter; it never sends the summary.
+Since protocol 2 the mod words nothing ([remote-control.md](remote-control.md#the-agents-part)):
+`mod/control` carries `{outcome, code?, native?}`, and the host words it (`modhost/control.go`,
+`worded`). Compaction is refused with code `turn` in a running main turn, `busy` beside another
+operation in flight. The mod answers `requested`, passes the focus to native compaction, and
+later answers `done` with what `$.session.compact` resolved, less its messages — `{skip?,
+tokensBefore?, tokensAfter?}` — or `failed` with what it threw. The host reads a skip as a
+refusal with its words, keeps the final result in the compaction outcomes for main's letter, and
+never sees the summary.
 
-Interrupt names the running main turn and waits for its matching `aborted` completion. The
-stopped report names the requester, and the mod appends that actor to native history without
-starting a turn. A normally completed turn refuses the interrupt. A missing end after three
-seconds gives an open failure; an end heard later still carries the actor.
+Interrupt is the host's to settle ([remote-control.md](remote-control.md#the-agents-part)). The
+host names the running main turn — set by `turn/start` and by each state's `turn`, which the
+mod sends while a main turn runs, cleared by its captured end — and refuses `no turn running`
+itself when it knows none. The mod aborts it if it is its running turn, else refuses with code
+`turn` (`idle` with none), and answers `requested`. The outbox's aborted end of that turn
+settles it: the host captures it with the actor's words as its answer, queues a `trace` command
+whose text the mod appends to native history without starting a turn (`$.session.append`), and
+answers `done` once the mod says it did. A normally completed turn refuses the interrupt. A
+missing end three seconds after the dispatch gives an open failure; an end heard later, by the
+next image too, still carries the actor and its trace.
 
 The host waits five seconds for a control acknowledgement. A command not dispatched by then is
 removed and refused; one already dispatched has an unknown outcome and is not repeated. An old
@@ -446,6 +456,7 @@ idle worker makes it (`handover.go`, `modhost/handover.go`; `handover.claude` na
 | The delivery server's held and recent letters | busy while any is held, or a notice reported delivered is within its late word's minute (the host's own refusal) |
 | The mirror | its model in a memory file, which the next image serves; a face reconnects ([face.md](face.md#the-socket)) |
 | The cache | the last response's cache usage that had input, inline (`Handed.Cache`): the mod sends only its last step's ([telemetry](#telemetry)) |
+| The interrupts | the running main turn as the host knows it, and who interrupted which turn, inline (`Handed.Turn`, `Handed.Interrupts`): an end heard by the next image still carries its actor and its trace ([control](#control)); an interrupt waiting on its turn's end keeps the switch waiting at most its three seconds |
 
 The snapshot is the endpoint's quiescent point (November 2, 2026): it waits for every request
 under way that takes an effect — a hello, a turn's start or end, an ask opened or settled, a control

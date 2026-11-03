@@ -138,8 +138,7 @@ func TestControlCrossesFilesHeartbeatAndFinalOutcome(t *testing.T) {
 	if server.Busy() == "" {
 		t.Fatal("ready for a handover while a compaction's outcome is to come")
 	}
-	before, after := 25000, 1000
-	initial.Outcome, initial.TokensBefore, initial.TokensAfter = control.Done, &before, &after
+	initial.Outcome, initial.Native = control.Done, json.RawMessage(`{"tokensBefore":25000,"tokensAfter":1000}`)
 	postValue(t, socket, PathModControl, initial)
 	postValue(t, socket, PathModControl, initial)
 	// Settled, it no longer keeps the run from a handover: it once did until
@@ -318,6 +317,7 @@ func TestASampleCarriesTheDirectoryAndTheAccountsWindows(t *testing.T) {
 func TestAnUnansweredRequestOfAnEarlierLoadKeepsNothingBusy(t *testing.T) {
 	server, socket := servingWith(t, func(server *Server) { server.cfg.Hold = 10 * time.Millisecond })
 	postValue(t, socket, PathHello, HelloRequest{Protocol: Protocol, LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
+	postValue(t, socket, PathTurnStart, TurnStartRequest{LoadID: "load", Conversation: "conversation-1", TurnID: "t"})
 	ctx, cancel := context.WithCancel(context.Background())
 	result := make(chan control.Answer, 1)
 	go func() { result <- server.carry(ctx, control.Request{ID: "r", From: "main", Action: control.Interrupt}) }()

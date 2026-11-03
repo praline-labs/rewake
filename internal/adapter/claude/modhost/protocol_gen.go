@@ -722,7 +722,8 @@ type ControlCommand struct {
 	// ID identifies the request.
 	ID string `json:"id"`
 
-	// Action is compact, interrupt, or prompt from rewake's own face.
+	// Action is compact, interrupt, prompt from rewake's own face, or trace: text the host puts
+	// into the conversation's history as an interruption's actor once the interrupted turn ended.
 	Action string `json:"action"`
 
 	// From names the requester.
@@ -734,7 +735,11 @@ type ControlCommand struct {
 	// Conversation names the selected conversation.
 	Conversation string `json:"conversation"`
 
-	// Text is a prompt's text, typed as the person; absent for any other action.
+	// Turn is the turn an interrupt stops, as the host knows it; the mod refuses with code turn
+	// when it is not the one running.
+	Turn *string `json:"turn,omitempty"`
+
+	// Text is a prompt's text, typed as the person, or a trace's; absent for any other action.
 	Text *string `json:"text,omitempty"`
 }
 
@@ -773,6 +778,10 @@ type StateRequest struct {
 	// Activity is working or idle.
 	Activity string `json:"activity"`
 
+	// Turn is the main loop's running turn, absent while idle: the host names the turn an
+	// interrupt stops from it and from turn/start.
+	Turn *string `json:"turn,omitempty"`
+
 	// Compacting says a native compaction is in progress.
 	Compacting bool `json:"compacting"`
 
@@ -800,7 +809,8 @@ type StateRequest struct {
 	Native json.RawMessage `json:"native,omitempty"`
 }
 
-// ControlReply is an initial or final result for a dispatched command.
+// ControlReply is an initial or final result for a dispatched command, as native as the mod has
+// it: the host words it (modhost/control.go).
 type ControlReply struct {
 	// LoadID names the current load.
 	LoadID string `json:"loadId"`
@@ -814,18 +824,23 @@ type ControlReply struct {
 	// Outcome is requested, done, refused or failed.
 	Outcome string `json:"outcome"`
 
-	// Reason is the fixed control reason, when known.
-	Reason string `json:"reason"`
+	// Code names the local check that refused the command, absent for any other outcome.
+	Code *ControlCode `json:"code,omitempty"`
 
-	// Detail explains the outcome without transcript content.
-	Detail string `json:"detail"`
-
-	// Open says the native outcome is not yet known.
-	Open bool `json:"open"`
-
-	// TokensBefore is context usage before compaction, when supplied.
-	TokensBefore *int `json:"tokensBefore,omitempty"`
-
-	// TokensAfter is context usage after compaction, when supplied.
-	TokensAfter *int `json:"tokensAfter,omitempty"`
+	// Native is the native call's result as it resolved, $.session.compact's {skip?,
+	// tokensBefore?, tokensAfter?}, or {error} with the message of what it threw; absent where
+	// nothing native ran.
+	Native json.RawMessage `json:"native,omitempty"`
 }
+
+// ControlCode is the local check that refused a command just before its native call, which the
+// host words (control.Refusal).
+type ControlCode string
+
+// The values of ControlCode.
+const (
+	ControlCodeConversation ControlCode = "conversation"
+	ControlCodeBusy         ControlCode = "busy"
+	ControlCodeTurn         ControlCode = "turn"
+	ControlCodeIdle         ControlCode = "idle"
+)
