@@ -33,6 +33,7 @@ READING WHAT COMES BACK
 - stopped means the turn was aborted, at the keyboard or by your rewake interrupt; its text is the partial answer or who stopped it, and may be empty. Do not resend the task: it stays open and a later report may settle it. Check rewake inbox --awaited before deciding what follows.
 - "no report coming: <name> ended; check its saved work and give the task to a new worker" in rewake inbox --awaited means the report is lost: a new worker does not resume the old one's obligation.
 - After a context compaction of your own or a restart, run rewake inbox --awaited instead of rebuilding from the summary what is still owed.
+- A notify headed "Unclaimed answer:" is a worker's finished answer that no task or question waited on, often the real result after a task was settled early: read it; it settles nothing and needs no acknowledgement.
 - Your own successful turns are reported to nobody; that keeps two sessions from waking each other forever.
 
 LIMITS

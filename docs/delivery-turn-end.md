@@ -32,6 +32,10 @@ still the version carried, and records the interim end, never over a record of t
 that ended later, nor over the record of another run that holds the name
 (`internal/core/mail/interim.go`). Last it writes `journal/<op>.done`
 (`internal/core/mail/journal.go`): the operation, its end time and the held end it took. A
+finished end of a worker that reports to nobody sends its answer to main instead
+([unclaimed answers](turn-outcomes.md#unclaimed-answers), `turn_unclaimed.go`); an end that
+wrote an ordinary report first writes the receipt `journal/<op>.reported` before clearing any
+wait, which only that net reads. A
 retry of the same event finds it and answers from it; the next end's window opens after it.
 A done journal is kept while its run lives; the live run's sweep removes those of ended runs
 a day later.
@@ -218,6 +222,8 @@ the machine, and a record of another run is written over.
 | Clearing a wait | the messages gone from the wait record | the messages still there | the wait record fails the attempt |
 | Taking the kept answer | absent, or holding another version | the version carried still in place | the record fails the attempt |
 | Recording the interim end | by the interim table | by the interim table | the record fails the attempt |
+| An unclaimed answer | a letter of the operation's id in main's mailbox, in any stage | neither | the stage that cannot be searched fails the attempt |
+| The receipt of an ordinary report | `journal/<op>.reported` | absent | the file fails the attempt, before any wait is cleared |
 | The end recorded done | `journal/<op>.done` | absent | the record fails the lookup, and the end reports nothing on that attempt |
 
 By record:

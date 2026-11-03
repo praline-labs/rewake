@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/core/mail"
@@ -50,6 +51,10 @@ func unfinishedJournals(t *testing.T, dir string) int {
 	entries, _ := os.ReadDir(mail.JournalPath(dir, "api"))
 	count := 0
 	for _, entry := range entries {
+		if strings.HasSuffix(entry.Name(), ".reported") {
+			// The receipt of a report (turn_unclaimed.go), not a journal of an end.
+			continue
+		}
 		raw, err := os.ReadFile(filepath.Join(mail.JournalPath(dir, "api"), entry.Name()))
 		if err != nil {
 			t.Fatal(err)
