@@ -80,6 +80,12 @@ The shell and the host speak JSON lines on a socket pair: the shell's end is the
   compiled face as a part `within` it — or none
   while no shell is ready ([install.md](install.md#the-running-set)).
 
+The shell's side of the channel, and of every pane's stream from its host, is one module,
+`shell/src/life.ts`: the messages above, the attach and its reattach, the closing layer's signs,
+release, finish and leave. Everything it acts on is handed to it (the channel, the streams, the
+screen once drawn, the clock, the panes, exit), so its order is tested as it runs
+(`life.test.ts`); `main.tsx` only wires it to the process, the renderer and the room's poll.
+
 The first launch runs in this order:
 
 1. The shell gets `welcome`, then `go`.

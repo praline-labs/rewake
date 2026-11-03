@@ -97,3 +97,16 @@ export function toggleBriefs() {
   setChosen(was === briefs || (was !== "main" && paneOf(was)) ? was : workers()[0]?.id);
   setFocused(paneOf(before.focused)?.id ?? "main");
 }
+
+// choice is what the person chose to see, which a restart hands on.
+export const choice = () => ({ focused: focused(), chosen: chosen(), zoomed: zoomed() });
+
+// restoreChoice applies what the last shell handed over, on the first view
+// of the room, which shows the workers' panes again; one closed meanwhile is
+// not chosen.
+export function restoreChoice(was: { focused?: string; chosen?: string; zoomed?: boolean }) {
+  if (was.chosen === briefs ? workers().length > 0 : was.chosen !== "main" && paneOf(was.chosen))
+    setChosen(was.chosen);
+  setZoomed(was.zoomed ?? false);
+  show(was.focused);
+}

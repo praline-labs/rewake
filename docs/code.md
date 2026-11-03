@@ -55,6 +55,7 @@ internal/host/mainhost/                       main's host, the pane's process of
 internal/host/spacehost/                      the space host: the worker's pseudo-terminal and screen, served through internal/host/stream; and opening a space for main (`Open`): the record, the host started, the wait for the worker's registration, the rollback
 internal/host/switching/                      a switch of the running room to another build between its leader, rewake restart rewake, and the room's wrappers and hosts: asking, the drop, go or resume, and a parked image's wait (rules/state.md#switching-a-running-room)
 internal/host/worktree/                       checkouts rewake makes for a launch: git worktree add, records, land, removal and what keeps one, a worker's release at its close; a reviewer's detached checkout
+shell/src/                                    the shell (shell.md): life.ts its life, the host's channel from hello to exit and each pane's stream, with everything it acts on handed in; main.tsx the entry that wires it to the process, the renderer and the room's poll; the panes, the bar, the strip, the briefs and the faces beside
 scripts/                                      packaging scripts and the tests of the npm shim
 test/workflow/                                the workflow suite: end-to-end scenarios against fixtures
 test/workflow/record/                         the record format a suite run prints and the summarizer reads
