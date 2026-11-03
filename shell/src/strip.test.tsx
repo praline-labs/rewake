@@ -61,15 +61,18 @@ test("the account's limits show on main's strip alone", () => {
   expect(texts(undefined).join(" ")).not.toMatch(/5h|7d/);
 });
 
-test("the context stays at the right whole while the left is cut", () => {
+test("the context stays at the right whole while the left is left out", () => {
   const status: Session = { ...base };
-  const line = (width: number) => stripParts({ session: "w", status, face: "rewake" }, width, now);
+  const line = (width: number) => stripParts({ session: "w", status }, width, now);
   expect(line(200).context?.text).toBe("23k/100k");
-  const narrow = line(18);
-  expect(narrow.context?.text).toBe("23k/100k");
-  expect(narrow.left.map((p) => p.text)).toEqual(["dev re…"]);
   // Left, separator's gap and context fill the width and no more.
-  expect(narrow.left.map((p) => p.text).join("").length + 3 + "23k/100k".length).toBe(18);
+  const fits = line(20);
+  expect(fits.left.map((p) => p.text)).toEqual(["Model low"]);
+  expect(fits.context?.text).toBe("23k/100k");
+  // One column less and the model, which is optional, goes before the context moves.
+  const narrow = line(19);
+  expect(narrow.context?.text).toBe("23k/100k");
+  expect(narrow.left).toEqual([]);
   // Too narrow for the context itself, it is cut and the left is gone.
   expect(line(5)).toEqual({ left: [], context: expect.objectContaining({ text: "23k/…" }) });
 });
@@ -106,19 +109,19 @@ test("the strip shows no activity and the button the verdict's mark, deriving no
 
 // The owner, November 1, 2026: the session's name and type are the top
 // row's, never the strip's, main's included; every strip keeps its context,
-// drawn by the face or not.
+// drawn by the face or not, and none says which face draws.
 test("no pane's strip names its session, and every one keeps its context", () => {
   const status = { ...base, name: "write-claude", type: "code" };
-  const texts = (face?: "rewake" | "native", own?: boolean) =>
-    shown(stripParts({ session: "write-claude", status: { ...status, own }, face }, 200, now));
-  for (const face of ["rewake", "native", undefined] as const) {
-    expect(texts(face).join(" ")).not.toMatch(/write-claude|code/);
-    expect(texts(face)).toContain("23k/100k");
+  const texts = (own?: boolean) =>
+    shown(stripParts({ session: "write-claude", status: { ...status, own } }, 200, now));
+  for (const own of [true, false, undefined]) {
+    expect(texts(own).join(" ")).not.toMatch(/write-claude|code/);
+    expect(texts(own)).toContain("23k/100k");
   }
-  expect(texts(undefined, true).join(" ")).not.toContain("write-claude");
-  expect(texts("rewake")[0]).toBe("dev rewake");
+  // The face in use is not the strip's to say (the owner, November 3, 2026).
+  expect(texts().join(" ")).not.toContain("dev");
   // No pane's strip says the percent of the window.
-  expect(texts(undefined).join(" ")).not.toContain("23%");
+  expect(texts().join(" ")).not.toContain("23%");
 });
 
 async function stripAt(state: StripState, width: number) {

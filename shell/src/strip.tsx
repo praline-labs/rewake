@@ -7,7 +7,6 @@
 import { RGBA } from "@opentui/core";
 import { createMemo, createSignal, For, onCleanup } from "solid-js";
 import { ShellRow, selecting, separator } from "./bar.tsx";
-import { type FaceMode, modeOf } from "./face/faces.ts";
 import type { Session, Space, Verdict } from "./room.ts";
 import type { Theme } from "./theme.ts";
 
@@ -17,8 +16,6 @@ export type StripState = {
   path?: string;
   branch?: string;
   status?: Session;
-  // face is the pane's face where its session serves a mirror: the dev mark.
-  face?: FaceMode;
 };
 
 // The room as last read: the spaces not over, and the sessions as main sees
@@ -36,7 +33,7 @@ export function stripOf(id: string): StripState {
   const status = sessions().get(session);
   const path = status?.path ?? space?.checkout?.path;
   const branch = status ? status.branch : space?.checkout?.branch;
-  return { session, status, path, branch, face: modeOf(id) };
+  return { session, status, path, branch };
 }
 
 // mainStrip is main's own: its row of the listing, once the run the listing
@@ -48,7 +45,7 @@ export function mainStrip(): StripState {
 
 type Part = {
   text: string;
-  kind: "plain" | "context" | "cache" | "limit" | "dev" | "awaited";
+  kind: "plain" | "context" | "cache" | "limit" | "awaited";
   fill?: number;
   cold?: boolean;
 };
@@ -141,7 +138,6 @@ export function stripParts(state: StripState, width: number, now = Date.now()): 
   const seven = s?.own ? limitOf(s, "7d") : undefined;
   // In the order shown; the optional ones are left out, 1 first, 4 last.
   const all: ((Part & { optional?: number }) | undefined)[] = [
-    state.face ? { text: `dev ${state.face}`, kind: "dev" } : undefined,
     // Thinking is named only while it is on: off and unknown say nothing.
     s?.model
       ? {
@@ -216,8 +212,6 @@ export function Strip(props: {
               {i() > 0 ? <span style={{ fg: props.theme.faint }}>{separator}</span> : ""}
               {part.kind === "limit" ? (
                 <span style={{ fg: fillColour(part.fill) }}>{part.text}</span>
-              ) : part.kind === "dev" ? (
-                <span style={{ fg: RGBA.fromIndex(5) }}>{part.text}</span>
               ) : part.kind === "cache" ? (
                 <span style={{ fg: part.cold ? props.theme.faint : RGBA.fromIndex(6) }}>
                   {part.text}
