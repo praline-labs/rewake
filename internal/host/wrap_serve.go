@@ -152,11 +152,13 @@ func (r *run) deliveryServer(ready chan struct{}, handoff chan chan<- delivery.S
 	}
 	if !role.Of(r.session.Role).Silent && r.plan.Telemetry != nil {
 		// A run whose turns are reported to somebody is woken when it
-		// stalls under a pending mark, judged idle by the snapshot its own
-		// telemetry publishes.
+		// stalls under a pending mark, judged idle by its telemetry as it
+		// stands now: the snapshot on disk lags it by a publication, and
+		// neither real harness times the start of the turn that ends a stall.
+		telemetry := r.plan.Telemetry
 		server.Stall = delivery.StallBound
 		server.Idle = func() bool {
-			verdict := session.Load(dir, name, epoch).Judge()
+			verdict := telemetry.SessionState().Judge()
 			return verdict.Activity == session.ActivityIdle && !verdict.Stale
 		}
 	}
