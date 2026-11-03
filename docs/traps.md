@@ -350,6 +350,20 @@ the command came from, taken before npm ran ([install.md](install.md#updating-fr
 
 *November 1, 2026, in the live check of a local registry.*
 
+### The installed shell did not draw main's output in the release gate
+
+The 3.0.0 gate's dry run started the installed rewake on a terminal, as a person's launch does,
+with a stand-in pi as main that printed a marker and ended a second later; the terminal showed the
+shell's bar and hints and never the marker. The gate was right. Main's pane is fed by its host
+since 85ffc35, and the host's preamble of a main on its normal screen visits a hidden alternate
+screen for its margins and saved cursor (`?1047h` … `?1047l`). The shell's scanner read the leave
+as main leaving its screen and showed "closing rewake…" over main for 5 s, which outlived the
+stand-in; a Claude Code main had it for half a second at every launch, until it entered its
+alternate screen. A switch of screens now counts once main draws on that screen
+([shell.md](shell.md#the-closing-screen)).
+
+*November 3, 2026, in the gate of the local registry; the shells from source and compiled alike.*
+
 ## A switch of the room's build
 
 ### After `rewake restart rewake` main's Claude Code ended, and the room with it
