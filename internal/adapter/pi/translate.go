@@ -132,21 +132,12 @@ type call struct {
 	Ended    bool            `json:"ended,omitempty"`
 }
 
-type parts struct {
-	Of   int    `json:"of"`
-	Next int    `json:"next"`
-	Text string `json:"text"`
-}
-
 // inputEvery is how often a call's input is said while it streams: each
 // says the input parsed so far, and a long write streams thousands of deltas.
 const inputEvery = 100 * time.Millisecond
 
 // facedKept bounds the face's prompts sent and not yet heard back.
 const facedKept = 16
-
-// maxParts bounds the parts of one event, the stream's bound of an event.
-const maxParts = 16
 
 var origins = map[string]string{"interactive": "person", "extension": "extension", "rpc": "rpc"}
 
@@ -170,8 +161,11 @@ func (t *translator) take(events []raw) []mirror.Event {
 	defer t.mu.Unlock()
 	t.out = nil
 	for _, e := range events {
-		if e.Event != "part" {
+		// A lost marker counts the rest of an event it dropped.
+		if e.Event == "lost" {
 			t.Parts = nil
+		} else if e.Event != "part" && t.Parts != nil {
+			t.broken()
 		}
 		switch e.Event {
 		case "part":
@@ -186,27 +180,6 @@ func (t *translator) take(events []raw) []mirror.Event {
 	}
 	t.flush()
 	return t.out
-}
-
-// part puts a long event together; a part out of place drops what was
-// being put together, its event lost with the batch it went in.
-func (t *translator) part(e raw) (raw, bool) {
-	if e.Part == 0 && e.Of > 0 && e.Of <= maxParts {
-		t.Parts = &parts{Of: e.Of}
-	}
-	if t.Parts == nil || e.Part != t.Parts.Next || e.Of != t.Parts.Of {
-		t.Parts = nil
-		return raw{}, false
-	}
-	t.Parts.Text += e.Text
-	t.Parts.Next++
-	if t.Parts.Next < t.Parts.Of {
-		return raw{}, false
-	}
-	var whole raw
-	err := json.Unmarshal([]byte(t.Parts.Text), &whole)
-	t.Parts = nil
-	return whole, err == nil && whole.Event != "part"
 }
 
 // lost is what the stream dropped past its bounds: a delta lost leaves the

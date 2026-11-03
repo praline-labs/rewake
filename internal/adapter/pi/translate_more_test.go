@@ -218,3 +218,22 @@ func TestACallsStreamedArgumentsAreReadAsFarAsTheyGo(t *testing.T) {
 		}
 	}
 }
+
+// Review of b832ce0: an event whose parts cannot be put together — more of
+// them than an event's bound, an assembly another event broke into, a text
+// that is no event — is lost, and the model resyncs, rather than vanishing.
+func TestAnEventWhosePartsCannotBePutTogetherResyncs(t *testing.T) {
+	part := func(at, of int, text string) string {
+		line, _ := json.Marshal(map[string]any{"event": "part", "part": at, "of": of, "text": text})
+		return string(line)
+	}
+	p := translating(t)
+	p.emit(part(0, maxParts+5, `{"event":`), part(1, maxParts+5, `"input"}`))
+	same(t, seen(p.out), []string{"resync  "})
+	p = translating(t)
+	p.emit(part(0, 2, `{"event":"input",`), `{"event":"input","text":"after","source":"interactive"}`, part(1, 2, `"text":"x"}`))
+	same(t, seen(p.out), []string{"resync  ", "prompt id1 after"})
+	p = translating(t)
+	p.emit(part(0, 2, `{"event":`), part(1, 2, `no event`))
+	same(t, seen(p.out), []string{"resync  "})
+}

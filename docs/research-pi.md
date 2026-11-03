@@ -716,12 +716,18 @@ translator makes of pi's events.
   `{deltas, events}` where it stood, neighbouring markers merged. 50 ms after a push, while the
   link is up, the oldest lines go as one `events` request of at most 48 KiB, one in flight; one
   refused or unanswered in 5 s stands as lost at the front. An event past 40 KiB goes as `part`
-  lines of its JSON text, put together by the wrapper (an out-of-place part drops the assembly);
-  one past 192 KiB has its longest strings cut first, and a tool's event is cut to 40 KiB.
+  lines of its JSON text, put together by the wrapper. An event whose lines would pass 192 KiB, a
+  tool's 40 KiB, has its longest strings cut first, then its longest arrays keep their head (a
+  call of many short hunks); one that still would is lost, a `lost` marker where it would stand, so
+  nothing held passes the bound. The wrapper resyncs the model for an event whose parts cannot be
+  put together — more than 16, broken into by another event, a text that is no event — and passes
+  over the rest of one a `lost` marker counted (review of b832ce0, November 3, 2026: a call of
+  1,500 hunks was held at 829,556 bytes and its 21 parts vanished without a resync).
   `message_end` carries its content blocks only when it ended `aborted` or `error`, without a
   thinking block's signature, and no usage; an image's data never goes. The wrapper, for a lost
   delta, leaves a call's input to its end, which says it whole, and for a lost event resyncs the
-  model. A call's input is said at most every 100 ms, read as far as its JSON goes; past 36 KiB a
+  model. A text or thinking block is open from its `text_start` or `thinking_start`, so an aborted
+  or failed end gives the face a block whose every delta the stream dropped (review of b832ce0). A call's input is said at most every 100 ms, read as far as its JSON goes; past 36 KiB a
   call's input or output keeps its head ½ and tail ¼ of that, as the mod's and the model's do.
 
 | pi tool | drawn as | input |

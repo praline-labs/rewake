@@ -194,6 +194,38 @@ test("a long event goes as parts of its text, and one past its bound is cut", as
   expect(wire(events[1])).toBeLessThanOrEqual(bounds.event);
 });
 
+// Review of b832ce0: a call of many short hunks, which no string cut
+// shortens, is held within its bound with its hunks' head; one nothing can
+// cut goes as a lost marker, never past the bound.
+test("an event of many short strings keeps its arrays' head within its bound, and one that cannot fit is lost", async () => {
+  const { stream, posted, tick, answer } = streaming();
+  const edits = Array.from({ length: 1500 }, (_, i) => ({
+    oldText: "a".repeat(256) + i,
+    newText: "b".repeat(256) + i,
+  }));
+  const args = { path: "big.ts", edits };
+  stream.push(
+    { event: "tool_execution_start", toolCallId: "e", toolName: "edit", args },
+    false,
+    bounds.part,
+  );
+  expect(stream.bytes).toBeLessThanOrEqual(bounds.part);
+  const keys = Object.fromEntries(Array.from({ length: 20000 }, (_, i) => [`k${i}`, i]));
+  stream.push({ event: "tool_execution_end", toolCallId: "e", result: keys }, false, bounds.part);
+  expect(stream.bytes).toBeLessThanOrEqual(bounds.part + 64);
+  for (let i = 0; i < 5 && stream.bytes > 0; i++) {
+    await tick();
+    await answer();
+  }
+  const lines = posted.flat();
+  expect(lines.map((line) => line.event)).toEqual(["tool_execution_start", "lost"]);
+  const sent = lines[0].args as typeof args;
+  expect(sent.path).toBe("big.ts");
+  expect(sent.edits.length).toBeGreaterThan(0);
+  expect(sent.edits).toEqual(edits.slice(0, sent.edits.length));
+  expect(lines[1]).toEqual({ event: "lost", deltas: 0, events: 1 });
+});
+
 test("one batch is in flight at a time, and one that fails stands as lost before what waits", async () => {
   const { stream, posted, tick, answer } = streaming();
   stream.push({ event: "agent_start" });

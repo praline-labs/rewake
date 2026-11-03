@@ -13,6 +13,10 @@ import (
 // streamed takes a piece of a reply as pi-ai streamed it.
 func (t *translator) streamed(e raw) {
 	switch e.Type {
+	case "text_start", "thinking_start":
+		// A block is open from its start: the stream may drop every delta of
+		// it, and an aborted or failed end then says it whole.
+		mark(&t.Open, t.blockID(e.ContentIndex), e.ContentIndex)
 	case "text_delta", "thinking_delta":
 		block := mirror.ItemKindText
 		if e.Type == "thinking_delta" {
@@ -130,10 +134,12 @@ func (t *translator) ended(e raw) {
 		if index < 0 || index >= len(content) {
 			continue
 		}
-		switch block := content[index]; block.Type {
-		case "text":
+		// A block that showed nothing and holds nothing stays unshown, as
+		// at its own end.
+		switch block := content[index]; {
+		case block.Type == "text" && block.Text != "":
 			t.settle(id, mirror.ItemKindText, block.Text)
-		case "thinking":
+		case block.Type == "thinking" && (t.Thought[id] || !blank(block.Thinking)):
 			t.settle(id, mirror.ItemKindThinking, block.Thinking)
 		}
 	}

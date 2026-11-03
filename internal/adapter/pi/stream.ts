@@ -8,8 +8,9 @@
 // first, which the block's end heals, then the oldest other event; each
 // leaves a lost marker where it stood, counting what it stood for, and
 // markers side by side merge. An event longer than a part goes as parts of
-// its serialized text, put together by the wrapper; one past bounds.event
-// has its longest strings cut, head and tail kept.
+// its serialized text, put together by the wrapper; one whose lines would
+// pass bounds.event has its longest strings cut, head and tail kept, then
+// its longest arrays, their head kept, and one that still would is lost.
 
 // Forwarded is one of pi's events as the stream carries it: its name and
 // the fields read of it.
@@ -105,10 +106,12 @@ export function fit(text: string, budget: number): string {
   return head + cutMark + text.slice(tail);
 }
 
-// cut is an event serialized within max, and the event it serializes: its
-// longest strings are cut until it fits, on a copy, so pi's own objects are
-// never touched.
-export function cut(event: Forwarded, max: number): [string, Forwarded] {
+// cut is an event serialized within max, and the event it serializes, or
+// undefined for one that cannot be: its longest strings are cut until it
+// fits, then its longest arrays keep their head, on a copy, so pi's own
+// objects are never touched. Many short strings, a call's hunks, no string
+// cut shortens.
+export function cut(event: Forwarded, max: number): [string, Forwarded] | undefined {
   let line = JSON.stringify(event);
   let size = Buffer.byteLength(line);
   if (size <= max) return [line, event];
@@ -117,14 +120,41 @@ export function cut(event: Forwarded, max: number): [string, Forwarded] {
     const longest = longestString(copy);
     if (!longest) break;
     const [holder, key, text] = longest;
-    holder[key] = fit(text, Math.max(256, jsonSize(text) - (size - max) - 1024));
+    const cutTo = fit(text, Math.max(256, jsonSize(text) - (size - max) - 1024));
+    if (cutTo.length >= text.length) break;
+    holder[key] = cutTo;
     line = JSON.stringify(copy);
     size = Buffer.byteLength(line);
   }
-  return [line, copy];
+  for (let i = 0; size > max && i < 64; i++) {
+    const longest = longestArray(copy);
+    if (!longest) break;
+    const [holder, key, list] = longest;
+    const keep = Math.min(list.length - 1, Math.floor((list.length * max) / size));
+    holder[key] = list.slice(0, Math.max(0, keep));
+    line = JSON.stringify(copy);
+    size = Buffer.byteLength(line);
+  }
+  return size <= max ? [line, copy] : undefined;
 }
 
 type Holder = Record<string | number, unknown>;
+
+// longestArray is the array of most elements in the value.
+function longestArray(value: unknown): [Holder, string | number, unknown[]] | undefined {
+  let best: [Holder, string | number, unknown[]] | undefined;
+  const walk = (holder: Holder) => {
+    for (const [key, child] of Object.entries(holder)) {
+      if (Array.isArray(child)) {
+        if (child.length > 0 && (!best || child.length > best[2].length))
+          best = [holder, key, child];
+        walk(child as unknown as Holder);
+      } else if (child && typeof child === "object") walk(child as Holder);
+    }
+  };
+  walk(value as Holder);
+  return best;
+}
 
 function longestString(value: unknown): [Holder, string | number, string] | undefined {
   let best: [Holder, string | number, string] | undefined;
@@ -137,6 +167,28 @@ function longestString(value: unknown): [Holder, string | number, string] | unde
   };
   walk(value as Holder);
   return best;
+}
+
+// linesOf is an event's lines within max in all, one or its parts, each
+// part escaping the event's text again; undefined for one that cannot fit.
+function linesOf(event: Forwarded, max: number): Omit<Entry, "delta"> | undefined {
+  let budget = max;
+  for (let i = 0; i < 4 && budget > 0; i++) {
+    const fitted = cut(event, budget);
+    if (!fitted) return undefined;
+    const [line, cutEvent] = fitted;
+    let lines: Forwarded[] = [cutEvent];
+    let sizes = [Buffer.byteLength(line)];
+    if (sizes[0] > bounds.part) {
+      const texts = pieces(line, bounds.part - partEnvelope);
+      lines = texts.map((text, part) => ({ event: "part", part, of: texts.length, text }));
+      sizes = lines.map((one) => Buffer.byteLength(JSON.stringify(one)));
+    }
+    const size = sizes.reduce((sum, one) => sum + one, 0);
+    if (size <= max) return { lines, sizes, size };
+    budget = Math.floor((budget * max) / size) - 1024;
+  }
+  return undefined;
 }
 
 export class Stream {
@@ -154,23 +206,20 @@ export class Stream {
     return this.held;
   }
 
-  // push takes an event, a delta one the first to go past the bound, its
-  // strings cut to fit max.
+  // push takes an event, a delta one the first to go past the bound, cut so
+  // its lines fit max; one that cannot be is lost where it would stand.
   push(event: Forwarded, delta = false, max = bounds.event) {
     if (!this.on) return;
     try {
-      const [line, fitted] = cut(event, Math.min(max, bounds.event));
-      let lines: Forwarded[] = [fitted];
-      let sizes = [Buffer.byteLength(line)];
-      if (sizes[0] > bounds.part) {
-        const texts = pieces(line, bounds.part - partEnvelope);
-        lines = texts.map((text, part) => ({ event: "part", part, of: texts.length, text }));
-        sizes = lines.map((one) => Buffer.byteLength(JSON.stringify(one)));
+      const entry = linesOf(event, Math.min(max, bounds.event));
+      if (!entry) {
+        this.mark(this.queue.length, delta ? 1 : 0, delta ? 0 : 1);
+        this.kick();
+        return;
       }
-      const size = sizes.reduce((sum, one) => sum + one, 0);
-      while (this.held + size > bounds.held && this.dropOne()) {}
-      this.queue.push({ lines, sizes, size, delta });
-      this.held += size;
+      while (this.held + entry.size > bounds.held && this.dropOne()) {}
+      this.queue.push({ ...entry, delta });
+      this.held += entry.size;
       this.kick();
     } catch {}
   }
