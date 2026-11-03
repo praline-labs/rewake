@@ -144,6 +144,13 @@ func TestScreenRefusesAnUnknownName(t *testing.T) {
 	}
 }
 
+func TestScreenWithoutANameIsAWrongCall(t *testing.T) {
+	screenRoom(t)
+	if code, _, errOut := run("screen"); code != ExitUsage || !strings.Contains(errOut, "screen needs") {
+		t.Fatalf("exit %d: %q", code, errOut)
+	}
+}
+
 // The picture is written outside rewake's state, not through a link, and not
 // over a file that is not a regular one; a regular file is replaced.
 func TestScreenWritesOnlyWhereItMay(t *testing.T) {
