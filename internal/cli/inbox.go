@@ -48,7 +48,7 @@ func handleInbox(ctx *Context, call Call) error {
 		return failf("%v; its mail cannot be read", err)
 	}
 	if mode.awaited {
-		return showAwaited(ctx, box)
+		return showAwaited(ctx, dir, box)
 	}
 	if mode.owed {
 		return showOwed(ctx, call, dir, session, box)

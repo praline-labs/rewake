@@ -33,13 +33,16 @@ func (b *backend) withdraw(l *link) {
 	}
 }
 
-// takeLive makes live the set proven on the connection held now. A
-// connection whose telemetry is live is ready before it reports an activity:
-// what an earlier one reported is not its own. The caller holds b.mu.
-func (b *backend) takeLive(live map[string]bool) {
+// takeLive makes live the set proven on the connection held now, its first
+// sample the activity its Telemetry probe answered: what an earlier
+// connection reported is not its own. A connection adopted across an exec is
+// one a real harness reports on again soon — Claude Code's mod after its
+// next heartbeat, pi at the run's next poll —, and the fixture says so in the
+// probe. The caller holds b.mu.
+func (b *backend) takeLive(live map[string]bool, activity string) {
 	b.live = live
 	if live[Telemetry] {
-		b.observed.Sample(session.Sample{Thread: b.thread})
+		b.observed.Sample(session.Sample{Thread: b.thread, Activity: activity})
 	}
 }
 

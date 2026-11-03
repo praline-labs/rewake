@@ -95,6 +95,27 @@ func TestTheExchangeMakesLiveWhatItsProbesAnswer(t *testing.T) {
 	}
 }
 
+// A program that has reported before — one whose connection was adopted
+// across an exec of the wrapper — answers the Telemetry probe with its
+// activity, and that is the connection's first sample; one that has not
+// leaves the activity unknown.
+func TestTheTelemetryProbesActivityIsTheFirstSample(t *testing.T) {
+	b, err := startProgram(t, switchActive+"=idle")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state := b.SessionState(); state.Activity == nil || *state.Activity != "idle" || !state.ActivityFresh {
+		t.Fatalf("the probe's activity is not the state: %+v", state)
+	}
+	b, err = startProgram(t)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state := b.SessionState(); state.Activity != nil {
+		t.Fatalf("a probe answering none set the activity: %+v", state)
+	}
+}
+
 // Each switch withholds one capability — left out of the hello, or served
 // with a failing probe — and only that one, and what rests on it stops.
 func TestEachSwitchWithholdsItsCapability(t *testing.T) {

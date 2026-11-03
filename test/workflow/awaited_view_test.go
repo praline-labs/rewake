@@ -141,7 +141,8 @@ func playAwaitedView(t *testing.T, c *Case, iso *Isolation, col column) []teleme
 				strings.HasPrefix(message.Detail, awaitedPending+"\n\n") && message.Text == awaitedSlow && message.Gone == ""
 		}
 		shown = shown && strings.HasPrefix(plain, "Rewake: waiting on 1 report:\n\nto "+slow.name+"\n"+slowTask.ID+" · task · ") &&
-			strings.Contains(plain, " · pending: "+awaitedPending+"\nawaited-view-slow: run the long check\n") &&
+			// Idle under its mark with main waiting: how long, too.
+			strings.Contains(plain, " · pending, idle <1m: "+awaitedPending+"\nawaited-view-slow: run the long check\n") &&
 			!strings.Contains(plain, quickTask.ID) && !strings.Contains(plain, "and report the tail")
 		out = append(out, finding(obsAwaitedOther, shown, "quick's task %s, slow's task %s; --awaited printed %q", quickTask.ID, slowTask.ID, plain))
 	}

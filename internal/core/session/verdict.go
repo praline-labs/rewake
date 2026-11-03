@@ -1,5 +1,10 @@
 package session
 
+import (
+	"fmt"
+	"time"
+)
+
 // Verdict is what a snapshot says a session does, judged in one place for
 // every reader: `rewake list` and the letters' headers, main's report to
 // herdr and the shell's strip and button render it and derive nothing
@@ -50,7 +55,14 @@ const (
 
 // Judge is the verdict on the snapshot as it stands: call it after whatever
 // marks the snapshot stale.
-func (s Snapshot) Judge() Verdict {
+func (s Snapshot) Judge() Verdict { return s.JudgePending(nil) }
+
+// JudgePending is the verdict on a run its reader found idle under a pending
+// mark since idleSince, with no turn since and a sender still waiting
+// (mail.Box.Stalled), or Judge's when idleSince is nil. The time is the
+// reader's, not the snapshot's: a snapshot is handed over across a switch of
+// builds (host.Handover), whose shape stays as it is.
+func (s Snapshot) JudgePending(idleSince *time.Time) Verdict {
 	v := Verdict{Activity: ActivityUnknown}
 	if s.Activity != nil && (*s.Activity == ActivityIdle || *s.Activity == ActivityWorking) {
 		v.Activity = *s.Activity
@@ -78,6 +90,12 @@ func (s Snapshot) Judge() Verdict {
 	// activity can be stale; one never reported is unknown.
 	v.Stale = s.Activity != nil && (!s.ActivityFresh || !s.Fresh)
 	v.Label = v.Activity
+	// Idle under a pending mark with a sender still waiting: how long says
+	// whether something will still wake it (docs/turn-outcomes.md). A stale
+	// idle is not known to be one.
+	if v.Activity == ActivityIdle && !v.Stale && idleSince != nil {
+		v.Label = "pending, idle " + IdleFor(time.Since(*idleSince))
+	}
 	// Only the gap is named. A session that hears interruptions behaves as
 	// expected and needs no word in a narrow cell, and a harness that always
 	// hears them never sets the field.
@@ -100,4 +118,12 @@ func (s Snapshot) Judge() Verdict {
 		v.Mark = MarkOff
 	}
 	return v
+}
+
+// IdleFor is an idle time as main reads it: whole minutes, "<1m" below one.
+func IdleFor(idle time.Duration) string {
+	if idle < time.Minute {
+		return "<1m"
+	}
+	return fmt.Sprintf("%dm", int(idle/time.Minute))
 }

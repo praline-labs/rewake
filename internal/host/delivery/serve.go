@@ -79,6 +79,13 @@ type Server struct {
 	// Remembered is the reminder's memory the previous image of this run
 	// handed over (handoff.go), nil for a run's first.
 	Remembered *Memory
+	// Stall is how long the session may stay idle under a pending mark
+	// before it is woken once (stall.go); zero never wakes it, as for a run
+	// whose turns are reported to nobody.
+	Stall time.Duration
+	// Idle says the session's telemetry calls it idle right now; nil never
+	// does, and nothing is woken.
+	Idle func() bool
 
 	// attempts remembers when each pending message was last tried.
 	attempts map[string]time.Time
@@ -115,6 +122,9 @@ type Server struct {
 	// clock: a release the harness made before it, heard only after, is
 	// that end's still.
 	looked int64
+	// reminded is the interim end whose stall this server woke the session
+	// for (stall.go).
+	reminded string
 }
 
 // Serve drains the mailbox until the context is canceled, then refuses whatever
@@ -167,6 +177,7 @@ func (s *Server) Serve(ctx context.Context) {
 			}
 			schedule(collectionInterval)
 		case <-ticker.C:
+			s.remindStalled(ctx)
 			schedule(collectionInterval)
 		case <-collect:
 			collect = nil

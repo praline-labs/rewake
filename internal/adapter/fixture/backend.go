@@ -278,10 +278,10 @@ func (b *backend) attach(l *link, reader *bufio.Reader, first Frame) {
 		defer b.routines.Done()
 		l.serve(reader, func(frame Frame) { b.handle(l, frame) })
 	}()
-	live := b.probe(l, first.Serves)
+	live, activity := b.probe(l, first.Serves)
 	b.mu.Lock()
 	if b.link == l {
-		b.takeLive(live)
+		b.takeLive(live, activity)
 	}
 	b.exchanged = true
 	b.mu.Unlock()

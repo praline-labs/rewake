@@ -32,6 +32,7 @@ const (
 	switchOrphan = "FIXTURE_TEST_ORPHAN"     // once probed, leave the socket to a child and exit
 	switchMute   = "FIXTURE_TEST_MUTE_PROBE" // a capability served whose probe is never answered
 	switchBrief  = "FIXTURE_TEST_BRIEF_FILE" // where the briefing the adapter hands over is written
+	switchActive = "FIXTURE_TEST_ACTIVITY"   // the activity the Telemetry probe answers, as a program adopted mid-run
 	childEnv     = "FIXTURE_TEST_CHILD_OF"
 	programThrd  = "fixture-test-thread"
 )
@@ -128,6 +129,9 @@ func speak(socket string, pid int, drop bool) error {
 				continue
 			}
 			reply.State = map[string]string{TurnBoundary: "idle", Telemetry: "none", Control: "ready"}[frame.Capability]
+			if activity := os.Getenv(switchActive); activity != "" && frame.Capability == Telemetry {
+				reply.State = activity
+			}
 			if frame.Capability == os.Getenv(switchFail) {
 				reply.OK, reply.Error = false, "withheld"
 			}

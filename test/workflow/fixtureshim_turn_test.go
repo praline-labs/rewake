@@ -194,6 +194,9 @@ func refusal(answer fixtureFrame, err error) string {
 
 // reportActivity tells the adapter the session works or waits.
 func (s *fixtureSession) reportActivity(state string) {
+	s.mu.Lock()
+	s.activity = state
+	s.mu.Unlock()
 	_ = s.send(fixtureFrame{Op: "activity", State: state})
 }
 
