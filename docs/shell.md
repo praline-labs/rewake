@@ -570,9 +570,10 @@ letters' state header ([session-state.md](session-state.md#activity)).
 <model> high · 90% 42m · 5h 37% · 7d 9%                                          ⧗ 2 · 674k/1M
 ```
 
-- **What it says**: `dev rewake` or `dev native` first on a dev worker's strip, the model and
+- **What it says**: the model and
   effort, with `thinking` after them while the harness says thinking is on — Claude Code's
-  session setting, pi's level for a model with reasoning — and nothing when it is off or not told, the prompt cache, and at the right edge the context as used and window. A value rewake does
+  session setting, pi's level for a model with reasoning — and nothing when it is off or not told, the prompt cache, and at the right edge the context as used and window. No `dev rewake` or `dev native` word: which
+  face draws is not the strip's to say (the owner, November 3, 2026). A value rewake does
   not know is left out; a window without a measure reads `–/<window>`. The model reads as the
   harness's display name (`configuredModelName` of the telemetry, less a trailing parenthesis),
   else the template's

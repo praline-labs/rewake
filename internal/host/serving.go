@@ -18,12 +18,13 @@ import (
 
 // startServing starts what serves the session beside the harness — the run's
 // turn boundary, its service and its telemetry — before the harness itself,
-// and returns what stops them, in the reverse order. closeService closes the
-// plan's service once: Run owns it from the moment the plan is returned, and
-// a stop here only brings that close before the read clock's. ends hears the
-// boot-clock end of each finished turn published, for the delivery server's
-// reminder (delivery/reminder.go); nil hears none.
-func startServing(ctx context.Context, request Request, self registry.Session, name, epoch string, plan adapter.LaunchPlan, live *liveSet, closeService func(), ends chan<- int64) (func(), error) {
+// and returns what stops them, in the reverse order. The run's closeService
+// closes the plan's service once: the run owns it from the moment the plan is
+// returned, and a stop here only brings that close before the read clock's.
+// The run's ends hear the boot-clock end of each finished turn published, for
+// the delivery server's reminder (delivery/reminder.go); nil hears none.
+func (r *run) startServing(ctx context.Context) (func(), error) {
+	request, self, name, epoch, plan, live, ends := r.request, r.session, r.session.Name, r.epoch, r.plan, r.live, r.ends
 	var stops []func()
 	stop := func() {
 		for i := len(stops) - 1; i >= 0; i-- {
@@ -83,8 +84,8 @@ func startServing(ctx context.Context, request Request, self registry.Session, n
 		// Before the harness: its first word goes to an address that has to
 		// exist by then. Closed either way: what the launch prepared for it
 		// goes.
-		err := startService(ctx, request, plan.Service, func(note string) { _, _ = fmt.Fprintln(os.Stderr, "rewake: "+note) })
-		stops = append(stops, closeService)
+		err := r.entry.startService(ctx, plan.Service, func(note string) { _, _ = fmt.Fprintln(os.Stderr, "rewake: "+note) })
+		stops = append(stops, r.closeService)
 		if err != nil {
 			stop()
 			return func() {}, err

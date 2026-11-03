@@ -342,8 +342,3 @@ func (b *backend) threadChanged(l *link, frame Frame) {
 	b.thread = frame.Thread
 	b.observed.Thread(frame.Thread)
 }
-
-func (b *backend) Done() <-chan struct{} { return b.exited }
-
-// ProcessID is the program's pid, zero before it started.
-func (b *backend) ProcessID() int { return b.pid }

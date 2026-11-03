@@ -87,11 +87,10 @@ publication, with exit 2 and a hint to use plain `send` or `--notify`.
 A letter to a run whose Wake is not live is still written: `send` reports it accepted, exit
 3, without waiting, and says no notice can reach the session, which reads its mail when it
 runs `rewake inbox`. The recipient's wrapper keeps the letter pending rather than failing it,
-so a Wake made live again carries the next attempt. It reserves nothing through that Wake and
-asks it for no conversation: the letter is made readable the plain way, owed a report in no
-conversation, and pinned when a later attempt finds the Wake live. A Wake withdrawn while a
-reservation is asked is the same case, so the promise `send` made is never broken by a failed
-letter.
+so a Wake made live again carries the next attempt. It asks that Wake for no conversation: the
+letter is made readable the plain way, owed a report in no conversation, and pinned when a
+later attempt finds the Wake live. A Wake withdrawn while the conversation is asked is the same
+case, so the promise `send` made is never broken by a failed letter.
 
 The live set reaches the record through a write that can fail like any other. A failed write
 is not taken for recorded: the wrapper tries once more at once, then again with a growing wait

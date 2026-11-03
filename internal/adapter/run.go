@@ -24,17 +24,6 @@ type Service interface {
 	Close()
 }
 
-// ProcessService is a service that runs a process of its own, which speaks
-// for the harness: the run is available once that process names its
-// conversation, and the harness is ended when the process is gone.
-type ProcessService interface {
-	Service
-	// ProcessID is the process's pid, zero before it started.
-	ProcessID() int
-	// Done is closed when the process is gone.
-	Done() <-chan struct{}
-}
-
 // HarnessWatcher is a service that serves the harness process itself and
 // checks each request by its peer: the host names the process it started,
 // with its start time, as soon as it is running. A request that comes before
@@ -66,12 +55,6 @@ type WorkerCounter interface {
 // and when; the adapter only carries it.
 type Wake interface {
 	Deliver(context.Context, mail.Message) mail.Result
-}
-
-// Reserver is a Wake that holds its destination through the inbox's
-// publication of a notice, so what is published is what is delivered.
-type Reserver interface {
-	Reserve(context.Context, mail.Message) (mail.Reservation, error)
 }
 
 // Receiver is a Wake whose word on a notice it answered held comes later: the

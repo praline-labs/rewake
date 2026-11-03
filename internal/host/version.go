@@ -9,20 +9,12 @@ import (
 	"github.com/praline-labs/rewake/internal/infra/build"
 )
 
-// readVersion is the launch's read of its harness's version, through the
+// version is the launch's read of its harness's version, through the
 // adapter's gate; its error refuses the launch before the claim. The program
 // read is the one the launch will start: the shipped copy it locates, unless
-// --command names another, which is held to the minimum alone.
-//
-// An adopted run reads nothing: its harness runs already, and a gate that
-// refused it now — a pinned copy the new build pins at another version, a
-// program replaced since the launch — would end a running session rather
-// than keep one from starting. Its plan uses neither answer
-// (adapter.Harness.Serve).
-func readVersion(request Request, cwd string) (string, adapter.Start, error) {
-	if request.Handover != nil {
-		return "", adapter.Start{}, nil
-	}
+// --command names another, which is held to the minimum alone. An adoption
+// reads none (adopting.version).
+func (launching) version(request Request, cwd string) (string, adapter.Start, error) {
 	if shipped, ok := request.Harness.(adapter.Shipped); ok && request.Command == "" {
 		start, err := shipped.Locate()
 		if err != nil {

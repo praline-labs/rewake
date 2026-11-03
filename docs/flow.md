@@ -187,8 +187,7 @@ written, and all of it goes in one notice. A task or a question does not wait, a
 whatever is waiting with it. Each member's expiry and reservation are checked again before
 it is made readable ([delivery.md](delivery.md#the-notice)).
 
-1. **Readable first.** With the shared destination reserved, rechecks each message under
-   the mailbox lock, records its delivery thread, and hard-links the message into `unread/`. An agent told
+1. **Readable first.** Rechecks each message under the mailbox lock, records its delivery thread, and hard-links the message into `unread/`. An agent told
    about mail may run `rewake inbox` at once, so the text is there before the
    notice goes out.
 2. **The notice.** A single member uses `Rewake: lead-claude task, 1 new message`

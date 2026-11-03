@@ -81,7 +81,7 @@ func TestAFaceReconnectsToTheModelHandedOver(t *testing.T) {
 	}
 	socket := registry.MirrorFor(room, "api", "e1")
 	request := Request{Harness: mirrored{&fakeHarness{}}, Dir: room, Mirror: true}
-	model, stop, err := startMirror(request, "api", "e1")
+	model, stop, err := startMirror(request, "api", "e1", launching{}.model)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -105,8 +105,7 @@ func TestAFaceReconnectsToTheModelHandedOver(t *testing.T) {
 	}
 	_ = face.Close()
 
-	request.Handover = &Handover{Count: 1, model: file}
-	adopted, stopAdopted, err := startMirror(request, "api", "e1")
+	adopted, stopAdopted, err := startMirror(request, "api", "e1", adopting{&Handover{Count: 1, model: file}}.model)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -43,6 +43,17 @@ whole life: launches it with an inherited terminal, registers the session, servi
 and on exit deregisters the session and returns the harness's exit code. There's no daemon: each
 wrapper is the delivery point for its own session only.
 
+One run is one value that goes through its phases in order: it claims the lease and the name,
+prepares and plans, starts what serves the session beside the harness, starts the harness, and
+delivers until it ends. Whatever a phase takes is given back latest first when the run returns.
+A launch and the adoption of a run that an earlier image of the wrapper handed over in a switch
+of the room's build ([rules/state.md](rules/state.md#switching-a-running-room)) take the same
+phases. They differ only in how each comes to its harness — the lease taken or followed, the
+name claimed or its record loaded, `Launch` or `Serve`, said on stderr or not, the service
+started or adopted, the harness started or taken — and in how a failure ends. A launch just
+fails, while an adoption holds the harness it has until the harness ends
+(`internal/host/entry.go`).
+
 A launch plan carries one run's capabilities as separate interfaces — a Service for this
 lifecycle, Wake for delivery, TurnBoundary for its turn ends, Telemetry, Control and Spaces — and
 what an adapter offers before any launch is its `Offers()` value

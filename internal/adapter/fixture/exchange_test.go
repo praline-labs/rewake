@@ -90,9 +90,6 @@ func TestTheExchangeMakesLiveWhatItsProbesAnswer(t *testing.T) {
 	if thread, err := b.Thread(); err != nil || thread != programThrd {
 		t.Fatalf("thread %q, %v", thread, err)
 	}
-	if b.ProcessID() == 0 || b.ProcessID() != b.process.Process.Pid {
-		t.Fatalf("process id %d", b.ProcessID())
-	}
 	if state := b.SessionState(); state.Thread != programThrd || !state.Fresh {
 		t.Fatalf("a live telemetry shows no state: %+v", state)
 	}
@@ -128,9 +125,6 @@ func withheldStops(t *testing.T, b *backend, capability string) {
 	case Wake:
 		if _, err := b.Thread(); !errors.Is(err, mail.ErrThreadUnavailable) {
 			t.Fatalf("a conversation without wake: %v", err)
-		}
-		if _, err := b.Reserve(context.Background(), mail.Message{}); !errors.Is(err, mail.ErrThreadUnavailable) {
-			t.Fatalf("a reservation without wake: %v", err)
 		}
 		if result := b.Deliver(context.Background(), mail.Message{ID: "m1"}); result.State != mail.Failed {
 			t.Fatalf("a delivery without wake: %+v", result)
@@ -169,7 +163,7 @@ func TestADisconnectWithdrawsEverythingAtOnce(t *testing.T) {
 		t.Fatalf("a conversation after the disconnect: %v", err)
 	}
 	select {
-	case <-b.Done():
+	case <-b.exited:
 		t.Fatal("the program ended; the test is of a disconnect")
 	default:
 	}
@@ -217,7 +211,7 @@ func TestTheProgramsEndWithdrawsEverything(t *testing.T) {
 				_ = syscall.Kill(b.pid, syscall.SIGKILL)
 			}
 			select {
-			case <-b.Done():
+			case <-b.exited:
 			case <-time.After(5 * time.Second):
 				t.Fatal("the program's end was not seen")
 			}

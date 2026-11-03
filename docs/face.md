@@ -163,8 +163,8 @@ its place (the look, "Rules").
 
 The shell starts a face for each worker pane whose session row carries `mirror`, and ends it with
 the pane or the socket. A dev worker opens on rewake's face; the prefix's `v` (Ctrl+\ then `v`)
-flips the shown pane between `rewake` and `native`, and the strip says `dev rewake` or
-`dev native`. The face is a layer over the pane's rectangle: the native widget under it stays
+flips the shown pane between `rewake` and `native`; the strip does not say which (the owner,
+November 3, 2026: the word was superfluous). The face is a layer over the pane's rectangle: the native widget under it stays
 mounted, sized and fed, so its pty is never resized and its TUI runs on, and the switch costs
 nothing on either side. It is laid over a box of the widget's own size inside the pane's padded
 box: an absolute layer starts at the padding's edge, and over the padded box it left the widget's
