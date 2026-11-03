@@ -72,6 +72,9 @@ func screenCommand() *Command {
 }
 
 func handleScreen(ctx *Context, call Call) error {
+	if len(call.Positionals) < 1 {
+		return &UsageError{Command: call.Command, Message: "screen needs the session's name: rewake screen helper-claude, or main."}
+	}
 	name := call.Positionals[0]
 	dir, err := state.Dir()
 	if err != nil {
