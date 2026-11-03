@@ -45,6 +45,11 @@ type Message struct {
 	// Brief names the brief a task or a question gives its recipient, by its
 	// id; the text stays the brief's, read when the letter is.
 	Brief string `json:"brief,omitempty"`
+	// briefNote is what a notice's preview adds for a report on a brief's
+	// task, "brief 96 7/8". Read when the notice is made and never written
+	// down: unexported, so it is no part of the record or of the handover's
+	// shape (WithBriefNote).
+	briefNote string
 	// Resends names the report this one sends again, and Decision the
 	// decision that did: a reader holding both can tell a duplicate. Neither
 	// says the first did not arrive; a decision proves nothing.
@@ -288,8 +293,11 @@ func List(dir, to string) ([]Message, error) {
 // IsReport includes every turn outcome — successful, failed, stopped and
 // interim — for what a report shares with the others: a notice that failed
 // leaves it readable rather than lost.
-func IsReport(message Message) bool {
-	switch KindOf(message) {
+func IsReport(message Message) bool { return IsReportKind(KindOf(message)) }
+
+// IsReportKind is IsReport for a kind.
+func IsReportKind(kind Kind) bool {
+	switch kind {
 	case Finished, Error, Stopped, Interim:
 		return true
 	}

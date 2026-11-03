@@ -245,6 +245,13 @@ turn's end answered nothing, and main got no report
 ([research-claude-mod.md](research-claude-mod.md#a-worker-acts-on-the-notices-preview)). The
 worker's playbook says the same in its working rules.
 
+**A report on a brief's task** ends its preview with ` (brief 96 7/8)`, the brief and its done
+items read when the notice is made, so an open item shows without reading; the bound on the line
+cuts the author's text first and never the note, as for a task's `previewOnly`. The note lives
+on the copy handed to the adapter (`Message.WithBriefNote`, an unexported field, so no record and no handover shape carries it;
+`internal/host/delivery/brief_note.go`); a brief that cannot be read leaves the preview as it was
+([briefs.md](briefs.md#the-commands)).
+
 **Fixed members.** Every notice has a fixed set of member ids. At the next ready delivery
 opportunity, accumulated eligible mail gets its own notice: active work takes it where its
 harness allows, idle work starts. No peek, terminal event or model-seen acknowledgment is

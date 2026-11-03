@@ -32,7 +32,7 @@ func Notice(message Message) string {
 		line := fmt.Sprintf("Rewake: %d new messages", len(message.Batch))
 		line += correctionLines(corrections)
 		if latest != nil {
-			line += "\n  ↳ " + shownPreview(fmt.Sprintf("%s %s: %s", latest.From, KindOf(*latest), firstLine(*latest)), KindOf(*latest))
+			line += "\n  ↳ " + shownPreview(fmt.Sprintf("%s %s: %s", latest.From, KindOf(*latest), firstLine(*latest)), KindOf(*latest), latest.briefNote)
 		}
 		return line
 	}
@@ -45,7 +45,7 @@ func Notice(message Message) string {
 		noun = "message"
 	}
 	line := fmt.Sprintf("Rewake: %s %s, %d new %s", message.From, KindOf(message), count, noun)
-	if first := shownPreview(firstLine(message), KindOf(message)); first != "" {
+	if first := shownPreview(firstLine(message), KindOf(message), message.briefNote); first != "" {
 		line += "\n  ↳ " + first
 	}
 	return line
@@ -60,7 +60,18 @@ const previewOnly = " (a preview only: run rewake inbox)"
 // shownPreview is the preview line of the letter a notice shows. A task's or
 // a question's ends with previewOnly, which the bound never cuts: the
 // author's text is cut first.
-func shownPreview(text string, kind Kind) string {
+//
+// A report on a brief's task ends with the brief's note in brackets, bounded
+// the same way: an open item shows without reading (docs/delivery.md#the-notice).
+func shownPreview(text string, kind Kind, briefNote string) string {
+	if briefNote != "" && IsReportKind(kind) {
+		suffix := " (" + briefNote + ")"
+		first := previewWithin(text, previewCells-textCells(suffix))
+		if first == "" {
+			return ""
+		}
+		return first + suffix
+	}
 	if kind != Task && kind != Question {
 		return preview(text)
 	}
@@ -92,7 +103,7 @@ func correctionLines(corrections []Message) string {
 			lines += "\n  ↳ " + preview(correction.Text)
 			continue
 		}
-		lines += "\n  ↳ " + shownPreview(fmt.Sprintf("%s %s: %s", correction.From, KindOf(correction), firstLine(correction)), KindOf(correction))
+		lines += "\n  ↳ " + shownPreview(fmt.Sprintf("%s %s: %s", correction.From, KindOf(correction), firstLine(correction)), KindOf(correction), "")
 	}
 	return lines
 }

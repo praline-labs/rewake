@@ -72,5 +72,5 @@ func reminderNotice(message Message) string {
 	}
 	kind := KindOf(latest)
 	return fmt.Sprintf("Rewake: %d unread %s still waiting\n  ↳ %s", len(members), noun,
-		shownPreview(fmt.Sprintf("%s %s: %s", latest.From, kind, firstLine(latest)), kind))
+		shownPreview(fmt.Sprintf("%s %s: %s", latest.From, kind, firstLine(latest)), kind, ""))
 }
