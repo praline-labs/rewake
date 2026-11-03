@@ -809,7 +809,7 @@ and the strip read `Stub ·B`, with no restart of pi.
 ## Holding a run's end (November 3, 2026, 1.4.0)
 
 Whether the extension can hold a run's end while it asks the wrapper, and continue it (brief
-102). Read in `docs/extensions.md` and `dist/core/agent-session.js`
+102). Read in `pi-coding-agent/docs/extensions.md` and `dist/core/agent-session.js`
 (`_runBeforeSettleBoundary`, `abort`), then probed with an inline probe extension in the real
 interactive pi, a private HOME and agent directory, a loopback stub of the messages API, no
 login.
