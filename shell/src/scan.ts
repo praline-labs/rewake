@@ -17,14 +17,16 @@ export type Seen = {
   closing?: boolean;
 };
 
-// A copy of a long selection is tens of kilobytes; a payload longer than
-// this is dropped, while the parser goes on through it in its state alone.
-const payloadLimit = 1 << 20;
-// A CSI's parameters are a few bytes; a longer one is no mode we read.
-const csiLimit = 256;
+// A copy of a selection is up to some megabytes; this bound is far above any
+// real one and is only there against an OSC that never ends, so a payload
+// longer than it is dropped while the parser goes on through it in its state
+// alone.
+const payloadLimit = 1 << 26;
+// The longest mode number we read has four digits; a parameter of more can
+// match none, so no more than this is kept of one.
+const modeDigits = 5;
 const tracking = new Set(["9", "1000", "1002", "1003"]);
 const alternate = new Set(["47", "1047", "1049"]);
-const privateModes = /^\?[\d;]+$/;
 const closingMark = "6262;rewake-closing";
 
 // ground draws; esc follows an ESC; escInter an ESC with intermediates; csi
@@ -44,9 +46,15 @@ export class Scanner {
   private state: State = "ground";
   private kind = "";
   // payload is an OSC's text so far, or undefined once it passed the limit
-  // or for a string that is no OSC; csi is a control sequence's parameters.
+  // or for a string that is no OSC.
   private payload: string | undefined = "";
-  private csi: string | undefined = "";
+  // A CSI is read as it comes, whatever its length: whether it is a private
+  // mode list (`?` first, then digits and `;`), the parameter in hand, and
+  // the modes of the list that we read.
+  private csiFirst = true;
+  private csiPrivate = false;
+  private csiParam = "";
+  private csiModes = new Set<string>();
   private mouse = new Set<string>();
   // alternate is whether the program is on an alternate screen, and drew
   // whether it has drawn on it since it entered.
@@ -62,7 +70,7 @@ export class Scanner {
   // reset forgets what the program set, for a stream that starts again.
   reset() {
     this.state = "ground";
-    this.payload = this.csi = "";
+    this.payload = "";
     this.mouse.clear();
     this.alternate = false;
     this.drew = false;
@@ -98,7 +106,7 @@ export class Scanner {
       case "csi":
         if (byte === 0x1b) this.state = "esc";
         else if (byte >= 0x40 && byte <= 0x7e) this.endCsi(String.fromCharCode(byte), seen);
-        else if (byte >= 0x20 && byte <= 0x3f) this.take(byte, "csi");
+        else if (byte >= 0x20 && byte <= 0x3f) this.param(byte);
         else if (byte >= 0x80) {
           this.state = "ground";
           this.draw(seen);
@@ -116,7 +124,10 @@ export class Scanner {
     if (byte === 0x1b) this.state = "esc";
     else if (this.state === "esc" && c === "[") {
       this.state = "csi";
-      this.csi = "";
+      this.csiFirst = true;
+      this.csiPrivate = false;
+      this.csiParam = "";
+      this.csiModes.clear();
     } else if (this.state === "esc" && "]P_^X".includes(c)) {
       this.state = "string";
       this.kind = c;
@@ -129,13 +140,34 @@ export class Scanner {
     }
   }
 
-  private take(byte: number, into: "payload" | "csi" = "payload") {
-    const text = into === "csi" ? this.csi : this.payload;
+  private take(byte: number) {
+    const text = this.payload;
     if (text === undefined) return;
-    const limit = into === "csi" ? csiLimit : payloadLimit;
-    const next = text.length < limit ? text + String.fromCharCode(byte) : undefined;
-    if (into === "csi") this.csi = next;
-    else this.payload = next;
+    this.payload = text.length < payloadLimit ? text + String.fromCharCode(byte) : undefined;
+  }
+
+  // param reads a parameter or intermediate byte of a CSI.
+  private param(byte: number) {
+    const c = String.fromCharCode(byte);
+    if (this.csiFirst) {
+      this.csiFirst = false;
+      this.csiPrivate = c === "?";
+    } else if (!this.csiPrivate) {
+      return;
+    } else if (c >= "0" && c <= "9") {
+      if (this.csiParam.length < modeDigits) this.csiParam += c;
+    } else if (c === ";") {
+      this.endParam();
+    } else {
+      this.csiPrivate = false;
+    }
+  }
+
+  private endParam() {
+    if (tracking.has(this.csiParam) || alternate.has(this.csiParam)) {
+      this.csiModes.add(this.csiParam);
+    }
+    this.csiParam = "";
   }
 
   // draw notes a drawn byte: the first a program draws on an alternate
@@ -164,11 +196,9 @@ export class Scanner {
 
   private endCsi(final: string, seen: Seen[]) {
     this.state = "ground";
-    const params = this.csi;
-    if (params === undefined || (final !== "h" && final !== "l") || !privateModes.test(params)) {
-      return;
-    }
-    const modes = params.slice(1).split(";");
+    if (!this.csiPrivate || (final !== "h" && final !== "l")) return;
+    this.endParam();
+    const modes = [...this.csiModes];
     const was = this.mouse.size > 0;
     for (const mode of modes) {
       if (!tracking.has(mode)) continue;

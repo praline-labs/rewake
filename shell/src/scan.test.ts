@@ -88,6 +88,31 @@ test("a DCS longer than a mebibyte stays no drawing across reads", () => {
   expect(pieces).toEqual([]);
 });
 
+// A completed copy is emitted whole however long, as before the parser.
+test("a large copy comes across whole, in one read and in cut ones", () => {
+  const original = "a".repeat(786432);
+  for (const end of ["\x07", "\x1b\\"]) {
+    const text = `\x1b]52;c;${Buffer.from(original).toString("base64")}${end}`;
+    for (const size of [text.length, 32768, 65536]) {
+      const scanner = new Scanner();
+      const got: Seen[] = [];
+      for (let at = 0; at < text.length; at += size) {
+        got.push(...scanner.scan(bytes(text.slice(at, at + size))));
+      }
+      expect(got.length).toBe(1);
+      expect(got[0]?.copy === original).toBe(true);
+    }
+  }
+});
+
+test("a mode list is read however long its parameters are", () => {
+  expect(seenIn(`\x1b[?1002;${"0".repeat(260)}1006hMAIN`)).toEqual([{ mouse: true }]);
+  expect(seenIn(`\x1b[?${"0".repeat(5000)};1000h`)).toEqual([{ mouse: true }]);
+  expect(seenIn("\x1b[?1002;1006h\x1b[?1002l")).toEqual([{ mouse: true }, { mouse: false }]);
+  // Not a private list: nothing in it is a mode.
+  expect(seenIn("\x1b[1002h\x1b[?1002x1000h")).toEqual([]);
+});
+
 test("a copy, the title and the closing mark still come across reads", () => {
   const copy = Buffer.from("a long selection").toString("base64");
   expect(seenIn(`\x1b]52;c;${copy}\x1b\\\x1b]2;main\x07\x1b]6262;rewake-closing\x07`)).toEqual([
