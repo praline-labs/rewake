@@ -14,7 +14,9 @@ type emulator interface {
 	// write feeds the program's output. Answers to the program's queries
 	// come out of replies while it runs.
 	write(p []byte)
-	resize(size Size)
+	// resize sizes the screen. pending are the bytes of a sequence the
+	// program has not finished, which the emulator may need given again.
+	resize(size Size, pending []byte)
 	size() Size
 	// defaults sets the colors the program's queries of the default
 	// foreground and background are answered with; nil keeps one.

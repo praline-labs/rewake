@@ -218,13 +218,13 @@ func (g *Grid) Size() Size {
 
 // Resize sizes the grid. The caller sizes the terminal after it: the program
 // draws for its new size only once the kernel tells it, and by then the grid
-// has that size. The library does not reflow.
+// has that size. A narrowing wraps what a row held (reflow.go).
 func (g *Grid) Resize(size Size) error {
 	if err := size.check(); err != nil {
 		return err
 	}
 	g.mu.Lock()
-	g.emu.resize(size)
+	g.emu.resize(size, g.unfinished.bytes())
 	g.mu.Unlock()
 	return nil
 }

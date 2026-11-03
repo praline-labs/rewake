@@ -11,7 +11,7 @@ import (
 // below, and the person's widget does: a line main wrote across the window,
 // then shown in a pane half as wide, is two lines there, and a replay of the
 // cut row would show one (docs/shell.md#the-space-hosts-emulator).
-func (v *vtEmulator) resize(size Size) {
+func (v *vtEmulator) resize(size Size, pending []byte) {
 	if size.Cols >= v.emu.Width() || v.emu.IsAltScreen() {
 		// A program on the alternate screen draws it again at its new size.
 		v.emu.Resize(size.Cols, size.Rows)
@@ -32,8 +32,11 @@ func (v *vtEmulator) resize(size Size) {
 			}
 		}
 	}
-	// Margins are whole after a resize, so the position is the screen's.
+	// Margins are whole after a resize, so the position is the screen's. The
+	// library places the cursor only by a sequence, which ends the one the
+	// program left unfinished, so that one's bytes are given again.
 	_, _ = v.emu.Write([]byte("\x1b[" + strconv.Itoa(cursor.Y+1) + ";" + strconv.Itoa(cursor.X+1) + "H"))
+	v.write(pending)
 }
 
 // wrapped is the shown screen's rows cut to the width of size and wrapped

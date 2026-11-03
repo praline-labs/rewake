@@ -69,6 +69,39 @@ func TestAGridNarrowedTwiceWrapsTheLineOnce(t *testing.T) {
 	}
 }
 
+// A sequence the program has half written when the grid narrows is finished
+// by the rest: the cursor's move during the resize must not cancel it. The
+// host and a client attached after show the same cells.
+func TestASequenceHalfWrittenAcrossANarrowingIsFinished(t *testing.T) {
+	g, err := NewGrid(Size{Cols: 40, Rows: 5})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = g.Close() })
+	g.commit([]byte("hello\x1b[31"), false)
+	if err := g.Resize(Size{Cols: 20, Rows: 5}); err != nil {
+		t.Fatal(err)
+	}
+	s := g.Attach()
+	g.commit([]byte("mRED"), false)
+	client := freshVT(t)
+	client.write(s.Preamble)
+	client.write(drained(s))
+	g.mu.Lock()
+	host := g.emu.(*vtEmulator)
+	want, got := host.look(), client.look()
+	g.mu.Unlock()
+	if rows := shownRows(host); rows[0] != "helloRED" {
+		t.Fatalf("host row %q, want helloRED", rows[0])
+	}
+	if !slices.EqualFunc(want.rows, got.rows, slices.Equal) {
+		t.Fatalf("client rows %+v, want %+v", got.rows, want.rows)
+	}
+	if red := want.rows[0][1]; red.Text != "RED" || red.Fg == (Color{}) {
+		t.Fatalf("RED is not colored: %+v", want.rows[0])
+	}
+}
+
 // The rows that no longer fit leave from the top, so the cursor stays on the
 // screen.
 func TestANarrowedGridKeepsTheCursorOnTheScreen(t *testing.T) {
