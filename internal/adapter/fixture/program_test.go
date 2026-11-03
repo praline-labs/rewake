@@ -132,10 +132,6 @@ func speak(socket string, pid int, drop bool) error {
 				reply.OK, reply.Error = false, "withheld"
 			}
 			answered++
-		case opReserve:
-			reply.Thread = programThrd
-		case opRelease:
-			continue
 		case opBrief:
 			if path := os.Getenv(switchBrief); path != "" {
 				_ = os.WriteFile(path, []byte(frame.Text), 0o600)

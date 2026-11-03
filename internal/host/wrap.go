@@ -251,7 +251,6 @@ func Run(ctx context.Context, request Request) (int, error) {
 		return hold.fail(err)
 	}
 
-	process, _ := plan.Service.(adapter.ProcessService)
 	if start, err := proc.StartTime(harness.Pid); err == nil {
 		session.HarnessPID = harness.Pid
 		session.HarnessStart = start
@@ -263,11 +262,6 @@ func Run(ctx context.Context, request Request) (int, error) {
 		if watcher, ok := plan.Service.(adapter.HarnessWatcher); ok {
 			watcher.HarnessStarted(adapter.RunProcess{PID: session.HarnessPID, Start: session.HarnessStart})
 		}
-	}
-	if process != nil {
-		watchCtx, stopWatching := context.WithCancel(ctx)
-		defer stopWatching()
-		go stopWithProcess(watchCtx, process, harness, session.HarnessStart)
 	}
 	harnessStart := session.HarnessStart
 	go forward(signals, harness, func() bool {
@@ -282,12 +276,6 @@ func Run(ctx context.Context, request Request) (int, error) {
 	stopAvailability, notices := startAvailability(serveCtx, request.Dir, session, request.Handover, serviceReady, func() bool {
 		if !proc.Alive(harness.Pid, harnessStart) || !boundaryProven() {
 			return false
-		}
-		// A process that speaks for the harness makes it available once it
-		// names the conversation.
-		if process != nil && plan.Thread != nil {
-			thread, err := plan.Thread.Thread()
-			return err == nil && thread != ""
 		}
 		if plan.Socket != "" {
 			info, err := os.Stat(plan.Socket)
@@ -304,15 +292,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 	adopted(request, runDir)
 	go func() {
 		defer close(served)
-		// No adapter follows its conversation outside a service since S9;
-		// host/thread_test.go holds the tracker's use until one does.
 		var thread func() (string, error)
-		if tracker, ok := request.Harness.(adapter.ThreadTracker); ok {
-			thread = func() (string, error) {
-				record := current(request.Dir, name, session)
-				return tracker.Thread(adapter.RunProcess{PID: record.HarnessPID, Start: record.HarnessStart})
-			}
-		}
 		if plan.Thread != nil {
 			thread = plan.Thread.Thread
 		}
@@ -334,9 +314,6 @@ func Run(ctx context.Context, request Request) (int, error) {
 		}
 		if request.Handover != nil {
 			server.Remembered = request.Handover.Delivery
-		}
-		if reserver, ok := plan.Wake.(adapter.Reserver); ok {
-			server.Reserve = reserveIfLive(reserver, live)
 		}
 		if receiver, ok := plan.Wake.(adapter.Receiver); ok {
 			server.Receipts, server.Opened = receiver.Receipts(), receiver.Opened()

@@ -120,14 +120,12 @@ The optional interfaces beside it:
   ([worktree.md](../worktree.md)). Claude Code implements it; a worker that may enter a
   checkout is told it starts in main's and enters before its first change
   ([worktree-tools.md](../worktree-tools.md#a-workers-entry-enter_worktree--true-and-worktree_enter)).
-- `ThreadTracker` follows the conversation from the outside, given the run's process.
 - `Resumer` gives the arguments after `rewake <harness>` that continue a conversation by its
   id, for herdr's resume command ([launch.md](../launch.md#herdr)). Claude Code answers
   `--resume <id>` and pi `--session-id <id>`; pi's `--resume` opens a picker.
 
 The plan carries one run's capabilities as interfaces the wrapper calls and never asserts on
-the adapter: `Service`, started before the harness and closed with it, a `ProcessService`
-when it owns a process; `Wake`; `TurnBoundary`, handed a `TurnHandler` before the service
+the adapter: `Service`, started before the harness and closed with it; `Wake`; `TurnBoundary`, handed a `TurnHandler` before the service
 starts; `Telemetry`; `Thread`, the run's conversation; and a `LiveReporter` where the run
 proves what it serves ([below](#two-levels-offered-and-live)).
 
@@ -158,7 +156,7 @@ wrapper's exit ([state.md](state.md)).
 
 Given a notice — built by `mail.Notice`, never the message's text — and the run, it delivers
 and answers delivered, held (with the harness's reason) or failed, and later, for a held one,
-the outcome; a `Reserver` and a `Receiver` where the run answers before the letter. The host's
+the outcome; a `Receiver` where the run answers before the letter. The host's
 delivery loop decides what to send and when; the adapter only carries it. Whether a busy
 session is steered or queued is part of the answer, because the notice texts promise "active
 work is steered, idle work is woken". A run without a `Wake` answers each delivery that no

@@ -22,7 +22,7 @@ import (
 // Operations. The program says hello, answers, and reports its turns, its
 // activity, its tool calls, their results and their denials, the ends of its
 // compactions and a change of its conversation; the adapter probes, briefs,
-// reserves, delivers, releases and carries a main's control requests.
+// delivers and carries a main's control requests.
 const (
 	opHello       = "hello"
 	opAnswer      = "answer"
@@ -30,9 +30,7 @@ const (
 	opTurnEnded   = "turn-ended"
 	opActivity    = "activity"
 	opProbe       = "probe"
-	opReserve     = "reserve"
 	opDeliver     = "deliver"
-	opRelease     = "release"
 	opCompacted   = "compacted"
 	opThread      = "thread"
 	opBrief       = "brief"
