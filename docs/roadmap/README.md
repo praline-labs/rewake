@@ -49,5 +49,12 @@ pi worker, read with a prompt back, the switch and hot reload:
 - A `rewake models` command listing the models and efforts a harness offers.
 - A slot in the room for heavy test runs: an agent takes it before a heavy run and waits for
   it, woken when it is its turn; it would replace the manual rule of `AGENTS.md`, "Checks".
+- The next protocol step of the mod and the extension, one room restart for all it carries:
+  a turn end with no pending mark while a wait is open held once and confirmed — Claude Code in
+  `classic.Stop` answering `block`, pi in `agent_before_settle` with a continuation, one model
+  request per held end — and Claude Code's `background_tasks` at a turn's end, so a stalled
+  pending does not wake a worker whose own work runs (probed November 3, 2026,
+  [research-claude-mod.md](../research-claude-mod.md), [research-pi.md](../research-pi.md)).
+  Today the unclaimed-answer notify and the stalled-pending reminder stand in for both.
 - Recording the directory a session actually works in, for `rewake worktree rm`
   ([worktree.md](../worktree.md)).
