@@ -295,8 +295,8 @@ the connection handed over, which never closed; a frame half read at the snapsho
 after it are answered by the next image. No live pi worker ran: a real worker opens in a space,
 whose host cannot hand over yet.
 
-The next image plans only the extension's endpoint on the run's socket (`adoptionPlan`,
-`LaunchRequest.Adopting`). It no longer refuses the launch's arguments, reads the briefing's
+The next image plans only the extension's endpoint on the run's socket (`Serve`, which
+`Launch` composes). It no longer refuses the launch's arguments, reads the briefing's
 files or makes pi's agent directory, and the host reads no version, which the next build's pinned
 copy could have refused. None of these failed live, but each prepared a pi that was not running
 yet. Run live on November 3, 2026 with a pi worker beside Claude Code ones: it kept its pids on

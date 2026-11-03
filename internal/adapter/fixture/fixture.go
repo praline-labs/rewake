@@ -87,20 +87,7 @@ func (fixtureHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan,
 		return adapter.LaunchPlan{}, errors.New("the fixture takes no conversation id; a launch of it names none")
 	}
 	settings, notes := readConfig()
-	description := []string{"--session", request.Name, "--room", room(request), "--role", request.Role.ID}
-	server := append([]string{}, description...)
-	socket := request.Socket
-	if socket == "" {
-		socket = filepath.Join(request.Dir, "fixture.sock")
-	}
-	server = append(server, "--connect", socket)
-	terminal := append(append(append([]string{}, description...), "--"), request.Args...)
-	env := request.Env
-	if request.WorktreeEntry {
-		env = append(slices.Clone(env), adapter.WorktreeEnterEnv+"=1")
-	}
-	cwd, _ := os.Getwd()
-	run := newBackend(request.Program(ID), server, env, cwd, socket, request.Epoch)
+	run := serviceOf(request)
 	if request.Intro {
 		if settings.brief {
 			notes = append(notes, "not adding the rewake briefing: the fixture's configuration in "+settings.path+" sets one")
@@ -109,19 +96,60 @@ func (fixtureHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan,
 			run.brief = func() string { return brief.Intro(context) }
 		}
 	}
-	// The run serves its control directory itself, carrying each request to
-	// the program while Control is live (control.go).
+	return adapter.LaunchPlan{
+		Command: request.Program(ID), Args: terminalArgs(request), Env: runEnv(request), Notes: notes,
+		ServicePlan: run.plan(),
+	}, nil
+}
+
+// Serve is the run's service, the backend that serves the program's socket:
+// what Launch composes after its refusals, its configuration and the
+// briefing, and all a run handed over is planned with.
+func (fixtureHarness) Serve(request adapter.LaunchRequest) adapter.ServicePlan {
+	return serviceOf(request).plan()
+}
+
+// serviceOf is the run's backend. It serves its control directory itself,
+// carrying each request to the program while Control is live (control.go).
+func serviceOf(request adapter.LaunchRequest) *backend {
+	socket := request.Socket
+	if socket == "" {
+		socket = filepath.Join(request.Dir, "fixture.sock")
+	}
+	server := append(description(request), "--connect", socket)
+	cwd, _ := os.Getwd()
+	run := newBackend(request.Program(ID), server, runEnv(request), cwd, socket, request.Epoch)
 	run.controlDir = request.ControlDir
 	run.hostsSpaces = request.Role.Spaces
-	return adapter.LaunchPlan{
-		Service: run, Wake: run, TurnBoundary: run, Telemetry: run, Thread: run, Live: run,
-		Socket:     socket,
-		OwnsSocket: true,
-		Command:    request.Program(ID),
-		Args:       terminal,
-		Env:        env,
-		Notes:      notes,
-	}, nil
+	return run
+}
+
+// plan is the service plan the backend serves.
+func (b *backend) plan() adapter.ServicePlan {
+	return adapter.ServicePlan{
+		Service: b, Wake: b, TurnBoundary: b, Telemetry: b, Thread: b, Live: b,
+		Socket: b.socket, OwnsSocket: true,
+	}
+}
+
+// description names the run to the program, on its terminal and its server.
+func description(request adapter.LaunchRequest) []string {
+	return []string{"--session", request.Name, "--room", room(request), "--role", request.Role.ID}
+}
+
+// terminalArgs are the program's arguments on its terminal: the run's
+// description, then the caller's.
+func terminalArgs(request adapter.LaunchRequest) []string {
+	return append(append(description(request), "--"), request.Args...)
+}
+
+// runEnv is the run's environment, which a worker that may enter a checkout
+// is told in.
+func runEnv(request adapter.LaunchRequest) []string {
+	if request.WorktreeEntry {
+		return append(slices.Clone(request.Env), adapter.WorktreeEnterEnv+"=1")
+	}
+	return request.Env
 }
 
 // Offers: what the program can serve — every capability a test can withhold.

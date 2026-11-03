@@ -383,11 +383,13 @@ the commit (found in review, November 2, 2026).
 
 **An adoption is not a launch.** The adopting image goes through the wrapper's run again, so
 each step a launch takes says whether it holds for a harness already running (November 3, 2026).
-The adapter is asked for an adoption's plan (`LaunchRequest.Adopting`): the service, the wake and
-the socket the run is served with, with no check of the harness's start and no write it made.
+The host asks the adapter's `Serve` alone, never its `Launch`, for the service, the wake and
+the socket the run is served with ([adapter-api.md](adapter-api.md)): no check of the harness's
+start, no program run and no write it made.
 The host reads no version, since the harness on `PATH` may have changed since the start. What
 Claude Code's adoption repeats is [claude.md](../claude.md#what-an-adoption-repeats); pi's
-plans its extension's endpoint again and no longer makes its agent directory or reads its intro.
+plans its extension's endpoint again and no longer makes its agent directory or reads its intro;
+the fixture's refusals of its arguments and its read of its configuration stay in its launch.
 Before this, every Claude Code run met its launch's refusal of a live messaging socket, and the
 image exited.
 
@@ -463,8 +465,11 @@ Tests:
 - `internal/adapter/claude/modhost/handover_outcome_test.go` `TestAnOutcomeMainHasNotReadKeepsTheRunBusy`
 - `internal/host/mainhost/drop_test.go` `TestTheDigestTakenWakesTheLoopForASwitch`
 - `internal/cli/adopt_worktree_test.go` `TestTheAdoptedRunFindsTheCheckoutItsLaunchMade`
-- `internal/adapter/claude/adoption_test.go` `TestAnAdoptionPlansOnTheLiveSocket`
-- `internal/adapter/pi/adoption_test.go` `TestAnAdoptionPlansWithoutTheLaunchsSteps`
+- `internal/adapter/claude/serve_test.go` `TestServePlansOnTheLiveSocket`
+- `internal/adapter/pi/serve_test.go` `TestServePlansWithoutTheLaunchsSteps`
+- `internal/adapter/catalog/serve_test.go` `TestEveryAdaptersServeIsPure`
+- `internal/adapter/catalog/serve_test.go` `TestEveryAdaptersLaunchComposesItsServe`
+- `internal/host/adoption_plan_test.go` `TestAnAdoptionNeitherLaunchesNorReadsTheVersion`
 - `internal/host/unadopted_test.go` `TestAFailedAdoptionHoldsTheHarness`
 - `internal/host/unadopted_hold_test.go` `TestAHeldRunWithdrawsItsLiveSet`
 - `internal/host/unadopted_hold_test.go` `TestAHeldRunForwardsASignalCaughtBeforeItsFailure`

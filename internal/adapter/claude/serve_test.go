@@ -11,12 +11,12 @@ import (
 	"github.com/praline-labs/rewake/internal/core/role"
 )
 
-// A worker's run handed over is planned again on the messaging socket its
-// harness listens on: the launch refuses that socket as another session's,
-// which ended every Claude Code run a switch adopted (November 3, 2026); the
-// adoption's plan takes it, serves on the same paths, and writes nothing of
-// the worker profile into the service folder.
-func TestAnAdoptionPlansOnTheLiveSocket(t *testing.T) {
+// A worker's run handed over is served on the messaging socket its harness
+// listens on: the launch refuses that socket as another session's, which
+// ended every Claude Code run a switch adopted (November 3, 2026); Serve
+// takes it, serves on the same paths, and writes nothing of the worker
+// profile into the service folder.
+func TestServePlansOnTheLiveSocket(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	socket := filepath.Join(t.TempDir(), "api.sock")
@@ -33,11 +33,7 @@ func TestAnAdoptionPlansOnTheLiveSocket(t *testing.T) {
 	if _, err := New().Launch(request); err == nil || !strings.Contains(err.Error(), "is a live socket") {
 		t.Fatalf("a launch on the live socket answered %v", err)
 	}
-	request.Adopting = true
-	plan, err := New().Launch(request)
-	if err != nil {
-		t.Fatalf("the adoption was refused: %v", err)
-	}
+	plan := New().Serve(request)
 	run, ok := plan.Service.(*modRun)
 	switch {
 	case !ok:

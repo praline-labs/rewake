@@ -17,15 +17,18 @@ import (
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
-// refusingAdoption plans a launch and refuses an adoption, as Claude Code's
-// adapter refused the live messaging socket on November 3, 2026.
+// refusingAdoption plans a service that cannot adopt what it is handed, as
+// the adoption of every Claude Code run failed on November 3, 2026.
 type refusingAdoption struct{ *fakeHarness }
 
-func (r refusingAdoption) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, error) {
-	if request.Adopting {
-		return adapter.LaunchPlan{}, errors.New("the socket is a live socket")
-	}
-	return r.fakeHarness.Launch(request)
+// unadoptable is a service with no Adopt.
+type unadoptable struct{}
+
+func (unadoptable) Start(context.Context, func(string)) error { return nil }
+func (unadoptable) Close()                                    {}
+
+func (r refusingAdoption) Serve(adapter.LaunchRequest) adapter.ServicePlan {
+	return adapter.ServicePlan{Service: unadoptable{}, Wake: r.fakeHarness}
 }
 
 // A worker's adoption that fails before it has its harness holds the
@@ -81,7 +84,7 @@ func TestAFailedAdoptionHoldsTheHarness(t *testing.T) {
 		entries, _ := os.ReadDir(state.InboxPath(dir, lead.Name))
 		for _, entry := range entries {
 			raw, _ := os.ReadFile(filepath.Join(state.InboxPath(dir, lead.Name), entry.Name()))
-			if strings.Contains(string(raw), "could not be adopted: the socket is a live socket") {
+			if strings.Contains(string(raw), "could not be adopted: the run was handed over to an adapter that cannot adopt it") {
 				return true
 			}
 		}

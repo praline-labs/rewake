@@ -51,16 +51,20 @@ func (f *fakeHarness) Offers() adapter.Offer { return adapter.Offer{Wake: true} 
 
 func (f *fakeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, error) {
 	time.Sleep(f.launchDelay)
-	plan := adapter.LaunchPlan{
-		Command: "/bin/sh",
-		Args:    []string{"-c", f.script},
-		Env:     request.Env,
-		Wake:    f,
-	}
+	return adapter.LaunchPlan{
+		Command:     "/bin/sh",
+		Args:        []string{"-c", f.script},
+		Env:         request.Env,
+		ServicePlan: f.Serve(request),
+	}, nil
+}
+
+func (f *fakeHarness) Serve(request adapter.LaunchRequest) adapter.ServicePlan {
+	plan := adapter.ServicePlan{Wake: f}
 	if f.socket {
 		plan.Socket, plan.OwnsSocket = request.Socket, true
 	}
-	return plan, nil
+	return plan
 }
 
 func (f *fakeHarness) Deliver(_ context.Context, message mail.Message) mail.Result {

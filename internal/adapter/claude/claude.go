@@ -216,9 +216,6 @@ func conversationRefusal(args []string) error {
 }
 
 func (claudeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, error) {
-	if request.Adopting {
-		return adoptionPlan(request), nil
-	}
 	args := append([]string{}, request.Args...)
 	if adapter.HasFlag(args, worktreeFlag) {
 		// The launch command takes the flag before a launch is planned; one
@@ -226,15 +223,10 @@ func (claudeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, 
 		// worktree of its own instead of rewake's.
 		return adapter.LaunchPlan{}, fmt.Errorf("%s reached the Claude Code launch; start it with rewake claude %s so rewake makes the checkout, or give -w for Claude Code's own", worktreeFlag, worktreeFlag)
 	}
-	socket := request.Socket
-	owns := false
-
-	if adapter.HasFlag(args, socketFlag) {
-		// The caller named their own socket. Their flag wins, and delivery has
-		// to find it from the record, so read it back rather than guess. It is
-		// theirs, not ours: this session never removes that file.
-		socket = flagValue(args, socketFlag)
-	} else {
+	// A socket the caller named is theirs: their flag wins, and serviceOf
+	// reads it back for the record rather than guess; this session never
+	// removes that file.
+	if socket := request.Socket; !adapter.HasFlag(args, socketFlag) {
 		if len(socket) > maxSocketPath {
 			return adapter.LaunchPlan{}, fmt.Errorf("the socket path %s is longer than the %d bytes a unix socket allows; use a shorter session name, or point REWAKE_DIR, the state directory, at a shorter path", socket, maxSocketPath)
 		}
@@ -243,17 +235,12 @@ func (claudeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, 
 		if err := removeStaleSocket(socket); err != nil {
 			return adapter.LaunchPlan{}, err
 		}
-		owns = true
 		args = adapter.AddFlags(args, socketFlag, socket)
 	}
 
 	args, notes, err := withDefaults(request, args)
 	if err != nil {
 		return adapter.LaunchPlan{}, err
-	}
-	reply, note := replyOf(request, socket, owns)
-	if note != "" {
-		notes = append(notes, note)
 	}
 	worker, err := workerProfile(request, args)
 	if err != nil {
@@ -296,8 +283,6 @@ func (claudeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, 
 		args = adapter.AddFlags(args, sessionIDFlag, request.Conversation)
 	}
 
-	wake := newLane(socket, reply, owns)
-	wake.room = request.RoomDir
 	env := request.Env
 	if request.Shell {
 		env = fullscreen(env)
@@ -308,26 +293,23 @@ func (claudeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, 
 	if worker.configDir != "" {
 		env = withEnv(env, configDirEnv, worker.configDir)
 	}
-	served := serve(request, args, wake)
-	if served.modSocket != "" {
+	service := serviceOf(request, args)
+	if service.note != "" {
+		notes = append(notes, service.note)
+	}
+	if service.modSocket != "" {
 		// The mod is this run's alone: written into its directory, loaded
 		// by this launch's flag, its socket named in this launch's
 		// environment.
 		args = adapter.AddFlags(args, pluginDirFlag, modDir(request.RunDir))
-		env = modEnv(env, served.modSocket)
+		env = modEnv(env, service.modSocket)
 	}
 	return adapter.LaunchPlan{
-		Command:      request.Program("claude"),
-		Args:         args,
-		Env:          env,
-		Socket:       socket,
-		OwnsSocket:   owns,
-		Notes:        notes,
-		Service:      served.service,
-		Wake:         wake,
-		Live:         served.live,
-		TurnBoundary: served.turns,
-		Telemetry:    served.telemetry,
+		Command:     request.Program("claude"),
+		Args:        args,
+		Env:         env,
+		Notes:       notes,
+		ServicePlan: service.plan,
 	}, nil
 }
 

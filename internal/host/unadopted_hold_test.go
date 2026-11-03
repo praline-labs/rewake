@@ -23,8 +23,8 @@ type failingAdoption struct {
 	report           func([]adapter.Capability)
 }
 
-func (f *failingAdoption) Launch(adapter.LaunchRequest) (adapter.LaunchPlan, error) {
-	return adapter.LaunchPlan{Service: f, Live: f}, nil
+func (f *failingAdoption) Serve(adapter.LaunchRequest) adapter.ServicePlan {
+	return adapter.ServicePlan{Service: f, Live: f}
 }
 
 func (f *failingAdoption) ReportLive(report func([]adapter.Capability)) { f.report = report }
@@ -107,11 +107,11 @@ func liveOf(t *testing.T, dir, name string) []string {
 
 // A held run serves nothing, so its record advertises nothing: a sender's
 // task admitted on the earlier image's boundary would wait for a report no
-// turn's end can send (found in review, November 3, 2026). Both when the plan
-// is refused, before anything is served, and when the service published in
-// part and failed, its later report not published again.
+// turn's end can send (found in review, November 3, 2026). Both when the
+// service fails before anything is served, and when it published in part and
+// failed, its later report not published again.
 func TestAHeldRunWithdrawsItsLiveSet(t *testing.T) {
-	t.Run("the plan refused", func(t *testing.T) {
+	t.Run("a service that cannot adopt", func(t *testing.T) {
 		dir, worker, done := holdRun(t, refusingAdoption{&fakeHarness{}})
 		if live := liveOf(t, dir, worker.Name); len(live) > 0 {
 			t.Fatalf("the held run still advertises %v", live)

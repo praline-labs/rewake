@@ -13,9 +13,6 @@ import (
 )
 
 func (harness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, error) {
-	if request.Adopting {
-		return adoptionPlan(request), nil
-	}
 	if request.RunDir == "" || request.Socket == "" {
 		return adapter.LaunchPlan{}, fmt.Errorf("pi needs a run directory and socket for its extension")
 	}
@@ -87,12 +84,10 @@ func (harness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, error)
 	if worker {
 		env = append(env, SessionDirEnv+"="+filepath.Join(dir, workerSessions))
 	}
-	run := serve(request)
 	command, args := request.Invocation(ID, args)
 	return adapter.LaunchPlan{
 		Command: command, Args: args, Env: env, Notes: notes,
-		Socket: request.Socket, OwnsSocket: true,
-		Service: run, Wake: run, TurnBoundary: run, Thread: run, Live: run, Telemetry: run,
+		ServicePlan: harness{}.Serve(request),
 	}, nil
 }
 
@@ -101,8 +96,11 @@ func extensionPath(request adapter.LaunchRequest) string {
 	return filepath.Join(request.RunDir, "extension.ts")
 }
 
-// serve builds the run's service, a launch's and an adoption's alike.
-func serve(request adapter.LaunchRequest) *run {
+// Serve is the run's service: the extension's endpoint on the run's socket,
+// which Launch composes and a run handed over is planned with alone. Nothing
+// here refuses the arguments, reads the briefing's files or makes pi's
+// directory: all of that prepares a pi that is not running yet.
+func (harness) Serve(request adapter.LaunchRequest) adapter.ServicePlan {
 	run := newRun(extensionPath(request), request.Socket, request.Epoch)
 	run.controlDir = request.ControlDir
 	run.hostsSpaces, run.onClosing = request.Role.Spaces, request.Closing
@@ -110,17 +108,7 @@ func serve(request adapter.LaunchRequest) *run {
 		run.mirror = request.Mirror
 		run.mirror.Take(run.input, mirror.InputKindPrompt, mirror.InputKindInterrupt, mirror.InputKindThinking)
 	}
-	return run
-}
-
-// adoptionPlan is the plan of a run handed over: its service on the socket
-// its launch planned, with nothing checked or written — no refusal of the
-// arguments, no read of the briefing's files and no making of pi's
-// directory, all of which prepare a pi that is not running yet
-// (adapter.LaunchRequest.Adopting).
-func adoptionPlan(request adapter.LaunchRequest) adapter.LaunchPlan {
-	run := serve(request)
-	return adapter.LaunchPlan{
+	return adapter.ServicePlan{
 		Socket: request.Socket, OwnsSocket: true,
 		Service: run, Wake: run, TurnBoundary: run, Thread: run, Live: run, Telemetry: run,
 	}

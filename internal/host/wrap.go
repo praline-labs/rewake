@@ -174,7 +174,6 @@ func Run(ctx context.Context, request Request) (int, error) {
 		WorkType:      request.WorkType,
 		Mirror:        model,
 		Work:          func() string { return work.Of(launch.QuietBriefHome(request.Dir), name, epoch) },
-		Adopting:      request.Handover != nil,
 	}
 	launchRequest.Env = launch.SessionEnv(launchRequest, request.Harness.EnvNotInherited())
 	if request.Shell {
@@ -188,7 +187,7 @@ func Run(ctx context.Context, request Request) (int, error) {
 			_ = space.BeginClosingFor(request.Dir, epoch, space.MainEnding)
 		}
 	}
-	plan, err := request.Harness.Launch(launchRequest)
+	plan, err := planRun(request, launchRequest)
 	if err != nil {
 		return hold.fail(err)
 	}

@@ -10,13 +10,15 @@ Meant to be one move:
 
 1. A new package `internal/adapter/<name>` with a type implementing `adapter.Harness`: `ID`,
    `Title`, `Summary`, `Examples`, `Notes`, `SingleUseFlags`, `Version`, `EnvNotInherited`,
-   `Offers` and `Launch`. `SingleUseFlags` names the flags that harness takes at most once,
+   `Offers`, `Serve` and `Launch`. `SingleUseFlags` names the flags that harness takes at most once,
    each with all its spellings and whether it carries a value. Returning nothing is not a
    neutral answer — it says every flag may be repeated, and a launch alias plus a typed flag
    then reach a harness that may refuse to parse them. A test over the catalogue requires the
    list to be non-empty. `Offers` says what the adapter offers beyond Launch, and the plan
-   `Launch` returns carries what one run serves — its service, wake, turn boundary, telemetry —
-   as the interfaces of `internal/adapter` ([rules/adapter-api.md](rules/adapter-api.md)). An
+   `Serve` returns carries what one run serves — its service, wake, turn boundary, telemetry —
+   as the interfaces of `internal/adapter` ([rules/adapter-api.md](rules/adapter-api.md)).
+   `Launch` composes it after the steps that prepare a start; an adoption calls `Serve` alone,
+   so it checks, runs and writes nothing, and a catalogue test holds it so. An
    offer with nothing in the plan behind it is a capability the CLI admits and the run cannot
    serve. The offer answers `Conversation` either way — the flag that names a new conversation
    with rewake's id, or why there is none — and offers `Spaces` only where the run proves them

@@ -9,10 +9,10 @@ import (
 	"github.com/praline-labs/rewake/internal/core/role"
 )
 
-// A run handed over is planned on the socket its launch planned, with
-// nothing refused or made: arguments a launch refuses, a missing run
-// directory's check and pi's directory all belong to a pi not yet started.
-func TestAnAdoptionPlansWithoutTheLaunchsSteps(t *testing.T) {
+// A run handed over is served on the socket its launch planned, with nothing
+// refused or made: arguments a launch refuses and pi's directory belong to a
+// pi not yet started.
+func TestServePlansWithoutTheLaunchsSteps(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	socket := filepath.Join(t.TempDir(), "api.sock")
@@ -23,11 +23,7 @@ func TestAnAdoptionPlansWithoutTheLaunchsSteps(t *testing.T) {
 	if _, err := New().Launch(request); err == nil {
 		t.Fatal("a launch took a worker's own session directory")
 	}
-	request.Adopting = true
-	plan, err := New().Launch(request)
-	if err != nil {
-		t.Fatalf("the adoption was refused: %v", err)
-	}
+	plan := New().Serve(request)
 	if _, ok := plan.Service.(adapter.Handover); !ok || plan.Socket != socket || !plan.OwnsSocket || plan.Wake == nil || plan.TurnBoundary == nil {
 		t.Fatalf("plan %+v", plan)
 	}

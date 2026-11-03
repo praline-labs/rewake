@@ -164,6 +164,16 @@ func claimOrAdopt(request Request, self int, selfStart uint64, boot, cwd string)
 	return session, nil
 }
 
+// planRun is the launch's plan, or the service alone of a run handed over:
+// its harness runs on what its launch prepared, so nothing of a start is
+// planned again, nothing checked and nothing refused (adapter.Harness.Serve).
+func planRun(request Request, launchRequest adapter.LaunchRequest) (adapter.LaunchPlan, error) {
+	if request.Handover != nil {
+		return adapter.LaunchPlan{ServicePlan: request.Harness.Serve(launchRequest)}, nil
+	}
+	return request.Harness.Launch(launchRequest)
+}
+
 // adoptHarness takes the harness an earlier image started, which is this
 // process's child still.
 func adoptHarness(request Request) (*os.Process, func(int), error) {

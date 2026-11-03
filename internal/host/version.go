@@ -18,7 +18,7 @@ import (
 // refused it now — a pinned copy the new build pins at another version, a
 // program replaced since the launch — would end a running session rather
 // than keep one from starting. Its plan uses neither answer
-// (adapter.LaunchRequest.Adopting).
+// (adapter.Harness.Serve).
 func readVersion(request Request, cwd string) (string, adapter.Start, error) {
 	if request.Handover != nil {
 		return "", adapter.Start{}, nil

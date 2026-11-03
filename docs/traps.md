@@ -364,8 +364,8 @@ worker, failed so; pi has no such check, and the live checks of the switch had r
 fixture only. The adapter's plan also wrote the worker profile again, and the host ran the
 version gate, which the next build's pinned pi could have refused.
 
-An adoption now plans only what the run is served with (`LaunchRequest.Adopting`,
-[claude.md](claude.md#what-an-adoption-repeats)), and an adoption that fails anyway no longer
+An adoption now plans only what the run is served with (`Harness.Serve`, which a launch
+composes and an adoption calls alone, [claude.md](claude.md#what-an-adoption-repeats)), and an adoption that fails anyway no longer
 exits under its harness: it holds it, unserved, and a worker's main is told
 ([rules/state.md](rules/state.md#switching-a-running-room)). `TestClaudeAdopt` in the workflow
 suite runs the real adapter against a stand-in listening on the socket, and failed on the old

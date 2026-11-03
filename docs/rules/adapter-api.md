@@ -84,13 +84,17 @@ type Harness interface {
   `EnvNotInherited` the variables the host leaves out of `LaunchRequest.Env`.
 - `Launch` turns a neutral description — name, role, room, the briefing, the working
   directory, a conversation id, the endpoint's address — and the run directory the host owns,
-  where the adapter may write what lives exactly as long as the run, into the plan of one run.
-- With `LaunchRequest.Adopting` the run's harness already runs, started by an earlier image of
-  the wrapper that handed it over ([state.md](state.md#switching-a-running-room)). Launch then
-  answers only the service, its wake and the socket on the request's paths. It checks nothing
-  and writes nothing that prepares a start, and it does not refuse: a refusal ends a running
-  session. Its command, arguments, environment and notes are not read (November 3, 2026, when
-  Claude Code's check of a stale socket refused its own live one).
+  where the adapter may write what lives exactly as long as the run, into the plan of one run:
+  what starts the harness, and the `ServicePlan` its own `Serve` answers.
+- `Serve` is the constructor of a run's service plan: the service, its wake, boundary,
+  telemetry, thread and live set, and the socket, on the request's paths. Launch composes it,
+  and the host calls it alone for a run handed over, whose harness an earlier image of the
+  wrapper started ([state.md](state.md#switching-a-running-room)), so an adoption cannot reach
+  a step of a launch. It checks nothing, runs no program, writes nothing and answers no error:
+  a refusal would end a running session (November 3, 2026, when Claude Code's check of a stale
+  socket, run again by the adoption, refused its own live one). A catalogue test holds every
+  adapter's Serve to that, for main and a worker
+  (`internal/adapter/catalog/serve_test.go`).
 - A briefing that needs a sentence about its own harness — how a session on it commits — gets
   it from the adapter, as `brief.Context.Harness`, a section after the role's own; the role
   texts and the CLI's help name no harness. A help text that needs one takes it from the

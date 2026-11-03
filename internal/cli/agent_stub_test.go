@@ -39,6 +39,9 @@ func (agentHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, e
 	return adapter.LaunchPlan{Command: request.Program(agentID), Args: request.Args, Env: request.Env}, nil
 }
 
+// Serve: the test agent's run has no service.
+func (agentHarness) Serve(adapter.LaunchRequest) adapter.ServicePlan { return adapter.ServicePlan{} }
+
 // Version: no gate, so a launch in these tests reads no program's version.
 func (agentHarness) Version() adapter.VersionGate { return adapter.VersionGate{} }
 

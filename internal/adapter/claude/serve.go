@@ -8,12 +8,12 @@ import (
 	"github.com/praline-labs/rewake/internal/core/role"
 )
 
-// What a launch and an adoption of a run share: the arguments as far as the
-// run's service reads them, its reply socket and its service. Everything
-// else of Launch — the stale socket's removal, the worker profile written
-// into the service folder, the briefing, the refusals of the arguments —
-// prepares a harness that is not running yet, and an adoption repeats none
-// of it (adapter.LaunchRequest.Adopting, docs/claude.md#handing-the-run-over).
+// The run's service, which Launch composes and an adoption plans alone
+// (adapter.Harness.Serve): the arguments as far as the service reads them,
+// the reply socket and the service. Everything else of Launch — the stale
+// socket's removal, the worker profile written into the service folder, the
+// briefing, the refusals of the arguments — prepares a harness that is not
+// running yet, and is not reached from here (docs/claude.md#what-an-adoption-repeats).
 
 // withDefaults is the caller's arguments with rewake's defaults and a
 // worker's window.
@@ -69,28 +69,47 @@ func serve(request adapter.LaunchRequest, args []string, wake *lane) served {
 	return served{service: run, live: run, turns: run, telemetry: run.server, modSocket: modSocket}
 }
 
-// adoptionPlan is the plan of a run handed over: the socket and the service
-// its launch planned, from the same request, with nothing checked or
-// written. The harness listens on the messaging socket, so the stale
-// socket's check would call it another session's (docs/traps.md, November
-// 3, 2026). The defaults are read again from rewake's settings: a default
-// changed since the launch moves only the effort the endpoint reports until
-// the status line says the run's own.
-func adoptionPlan(request adapter.LaunchRequest) adapter.LaunchPlan {
+// runService is the run's service plan, with what the launch adds for it:
+// the mod's socket when the run loads the mod, and a note when the run hears
+// nothing back about held messages.
+type runService struct {
+	plan            adapter.ServicePlan
+	modSocket, note string
+}
+
+// serviceOf plans the run's service from the request and args, the
+// arguments the harness runs with as far as the service reads them: the
+// effort and the window it reports. The messaging socket is the caller's
+// when the caller's own arguments name it, and rewake's on request.Socket
+// otherwise. Pure: it reads and writes no file.
+func serviceOf(request adapter.LaunchRequest, args []string) runService {
+	socket, owns := request.Socket, true
+	if adapter.HasFlag(request.Args, socketFlag) {
+		socket, owns = flagValue(request.Args, socketFlag), false
+	}
+	reply, note := replyOf(request, socket, owns)
+	wake := newLane(socket, reply, owns)
+	wake.room = request.RoomDir
+	run := serve(request, args, wake)
+	return runService{
+		plan: adapter.ServicePlan{
+			Socket: socket, OwnsSocket: owns,
+			Service: run.service, Wake: wake, Live: run.live, TurnBoundary: run.turns, Telemetry: run.telemetry,
+		},
+		modSocket: run.modSocket, note: note,
+	}
+}
+
+// Serve is the service of a run handed over. Its harness listens on the
+// messaging socket, so the launch's check of a stale socket would call it
+// another session's (docs/traps.md, November 3, 2026). The defaults are read
+// again from rewake's settings, and one that cannot be read leaves the
+// caller's arguments: a default changed since the launch moves only the
+// effort the endpoint reports until the status line says the run's own.
+func (claudeHarness) Serve(request adapter.LaunchRequest) adapter.ServicePlan {
 	args := request.Args
 	if defaulted, _, err := withDefaults(request, args); err == nil {
 		args = defaulted
 	}
-	socket, owns := request.Socket, true
-	if adapter.HasFlag(args, socketFlag) {
-		socket, owns = flagValue(args, socketFlag), false
-	}
-	reply, _ := replyOf(request, socket, owns)
-	wake := newLane(socket, reply, owns)
-	wake.room = request.RoomDir
-	run := serve(request, args, wake)
-	return adapter.LaunchPlan{
-		Socket: socket, OwnsSocket: owns,
-		Service: run.service, Wake: wake, Live: run.live, TurnBoundary: run.turns, Telemetry: run.telemetry,
-	}
+	return serviceOf(request, args).plan
 }

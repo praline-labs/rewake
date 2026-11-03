@@ -142,7 +142,7 @@ func TestABoundaryNeverReportedIsRefusedAtTheBound(t *testing.T) {
 
 // A run that reports no set of its own has live what its plan carries.
 func TestARunThatReportsNoneHasItsPlanLive(t *testing.T) {
-	plan := adapter.LaunchPlan{Wake: &fakeHarness{}}
+	plan := adapter.LaunchPlan{ServicePlan: adapter.ServicePlan{Wake: &fakeHarness{}}}
 	offer := adapter.Offer{Wake: true, Control: adapter.ControlOffer{Compact: true}}
 	got := plannedLive(offer, plan, "/control")
 	if !slices.Equal(got, []adapter.Capability{adapter.WakeCapability, adapter.ControlCapability}) {

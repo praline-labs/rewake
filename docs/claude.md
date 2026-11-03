@@ -431,11 +431,11 @@ and the mod's next poll answered.
 
 ### What an adoption repeats
 
-The adopting image runs the wrapper's run again with the handover, and the adapter's `Launch`
-with `LaunchRequest.Adopting` (November 3, 2026). Its Claude Code already runs, on the arguments
-and environment the first image planned, so the plan builds only what the run is served with:
-the lane, the mod's server and the plan's socket (`adoptionPlan`, `adoption.go`). It refuses
-nothing and writes nothing a start would. A check meant for a harness not yet started fails on
+The adopting image runs the wrapper's run again with the handover, and the host plans it with
+the adapter's `Serve` alone, never its `Launch` (November 3, 2026). Its Claude Code already
+runs, on the arguments and environment the first image planned, so the plan builds only what
+the run is served with: the lane, the mod's server and the plan's socket (`serviceOf`,
+`serve.go`), which a launch composes too. It refuses nothing and writes nothing a start would. A check meant for a harness not yet started fails on
 the one running. Until then the stale socket's check refused the run's own live socket, and the
 wrapper's exit ended the session and, for main, the room
 ([traps.md](traps.md#after-rewake-restart-rewake-mains-claude-code-ended-and-the-room-with-it)).
@@ -451,12 +451,14 @@ wrapper's exit ended the session and, for main, the room
 | The lane: its reply socket and the sweep (`sweepReplies`) | run: the reply socket, closed by the exec, is bound again at the same path; the sweep removes only sockets whose dial is refused, never the handed listener |
 | The defaults (`ApplyDefaults`, the worker's compaction window) | computed again for what the service reports, never passed on; a default changed since the start shows until the status line reports the run's own |
 | The version gate | not run, by the host for every harness: the program on `PATH` may have changed since the start, and a refusal would end a running session |
+| Main's report to its herdr pane | run again, from the `HERDR_*` the exec kept: it is ongoing service, not a start; not checked live, since the live runs leave herdr out |
 | The role line, the intro, the launch's notes | not said again ([rules/state.md](rules/state.md#switching-a-running-room)) |
 | The registry's claim, the run and control directories | the run's own record adopted, its epoch kept; the directories exist |
 
 An adoption that still fails holds its Claude Code unserved rather than exit under it
 ([rules/state.md](rules/state.md#switching-a-running-room)). Tested by
-`adoption_test.go` `TestAnAdoptionPlansOnTheLiveSocket`, and end to end by the workflow suite's
+`serve_test.go` `TestServePlansOnTheLiveSocket`, across the catalogue by
+`internal/adapter/catalog/serve_test.go`, and end to end by the workflow suite's
 `TestClaudeAdopt`: the real adapter's launch, handover and adoption against a stand-in that
 listens on the messaging socket as Claude Code does, a letter delivered before and after the
 exec. Run live on November 3, 2026 (2.1.310, without a login) with a Claude Code main, a Claude

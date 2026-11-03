@@ -103,14 +103,6 @@ type LaunchRequest struct {
 	// plus the rewake variables that name the run. The adapter starts the
 	// harness with it, adding only its own.
 	Env []string
-	// Adopting says the plan is for a run an earlier image of this wrapper
-	// started and handed over: its harness runs already, on what that
-	// launch planned. Launch then builds only what the run serves with — the
-	// service Adopt runs on, its wake and the plan's socket — and refuses
-	// nothing and changes nothing a start of the harness would: a check
-	// meant for a harness not yet started fails on the one running, and its
-	// refusal ends the session (docs/claude.md#handing-the-run-over).
-	Adopting bool
 }
 
 // VersionGate is how a launch learns whether the installed harness is one the
@@ -153,8 +145,7 @@ type Start struct {
 	Runtime      VersionGate
 }
 
-// LaunchPlan is how the wrapper starts the harness, and the capabilities of
-// the run it starts: each one nil where the run has none.
+// LaunchPlan is how the wrapper starts the harness, and the run's service.
 type LaunchPlan struct {
 	// Command is the executable to run, looked up in PATH.
 	Command string
@@ -162,16 +153,23 @@ type LaunchPlan struct {
 	Args []string
 	// Env is the complete environment of the child.
 	Env []string
+	// Notes are things the caller should know about this launch: a setting that
+	// could not be read, a briefing that was skipped. They are printed once, to
+	// stderr, and do not stop the launch.
+	Notes []string
+	ServicePlan
+}
+
+// ServicePlan is what serves a run beside its harness, and the capabilities
+// of the run: each one nil where the run has none. It is all an adoption has
+// (Harness.Serve).
+type ServicePlan struct {
 	// Socket, when set, is recorded in the session so senders can reach it.
 	Socket string
 	// OwnsSocket says this run created the socket path and may remove it when
 	// the session ends. A path the caller named belongs to the caller: deleting
 	// it could cut off a session that is still running on it.
 	OwnsSocket bool
-	// Notes are things the caller should know about this launch: a setting that
-	// could not be read, a briefing that was skipped. They are printed once, to
-	// stderr, and do not stop the launch.
-	Notes []string
 
 	// Service is what of the run's own serves the session beside the
 	// harness, started before it and closed after it.
@@ -251,9 +249,18 @@ type Harness interface {
 	EnvNotInherited() []string
 	// Offers is what the adapter offers beyond Launch, before any launch.
 	Offers() Offer
-	// Launch turns a request into the command to run and the capabilities
-	// of the run.
+	// Launch turns a request into the command to run and the run's service:
+	// it prepares the harness's start — checks, refusals, what it writes
+	// for the harness to read — and then composes Serve's plan.
 	Launch(request LaunchRequest) (LaunchPlan, error)
+	// Serve plans the service of the run request names, on its paths, and
+	// nothing else: it is all a run handed over to the next image of its
+	// wrapper is planned with (docs/rules/state.md#switching-a-running-room),
+	// while its harness runs on what its launch prepared. It checks nothing,
+	// writes nothing, starts nothing and cannot refuse: a check meant for a
+	// harness not yet started fails on the one running, and a refusal there
+	// ended the session (docs/traps.md, November 3, 2026).
+	Serve(request LaunchRequest) ServicePlan
 }
 
 // Flag is one parameter of a harness, by every spelling it answers to.
