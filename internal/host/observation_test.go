@@ -35,7 +35,7 @@ func TestWrapperCollectsStateForEveryRoleDespiteDisplayPolicy(t *testing.T) {
 	for _, selected := range []role.Role{role.Main, role.Write, role.General} {
 		t.Run(selected.ID, func(t *testing.T) {
 			dir := stateDir(t)
-			backend := &observedFixture{backendFixture: &backendFixture{marker: filepath.Join(t.TempDir(), "start"), done: make(chan struct{})}}
+			backend := &observedFixture{backendFixture: &backendFixture{marker: filepath.Join(t.TempDir(), "start")}}
 			// The ordinary child runs independently while the snapshot worker persists.
 			fake := &observedHarness{fakeHarness: fakeHarness{script: "sleep 0.3"}, backend: backend}
 			code, err := Run(context.Background(), Request{Harness: fake, Dir: dir, Role: selected})

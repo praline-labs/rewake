@@ -252,24 +252,6 @@ func wakeIfLive(wake adapter.Wake, live *liveSet) func(context.Context, mail.Mes
 	}
 }
 
-// reserveIfLive reserves through the run's Wake while it is live. Otherwise it
-// reserves nothing, and the letter takes the plain path: made readable, then
-// handed to wakeIfLive, which leaves it waiting. A Wake withdrawn while the
-// reservation was asked is the same case, so the letter a sender was told it
-// could read is never failed for want of a notice.
-func reserveIfLive(reserver adapter.Reserver, live *liveSet) mail.Reserver {
-	return func(ctx context.Context, message mail.Message) (mail.Reservation, error) {
-		if !live.has(adapter.WakeCapability) {
-			return nil, nil
-		}
-		reservation, err := reserver.Reserve(ctx, message)
-		if err != nil && !live.has(adapter.WakeCapability) {
-			return nil, nil
-		}
-		return reservation, err
-	}
-}
-
 // threadIfLive asks the run's conversation while its Wake is live. Without
 // it, as when the conversation rests on the Wake and went with it, a letter
 // owed a report is made readable in no conversation rather than failed. A

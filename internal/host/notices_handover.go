@@ -47,12 +47,8 @@ type noticeHand struct {
 	handed *Notices
 }
 
-func newNoticeHand(handover *Handover) *noticeHand {
-	hand := &noticeHand{take: make(chan chan *Notices), resume: make(chan struct{})}
-	if handover != nil {
-		hand.handed = handover.Notices
-	}
-	return hand
+func newNoticeHand(handed *Notices) *noticeHand {
+	return &noticeHand{take: make(chan chan *Notices), resume: make(chan struct{}), handed: handed}
 }
 
 // hold answers a take with n and waits until the exec ends the image, a

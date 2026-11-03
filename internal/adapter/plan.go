@@ -182,8 +182,8 @@ type ServicePlan struct {
 	TurnBoundary TurnBoundary
 	// Telemetry reports the run's state; without it the state is unknown.
 	Telemetry Telemetry
-	// Thread follows the run's conversation; without it a ThreadTracker
-	// harness is asked, or the conversation is unknown.
+	// Thread follows the run's conversation; without it the conversation is
+	// unknown.
 	Thread ThreadSource
 	// Live reports what the run proves of the capabilities above; without
 	// it the run's live set is what the plan carries, from its start.

@@ -30,10 +30,10 @@ var builtNoticeScan string
 // The worker counts among workers until it returns. Main's loop starts from
 // the state an earlier image handed over, and hands its own to a switch's
 // drop through the returned hand (notices_handover.go).
-func startAvailability(parent context.Context, dir string, self registry.Session, handover *Handover, ready <-chan struct{}, usable func() bool, workers *sync.WaitGroup) (func(), *noticeHand) {
+func startAvailability(parent context.Context, dir string, self registry.Session, handed *Notices, ready <-chan struct{}, usable func() bool, workers *sync.WaitGroup) (func(), *noticeHand) {
 	ctx, cancel := context.WithCancel(parent)
 	done := make(chan struct{})
-	hand := newNoticeHand(handover)
+	hand := newNoticeHand(handed)
 	spawn(workers, func() {
 		defer close(done)
 		// From the start, so a drop before the first scan hands on what an
