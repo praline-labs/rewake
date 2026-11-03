@@ -12,12 +12,6 @@ import (
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
-// One reservation fences every member's readability and the group's native ACK.
-// Per-member preparation borrows it; releasing one member cannot drop that fence.
-type borrowedReservation struct{ mail.Reservation }
-
-func (borrowedReservation) Close() {}
-
 func announcement(messages []mail.Message) mail.Message {
 	message := messages[0]
 	message.Unread = len(messages)
@@ -38,16 +32,10 @@ func (s *Server) deliverGroup(ctx context.Context, pending []mail.Message) {
 	}
 	groupCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
-	var shared mail.Reservation
-	defer func() {
-		if shared != nil {
-			shared.Close()
-		}
-	}()
 	preparer := *s
 	preparer.lockContext = groupCtx
-	// Readiness may wait while more letters arrive. Refresh once when the shared
-	// destination is acquired; after admission the request is immutable.
+	// Letters may arrive while the first member is prepared. Refresh once after
+	// it; after admission the request is immutable.
 	refresh := func() {
 		seen := make(map[string]bool, len(pending))
 		for _, member := range pending {
@@ -59,38 +47,20 @@ func (s *Server) deliverGroup(ctx context.Context, pending []mail.Message) {
 			}
 		}
 	}
-	if s.Reserve != nil {
-		attempted := false
-		var reserveErr error
-		preparer.Reserve = func(context.Context, mail.Message) (mail.Reservation, error) {
-			if !attempted {
-				attempted = true
-				shared, reserveErr = s.Reserve(groupCtx, announcement(pending))
-				if reserveErr == nil {
-					refresh()
-				}
-			}
-			if reserveErr != nil || shared == nil {
-				return nil, reserveErr
-			}
-			return borrowedReservation{shared}, nil
-		}
-	}
 	var ready []mail.Message
 	for index := 0; index < len(pending); index++ {
 		message := pending[index]
 		if ctx.Err() != nil || !s.owned() {
 			return
 		}
-		read, answered, expired, _, release, err := preparer.prepareDelivery(groupCtx, &message)
-		release()
+		read, answered, expired, err := preparer.prepareDelivery(&message)
 		if !s.owned() {
 			return
 		}
 		if preparer.prepared(message, read, answered, expired, err) {
 			ready = append(ready, message)
 		}
-		if index == 0 && s.Reserve == nil {
+		if index == 0 {
 			refresh()
 		}
 	}
@@ -106,18 +76,8 @@ func (s *Server) deliverGroup(ctx context.Context, pending []mail.Message) {
 		result = mail.Result{State: mail.Failed, Detail: "session ended before grouped announcement"}
 	case !s.validAnnouncement(groupCtx, ready):
 		result = mail.Result{State: mail.Pending, Detail: "announcement membership changed before send"}
-	case shared != nil:
-		if checked, ok := shared.(mail.CheckedAnnouncer); ok {
-			result = checked.DeliverChecked(ctx, message, func() bool { return s.validAnnouncement(groupCtx, ready) })
-		} else {
-			result = shared.Deliver(ctx, message)
-		}
 	default:
 		result = s.Deliver(ctx, message)
-	}
-	if shared != nil {
-		shared.Close()
-		shared = nil
 	}
 	s.track(message.ID, result, ready)
 	if result.State == mail.Delivered {

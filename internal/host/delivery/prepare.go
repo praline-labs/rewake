@@ -1,21 +1,17 @@
 package delivery
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"path/filepath"
-	"sync"
-	"time"
 
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
-// prepareDelivery checks leases before reserving a destination, then rechecks under
-// the mailbox lock. Waiting for native readiness never holds the mailbox lock.
-func (s *Server) prepareDelivery(ctx context.Context, message *mail.Message) (read, answered, expired bool, reservation mail.Reservation, release func(), err error) {
-	release = func() {}
+// prepareDelivery checks leases, then rechecks them under the mailbox lock and
+// makes the message readable.
+func (s *Server) prepareDelivery(message *mail.Message) (read, answered, expired bool, err error) {
 	check := func() (err error) {
 		read, answered, expired, err = s.admit(*message)
 		return err
@@ -40,20 +36,6 @@ func (s *Server) prepareDelivery(ctx context.Context, message *mail.Message) (re
 	if err = s.lockOrAlone(s.lockCtx(), check); err != nil || read || answered || expired {
 		return
 	}
-	deliveryCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
-	release = cancel
-	if s.Reserve != nil {
-		reservation, err = s.Reserve(deliveryCtx, *message)
-		if err != nil {
-			if !errors.Is(err, mail.ErrNotYet) {
-				err = refuse(err)
-			}
-			return
-		}
-		if reservation != nil {
-			release = sync.OnceFunc(func() { reservation.Close(); cancel() })
-		}
-	}
 	makeReadable := func(thread string) error {
 		if thread != "" && mail.Owed(*message) {
 			if err := recordDeliveryThread(s.Dir, s.Name, message.ID, thread); err != nil {
@@ -63,20 +45,12 @@ func (s *Server) prepareDelivery(ctx context.Context, message *mail.Message) (re
 		}
 		return mail.LinkUnread(s.Dir, s.Name, message.ID)
 	}
-	lockCtx := s.lockCtx()
-	if reservation != nil {
-		lockCtx = deliveryCtx
-	}
-	lock := func(fn func() error) error { return s.lockOrAlone(lockCtx, fn) }
-	err = lock(func() error {
+	err = s.lockOrAlone(s.lockCtx(), func() error {
 		if err := check(); err != nil || read || answered || expired {
 			return err
 		}
 		if !s.owned() {
 			return fmt.Errorf("%w: session no longer owns its name", mail.ErrThreadUnavailable)
-		}
-		if reservation != nil {
-			return reservation.Prepare(makeReadable)
 		}
 		var thread string
 		if s.Thread != nil && mail.Owed(*message) {
@@ -89,7 +63,6 @@ func (s *Server) prepareDelivery(ctx context.Context, message *mail.Message) (re
 		return makeReadable(thread)
 	})
 	if errors.Is(err, mail.ErrThreadUnavailable) {
-		release()
 		err = refuse(err)
 	}
 	return

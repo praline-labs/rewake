@@ -52,9 +52,6 @@ const (
 	// shimFixtureVersion is what --version answers, for the refusals by
 	// version; "none" answers nothing readable.
 	shimFixtureVersion = "RW_SHIM_FIXTURE_VERSION"
-	// shimHoldReserve names a file: until it exists the program refuses every
-	// reservation, so a letter waits in the mailbox and is tried again.
-	shimHoldReserve = "RW_SHIM_HOLD_RESERVE"
 	// fixtureHelperEnv marks the child shimHelperRequests starts.
 	fixtureHelperEnv = "RW_SHIM_FIXTURE_HELPER"
 )
@@ -340,18 +337,8 @@ func (s *fixtureSession) serve(frame fixtureFrame) {
 	switch frame.Op {
 	case "probe":
 		reply = s.probe(frame, reply)
-	case "reserve":
-		if held := os.Getenv(shimHoldReserve); held != "" {
-			if _, err := os.Stat(held); err != nil {
-				reply.Error = "the scenario holds this session's deliveries"
-				break
-			}
-		}
-		reply.OK, reply.Thread = true, s.currentThread()
 	case "deliver":
 		reply = s.delivered(frame, reply)
-	case "release":
-		return
 	case "brief":
 		if path := os.Getenv(shimBriefFile); path != "" {
 			_ = os.WriteFile(path, []byte(frame.Text), 0o600)

@@ -2,7 +2,6 @@ package delivery
 
 import (
 	"context"
-	"errors"
 	"testing"
 	"time"
 
@@ -29,30 +28,19 @@ func batchServer(dir string) *Server {
 	return &Server{Dir: dir, Name: "api", Epoch: "receiver-epoch", attempts: map[string]time.Time{}, outcomes: map[string]mail.Result{}}
 }
 
-func TestMixedGroupUsesOneReservationAndIndependentReceipts(t *testing.T) {
+func TestMixedGroupIsOneNoticeWithIndependentReceipts(t *testing.T) {
 	dir := stateDir(t)
 	members := mixedPending(t, dir)
 	s := batchServer(dir)
-	reserved, prepared, announced := 0, 0, 0
-	r := &reservationFixture{}
-	s.Reserve = func(context.Context, mail.Message) (mail.Reservation, error) {
-		reserved++
-		if unread, _ := mail.Open(dir, "api", s.Epoch).PeekUnread(); len(unread) != 0 {
-			t.Fatal("group readable before reservation")
-		}
-		return r, nil
+	threads, announced := 0, 0
+	s.Thread = func() (string, error) {
+		threads++
+		return "root-A", nil
 	}
-	r.prepare = func(fn func(string) error) error {
-		prepared++
-		if r.closed {
-			t.Fatal("member dropped shared fence")
-		}
-		return fn("root-A")
-	}
-	r.deliver = func(_ context.Context, m mail.Message) mail.Result {
+	s.Deliver = func(_ context.Context, m mail.Message) mail.Result {
 		announced++
-		if r.closed || len(m.Batch) != 4 || m.Unread != 4 {
-			t.Fatal("group lost reservation or membership")
+		if len(m.Batch) != 4 || m.Unread != 4 {
+			t.Fatal("group lost membership")
 		}
 		available, err := mail.Open(dir, "api", s.Epoch).AvailableUnread()
 		if err != nil || len(available) != 4 {
@@ -74,8 +62,8 @@ func TestMixedGroupUsesOneReservationAndIndependentReceipts(t *testing.T) {
 	}
 	s.drain(context.Background())
 	s.drain(context.Background())
-	if reserved != 1 || prepared != 4 || announced != 1 || !r.closed {
-		t.Fatalf("reserve=%d prepare=%d announce=%d closed=%v", reserved, prepared, announced, r.closed)
+	if threads != 2 || announced != 1 {
+		t.Fatalf("threads=%d announce=%d", threads, announced)
 	}
 	for i, m := range members {
 		status, ok, _ := mail.ReadStatus(dir, "api", m.ID)
@@ -90,42 +78,6 @@ func TestMixedGroupUsesOneReservationAndIndependentReceipts(t *testing.T) {
 	unread, _ := mail.Open(dir, "api", s.Epoch).AvailableUnread()
 	if len(unread) != 1 || unread[0].Kind != mail.Finished {
 		t.Fatal("failed group lost report or retained unaccepted task")
-	}
-}
-
-func TestGroupCollectsArrivalsWhileReservationWaits(t *testing.T) {
-	dir := stateDir(t)
-	s := batchServer(dir)
-	first := message("first")
-	first.ToEpoch = s.Epoch
-	if err := mail.Put(dir, first); err != nil {
-		t.Fatal(err)
-	}
-	entered, release, done := make(chan struct{}), make(chan struct{}), make(chan struct{})
-	var captured mail.Message
-	reservations := 0
-	r := &reservationFixture{prepare: func(fn func(string) error) error { return fn("root-A") }, deliver: func(_ context.Context, m mail.Message) mail.Result {
-		captured = m
-		return mail.Result{State: mail.Delivered}
-	}}
-	s.Reserve = func(context.Context, mail.Message) (mail.Reservation, error) {
-		reservations++
-		close(entered)
-		<-release
-		return r, nil
-	}
-	go func() { defer close(done); s.drain(context.Background()) }()
-	<-entered
-	later := mixedPending(t, dir)
-	close(release)
-	<-done
-	if reservations != 1 || len(captured.Batch) != 5 {
-		t.Fatalf("readiness wait split pending group: reservations=%d members=%d", reservations, len(captured.Batch))
-	}
-	for _, m := range append([]mail.Message{first}, later...) {
-		if status, ok, _ := mail.ReadStatus(dir, "api", m.ID); !ok || status.State != mail.Delivered {
-			t.Fatalf("missing group ACK for %s", m.ID)
-		}
 	}
 }
 
@@ -173,35 +125,5 @@ func TestPendingRetryDoesNotDelayFreshMailOrReplayAcceptedMembers(t *testing.T) 
 	s.drain(context.Background())
 	if len(groups) != 4 || groups[3].ID != next.ID || groups[3].Unread != 1 {
 		t.Fatal("new mail waited for overview or replayed old unread")
-	}
-}
-
-func TestGroupRefusalKeepsReportsAndDoesNotAcquireAgain(t *testing.T) {
-	dir := stateDir(t)
-	s := batchServer(dir)
-	members := mixedPending(t, dir)
-	calls := 0
-	s.Reserve = func(context.Context, mail.Message) (mail.Reservation, error) {
-		calls++
-		return nil, errors.New("not ready")
-	}
-	s.Deliver = func(context.Context, mail.Message) mail.Result {
-		t.Fatal("sent despite reservation refusal")
-		return mail.Result{}
-	}
-	s.drain(context.Background())
-	s.drain(context.Background())
-	if calls != 1 {
-		t.Fatal("conflicting/repeated reservations")
-	}
-	for _, m := range members {
-		status, ok, _ := mail.ReadStatus(dir, "api", m.ID)
-		if !ok || status.State != mail.Failed || status.ReportAvailable != mail.IsReport(m) {
-			t.Fatalf("refusal lost identity: %+v", status)
-		}
-	}
-	unread, _ := mail.Open(dir, "api", s.Epoch).AvailableUnread()
-	if len(unread) != 1 || unread[0].Kind != mail.Finished {
-		t.Fatal("refusal lost report")
 	}
 }

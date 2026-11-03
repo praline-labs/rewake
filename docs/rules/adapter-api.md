@@ -335,7 +335,6 @@ Tests:
 - `internal/host/after_start_test.go` `TestABoundaryProvenAfterTheStartStartsTheHarnessAndAvailabilityWaitsForIt`
 - `internal/host/after_start_test.go` `TestAvailabilityGoesAheadPastTheBoundWithTheBoundaryNotLive`
 - `internal/host/after_start_test.go` `TestABoundaryWithdrawnAfterAvailabilityLeavesWakeUntilProvenAgain`
-- `internal/host/delivery/reservation_test.go` `TestNoReservationTakesThePlainPath`
 - `internal/adapter/claude/mod_live_test.go` `TestTheSetIsWakeUntilTheHelloThenTheBoundaryAndSpacesOnMain`
 - `internal/adapter/claude/mod_live_test.go` `TestALapseLeavesWakeAndANewHelloRestoresTheSet`
 - `internal/adapter/claude/modhost/alive_test.go` `TestALapseWithdrawsWhatTheModProvedAndANewHelloRestoresIt`

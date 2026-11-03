@@ -26,14 +26,19 @@ func TestGroupedPreparationRechecksAnswerLeasesExpiryAndEpoch(t *testing.T) {
 	}
 	var release func()
 	var group mail.Message
-	r := &reservationFixture{prepare: func(fn func(string) error) error { return fn("root") }, deliver: func(_ context.Context, m mail.Message) mail.Result {
+	s.Deliver = func(_ context.Context, m mail.Message) mail.Result {
 		group = m
 		return mail.Result{State: mail.Delivered}
-	}}
-	s.Reserve = func(context.Context, mail.Message) (mail.Reservation, error) {
-		var err error
-		release, err = mail.Open(dir, "api", "").ReserveAnswer("question-id")
-		return r, err
+	}
+	s.Thread = func() (string, error) {
+		if release == nil {
+			var err error
+			release, err = mail.Open(dir, "api", "").ReserveAnswer("question-id")
+			if err != nil {
+				return "", err
+			}
+		}
+		return "root", nil
 	}
 	s.drain(context.Background())
 	defer release()
