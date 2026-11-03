@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/core/mail"
-	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 func TestNewBatchPreservesReservedAnswersAndExpiry(t *testing.T) {
@@ -70,53 +69,6 @@ func TestNewBatchPreservesReservedAnswersAndExpiry(t *testing.T) {
 	for i, m := range announced[1].Batch {
 		if m.ID != later[i].ID {
 			t.Fatal("fixed IDs changed")
-		}
-	}
-}
-
-type consumedAnnouncement struct {
-	*reservationFixture
-	consume func()
-	calls   *int
-}
-
-func (r *consumedAnnouncement) DeliverChecked(_ context.Context, _ mail.Message, valid func() bool) mail.Result {
-	r.consume()
-	if !valid() {
-		return mail.Result{State: mail.Pending, Detail: "announcement membership changed before send"}
-	}
-	*r.calls++
-	return mail.Result{State: mail.Delivered}
-}
-
-func TestConsumedDuringPreparationNeverProducesAStaleAnnouncement(t *testing.T) {
-	dir := stateDir(t)
-	s := batchServer(dir)
-	members := mixedPending(t, dir)
-	calls := 0
-	s.Reserve = func(context.Context, mail.Message) (mail.Reservation, error) {
-		return &consumedAnnouncement{reservationFixture: &reservationFixture{prepare: func(fn func(string) error) error { return fn("A") }}, calls: &calls, consume: func() {
-			if err := state.WithMailboxLock(context.Background(), dir, s.Name, func() error {
-				for _, m := range members {
-					if err := mail.Open(dir, s.Name, s.Epoch).MarkRead(m, false); err != nil {
-						return err
-					}
-				}
-				return nil
-			}); err != nil {
-				t.Fatal(err)
-			}
-		}}, nil
-	}
-	s.drain(context.Background())
-	s.attempts = map[string]time.Time{}
-	s.drain(context.Background())
-	if calls != 0 {
-		t.Fatal("already consumed work produced a stale notice")
-	}
-	for _, m := range members {
-		if st, _, _ := mail.ReadStatus(dir, s.Name, m.ID); st.State != mail.Read {
-			t.Fatal("read outcome was undone")
 		}
 	}
 }

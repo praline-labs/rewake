@@ -209,13 +209,11 @@ waiting mail stays `pending` with the detail "the session is still starting", is
 readable, and goes out on the next pass once the harness opens. The Claude Code adapter opens
 three seconds after its lane starts; that bound is the only gate.
 
-**A reservation that cannot be taken in three seconds fails the message, it does not hold
-it.** The reservation a Wake makes is bounded at three seconds by the delivery context in
-`internal/host/delivery/prepare.go`; a refusal or a timeout is wrapped into
-`ErrThreadUnavailable` (`internal/core/mail/thread.go`), and `internal/host/delivery/batch.go`
-turns that into `failed` rather than `pending`. The one error let through unwrapped is
-`mail.ErrNotYet`: the Wake says the session cannot take the message yet, and it stays
-`pending` for a later pass.
+**A conversation that cannot be named fails the message, it does not hold it.** The thread a
+task goes into is asked for before the task becomes readable (`Server.Thread`, in
+`internal/host/delivery/prepare.go`); a refusal is wrapped into `ErrThreadUnavailable`
+(`internal/core/mail/thread.go`), and `internal/host/delivery/batch.go` turns that into
+`failed` rather than `pending`, a report staying readable.
 
 Only an answer accepted under a fresh reservation receives a new delivery window.
 `retention/<report id>` records that reservation and, on release, fixes one deadline origin.

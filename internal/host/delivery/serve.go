@@ -48,8 +48,6 @@ type Server struct {
 	Name string
 	// Deliver hands a message to the harness.
 	Deliver Deliverer
-	// Reserve fences destinations across readability and delivery when supported.
-	Reserve mail.Reserver
 	// Thread identifies the target conversation before a task becomes readable.
 	Thread func() (string, error)
 	// TTL overrides how long a message may stay pending.
