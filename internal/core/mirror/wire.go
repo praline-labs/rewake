@@ -1,9 +1,9 @@
 package mirror
 
-// WireEvent is an event as an adapter's harness side sends it through the
-// feed (feed.ts), in the same neutral words on every adapter's wire: the
-// adapter decodes its batch's events into this and hands them to Decode, so
-// none maps the fields by hand.
+// WireEvent is an event in the mirror's neutral words, as a harness side that
+// translates its own events sends it (the mod's feed, docs/face.md, "The
+// feed"): the adapter decodes its batch's events into this and hands them to
+// Decode, so none maps the fields by hand.
 type WireEvent struct {
 	Kind   EventKind  `json:"kind"`
 	ID     string     `json:"id,omitempty"`

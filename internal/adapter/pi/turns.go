@@ -84,7 +84,7 @@ func (r *run) handle(l *link, request frame) {
 				r.traced(l, completion.Thread, completion.Answer, settled)
 			}
 		}()
-	case "mirror":
+	case "events":
 		reply := r.mirrored(request)
 		r.leave()
 		l.answer(request, reply)

@@ -306,7 +306,10 @@ asks ([rules/state.md](rules/state.md#switching-a-running-room)); `handover.pi` 
 (`handover.go`). Since the extension has no replay after a reconnect, the connection itself is
 handed over: the listener and the extension's connection go as files, with pi's pid and start, the
 thread, the next request number and the last cache observation with input, and the next image serves the connection as its current one,
-its hello long answered. The extension never sees the exec; its files stay as written, the switch
+its hello long answered. The translator of pi's raw events (`translate.go`), whose open blocks,
+calls, queue and parts an event in flight still needs, goes as a third file, a memfd
+`rewake-pi-mirror` of its state as JSON read under 64 MiB (`handover.pi` 3, brief 94): inline in
+the environment it could pass the exec's bound, as the mirror's model would. The extension never sees the exec; its files stay as written, the switch
 admitting only a build of the same `extension` protocol. The adopting image sends the extension its own tool table
 once (`tools`), so a changed tool reaches the running pi; a tool call's plan or end read while the
 reader is halted waits in the socket for the next image, which answers it alike.
@@ -557,14 +560,19 @@ and hide or replace pi's own working row, header and footer.
 ## The face of a pi worker
 
 October 31, 2026, pi 1.4.0, the owner's word: a pi worker is drawn by rewake's face
-([face.md](face.md)) as a Claude Code session looks. rewake's extension feeds the face's model from
-pi's events, as the Claude Code mod does ([claude.md](claude.md#the-mirror)); the host only decodes
-the events with `mirror.Decode` and hands them on (`internal/adapter/pi/mirror.go`). The extension's
-side is `mirror.ts` (the model of the events), `mirrorhooks.ts` (pi's events it hears), `toolmap.ts` (the tools' names, each form a row of the face's
-table of its vocabulary, [face.md](face.md#calls)), tested by `mirror.test.ts` and `compaction.test.ts`, and
-`feed.ts`, the copy of the feed every adapter sends through ([face.md](face.md#the-feed)).
+([face.md](face.md)) as a Claude Code session looks. Since November 3, 2026 (brief 94,
+`hello.protocol` 3) the extension translates nothing: `forward.ts` hears pi's events and forwards
+each as pi gave it, `{event: <pi's name>, ...its fields}`, less the partial message a delta grows,
+through `stream.ts` (below, "The stream"); the wrapper translates them into the mirror's neutral
+events in Go (`internal/adapter/pi/translate*.go`, tested by `translate_test.go` and
+`translate_more_test.go`), names the tools as their Claude Code kin (`translate_tools.go`, each
+form a row of the face's table of its vocabulary, [face.md](face.md#calls), held so by
+`translate_vocab_test.go`) and hands them to the model (`mirror.go`). A change of what the face
+draws of pi is a Go change, live after `rewake restart rewake`; the translator's state crosses the
+handover in a memfd of its own ([rules/state.md](rules/state.md)). What follows is what the
+translator makes of pi's events.
 
-- **Only when drawn.** The extension mirrors nothing until hello's answer says `mirror: true`;
+- **Only when drawn.** The extension forwards nothing until hello's answer says `mirror: true`;
   every worker's launch sets it (`adapter.FacedWorkersHarness`), main's does not yet. An older
   extension never sends `mirror` and answers a `prompt` with `unknown host operation`.
 - **The events.** `input` is a `prompt`, its `source` its origin: `interactive` is the person's,
@@ -601,7 +609,8 @@ table of its vocabulary, [face.md](face.md#calls)), tested by `mirror.test.ts` a
   going on) put the queue back into pi's editor. An extension hears no change of the queue
   (`queue_update` reaches the session's own listeners only), and the queue holds the text after
   the input handlers and a prompt template changed it; `ctx.hasPendingMessages()` says whether
-  anything waits. So the extension (`queued.ts`) sends a steered prompt `queued` and says `taken`
+  anything waits (the extension forwards it as `turn_start`'s and `message_start`'s `pending`). So
+  the translator (`translate_queue.go`) sends a steered prompt `queued` and says `taken`
   as a user message begins: the queued prompt of the message's text, the first of the same texts.
   A message of no queued text is nobody's: an input handler may have consumed one prompt and
   transformed the next, so the oldest is no evidence (review of 8e94ba1). One still queued when pi's queue is found
@@ -643,9 +652,10 @@ table of its vocabulary, [face.md](face.md#calls)), tested by `mirror.test.ts` a
   for the session alone, clamped to the model: the session emits `thinking_level_changed`, on which
   pi's screen redraws its footer and border, and extensions hear `thinking_level_select`; no status
   line is said. rewake's extension answers the face's `thinking` input so (`faceThinking` in
-  `faced.ts`, its order repeated in `levelsOf`, tested by `interrupt.test.ts`), and says the level
-  to the face's mirror once the face draws the run and on every `thinking_level_select` and
-  `model_select` (`serveLevel`, brief 75), pi's level names being the mirror's; the face's rule
+  `faced.ts`, its order repeated in `levelsOf`, tested by `interrupt.test.ts`). The wrapper says the
+  level to the face's mirror from the state the extension samples, its raw `thinkingLevel`, as the
+  sample changes (`mirrorLevel`; until brief 94 the extension said it on every
+  `thinking_level_select` and `model_select`), pi's level names being the mirror's; the face's rule
   shows it from there ([face.md](face.md), "The look"). Its telemetry still sends it as `effort`.
 - **An aborted or failed message** ends as pi's screen ends it (`interactive-mode.js`,
   `message_end`; `components/assistant-message.js`, read on 1.4.0): a block that was streaming
@@ -700,10 +710,19 @@ table of its vocabulary, [face.md](face.md#calls)), tested by `mirror.test.ts` a
   call on the screen, said in its status as `Tool output: expanded`; ctrl+t hides or shows
   thinking (`pi-coding-agent/docs/keybindings.md`, read October 31, 2026, pi 1.4.0). The face's ctrl+o opens its
   folds the same way ([face.md](face.md), "Unfolding").
-- **The feed** bounds, queues and batches the events as for every adapter
-  ([face.md](face.md#the-feed)); a call's input or output past 36 KiB keeps its head ½ and tail ¼
-  of that, as the mod's and the model's do (the tail was ½ until November 1, 2026). Nothing waits
-  for it, and a throw in the mirror is dropped: pi's work is never held.
+- **The stream** (`stream.ts`, brief 94) is bounded, ordered and never waits: a handler only
+  pushes, and a throw in one is dropped, so pi's work is never held. It holds 256 KiB of serialized
+  events; past it the oldest delta goes first, then the oldest event, each leaving a `lost` marker
+  `{deltas, events}` where it stood, neighbouring markers merged. 50 ms after a push, while the
+  link is up, the oldest lines go as one `events` request of at most 48 KiB, one in flight; one
+  refused or unanswered in 5 s stands as lost at the front. An event past 40 KiB goes as `part`
+  lines of its JSON text, put together by the wrapper (an out-of-place part drops the assembly);
+  one past 192 KiB has its longest strings cut first, and a tool's event is cut to 40 KiB.
+  `message_end` carries its content blocks only when it ended `aborted` or `error`, without a
+  thinking block's signature, and no usage; an image's data never goes. The wrapper, for a lost
+  delta, leaves a call's input to its end, which says it whole, and for a lost event resyncs the
+  model. A call's input is said at most every 100 ms, read as far as its JSON goes; past 36 KiB a
+  call's input or output keeps its head ½ and tail ¼ of that, as the mod's and the model's do.
 
 | pi tool | drawn as | input |
 |---|---|---|

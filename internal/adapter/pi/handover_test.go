@@ -2,6 +2,7 @@ package pi
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"reflect"
@@ -87,9 +88,15 @@ func TestAnIdlePiRunHandsItsConnectionOver(t *testing.T) {
 		t.Fatalf("idle, Busy says %q", why)
 	}
 
+	// What the face's translator holds goes over in its memory file: a
+	// block streaming in the old image settles under its id in the next.
+	opened := before.translate.take([]raw{{Event: "agent_start"}, {Event: "message_update", Type: "text_delta", Delta: "Hel"}})
 	handed, err := before.HandOver()
 	if err != nil {
 		t.Fatal(err)
+	}
+	if len(handed.Files) != 3 {
+		t.Fatalf("handed over %d files", len(handed.Files))
 	}
 	// The exec: the old image's descriptors go, the socket's path and the
 	// copies handed over stay.
@@ -116,6 +123,9 @@ func TestAnIdlePiRunHandsItsConnectionOver(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(after.Close)
+	if settled := after.translate.take([]raw{{Event: "message_update", Type: "text_end", Content: json.RawMessage(`"Hello"`)}}); len(settled) != 1 || len(opened) != 2 || settled[0].ID != opened[1].ID || settled[0].Turn != opened[0].Turn {
+		t.Fatalf("the block streaming across the handover: %+v, then %+v", opened, settled)
+	}
 	if caps := receive(t, live); len(caps) != 3 {
 		t.Fatalf("the adopted run's live set: %v", caps)
 	}
@@ -145,7 +155,7 @@ func TestAnIdlePiRunHandsItsConnectionOver(t *testing.T) {
 var handedShapes = map[int]string{
 	1: `Version int "version"; PID int "pid"; Start uint64 "start"; Thread string "thread"; Next int64 "next"`,
 	2: `Version int "version"; PID int "pid"; Start uint64 "start"; Thread string "thread"; Next int64 "next"; Unread []uint8 "unread,omitempty"`,
-	3: `Version int "version"; PID int "pid"; Start uint64 "start"; Thread string "thread"; Next int64 "next"; Unread []uint8 "unread,omitempty"; Cache *pi.cacheSeen "cache,omitempty" {Thread string "thread"; Of json.RawMessage "of,omitempty"; Read int64 "read"; Write int64 "write"; Input int64 "input"; TTL int64 "ttl,omitempty"; ExpiresAt int64 "expiresAt,omitempty"}`,
+	3: `Version int "version"; PID int "pid"; Start uint64 "start"; Thread string "thread"; Next int64 "next"; Unread []uint8 "unread,omitempty"; Cache *pi.cacheSeen "cache,omitempty" {Thread string "thread"; Of json.RawMessage "of,omitempty"; Read int64 "read"; Write int64 "write"; Input int64 "input"; TTL int64 "ttl,omitempty"; ExpiresAt int64 "expiresAt,omitempty"}; Translator int "translator"`,
 }
 
 func TestThePiHandoverChangesWithItsShape(t *testing.T) {

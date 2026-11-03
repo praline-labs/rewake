@@ -34,7 +34,7 @@ internal/core/brief/                          text injected into an agent, indep
 internal/core/worktype/                       the kinds of work a worker is raised for: the built-in texts and the person's and project's own
 internal/core/session/                        optional, epoch-scoped observations of a harness (telemetry): the Observer every adapter reports to, which merges them into the snapshot, and the activity verdict on it
 internal/core/sessiontools/                   the session tools every adapter offers — the brief and worktree tools' names, descriptions, input schemas, which role is offered which, the check of an input into a rewake command's argv and variables or a refusal, bounds and the wording of a raw outcome; the agents get the table as data and hold no copy
-internal/core/mirror/                         the mirror: the model of a session's conversation the face draws, its socket, the decoder of a batch's neutral events, and feed.ts, the TypeScript feed every adapter's harness side sends through, copied into each by tools/protogen
+internal/core/mirror/                         the mirror: the model of a session's conversation the face draws, its socket, and the decoder of the neutral events the mod's feed sends (the feed itself is the mod's, mod/hooks/feed.ts)
 internal/core/screen/                         a window as cells for `rewake screen`: the frame, its text, its PNG with the embedded font, the picture's file with its refusals
 internal/core/space/                          the record of each space a main opens: its states, its steps, the kept checkouts' reminder
 internal/core/work/                           a run's room work as its input shows it: the open briefs bound to it with their ticks and the reports it waits on
@@ -42,7 +42,7 @@ internal/adapter/                             the adapter API: the Harness inter
 internal/adapter/catalog/                     the one constructor of the catalogue, which cmd/rewake builds and hands to the CLI
 internal/adapter/claude/                      launch arguments, environment, socket delivery, the mod embedded from its mod/ directory and written per run
 internal/adapter/claude/modhost/              the wrapper's end of the mod's protocol: the HTTP server on the run's mod socket, each request checked by its peer, hello, a turn's start and end, mod/ended, the tools' plan and the wording of their raw end; the types tools/protogen writes from internal/adapter/claude/mod/protocol.schema.json
-internal/adapter/pi/                          launch arguments, embedded TypeScript extension and management, peer-checked socket for notices, settled ends, telemetry and control, the tools' plan and the wording of their raw end
+internal/adapter/pi/                          launch arguments, embedded TypeScript extension and management, peer-checked socket for notices, settled ends, telemetry and control, the tools' plan and the wording of their raw end, the translator of pi's raw events into the mirror's (translate*.go) and the extension's bounded stream of them (stream.ts, forward.ts)
 internal/adapter/fixture/                     the test harness behind rewaketest: a scripted program over a socket, every contract interface
 internal/host/                                wrapper: launch, signals, lifecycle
 internal/host/launch/                         a launch's host side: the run's environment, the version read before the claim, the bounded probe, the worker aliases main opens, a worker raised from one (`Set.Raise`: its worktree and type resolved, every conflicting request refused) and the worktree flag read for every launch
@@ -63,7 +63,7 @@ test/leaserig/                                the room's build lease raced betwe
 tools/checksummary/                           summarizes a suite run into a few lines and summary.json
 tools/release/                                the release gate: checks, builds with pack.sh, writes each build's manifest, publishes only when told, waits for the registry with --wait
 tools/land/                                   lands an accepted branch on v2: merges, runs a step's last-commit checks, pushes, installs rewake2's build and its manifest and says what to restart, or resets on red
-tools/protogen/                               writes the Go and TypeScript types of three schemas, the mod protocol's, the shell's room view (internal/cli/room_view.schema.json) and the mirror's, whose TypeScript goes to the face (face/src/mirror.gen.ts); copies the TypeScript module both adapters share, the mirror's feed, into pi's extension and the mod; its test fails when a checked-in file differs
+tools/protogen/                               writes the Go and TypeScript types of three schemas, the mod protocol's, the shell's room view (internal/cli/room_view.schema.json) and the mirror's, whose TypeScript goes to the face (face/src/mirror.gen.ts); its test fails when a checked-in file differs
 ```
 
 `cmd/` holds only what the project ships; `tools/` holds development programs that ship

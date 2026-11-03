@@ -44,6 +44,10 @@ type handedState struct {
 	// Cache is the last response's cache usage that had input: the extension
 	// sends only its last message's, which may be a placeholder's by now.
 	Cache *cacheSeen `json:"cache,omitempty"`
+	// Translator is the index among the files of the memory file holding
+	// what the face's translator holds (translate.go): a block's open text
+	// may be past what the exec's environment takes.
+	Translator int `json:"translator"`
 }
 
 // maxUnread bounds the part of a frame a handover carries in the exec's
@@ -105,22 +109,28 @@ func (r *run) HandOver() (adapter.HandedOver, error) {
 	cache := r.observed.cache
 	r.mu.Unlock()
 	l.mu.Lock()
-	handed := handedState{Version: handoverVersion, PID: r.process.PID, Start: r.process.Start, Thread: thread, Next: l.next, Unread: unread, Cache: cache}
+	handed := handedState{Version: handoverVersion, PID: r.process.PID, Start: r.process.Start, Thread: thread, Next: l.next, Unread: unread, Cache: cache, Translator: 2}
 	l.mu.Unlock()
 	raw, err := json.Marshal(handed)
 	if err != nil {
 		return fail(err)
 	}
+	translated, err := r.translate.hand()
+	if err != nil {
+		return fail(err)
+	}
 	listening, err := r.listener.File()
 	if err != nil {
+		_ = translated.Close()
 		return fail(err)
 	}
 	connected, err := conn.File()
 	if err != nil {
+		_ = translated.Close()
 		_ = listening.Close()
 		return fail(err)
 	}
-	return adapter.HandedOver{State: raw, Files: []*os.File{listening, connected}, Resume: l.start}, nil
+	return adapter.HandedOver{State: raw, Files: []*os.File{listening, connected, translated}, Resume: l.start}, nil
 }
 
 // stop halts the link's reader at a frame's boundary or inside one, and
@@ -189,17 +199,24 @@ func (l *link) halted(err error, rest []byte) ([]byte, bool) {
 // current one, its hello long answered.
 func (r *run) Adopt(ctx context.Context, _ func(string), handed adapter.HandedOver) error {
 	var got handedState
-	if err := json.Unmarshal(handed.State, &got); err != nil || got.Version != handoverVersion || len(handed.Files) != 2 {
+	if err := json.Unmarshal(handed.State, &got); err != nil || got.Version != handoverVersion || len(handed.Files) != 3 || got.Translator != 2 {
 		for _, file := range handed.Files {
 			_ = file.Close()
 		}
-		return fmt.Errorf("pi's run was handed over as version %d with %d files; this build takes version %d with 2", got.Version, len(handed.Files), handoverVersion)
+		return fmt.Errorf("pi's run was handed over as version %d with %d files; this build takes version %d with 3", got.Version, len(handed.Files), handoverVersion)
+	}
+	translator, err := adoptTranslator(handed.Files[2])
+	if err != nil {
+		_ = handed.Files[0].Close()
+		_ = handed.Files[1].Close()
+		return fmt.Errorf("the face's translator of pi's run: %w", err)
 	}
 	if start, err := proc.StartTime(got.PID); err != nil || start != got.Start {
 		_ = handed.Files[0].Close()
 		_ = handed.Files[1].Close()
 		return errors.New("pi's process handed over no longer runs")
 	}
+	r.translate = translator
 	r.ctx, r.cancel = context.WithCancel(ctx)
 	listener, err := state.Inherit(r.socket, handed.Files[0])
 	if err != nil {

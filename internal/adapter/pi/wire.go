@@ -11,7 +11,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/praline-labs/rewake/internal/core/mirror"
 	"github.com/praline-labs/rewake/internal/core/sessiontools"
 )
 
@@ -44,9 +43,9 @@ type frame struct {
 	Native json.RawMessage `json:"native,omitempty"`
 	Levels []string        `json:"levels,omitempty"`
 	// Mirror, in hello's answer, says rewake's face draws the run; Events
-	// are the conversation a mirror frame carries (mirror.go).
-	Mirror bool               `json:"mirror,omitempty"`
-	Events []mirror.WireEvent `json:"events,omitempty"`
+	// are pi's own events an events frame carries (translate.go).
+	Mirror bool  `json:"mirror,omitempty"`
+	Events []raw `json:"events,omitempty"`
 	// The tools (tools.go): the table, in hello's answer and a tools frame;
 	// a call's plan, asked by tool-plan with the call's arguments and
 	// answered by its argv and bound or a refusal; its raw end, which

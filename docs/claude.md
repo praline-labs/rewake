@@ -365,8 +365,8 @@ hello answer, and `mirror.ts` then passes its conversation to the wrapper's mode
 prompts (`prompt.submit`), the main loop's text and thinking chunks as `turn.step` yields them, each
 tool call with its input and result (`tool.call` observed through `next`), and the turn's state. It
 reads no transcript file. A hook only pushes to the feed's outbox and returns; the `turn.step`
-generator yields every chunk unchanged before queueing it. The feed (`hooks/feed.ts`, the copy of
-[face.md](face.md#the-feed)'s module) bounds, queues and batches every event; its bounds are the
+generator yields every chunk unchanged before queueing it. The feed (`hooks/feed.ts`,
+[face.md](face.md#the-feed)) bounds, queues and batches every event; its bounds are the
 protocol's `maxMirror*` ones, which a mod test holds equal. What a step holds until it stops, its
 open blocks and its tools' inputs together, is at most 1 MiB, each input 256 KiB, counted in UTF-8
 bytes. The host decodes the events with `mirror.Decode`, naming Claude Code's permission modes in

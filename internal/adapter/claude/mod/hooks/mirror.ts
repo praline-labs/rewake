@@ -2,8 +2,8 @@
 // to its wrapper in memory only, from a load whose hello answer said mirror.
 // A hook only pushes to the feed's outbox and returns: the turn's stream
 // yields every chunk unchanged, and nothing here waits on the wrapper. The
-// feed (feed.ts, a copy of internal/core/mirror/feed.ts) bounds, queues and
-// batches; this file maps Claude Code's events to the mirror's.
+// feed (feed.ts) bounds, queues and batches; this file maps Claude Code's
+// events to the mirror's.
 import type { Register, TurnStepChunk } from "claude-code";
 import type { HelloAnswer, MirrorBatch, MirrorEvent, MirrorPermit } from "../protocol.gen.ts";
 import { paths } from "../protocol.gen.ts";

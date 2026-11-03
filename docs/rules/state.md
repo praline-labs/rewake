@@ -332,7 +332,8 @@ refused. A switch run just after a delivery may find the session busy for a mome
 again. A worker's wrapper of Claude Code or pi hands over when idle (November 2, 2026): what is
 handed over and what keeps it busy is in [claude.md](../claude.md#handing-the-run-over) and
 [research-pi.md](../research-pi.md#handing-the-run-over-november-2-2026). A run's mirror goes over
-in a memory file, and its face reconnects to the next image
+in a memory file, pi's translator of its raw events in another (brief 94), and its face reconnects
+to the next image
 ([face.md](../face.md#the-socket)). An adopting image says nothing on stderr, which is the
 harness's terminal: the role line and the launch's notes are said once, at the launch, and said
 again they landed inside a worker's screen (found in review, November 2, 2026). A space host

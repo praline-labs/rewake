@@ -95,6 +95,7 @@ func (r *run) projectLocked(thread string, raw json.RawMessage, now time.Time, o
 	if level != "" {
 		settings.Effort = &level
 	}
+	r.mirrorLevel(level)
 	observed.Settings = settings
 	r.observed.model = model
 	observed.Context = contextOf(parts.ContextUsage, model)

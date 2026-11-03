@@ -1,11 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { createConnection, type Socket } from "node:net";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { faceInterrupt, facePrompt, faceThinking, serveLevel } from "./faced.ts";
-import { type MirrorEvent, Outbox } from "./feed.ts";
+import { faceInterrupt, facePrompt, faceThinking } from "./faced.ts";
+import { forward } from "./forward.ts";
 import { management, type State, thrown } from "./management.ts";
-import { Mirror } from "./mirror.ts";
-import { serveMirror } from "./mirrorhooks.ts";
+import { type Forwarded, Stream } from "./stream.ts";
 import { type ToolFields, Tools } from "./tools.ts";
 
 export type Frame = {
@@ -33,9 +32,10 @@ export type Frame = {
   native?: unknown;
   // levels are the thinking levels a shift+tab of the face cycles, in order.
   levels?: string[];
-  // mirror, in hello's answer, says rewake's face draws this run.
+  // mirror, in hello's answer, says rewake's face draws this run, and
+  // events carry pi's own events for it.
   mirror?: boolean;
-  events?: MirrorEvent[];
+  events?: Forwarded[];
 } & ToolFields;
 type Waiter = {
   resolve: (frame: Frame) => void;
@@ -74,13 +74,13 @@ export default function (pi: ExtensionAPI) {
       });
     },
   );
-  // The face's mirror waits in its outbox while the link is down.
-  const outbox = new Outbox({
-    ready: () => mirror.on && !!current?.ready,
+  // pi's events for the face wait in the stream while the link is down.
+  const stream = new Stream({
+    ready: () => stream.on && !!current?.ready,
     post: async (events) => {
       const link = current;
       if (!link?.ready) return false;
-      return !!(await ask(link, { op: "mirror", thread: link.thread, events })).ok;
+      return !!(await ask(link, { op: "events", thread: link.thread, events })).ok;
     },
     after: (ms, run) => setTimeout(run, ms).unref(),
   });
@@ -91,9 +91,7 @@ export default function (pi: ExtensionAPI) {
     if (!link?.ready) return Promise.reject(new Error("the session has no connection to rewake"));
     return ask(link, fields, 30000);
   });
-  const mirror = new Mirror(outbox);
-  serveMirror(pi, mirror);
-  const sayLevel = serveLevel(pi, mirror);
+  forward(pi, stream);
 
   function warn(message: string) {
     if (context?.hasUI) context.ui.notify(`rewake: ${message}`, "warning");
@@ -172,15 +170,15 @@ export default function (pi: ExtensionAPI) {
       return;
     }
     if (frame.op === "prompt") {
-      respond(facePrompt(pi, mirror, context.isIdle(), managed.busy(), frame.text));
+      respond(facePrompt(pi, stream.on, context.isIdle(), managed.busy(), frame.text));
       return;
     }
     if (frame.op === "interrupt") {
-      respond(faceInterrupt(mirror, context, managed.busy()));
+      respond(faceInterrupt(stream.on, context, managed.busy()));
       return;
     }
     if (frame.op === "thinking") {
-      respond(faceThinking(pi, mirror, frame.levels));
+      respond(faceThinking(pi, stream.on, frame.levels));
       return;
     }
     if (frame.op === "tools") {
@@ -293,9 +291,8 @@ export default function (pi: ExtensionAPI) {
         link.ready = true;
         delay = 250;
         tools.take(reply.tools);
-        mirror.on = reply.mirror === true;
-        sayLevel();
-        outbox.kick();
+        stream.on = reply.mirror === true;
+        stream.kick();
       } catch {
         close(link);
         warn("mail connection unavailable; reconnecting while this session runs");

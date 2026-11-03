@@ -19,19 +19,27 @@ func (harness) Mirrors() {}
 // session looks, without --dev (the owner's word, October 31, 2026).
 func (harness) FacesWorkers() {}
 
-// mirrored hands a batch of the conversation to the model the face draws,
-// in the feed's neutral words the extension mapped pi's events to.
+// mirrored hands a batch of pi's own events to the model the face draws,
+// translated here (translate.go).
 func (r *run) mirrored(request frame) frame {
 	if r.mirror == nil {
 		return frame{Error: "rewake's face does not draw this run"}
 	}
-	// pi has no permission mode to say.
-	r.mirror.Apply(mirror.Decode(request.Events, nil)...)
+	r.mirror.Apply(r.translate.take(request.Events)...)
 	return frame{OK: true}
 }
 
+// mirrorLevel tells the face the thinking level a sample read, which the
+// face's rule shows and its shift+tab moves; the model says only a change,
+// and pi's level names are the model's.
+func (r *run) mirrorLevel(level string) {
+	if r.mirror != nil && level != "" {
+		r.mirror.Apply(mirror.Decode([]mirror.WireEvent{{Kind: mirror.EventLevel, Level: mirror.ThinkingLevel(level)}}, nil)...)
+	}
+}
+
 // input carries an input of rewake's face to pi: a prompt typed there as
-// the person's, which the extension mirrors once pi hears it as its input;
+// the person's, which the face shows once pi hears it as its input;
 // the person's Esc, which stops the run as pi's own Esc does; or their
 // shift+tab, which moves the thinking level on as pi's own does, through the
 // levels read here off the last sample's model.
@@ -42,6 +50,9 @@ func (r *run) input(ctx context.Context, input mirror.Input) error {
 	}
 	request := frame{Op: "prompt", Thread: thread, Text: input.Text}
 	switch input.Kind {
+	case mirror.InputKindPrompt:
+		// Heard back as pi's input from an extension, it is the face's.
+		r.translate.sent(input.Text)
 	case mirror.InputKindInterrupt:
 		request = frame{Op: "interrupt", Thread: thread}
 	case mirror.InputKindThinking:
