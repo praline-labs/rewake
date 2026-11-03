@@ -25,14 +25,13 @@ type Contracts struct {
 
 // The contracts a running room holds across a switch of its build
 // (docs/rules/state.md#switching-a-running-room): the wrapper's handover and
-// the face's model it carries, the space host's, main's host's, and the
+// the face's model it carries, the space host's and main's host's, which name
+// theirs with the screen file's version (stream.Contract), and the
 // switch's own mark, messages and parked image.
 const (
-	handoverContract         = "handover"
-	mirrorHandoverContract   = "handover.mirror"
-	spaceHandoverContract    = "handover.space"
-	mainHostHandoverContract = "handover.mainhost"
-	switchContract           = "switch"
+	handoverContract       = "handover"
+	mirrorHandoverContract = "handover.mirror"
+	switchContract         = "switch"
 )
 
 // contractsOf is this build's: the host's channel and the mirror's lines,
@@ -42,13 +41,13 @@ const (
 func contractsOf(catalog adapter.Catalog) Contracts {
 	c := Contracts{
 		Speaks: map[string]string{
-			parts.HostContract:       strconv.Itoa(mainhost.Version),
-			parts.MirrorContract:     strconv.Itoa(mirror.Version),
-			handoverContract:         strconv.Itoa(host.HandoverVersion),
-			mirrorHandoverContract:   strconv.Itoa(mirror.HandedVersion),
-			spaceHandoverContract:    strconv.Itoa(spacehost.HandoverVersion),
-			mainHostHandoverContract: strconv.Itoa(mainhost.HandoverVersion),
-			switchContract:           strconv.Itoa(state.SwitchVersion),
+			parts.HostContract:     strconv.Itoa(mainhost.Version),
+			parts.MirrorContract:   strconv.Itoa(mirror.Version),
+			handoverContract:       strconv.Itoa(host.HandoverVersion),
+			mirrorHandoverContract: strconv.Itoa(mirror.HandedVersion),
+			spacehost.ContractName: spacehost.Contract(),
+			mainhost.ContractName:  mainhost.Contract(),
+			switchContract:         strconv.Itoa(state.SwitchVersion),
 		},
 		Requires: map[string]string{},
 	}

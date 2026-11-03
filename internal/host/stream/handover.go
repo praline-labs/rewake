@@ -27,6 +27,14 @@ import (
 // handover that carries a relay names.
 const ScreenVersion = 1
 
+// Contract is the version of a handover contract of a host that carries a
+// relay: its own handover's version and the screen file's, "<handover>.<screen>",
+// so that a raise of either is a different contract and a switch admits only a
+// build that reads both.
+func Contract(handoverVersion int) string {
+	return fmt.Sprintf("%d.%d", handoverVersion, ScreenVersion)
+}
+
 // ErrFrozen is a client's input or resize refused once a handover froze
 // them: the client gives them again to the next image.
 var ErrFrozen = errors.New("the program's terminal is being handed over")

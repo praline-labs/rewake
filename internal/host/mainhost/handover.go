@@ -20,10 +20,16 @@ import (
 // child inherits it.
 const HandoverEnv = "REWAKE_MAIN_HOST"
 
-// HandoverVersion is the shape of Handover and of the screen it carries
-// (stream.ScreenVersion): an image adopts only its own, and a switch admits
-// only a build that takes the same (the contract handover.mainhost).
+// HandoverVersion is the shape of Handover: an image adopts only its own.
 const HandoverVersion = 1
+
+// ContractName is the contract of main's host's handed terminal, shell and
+// loop, and Contract its version: the handover's and the screen file's
+// together (stream.Contract), so a switch admits only a build that takes both.
+const ContractName = "handover.mainhost"
+
+// Contract is the version this build speaks under ContractName.
+func Contract() string { return stream.Contract(HandoverVersion) }
 
 // Handover is what main's host hands to the next image of itself: the
 // launch, main's terminal and the shell's channel as descriptors, and the
