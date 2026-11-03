@@ -85,28 +85,27 @@ test("an answer without work leaves the last, and work that is over leaves no ta
   expect(await tailed($)).toBeUndefined();
 });
 
-// The owner, November 1, 2026: main's `⧗ N` moved to its strip in the shell,
-// as the text Claude Code adds to the hint line kept moving it; a worker's
-// tail keeps its briefs and the reports it waits on.
-test("main's tail leaves out the reports it waits on, and keeps its briefs", async ($, on) => {
+// The host decides the tail (work.TailOf: main's leaves out `⧗ N`, the owner,
+// November 1, 2026); the band draws what it is told, whatever the role, and
+// the poll echoes it so the host does not answer it again.
+test("the band draws the text unchanged for main", async ($, on) => {
   const run = standInAs(on, "main", { work: "brief 57 3/6 · ⧗ 2" });
   await start($);
   await run.clock.settle();
-  expect(await tailed($)).toBe("brief 57 3/6");
-  // The poll still names the work as told, so the host does not answer it again.
+  expect(await tailed($)).toBe("brief 57 3/6 · ⧗ 2");
   expect(run.polls().at(-1)?.body.work).toBe("brief 57 3/6 · ⧗ 2");
 });
 
-test("main waiting on reports alone gets no tail", async ($, on) => {
-  const run = standInAs(on, "main", { work: "⧗ 2" });
-  await start($);
-  await run.clock.settle();
-  expect(await tailed($)).toBeUndefined();
-});
-
-test("a worker's tail keeps the reports it waits on", async ($, on) => {
+test("the band draws the text unchanged for a worker", async ($, on) => {
   const run = standInAs(on, "write", { work: "brief 57 3/6 · ⧗ 2" });
   await start($);
   await run.clock.settle();
   expect(await tailed($)).toBe("brief 57 3/6 · ⧗ 2");
+});
+
+test("main told no work gets no tail", async ($, on) => {
+  const run = standInAs(on, "main", { work: "" });
+  await start($);
+  await run.clock.settle();
+  expect(await tailed($)).toBeUndefined();
 });

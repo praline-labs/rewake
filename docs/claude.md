@@ -361,11 +361,14 @@ keeps its native interface and gets the run's room work added to the hint line u
 input (`hooks/band.ts`, a `ui.render` hook on `PromptHint` that sets the `tail` prop): the open briefs
 it was given with their ticks, `brief 57 3/6`, and the reports it waits on, `⧗ 3` (`rewake inbox
 --awaited`'s count), joined by ` · ` (`internal/core/work`, the same text the face's input rule
-carries); nothing when there is none. Main's tail leaves out its `⧗ 3`, which stands on main's
-strip in the shell instead ([shell.md](shell.md#the-strip)): the text Claude Code keeps adding to the
-hint line before our tail moved it all the time (the owner, November 1, 2026). The band takes the run's
-role from `REWAKE_ROLE`, and every poll still names the work as the host told it, the `⧗` included,
-so dropping it asks the host for nothing. Native's own text and pills stay as they are, and the tail
+carries); nothing when there is none. The band draws exactly the text the heartbeat answers and
+decides nothing: Go owns its content, so a change of it reaches a running room by `rewake restart
+rewake` and not by a restart of the agent (the owner, November 3, 2026). Main's text leaves out its
+`⧗ 3` (`work.TailOf`, formed in the host's `Work` for the run's role), which stands on main's strip in
+the shell instead ([shell.md](shell.md#the-strip)): the text Claude Code keeps adding to the hint line
+before our tail moved it all the time (the owner, November 1, 2026). Every poll echoes the text as
+told, so the host compares what it sent. A mod of an older build still drops a part that starts with
+`⧗ ` for main, which the text no longer has, so it works unchanged. Native's own text and pills stay as they are, and the tail
 follows them dim, so it reads `⏵⏵ auto mode on (shift+tab to cycle) · brief 57 3/6`. It is the line
 under the input, as close as a mod can draw to it, and shows idle and working alike. The mode is not
 drawn: native's footer shows it. A narrow row cuts ours first, the engine's own rule — the tail goes

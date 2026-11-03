@@ -49,3 +49,26 @@ func TestARunsWorkIsItsBriefsAndTheReportsItAwaits(t *testing.T) {
 		t.Fatalf("with nothing: %q", got)
 	}
 }
+
+// The owner, November 1, 2026: main's hint under its input leaves out the
+// reports it waits on, which stand on its strip; a worker's keeps them. A
+// running mod of an older build still drops a part that starts with `⧗ `
+// for main, which a text already cut has none of, so it passes unchanged.
+func TestMainsTailLeavesOutTheReportsItAwaits(t *testing.T) {
+	for _, c := range []struct{ line, main, worker string }{
+		{"brief 57 3/6 · ⧗ 2", "brief 57 3/6", "brief 57 3/6 · ⧗ 2"},
+		{"brief 1 · brief 2 1/2 · ⧗ 3", "brief 1 · brief 2 1/2", "brief 1 · brief 2 1/2 · ⧗ 3"},
+		{"⧗ 2", "", "⧗ 2"},
+		{"", "", ""},
+	} {
+		if got := TailOf(c.line, true); got != c.main {
+			t.Errorf("main %q: %q, want %q", c.line, got, c.main)
+		}
+		if got := TailOf(c.line, false); got != c.worker {
+			t.Errorf("worker %q: %q, want %q", c.line, got, c.worker)
+		}
+		if got := TailOf(c.main, true); got != c.main {
+			t.Errorf("cut text %q cut again: %q", c.main, got)
+		}
+	}
+}

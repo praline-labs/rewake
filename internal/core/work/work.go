@@ -38,6 +38,24 @@ func Awaited(room, name, epoch string) int {
 	return coming
 }
 
+// TailOf is the work as the hint under a run's input shows it: main's
+// without the reports it waits on, which stand on its strip in the shell
+// (the owner, November 1, 2026), a worker's whole. Decided here, in Go, so
+// the mod only draws it and a change reaches a running room without a
+// restart of the agent.
+func TailOf(line string, main bool) string {
+	if !main {
+		return line
+	}
+	var kept []string
+	for _, part := range strings.Split(line, " · ") {
+		if part != "" && !strings.HasPrefix(part, "⧗ ") {
+			kept = append(kept, part)
+		}
+	}
+	return strings.Join(kept, " · ")
+}
+
 // Line is the work as shown: each open brief bound to the run, oldest first,
 // as `brief 57 3/6` (a brief without items as `brief 57`), then `⧗ 3` for
 // the reports it waits on; empty when there is none.

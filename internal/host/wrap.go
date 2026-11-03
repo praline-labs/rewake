@@ -173,7 +173,9 @@ func Run(ctx context.Context, request Request) (int, error) {
 		WorktreeEntry: request.WorktreeEntry,
 		WorkType:      request.WorkType,
 		Mirror:        model,
-		Work:          func() string { return work.Of(launch.QuietBriefHome(request.Dir), name, epoch) },
+		Work: func() string {
+			return work.TailOf(work.Of(launch.QuietBriefHome(request.Dir), name, epoch), session.Role == role.Main.ID)
+		},
 	}
 	launchRequest.Env = launch.SessionEnv(launchRequest, request.Harness.EnvNotInherited())
 	if request.Shell {

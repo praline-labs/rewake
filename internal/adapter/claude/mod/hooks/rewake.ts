@@ -184,7 +184,7 @@ export const register: Register = (on) => {
       // Loaded outside a rewake run: nobody to report to.
       return started;
     }
-    band.begin(() => $.ui.invalidate("ui.render"), await $.env.get("REWAKE_ROLE"));
+    band.begin(() => $.ui.invalidate("ui.render"));
     if (await $.env.get("REWAKE_EXECUTABLE")) {
       const role = await $.env.get("REWAKE_ROLE");
       for (const tool of [...worktreeToolsFor(role), ...briefToolsFor(role)]) {
