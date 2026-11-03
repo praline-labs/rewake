@@ -287,7 +287,7 @@ and `internal/cli/restart_rewake.go`.
   the target's, and asked its contracts (`--version --json`): every contract it speaks and
   requires must equal the room's build's, or the attempt ends, naming the contract, and the room
   needs its restart. Among them `handover` (the wrapper's handed run), `handover.<adapter>` (an
-  adapter's handed state), `handover.space` (a space host's handed terminal), `handover.mainhost` (main's host's handed terminal, shell and loop), `switch` (the mark, the socket's messages, a parked image's
+  adapter's handed state), `handover.space` (a space host's handed terminal) and `handover.mainhost` (main's host's handed terminal, shell and loop), each made by `stream.Contract` from its handover's version and the screen file's (the handover's own number while the screen file is at its first version, `<handover>.<screen>` after), so a raise of the screen file's version alone is a contract the switch refuses, `switch` (the mark, the socket's messages, a parked image's
   handover), `mod` and `extension`; each handed shape is pinned to its number by a test.
 - **Asking.** Every wrapper, space host and main's host looks at the mark every 250 ms and,
   while it is asking, joins on the socket — again at the next look when nothing listened yet —

@@ -27,10 +27,16 @@ import (
 // true without a write, and the worker, still this process's child, runs on
 // without seeing it (docs/space.md#a-switch-of-the-rooms-build).
 
-// HandoverVersion is the shape of Handover and of the screen it carries
-// (stream.ScreenVersion): an image adopts only its own, and a switch admits
-// only a build that takes the same (the contract handover.space).
+// HandoverVersion is the shape of Handover: an image adopts only its own.
 const HandoverVersion = 1
+
+// ContractName is the contract of a space host's handed terminal, and
+// Contract its version: the handover's and the screen file's together
+// (stream.Contract), so a switch admits only a build that takes both.
+const ContractName = "handover.space"
+
+// Contract is the version this build speaks under ContractName.
+func Contract() string { return stream.Contract(HandoverVersion) }
 
 // handBound bounds each step of the relay's stop: a client's write in
 // flight, the answers the closing grid writes.

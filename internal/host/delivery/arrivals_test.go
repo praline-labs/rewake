@@ -21,20 +21,23 @@ func TestSeparatedArrivalsDispatchWithoutOverview(t *testing.T) {
 	go func() { defer close(done); server.Serve(ctx) }()
 	defer func() { cancel(); <-done }()
 	<-ready
-	for i, delay := range []time.Duration{0, 2 * time.Second, 3 * time.Second, 2 * time.Second} {
-		if delay > 0 {
-			timer := time.NewTimer(delay)
-			<-timer.C
-		}
+	// Each letter is sent once the one before it was announced, so no two
+	// share a collection window, whatever the machine's speed.
+	for i := range 4 {
 		m := message("availability/departure fixture")
 		m.Kind, m.ToEpoch = mail.Note, "owner-example"
 		if err := mail.Put(dir, m); err != nil {
 			t.Fatal(err)
 		}
 		t.Logf("queued message %d without recipient overview", i+1)
+		for end := time.Now().Add(5 * time.Second); int(wakes.Load()) <= i; time.Sleep(5 * time.Millisecond) {
+			if time.Now().After(end) {
+				t.Fatalf("message %d was not announced", i+1)
+			}
+		}
 	}
-	timer := time.NewTimer(2 * collectionInterval)
-	<-timer.C
+	// Long enough for a replayed announcement to show as a fifth wake.
+	time.Sleep(2 * collectionInterval)
 	cancel()
 	<-done
 	unread, err := mail.Open(dir, "api", "owner-example").PeekUnread()

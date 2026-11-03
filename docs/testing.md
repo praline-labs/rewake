@@ -14,8 +14,8 @@ before updating, and how to extend the suite. The commands of a commit and of a 
 
 | Tier | Runs | Proves | Does not prove | Costs |
 | --- | --- | --- | --- | --- |
-| The step's checks | the hook's formatters and linters, one `go test -race -shuffle=on ./...`, and where `shell/` or `face/` changed each one's `bun run check`: `tsc --noEmit`, then its own `bun test` | unit invariants: parsing, publishing races, liveness, inbox order and expiry, the context endpoint's framing, the import rule; the suite's own classifier and summarizer; the shell's drawing, input and face host, the face's drawing, copying and unfolding | anything end to end: every workflow scenario skips itself | about two minutes of the race run at `-p 4` on an idle machine, compilation aside; `core/mail` is the longest package. The shell's suite about ten seconds, the face's under one. No network, no harness, no container |
-| Workflow suite | a built rewake end to end against the fixture harness, in one column | that the shared service code delivers, groups, steers and reports as each scenario claims | that a real harness parses, renders or behaves as its fixture does | about half a minute for 24 scenarios, six cases at a time; no network |
+| The step's checks | the hook's formatters and linters, one `go test -race -shuffle=on ./...`, and where `shell/` or `face/` changed each one's `bun run check`: `tsc --noEmit`, then its own `bun test` | unit invariants: parsing, publishing races, liveness, inbox order and expiry, the context endpoint's framing, the import rule; the suite's own classifier and summarizer; the shell's drawing, input and face host, the face's drawing, copying and unfolding | anything end to end: every workflow scenario skips itself | about two minutes of the race run at `-p 4` on an idle machine, compilation aside (1m57s on November 3, 2026); `host/delivery` is the longest package, about a minute The shell's suite about ten seconds, the face's under one. No network, no harness, no container |
+| Workflow suite | a built rewake end to end against the fixture harness, in one column | that the shared service code delivers, groups, steers and reports as each scenario claims | that a real harness parses, renders or behaves as its fixture does | about a minute and three quarters for 37 scenarios, six cases at a time (104 s on November 3, 2026, the longest case of about a minute); no network |
 
 Two tiers are not built. **P**, a real harness of a named version against a local responder
 instead of a model provider, would catch a change of behaviour that a schema cannot see. **M**,
@@ -159,7 +159,7 @@ needs now, after several landings, is `rewake restart` with no part. On red, or 
 checks. It prints those lines and the path of a log under `.scratch/land/` with every command's
 output; `--no-push` is a dry run that resets `v2` after the checks, green or red. Exit 0 landed
 (with `--no-push`, green), 1 a refusal, a red check or a failed push or install, 2 a wrong call.
-The scenarios a change touches are the floor; the tool runs them all, half a minute more.
+The scenarios a change touches are the floor; the tool runs them all, under two minutes more.
 
 **Every `go test`** clears `REWAKE_SESSION`, `REWAKE_EPOCH`, `REWAKE_DIR` and `REWAKE_ROOM`,
 the workflow suite's included, because a test that inherits them reads the live session's state

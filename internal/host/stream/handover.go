@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -26,6 +27,19 @@ import (
 // ScreenVersion is the shape of the screen file, which a contract of the
 // handover that carries a relay names.
 const ScreenVersion = 1
+
+// Contract is the version of a handover contract of a host that carries a
+// relay: its own handover's version, with the screen file's after a dot once
+// that is past its first, so a raise of either is a different contract and a
+// switch admits only a build that reads both. The first screen version is
+// left out so the value stays the handover's own, and a build from before the
+// screen was named admits this one.
+func Contract(handoverVersion int) string {
+	if ScreenVersion == 1 {
+		return strconv.Itoa(handoverVersion)
+	}
+	return fmt.Sprintf("%d.%d", handoverVersion, ScreenVersion)
+}
 
 // ErrFrozen is a client's input or resize refused once a handover froze
 // them: the client gives them again to the next image.

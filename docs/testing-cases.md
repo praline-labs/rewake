@@ -1,5 +1,5 @@
 ---
-description: What each of the 25 workflow scenarios in test/workflow claims — the sessions it starts, what the fixture plays and what it must see — and what none of them proves.
+description: What each of the 37 workflow scenarios in test/workflow claims — the sessions it starts, what the fixture plays and what it must see — and what none of them proves.
 ---
 
 # The workflow suite's cases
@@ -20,6 +20,13 @@ the continuations — is held by unit tests in `internal/adapter/claude`, `inter
 report that comes back corresponds to exactly that message from exactly that session. The
 sender sends with its own rewake and reads its own mailbox, so the half of the claim that lives
 on the sender's side is checked too.
+
+`question`: one running session sends `rewake send <name> "..." --question` and waits; the
+session asked reads it and ends its turn, and the waiting command prints that end as the
+answer from the session it asked. The question is delivered to the recipient once and read
+once, and the answer reaches the asker only through the command: nothing but the recipient's
+heads-up is delivered to it or read, and its inbox holds nothing unread. The asker runs the
+command itself, through its request directory.
 
 `batch-arrival`: two letters that arrive inside one collection window are announced as one
 group of fixed membership whose notice previews the latest member, and a third letter after the

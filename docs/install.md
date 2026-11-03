@@ -153,6 +153,16 @@ rewake, which is a room restart anyway, so after a landing that changes both rew
 `restart shell` may load a shell the room's older view does not suit, while the plan says room
 (decided by main, November 1, 2026).
 
+Which parts `rewake restart <part>` restarts in place — the shell and the face — is one answer in
+`internal/infra/parts` (`InPlace`, with the words of a refusal, `NotInPlace`): the command and the
+advice of a plan's step come from it. The shell's banner reads only each step's class from the
+room view and words the person's key for it itself, so it holds no list of parts.
+
+The handover contracts of the space host and of main's host (`handover.space`, `handover.mainhost`)
+are made by `stream.Contract` from the handover's version and the screen file's: the handover's own
+number while the screen file is at its first version, `<handover>.<screen>` after. A raise of either
+is a contract a switch refuses, and today's value is the one before the screen was named.
+
 ### The running set
 
 Nothing records it in the room. `rewake` is the CLI's own build: a room's command runs as the

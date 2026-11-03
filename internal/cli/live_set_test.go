@@ -90,13 +90,14 @@ func TestSteeringARunWithoutALiveControlFails(t *testing.T) {
 		t.Run(action, func(t *testing.T) {
 			dir, worker, controlDir := steerWorld(t, "")
 			withLive(t, dir, worker, withoutLive(allLive(), adapter.ControlCapability))
-			seen := answerOnce(t, controlDir, func(r control.Request) string { return `{"id":"` + r.ID + `","outcome":"started"}` })
 			code, _, errOut := steerRun(action, "worker")
 			if code != ExitFailed || !strings.Contains(errOut, "worker's control is not live") || !strings.Contains(errOut, "nothing was asked") {
 				t.Fatalf("exit %d, %q", code, errOut)
 			}
-			if request, ok := <-seen; ok {
-				t.Fatalf("a request reached the worker: %+v", request)
+			// The refusal is synchronous: nothing was written for the worker to
+			// pick up, so the directory is looked at once, not waited on.
+			if _, err := os.Stat(control.RequestPath(controlDir)); err == nil {
+				t.Fatal("a request reached the worker")
 			}
 		})
 	}

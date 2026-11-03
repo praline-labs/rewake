@@ -16,10 +16,28 @@ type Step struct {
 // Line is the step as rewake restart and the land tool say it.
 func (s Step) Line() string { return s.Part + ": " + s.Why + " → " + Action(s.Class, s.Part) }
 
+// InPlace says whether rewake restart can restart the part while main and
+// the workers run on: the shell, and the face main's host reloads with it.
+// Every other part is restarted by its class (Action), and the command
+// refuses it with NotInPlace.
+func InPlace(part string) bool { return part == ShellPart || part == Face }
+
+// NotInPlace is why rewake restart does not restart a part in place; installed
+// is the part as the manifest lists it, listed whether it does.
+func NotInPlace(part string, installed Part, listed bool) string {
+	if part != Rewake && (!listed || ClassOf(installed) == Sessions) {
+		return part + " is not restarted in place: each new session starts the installed one, and the sessions running keep theirs; when the plan of rewake restart says room, end main and start it again"
+	}
+	return part + " is loaded only by a restart of the room: end main and start it again, which ends its workers"
+}
+
 // Action is what a class of restart asks of the person or main.
 func Action(class, part string) string {
 	switch class {
 	case Live:
+		if !InPlace(part) {
+			return Action(Sessions, part)
+		}
 		return "rewake restart " + part
 	case Shell:
 		return "rewake restart shell"
