@@ -143,6 +143,11 @@ The turn it starts ends as any other: unmarked, it is the report. Main, whose tu
 reported to nobody, a run whose adapter publishes no state, a worker with no open wait, and a
 failed or stopped end — which write no interim record — are never reminded.
 
+- **Judged at the write.** The pass looks without the lock, and judges the stall again under
+  the mailbox lock before it writes: a report that settles the task, or a turn's end or timed
+  start, landing in between leaves no letter. Idle is the adapter's state as it stands, not the
+  last publication on disk, which lags it by up to a quarter second. A turn the harness starts
+  after that judgement, before its adapter hears of it, still gets the letter as mail.
 - **Once per mark.** The reminder is keyed by the interim end's operation in
   `pending/stalled.json` (`{epoch, op, id, sent}`): the letter's id is drawn and written
   before the letter, so a wrapper stopped between the two writes the same letter next time,

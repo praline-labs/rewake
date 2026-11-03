@@ -104,3 +104,42 @@ func TestAStalledWorkerIsWokenOnce(t *testing.T) {
 		t.Fatalf("%d reminders after a second look and a new image's, want one", len(got))
 	}
 }
+
+// What lands between the pass's first look and its lock — the report that
+// settles the task, a turn's start — is what the reminder is judged by: the
+// look without the lock decides nothing.
+func TestAStallIsJudgedAgainUnderTheLock(t *testing.T) {
+	for name, between := range map[string]func(t *testing.T, s *Server){
+		"the report settles the task": func(t *testing.T, s *Server) {
+			self := must(registry.Lookup(s.Dir, s.Name))
+			if _, err := mail.CompleteTurn(context.Background(), s.Dir, self, mail.TurnEnd{Text: "done", Started: boottime.Now() - 1000, Ended: boottime.Now()}, "t", mail.TurnEndOptions{}); err != nil {
+				t.Fatal(err)
+			}
+		},
+		"a turn starts": func(t *testing.T, s *Server) {
+			if err := mail.Open(s.Dir, s.Name, s.Epoch).RecordTurnStart(boottime.Now()); err != nil {
+				t.Fatal(err)
+			}
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			var notices []mail.Message
+			s := stalledServer(t, &notices)
+			looks := 0
+			// The first look is the one without the lock.
+			s.Idle = func() bool {
+				if looks++; looks == 1 {
+					between(t, s)
+				}
+				return true
+			}
+			s.remindStalled(context.Background())
+			if looks == 0 {
+				t.Fatal("the pass never asked whether the session is idle")
+			}
+			if got := stallLetters(t, s); len(got) != 0 {
+				t.Fatalf("reminded after %s: %+v", name, got)
+			}
+		})
+	}
+}

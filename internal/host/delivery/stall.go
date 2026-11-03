@@ -25,19 +25,43 @@ var builtStall string
 // reminder is a letter in its own mailbox, which the next pass announces as
 // any other mail. Only a session its telemetry calls idle right now is
 // reminded: one working on a turn whose start nobody timed is not stalled.
-// Once a stall is reminded of, this server looks no further at it; the record
-// the letter leaves (mail.Box.RemindStall) keeps another image from writing a
-// second.
+// The look without the lock is only what makes the pass cheap: a turn that
+// starts or ends, a report that settles the task, can land before the lock
+// is taken, so the stall is judged again under it, and the letter quotes that
+// judgement. Once a stall is reminded of, this server looks no further at it;
+// the record the letter leaves (mail.Box.RemindStall) keeps another image
+// from writing a second.
 func (s *Server) remindStalled(ctx context.Context) {
 	if s.Stall <= 0 || s.Idle == nil || ctx.Err() != nil || !s.owned() {
 		return
 	}
 	box := mail.Open(s.Dir, s.Name, s.Epoch)
-	stall, ok, err := box.Stalled()
-	if err != nil || !ok || stall.Op == s.reminded || time.Duration(boottime.Now()-stall.Ended) < s.Stall || !s.Idle() {
+	if stall, ok := s.stalled(box); !ok || stall.Op == s.reminded {
 		return
 	}
-	if s.lockOrAlone(s.lockCtx(), func() error { return box.RemindStall(stall, time.Now()) }) == nil {
-		s.reminded = stall.Op
+	var reminded string
+	err := s.lockOrAlone(s.lockCtx(), func() error {
+		stall, ok := s.stalled(box)
+		if !ok {
+			return nil
+		}
+		if err := box.RemindStall(stall, time.Now()); err != nil {
+			return err
+		}
+		reminded = stall.Op
+		return nil
+	})
+	if err == nil && reminded != "" {
+		s.reminded = reminded
 	}
+}
+
+// stalled answers the session's stall when it is due: a stall on disk, idle
+// past the bound, and the session idle by its telemetry now.
+func (s *Server) stalled(box mail.Box) (mail.Stall, bool) {
+	stall, ok, err := box.Stalled()
+	if err != nil || !ok || time.Duration(boottime.Now()-stall.Ended) < s.Stall || !s.Idle() {
+		return mail.Stall{}, false
+	}
+	return stall, true
 }
