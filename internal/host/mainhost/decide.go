@@ -42,7 +42,7 @@ const (
 	// SIGQUIT.
 	evClose
 	// evLost: the terminal is gone — the shell said lost, the host had
-	// SIGHUP or SIGPIPE, or its parent left.
+	// SIGHUP, or its parent left.
 	evLost
 	// evMainEnded: main's wrapper exited.
 	evMainEnded

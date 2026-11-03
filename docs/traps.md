@@ -1,5 +1,5 @@
 ---
-description: What misbehaves in rewake and the harnesses it lives with, by symptom — roles and reports, tests next to a live session, arguments, delivery, a switch of the room's build — each entry dated, with its cause and what to do.
+description: What misbehaves in rewake and the harnesses it lives with, by symptom — roles and reports, tests next to a live session, arguments, delivery, main's host and its shell, a switch of the room's build — each entry dated, with its cause and what to do.
 ---
 
 # Traps in rewake and its harnesses
@@ -363,6 +363,29 @@ alternate screen. A switch of screens now counts once main draws on that screen
 ([shell.md](shell.md#the-closing-screen)).
 
 *November 3, 2026, in the gate of the local registry; the shells from source and compiled alike.*
+
+## Main's host and its shell
+
+### `rewake restart shell` answered "rewake is closing", and the whole room closed
+
+On a restart of the shell right after a landing, the command printed `the shell was not restarted:
+rewake is closing`, and main, every worker and the terminal tab main ran in ended within seconds.
+Neither the landing nor the new code was the cause: a checkout moved to new code under the
+running shell, `bun install` and `bun run check` in its directory, a restart from the old code to
+the new and a switch of the room's build all passed, alone and together. Main's host took
+SIGPIPE among the signals of the terminal's end and closed as on a hangup. In Go a process that
+subscribes to SIGPIPE gets it for a broken write on *any* descriptor. So when a client of
+`host.sock` left with main's bytes unread, the host's next write to it closed the room. That
+client was a shell that stopped reading while it gave its screen back and then exited or was
+killed, or any stream or door client. A raw-stream client that stops reading while main draws and
+then leaves closed a private room every time; so did a restart whose old shell was stalled. No log
+of the owner's room survived, which leaves the stalled old shell's release, under the landing's
+load and a Claude Code main drawing, the likely client. The host now takes SIGPIPE only so that
+the write fails where it is made ([shell.md](shell.md#who-owns-which-pty)). `TestFixtureShellRestart`
+has a stream client leave unread while main draws, and failed on the old code.
+
+*November 3, 2026, in the owner's room; reproduced and checked in a private room with the real
+shell and the fixture.*
 
 ## A switch of the room's build
 

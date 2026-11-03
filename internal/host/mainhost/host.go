@@ -117,7 +117,9 @@ type Host struct {
 }
 
 // hostSignals are the signals the host takes, from its first moment in each
-// image: a hangup during a switch's park still ends everything.
+// image: a hangup during a switch's park still ends everything. SIGPIPE is
+// taken only so that a write to a peer gone fails with EPIPE where it is made,
+// on any descriptor, and kills nothing; it says nothing of the terminal.
 var hostSignals = []os.Signal{syscall.SIGHUP, syscall.SIGPIPE, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGWINCH}
 
 func newHost(cfg Config, signals chan os.Signal) *Host {
@@ -221,7 +223,14 @@ func (h *Host) signal(sig os.Signal) bool {
 	case syscall.SIGWINCH:
 		h.solo.resize()
 		return false
-	case syscall.SIGHUP, syscall.SIGPIPE:
+	case syscall.SIGPIPE:
+		// Go delivers it for a write to any socket whose peer left — a shell
+		// released or killed with main's bytes unread, a client of the door
+		// or of the stream gone — and the write fails on its own. Read as a
+		// hangup, it closed the whole room on a shell's restart (November
+		// 3, 2026, docs/traps.md).
+		return false
+	case syscall.SIGHUP:
 		return h.act(decide(evLost, h.situation()), "the terminal hung up")
 	}
 	return h.act(decide(evClose, h.situation()), "the host was asked to end")

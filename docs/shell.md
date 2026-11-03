@@ -36,8 +36,12 @@ run on, and closing the window still ends everything.
   lives exactly as long as main's run, in the person's pane. When the window goes, or on a stop
   signal, the host hangs main up and waits 5 s for main's group, then SIGTERM, 3 s, SIGKILL.
   Main's run ends, and each space host, which reads that run, ends its worker. The host follows
-  the terminal itself: SIGHUP, SIGPIPE, SIGTERM, SIGINT, SIGQUIT, its parent gone, and what the
-  shell tells it. A host killed outright closes main's pty the same way, by the kernel.
+  the terminal itself: SIGHUP, SIGTERM, SIGINT, SIGQUIT, its parent gone, and what the shell tells
+  it. A host killed outright closes main's pty the same way, by the kernel. SIGPIPE is no sign of
+  the terminal: Go delivers it for a write to any socket whose peer left, a shell or a client of
+  `host.sock` gone with main's bytes unread, and read as a hangup it closed the room on a restart
+  ([traps.md](traps.md#rewake-restart-shell-answered-rewake-is-closing-and-the-whole-room-closed),
+  November 3, 2026). The host takes it so the write fails where it is made, and does nothing more.
 - **Who answers the person's terminal.** The shell asks the terminal for its colours, as before
   ([below](#what-the-widget-lacks-and-what-the-shell-does-about-it)). The first shell's answer
   seeds the host's emulator and main's `REWAKE_HOST_COLORS`; later shells change neither. The

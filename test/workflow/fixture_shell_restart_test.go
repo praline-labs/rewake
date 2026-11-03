@@ -16,9 +16,11 @@ import (
 // (docs/shell.md, "Restart, crash and close"): main launched on a terminal
 // runs under its host, the pane's process, with the shell as the host's
 // child; main opens a space, the worker takes a task and holds its turn
-// open, and rewake restart shell replaces the shell meanwhile. Main and the
-// worker are the same runs afterwards, the task's one report reaches main,
-// and closing the terminal ends everything as before. The shell is this test
+// open; a client of main's stream leaves with main's bytes unread while main
+// draws, and the room runs on; rewake restart shell replaces the shell
+// meanwhile. Main and the worker are the same runs afterwards, the task's
+// one report reaches main, and closing the terminal ends everything as
+// before. The shell is this test
 // binary speaking the host's channel; the host, main and the worker are
 // rewake's own.
 func TestFixtureShellRestart(t *testing.T) {
@@ -63,6 +65,28 @@ func TestFixtureShellRestart(t *testing.T) {
 	}
 	c.Await("the worker to hold its turn open", func() bool { return turnEventSeen(worker, "operation-open") })
 	before := identities(iso)
+
+	// A client of main's stream leaves with main's bytes unread while main
+	// draws; the host's write to it breaks, which once closed the room.
+	stopDrawing, err := drawOnMain(before[lead.name])
+	if err != nil {
+		t.Fatal(err)
+	}
+	left := leaveUnread(iso, 1500*time.Millisecond)
+	time.Sleep(time.Second)
+	stopDrawing()
+	switch {
+	case left != nil:
+		c.Contradicted(obsShellStreamLeft, "the stream's client could not attach: %v", left)
+	case lead.process.finished() || !runAlive(before[lead.name]) || !runAlive(before[worker.name]):
+		c.Contradicted(obsShellStreamLeft, "main's host ended %v, main runs %v, the worker runs %v", lead.process.finished(), runAlive(before[lead.name]), runAlive(before[worker.name]))
+		closeWindow(c, window, lead)
+		// The worker ends with main's run; nothing the case started outlives it.
+		waitFor(c, 25*time.Second, func() bool { return !runAlive(before[worker.name]) })
+		return
+	default:
+		c.Observed(obsShellStreamLeft, "main's host, main and the worker ran on")
+	}
 
 	restart, err := iso.Output(iso.Command("restart", "shell", "--json"))
 	var answer struct {
@@ -121,13 +145,14 @@ func TestFixtureShellRestart(t *testing.T) {
 }
 
 const (
-	obsShellRestarted = "rewake restart shell, asked while a worker works, answers the new shell's generation once the old one let go and the new one attached to main's stream"
-	obsShellKept      = "main and the worker keep their pid, start and epoch across the restart, and the task's one report reaches main"
-	obsShellClosed    = "closing the terminal afterwards ends the host, main, the worker and its space host"
-	shellRestartTask  = "fixture-shell-restart-probe: report back"
+	obsShellRestarted  = "rewake restart shell, asked while a worker works, answers the new shell's generation once the old one let go and the new one attached to main's stream"
+	obsShellKept       = "main and the worker keep their pid, start and epoch across the restart, and the task's one report reaches main"
+	obsShellClosed     = "closing the terminal afterwards ends the host, main, the worker and its space host"
+	obsShellStreamLeft = "a client of main's stream that leaves with main's bytes unread while main draws ends nothing: main's host, main and the worker run on"
+	shellRestartTask   = "fixture-shell-restart-probe: report back"
 )
 
-var shellRestartObservations = []string{obsShellRestarted, obsShellKept, obsShellClosed}
+var shellRestartObservations = []string{obsShellStreamLeft, obsShellRestarted, obsShellKept, obsShellClosed}
 
 // startOnTerminal launches a session as a person does, on a terminal: its
 // standard input and output are a pty the scenario holds, the window. The
