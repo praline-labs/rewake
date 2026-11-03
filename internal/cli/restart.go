@@ -60,8 +60,9 @@ func handleRestart(ctx *Context, call Call) error {
 	if part == parts.Rewake {
 		return restartRewake(ctx)
 	}
-	if part != parts.ShellPart && part != parts.Face {
-		return failf("%s", roomOnly(part, update))
+	if !parts.InPlace(part) {
+		installed, listed := update.installed.Find(part)
+		return failf("%s", parts.NotInPlace(part, installed, listed))
 	}
 	if why := parts.Blocks(update.running, update.installed, part); why != "" {
 		return failf("the %s was not restarted: %s; restart the room — end main and start it again — to load both", part, why)
@@ -84,15 +85,6 @@ func handleRestart(ctx *Context, call Call) error {
 		}
 		return []string{"Rewake: the " + part + " restarted; generation " + itoa(generation) + " draws now."}
 	})
-}
-
-// roomOnly is the refusal of a part this command cannot restart.
-func roomOnly(part string, update updateOf) string {
-	installed, listed := update.installed.Find(part)
-	if part != parts.Rewake && (!listed || parts.ClassOf(installed) == parts.Sessions) {
-		return fmt.Sprintf("%s is not restarted in place: each new session starts the installed one, and the sessions running keep theirs; when the plan of rewake restart says room, end main and start it again", part)
-	}
-	return fmt.Sprintf("%s is loaded only by a restart of the room: end main and start it again, which ends its workers", part)
 }
 
 func printPlan(ctx *Context, update updateOf) error {

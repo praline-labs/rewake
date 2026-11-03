@@ -2,6 +2,7 @@ package parts
 
 import (
 	"slices"
+	"strings"
 	"testing"
 )
 
@@ -222,5 +223,19 @@ func TestASameRewakeOfAnotherReleaseNeedsNoRestart(t *testing.T) {
 	}
 	if got := Plan(running(nil), next); !slices.Contains(got, Step{Rewake, Room, "changed"}) {
 		t.Errorf("a running rewake without its digest plans %v, want rewake by its file", got)
+	}
+}
+
+// What a step advises is what the command does: a restart it names is of a
+// part the command restarts, in place or the room's rewake by a switch.
+func TestNoActionAdvisesARestartTheCommandRefuses(t *testing.T) {
+	for _, class := range []string{Live, Shell, Sessions, Switch, Room} {
+		for _, part := range []string{ShellPart, Face, Rewake, "pi"} {
+			action := Action(class, part)
+			named, advised := strings.CutPrefix(action, "rewake restart ")
+			if advised && named != Rewake && !InPlace(named) {
+				t.Errorf("%s of %s advises %q, which the command refuses", class, part, action)
+			}
+		}
 	}
 }
