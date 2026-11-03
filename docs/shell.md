@@ -185,7 +185,14 @@ What begins it:
   that would show main's left screen shows the layer instead. A leave may be no end, so under a
   layer begun by a leave alone main keeps its focus and keys, and the layer is lifted when main
   comes back to the alternate screen — an external editor's end — or when main still runs 5 s
-  after the last sign. Text main writes after a leave is no sign of a pause: an exit prints
+  after the last sign. A switch counts once main draws: a leave of an alternate screen main drew
+  nothing on begins nothing, and a coming back is the first text drawn there. The host's
+  preamble of a main on its normal screen enters and leaves a hidden alternate screen
+  ([below](#the-space-hosts-emulator)), and read as a leave it covered main with the layer at
+  every attach until main entered its alternate screen: half a second for a Claude Code main, 5 s
+  for one that never went there (found by the release gate, November 3, 2026,
+  [traps.md](traps.md#the-installed-shell-did-not-draw-mains-output-in-the-release-gate)).
+  Text main writes after a leave is no sign of a pause: an exit prints
   "Resume this session with: claude --resume …" on the screen it went to. A leave within a second
   after the shell sent main a Ctrl+Z (0x1a, or its kitty or modifyOtherKeys form, `isSuspend` in
   `shell/src/keys.ts`) begins nothing.
