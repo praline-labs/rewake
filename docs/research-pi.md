@@ -239,7 +239,7 @@ harness pid and rechecks its process start time before accepting the first frame
 | Host to extension | `tools` | `thread`, `tools`: the table again, sent once by an image that adopted the run, since it may offer another; the extension registers what is added or changed and hides what is dropped, and answers `ok` (November 3, 2026) |
 | Extension to host | `tool-plan` | `tool`, `arguments`: a call of a rewake tool; answer the `argv` and `timeoutMs` to run, or `refused`, the text the model reads (November 3, 2026) |
 | Extension to host | `tool-result` | `tool`, `ran`: the command's raw end, `exitCode`, `stdout`, `stderr`, `killed`, `stdoutCut` past 1 MiB, or a start's `error`; answer the result's `text` and `isError` (November 3, 2026) |
-| Extension to host | `mirror` | `thread`, `events`: a batch of the face's neutral events ([below](#the-face-of-a-pi-worker)); answer `ok`, or `error` for a run the face does not draw (October 31, 2026) |
+| Extension to host | `events` | `thread`, `events`: a batch of pi's own events, raw, with `part` and `lost` lines, which the wrapper's translator makes the face's neutral events of ([below](#the-face-of-a-pi-worker)); answer `ok`, or `error` for a run the face does not draw (November 3, 2026; before it `mirror`, the neutral events made in the extension, from October 31, 2026) |
 | Host to extension | `prompt` | `thread`, `text`: a prompt typed in rewake's face; answer `ok` and whether it was `steered`, or `error` while compacting, for an empty text or a run not drawn (October 31, 2026) |
 | Host to extension | `interrupt` | `thread`: the person's Esc in rewake's face; the extension calls `ctx.abort()` and answers `ok`, or `error` while pi is idle or compacting or for a run not drawn; an older extension answers `unknown host operation` (October 31, 2026) |
 | Extension to host | `closing` | `thread`; sent at `session_shutdown` whose `reason` is `"quit"`, before the link closes, waited for at most one second; a main's run in rewake's shell calls `LaunchRequest.Closing` (October 24, 2026) |
@@ -700,8 +700,8 @@ translator makes of pi's events.
   says `session_before_compact` once it has something to compact, then `session_compact` when it
   is done or `session_compact_failed` when it failed, was aborted (Esc, `abortCompaction`) or an
   extension cancelled it; a manual one with nothing to compact says only `session_compact_failed`.
-  The extension's mirror hears these three and returns nothing, so it never cancels a compaction
-  or gives it a summary. At the start it sends `turn` `compacting`, on the run going on or on one
+  The extension's forwarder hears these three and returns nothing, so it never cancels a
+  compaction or gives it a summary. At the start the translator sends `turn` `compacting`, on the run going on or on one
   of its own outside a run; at the end it sends `working` for a run that goes on, else `idle`; an
   end with no start sends nothing. The face draws `Compacting…` and then what follows
   ([face.md](face.md), "The look"); the wrapper's model keeps a working turn's start through a
@@ -786,3 +786,16 @@ then `[compaction] Compacted from 3,185 tokens`): the face drew `Compacting…` 
 8:59 AM`, the compaction counted in, where the turn's own work took about 3 s. Its first turn did
 not compact, nor did any turn of a worker under a reserve of 268500 (about 3k tokens, under its
 threshold); why the first turn did not was not traced.
+
+**[live]** November 3, 2026 (brief 94), this build (extension 3), a private HOME, `REWAKE_DIR` and
+project under `/tmp` with no `HERDR_*`, `CLAUDE*`, `ANTHROPIC*` or `REWAKE_*` variables, the shell
+from its sources, a Claude Code 2.1.310 main and worker and a pi worker on pi 1.4.0 through
+`REWAKE_PI`, no login: a stand-in provider on `127.0.0.1` speaking `anthropic-messages`, pi's
+`models.json` naming it, answered pi's first request of a task with a `bash` call of `ls` and then
+a short reply with cache usage. The face drew the call as `Listed 1 directory`, the reply, `Done in
+12s`, the input rule `◆ medium` and the Хвост `brief 1 0/2`; the strip read `dev rewake · Stub
+medium thinking · 72%` and `13k/200k`, the context counted from pi's own reading after the turn.
+Then `rewake restart rewake` switched the room to a build whose Go alone differed: two tools'
+descriptions and the strip's model name suffixed. pi's process, its wrapper and its host kept
+their pids; pi's next request carried the new descriptions of `brief_tick` and `worktree_status`,
+and the strip read `Stub ·B`, with no restart of pi.

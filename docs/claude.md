@@ -189,7 +189,10 @@ table the hello's answer carries, asks the wrapper to plan each call, runs it wi
 `$.process.run`, and posts the raw end for the wrapper to word (`hooks/tools.ts`,
 `modhost/tools.go`). A new table on a poll registers a reshaped tool again and serves a changed
 description from `tool.describe`, so a change of a tool reaches a running session with
-`rewake restart rewake`:
+`rewake restart rewake` (seen live on November 3, 2026, Claude Code 2.1.310: after the restart a
+running main's and worker's next request carried the changed descriptions, the same Claude Code
+processes, the strip's projection changed too; with `ENABLE_TOOL_SEARCH=false`, since tool search
+keeps the mod's tools out of the request):
 
 - `worktree_status` on every run: the checkout the session works in and what a space's close
   would do with it;
