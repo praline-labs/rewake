@@ -298,7 +298,9 @@ and `internal/cli/restart_rewake.go`.
   that finds a dropping mark whose leader runs lets go of its shared lock and looks again every
   50 ms, within the writers' bound, then is refused as busy; a `send --question` waiting ends its wait as pending.
   Each participant must say `parked` within 5 s; then the leader turns its lock exclusive within
-  5 s, as commands finish, or names the holders left.
+  5 s, as commands finish, or names the holders left. One that turned busy since it was ready
+  ends the drop, and the refusal names the busy ones alone, the others having stopped for them;
+  only when none said busy does it name who did not say `parked` (November 3, 2026).
 - **The commit**, `state.CommitSwitch`, only under the exclusive lock and only for the room's
   own dropping mark: the mark `committed` first, then `build` — the commit point — then the
   staged copy linked to `bin/rewake`, then the other staged copies removed. The leader keeps
