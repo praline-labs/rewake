@@ -63,7 +63,12 @@ interrupted. The behaviour in full is [turn-outcomes.md](../turn-outcomes.md).
   ([claude-turns.md](../claude-turns.md#the-mods-side)). On pi, `agent_settled` reports
   aborted, a final `stop` answered, and other stop reasons failed
   ([research-pi.md](../research-pi.md)).
+  A worker's finished end with a nonempty answer that no waiter took goes to main as a
+  `notify`, once, even on a retry ([turn-outcomes.md](../turn-outcomes.md#unclaimed-answers)).
   Tests:
+  - `internal/cli/completion_unclaimed_test.go` `TestAnAnswerNoWaiterTakesReachesMainOnce`
+  - `internal/cli/completion_unclaimed_test.go` `TestARetriedOrdinaryEndSendsNoUnclaimedAnswer`
+  - `internal/cli/completion_unclaimed_test.go` `TestTheNetTakesOnlyAWorkersNonemptyFinish`
   - `internal/adapter/claude/modhost/turns_test.go` `TestEachReasonReachesTheCoreAsItsEndReason`
   - `internal/adapter/claude/mod_test.go` `TestTheModsTestsPass`
   - `internal/cli/stopped_test.go` `TestStoppedKeepsWorkForTheHumanContinuation`

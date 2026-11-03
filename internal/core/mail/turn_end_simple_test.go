@@ -206,7 +206,7 @@ func TestASweepKeepsAReportWhileItsWaitStands(t *testing.T) {
 func TestAnEndNotRecordedDoneIsNotRepublishedAfterTheSweep(t *testing.T) {
 	lab := newEndLab(t)
 	end := lab.end(t, "turn-1")
-	failFirst(t, state.OpWrite, JournalPath(lab.dir, "api"))
+	failFirst(t, state.OpWrite, doneSuffix) // past the receipt, which is written before the waits clear
 	if err := lab.complete(t, end); err == nil {
 		t.Fatal("the record of the end did not fail")
 	}

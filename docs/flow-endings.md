@@ -36,6 +36,9 @@ answer in the same command.
 there: reading it records no wait, so no report comes back. It is the right kind for a
 heads-up and for a probe.
 
+A worker's finished answer that no task or question waits on arrives the same way, as a
+notify headed `Unclaimed answer:` ([turn-outcomes.md](turn-outcomes.md#unclaimed-answers)).
+
 ## Act 8. The session ends
 
 The harness exits, or Ctrl+C reaches the foreground group, or `kill` reaches the wrapper

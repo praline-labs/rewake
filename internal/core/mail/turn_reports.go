@@ -101,6 +101,12 @@ func publishTurnContext(ctx context.Context, dir string, self registry.Session, 
 		}
 	}
 	if !event.Stopped && !pending {
+		if len(reports) > 0 && len(reports[0].InReplyTo) > 0 {
+			// Before the waits clear: past them, a retry sees nobody waiting.
+			if err := writeReportedReceipt(dir, self, op); err != nil {
+				return Outcome{}, err
+			}
+		}
 		for _, waiter := range reported {
 			if err := clearAwaiting(dir, self.Name, self.Epoch(), waiter); err != nil {
 				return Outcome{}, fmt.Errorf("could not clear what %s was owed: %w", waiter.Name, err)
@@ -176,7 +182,7 @@ func prepareTurnReports(dir string, self registry.Session, event TurnEnd, pendin
 		event.Failed = true
 		event.Text = ""
 	}
-	if !event.Failed && !event.Stopped && (!OwesReports(self.Role) || len(waiters) == 0) {
+	if !event.Failed && !event.Stopped && !OwesReports(self.Role) {
 		return nil, nil, nil
 	}
 	kind := Finished
@@ -239,6 +245,15 @@ func prepareTurnReports(dir string, self registry.Session, event TurnEnd, pendin
 			return nil, nil, err
 		}
 		reports = append(reports, Message{ID: id, From: self.Name, FromEpoch: self.Epoch(), To: target.Name, ToEpoch: target.Epoch(), Kind: kind, Text: event.Text, CreatedAt: time.Now()})
+	}
+	if len(reports) == 0 {
+		unclaimed, err := unclaimedAnswer(dir, self, event, pending, op)
+		if err != nil {
+			return nil, nil, err
+		}
+		if unclaimed != nil {
+			reports = append(reports, *unclaimed)
+		}
 	}
 	return reports, waiters, nil
 }

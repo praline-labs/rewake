@@ -33,6 +33,32 @@ Every adapter of this build reports failures: Claude Code's mod sends `turn/end`
 reason `failed` or `refused`, pi's extension a stop reason other than `stop`, and the
 fixture's program its end frame.
 
+## Unclaimed answers
+
+A worker's finished end whose answer no waiter takes goes to the room's main as a `notify`,
+so a final message is never left unread (the owner's decision, November 3, 2026; the case was
+a worker whose unmarked acknowledgment settled two tasks and whose real result, ending a
+later turn, reached nobody). It applies when the end finished normally (not failed, not
+stopped, not under a `pending` mark), its answer is not empty after trimming, its session is
+a worker that reports and not main, and no ordinary report was written, because nobody
+waited or every waiter's run is gone. An end that reported to a live waiter sends nothing
+more, whoever the waiter is.
+
+- **The letter** is from the worker's run, kind `notify`, without `inReplyTo`; it owes nothing,
+  settles nothing and opens no wait. Its first line, the notice preview, is
+  `Unclaimed answer: <worker>'s turn ended with no task or question waiting on it.`, then a
+  blank line and the turn's text. It is not a reconstructed report and `inbox --awaited` does
+  not change: a task settled early still shows as answered.
+- **Without a main** in the room nothing is sent, as for the error fallback.
+- **A retry** sends no second letter: its id comes from the operation as the error fallback's
+  does (`reportOfOp`), and an end that wrote an ordinary report first writes
+  `journal/<op>.reported` (the journal's shape, `Epoch` and `Op`) before clearing any wait,
+  so a retry past the clearing, which sees no waiter, does not take its answer for an
+  unclaimed one. Older builds read the file as a journal and ignore it.
+- **The noise** for main: a worker's acknowledgment of a notify, a first turn that found no
+  mail, a reply to the person typing in the worker's window, a background end. Each is one
+  notify that owes nothing, and main's own ends are silent, so no loop forms.
+
 ## Interim turn ends (`rewake pending`)
 
 A turn end is the report by default. A session about to end a turn that has not finished the
