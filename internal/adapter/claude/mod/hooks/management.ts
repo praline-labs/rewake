@@ -1,13 +1,7 @@
 // Native state and control stay outside the heartbeat's awaited chain: a
 // compaction may take minutes while the load must keep renewing its lease.
 
-import type {
-  AskKind,
-  ControlCommand,
-  ControlReply,
-  RateLimit,
-  StateRequest,
-} from "../protocol.gen.ts";
+import type { AskKind, ControlCommand, ControlReply, StateRequest } from "../protocol.gen.ts";
 import { paths } from "../protocol.gen.ts";
 import type { Host } from "./outbox.ts";
 
@@ -16,10 +10,8 @@ export interface Native {
   model: () => Promise<string>;
   // cwd is the directory the session runs in now: a worktree entry moves it.
   cwd: () => Promise<string>;
-  usage: () => Promise<{
-    context: { tokens?: number; window: number; percent?: number };
-    rateLimits?: { kind: string; percentUsed: number; resetsAt?: string }[];
-  }>;
+  // usage is $.session.usage() as Claude Code answers it; the host reads it.
+  usage: () => Promise<unknown>;
   compact: (
     focus: string,
   ) => Promise<{ skip?: string; tokensBefore?: number; tokensAfter?: number }>;
@@ -37,8 +29,9 @@ export class Management {
   private compactions = 0;
   private last = { request: "", from: "" };
   private turn?: string;
-  private effort?: string;
-  private cache?: { cacheRead: number; cacheWrite: number; cacheInput: number };
+  // step is the last main-loop step as read: the effort its request asked
+  // for and the usage its response reported, the cache's only source.
+  private step: { effort?: unknown; usage?: unknown } = {};
   private compacting = false;
   // dialog is what the engine said of a dialog the session waits at that no
   // request carries to main (dialogs.ts), until the next tool result or step.
@@ -69,10 +62,16 @@ export class Management {
 
   // A main-loop request names the effort the session runs at now; the person
   // may change it between turns, and no other source of the engine says it.
-  effortSeen(effort: string | number | undefined) {
-    if (effort === undefined || String(effort) === this.effort) return;
-    this.effort = String(effort);
+  stepStarted(effort: unknown) {
+    if (effort === this.step.effort) return;
+    this.step = { ...this.step, effort };
     this.changed();
+  }
+
+  // stepEnded keeps the usage a main-loop response reported, as reported;
+  // the next sample carries it.
+  stepEnded(usage: unknown) {
+    this.step = { ...this.step, usage };
   }
 
   // waits says the session waits at a dialog nobody else is told of, or with
@@ -94,23 +93,6 @@ export class Management {
       released = true;
       this.held.splice(this.held.indexOf(kind), 1);
       this.changed();
-    };
-  }
-
-  // The usage the API reported for a main-loop response is the cache's only
-  // source; a response without usage keeps the last one's.
-  usageSeen(
-    usage: {
-      cache_read_input_tokens?: number | null;
-      cache_creation_input_tokens?: number | null;
-      input_tokens?: number | null;
-    } | null,
-  ) {
-    if (!usage) return;
-    this.cache = {
-      cacheRead: usage.cache_read_input_tokens ?? 0,
-      cacheWrite: usage.cache_creation_input_tokens ?? 0,
-      cacheInput: usage.input_tokens ?? 0,
     };
   }
 
@@ -147,8 +129,9 @@ export class Management {
     return actor;
   }
 
-  // Samples are serialized and complete: an unknown native usage clears an
-  // older one instead of keeping pre-compaction tokens as current.
+  // Samples are serialized and complete: what the session read of itself
+  // goes as read, and a read that failed is absent, so an unknown usage
+  // clears an older one instead of keeping pre-compaction tokens as current.
   changed() {
     if (!this.generation) return;
     const state = {
@@ -156,47 +139,29 @@ export class Management {
       activity: this.turn ? "working" : "idle",
       compacting: this.compacting,
       compactions: this.compactions,
-      effort: this.effort,
       dialog: this.dialog,
       // A permission stops the call whatever else is asked beside it.
       waiting: this.held.includes("permission") ? ("permission" as const) : this.held[0],
-      ...this.cache,
       ...this.last,
     };
+    const step = this.step;
     this.sending = this.sending
       .then(async () => {
         if (state.generation !== this.generation) return;
-        let context: { tokens?: number; window?: number; percent?: number } = {};
-        let rateLimits: RateLimit[] | undefined;
-        let model: string | undefined;
-        let cwd: string | undefined;
-        try {
-          const usage = await this.native.usage();
-          context = usage.context;
-          rateLimits = limitsOf(usage.rateLimits);
-        } catch {
-          /* unknown */
-        }
-        try {
-          model = await this.native.model();
-        } catch {
-          /* unknown */
-        }
-        try {
-          cwd = (await this.native.cwd()) || undefined;
-        } catch {
-          /* unknown */
+        const native: Record<string, unknown> = { step };
+        const reads = { usage: this.native.usage, model: this.native.model, cwd: this.native.cwd };
+        for (const [key, read] of Object.entries(reads)) {
+          try {
+            native[key] = await read();
+          } catch {
+            /* unknown */
+          }
         }
         const request: StateRequest = {
           loadId: this.loadId,
           sequence: ++this.sequence,
           conversation: await this.native.id(),
-          model,
-          tokens: context.tokens,
-          window: context.window,
-          percent: context.percent,
-          cwd,
-          rateLimits,
+          native,
           ...state,
         };
         await this.host.post(paths.modState, request);
@@ -333,18 +298,4 @@ export class Management {
       /* The host reports a missing acknowledgement as unknown. */
     }
   }
-}
-
-// limitsOf is the account's windows as the host takes them: whole percent,
-// the reset in epoch seconds; none off a subscription.
-export function limitsOf(
-  windows: { kind: string; percentUsed: number; resetsAt?: string }[] | undefined,
-): RateLimit[] | undefined {
-  if (!windows?.length) return undefined;
-  return windows.map(({ kind, percentUsed, resetsAt }) => {
-    const limit: RateLimit = { kind, percent: Math.round(percentUsed) };
-    const at = resetsAt ? Date.parse(resetsAt) : Number.NaN;
-    if (Number.isFinite(at)) limit.resetsAt = Math.floor(at / 1000);
-    return limit;
-  });
 }

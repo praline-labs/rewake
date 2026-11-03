@@ -105,6 +105,7 @@ func (harness) Serve(request adapter.LaunchRequest) adapter.ServicePlan {
 	run := newRun(extensionPath(request), request.Socket, request.Epoch)
 	run.controlDir = request.ControlDir
 	run.hostsSpaces, run.onClosing = request.Role.Spaces, request.Closing
+	run.retention = envValue(request.Env, cacheRetentionEnv)
 	run.tools = sessiontools.Run{Executable: request.Executable, Dir: request.Dir, Room: request.Room, Session: request.Name, Epoch: request.Epoch, Role: request.Role.ID}
 	if request.Mirror != nil {
 		run.mirror = request.Mirror
@@ -114,6 +115,21 @@ func (harness) Serve(request adapter.LaunchRequest) adapter.ServicePlan {
 		Socket: request.Socket, OwnsSocket: true,
 		Service: run, Wake: run, TurnBoundary: run, Thread: run, Live: run, Telemetry: run,
 	}
+}
+
+// cacheRetentionEnv is pi's own variable naming the cache tier its requests
+// ask for, which the wrapper reads to reckon the cache's lifetime (native.go).
+const cacheRetentionEnv = "PI_CACHE_RETENTION"
+
+// envValue is name's value in env, the last that sets it, as the child sees.
+func envValue(env []string, name string) string {
+	value := ""
+	for _, kv := range env {
+		if rest, ok := strings.CutPrefix(kv, name+"="); ok {
+			value = rest
+		}
+	}
+	return value
 }
 
 func defaults() []adapter.Default {

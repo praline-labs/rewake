@@ -773,32 +773,6 @@ type StateRequest struct {
 	// Activity is working or idle.
 	Activity string `json:"activity"`
 
-	// Model is the configured model, absent when unknown.
-	Model *string `json:"model,omitempty"`
-
-	// Effort is the reasoning effort the latest main-loop request of this load asked for, absent
-	// until one is seen.
-	Effort *string `json:"effort,omitempty"`
-
-	// Tokens is current input context usage, absent when unknown.
-	Tokens *int `json:"tokens,omitempty"`
-
-	// Window is the context window, absent when unknown.
-	Window *int `json:"window,omitempty"`
-
-	// Percent is the filled percentage, absent when unknown.
-	Percent *int `json:"percent,omitempty"`
-
-	// CacheRead is the input tokens the prompt cache served on the latest main-loop response of
-	// this load, absent until one reports usage.
-	CacheRead *int `json:"cacheRead,omitempty"`
-
-	// CacheWrite is the input tokens that response wrote to the prompt cache.
-	CacheWrite *int `json:"cacheWrite,omitempty"`
-
-	// CacheInput is the input tokens that response neither read from nor wrote to the cache.
-	CacheInput *int `json:"cacheInput,omitempty"`
-
 	// Compacting says a native compaction is in progress.
 	Compacting bool `json:"compacting"`
 
@@ -819,26 +793,11 @@ type StateRequest struct {
 	// a permission, or the model's own question — absent when none.
 	Waiting *AskKind `json:"waiting,omitempty"`
 
-	// Cwd is the directory the session runs in now, the harness's own working directory, which a
-	// worktree entry moves; absent when unknown.
-	Cwd *string `json:"cwd,omitempty"`
-
-	// RateLimits are the account's rate-limit windows the last response reported, absent or empty
-	// off a subscription or before the first reading.
-	RateLimits []RateLimit `json:"rateLimits,omitempty"`
-}
-
-// RateLimit is one rate-limit window of the account, as the harness reported it.
-type RateLimit struct {
-	// Kind is the window: five_hour, seven_day, or another the harness names.
-	Kind string `json:"kind"`
-
-	// Percent is how much of the window is used, in whole percent.
-	Percent int `json:"percent"`
-
-	// ResetsAt is when the window resets, in seconds since the epoch, absent when the harness does
-	// not say.
-	ResetsAt *int `json:"resetsAt,omitempty"`
+	// Native is what the session read of itself, unconverted, which the host projects into the
+	// session's state (modhost/native.go): {model: $.session.model(), cwd: $.session.cwd(), usage:
+	// $.session.usage(), step: {usage, effort}} with step the last main-loop step's usage and the
+	// effort its request asked for; a part that could not be read is absent.
+	Native json.RawMessage `json:"native,omitempty"`
 }
 
 // ControlReply is an initial or final result for a dispatched command.

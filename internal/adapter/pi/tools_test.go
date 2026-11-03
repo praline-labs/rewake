@@ -27,7 +27,7 @@ func toolRig(t *testing.T, role string) (*link, frame) {
 	l := newLink(conn)
 	t.Cleanup(l.close)
 	go l.serve(bufio.NewReader(conn), func(got frame) { l.answer(got, frame{OK: true}) })
-	reply, err := l.ask(t.Context(), frame{Op: "hello", Protocol: protocolVersion, State: &sample{Sequence: 1, Activity: "idle"}, Thread: "conversation"})
+	reply, err := l.ask(t.Context(), frame{Op: "hello", Protocol: protocolVersion, State: &sample{Sequence: 1, Idle: true}, Thread: "conversation"})
 	if err != nil || !reply.OK {
 		t.Fatalf("hello: %+v, %v", reply, err)
 	}
@@ -105,7 +105,7 @@ func TestAnOlderExtensionIsToldToRestartTheRoom(t *testing.T) {
 	}
 	defer func() { _ = conn.Close() }()
 	l := newLink(conn)
-	if err := l.send(frame{Op: "hello", ID: 1, Protocol: protocolVersion - 1, State: &sample{Sequence: 1, Activity: "idle"}, Thread: "conversation"}); err != nil {
+	if err := l.send(frame{Op: "hello", ID: 1, Protocol: protocolVersion - 1, State: &sample{Sequence: 1, Idle: true}, Thread: "conversation"}); err != nil {
 		t.Fatal(err)
 	}
 	_ = conn.SetReadDeadline(time.Now().Add(time.Second))

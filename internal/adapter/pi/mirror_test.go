@@ -22,7 +22,7 @@ func hello(t *testing.T, rig *rig, handle func(*link, frame)) (*link, frame) {
 	l := newLink(conn)
 	t.Cleanup(l.close)
 	go l.serve(bufio.NewReader(conn), func(got frame) { handle(l, got) })
-	reply, err := l.ask(t.Context(), frame{Op: "hello", Protocol: protocolVersion, State: &sample{Sequence: 1, Activity: "idle"}, Thread: "conversation"})
+	reply, err := l.ask(t.Context(), frame{Op: "hello", Protocol: protocolVersion, State: &sample{Sequence: 1, Idle: true}, Thread: "conversation"})
 	if err != nil || !reply.OK {
 		t.Fatalf("hello: %+v, %v", reply, err)
 	}

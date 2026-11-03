@@ -28,7 +28,7 @@ func (r *run) serve(l *link) {
 		l.answer(hello, frame{Error: olderProtocol})
 		return
 	}
-	if hello.Op != "hello" || hello.Thread == "" || hello.State == nil || hello.State.Sequence == 0 || (hello.State.Activity != "working" && hello.State.Activity != "idle") {
+	if hello.Op != "hello" || hello.Thread == "" || hello.State == nil || hello.State.Sequence == 0 {
 		l.answer(hello, frame{Error: "expected a hello with a conversation and state"})
 		return
 	}

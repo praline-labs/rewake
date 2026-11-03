@@ -226,7 +226,13 @@ The mod samples native context and the configured model after its hello, on `ses
 (which comes only at a turn's end), at the main turn's start and end, after each main-loop
 `turn.step`'s response, at compaction boundaries, and after each heartbeat answer, so a long
 turn's fill grows as it runs. It sends complete samples through `mod/state`, with the load,
-heartbeat generation, selected conversation and a load-local sequence. The host accepts only its
+heartbeat generation, selected conversation and a load-local sequence. What the session read of
+itself goes unconverted in `native` (brief 94, November 3, 2026): `$.session.model()`,
+`$.session.cwd()`, `$.session.usage()` as Claude Code answers it, and the last main-loop step's
+`usage` and the `effort` its request asked for; a read that failed is absent. The host names and
+converts it (`modhost/native.go`), each part on its own, so a part whose shape a release changes
+is unknown and the rest still counts, and a change of what the Статус shows is the wrapper's alone,
+reaching a running room with `rewake restart rewake`. The host accepts only its
 current live generation and newer samples; unknown tokens clear an older reading. It hands each
 sample, and each status line, to the session's observer (`core/session.Observer`), which merges
 them into the published snapshot ([session-state.md](session-state.md#persistence-and-freshness));
@@ -259,15 +265,17 @@ which the host tells main of once
 ([permission-requests.md](permission-requests.md#a-dialog-nobody-is-asked-about)). Every sample
 carries the session's directory now (`cwd`, `$.session.cwd()`: a worktree entry moves it, a `cd`
 in Bash does not) and the account's rate-limit windows as `$.session.usage()` reports them
-(`rateLimits`: `kind`, `percent` rounded, `resetsAt` in epoch seconds); the host keeps
-`Snapshot.Cwd` and `Snapshot.RateLimits`, dropping a window without a kind or outside 0–100, and
+(`rateLimits`: `kind`, `percentUsed`, `resetsAt` as ISO 8601); the host keeps
+`Snapshot.Cwd` and `Snapshot.RateLimits`, the percent rounded, dropping a window without a kind or outside 0–100, and
 the room view gives the shell the pane's path and its `5h`/`7d` windows
 ([shell.md](shell.md#the-strip)). A lapse makes every field stale until a new generation supplies a sample.
 
 **The prompt cache** is the usage the API reported for the latest main-loop `turn.step` response
-(`usage.cache_read_input_tokens`, `cache_creation_input_tokens`, `input_tokens`): the mod sends
-`cacheRead`, `cacheWrite` and `cacheInput` with every sample; a response with no usage and a
-subagent's leave the last. The host publishes `Snapshot.Cache` (`cache` of the telemetry): the
+with input (`usage.cache_read_input_tokens`, `cache_creation_input_tokens`, `input_tokens`): the
+mod sends the last step's `usage` as reported with every sample, and the host keeps the last one
+with input, so a response with no usage, a placeholder's with none, and a subagent's leave it; it
+goes to the next image with the run (`Handed.Cache`), since by then the mod's last step may be a
+placeholder's. The host publishes `Snapshot.Cache` (`cache` of the telemetry): the
 raw counts and `hitPercent`, the share of all the request's input tokens — read, written and
 neither — that the cache served. It is the last request's, not a running total, since that is
 what says whether the prefix is still warm; providers count input differently, so the harness's
@@ -437,6 +445,7 @@ idle worker makes it (`handover.go`, `modhost/handover.go`; `handover.claude` na
 | The lane's notices | busy while a word is queued, or a notice is within its late word's minute (`mail.LateWordWindow`): its receipts live only here |
 | The delivery server's held and recent letters | busy while any is held, or a notice reported delivered is within its late word's minute (the host's own refusal) |
 | The mirror | its model in a memory file, which the next image serves; a face reconnects ([face.md](face.md#the-socket)) |
+| The cache | the last response's cache usage that had input, inline (`Handed.Cache`): the mod sends only its last step's ([telemetry](#telemetry)) |
 
 The snapshot is the endpoint's quiescent point (November 2, 2026): it waits for every request
 under way that takes an effect — a hello, a turn's start or end, an ask opened or settled, a control

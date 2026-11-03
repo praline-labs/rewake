@@ -30,23 +30,24 @@ const results = (run: any) =>
 const states = (run: any) =>
   run.sent.filter((one: any) => one.path === "/v1/mod/state").map((one: any) => one.body);
 
-test("context is sampled initially, on measurement and after the main turn; missing usage stays unknown", async ($, on) => {
+test("what the session read is sampled initially, on measurement and after the main turn, as read", async ($, on) => {
   let usage: any = { window: 200000, tokens: 50000, percent: 25 };
   const run = world(on, { usage: () => usage });
   on("session.measure", () => ({ changed: ["context"] }));
   await start($);
   await run.clock.settle();
   expect(states(run).at(-1)).toMatchObject({
-    tokens: 50000,
-    window: 200000,
-    percent: 25,
-    model: "test-model",
+    native: {
+      usage: { context: { tokens: 50000, window: 200000, percent: 25 }, rateLimits: [] },
+      model: "test-model",
+      step: {},
+    },
     activity: "idle",
   });
   usage = { window: 200000 };
   await $.session.measure({ context: usage, rateLimits: [], changed: ["context"] } as any);
   await run.clock.settle();
-  expect(states(run).at(-1).tokens).toBeUndefined();
+  expect(states(run).at(-1).native.usage.context).toEqual({ window: 200000 });
   await $.turn.start({ turnId: "t" } as any);
   await run.clock.settle();
   expect(states(run).at(-1).activity).toBe("working");
@@ -56,15 +57,15 @@ test("context is sampled initially, on measurement and after the main turn; miss
 });
 
 // Brief 60: a sample names where the session runs now, which a worktree
-// entry moves, and the account's windows in whole percent with their resets.
-test("a sample carries the session's directory and the account's rate limits", async ($, on) => {
+// entry moves, and the account's windows; the host converts them (brief 94).
+test("a sample carries the session's directory and the account's rate limits as read", async ($, on) => {
   let cwd = "/work";
   let limits: unknown[] = [];
   const run = world(on, { cwd: () => cwd, limits: () => limits });
   await start($);
   await run.clock.settle();
-  expect(states(run).at(-1).cwd).toBe("/work");
-  expect(states(run).at(-1).rateLimits).toBeUndefined();
+  expect(states(run).at(-1).native.cwd).toBe("/work");
+  expect(states(run).at(-1).native.usage.rateLimits).toEqual([]);
   cwd = "/work/.claude/worktrees/wt";
   limits = [
     { kind: "five_hour", percentUsed: 37.4, resetsAt: "2026-10-31T13:00:00Z" },
@@ -72,14 +73,11 @@ test("a sample carries the session's directory and the account's rate limits", a
   ];
   await $.turn.start({ turnId: "t" } as any);
   await run.clock.settle();
-  expect(states(run).at(-1)).toMatchObject({
+  expect(states(run).at(-1).native).toMatchObject({
     cwd: "/work/.claude/worktrees/wt",
-    rateLimits: [
-      { kind: "five_hour", percent: 37, resetsAt: Date.parse("2026-10-31T13:00:00Z") / 1000 },
-      { kind: "seven_day", percent: 9 },
-    ],
+    usage: { rateLimits: limits },
   });
-  expect(states(run).at(-1).rateLimits[1].resetsAt).toBeUndefined();
+  expect(Object.keys(states(run).at(-1))).not.toContain("rateLimits");
 });
 
 test("remote compact carries focus, returns requested while the heartbeat continues, then counts completion once", async ($, on) => {
@@ -244,7 +242,7 @@ test("effort is the main loop's latest request's, and each main-loop step is sam
   };
   await start($);
   await run.clock.settle();
-  expect(states(run).at(-1).effort).toBeUndefined();
+  expect(states(run).at(-1).native.step.effort).toBeUndefined();
   const before = states(run).length;
   await step({ effort: "max", agentId: "child" });
   await run.clock.settle();
@@ -252,17 +250,17 @@ test("effort is the main loop's latest request's, and each main-loop step is sam
   await step({ effort: "low" });
   await run.clock.settle();
   const count = states(run).length;
-  expect(states(run).at(-1).effort).toBe("low");
+  expect(states(run).at(-1).native.step.effort).toBe("low");
   await step({ effort: "low", index: 1 });
   await run.clock.settle();
   expect(states(run).length).toBe(count + 1);
-  expect(states(run).at(-1).effort).toBe("low");
+  expect(states(run).at(-1).native.step.effort).toBe("low");
   await step({ effort: "high", index: 2 });
   await run.clock.settle();
-  expect(states(run).at(-1).effort).toBe("high");
+  expect(states(run).at(-1).native.step.effort).toBe("high");
 });
 
-test("the cache is the latest main-loop response's usage; a response without usage and a subagent's leave it", async ($, on) => {
+test("a sample carries the last main-loop step's usage as reported; a subagent's leaves it", async ($, on) => {
   const run = world(on);
   let usage: any = null;
   on("turn.step", async function* (_: any, e: any) {
@@ -289,7 +287,7 @@ test("the cache is the latest main-loop response's usage; a response without usa
   };
   await start($);
   await run.clock.settle();
-  expect(states(run).at(-1).cacheRead).toBeUndefined();
+  expect(states(run).at(-1).native.step.usage).toBeUndefined();
   usage = {
     model: "m",
     input_tokens: 50,
@@ -297,15 +295,18 @@ test("the cache is the latest main-loop response's usage; a response without usa
     cache_read_input_tokens: 900,
     cache_creation_input_tokens: 50,
   };
+  const reported = usage;
   await step({});
   await run.clock.settle();
-  expect(states(run).at(-1)).toMatchObject({ cacheRead: 900, cacheWrite: 50, cacheInput: 50 });
+  expect(states(run).at(-1).native.step.usage).toEqual(reported);
   usage = { ...usage, cache_read_input_tokens: 1 };
   await step({ agentId: "child" });
+  await run.clock.settle();
+  expect(states(run).at(-1).native.step.usage).toEqual(reported);
   usage = null;
   await step({ index: 1 });
   await run.clock.settle();
-  expect(states(run).at(-1)).toMatchObject({ cacheRead: 900, cacheWrite: 50, cacheInput: 50 });
+  expect(states(run).at(-1).native.step.usage).toBeNull();
 });
 
 test("a prompt of rewake's face is submitted as the person's from the clock and answered done", async ($, on) => {

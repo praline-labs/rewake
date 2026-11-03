@@ -18,24 +18,25 @@ func TestStateOrdersPushesAndPollsAndClearsUnknownUsage(t *testing.T) {
 	if poll.Op != "state" || poll.Thread != "conversation" {
 		t.Fatalf("poll: %+v", poll)
 	}
-	model, effort := "selected-model", "high"
-	tokens, window, percent := int64(42000), int64(100000), 42.0
-	value := &sample{Sequence: 3, Activity: "idle", Model: &model, Effort: &effort, Tokens: &tokens, Window: &window, Percent: &percent}
+	model, effort, window := "selected-model", "high", int64(100000)
+	selected := map[string]any{"id": model, "provider": "p", "contextWindow": window}
+	value := &sample{Sequence: 3, Idle: true, Native: nativeOf(map[string]any{
+		"model": selected, "thinkingLevel": effort,
+		"contextUsage": map[string]any{"tokens": 42000, "contextWindow": window, "percent": 42.0},
+	})}
 	askOK(t, l, frame{Op: "state", Thread: "conversation", State: value})
 	older := *value
-	older.Sequence = 2
-	older.Activity = "working"
+	older.Sequence, older.Idle = 2, false
 	l.answer(poll, frame{OK: true, State: &older})
 	// A following acknowledged push is an ordering barrier on the same socket.
 	value.Sequence = 4
-	value.Tokens = nil
-	value.Percent = nil
+	value.Native = nativeOf(map[string]any{"model": selected, "thinkingLevel": effort, "contextUsage": nil})
 	askOK(t, l, frame{Op: "state", Thread: "conversation", State: value})
 	got := rig.run.SessionState()
 	if got.Epoch != "run-epoch" || !got.Fresh || got.Thread != "conversation" || *got.Activity != "idle" || *got.Model != model || *got.Effort != effort || got.ContextUsed != nil || got.FilledPercent != nil || *got.ContextWindow != window {
 		t.Fatalf("state after late poll and unknown usage: %+v", got)
 	}
-	reply, err := l.ask(t.Context(), frame{Op: "state", Thread: "another", State: &sample{Sequence: 99, Activity: "working"}})
+	reply, err := l.ask(t.Context(), frame{Op: "state", Thread: "another", State: &sample{Sequence: 99}})
 	if err != nil || reply.OK {
 		t.Fatalf("stale conversation state: %+v %v", reply, err)
 	}
@@ -122,28 +123,4 @@ func TestControlDoesNotRepeatUnknownRequestsAndCompactionDefersWake(t *testing.T
 	default:
 	}
 	l.close()
-}
-
-func TestStateCarriesTheCacheOfTheLastResponseAndOldExtensionsLeaveItEmpty(t *testing.T) {
-	rig := newRig(t, nil)
-	l := rig.client(t, "conversation", nil)
-	askOK(t, l, frame{Op: "state", Thread: "conversation", State: &sample{Sequence: 2, Activity: "idle"}})
-	if got := rig.run.SessionState(); got.Cache != nil {
-		t.Fatalf("cache before any response: %+v", got.Cache)
-	}
-	value := &sample{Sequence: 3, Activity: "idle", Cache: &cacheUsage{Read: 900, Write: 50, Input: 50}}
-	askOK(t, l, frame{Op: "state", Thread: "conversation", State: value})
-	if got := rig.run.SessionState().Cache; got == nil || got.HitPercent != 90 || got.Read != 900 || got.Write != 50 || got.Input != 50 {
-		t.Fatalf("cache: %+v", got)
-	}
-	if got := rig.run.SessionState().CacheLife; got != nil {
-		t.Fatalf("a cache with no lifetime has a life: %+v", got)
-	}
-	ttl, expires := int64(300), time.Now().Add(4*time.Minute).UnixMilli()
-	value = &sample{Sequence: 4, Activity: "idle", Cache: &cacheUsage{Read: 900, Write: 50, Input: 50, TTL: &ttl, ExpiresAt: &expires}}
-	askOK(t, l, frame{Op: "state", Thread: "conversation", State: value})
-	got := rig.run.SessionState().CacheLife
-	if got == nil || got.TTL != "5m" || got.ExpiresAt == nil || got.ExpiresAt.UnixMilli() != expires || !got.Warm {
-		t.Fatalf("cache life: %+v", got)
-	}
 }

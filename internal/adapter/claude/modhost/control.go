@@ -217,3 +217,11 @@ func (s *Server) outcomeLocked(request control.Request, answer control.Answer) {
 		TokensBefore: answer.TokensBefore, TokensAfter: answer.TokensAfter, EndedAt: time.Now(),
 	})
 }
+
+func tokenCount(value *int) *int64 {
+	if value == nil {
+		return nil
+	}
+	count := int64(*value)
+	return &count
+}

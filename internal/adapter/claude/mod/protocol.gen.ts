@@ -624,24 +624,6 @@ export interface StateRequest {
   conversation: string
   // activity is working or idle.
   activity: string
-  // model is the configured model, absent when unknown.
-  model?: string
-  // effort is the reasoning effort the latest main-loop request of this load asked for, absent
-  // until one is seen.
-  effort?: string
-  // tokens is current input context usage, absent when unknown.
-  tokens?: number
-  // window is the context window, absent when unknown.
-  window?: number
-  // percent is the filled percentage, absent when unknown.
-  percent?: number
-  // cacheRead is the input tokens the prompt cache served on the latest main-loop response of
-  // this load, absent until one reports usage.
-  cacheRead?: number
-  // cacheWrite is the input tokens that response wrote to the prompt cache.
-  cacheWrite?: number
-  // cacheInput is the input tokens that response neither read from nor wrote to the cache.
-  cacheInput?: number
   // compacting says a native compaction is in progress.
   compacting: boolean
   // compactions counts completed compactions observed by this load.
@@ -656,23 +638,11 @@ export interface StateRequest {
   // waiting is what a dialog the session waits at on its screen asks while the mod holds it —
   // a permission, or the model's own question — absent when none.
   waiting?: AskKind
-  // cwd is the directory the session runs in now, the harness's own working directory, which a
-  // worktree entry moves; absent when unknown.
-  cwd?: string
-  // rateLimits are the account's rate-limit windows the last response reported, absent or empty
-  // off a subscription or before the first reading.
-  rateLimits?: RateLimit[]
-}
-
-// RateLimit is one rate-limit window of the account, as the harness reported it.
-export interface RateLimit {
-  // kind is the window: five_hour, seven_day, or another the harness names.
-  kind: string
-  // percent is how much of the window is used, in whole percent.
-  percent: number
-  // resetsAt is when the window resets, in seconds since the epoch, absent when the harness
-  // does not say.
-  resetsAt?: number
+  // native is what the session read of itself, unconverted, which the host projects into the
+  // session's state (modhost/native.go): {model: $.session.model(), cwd: $.session.cwd(),
+  // usage: $.session.usage(), step: {usage, effort}} with step the last main-loop step's usage
+  // and the effort its request asked for; a part that could not be read is absent.
+  native?: unknown
 }
 
 // ControlReply is an initial or final result for a dispatched command.

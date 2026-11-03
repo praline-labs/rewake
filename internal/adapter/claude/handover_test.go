@@ -217,7 +217,7 @@ func TestAnIdleClaudeRunIsHandedOverAndTheModsNextPollAnswered(t *testing.T) {
 // handoverVersion.
 var handedShapes = map[int]string{
 	1: "136c3efd43a1edacab1737b21292751682ae4a0f157a4db611675ec7d3748816",
-	2: "7b4d1e68e18a746de87630af74ea02b3bac99800a218bd8c12418c7d12093720",
+	2: "29173fbb27293ead031354b92e15e16406fb99fc6ad50e9dcb059476ea134289",
 }
 
 func TestTheClaudeHandoverChangesWithItsShape(t *testing.T) {

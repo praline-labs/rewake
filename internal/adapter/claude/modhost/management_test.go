@@ -26,9 +26,23 @@ func postValue(t *testing.T, socket, path string, value any) string {
 	return answer
 }
 
+// testState is a sample whose native part is the model and the window's
+// figures as Claude Code answers them.
 func testState() StateRequest {
-	tokens, window, percent, model := 25000, 100000, 25, "test-model"
-	return StateRequest{LoadID: "load", Generation: 1, Sequence: 1, Conversation: "conversation-1", Activity: "idle", Model: &model, Tokens: &tokens, Window: &window, Percent: &percent}
+	return withNative(StateRequest{LoadID: "load", Generation: 1, Sequence: 1, Conversation: "conversation-1", Activity: "idle"}, map[string]any{
+		"model": "test-model",
+		"usage": map[string]any{"context": map[string]any{"tokens": 25000, "window": 100000, "percent": 25}, "rateLimits": []any{}},
+	})
+}
+
+// withNative is sample with native as its native part.
+func withNative(sample StateRequest, native map[string]any) StateRequest {
+	raw, err := json.Marshal(native)
+	if err != nil {
+		panic(err)
+	}
+	sample.Native = raw
+	return sample
 }
 
 func TestStateIsCurrentGenerationOrderedAndUnknownAfterCompaction(t *testing.T) {
@@ -42,7 +56,7 @@ func TestStateIsCurrentGenerationOrderedAndUnknownAfterCompaction(t *testing.T) 
 	}
 	sample.Sequence = 2
 	sample.Compactions = 1
-	sample.Tokens, sample.Percent = nil, nil
+	sample = withNative(sample, map[string]any{"model": "test-model", "usage": map[string]any{"context": map[string]any{"window": 100000}}})
 	sample.Request, sample.From = "r1", "main"
 	postValue(t, socket, PathModState, sample)
 	postValue(t, socket, PathModState, testState())
@@ -262,28 +276,36 @@ func TestAHeldDialogsKindLastsWhileSamplesNameIt(t *testing.T) {
 	}
 }
 
-// A sample's directory and the account's windows reach the snapshot; a
-// window without a kind or past a whole percent is no window, and a newer
-// sample without them says the session no longer knows them.
+// A sample's directory and the account's windows, as Claude Code answers
+// them, reach the snapshot in whole percent and seconds; a window without a
+// kind or past a whole percent is no window, and a newer sample without them
+// says the session no longer knows them.
 func TestASampleCarriesTheDirectoryAndTheAccountsWindows(t *testing.T) {
 	server, socket := serving(t)
 	postValue(t, socket, PathHello, HelloRequest{Protocol: Protocol, LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
-	sample := testState()
-	cwd, resets := "/work/wt", 1_790_000_000
-	sample.Cwd = &cwd
-	sample.RateLimits = []RateLimit{{Kind: "five_hour", Percent: 37, ResetsAt: &resets}, {Kind: "seven_day", Percent: 9}, {Kind: "", Percent: 5}, {Kind: "odd", Percent: 101}}
+	resets := time.Unix(1_790_000_000, 0)
+	sample := withNative(testState(), map[string]any{"cwd": "/work/wt", "usage": map[string]any{
+		"context": map[string]any{"window": 100000},
+		"rateLimits": []any{
+			map[string]any{"kind": "five_hour", "percentUsed": 36.6, "resetsAt": resets.Add(400 * time.Millisecond).UTC().Format(time.RFC3339Nano)},
+			map[string]any{"kind": "seven_day", "percentUsed": 9},
+			map[string]any{"kind": "", "percentUsed": 5},
+			map[string]any{"kind": "odd", "percentUsed": 101},
+		},
+	}})
 	postValue(t, socket, PathModState, sample)
 	got := server.SessionState()
-	if got.Cwd == nil || *got.Cwd != cwd || len(got.RateLimits) != 2 {
+	if got.Cwd == nil || *got.Cwd != "/work/wt" || len(got.RateLimits) != 2 {
 		t.Fatalf("the sample: %+v", got)
 	}
-	if five := got.RateLimits[0]; five.Kind != "five_hour" || five.Percent != 37 || five.ResetsAt == nil || five.ResetsAt.Unix() != int64(resets) {
+	if five := got.RateLimits[0]; five.Kind != "five_hour" || five.Percent != 37 || five.ResetsAt == nil || !five.ResetsAt.Equal(resets) {
 		t.Fatalf("the five hours: %+v", five)
 	}
 	if seven := got.RateLimits[1]; seven.Kind != "seven_day" || seven.ResetsAt != nil {
 		t.Fatalf("the seven days: %+v", seven)
 	}
-	sample.Sequence, sample.Cwd, sample.RateLimits = 2, nil, nil
+	sample = withNative(sample, map[string]any{"usage": map[string]any{"context": map[string]any{"window": 100000}}})
+	sample.Sequence = 2
 	postValue(t, socket, PathModState, sample)
 	if got := server.SessionState(); got.Cwd != nil || got.RateLimits != nil {
 		t.Fatalf("a sample without them: %+v", got)

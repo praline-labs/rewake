@@ -32,7 +32,7 @@ import (
 
 // handoverVersion is the version of handedState; an image adopts only its
 // own, and a switch of the room admits only a build that takes the same.
-const handoverVersion = 2
+const handoverVersion = 3
 
 type handedState struct {
 	Version int    `json:"version"`
@@ -41,6 +41,9 @@ type handedState struct {
 	Thread  string `json:"thread"`
 	Next    int64  `json:"next"`
 	Unread  []byte `json:"unread,omitempty"`
+	// Cache is the last response's cache usage that had input: the extension
+	// sends only its last message's, which may be a placeholder's by now.
+	Cache *cacheSeen `json:"cache,omitempty"`
 }
 
 // maxUnread bounds the part of a frame a handover carries in the exec's
@@ -98,8 +101,11 @@ func (r *run) HandOver() (adapter.HandedOver, error) {
 	if len(unread) > maxUnread {
 		return fail(errors.New("a long frame of the extension is being read"))
 	}
+	r.mu.Lock()
+	cache := r.observed.cache
+	r.mu.Unlock()
 	l.mu.Lock()
-	handed := handedState{Version: handoverVersion, PID: r.process.PID, Start: r.process.Start, Thread: thread, Next: l.next, Unread: unread}
+	handed := handedState{Version: handoverVersion, PID: r.process.PID, Start: r.process.Start, Thread: thread, Next: l.next, Unread: unread, Cache: cache}
 	l.mu.Unlock()
 	raw, err := json.Marshal(handed)
 	if err != nil {
@@ -211,6 +217,7 @@ func (r *run) Adopt(ctx context.Context, _ func(string), handed adapter.HandedOv
 	l.next = got.Next
 	r.mu.Lock()
 	r.links[l] = struct{}{}
+	r.observed.cache = got.Cache
 	r.mu.Unlock()
 	go r.accept()
 	if !r.change(l, frame{Thread: got.Thread}) {

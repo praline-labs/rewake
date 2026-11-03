@@ -176,10 +176,14 @@ seconds per retention tier, `short` and `long`, "a missing tier means the lifeti
 `getPromptCacheTtlMs` of `dist/core/cache-warmer.js` reads it (`dist/core/sdk.js` builds the
 request without one; only compaction sends `none`). An assistant message's `timestamp` is when its
 request started (`pi-ai/dist/types.d.ts`), which is when the provider read or wrote the cache. The
-extension therefore reckons `expiresAt` as the last assistant message's `timestamp` plus the tier's
+wrapper therefore reckons `expiresAt` as the last assistant message's `timestamp` plus the tier's
 lifetime, where the model in use is the one that answered and names that tier; the host carries it
 as `cacheLife` with `ttl` as `5m`, `1h` or the seconds, and `warm` while the reckoned expiry is
-ahead. Known limit: pi's cache warming (`cacheWarming` in settings) re-sends a request to keep the
+ahead. Since extension 3 (November 3, 2026) the reckoning is the wrapper's (`native.go`): it reads
+the retention from the run's planned environment, projects a reading once, when it is first seen,
+with the model of that moment, and keeps the last with input, so a placeholder with no input
+counts, or the same reading after another model was chosen, leaves it; another conversation
+starts with none, and the observation goes to the next image with the run (`handedState.Cache`). Known limit: pi's cache warming (`cacheWarming` in settings) re-sends a request to keep the
 cache alive; in its default `streaming` mode it stops when the run settles, but in `idle` mode it
 goes on up to 30 minutes, which the extension does not see — the cell then shows less time left
 than there is.
@@ -236,7 +240,7 @@ harness pid and rechecks its process start time before accepting the first frame
 | Host to extension | `wake` | `thread`, `notice`; answer says `ok` and whether it was `steered`, or `pending` while compacting |
 | Extension to host | `turn-start` | `thread`, `turn`; acknowledgment precedes model work |
 | Extension to host | `turn-end` | `thread`, `turn`, `outcome`, `text` (the final text, or pi's error message when a failed turn has none); acknowledgment follows publication |
-| Either | `state` | host asks with `thread`; extension answers or pushes `state` with sequence, activity, model, effort, tokens, window, percent, compacting and (from October 23, 2026, optional) `cache`: the last assistant message's `usage` as `read`, `write`, `input` (`cacheRead`, `cacheWrite`, `input`), kept from `message_end`, `null` before the first response, so an older extension leaves it out; with it, where the model names a lifetime for the request's tier, `ttl` (seconds) and `expiresAt` (epoch milliseconds), the host's `cacheLife` (October 23, 2026, optional) |
+| Either | `state` | host asks with `thread`; extension answers or pushes `state` with `sequence`, `idle`, `compacting` and `native`, what the session read unconverted (extension 3, November 3, 2026): `contextUsage` (`ctx.getContextUsage()`), `model` (`ctx.model` less `headers` and `baseUrl`, which may carry credentials), `thinkingLevel`, and `lastAssistant`, the last assistant message's `usage`, `provider`, `model` and `timestamp`, sampled at each of its `message_end`s, `null` before the first; the wrapper projects it (`native.go`) |
 | Host to extension | `control` | `thread`, `action`, `request`, `from`, optional `focus`; answer carries outcome, reason, detail, open and token counts where known |
 | Extension to host | `compacted` | `thread`, event `sequence`, optional remote `request` and `from`; acknowledgment follows counting |
 | Extension to host | `compaction-result` | `thread`, `request`, `from`, outcome and optional token counts; acknowledgment follows retaining the outcome for main's letter |
@@ -295,7 +299,7 @@ A worker's run is handed over to the next image of its wrapper when a switch of 
 asks ([rules/state.md](rules/state.md#switching-a-running-room)); `handover.pi` names the version
 (`handover.go`). Since the extension has no replay after a reconnect, the connection itself is
 handed over: the listener and the extension's connection go as files, with pi's pid and start, the
-thread and the next request number, and the next image serves the connection as its current one,
+thread, the next request number and the last cache observation with input, and the next image serves the connection as its current one,
 its hello long answered. The extension never sees the exec; its files stay as written, the switch
 admitting only a build of the same `extension` protocol. The adopting image sends the extension its own tool table
 once (`tools`), so a changed tool reaches the running pi; a tool call's plan or end read while the

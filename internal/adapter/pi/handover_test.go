@@ -145,18 +145,28 @@ func TestAnIdlePiRunHandsItsConnectionOver(t *testing.T) {
 var handedShapes = map[int]string{
 	1: `Version int "version"; PID int "pid"; Start uint64 "start"; Thread string "thread"; Next int64 "next"`,
 	2: `Version int "version"; PID int "pid"; Start uint64 "start"; Thread string "thread"; Next int64 "next"; Unread []uint8 "unread,omitempty"`,
+	3: `Version int "version"; PID int "pid"; Start uint64 "start"; Thread string "thread"; Next int64 "next"; Unread []uint8 "unread,omitempty"; Cache *pi.cacheSeen "cache,omitempty" {Thread string "thread"; Of json.RawMessage "of,omitempty"; Read int64 "read"; Write int64 "write"; Input int64 "input"; TTL int64 "ttl,omitempty"; ExpiresAt int64 "expiresAt,omitempty"}`,
 }
 
 func TestThePiHandoverChangesWithItsShape(t *testing.T) {
-	typ := reflect.TypeFor[handedState]()
+	if got := shapeOf(reflect.TypeFor[handedState]()); got != handedShapes[handoverVersion] {
+		t.Fatalf("handedState is\n%s\nand handover.pi %d pins\n%s\na changed handedState raises handoverVersion", got, handoverVersion, handedShapes[handoverVersion])
+	}
+}
+
+// shapeOf is a struct's fields, and those of a struct of this package one
+// holds, so a changed field of what the handover nests changes it too.
+func shapeOf(typ reflect.Type) string {
 	fields := make([]string, 0, typ.NumField())
 	for index := range typ.NumField() {
 		field := typ.Field(index)
-		fields = append(fields, fmt.Sprintf("%s %s %q", field.Name, field.Type, field.Tag.Get("json")))
+		shape := fmt.Sprintf("%s %s %q", field.Name, field.Type, field.Tag.Get("json"))
+		if nested := field.Type; nested.Kind() == reflect.Pointer && nested.Elem().Kind() == reflect.Struct && nested.Elem().PkgPath() == typ.PkgPath() {
+			shape += " {" + shapeOf(nested.Elem()) + "}"
+		}
+		fields = append(fields, shape)
 	}
-	if got := strings.Join(fields, "; "); got != handedShapes[handoverVersion] {
-		t.Fatalf("handedState is\n%s\nand handover.pi %d pins\n%s\na changed handedState raises handoverVersion", got, handoverVersion, handedShapes[handoverVersion])
-	}
+	return strings.Join(fields, "; ")
 }
 
 // What the extension sends after the snapshot is not taken by the image that

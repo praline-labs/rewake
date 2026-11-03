@@ -12,7 +12,7 @@ import (
 // it raises Protocol, and a switch of the room's build refuses the new one.
 var protocolDigests = map[int]string{
 	1: "17a3817dd7671b50f647a861cfed64fa3e7bccbf348818fb8d9c6308022b6642",
-	2: "ac975e0bbd602b27960db0ab901cee36f578a7c31ee0e72d756aebb1132ed440",
+	2: "ba93552c0abd33c93d152d5d319527343e415e1da63002267e3fa13fa0d961de",
 }
 
 func TestTheModContractChangesWithItsProtocol(t *testing.T) {

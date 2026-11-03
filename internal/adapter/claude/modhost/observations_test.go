@@ -16,9 +16,10 @@ func TestTheLaunchTheSamplesAndTheStatusLineReachTheObserver(t *testing.T) {
 		t.Fatalf("before anything: %v %q", got.Effort, got.EffortSource)
 	}
 	postValue(t, socket, PathHello, HelloRequest{Protocol: Protocol, LoadID: "load", SessionID: "conversation-1", HarnessVersion: "test"})
-	sample := testState()
-	low := "low"
-	sample.Effort = &low
+	sample := withNative(testState(), map[string]any{
+		"usage": map[string]any{"context": map[string]any{"tokens": 25000, "window": 100000, "percent": 25}},
+		"step":  map[string]any{"effort": "low", "usage": nil},
+	})
 	postValue(t, socket, PathModState, sample)
 	got := server.SessionState()
 	if got.Effort == nil || *got.Effort != "low" || got.EffortSource != "" {

@@ -443,6 +443,8 @@ Tests:
 - `internal/adapter/claude/handover_test.go` `TestTheClaudeHandoverChangesWithItsShape`
 - `internal/adapter/pi/handover_test.go` `TestAnIdlePiRunHandsItsConnectionOver`
 - `internal/adapter/pi/handover_test.go` `TestThePiHandoverChangesWithItsShape`
+- `internal/adapter/pi/native_test.go` `TestThePiCacheIsHandedToTheNextImage`
+- `internal/adapter/claude/modhost/native_test.go` `TestTheCacheIsHandedToTheNextImage`
 - `internal/adapter/fixture/handover_shape_test.go` `TestTheFixtureHandoverChangesWithItsShape`
 - `internal/adapter/claude/modhost/protocol_pin_test.go` `TestTheModContractChangesWithItsProtocol`
 - `internal/cli/restart_rewake_test.go` `TestRestartRewakeRefusesAnotherContract`

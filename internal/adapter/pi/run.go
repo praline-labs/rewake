@@ -33,6 +33,8 @@ type run struct {
 	onClosing func()
 	// tools is the run as its tools' commands answer for it (tools.go).
 	tools sessiontools.Run
+	// retention is the run's PI_CACHE_RETENTION, the cache tier pi asks for.
+	retention string
 	// mirror is LaunchRequest.Mirror, the model rewake's face draws, nil for
 	// a run it does not draw.
 	mirror      *mirror.Model

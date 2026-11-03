@@ -312,11 +312,11 @@ export const register: Register = (on) => {
   on("turn.step", async function* ($, e, next) {
     if (e.agentId === undefined) load?.asks.ended();
     if (e.agentId === undefined) load?.management.waits();
-    if (e.agentId === undefined) load?.management.effortSeen(e.effort);
+    if (e.agentId === undefined) load?.management.stepStarted(e.effort);
     const step =
       e.agentId === undefined ? yield* mirror.step(e.turnId, e.index, next(e)) : yield* next(e);
     if (e.agentId === undefined) {
-      load?.management.usageSeen(step.usage);
+      load?.management.stepEnded(step.usage);
       load?.management.changed();
     }
     return step;
