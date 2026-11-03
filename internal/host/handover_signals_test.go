@@ -60,7 +60,7 @@ func parkedImage() {
 	if err != nil {
 		panic(err)
 	}
-	incoming, restore := takeSignals(h)
+	incoming, restore := takeSignals(h.Signals)
 	defer restore()
 	select {
 	case got := <-incoming:

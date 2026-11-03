@@ -65,9 +65,9 @@ func TestMainsNoticesGoOverWithItsRun(t *testing.T) {
 func TestADropTakesMainsNoticesAndAFailedExecResumesThem(t *testing.T) {
 	dir := stateDir(t)
 	main := availabilityPeer(t, dir, "main-fixture", role.Main.ID, 1, true)
-	handover := &Handover{Notices: &Notices{Known: map[string]KnownWorker{"worker-fixture@2": {Compactions: 4}}}}
+	handed := &Notices{Known: map[string]KnownWorker{"worker-fixture@2": {Compactions: 4}}}
 	ready := make(chan struct{})
-	stop, hand := startAvailability(context.Background(), dir, main, handover, ready, func() bool { return true }, nil)
+	stop, hand := startAvailability(context.Background(), dir, main, handed, ready, func() bool { return true }, nil)
 	defer stop()
 	r := &reexec{session: main, notices: hand}
 	taken, why := r.takeNotices()

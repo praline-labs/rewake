@@ -249,7 +249,7 @@ new generation.
 
 **A boundary proven after the harness starts.** A launch of a reporting role whose boundary is
 proven before the start — the fixture's — waits for it up to the readiness bound before the
-harness starts (`host/wrap.go`, `awaitBoundary`). The mod can only say hello once the harness
+harness starts (the run's serve phase, `host/wrap_serve.go`, and `awaitBoundary`). The mod can only say hello once the harness
 runs, so Claude Code's boundary carries `AfterStart`, and for it the launch does not wait before
 the start.
 

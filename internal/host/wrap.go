@@ -14,17 +14,17 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sync"
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/core/control"
+	"github.com/praline-labs/rewake/internal/core/mirror"
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/core/space"
 	"github.com/praline-labs/rewake/internal/core/work"
-	"github.com/praline-labs/rewake/internal/host/delivery"
 	"github.com/praline-labs/rewake/internal/host/launch"
 	"github.com/praline-labs/rewake/internal/host/terminal"
+	"github.com/praline-labs/rewake/internal/infra/build"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
@@ -33,146 +33,221 @@ import (
 // exit code of the harness itself: rewake is in the middle, and a caller
 // scripting around it should see what the program said.
 func Run(ctx context.Context, request Request) (int, error) {
-	// An adoption that fails before it has the harness holds it rather than
-	// return under it (unadopted.go); a launch just fails.
-	hold := &unadopted{request: request}
-	// The build lease comes first and goes last: every lock, callback,
-	// worker and cleanup of the run is inside it. A caller hands over the one it took
-	// rather than holding it shared while this asks for it exclusive.
+	r := &run{request: request, entry: entryOf(request)}
+	// Whatever a phase took is given back once Run returns, latest first; a
+	// failure is the entry's to answer before that (entry.fail).
+	defer r.undo()
+	for _, phase := range []func(context.Context) error{r.claim, r.prepare, r.serve, r.start} {
+		if err := phase(ctx); err != nil {
+			return r.entry.fail(r, err)
+		}
+	}
+	return r.deliver(ctx), nil
+}
+
+// run is one run of the wrapper as its phases build it: what each phase
+// took, which the next ones use and a failure reads.
+type run struct {
+	request Request
+	entry   entry
+
+	// From the claim: the room's base and lease, the run's lifetime, the
+	// harness's version read, the run's record, its live set and its
+	// directory.
+	base    string
+	lease   *build.Lease
+	life    *lifetime
+	version string
+	started adapter.Start
+	session registry.Session
+	epoch   string
+	live    *liveSet
+	runDir  string
+
+	// From preparing: the face's model, the plan and the close of its
+	// service, once.
+	model        *mirror.Model
+	plan         adapter.LaunchPlan
+	closeService func()
+
+	// From serving: the run's catch of signals, and the finished turns'
+	// ends the delivery server reminds by.
+	signals chan os.Signal
+	ends    chan int64
+
+	// From the start: the harness and how its stops are followed.
+	harness *os.Process
+	onStop  func(int)
+
+	undos []func()
+}
+
+// atUndo adds what Run gives back once it returns.
+func (r *run) atUndo(undo func()) { r.undos = append(r.undos, undo) }
+
+func (r *run) undo() {
+	for i := len(r.undos) - 1; i >= 0; i-- {
+		r.undos[i]()
+	}
+}
+
+// claim takes the room's lease and the run's name, its live set and its
+// directory. The build lease comes first and goes last: every lock, callback,
+// worker and cleanup of the run is inside it. A caller hands over the one it
+// took rather than holding it shared while this asks for it exclusive.
+func (r *run) claim(context.Context) error {
+	request := r.request
 	// The base the room belongs to, checked: it is what the children are
 	// told, and a directory that is no room of a base is refused rather than
 	// read two levels up.
 	base, err := state.BaseForRoom(request.Dir)
 	if err != nil {
-		return hold.fail(err)
+		return err
 	}
+	r.base = base
 	lease := request.Lease
 	if lease == nil {
-		acquired, err := leaseFor(request)(base, filepath.Base(request.Dir))
+		acquired, err := r.entry.lease(base, filepath.Base(request.Dir))
 		if err != nil {
-			return hold.fail(err)
+			return err
 		}
-		defer acquired.Release()
+		r.atUndo(acquired.Release)
 		if note := acquired.Note(); note != "" {
 			_, _ = fmt.Fprintln(os.Stderr, note)
 		}
 		lease = acquired
 	}
-	hold.leased = true
+	r.lease = lease
 	// The run's own hold outlasts the caller's: it goes once every worker
 	// the run started has stopped, whenever that is.
-	life := &lifetime{keep: lease.Keep()}
-	defer life.end()
+	r.life = &lifetime{keep: lease.Keep()}
+	r.atUndo(r.life.end)
 	self := os.Getpid()
 	selfStart, err := proc.StartTime(self)
 	if err != nil {
-		return hold.fail(fmt.Errorf("could not read the start time of this process: %w", err))
+		return fmt.Errorf("could not read the start time of this process: %w", err)
 	}
-
 	// A run is named by the boot too: after a restart of the machine the same
 	// pid and start can name another process.
 	boot, err := registry.CurrentBoot()
 	if err != nil {
-		return hold.fail(fmt.Errorf("could not read the machine's boot id, which names this run: %w", err))
+		return fmt.Errorf("could not read the machine's boot id, which names this run: %w", err)
 	}
-
 	cwd, err := os.Getwd()
 	if err != nil {
-		return hold.fail(err)
+		return err
 	}
 	// The version is read before the run is claimed, so a refusal leaves no
 	// record, no session and no socket behind.
-	version, start, err := readVersion(request, cwd)
-	if err != nil {
-		return hold.fail(err)
+	if r.version, r.started, err = r.entry.version(request, cwd); err != nil {
+		return err
 	}
 	// The name is claimed before anything is prepared. Preparing first means a
 	// launch that loses the race has already touched what belongs to the session
 	// that won — its socket file, for one.
-	session, err := claimOrAdopt(request, self, selfStart, boot, cwd)
+	session, err := r.entry.claim(request, self, selfStart, boot, cwd)
 	if err != nil {
-		return hold.fail(err)
+		return err
 	}
-	name := session.Name
-	epoch := session.Epoch()
-	hold.name, hold.epoch, hold.part = name, epoch, session.Role
-	defer func() {
+	r.session, r.epoch = session, session.Epoch()
+	r.atUndo(func() {
 		// Ownership is settled once, before anything is removed. Asking again
 		// afterwards always answered no — the record had just been deleted — so
 		// the socket of a session that ended was left behind for good.
 		// The record goes only while it is still ours. The socket is ours
 		// whatever happened to the name: its path names this run, so the next
 		// holder of the name has a socket of its own that this cannot reach.
-		_, _ = registry.RemoveOwned(request.Dir, name, epoch)
-		if session.OwnsSocket {
-			removeSocket(session.Socket)
+		_, _ = registry.RemoveOwned(request.Dir, r.session.Name, r.epoch)
+		if r.session.OwnsSocket {
+			removeSocket(r.session.Socket)
 		}
-	}()
+	})
 	// The live set is the run's from its claim: a held run withdraws it
 	// whatever failed after (unadopted.go).
-	live := newLiveSet(request.Dir, name, epoch)
-	live.workers = &life.workers
-	defer live.stop()
-	hold.live = live
+	r.live = newLiveSet(request.Dir, session.Name, r.epoch)
+	r.live.workers = &r.life.workers
+	r.atUndo(r.live.stop)
 	// The run's directory comes before anything is prepared and goes at the
 	// run's end, once every worker of the run has stopped and before its hold
 	// on the lease goes (docs/rules/launch.md), on every path out.
 	reclaimRuns(request.Dir)
-	runDir, err := makeRunDir(request.Dir, name, epoch)
+	runDir, err := makeRunDir(request.Dir, session.Name, r.epoch)
 	if err != nil {
-		return hold.fail(err)
+		return err
 	}
-	life.atEnd(func() { _ = state.RemoveAll(runDir) })
-	hold.runDir = runDir
+	r.life.atEnd(func() { _ = state.RemoveAll(runDir) })
+	r.runDir = runDir
 	if request.OnClaimed != nil {
-		if err := request.OnClaimed(session); err != nil {
-			return hold.fail(err)
-		}
+		return request.OnClaimed(session)
 	}
+	return nil
+}
 
+// prepare makes what the harness is told of, plans the run and records where
+// it is served.
+func (r *run) prepare(context.Context) error {
+	request, name := r.request, r.session.Name
 	// The control directory is the run's, like its sockets: made before the
 	// harness can be asked anything, removed with the session. Only for a
 	// harness that serves it: a directory nobody serves would answer "not
 	// answering" where "no control directory" names the real next step.
 	controlDir := ""
 	if request.Harness.Offers().Control.Any() {
-		made := registry.ControlFor(request.Dir, name, epoch)
+		made := registry.ControlFor(request.Dir, name, r.epoch)
 		if control.Prepare(made) == nil {
 			controlDir = made
-			defer func() { _ = state.RemoveAll(made) }()
+			r.atUndo(func() { _ = state.RemoveAll(made) })
 		}
 	}
-
-	model, stopMirror, err := startMirror(request, name, epoch)
+	model, stopMirror, err := startMirror(request, name, r.epoch, r.entry.model)
 	if err != nil {
-		return hold.fail(err)
+		return err
 	}
-	defer stopMirror()
+	r.model = model
+	r.atUndo(stopMirror)
+	plan, err := r.entry.plan(request, r.launchRequest(controlDir))
+	if err != nil {
+		return err
+	}
+	// The plan is the run's from here: whatever fails next, its service is
+	// closed once, before the run's directory goes.
+	r.plan = plan
+	r.closeService = closeOnce(plan.Service)
+	r.atUndo(r.closeService)
+	r.live.planned = plannedLive(request.Harness.Offers(), plan, controlDir)
+	r.entry.announce(r.session, plan)
+	r.session.Socket = plan.Socket
+	r.session.OwnsSocket = plan.OwnsSocket
+	return registry.Update(request.Dir, r.session)
+}
 
+// launchRequest is what the adapter plans the run from.
+func (r *run) launchRequest(controlDir string) adapter.LaunchRequest {
+	request, session, name, epoch := r.request, r.session, r.session.Name, r.epoch
 	launchRequest := adapter.LaunchRequest{
 		Name:       name,
-		Dir:        base,
+		Dir:        r.base,
 		RoomDir:    request.Dir,
 		Room:       session.Room,
 		RoleReason: session.RoleReason,
 		Args:       request.Args,
 		Intro:      request.Intro,
 		Command:    request.Command,
-		Executable: lease.Executable(),
+		Executable: r.lease.Executable(),
 		Socket:     registry.SocketFor(request.Dir, name, epoch),
 		Epoch:      epoch,
 		Role:       role.Of(session.Role),
 
 		ControlDir: controlDir,
-		RunDir:     runDir,
-		Version:    version,
-		Start:      start,
+		RunDir:     r.runDir,
+		Version:    r.version,
+		Start:      r.started,
 		Shell:      request.Shell,
 		Template:   request.Template,
 
 		WorktreeEntry: request.WorktreeEntry,
 		WorkType:      request.WorkType,
-		Mirror:        model,
+		Mirror:        r.model,
 		Work: func() string {
 			return work.TailOf(work.Of(launch.QuietBriefHome(request.Dir), name, epoch), session.Role == role.Main.ID)
 		},
@@ -189,147 +264,5 @@ func Run(ctx context.Context, request Request) (int, error) {
 			_ = space.BeginClosingFor(request.Dir, epoch, space.MainEnding)
 		}
 	}
-	plan, err := planRun(request, launchRequest)
-	if err != nil {
-		return hold.fail(err)
-	}
-	// The plan is the run's from here: whatever fails next, its service is
-	// closed once, before the run's directory goes.
-	closeService := closeOnce(plan.Service)
-	defer closeService()
-	hold.close = closeService
-	live.planned = plannedLive(request.Harness.Offers(), plan, controlDir)
-	if request.Handover == nil {
-		// An adopted image says nothing: its stderr is the harness's terminal,
-		// where a line drawn again lands inside the harness's own screen —
-		// pi's input box after a switch (found in review, November 2, 2026).
-		_, _ = fmt.Fprintf(os.Stderr, "rewake: room %s, role %s: %s\n", session.Room, session.Role, session.RoleReason)
-		for _, note := range plan.Notes {
-			// Said once, on stderr, before the harness takes over the screen:
-			// these are things rewake decided not to do, and silence about them
-			// would look like it had done them.
-			_, _ = fmt.Fprintln(os.Stderr, "rewake: "+note)
-		}
-	}
-
-	session.Socket = plan.Socket
-	session.OwnsSocket = plan.OwnsSocket
-	if err := registry.Update(request.Dir, session); err != nil {
-		return hold.fail(err)
-	}
-	// Signals are caught before the child exists. In the gap between starting it
-	// and installing the handlers, a SIGTERM meant for the wrapper would kill it
-	// outright: the harness would keep running with nobody serving its mailbox
-	// and its record left behind.
-	signals, restore := takeSignals(request.Handover)
-	defer restore()
-	// Taken once: a held run forwards what came meanwhile on this channel.
-	hold.signals = signals
-
-	// A service whose handlers write the room counts them among the run's
-	// workers: its close is bounded, and what outlasts it holds the lease.
-	if counter, ok := plan.Service.(adapter.WorkerCounter); ok {
-		counter.CountWorkers(runWorkers{life: life})
-	}
-	// Finished turn ends reach the delivery server, which reminds of what
-	// each turn left unread; a few are room for ends heard close together.
-	ends := make(chan int64, 8)
-	stopServing, err := startServing(ctx, request, session, name, epoch, plan, live, closeService, ends)
-	if err != nil {
-		return hold.fail(err)
-	}
-	defer stopServing()
-	if err := refuseWithheld(session, request.Harness, plan); err != nil {
-		return hold.fail(err)
-	}
-	if err := awaitBoundary(ctx, session, request.Harness, live); err != nil {
-		return hold.fail(err)
-	}
-
-	harness, onStop, err := runHarness(request, plan)
-	if err != nil {
-		return hold.fail(err)
-	}
-
-	if start, err := proc.StartTime(harness.Pid); err == nil {
-		session.HarnessPID = harness.Pid
-		session.HarnessStart = start
-		// The record as it stands: the live set may have moved since the
-		// copy here was read.
-		_ = registry.Modify(request.Dir, name, epoch, func(record *registry.Session) {
-			record.HarnessPID, record.HarnessStart = session.HarnessPID, session.HarnessStart
-		})
-		if watcher, ok := plan.Service.(adapter.HarnessWatcher); ok {
-			watcher.HarnessStarted(adapter.RunProcess{PID: session.HarnessPID, Start: session.HarnessStart})
-		}
-	}
-	harnessStart := session.HarnessStart
-	go forward(signals, harness, func() bool {
-		return proc.Alive(harness.Pid, harnessStart)
-	})
-
-	serveCtx, stopServing := context.WithCancel(ctx)
-	defer stopServing()
-	served := make(chan struct{})
-	serviceReady := make(chan struct{})
-	boundaryProven := availableAfterStart(session, request.Harness, live)
-	stopAvailability, notices := startAvailability(serveCtx, request.Dir, session, request.Handover, serviceReady, func() bool {
-		if !proc.Alive(harness.Pid, harnessStart) || !boundaryProven() {
-			return false
-		}
-		if plan.Socket != "" {
-			info, err := os.Stat(plan.Socket)
-			return err == nil && info.Mode()&os.ModeSocket != 0
-		}
-		return true
-	}, &life.workers)
-	defer stopAvailability()
-	handover := &reexec{
-		request: request, session: session, runDir: runDir, service: plan.Service, harness: harness, start: harnessStart, model: model, notices: notices,
-		handoff: make(chan chan<- delivery.Stop), resume: make(chan struct{}),
-	}
-	defer handover.watch(serveCtx)()
-	adopted(request, runDir)
-	go func() {
-		defer close(served)
-		var thread func() (string, error)
-		if plan.Thread != nil {
-			thread = plan.Thread.Thread
-		}
-		server := &delivery.Server{
-			Ready:  sync.OnceFunc(func() { close(serviceReady) }),
-			Dir:    request.Dir,
-			Thread: threadIfLive(thread, live),
-			Name:   name,
-			Epoch:  epoch,
-			// Asked before the mailbox is touched at all: a serving goroutine
-			// that starts late, after its harness is gone and the name has
-			// changed hands, has no business in there.
-			Owns: func() bool { return registry.OwnsName(request.Dir, name, epoch) },
-			// A burst of letters that ask for nothing wakes the session once.
-			Window:  delivery.Coalescing,
-			Deliver: wakeIfLive(plan.Wake, live),
-			Ends:    ends,
-			Handoff: handover.handoff,
-		}
-		if request.Handover != nil {
-			server.Remembered = request.Handover.Delivery
-		}
-		if receiver, ok := plan.Wake.(adapter.Receiver); ok {
-			server.Receipts, server.Opened = receiver.Receipts(), receiver.Opened()
-		}
-		serveHandingOver(serveCtx, server, handover.resume)
-	}()
-
-	code := waitForHarness(harness.Pid, onStop)
-	// The run begins to end with its harness: no decision is taken from here.
-	life.closeAdmission()
-
-	// Stop serving before the record goes away, and let the server refuse what
-	// is still waiting: a sender blocked on a status should be told the session
-	// ended rather than wait out its timeout.
-	stopServing()
-	<-served
-
-	return code, nil
+	return launchRequest
 }

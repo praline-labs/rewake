@@ -28,55 +28,37 @@ type Held struct{ Err error }
 func (h *Held) Error() string { return h.Err.Error() }
 func (h *Held) Unwrap() error { return h.Err }
 
-// unadopted is how Run fails before the harness is its own.
-type unadopted struct {
-	request Request
-	// Known once the run has them: what main is told, and where the
-	// sender of a re-execution looks for its outcome.
-	name, epoch, part, runDir string
-	// close closes the plan's service, once the plan exists.
-	close func()
-	// leased says the run holds the room's lease, so its record may be
-	// written; live is its live set from the claim on.
-	leased bool
-	live   *liveSet
-	// signals is the run's catch once Run took it: taken a second time, what
-	// came before would wait on a channel nobody reads.
-	signals chan os.Signal
-}
-
-// fail returns err: at once for a launch, which started nothing, and for an
-// adoption once the harness it holds has ended, with its exit code.
-func (u *unadopted) fail(err error) (int, error) {
-	h := u.request.Handover
-	if h == nil {
-		return 0, err
-	}
+// fail holds the harness until it ends and answers its exit code: before
+// the harness is the run's own, nothing of the run serves on, and what of it
+// the run has so far says so.
+func (a adopting) fail(r *run, err error) (int, error) {
+	h := a.h
 	// Nothing half-adopted serves on: the mod's or the extension's next
 	// request finds nobody, as when its run's wrapper is gone.
-	if u.close != nil {
-		u.close()
+	if r.closeService != nil {
+		r.closeService()
 	}
 	// What the record says the run serves goes: admission reads it, and a
 	// task admitted now would wait for a report no turn's end can send. Before
 	// the claim the record is the earlier image's, under the same epoch.
-	if u.live == nil && u.leased {
-		u.live = newLiveSet(u.request.Dir, h.Name, h.Epoch)
-		defer u.live.stop()
+	live := r.live
+	if live == nil && r.lease != nil {
+		live = newLiveSet(r.request.Dir, h.Name, h.Epoch)
+		defer live.stop()
 	}
-	if u.live != nil {
-		u.live.withdraw()
+	if live != nil {
+		live.withdraw()
 	}
-	if u.runDir != "" {
-		(&reexec{runDir: u.runDir}).mark("not adopted: " + err.Error())
+	if r.runDir != "" {
+		(&reexec{runDir: r.runDir}).mark("not adopted: " + err.Error())
 	}
 	why := "could not be adopted: " + err.Error()
 	_, _ = fmt.Fprintln(os.Stderr, "rewake: the run handed over "+why+"; its harness runs on unserved: no letter wakes it and none of its turns is reported. End it and start it again.")
-	if u.name != "" && role.Of(u.part).ID != role.Main.ID {
-		_ = tellMain(u.request.Dir, u.name, u.epoch, "Rewake: the run of "+u.name+" "+why+".\n"+
+	if name := r.session.Name; name != "" && role.Of(r.session.Role).ID != role.Main.ID {
+		_ = tellMain(r.request.Dir, name, r.epoch, "Rewake: the run of "+name+" "+why+".\n"+
 			"Its harness runs on, but rewake serves it no more: no letter wakes it and none of its turns is reported. Ask the person to end it in its pane, or close its space, and open it again.")
 	}
-	code, held := h.hold(u.signals)
+	code, held := h.hold(r.signals)
 	if !held {
 		return 0, err
 	}
@@ -100,13 +82,13 @@ func (h *Handover) hold(signals chan os.Signal) (int, bool) {
 	if h.model != nil {
 		_ = h.model.Close()
 	}
-	harness, onStop, err := adoptHarness(Request{Handover: h, Shell: h.Shell})
+	harness, onStop, err := h.adoptHarness()
 	if err != nil {
 		return 0, false
 	}
 	if signals == nil {
 		var restore func()
-		signals, restore = takeSignals(h)
+		signals, restore = takeSignals(h.Signals)
 		defer restore()
 	}
 	go forward(signals, harness, func() bool { return proc.Alive(h.HarnessPID, h.HarnessStart) })

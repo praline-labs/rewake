@@ -15,25 +15,16 @@ import (
 // startMirror serves the session's conversation to rewake's own face when the
 // launch asked for it (docs/face.md): the model is the wrapper's, in memory,
 // served on the run's own socket until the run ends. A harness without the
-// offer is refused, never run without what was asked. An image that adopts a
-// run serves the model the last image handed over, which a face reconnects
-// to; one it cannot read is replaced by a model that says what it lost.
-func startMirror(request Request, name, epoch string) (*mirror.Model, func(), error) {
+// offer is refused, never run without what was asked. The model is the
+// entry's (entry.model): a new one, or the one an earlier image handed over.
+func startMirror(request Request, name, epoch string, fresh func() *mirror.Model) (*mirror.Model, func(), error) {
 	if !request.Mirror {
 		return nil, func() {}, nil
 	}
 	if _, ok := request.Harness.(adapter.MirrorHarness); !ok {
 		return nil, nil, fmt.Errorf("a %s session cannot be drawn by rewake's own face", request.Harness.Title())
 	}
-	model := mirror.New()
-	if h := request.Handover; h != nil {
-		adopted, err := adoptModel(h)
-		if err != nil {
-			model.Apply(mirror.Event{Kind: mirror.EventNotice, ID: fmt.Sprintf("rewake-handover-%d", h.Count), Text: "rewake was updated while the session ran, and what came before could not be kept (" + err.Error() + "); the native face has it."})
-		} else {
-			model = adopted
-		}
-	}
+	model := fresh()
 	server, err := mirror.Serve(registry.MirrorFor(request.Dir, name, epoch), model)
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not serve the session to rewake's face: %w", err)

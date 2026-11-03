@@ -101,19 +101,17 @@ func CatchSignals() { caught.incoming, caught.restore = catchSignals() }
 // takeSignals is what CatchSignals caught, or a catch of its own, with the
 // signals an earlier image caught and carried over (Handover.Continue) in
 // front.
-func takeSignals(h *Handover) (chan os.Signal, func()) {
+func takeSignals(carried []int) (chan os.Signal, func()) {
 	incoming, restore := caught.incoming, caught.restore
 	if incoming != nil {
 		caught.incoming, caught.restore = nil, nil
 	} else {
 		incoming, restore = catchSignals()
 	}
-	if h != nil {
-		for _, carried := range h.Signals {
-			select {
-			case incoming <- syscall.Signal(carried):
-			default:
-			}
+	for _, number := range carried {
+		select {
+		case incoming <- syscall.Signal(number):
+		default:
 		}
 	}
 	return incoming, restore

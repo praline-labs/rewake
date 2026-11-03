@@ -22,8 +22,11 @@ func (b *startBoundary) ReportTurns(handler adapter.TurnHandler) { b.handler = h
 func TestABoundaryRecordsItsStart(t *testing.T) {
 	dir := stateDir(t)
 	boundary := &startBoundary{}
-	stop, err := startServing(context.Background(), Request{Dir: dir}, registry.Session{}, "api", "1.1",
-		adapter.LaunchPlan{ServicePlan: adapter.ServicePlan{TurnBoundary: boundary}}, newLiveSet(dir, "api", "1.1"), func() {}, nil)
+	r := &run{
+		request: Request{Dir: dir}, entry: launching{}, session: registry.Session{Name: "api"}, epoch: "1.1",
+		plan: adapter.LaunchPlan{ServicePlan: adapter.ServicePlan{TurnBoundary: boundary}}, live: newLiveSet(dir, "api", "1.1"), closeService: func() {},
+	}
+	stop, err := r.startServing(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}

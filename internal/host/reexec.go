@@ -3,7 +3,6 @@ package host
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -20,8 +19,6 @@ import (
 	"github.com/praline-labs/rewake/internal/core/worktype"
 	"github.com/praline-labs/rewake/internal/host/delivery"
 	"github.com/praline-labs/rewake/internal/host/switching"
-	"github.com/praline-labs/rewake/internal/infra/build"
-	"github.com/praline-labs/rewake/internal/infra/proc"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -138,72 +135,6 @@ func (h *Handover) Continue(executable string) error {
 	return syscall.Exec(executable, os.Args, append(env, HandoverEnv+"="+string(raw)))
 }
 
-// leaseFor is how a run takes the room's lease: a launch's, which may switch
-// the build, or an adoption's, which only follows it (build.Follow).
-func leaseFor(request Request) func(base, room string) (*build.Lease, error) {
-	if request.Handover != nil {
-		return build.Follow
-	}
-	return build.Launch
-}
-
-// claimOrAdopt claims the run's name, or takes the record an earlier image of
-// this process claimed: same pid, same start, same epoch.
-func claimOrAdopt(request Request, self int, selfStart uint64, boot, cwd string) (registry.Session, error) {
-	h := request.Handover
-	if h == nil {
-		return claimName(request, self, selfStart, boot, cwd)
-	}
-	session, err := registry.Load(request.Dir, h.Name)
-	if err != nil {
-		return registry.Session{}, err
-	}
-	if session.ServicePID != self || session.ServiceStart != selfStart || session.Epoch() != h.Epoch {
-		return registry.Session{}, errors.New("the record of the run handed over is not this process's any more")
-	}
-	return session, nil
-}
-
-// planRun is the launch's plan, or the service alone of a run handed over:
-// its harness runs on what its launch prepared, so nothing of a start is
-// planned again, nothing checked and nothing refused (adapter.Harness.Serve).
-func planRun(request Request, launchRequest adapter.LaunchRequest) (adapter.LaunchPlan, error) {
-	if request.Handover != nil {
-		return adapter.LaunchPlan{ServicePlan: request.Harness.Serve(launchRequest)}, nil
-	}
-	return request.Harness.Launch(launchRequest)
-}
-
-// adoptHarness takes the harness an earlier image started, which is this
-// process's child still.
-func adoptHarness(request Request) (*os.Process, func(int), error) {
-	h := request.Handover
-	if start, err := proc.StartTime(h.HarnessPID); err != nil || start != h.HarnessStart {
-		return nil, nil, errors.New("the harness handed over no longer runs")
-	}
-	process, err := os.FindProcess(h.HarnessPID)
-	if request.Shell {
-		// Its suspends are answered again: the earlier image's catch went
-		// with it (startHarness).
-		go continueSuspends(catchSuspends(), h.HarnessPID)
-		return process, continueHarness, err
-	}
-	return process, followJob, err
-}
-
-// startService starts the plan's service, or adopts what the handover holds.
-func startService(ctx context.Context, request Request, service adapter.Service, note func(string)) error {
-	h := request.Handover
-	if h == nil {
-		return service.Start(ctx, note)
-	}
-	adopter, ok := service.(adapter.Handover)
-	if !ok {
-		return errors.New("the run was handed over to an adapter that cannot adopt it")
-	}
-	return adopter.Adopt(ctx, note, adapter.HandedOver{State: h.Service, Files: h.files})
-}
-
 // reexec is what a run needs to hand itself over.
 type reexec struct {
 	request Request
@@ -216,6 +147,8 @@ type reexec struct {
 	model *mirror.Model
 	// notices hands main's notice state over (notices_handover.go).
 	notices *noticeHand
+	// count is how many execs the run has been through before this image.
+	count int
 	// handoff asks the delivery server to stop; resume serves again after
 	// an exec that failed.
 	handoff chan chan<- delivery.Stop
@@ -353,10 +286,7 @@ func (r *reexec) exec(handing adapter.Handover, park *switching.Park, memory del
 		}
 		h.Model = int(model.Fd())
 	}
-	if r.request.Handover != nil {
-		h.Count = r.request.Handover.Count
-	}
-	h.Count++
+	h.Count = r.count + 1
 	for _, file := range handed.Files {
 		if why := inherited(file); why != "" {
 			return why
@@ -381,11 +311,4 @@ func inherited(file *os.File) string {
 		return "a descriptor could not be kept across the exec: " + errno.Error()
 	}
 	return ""
-}
-
-// adopted tells the sender that the new image runs the run.
-func adopted(request Request, runDir string) {
-	if request.Handover != nil {
-		(&reexec{runDir: runDir}).mark(fmt.Sprintf("adopted %d", request.Handover.Count))
-	}
 }
