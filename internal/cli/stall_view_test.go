@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"encoding/json"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -81,13 +82,25 @@ func TestMainSeesAStalledPending(t *testing.T) {
 	if shown == nil || shown.Verdict == nil || shown.Verdict.Label != "pending, idle 12m" {
 		t.Fatalf("the worker's telemetry under --json: %+v", shown)
 	}
-	if line := stateLine(peer.Name, sessionSnapshot(dir, peer.Name, peer.Epoch()), false); !strings.HasPrefix(line, peer.Name+": pending, idle 12m | context") {
-		t.Fatalf("the state header: %s", line)
+	leave := state.EnterView()
+	line := stateLine(peer.Name, sessionSnapshot(dir, peer.Name, peer.Epoch()), false)
+	since := idleRecipients(dir)(peer.Name, peer.Epoch())
+	if err := leave(); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(line, peer.Name+": pending, idle 12m | context") || since == nil {
+		t.Fatalf("the read-only state header/awaited time: %s, %v", line, since)
 	}
 
 	code, out, errOut = run("inbox", "--awaited")
 	if code != ExitOK || !strings.Contains(out, "pending, idle 12m: the suite runs") {
 		t.Fatalf("inbox --awaited: %d %s %s", code, out, errOut)
+	}
+
+	code, out, errOut = run("inbox", "--awaited", "--json")
+	var awaited awaitedModel
+	if code != ExitOK || json.Unmarshal([]byte(out), &awaited) != nil || len(awaited.Recipients) != 1 || len(awaited.Recipients[0].Messages) != 1 || awaited.Recipients[0].Messages[0].IdleSince == nil {
+		t.Fatalf("inbox --awaited --json: %d %s %s", code, out, errOut)
 	}
 
 	// A turn running whose start no harness timed shows only in the activity.
@@ -108,5 +121,42 @@ func TestMainSeesAStalledPending(t *testing.T) {
 	}
 	if code, out, _ := run("inbox", "--awaited"); code != ExitOK || strings.Contains(out, "idle") || !strings.Contains(out, "pending: the suite runs") {
 		t.Fatalf("inbox --awaited after a turn started: %s", out)
+	}
+}
+
+// Open mail evidence cannot make stale, unknown or dialog activity idle;
+// unreadable evidence deliberately degrades to ordinary activity/plain pending.
+func TestStallViewsRetainTheirActivityAndEvidenceDegradation(t *testing.T) {
+	for _, condition := range []string{"stale", "unknown", "dialog", "unreadable mail"} {
+		t.Run(condition, func(t *testing.T) {
+			dir, _, peer := stalledWorker(t)
+			snapshot := session.Load(dir, peer.Name, peer.Epoch())
+			want := "idle"
+			switch condition {
+			case "stale":
+				snapshot.ActivityFresh = false
+				want = "idle (stale)"
+			case "unknown":
+				snapshot.Activity = nil
+				want = "unknown"
+			case "dialog":
+				snapshot.Waiting = session.WaitingPermission
+				want = session.ActivityPermission
+			case "unreadable mail":
+				path := filepath.Join(state.InboxPath(dir, peer.Name), "pending", "interim.json")
+				if err := state.WriteAtomic(path, []byte("{")); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if err := session.Save(dir, peer.Name, peer.Epoch(), snapshot); err != nil {
+				t.Fatal(err)
+			}
+			if got := sessionSnapshot(dir, peer.Name, peer.Epoch()).Verdict.Label; got != want {
+				t.Fatalf("header/list verdict %q, want %q", got, want)
+			}
+			if code, out, errOut := run("inbox", "--awaited"); code != ExitOK || strings.Contains(out, "idle") || !strings.Contains(out, "pending: the suite runs") {
+				t.Fatalf("awaited: %d %s %s", code, out, errOut)
+			}
+		})
 	}
 }

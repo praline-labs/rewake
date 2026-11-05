@@ -28,15 +28,15 @@ func sessionSnapshot(dir, name, epoch string) *session.Snapshot {
 	// A boot clock reading means nothing outside this machine's processes.
 	value.CompactionEvents, value.CompactionOutcomes, value.PublishedBoot = nil, nil, 0
 	current, err := registry.LookupReadOnly(dir, name)
-	var idleSince *time.Time
+	verdict := value.Judge()
 	if err != nil || current.Epoch() != epoch {
 		value.Stale()
-	} else if stall, ok, err := mail.Open(dir, name, epoch).Stalled(); err == nil && ok {
-		// A stall that cannot be read shows the activity alone, as before.
-		since := stall.IdleSince(time.Now())
-		idleSince = &since
+		verdict = value.Judge()
+	} else {
+		// An unreadable stall retains the ordinary activity verdict.
+		judgment, _ := mail.Open(dir, name, epoch).JudgeStall(value, time.Now())
+		verdict = judgment.Verdict
 	}
-	verdict := value.JudgePending(idleSince)
 	value.Verdict = &verdict
 	return &value
 }

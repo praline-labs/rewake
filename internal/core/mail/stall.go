@@ -19,9 +19,9 @@ import (
 // after it (November 3, 2026; docs/turn-outcomes.md#a-stalled-pending). So a
 // run whose last word is an interim end, with no turn since and a sender
 // still waiting, is a stall: main is shown it, and after a while the run's own
-// wrapper wakes it once with a letter (host/delivery/stall.go). Everything it
-// is judged by is on disk — the interim record, the run's ends and timed
-// starts, its waits — so a wrapper of another build judges it the same.
+// wrapper wakes it once with a letter (host/delivery/stall.go). Its mail
+// evidence is on disk — the interim record, the run's ends and timed starts,
+// its waits — so another image finds it too; current activity is sampled anew.
 
 // Stall is a run idle under a pending mark.
 type Stall struct {
@@ -77,6 +77,54 @@ func (b Box) Stalled() (Stall, bool, error) {
 	return stall, true, nil
 }
 
+// StallJudgment combines the mail evidence with current session activity.
+// A non-idle or stale verdict carries no stall or idle time.
+type StallJudgment struct {
+	Verdict   session.Verdict
+	Stall     *Stall
+	IdleSince *time.Time
+}
+
+// JudgeStall only reads. On an evidence error it retains the ordinary activity
+// verdict, so an informing view can degrade without treating an error as absence
+// when deciding a write. The caller loads and validates the snapshot's epoch.
+func (b Box) JudgeStall(snapshot session.Snapshot, now time.Time) (StallJudgment, error) {
+	judgment := StallJudgment{Verdict: snapshot.Judge()}
+	if judgment.Verdict.Activity != session.ActivityIdle || judgment.Verdict.Stale {
+		return judgment, nil
+	}
+	stall, ok, err := b.Stalled()
+	if err != nil || !ok {
+		return judgment, err
+	}
+	since := stall.IdleSince(now)
+	judgment.Stall, judgment.IdleSince = &stall, &since
+	judgment.Verdict = snapshot.JudgePending(&since)
+	return judgment, nil
+}
+
+// RemindStallIfDue samples live activity and rejudges the current interim under
+// the mailbox lock before publishing. No earlier stall can decide the letter.
+// The returned op was published (or already sent); empty means none was due.
+// Activity may still change after the live sample: the lock orders mail only.
+func (l Locked) RemindStallIfDue(bound time.Duration, liveSnapshot func() session.Snapshot, now time.Time) (string, error) {
+	if bound <= 0 || liveSnapshot == nil {
+		return "", nil
+	}
+	judgment, err := l.box.JudgeStall(liveSnapshot(), now)
+	if err != nil || judgment.Stall == nil {
+		return "", err
+	}
+	stall := *judgment.Stall
+	if time.Duration(boottime.Now()-stall.Ended) < bound {
+		return "", nil
+	}
+	if err := l.box.remindStall(stall, now); err != nil {
+		return "", err
+	}
+	return stall.Op, nil
+}
+
 // stallRecord is the reminder of one stall, beside the interim record: the
 // letter's id is drawn before it is written, so a retry or a wrapper of the
 // next image writes the same letter, and Sent once it is in the mailbox.
@@ -89,12 +137,12 @@ type stallRecord struct {
 
 func stallPath(dir, name string) string { return filepath.Join(pendingDir(dir, name), "stalled.json") }
 
-// RemindStall puts the letter reminding the run of its stall into its own
+// remindStall puts the letter reminding the run of its stall into its own
 // mailbox, once for each interim end: a stall reminded of already writes
 // nothing. The letter is a notify from the run to itself, so it owes nothing
 // and settles nothing; the wrapper announces it as any other. The caller holds
 // the mailbox lock.
-func (b Box) RemindStall(stall Stall, now time.Time) error {
+func (b Box) remindStall(stall Stall, now time.Time) error {
 	path := stallPath(b.dir, b.name)
 	var record stallRecord
 	raw, err := readRecord(path)

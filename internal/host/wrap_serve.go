@@ -8,7 +8,6 @@ import (
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/core/role"
-	"github.com/praline-labs/rewake/internal/core/session"
 	"github.com/praline-labs/rewake/internal/host/delivery"
 	"github.com/praline-labs/rewake/internal/infra/proc"
 )
@@ -157,10 +156,7 @@ func (r *run) deliveryServer(ready chan struct{}, handoff chan chan<- delivery.S
 		// neither real harness times the start of the turn that ends a stall.
 		telemetry := r.plan.Telemetry
 		server.Stall = delivery.StallBound
-		server.Idle = func() bool {
-			verdict := telemetry.SessionState().Judge()
-			return verdict.Activity == session.ActivityIdle && !verdict.Stale
-		}
+		server.StallSnapshot = telemetry.SessionState
 	}
 	return server
 }

@@ -1,11 +1,13 @@
 package mail
 
 import (
+	"context"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/praline-labs/rewake/internal/core/registry"
+	"github.com/praline-labs/rewake/internal/core/session"
 	"github.com/praline-labs/rewake/internal/infra/boottime"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
@@ -41,6 +43,23 @@ func newStallLab(t *testing.T) stallLab {
 }
 
 func (lab stallLab) box() Box { return Open(lab.dir, "api", lab.self.Epoch()) }
+
+func (lab stallLab) remind(t *testing.T) string {
+	t.Helper()
+	var op string
+	err := lab.box().WithLock(context.Background(), func(locked Locked) error {
+		var err error
+		op, err = locked.RemindStallIfDue(time.Nanosecond, func() session.Snapshot {
+			idle := session.ActivityIdle
+			return session.Snapshot{Activity: &idle, ActivityFresh: true, Fresh: true}
+		}, time.Now())
+		return err
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return op
+}
 
 func (lab stallLab) stalled(t *testing.T) (Stall, bool) {
 	t.Helper()
@@ -119,8 +138,8 @@ func TestAStallIsRemindedOncePerInterimEnd(t *testing.T) {
 	stall, _ := lab.stalled(t)
 	remind := func() {
 		t.Helper()
-		if err := withLock(lab.dir, "api", func() error { return lab.box().RemindStall(stall, time.Now()) }); err != nil {
-			t.Fatal(err)
+		if op := lab.remind(t); op == "" {
+			t.Fatal("the due stall was not reminded")
 		}
 	}
 	remind()
@@ -158,7 +177,6 @@ func TestAStallIsRemindedOncePerInterimEnd(t *testing.T) {
 	if !ok || next.Op == stall.Op || next.Text != "the second half runs" {
 		t.Fatalf("the next interim end: %+v %v", next, ok)
 	}
-	stall = next
 	remind()
 	if letters := must(List(lab.dir, "api")); len(letters) != 1 || !strings.Contains(letters[0].Text, `"the second half runs"`) {
 		t.Fatalf("the next interim end's reminder: %+v", letters)
@@ -175,8 +193,8 @@ func TestAReminderDrawnBeforeAStopIsWrittenOnce(t *testing.T) {
 	if err := lab.box().writeStallRecord(drawn); err != nil {
 		t.Fatal(err)
 	}
-	if err := withLock(lab.dir, "api", func() error { return lab.box().RemindStall(stall, time.Now()) }); err != nil {
-		t.Fatal(err)
+	if op := lab.remind(t); op != stall.Op {
+		t.Fatalf("reminded %s, want %s", op, stall.Op)
 	}
 	if letters := must(List(lab.dir, "api")); len(letters) != 1 || letters[0].ID != drawn.ID {
 		t.Fatalf("letters %+v, want the one drawn, %s", letters, drawn.ID)

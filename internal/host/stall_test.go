@@ -38,7 +38,7 @@ func stallServer(t *testing.T, dir, roleID string, telemetry adapter.Telemetry) 
 func TestOnlyAReportingRunWithTelemetryIsWokenWhenItStalls(t *testing.T) {
 	dir := stateDir(t)
 	none := ""
-	if s := stallServer(t, dir, role.Main.ID, reportedTelemetry{&none}); s.Stall != 0 || s.Idle != nil {
+	if s := stallServer(t, dir, role.Main.ID, reportedTelemetry{&none}); s.Stall != 0 || s.StallSnapshot != nil {
 		t.Errorf("main's server wakes it after %s", s.Stall)
 	}
 	if s := stallServer(t, dir, role.General.ID, nil); s.Stall != 0 {
@@ -46,15 +46,15 @@ func TestOnlyAReportingRunWithTelemetryIsWokenWhenItStalls(t *testing.T) {
 	}
 	activity := ""
 	s := stallServer(t, dir, role.General.ID, reportedTelemetry{&activity})
-	if s.Stall != delivery.StallBound || s.Idle == nil {
-		t.Fatalf("a worker's server: bound %s, idle %v", s.Stall, s.Idle != nil)
+	if s.Stall != delivery.StallBound || s.StallSnapshot == nil {
+		t.Fatalf("a worker's server: bound %s, idle %v", s.Stall, s.StallSnapshot != nil)
 	}
-	if s.Idle() {
+	if s.StallSnapshot().Judge().Activity == session.ActivityIdle {
 		t.Error("a run that reported nothing is taken for idle")
 	}
 	for state, want := range map[string]bool{session.ActivityIdle: true, session.ActivityWorking: false} {
 		activity = state
-		if got := s.Idle(); got != want {
+		if got := s.StallSnapshot().Judge().Activity == session.ActivityIdle; got != want {
 			t.Errorf("a run %s is idle: %v", state, got)
 		}
 	}
@@ -70,7 +70,13 @@ func TestAStallIsJudgedByTheAdaptersStateNotTheLastPublication(t *testing.T) {
 		t.Fatal(err)
 	}
 	working := session.ActivityWorking
-	if s := stallServer(t, dir, role.General.ID, reportedTelemetry{&working}); s.Idle() {
+	if s := stallServer(t, dir, role.General.ID, reportedTelemetry{&working}); s.StallSnapshot().Judge().Activity == session.ActivityIdle {
 		t.Fatal("a run its adapter reports working is woken by the idle its last publication said")
+	}
+	if err := session.Save(dir, "api", "1.1", session.Snapshot{Activity: &working, ActivityAt: &now, ActivityFresh: true, Fresh: true, PublishedAt: &now}); err != nil {
+		t.Fatal(err)
+	}
+	if s := stallServer(t, dir, role.General.ID, reportedTelemetry{&idle}); s.StallSnapshot().Judge().Activity != session.ActivityIdle {
+		t.Fatal("a live idle sample was replaced by the working last publication")
 	}
 }

@@ -31,7 +31,8 @@ func (b Box) Name() string { return b.name }
 func (b Box) Epoch() string { return b.epoch }
 
 // Locked is the mailbox while its lock is held by WithLock. What retires or
-// moves a letter runs under that lock and takes none of its own, since the
+// moves a letter, or rejudges and publishes a stalled reminder, runs under that
+// lock and takes none of its own, since the
 // lock is not reentrant: these are methods of Locked, so a caller outside a
 // locked section has no way to call them, which a test over callers used to
 // hold.

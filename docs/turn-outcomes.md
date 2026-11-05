@@ -121,7 +121,7 @@ open for ever when forgotten.
 A worker that ends a turn pending and has nothing of its own left to wake it — the background
 run it named is another session's, or it forgot to start one — stays idle with the task open
 until somebody asks after it; on November 3, 2026 one did, until the owner asked. Since then a
-run is **stalled** (`mail.Box.Stalled`) when all of these hold:
+run is **stalled** (`mail.Box.JudgeStall`) when all of these hold:
 
 - its last word is an interim end of this run (`pending/interim.json`, not settled, its end
   time known);
@@ -147,17 +147,29 @@ The turn it starts ends as any other: unmarked, it is the report. Main, whose tu
 reported to nobody, a run whose adapter publishes no state, a worker with no open wait, and a
 failed or stopped end — which write no interim record — are never reminded.
 
-- **Judged at the write.** The pass looks without the lock, and judges the stall again under
-  the mailbox lock before it writes: a report that settles the task, or a turn's end or timed
-  start, landing in between leaves no letter. Idle is the adapter's state as it stands, not the
-  last publication on disk, which lags it by up to a quarter second. A turn the harness starts
-  after that judgement, before its adapter hears of it, still gets the letter as mail.
+- **One judgment for the views.** `mail.Box.JudgeStall` reads the mail evidence
+  (`Box.Stalled`) and combines it with the supplied snapshot's activity verdict, exposing a
+  stall and idle time only for fresh idle activity. List/header and awaited load persisted
+  snapshots themselves; an unreadable mail record leaves ordinary activity in list/header
+  and plain pending in awaited. These views take no lock and write nothing.
+- **Judged at the write.** The pass looks without the lock, then
+  `mail.Locked.RemindStallIfDue` samples live telemetry again, rereads the current mail
+  evidence and checks its bound before publishing, all under the mailbox lock. A report
+  that settles the task, a turn's end or timed start, or live working activity landing in
+  between leaves no letter; a changed interim is judged on its own time, text and operation.
+  Idle is the adapter's state as it stands, not the last publication on disk, which lags it
+  by up to a quarter second. The lock orders mail, not telemetry: activity can change
+  immediately after the sample, or before its adapter hears of a start, and that turn still
+  gets the letter as mail.
+- **Only with the lock.** A lock that cannot be taken, including an unusable lock file,
+  leaves this optional reminder and its locked rejudgment unrun on that pass. Other delivery
+  status/link operations retain their lockless fallback ([delivery.md](delivery.md#one-lock-per-mailbox)).
 - **Once per mark.** The reminder is keyed by the interim end's operation in
   `pending/stalled.json` (`{epoch, op, id, sent}`): the letter's id is drawn and written
   before the letter, so a wrapper stopped between the two writes the same letter next time,
   which `PutOnce` makes a no-op; `sent` ends it. A later interim end has another operation
   and arms another reminder.
-- **Across a restart.** Everything the check reads is on disk, readable by an image of
+- **Across a restart.** All mail evidence the check reads is on disk, readable by an image of
   another build: the interim record (its operation, its end on the boot clock, the text), the
   marks, the end journals, the turn-start readings, the waits and `stalled.json`. An image
   re-executed by `rewake restart` builds its delivery server the same way and goes on from

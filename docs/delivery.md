@@ -155,8 +155,9 @@ the readers, who say why, and not the server's statuses: it writes them without 
 along with the links that make letters readable. That an open fails does not prove nobody
 holds the lock, since a descriptor opened before the file's mode changed keeps it, so nothing
 that moves or removes a letter runs without it: settling waits for a pass that holds the lock.
-What a settling still owes is read from the mailbox, not remembered: a status that records an
-outcome beside a copy its outcome takes away. A waiting copy is found by every pass, one for
+The optional stalled-pending reminder also requires the lock: its final rejudgment and
+publication do not run when the lock is unusable. What a settling still owes is read from the
+mailbox, not remembered: a status that records an outcome beside a copy its outcome takes away. A waiting copy is found by every pass, one for
 an earlier session included; a late refusal whose readable copy is the only one left is found
 by its failed status beside a letter in `unread/` with no waiting copy, at a run's start and
 on every pass. Such a letter is settled once the lock can be taken or its archive can be

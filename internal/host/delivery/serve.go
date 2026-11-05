@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/core/mail"
+	"github.com/praline-labs/rewake/internal/core/session"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -83,9 +84,9 @@ type Server struct {
 	// before it is woken once (stall.go); zero never wakes it, as for a run
 	// whose turns are reported to nobody.
 	Stall time.Duration
-	// Idle says the session's telemetry calls it idle right now; nil never
-	// does, and nothing is woken.
-	Idle func() bool
+	// StallSnapshot samples live telemetry, not its last publication on disk.
+	// Nil never wakes the session. Mail calls it again under the lock.
+	StallSnapshot func() session.Snapshot
 
 	// attempts remembers when each pending message was last tried.
 	attempts map[string]time.Time

@@ -71,8 +71,8 @@ and JSON carries it as the telemetry's `verdict` — `activity`, `label`, `block
 A waiting activity wins over the others, and `blocked` names what it waits on (`permission`,
 `question`, `dialog`; empty otherwise). The label is the activity — `pending, idle <N>m` in
 place of `idle` for a worker idle under a pending mark with a task still open and no turn
-since, which the CLI finds on disk and judges with the snapshot (`Snapshot.JudgePending`), the
-snapshot's shape staying as a switch of builds hands it over
+since, which mail judges from disk evidence and the CLI's supplied snapshot
+(`mail.Box.JudgeStall`, applying `Snapshot.JudgePending`), the snapshot's shape staying as a switch of builds hands it over
 ([turn-outcomes.md](turn-outcomes.md#a-stalled-pending)) —, with `; interruptions
 unheard` when the snapshot says its interrupted turns go unheard (no adapter of this build sets
 it) and ` (stale)` when the verdict is stale. The mark is the shell's button edge: `blink` for a

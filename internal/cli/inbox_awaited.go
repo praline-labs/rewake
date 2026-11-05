@@ -86,14 +86,9 @@ func idleRecipients(dir string) func(name, epoch string) *time.Time {
 			return since
 		}
 		var since *time.Time
-		verdict := session.Load(dir, name, epoch).Judge()
-		if verdict.Activity != session.ActivityIdle || verdict.Stale {
-			seen[key] = nil
-			return nil
-		}
-		if stall, ok, err := mail.Open(dir, name, epoch).Stalled(); err == nil && ok {
-			at := stall.IdleSince(time.Now())
-			since = &at
+		judgment, err := mail.Open(dir, name, epoch).JudgeStall(session.Load(dir, name, epoch), time.Now())
+		if err == nil {
+			since = judgment.IdleSince
 		}
 		seen[key] = since
 		return since

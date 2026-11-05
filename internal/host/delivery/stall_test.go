@@ -2,13 +2,17 @@ package delivery
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/registry"
+	"github.com/praline-labs/rewake/internal/core/session"
 	"github.com/praline-labs/rewake/internal/infra/boottime"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // stalledServer is api's server after its turn ended pending two seconds ago
@@ -67,7 +71,13 @@ func TestAStalledWorkerIsWokenOnce(t *testing.T) {
 	s := stalledServer(t, &notices)
 	ctx := context.Background()
 	idle := false
-	s.Idle = func() bool { return idle }
+	s.StallSnapshot = func() session.Snapshot {
+		activity := session.ActivityWorking
+		if idle {
+			activity = session.ActivityIdle
+		}
+		return freshStallSnapshot(activity)
+	}
 
 	s.remindStalled(ctx)
 	if got := stallLetters(t, s); len(got) != 0 {
@@ -98,10 +108,40 @@ func TestAStalledWorkerIsWokenOnce(t *testing.T) {
 
 	s.remindStalled(ctx)
 	next := batchServer(s.Dir)
-	next.Epoch, next.Stall, next.Idle = s.Epoch, time.Second, s.Idle
+	next.Epoch, next.Stall, next.StallSnapshot = s.Epoch, time.Second, s.StallSnapshot
 	next.remindStalled(ctx)
 	if got := stallLetters(t, s); len(got) != 1 {
 		t.Fatalf("%d reminders after a second look and a new image's, want one", len(got))
+	}
+}
+
+// An unusable lock is not contention: publication and its second live sample
+// must not run lockless even when the reminder records remain writable.
+func TestAStallWithoutAUsableLockPublishesNothing(t *testing.T) {
+	var notices []mail.Message
+	s := stalledServer(t, &notices)
+	looks := 0
+	s.StallSnapshot = func() session.Snapshot {
+		looks++
+		return freshStallSnapshot(session.ActivityIdle)
+	}
+	lock := filepath.Join(state.InboxPath(s.Dir, s.Name), ".lock")
+	if err := os.Remove(lock); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(lock, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	s.remindStalled(context.Background())
+	if looks != 1 || len(stallLetters(t, s)) != 0 || s.reminded != "" {
+		t.Fatalf("lockless rejudgment/publication: samples %d, letters %+v, remembered %q", looks, stallLetters(t, s), s.reminded)
+	}
+	if err := os.Remove(lock); err != nil {
+		t.Fatal(err)
+	}
+	s.remindStalled(context.Background())
+	if len(stallLetters(t, s)) != 1 || s.reminded == "" {
+		t.Fatal("a usable lock did not permit the reminder")
 	}
 }
 
@@ -125,17 +165,10 @@ func TestAStallIsJudgedAgainUnderTheLock(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			var notices []mail.Message
 			s := stalledServer(t, &notices)
-			looks := 0
-			// The first look is the one without the lock.
-			s.Idle = func() bool {
-				if looks++; looks == 1 {
-					between(t, s)
-				}
-				return true
-			}
-			s.remindStalled(context.Background())
-			if looks == 0 {
-				t.Fatal("the pass never asked whether the session is idle")
+			s.StallSnapshot = func() session.Snapshot { return freshStallSnapshot(session.ActivityIdle) }
+			beforeStallLock(t, s, func() { between(t, s) })
+			if s.reminded != "" {
+				t.Fatalf("remembered an unpublished reminder: %s", s.reminded)
 			}
 			if got := stallLetters(t, s); len(got) != 0 {
 				t.Fatalf("reminded after %s: %+v", name, got)

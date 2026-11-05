@@ -29,10 +29,10 @@ var builtStall string
 // starts or ends, a report that settles the task, can land before the lock
 // is taken, so the stall is judged again under it, and the letter quotes that
 // judgement. Once a stall is reminded of, this server looks no further at it;
-// the record the letter leaves (mail.Box.RemindStall) keeps another image
+// the record the letter leaves (mail.Locked.RemindStallIfDue) keeps another image
 // from writing a second.
 func (s *Server) remindStalled(ctx context.Context) {
-	if s.Stall <= 0 || s.Idle == nil || ctx.Err() != nil || !s.owned() {
+	if s.Stall <= 0 || s.StallSnapshot == nil || ctx.Err() != nil || !s.owned() {
 		return
 	}
 	box := mail.Open(s.Dir, s.Name, s.Epoch)
@@ -40,16 +40,10 @@ func (s *Server) remindStalled(ctx context.Context) {
 		return
 	}
 	var reminded string
-	err := s.lockOrAlone(s.lockCtx(), func() error {
-		stall, ok := s.stalled(box)
-		if !ok {
-			return nil
-		}
-		if err := box.RemindStall(stall, time.Now()); err != nil {
-			return err
-		}
-		reminded = stall.Op
-		return nil
+	err := s.locked(func(locked mail.Locked) error {
+		var err error
+		reminded, err = locked.RemindStallIfDue(s.Stall, s.StallSnapshot, time.Now())
+		return err
 	})
 	if err == nil && reminded != "" {
 		s.reminded = reminded
@@ -59,9 +53,9 @@ func (s *Server) remindStalled(ctx context.Context) {
 // stalled answers the session's stall when it is due: a stall on disk, idle
 // past the bound, and the session idle by its telemetry now.
 func (s *Server) stalled(box mail.Box) (mail.Stall, bool) {
-	stall, ok, err := box.Stalled()
-	if err != nil || !ok || time.Duration(boottime.Now()-stall.Ended) < s.Stall || !s.Idle() {
+	judgment, err := box.JudgeStall(s.StallSnapshot(), time.Now())
+	if err != nil || judgment.Stall == nil || time.Duration(boottime.Now()-judgment.Stall.Ended) < s.Stall {
 		return mail.Stall{}, false
 	}
-	return stall, true
+	return *judgment.Stall, true
 }
