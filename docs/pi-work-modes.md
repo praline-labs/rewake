@@ -74,7 +74,10 @@ Turn admission starts closed until initial instructions and native selections co
 mode or thinking application closes it before its first native mutation, through commit or
 restoration. Native input and run preparation await it; face prompts wait without being
 submitted early. Wakes receive the existing pending receipt for the host to retry, not a
-premature acknowledgment or an unbounded wait. A compaction cannot start in that gap either.
+premature acknowledgment or an unbounded wait. Native compaction's admission hook waits there
+too; remote compact/interrupt requests refuse with `busy` while a selection is changing. Native
+compaction preparation still precedes that hook. Thinking cycling need not wait for an idle
+turn, but refuses while selection or compaction is in progress.
 
 Native pi uses a documented `CustomEditor` subclass: only focused editor Shift+Tab/Alt+T are
 intercepted, with all other editing, paste and rendering delegated to native pi. Dialogs keep
@@ -85,8 +88,15 @@ parallel editor. Source evidence is dated in [research-pi.md](research-pi.md#wor
 
 Go owns parsing, precedence, instructions, mode destinations, refusal/status text and state
 projection. TypeScript resolves/calls native model/thinking APIs, injects the supplied section,
-publishes observed values and renders Go's status. A successful native application publishes
-`workMode`; planning a switch does not change observed state.
+publishes observed values and renders Go's status. Its `Modes` module owns initialization,
+selection/restoration and admission privately: callers use initialization, cycle/thinking,
+face prompt, wake and selection-side control operations, plus the observed mode name. Prompt
+submission stays inside admission's continuation; the wire dispatcher supplies a fresh
+link/conversation/face lookup at execution and maps stale-target refusals or stopped-session
+closure to the socket. Wake never waits or saves a notice; control delegates its other checks
+and lifecycle to management. Socket ownership and compaction lifecycle stay outside Modes.
+A successful native application publishes `workMode`; planning a switch does not change
+observed state.
 
 Native status uses `ctx.ui.setStatus`. The face's input rule shows mode at its left; model and
 thinking remain on the strip. Its explicit `workmode` input is separate from permission mode,
@@ -94,7 +104,8 @@ and keys never reach the pty. Ctrl+T hides/shows the face's thinking rows withou
 thinking effort. Only verified main readers see telemetry: `rewake list` has a separate Mode
 cell and optional JSON `mode`, leaving Role and Type unchanged; snapshots and room-view rows
 carry the same observed value. Wrapper handover preserves the live current mode, not merely
-the configured start value; reconnecting the extension restores that mode's instructions.
+the configured start value. A reconnect keeps an already-applied stance; a new extension
+instance receives the observed mode's instructions in its hello.
 
 ## Compatibility
 
@@ -104,7 +115,9 @@ the configured start value; reconnecting the extension restores that mode's inst
 - Face/shell messages: **6**; room-view: **2**, advertised by the executable and required by
   the loaded shell.
 
-Existing build-switch preflight compares the loaded extension/handover contracts. An old
-loaded extension is not adopted into this incompatible build: the room needs a restart,
-rather than breaking a running old extension. A face of a different contract is refused by
-the existing hot-reload handshake, keeping the running face. No stored role/type format changes.
+Existing build-switch preflight compares the loaded extension/handover contracts; an
+incompatible loaded extension requires a room restart. The admission deepening keeps both pi
+contracts at 4, so same-contract wrapper handover can retain the earlier loaded extension;
+its new native organization takes effect only at a fresh extension load, not a Go restart.
+A face of a different contract is refused by the existing hot-reload handshake, keeping the
+running face. No stored role/type format changes.

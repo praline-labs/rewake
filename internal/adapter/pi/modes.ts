@@ -3,8 +3,14 @@ import type {
   ExtensionContext,
   ThinkingLevel,
 } from "@earendil-works/pi-coding-agent";
-import { faceThinking } from "./faced.ts";
-import type { Frame } from "./protocol.ts";
+import { facePrompt, faceThinking } from "./faced.ts";
+import type { Frame, Link } from "./protocol.ts";
+
+type PromptTarget = () => { context: ExtensionContext; drawn: boolean } | undefined;
+type PromptResult =
+  | { kind: "reply"; reply: Partial<Frame> }
+  | { kind: "conversation" }
+  | { kind: "closed" };
 
 // Every word and destination comes from Go. This bridge only calls native
 // model/thinking APIs and holds the policy that was successfully applied.
@@ -20,8 +26,8 @@ export type ModePlan = {
 };
 
 export class Modes {
-  current: ModePlan | undefined;
-  changing = false;
+  private current: ModePlan | undefined;
+  private changing = false;
   private stopped = false;
   private waiting: (() => void)[] = [];
 
@@ -33,6 +39,7 @@ export class Modes {
     private state: () => NonNullable<Frame["state"]>,
     private changed: () => void,
     private warn: (text: string) => void,
+    private command: (link: Link, request: Frame) => Promise<Partial<Frame>>,
   ) {
     // Input precedes native preflight; custom-message wakes bypass input.
     // The run hook covers both, including an input already in preflight
@@ -54,14 +61,65 @@ export class Modes {
     });
   }
 
-  get blocked(): boolean {
+  get name(): string | undefined {
+    return this.current?.name;
+  }
+
+  async initialize(plan?: ModePlan): Promise<void> {
+    if (!plan || this.current) return;
+    const result = await this.apply(plan, true);
+    if (result.error) this.warn(result.error);
+  }
+
+  async prompt(text: unknown, target: PromptTarget): Promise<PromptResult> {
+    let result: PromptResult = { kind: "closed" };
+    await this.admit(() => {
+      const addressed = target();
+      result = addressed
+        ? {
+            kind: "reply",
+            reply: facePrompt(
+              this.pi,
+              addressed.drawn,
+              addressed.context.isIdle(),
+              this.busy(),
+              text,
+            ),
+          }
+        : { kind: "conversation" };
+    });
+    return result;
+  }
+
+  wake(notice: unknown): Partial<Frame> {
+    if (typeof notice !== "string" || !notice) return { error: "a wake needs a notice" };
+    if (this.blocked) return { pending: true };
+    if (this.busy()) return { pending: true, error: "compaction in progress" };
+    const steered = !this.context()?.isIdle();
+    try {
+      this.pi.sendMessage(
+        { customType: "rewake_notice", content: notice, display: true },
+        { triggerTurn: true, deliverAs: "steer" },
+      );
+      return { ok: true, steered };
+    } catch {
+      return { error: "the harness did not accept the notice" };
+    }
+  }
+
+  control(link: Link, request: Frame): Promise<Partial<Frame>> {
+    if (this.changing) return Promise.resolve({ outcome: "refused", code: "busy" });
+    return this.command(link, request);
+  }
+
+  private get blocked(): boolean {
     return this.stopped || !this.current || this.changing;
   }
 
   // Start closed, and close synchronously before the first native mutation.
   // Execute the caller in the admission check's continuation, not after an
   // extra await that could allow another switch to overtake it.
-  async admit(run: () => void): Promise<boolean> {
+  private async admit(run: () => void): Promise<boolean> {
     while (!this.stopped && this.blocked) {
       await new Promise<void>((resolve) => this.waiting.push(resolve));
     }
@@ -81,7 +139,7 @@ export class Modes {
     ctx?.shutdown();
   }
 
-  async apply(plan: ModePlan, initial = false): Promise<Partial<Frame>> {
+  private async apply(plan: ModePlan, initial = false): Promise<Partial<Frame>> {
     const ctx = this.context();
     if (!ctx || this.stopped || this.changing || !ctx.isIdle() || this.busy()) {
       if (initial) this.stop(ctx);

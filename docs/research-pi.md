@@ -245,7 +245,7 @@ harness pid and rechecks its process start time before accepting the first frame
 | Host to extension | `prompt` | `thread`, `text`: a prompt typed in rewake's face; answer `ok` and whether it was `steered`, or `error` while compacting, for an empty text or a run not drawn (October 31, 2026) |
 | Host to extension | `interrupt` | `thread`: the person's Esc in rewake's face; the extension calls `ctx.abort()` and answers `ok`, or `error` while pi is idle or compacting or for a run not drawn; an older extension answers `unknown host operation` (October 31, 2026) |
 | Extension to host | `closing` | `thread`; sent at `session_shutdown` whose `reason` is `"quit"`, before the link closes, waited for at most one second; a main's run in rewake's shell calls `LaunchRequest.Closing` (October 24, 2026) |
-| Host to extension | `wake` | `thread`, `notice`; answer says `ok` and whether it was `steered`, or `pending` while compacting |
+| Host to extension | `wake` | `thread`, `notice`; answer says `ok` and whether it was `steered`, or immediate `pending` while native admission is closed; compaction separately returns `pending` with its existing detail |
 | Extension to host | `turn-start` | `thread`, `turn`; acknowledgment precedes model work |
 | Extension to host | `turn-end` | `thread`, `turn`, `outcome`, `text` (the final text, or pi's error message when a failed turn has none); acknowledgment follows publication |
 | Either | `state` | host asks with `thread`; extension answers or pushes `state` with `sequence`, `idle`, `compacting` and `native`, what the session read unconverted (extension 3, November 3, 2026): `contextUsage` (`ctx.getContextUsage()`), `model` (`ctx.model` less `headers` and `baseUrl`, which may carry credentials), `thinkingLevel`, runtime `workMode` (extension 4), and `lastAssistant`, the last assistant message's `usage`, `provider`, `model` and `timestamp`, sampled at each of its `message_end`s, `null` before the first; the wrapper projects it (`native.go`) |
@@ -867,6 +867,42 @@ against the same old commit they still reproduced both defects, and with the fix
 exactly one correctly instructed request. No paid provider, credentials or transcripts were used.
 Local evidence: `.scratch/review63-{startup,switch}-{red,green}.json`, copied probe scripts,
 and `.scratch/review63-unit-{red,green}.log`. This RPC check is not a terminal validation.
+
+### Admission ownership (November 5, 2026, 1.4.0)
+
+Rechecked the installed pinned package's extension/RPC documentation and native selection/run
+paths for brief 107. The native facts above are unchanged. `Modes` now keeps its selected plan,
+mutation state, initialization distinction and admission continuation private. Its operations
+initialize, cycle mode/thinking, submit a face prompt, accept a wake and perform the
+selection-side control check; only the observed mode name is exposed. The dispatcher owns
+socket/address/receipt handling and supplies the prompt's fresh target lookup. Compaction and
+interrupt lifecycle remain in management; Go still supplies mode policy and wording. Both pi
+contracts remain 4; an existing same-contract loaded extension can survive wrapper handover,
+so this organization must be checked with a fresh native load.
+
+**[live RPC]** November 5, 2026 (brief 107), fresh pinned pi 1.4.0 with the actual extension,
+private HOME, agent, project and state directories under `/tmp`, no inherited session/account
+variables, no login, and a synthetic loopback chat endpoint. Explicit native handler holds
+made startup/model mutation and compaction windows observable:
+
+- Hello's answer, a wake and a face prompt arrived in one socket write. The wake immediately
+  returned pending and the prompt made no request until initialization committed. Its request
+  used the selected model and review instructions; an explicit host wake retry ran once.
+- During held model selection, wake returned pending and remote compact/interrupt returned
+  refused/busy. Native RPC input reached a handler before Modes, but not the handler after it,
+  and made no request until release. It then ran once with the destination model and build
+  instructions; one host wake retry ran once with those same observations.
+- An actual native manual compaction held in its hook returned the existing detailed pending
+  receipt for a wake and resend error for a face prompt. Release completed compaction with a
+  done result. Four ordinary model requests had the correct stance; the two compactor requests
+  were native summary calls, not ordinary stance-injected turns. No extension errors occurred;
+  pi exited 0 on orderly stdin close.
+
+This is native RPC/loopback evidence, not terminal rendering or paid-provider acceptance. No
+credential or transcript files were read, copied or linked. Local artifacts in the writer's
+checkout: `.scratch/pi107-probe.py`, `.scratch/pi107-hold.ts`,
+`.scratch/pi107-observe.ts`, `.scratch/pi107-probe-result.json` and
+`.scratch/pi107-probe.log`.
 
 ## Holding a run's end (November 3, 2026, 1.4.0)
 

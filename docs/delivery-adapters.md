@@ -115,7 +115,7 @@ adapter names none when a message is made readable, so a report there never carr
 ## pi
 
 A per-run extension connects to the wrapper's unix socket
-(`internal/adapter/pi/extension.ts`). A protocol-2 hello with the current conversation and
+(`internal/adapter/pi/extension.ts`). A protocol-4 hello with the current conversation and
 native state, from the exact process the wrapper started, makes Wake, the turn boundary and
 Telemetry live, plus Control when the run has its control directory. The extension reconnects
 after a lost socket, `/new` or `/reload`; a replaced socket cannot withdraw its successor's
@@ -126,8 +126,12 @@ checks the conversation and calls `pi.sendMessage` with `triggerTurn: true` and
 `deliverAs: "steer"`. An idle session starts work; a busy one takes the notice after its tool
 batch. An `answer` means the native call accepted the notice, not that a model request or
 inbox read succeeded. Before a connection exists the delivery is pending; after a write whose
-answer is lost it fails without an automatic replay. During compaction the extension refuses
-queue acceptance with `pending`, so delivery waits and retries after compaction ends.
+answer is lost it fails without an automatic replay. While native admission is closed for
+initialization, selection or restoration, the extension answers `pending` immediately without
+queuing the notice. Once admission opens, compaction separately refuses queue acceptance with
+`pending` and its existing compaction detail. The host owns retry in either case; a wake does
+not wait inside the extension. Native selection/admission ownership is in
+[pi-work-modes.md](pi-work-modes.md).
 
 `agent_start` is acknowledged before model work. `agent_end` supplies the last assistant text,
 while `agent_settled` reports the end after automatic work. An aborted settled event reports
