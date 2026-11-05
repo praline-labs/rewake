@@ -30,7 +30,7 @@ func (r *run) mirrored(request frame) frame {
 }
 
 // mirrorLevel tells the face the thinking level a sample read, which the
-// face's rule shows and its shift+tab moves; the model says only a change,
+// strip shows and its Alt+T moves; the model says only a change,
 // and pi's level names are the model's.
 func (r *run) mirrorLevel(level string) {
 	if r.mirror != nil && level != "" {
@@ -38,11 +38,16 @@ func (r *run) mirrorLevel(level string) {
 	}
 }
 
+func (r *run) mirrorWorkMode(mode string) {
+	if r.mirror != nil {
+		r.mirror.Apply(mirror.Event{Kind: mirror.EventWorkMode, WorkMode: mirror.WorkMode(mode)})
+	}
+}
+
 // input carries an input of rewake's face to pi: a prompt typed there as
 // the person's, which the face shows once pi hears it as its input;
-// the person's Esc, which stops the run as pi's own Esc does; or their
-// shift+tab, which moves the thinking level on as pi's own does, through the
-// levels read here off the last sample's model.
+// the person's Esc; Shift+Tab for runtime mode; or Alt+T for thinking,
+// through the levels read here off the last sample's model.
 func (r *run) input(ctx context.Context, input mirror.Input) error {
 	l, thread := r.connection()
 	if l == nil {
@@ -55,6 +60,8 @@ func (r *run) input(ctx context.Context, input mirror.Input) error {
 		r.translate.sent(input.Text)
 	case mirror.InputKindInterrupt:
 		request = frame{Op: "interrupt", Thread: thread}
+	case mirror.InputKindWorkmode:
+		request = frame{Op: "mode-key", Thread: thread}
 	case mirror.InputKindThinking:
 		r.mu.Lock()
 		model := r.observed.model

@@ -195,6 +195,7 @@ export class FaceHost {
           prompts: message.prompts,
           mode: message.mode,
           level: message.level,
+          workMode: message.workMode,
           error: undefined,
         });
       case "error":
@@ -295,8 +296,19 @@ export class FaceHost {
     this.send({ kind: "escape", id });
   }
 
-  // thinking is the person's shift+tab: the session's thinking level moves
-  // on, a refusal showing as a prompt's does.
+  // workmode is Shift+Tab; a refusal shows as a prompt's does.
+  workmode() {
+    if (!this.worker) return;
+    const id = `m${++ids}`;
+    this.keep(id, { text: "", at: Date.now(), verb: "not changed" });
+    this.send({ kind: "workmode", id });
+  }
+
+  toggleThinking() {
+    this.send({ kind: "thinkingVisible" });
+  }
+
+  // thinking is Alt+T, separate from the runtime work mode.
   thinking() {
     if (!this.worker) return;
     const id = `t${++ids}`;

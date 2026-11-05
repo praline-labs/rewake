@@ -39,6 +39,7 @@ type Snapshot struct {
 	// template's label (rewake list adds it); nil when neither is known.
 	ModelName *string `json:"configuredModelName,omitempty"`
 	Effort    *string `json:"configuredReasoningEffort"`
+	Mode      *string `json:"mode,omitempty"`
 	// EffortSource is EffortFromLaunch when Effort is what the launch passed,
 	// not what the harness was seen to run at; empty when observed.
 	EffortSource string `json:"reasoningEffortSource,omitempty"`

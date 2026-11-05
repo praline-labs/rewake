@@ -67,7 +67,7 @@ func handleRoom(ctx *Context, call Call) error {
 	if err != nil {
 		return failf("could not read the spaces in %s: %v", dir, err)
 	}
-	view := RoomView{Room: filepath.Base(dir), AsMain: asMain, Spaces: spaceRowsOf(dir, records)}
+	view := RoomView{V: ptr(RoomViewVersion), Room: filepath.Base(dir), AsMain: asMain, Spaces: spaceRowsOf(dir, records)}
 	var home taskbrief.Home
 	var workOf func(name, epoch string) string
 	if asMain {

@@ -41,7 +41,7 @@ type workersListing struct {
 	// Types are the kinds of work space open --type takes.
 	Types []worktype.Type `json:"types"`
 	// NoWriter says no template of the catalog as read now has the write
-	// role, so main writes the code itself.
+	// role; main still delegates implementation.
 	NoWriter bool `json:"noWriter"`
 }
 
@@ -55,7 +55,7 @@ func workersCommand() *Command {
 		Notes: []string{
 			"Any role may read this catalog. rewake ships no templates: each is an [alias.<name>] in the user alias file, ~/.config/rewake/aliases.toml, or in .rewake/aliases.toml of the directory the command runs in — not the room's, so run workers and space open from the project's top, where its file, its types and its [aliases] off are read. A project alias with the user's name replaces the user's whole, role and command included. The project file may not set role or command. It may hold [aliases] off = [\"<alias>\", ...], which hides those templates of the merged catalog, the user's included; a name that is no template, or one the same file defines, refuses the catalog, and so does [aliases] off in the user file. A .rewake.toml in the directory is refused: the project file is .rewake/aliases.toml. An unreadable file refuses the listing rather than silently omit workers.",
 			"Types are the kinds of work a worker is raised for, each a text that follows its role's briefing: rewake's built-in " + builtInTypes() + "; the person's ~/.config/rewake/types/<type>.md; the project's .rewake/types/<type>.md. The nearest of one name wins. A type file is Markdown opening with a TOML front matter between two +++ lines that holds description = \"<one line>\", at most 32 KiB. [types] off = [\"<built-in type>\", ...] in either alias file hides those built-in ones; a file of the same name still stands. An alias's type = \"<type>\" is its default, shown with why space open would refuse it when it is not there or turned off.",
-			"An alias: [alias.<name>] with harness = \"<id>\"; role = \"write\" or \"general\" (general when absent); args = [the harness's arguments]; command = \"<program>\", a wrapper that runs the harness; description; type = \"<type>\"; worktree = true, a worker started in a new worktree of its own, which --worktree=<name> on space open names and --no-worktree leaves out; enter_worktree = true, on Claude Code, a worker started without one that may enter one mid-session through its worktree_enter tool, refused beside worktree = true. And [alias.<name>.launch] with model and effort, which become the harness's flags; context, the window auto-compaction keeps to — Claude Code's --autocompact, auto or 100k to 1M such as 300k —, applied where the harness has a flag for it and only shown elsewhere; and label, how the strip and rewake list name the model where the harness gives it no name. A template with no model or effort takes the launch defaults rewake <harness> --help names. space open --help says how harness flags after -- meet the template's.",
+			"An alias: [alias.<name>] with harness = \"<id>\"; role = \"write\" or \"general\" (general when absent); args = [the harness's arguments]; command = \"<program>\", a wrapper that runs the harness; description; type = \"<type>\"; worktree = true, a worker started in a new worktree of its own, which --worktree=<name> on space open names and --no-worktree leaves out; enter_worktree = true, on Claude Code, a worker started without one that may enter one mid-session through its worktree_enter tool, refused beside worktree = true. And [alias.<name>.launch] with model and effort, which become the harness's flags; context, the window auto-compaction keeps to — Claude Code's --autocompact, auto or 100k to 1M such as 300k —, applied where the harness has a flag for it and only shown elsewhere; and label, how the strip and rewake list name the model where the harness gives it no name. For pi, [pi] and [alias.<name>.pi] take start_mode = review, advisor or build; [pi.modes.<mode>] and [alias.<name>.pi.modes.<mode>] take model = provider/model-id and effort. Global fields merge user then project; the selected template overlays them. Start precedence is template start_mode, review/code type defaults, global start_mode, then advisor (main included). Initial explicit harness flags win, then the starting mode, then ordinary launch defaults. Review/advisor are prompt-only read-only stances, not permissions. space open --help says how harness flags after -- meet the template's.",
 		},
 		Access: viewForm, Handler: handleWorkers,
 	}
@@ -130,7 +130,7 @@ func workerView(template launch.Template) workerTemplate {
 func (l workersListing) lines() []string {
 	lines := l.workerLines()
 	if l.NoWriter {
-		lines = append(lines, "", "No template writes code here: main writes it itself.")
+		lines = append(lines, "", "No template writes code here: main remains the orchestrator; ask the owner for a writer template.")
 	}
 	lines = append(lines, "", "Types (space open --type <type>):")
 	if len(l.Types) == 0 {

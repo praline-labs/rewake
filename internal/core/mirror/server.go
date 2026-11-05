@@ -36,7 +36,7 @@ const inputWait = 10 * time.Second
 
 // inputKinds are the inputs a face may send; the session's own list, on
 // hello, says which of them it takes.
-var inputKinds = []InputKind{InputKindPrompt, InputKindInterrupt, InputKindThinking}
+var inputKinds = []InputKind{InputKindPrompt, InputKindInterrupt, InputKindThinking, InputKindWorkmode}
 
 // Serve listens at path, which a dead run of the same name and epoch cannot
 // hold, and serves the model until Close.

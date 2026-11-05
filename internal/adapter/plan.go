@@ -4,6 +4,7 @@ import (
 	"github.com/praline-labs/rewake/internal/core/brief"
 	"github.com/praline-labs/rewake/internal/core/mirror"
 	"github.com/praline-labs/rewake/internal/core/role"
+	"github.com/praline-labs/rewake/internal/core/workmode"
 	"github.com/praline-labs/rewake/internal/core/worktype"
 )
 
@@ -84,6 +85,7 @@ type LaunchRequest struct {
 	// WorkType is the kind of work the worker was raised for, which its
 	// briefing carries (docs/worker-types.md); empty Name for none.
 	WorkType worktype.Type
+	Modes    workmode.Config
 	// Shell says the run is main's in rewake's shell, drawn on a pane whose
 	// terminal keeps no scrollback before a pane attached: an adapter whose
 	// harness can scroll its own history turns that on (docs/shell.md).

@@ -125,7 +125,9 @@ same steps, with its name, role and room from the space's record.
    ending with MAIL: the shared rule of a first line stating the point, how a waiting
    message is announced with `Rewake:`, and that `rewake guide` has the complete rules
    ([roles.md](roles.md#what-a-session-is-told)).
-   The golden copies are in `internal/core/brief/testdata/`.
+   The golden copies are in `internal/core/brief/testdata/`. Pi's runtime
+   [work mode](pi-work-modes.md) adds its Go-owned stance before each model request, without
+   replacing those briefings or granting authority. Main delegates in every mode.
 9. **Serving.** The wrapper watches `inbox/<name>/` with inotify, polls every
    second as the safety net, sweeps old mail every ten minutes, and waits for
    the harness to exit.

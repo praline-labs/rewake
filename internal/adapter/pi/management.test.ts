@@ -17,6 +17,7 @@ function staged(ctx: object, running?: () => unknown) {
     () => ctx as never,
     () => link as never,
     () => running?.() as never,
+    () => undefined,
     (_link, fields) => sent.push(fields),
   );
   return {

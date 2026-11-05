@@ -16,6 +16,7 @@ export const version = 1;
 export const requires = (): Record<string, string> => ({
   host: String(version),
   face: String(contract),
+  "room-view": "2",
 });
 
 // MainRef is main's wrapper and the host socket that serves its stream.

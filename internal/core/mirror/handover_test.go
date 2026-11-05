@@ -24,6 +24,7 @@ func TestTheNextImageAdoptsTheModelAsItWas(t *testing.T) {
 		Event{Kind: EventTool, ID: "c1", Turn: "t1", Name: "Read"},
 		Event{Kind: EventInput, ID: "c1", Text: strings.Repeat("x", MaxFieldBytes+10)},
 		Event{Kind: EventMode, Mode: PermissionModeDefault},
+		Event{Kind: EventWorkMode, WorkMode: WorkModeReview},
 	)
 	raw, err := model.Hand()
 	if err != nil {
@@ -44,6 +45,7 @@ func TestTheNextImageAdoptsTheModelAsItWas(t *testing.T) {
 	}
 	same("adopted")
 	after := []Event{
+		{Kind: EventWorkMode, WorkMode: WorkModeBuild},
 		{Kind: EventSettle, ID: "b2", Turn: "t1", Block: ItemKindText, Text: "one ", Part: 0, Of: 2},
 		{Kind: EventSettle, ID: "b2", Turn: "t1", Block: ItemKindText, Text: "two", Part: 1, Of: 2},
 		{Kind: EventResult, ID: "c1", Text: "read", Status: ItemStatusDone},
@@ -67,6 +69,7 @@ func drawn(m *Model) string {
 // of the room's build admits only a build that takes the same, so a changed
 // shape raises HandedVersion.
 var handedShapes = map[int]string{
+	2: "585326bbf9e8a3ea7875a69a482d02ca72a89cb4c2a74689ef81db34788bd49e",
 	1: "e353d31385d8df3d96785639919835efeb37809c31f26d1bcd5a7fa038ac4150",
 }
 

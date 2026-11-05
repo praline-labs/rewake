@@ -36,7 +36,7 @@ A person using rewake reads [user-guide.md](user-guide.md) alone. An agent worki
    - **main's view**: [session-state.md](session-state.md) → [remote-control.md](remote-control.md)
      → [permission-requests.md](permission-requests.md);
    - **state and the layout**: [rules/state.md](rules/state.md), [rules/layout.md](rules/layout.md);
-   - **roles**: [roles.md](roles.md);
+   - **roles and runtime stance**: [roles.md](roles.md), [pi-work-modes.md](pi-work-modes.md);
    - **tests**: [testing.md](testing.md) → [testing-cases.md](testing-cases.md),
      [legacy.md](legacy.md);
    - **installing and releasing**: [install.md](install.md);

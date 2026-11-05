@@ -38,7 +38,7 @@ func (r *run) serve(l *link) {
 	}
 	// Put hello's acknowledgment on the wire before publishing live Wake:
 	// delivery can start as soon as the live callback records the capability.
-	l.answer(hello, frame{OK: true, Mirror: r.mirror != nil, Tools: r.table()})
+	l.answer(hello, frame{OK: true, Mirror: r.mirror != nil, Tools: r.table(), Mode: r.helloMode()})
 	if !r.change(l, hello) {
 		return
 	}
@@ -53,6 +53,14 @@ func (r *run) handle(l *link, request frame) {
 		return
 	}
 	switch request.Op {
+	case "mode-cycle":
+		reply := r.cycleMode(l, request)
+		r.leave()
+		l.answer(request, reply)
+	case "thinking-cycle":
+		reply := r.cycleThinking(l, request)
+		r.leave()
+		l.answer(request, reply)
 	case "state":
 		ok := r.observe(l, request.Thread, request.State)
 		r.leave()

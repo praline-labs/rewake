@@ -5,7 +5,7 @@
 // `\`; it grows with its text to 30% of the pane, at least 5 rows, then
 // scrolls inside with `↑ N more` and `↓ N more` on its rules; a paste comes
 // whole with its newlines, a large one as pi's marker. Its keys never reach a
-// pty: the pane's widget is blurred while the face is shown. shift+tab moves
+// pty: the pane's widget is blurred while the face is shown. Alt+T moves
 // the session's thinking level on where it takes that, as pi's own key does.
 
 import type {
@@ -30,8 +30,10 @@ import {
   setDraft,
   setInput,
   thinkingFace,
+  toggleThinkingFace,
   unfoldFace,
   unselectFace,
+  workmodeFace,
 } from "./faces.ts";
 import { cleaned, type Paste, pastesOf, rowsFor } from "./paste.ts";
 
@@ -244,10 +246,20 @@ export function FaceInput(props: {
             return;
           }
           if (key.name === "escape") escapeFace(props.id);
-          // shift+tab moves the session's thinking level on, as pi's own key.
+          // Mode and thinking keys never reach the underlying pty.
           if (key.name === "tab" && key.shift) {
             key.preventDefault();
+            workmodeFace(props.id);
+            return;
+          }
+          if (key.name === "t" && key.meta && !key.ctrl) {
+            key.preventDefault();
             thinkingFace(props.id);
+            return;
+          }
+          if (key.name === "t" && key.ctrl) {
+            key.preventDefault();
+            toggleThinkingFace(props.id);
             return;
           }
           if (key.name === "o" && key.ctrl) unfoldFace(props.id);

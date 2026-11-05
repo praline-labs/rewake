@@ -27,7 +27,7 @@ type observations struct {
 	sequence uint64
 	// cache is the last assistant message's cache usage that had input.
 	cache *cacheSeen
-	// model is the last sample's model, whose levels the face's shift+tab
+	// model is the last sample's model, whose levels the face's Alt+T
 	// cycles (levelsOf).
 	model *nativeModel
 }

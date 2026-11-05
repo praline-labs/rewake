@@ -94,7 +94,7 @@ func (m *Model) snapshotLocked() []Line {
 	if m.inputs != nil {
 		inputs = append(inputs, m.takes...)
 	}
-	begin := Line{Op: LineOpBegin, Items: ptr(len(m.order)), Dropped: ptr(m.dropped), Turn: ptr(m.turn), Mode: m.mode, Level: m.level}
+	begin := Line{Op: LineOpBegin, Items: ptr(len(m.order)), Dropped: ptr(m.dropped), Turn: ptr(m.turn), Mode: m.mode, Level: m.level, WorkMode: m.workMode}
 	switch {
 	case m.turn == TurnStateWorking && m.since > 0:
 		begin.Since = ptr(m.since)

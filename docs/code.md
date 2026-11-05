@@ -32,6 +32,7 @@ internal/core/ask/                            a worker's permission requests and
 internal/core/role/                           the role catalogue: flag, briefing line, reporting duty
 internal/core/brief/                          text injected into an agent, independent of transport
 internal/core/worktype/                       the kinds of work a worker is raised for: the built-in texts and the person's and project's own
+internal/core/workmode/                       pi's closed runtime stances, configuration overlays, type defaults and additive instructions; never permissions or Git authority
 internal/core/session/                        optional, epoch-scoped observations of a harness (telemetry): the Observer every adapter reports to, which merges them into the snapshot, and the activity verdict on it
 internal/core/sessiontools/                   the session tools every adapter offers — the brief and worktree tools' names, descriptions, input schemas, which role is offered which, the check of an input into a rewake command's argv and variables or a refusal, bounds and the wording of a raw outcome; the agents get the table as data and hold no copy
 internal/core/mirror/                         the mirror: the model of a session's conversation the face draws, its socket, and the decoder of the neutral events the mod's feed sends (the feed itself is the mod's, mod/hooks/feed.ts)

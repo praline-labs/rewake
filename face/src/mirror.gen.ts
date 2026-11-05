@@ -9,7 +9,7 @@
 export const bounds = {
   // version is the version of the lines, which hello carries; one build per room makes it a
   // guard, not a negotiation.
-  version: 1,
+  version: 2,
   // maxItemBytes bounds one item serialized: a longer text keeps its head and its tail with a
   // cut mark between.
   maxItemBytes: 262144,
@@ -64,6 +64,9 @@ export interface Line {
   // since, the session trying again, on begin and turn while the turn works; absent when none
   // did.
   retry?: number
+  // workMode is the observed runtime work stance, independent of permissions, on begin and
+  // stance.
+  workMode?: WorkMode
   // mode is the session's permission mode, on begin and mode; absent while the session has not
   // said it.
   mode?: PermissionMode
@@ -78,8 +81,8 @@ export interface Line {
 }
 
 // LineOp is a line's kind.
-export type LineOp = "hello" | "begin" | "item" | "end" | "add" | "append" | "set" | "turn" | "mode" | "level" | "drop" | "answer"
-export const lineOpValues: readonly LineOp[] = ["hello", "begin", "item", "end", "add", "append", "set", "turn", "mode", "level", "drop", "answer"]
+export type LineOp = "hello" | "begin" | "item" | "end" | "add" | "append" | "set" | "turn" | "mode" | "level" | "stance" | "drop" | "answer"
+export const lineOpValues: readonly LineOp[] = ["hello", "begin", "item", "end", "add", "append", "set", "turn", "mode", "level", "stance", "drop", "answer"]
 
 // Item is one entry of the conversation.
 export interface Item {
@@ -145,6 +148,10 @@ export const permitByValues: readonly PermitBy[] = ["rule", "mode", "classifier"
 export type PermissionMode = "default" | "plan" | "edits" | "auto" | "bypass" | "unasked"
 export const permissionModeValues: readonly PermissionMode[] = ["default", "plan", "edits", "auto", "bypass", "unasked"]
 
+// WorkMode is a runtime working stance, never a permission grant.
+export type WorkMode = "review" | "advisor" | "build"
+export const workModeValues: readonly WorkMode[] = ["review", "advisor", "build"]
+
 // ThinkingLevel is how much the session's model thinks before it answers, in the words of the
 // harness that moves it, from not at all to the most.
 export type ThinkingLevel = "off" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max"
@@ -162,8 +169,8 @@ export interface Input {
 }
 
 // InputKind is what the face may send: a prompt, typed as the person; an interrupt, the
-// person's Esc stopping the turn that works, as the harness's own Esc does; thinking, the
-// person's shift+tab moving the session's thinking level to the next, as the harness's own key
-// does.
-export type InputKind = "prompt" | "interrupt" | "thinking"
-export const inputKindValues: readonly InputKind[] = ["prompt", "interrupt", "thinking"]
+// person's Esc stopping the turn that works, as the harness's own Esc does; work-mode,
+// shift+tab cycling the runtime stance; thinking, Alt+T moving the session's thinking level to
+// the next, as the harness's own key does.
+export type InputKind = "prompt" | "interrupt" | "thinking" | "workmode"
+export const inputKindValues: readonly InputKind[] = ["prompt", "interrupt", "thinking", "workmode"]

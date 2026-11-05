@@ -40,6 +40,7 @@ func (harness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, error)
 		}
 		args = adapter.AddFlags(args, sessionIDFlag, request.Conversation)
 	}
+	args = harness{}.StartModeArgs(args, request.Modes, request.WorkType.Name, false, nil)
 	args, notes, err := adapter.ApplyDefaults(args, defaults())
 	if err != nil {
 		return adapter.LaunchPlan{}, err
@@ -104,12 +105,13 @@ func extensionPath(request adapter.LaunchRequest) string {
 func (harness) Serve(request adapter.LaunchRequest) adapter.ServicePlan {
 	run := newRun(extensionPath(request), request.Socket, request.Epoch)
 	run.controlDir = request.ControlDir
+	run.modes, run.initial = request.Modes, initialMode(request)
 	run.hostsSpaces, run.onClosing = request.Role.Spaces, request.Closing
 	run.retention = envValue(request.Env, cacheRetentionEnv)
 	run.tools = sessiontools.Run{Executable: request.Executable, Dir: request.Dir, Room: request.Room, Session: request.Name, Epoch: request.Epoch, Role: request.Role.ID}
 	if request.Mirror != nil {
 		run.mirror = request.Mirror
-		run.mirror.Take(run.input, mirror.InputKindPrompt, mirror.InputKindInterrupt, mirror.InputKindThinking)
+		run.mirror.Take(run.input, mirror.InputKindPrompt, mirror.InputKindInterrupt, mirror.InputKindThinking, mirror.InputKindWorkmode)
 	}
 	return adapter.ServicePlan{
 		Socket: request.Socket, OwnsSocket: true,

@@ -43,6 +43,7 @@ export class Face {
   // once it or the width changed: only a tick lays them out again.
   private laid: FaceLine[] = [];
   private stale = true;
+  private hideThinking = false;
   // frame is what the last tick committed: every row from the same moment,
   // and what the rows are posted with. A scroll cuts only it, so a change of
   // the conversation waits for its tick.
@@ -143,7 +144,13 @@ export class Face {
           return this.escaped(message.id);
         case "unfold":
           return this.unfolded(message.all);
-        // shift+tab moves the thinking level on, as the harness's own key does.
+        // Mode and thinking use separate inputs; visibility is local drawing.
+        case "workmode":
+          return this.asked(message.id, "workmode");
+        case "thinkingVisible":
+          this.hideThinking = !this.hideThinking;
+          this.pointer.clear();
+          return this.soon();
         case "thinking":
           return this.asked(message.id, "thinking");
         case "ping":
@@ -181,7 +188,8 @@ export class Face {
   private draw(now: number) {
     try {
       const m = this.model;
-      if (this.stale) this.laid = bodyOf(m, this.width, Infinity, this.unfold).rows;
+      if (this.stale)
+        this.laid = bodyOf(m, this.width, Infinity, this.unfold, this.hideThinking).rows;
       this.stale = false;
       if (this.anchor) this.scroll.top = topFor(this.laid, this.anchor) ?? this.scroll.top;
       this.anchor = undefined;
@@ -195,6 +203,7 @@ export class Face {
         prompts,
         mode: m.mode,
         level: m.level,
+        workMode: m.workMode,
       };
       this.paint();
     } catch (err) {

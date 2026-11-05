@@ -99,6 +99,7 @@ type Settings struct {
 	// an effort whether or not it changed reports it by Observer.Effort.
 	Effort   *string
 	Thinking *bool
+	Mode     *string
 }
 
 // Reading is what the adapter knows at a read that its observations do not.
@@ -146,6 +147,7 @@ func (o *Observer) Sample(sample Sample) {
 	if s := sample.Settings; s != nil {
 		snapshot.SettingsAt, snapshot.SettingsFresh = &now, true
 		snapshot.Model, snapshot.Effort, snapshot.Thinking = s.Model, s.Effort, s.Thinking
+		snapshot.Mode = s.Mode
 		if s.ModelName != nil && *s.ModelName != "" {
 			snapshot.ModelName = s.ModelName
 		}

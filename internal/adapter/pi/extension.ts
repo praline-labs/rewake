@@ -1,42 +1,18 @@
 import { randomUUID } from "node:crypto";
 import { createConnection, type Socket } from "node:net";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
+import { modeEditor } from "./editor.ts";
 import { faceInterrupt, facePrompt, faceThinking } from "./faced.ts";
-import { forward } from "./forward.ts";
-import { management, type State, thrown } from "./management.ts";
-import { type Forwarded, Stream } from "./stream.ts";
-import { type ToolFields, Tools } from "./tools.ts";
+import { Modes } from "./modes.ts";
+import type { Frame } from "./protocol.ts";
 
-export type Frame = {
-  op: string;
-  id: number;
-  protocol?: number;
-  thread?: string;
-  turn?: string;
-  outcome?: string;
-  text?: string;
-  notice?: string;
-  ok?: boolean;
-  error?: string;
-  steered?: boolean;
-  state?: State;
-  sequence?: number;
-  pending?: boolean;
-  action?: string;
-  request?: string;
-  from?: string;
-  focus?: string;
-  // code names the check that refused a control command, native its raw
-  // result; the wrapper words both (control.go).
-  code?: string;
-  native?: unknown;
-  // levels are the thinking levels a shift+tab of the face cycles, in order.
-  levels?: string[];
-  // mirror, in hello's answer, says rewake's face draws this run, and
-  // events carry pi's own events for it.
-  mirror?: boolean;
-  events?: Forwarded[];
-} & ToolFields;
+export type { Frame } from "./protocol.ts";
+
+import { forward } from "./forward.ts";
+import { management, thrown } from "./management.ts";
+import { Stream } from "./stream.ts";
+import { Tools } from "./tools.ts";
+
 type Waiter = {
   resolve: (frame: Frame) => void;
   reject: (error: Error) => void;
@@ -62,11 +38,13 @@ export default function (pi: ExtensionAPI) {
   let retry: ReturnType<typeof setTimeout> | undefined;
   let delay = 250;
   let turn: Turn | undefined;
+  let modes: Modes;
   const managed = management(
     pi,
     () => context,
     () => current,
     () => turn,
+    () => modes?.current?.name,
     (link, fields) => {
       void ask(link, fields).catch(() => {
         if (fields.op !== "state")
@@ -92,6 +70,20 @@ export default function (pi: ExtensionAPI) {
     return ask(link, fields, 30000);
   });
   forward(pi, stream);
+  modes = new Modes(
+    pi,
+    () => context,
+    () => managed.busy(),
+    (fields) => {
+      const link = current;
+      if (!link?.ready) return Promise.reject(new Error("the session has no connection to rewake"));
+      return ask(link, { ...fields, thread: link.thread });
+    },
+    managed.sample,
+    managed.changed,
+    warn,
+  );
+  modeEditor(pi, modes);
 
   function warn(message: string) {
     if (context?.hasUI) context.ui.notify(`rewake: ${message}`, "warning");
@@ -175,6 +167,14 @@ export default function (pi: ExtensionAPI) {
     }
     if (frame.op === "interrupt") {
       respond(faceInterrupt(stream.on, context, managed.busy()));
+      return;
+    }
+    if (frame.op === "mode-key") {
+      if (!stream.on) {
+        respond({ ok: false });
+        return;
+      }
+      void modes.cycle().then(respond);
       return;
     }
     if (frame.op === "thinking") {
@@ -279,7 +279,7 @@ export default function (pi: ExtensionAPI) {
       try {
         const reply = await ask(link, {
           op: "hello",
-          protocol: 3,
+          protocol: 4,
           thread,
           state: managed.sample(),
         });
@@ -291,6 +291,10 @@ export default function (pi: ExtensionAPI) {
         link.ready = true;
         delay = 250;
         tools.take(reply.tools);
+        if (reply.mode && !modes.current) {
+          const selected = await modes.apply(reply.mode, true);
+          if (selected.error) warn(selected.error);
+        }
         stream.on = reply.mirror === true;
         stream.kick();
       } catch {

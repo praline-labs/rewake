@@ -13,22 +13,23 @@ import (
 
 // HandedVersion is the version of what Hand answers; Adopted takes only its
 // own, and a switch of the room admits only a build that takes the same.
-const HandedVersion = 1
+const HandedVersion = 2
 
 type handedModel struct {
-	Version int                       `json:"version"`
-	Items   []handedEntry             `json:"items"`
-	Parts   map[string]handedAssembly `json:"parts,omitempty"`
-	Bytes   int                       `json:"bytes"`
-	Dropped int                       `json:"dropped"`
-	Turn    TurnState                 `json:"turn"`
-	Mode    *PermissionMode           `json:"mode,omitempty"`
-	Level   *ThinkingLevel            `json:"level,omitempty"`
-	Born    int                       `json:"born"`
-	Notices int                       `json:"notices"`
-	Since   int                       `json:"since"`
-	Worked  *handedWorked             `json:"worked,omitempty"`
-	Retry   int                       `json:"retry"`
+	Version  int                       `json:"version"`
+	Items    []handedEntry             `json:"items"`
+	Parts    map[string]handedAssembly `json:"parts,omitempty"`
+	Bytes    int                       `json:"bytes"`
+	Dropped  int                       `json:"dropped"`
+	Turn     TurnState                 `json:"turn"`
+	Mode     *PermissionMode           `json:"mode,omitempty"`
+	Level    *ThinkingLevel            `json:"level,omitempty"`
+	WorkMode *WorkMode                 `json:"workMode,omitempty"`
+	Born     int                       `json:"born"`
+	Notices  int                       `json:"notices"`
+	Since    int                       `json:"since"`
+	Worked   *handedWorked             `json:"worked,omitempty"`
+	Retry    int                       `json:"retry"`
 }
 
 type handedEntry struct {
@@ -70,7 +71,7 @@ func (m *Model) Hand() ([]byte, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	handed := handedModel{
-		Version: HandedVersion, Bytes: m.bytes, Dropped: m.dropped, Turn: m.turn, Mode: m.mode, Level: m.level,
+		Version: HandedVersion, Bytes: m.bytes, Dropped: m.dropped, Turn: m.turn, Mode: m.mode, Level: m.level, WorkMode: m.workMode,
 		Born: m.born, Notices: m.notices, Since: m.since, Retry: m.retry, Parts: map[string]handedAssembly{},
 	}
 	for _, at := range m.order {
@@ -95,6 +96,7 @@ func Adopted(raw []byte) (*Model, error) {
 		return nil, fmt.Errorf("the face's model was handed over as version %d; this build takes %d", handed.Version, HandedVersion)
 	}
 	m := New()
+	m.workMode = handed.WorkMode
 	m.bytes, m.dropped, m.turn, m.mode, m.level = handed.Bytes, handed.Dropped, handed.Turn, handed.Mode, handed.Level
 	m.born, m.notices, m.since, m.retry = handed.Born, handed.Notices, handed.Since, handed.Retry
 	for _, e := range handed.Items {

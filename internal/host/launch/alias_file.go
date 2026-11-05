@@ -10,6 +10,7 @@ import (
 
 	"github.com/pelletier/go-toml/v2"
 
+	"github.com/praline-labs/rewake/internal/core/workmode"
 	"github.com/praline-labs/rewake/internal/core/worktype"
 )
 
@@ -82,6 +83,7 @@ func (s *Set) read(path, description string, user bool) {
 	}
 	var file struct {
 		Alias map[string]Alias `toml:"alias"`
+		Pi    workmode.Config  `toml:"pi"`
 		// Types turns built-in types off: the person's or the project's
 		// choice of which of rewake's texts main is offered.
 		Types struct {
@@ -121,6 +123,17 @@ func (s *Set) read(path, description string, user bool) {
 		s.unreadable(fmt.Sprintf("%s at %s could not be read: %v", description, where, err))
 		return
 	}
+	if err := file.Pi.Check(); err != nil {
+		s.unreadable(fmt.Sprintf("%s at %s: [pi]: %v", description, path, err))
+		return
+	}
+	for name, value := range file.Alias {
+		if err := value.Pi.Check(); err != nil {
+			s.unreadable(fmt.Sprintf("%s at %s: [alias.%s.pi]: %v", description, path, name, err))
+			return
+		}
+	}
+	s.pi = s.pi.Overlay(file.Pi)
 	if err := s.turnOff(file.Types.Off, description, path); err != nil {
 		s.unreadable(err.Error())
 		return

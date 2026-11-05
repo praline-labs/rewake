@@ -4,6 +4,9 @@ package cli
 
 // RoomView is the room as the shell draws it.
 type RoomView struct {
+	// V is the room-view contract version, 2 with runtime work modes.
+	V *int `json:"v,omitempty"`
+
 	// Room is the room's name.
 	Room string `json:"room"`
 
@@ -177,6 +180,9 @@ type SessionRow struct {
 
 	// Model is the harness's display name of the model, else the template's label, else the id.
 	Model *string `json:"model,omitempty"`
+
+	// Mode is the observed runtime work mode; absent when not reported.
+	Mode *string `json:"mode,omitempty"`
 
 	// Effort is the reasoning effort.
 	Effort *string `json:"effort,omitempty"`

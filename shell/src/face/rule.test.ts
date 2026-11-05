@@ -32,9 +32,9 @@ test("the rule's left is the session's mode, else its thinking level, from one i
       { level: "high" },
       60,
       "brief 61 1/3",
-      `── ◆ high (shift+tab to cycle) ${"─".repeat(14)} brief 61 1/3 ─`,
+      `── ◆ high (alt+t to cycle) ${"─".repeat(18)} brief 61 1/3 ─`,
     ],
-    [{ level: "off" }, 40, undefined, "── ◆ thinking off (shift+tab to cycle) ─"],
+    [{ level: "off" }, 40, undefined, `── ◆ thinking off (alt+t to cycle) ${"─".repeat(5)}`],
     [{ level: "high" }, 30, "brief 61 1/3", `── ◆ high ${"─".repeat(5)} brief 61 1/3 ─`],
     [{ level: "high" }, 20, "brief 61 1/3", `${"─".repeat(5)} brief 61 1/3 ─`],
     [{ level: "high" }, 10, "brief 61 1/3", "── brie… ─"],
@@ -53,7 +53,15 @@ test("the rule's left is the session's mode, else its thinking level, from one i
     text: "⏸ plan mode",
     mode: "plan",
   });
-  for (const said of [{ mode: "bypass" }, { level: "minimal" }] as Left[])
+  expect(ruleOf(80, "brief 1 0/2", { workMode: "build", level: "high" })).toContain(
+    "◆ build (shift+tab to cycle)",
+  );
+  expect(ruleOf(80, undefined, { workMode: "review", level: "high" })).not.toContain("◆ high");
+  for (const said of [
+    { mode: "bypass" },
+    { level: "minimal" },
+    { workMode: "advisor", level: "low" },
+  ] as Left[])
     for (let width = 0; width <= 60; width++)
       expect(Bun.stringWidth(ruleOf(width, "brief 名前 1/2", said))).toBe(width);
 });

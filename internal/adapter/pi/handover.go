@@ -32,7 +32,7 @@ import (
 
 // handoverVersion is the version of handedState; an image adopts only its
 // own, and a switch of the room admits only a build that takes the same.
-const handoverVersion = 3
+const handoverVersion = 4
 
 type handedState struct {
 	Version int    `json:"version"`
@@ -44,6 +44,7 @@ type handedState struct {
 	// Cache is the last response's cache usage that had input: the extension
 	// sends only its last message's, which may be a placeholder's by now.
 	Cache *cacheSeen `json:"cache,omitempty"`
+	Mode  string     `json:"mode,omitempty"`
 	// Translator is the index among the files of the memory file holding
 	// what the face's translator holds (translate.go): a block's open text
 	// may be past what the exec's environment takes.
@@ -107,9 +108,10 @@ func (r *run) HandOver() (adapter.HandedOver, error) {
 	}
 	r.mu.Lock()
 	cache := r.observed.cache
+	mode := r.mode
 	r.mu.Unlock()
 	l.mu.Lock()
-	handed := handedState{Version: handoverVersion, PID: r.process.PID, Start: r.process.Start, Thread: thread, Next: l.next, Unread: unread, Cache: cache, Translator: 2}
+	handed := handedState{Version: handoverVersion, PID: r.process.PID, Start: r.process.Start, Thread: thread, Next: l.next, Unread: unread, Cache: cache, Translator: 2, Mode: mode}
 	l.mu.Unlock()
 	raw, err := json.Marshal(handed)
 	if err != nil {
@@ -235,6 +237,7 @@ func (r *run) Adopt(ctx context.Context, _ func(string), handed adapter.HandedOv
 	r.mu.Lock()
 	r.links[l] = struct{}{}
 	r.observed.cache = got.Cache
+	r.mode = got.Mode
 	r.mu.Unlock()
 	go r.accept()
 	if !r.change(l, frame{Thread: got.Thread}) {

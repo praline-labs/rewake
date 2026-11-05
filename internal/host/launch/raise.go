@@ -93,6 +93,9 @@ func (s *Set) Raise(catalog adapter.Catalog, request Request) (Raised, error) {
 	if err != nil {
 		return Raised{}, err
 	}
+	if modes, ok := template.Harness.(adapter.WorkModesHarness); ok {
+		aliasArgs = modes.StartModeArgs(aliasArgs, s.Modes(request.Alias), work.Name, true, typedArgs)
+	}
 	return Raised{
 		Harness: template.Harness, Role: template.Role, Command: template.Command, Template: request.Alias,
 		Worktree: checkout, Enter: template.EnterWorktree && checkout == "", Work: work, Label: template.Settings.Label,

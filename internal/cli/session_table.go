@@ -46,7 +46,14 @@ func sessionTable(room string, sessions []sessionView, visible bool) []string {
 		cached = cached || (session.Telemetry != nil && session.Telemetry.Cache != nil)
 		thinks = thinks || (session.Telemetry != nil && session.Telemetry.Thinking != nil)
 	}
+	moded := false
+	for _, s := range sessions {
+		moded = moded || s.Mode != nil
+	}
 	if visible {
+		if moded {
+			header = append(header, "Mode")
+		}
 		header = append(header, "Status", "Model", "Effort")
 		if thinks {
 			header = append(header, "Thinking")
@@ -73,6 +80,13 @@ func sessionTable(room string, sessions []sessionView, visible bool) []string {
 			row = append(row, strconv.Quote(session.Harness))
 		}
 		if visible {
+			if moded {
+				value := "-"
+				if session.Mode != nil {
+					value = *session.Mode
+				}
+				row = append(row, value)
+			}
 			cells := stateCells(session.Telemetry)
 			if cached {
 				cells = slices.Insert(cells, 4, cacheCell(session.Telemetry))

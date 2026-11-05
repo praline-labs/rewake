@@ -7,6 +7,8 @@
 
 // RoomView is the room as the shell draws it.
 export interface RoomView {
+  // v is the room-view contract version, 2 with runtime work modes.
+  v?: number
   // room is the room's name.
   room: string
   // asMain says the caller proved to be the shell of the room's main: only then does the view
@@ -127,6 +129,8 @@ export interface SessionRow {
   verdict?: Verdict
   // model is the harness's display name of the model, else the template's label, else the id.
   model?: string
+  // mode is the observed runtime work mode; absent when not reported.
+  mode?: string
   // effort is the reasoning effort.
   effort?: string
   // thinking is whether the model thinks, where the harness tells it.

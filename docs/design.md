@@ -251,7 +251,9 @@ removed and the attempt retried; for a live one, the name stays taken. Updating 
 ### Roles and names
 
 A session's role — what it is told, whether its turns are reported — and how its name is built
-from the role and the harness are in [roles.md](roles.md).
+from the role and the harness are in [roles.md](roles.md). Pi's [runtime work mode](pi-work-modes.md)
+is separate: Go supplies stance instructions and optional selections, native pi applies them,
+and observed mode travels through telemetry/mirror and handover, never the role/type record.
 
 ### Environment the harness receives
 

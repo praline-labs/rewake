@@ -180,8 +180,16 @@ no alias of the catalog; available: ...`, a typo would leave on what was meant o
 same file defines (`defines [alias.x] and turns it off in [aliases] off; keep one`, a contradiction,
 not hidden); and `[aliases] off` in the user's file (`belongs in a project's .rewake/aliases.toml,
 and to drop a template everywhere delete it from this file`).
-Hiding every `write` template leaves main to write the code itself with a reviewer; `rewake workers`
-then ends with "No template writes code here: main writes it itself." (`--json`: `noWriter`).
+Hiding every `write` template leaves main an orchestrator, not a writer; `rewake workers`
+then says `No template writes code here: main remains the orchestrator; ask the owner for a writer template.`
+(`--json`: `noWriter`). It must not substitute its own implementation.
+
+For pi, [work modes](pi-work-modes.md) add optional startup model/effort fields before ordinary
+launch defaults: explicit harness flags win, then the starting mode, then these defaults.
+Global `[pi]` fields merge user then project; `[alias.<name>.pi]` overlays that result, without
+changing whole-template replacement. Start precedence is template `start_mode`, then review/code
+type defaults (review/build), then global `start_mode`, then advisor. Global start covers main
+and otherwise-advisor workers; it does not displace review/code.
 
 **A project file may not choose a role, or the program.** `role` and `command` belong in the
 user's own file; an alias in `.rewake/aliases.toml` that carries one is refused by name. The program is

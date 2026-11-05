@@ -40,7 +40,8 @@ type Event struct {
 	// Mode is the session's permission mode, on a mode event.
 	Mode PermissionMode
 	// Level is the session's thinking level, on a level event.
-	Level ThinkingLevel
+	Level    ThinkingLevel
+	WorkMode WorkMode
 }
 
 // EventKind is what an event says.
@@ -50,18 +51,19 @@ type EventKind string
 // delta lost on the way heals at the block's end; lost names a block whose
 // settle was dropped, and resync stands for whatever else was.
 const (
-	EventPrompt EventKind = "prompt"
-	EventDelta  EventKind = "delta"
-	EventSettle EventKind = "settle"
-	EventTool   EventKind = "tool"
-	EventInput  EventKind = "input"
-	EventResult EventKind = "result"
-	EventTurn   EventKind = "turn"
-	EventLost   EventKind = "lost"
-	EventResync EventKind = "resync"
-	EventNotice EventKind = "notice"
-	EventMode   EventKind = "mode"
-	EventLevel  EventKind = "level"
+	EventPrompt   EventKind = "prompt"
+	EventDelta    EventKind = "delta"
+	EventSettle   EventKind = "settle"
+	EventTool     EventKind = "tool"
+	EventInput    EventKind = "input"
+	EventResult   EventKind = "result"
+	EventTurn     EventKind = "turn"
+	EventLost     EventKind = "lost"
+	EventResync   EventKind = "resync"
+	EventNotice   EventKind = "notice"
+	EventMode     EventKind = "mode"
+	EventLevel    EventKind = "level"
+	EventWorkMode EventKind = "stance"
 	// EventTaken says the session took a queued prompt into its
 	// conversation, or with Status refused gave it back untaken.
 	EventTaken EventKind = "taken"

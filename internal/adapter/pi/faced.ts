@@ -1,5 +1,5 @@
 // What the person does in rewake's face, handed to pi (docs/face.md, "The
-// face"): a prompt typed there, Esc and shift+tab. on is the hello's answer:
+// face"): a prompt typed there, Esc and Alt+T. on is the hello's answer:
 // rewake's face draws this run. The face hears pi's thinking level from the
 // session's state, which the wrapper reads (native.go).
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
@@ -46,7 +46,7 @@ export function faceInterrupt(
   }
 }
 
-// faceThinking moves pi's thinking level on at the person's shift+tab in the
+// faceThinking moves pi's thinking level on at the person's Alt+T in the
 // face, as pi's own app.thinking.cycle does: the next of the levels the
 // wrapper read off the model (native.go, levelsOf) after the one pi runs at,
 // for this session alone. pi's screen and rewake's telemetry hear it as any

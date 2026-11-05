@@ -14,6 +14,7 @@ export type State = {
     model: unknown;
     thinkingLevel: unknown;
     lastAssistant: unknown;
+    workMode?: string;
   };
 };
 type Pending = {
@@ -41,6 +42,7 @@ export function management(
   context: () => ExtensionContext | undefined,
   current: () => Link | undefined,
   turn: () => Turn | undefined,
+  mode: () => string | undefined,
   emit: (link: Link, fields: Omit<Frame, "id">) => void,
 ) {
   let sequence = 0;
@@ -62,6 +64,7 @@ export function management(
         model: modelOf(ctx?.model),
         thinkingLevel: ctx?.thinkingLevel ?? null,
         lastAssistant,
+        workMode: mode(),
       },
     };
   }

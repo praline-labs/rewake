@@ -7,6 +7,7 @@
       "type": "object",
       "description": "is the room as the shell draws it.",
       "properties": {
+        "v": {"type":"integer", "description":"is the room-view contract version, 2 with runtime work modes."},
         "room": {"type": "string", "description": "is the room's name."},
         "asMain": {"type": "boolean", "description": "says the caller proved to be the shell of the room's main: only then does the view carry the sessions' telemetry and the briefs."},
         "spaces": {"type": "array", "items": {"$ref": "#/$defs/SpaceRow"}, "description": "are the spaces not over, in the order they opened."},
@@ -99,6 +100,7 @@
         "branch": {"type": "string", "description": "is the branch checked out at path: its space's own checkout while it works there, else what is checked out at path, a detached head as its short commit; absent outside a repository."},
         "verdict": {"$ref": "#/$defs/Verdict", "description": "is what rewake judged the session does; absent while the room view carries no telemetry."},
         "model": {"type": "string", "description": "is the harness's display name of the model, else the template's label, else the id."},
+        "mode": {"type":"string", "description":"is the observed runtime work mode; absent when not reported."},
         "effort": {"type": "string", "description": "is the reasoning effort."},
         "thinking": {"type": "boolean", "description": "is whether the model thinks, where the harness tells it."},
         "used": {"type": "integer", "description": "is the tokens the context holds."},

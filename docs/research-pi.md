@@ -235,18 +235,20 @@ harness pid and rechecks its process start time before accepting the first frame
 
 | Direction | Operation | Fields and acknowledgment |
 |---|---|---|
-| Extension to host | `hello` | `protocol: 3` (from November 3, 2026; 2 before), `thread`, initial `state`; success makes Wake, TurnBoundary and Telemetry live, plus Control when its directory exists and Spaces on a main's run; the answer's `mirror: true` (October 31, 2026, optional) says rewake's face draws the run, and its `tools` (November 3, 2026) are the table the run's role is offered, each `name`, `label`, `description`, `inputSchema`. A hello of another protocol is answered with the `error` "this extension speaks an older protocol of rewake: restart the room" |
+| Extension to host | `hello` | `protocol: 4` (work modes, November 3, 2026; 3 before), `thread`, initial `state`; the answer's optional `mode` is Go's startup/current instructions and optional exact model/effort; success makes Wake, TurnBoundary and Telemetry live, plus Control when its directory exists and Spaces on a main's run; the answer's `mirror: true` (October 31, 2026, optional) says rewake's face draws the run, and its `tools` (November 3, 2026) are the table the run's role is offered, each `name`, `label`, `description`, `inputSchema`. A hello of another protocol is answered with the `error` "this extension speaks an older protocol of rewake: restart the room" |
 | Host to extension | `tools` | `thread`, `tools`: the table again, sent once by an image that adopted the run, since it may offer another; the extension registers what is added or changed and hides what is dropped, and answers `ok` (November 3, 2026) |
 | Extension to host | `tool-plan` | `tool`, `arguments`: a call of a rewake tool; answer the `argv` and `timeoutMs` to run, or `refused`, the text the model reads (November 3, 2026) |
 | Extension to host | `tool-result` | `tool`, `ran`: the command's raw end, `exitCode`, `stdout`, `stderr`, `killed`, `stdoutCut` past 1 MiB, or a start's `error`; answer the result's `text` and `isError` (November 3, 2026) |
 | Extension to host | `events` | `thread`, `events`: a batch of pi's own events, raw, with `part` and `lost` lines, which the wrapper's translator makes the face's neutral events of ([below](#the-face-of-a-pi-worker)); answer `ok`, or `error` for a run the face does not draw (November 3, 2026; before it `mirror`, the neutral events made in the extension, from October 31, 2026) |
+| Extension to host | `mode-cycle`, `thinking-cycle` | current `state` and `thread`; Go answers with a destination `mode` plan or supported `levels`, or an explicit refusal. A mode plan is not an observation. |
+| Host to extension | `mode-key` | a face mode-cycle request; uses the same native bridge as focused editor Shift+Tab and answers only after application/refusal. |
 | Host to extension | `prompt` | `thread`, `text`: a prompt typed in rewake's face; answer `ok` and whether it was `steered`, or `error` while compacting, for an empty text or a run not drawn (October 31, 2026) |
 | Host to extension | `interrupt` | `thread`: the person's Esc in rewake's face; the extension calls `ctx.abort()` and answers `ok`, or `error` while pi is idle or compacting or for a run not drawn; an older extension answers `unknown host operation` (October 31, 2026) |
 | Extension to host | `closing` | `thread`; sent at `session_shutdown` whose `reason` is `"quit"`, before the link closes, waited for at most one second; a main's run in rewake's shell calls `LaunchRequest.Closing` (October 24, 2026) |
 | Host to extension | `wake` | `thread`, `notice`; answer says `ok` and whether it was `steered`, or `pending` while compacting |
 | Extension to host | `turn-start` | `thread`, `turn`; acknowledgment precedes model work |
 | Extension to host | `turn-end` | `thread`, `turn`, `outcome`, `text` (the final text, or pi's error message when a failed turn has none); acknowledgment follows publication |
-| Either | `state` | host asks with `thread`; extension answers or pushes `state` with `sequence`, `idle`, `compacting` and `native`, what the session read unconverted (extension 3, November 3, 2026): `contextUsage` (`ctx.getContextUsage()`), `model` (`ctx.model` less `headers` and `baseUrl`, which may carry credentials), `thinkingLevel`, and `lastAssistant`, the last assistant message's `usage`, `provider`, `model` and `timestamp`, sampled at each of its `message_end`s, `null` before the first; the wrapper projects it (`native.go`) |
+| Either | `state` | host asks with `thread`; extension answers or pushes `state` with `sequence`, `idle`, `compacting` and `native`, what the session read unconverted (extension 3, November 3, 2026): `contextUsage` (`ctx.getContextUsage()`), `model` (`ctx.model` less `headers` and `baseUrl`, which may carry credentials), `thinkingLevel`, runtime `workMode` (extension 4), and `lastAssistant`, the last assistant message's `usage`, `provider`, `model` and `timestamp`, sampled at each of its `message_end`s, `null` before the first; the wrapper projects it (`native.go`) |
 | Host to extension | `control` | `thread`, `action`, `request`, `from`, optional `focus`; answer carries outcome, reason, detail, open and token counts where known |
 | Extension to host | `compacted` | `thread`, event `sequence`, optional remote `request` and `from`; acknowledgment follows counting |
 | Extension to host | `compaction-result` | `thread`, `request`, `from`, outcome and optional token counts; acknowledgment follows retaining the outcome for main's letter |
@@ -805,6 +807,43 @@ Then `rewake restart rewake` switched the room to a build whose Go alone differe
 descriptions and the strip's model name suffixed. pi's process, its wrapper and its host kept
 their pids; pi's next request carried the new descriptions of `brief_tick` and `worktree_status`,
 and the strip read `Stub ·B`, with no restart of pi.
+
+## Work-mode native APIs (November 3, 2026, 1.4.0)
+
+Source observations, not a paid model probe: installed `dist/core/extensions/runner.js` reserves
+`app.thinking.cycle` (Shift+Tab), so `registerShortcut` cannot replace it. `pi-tui/dist/tui.js`
+runs `onTerminalInput` before focus routing; there is no supported editor-focus getter.
+`ui_prompt_start/end` cover extension dialogs, not native model/settings/session selectors.
+The documented `CustomEditor` subclass (`examples/extensions/modal-editor.ts`) receives only
+focused editor input; overriding its `handleInput` and delegating everything else preserves
+native dialogs and editing. `setEditorComponent` replaces the factory, so this integration
+does not chain another extension's replacement editor. Bracketed paste stays with the native
+editor, including split paste input. Shutdown removes the replacement.
+
+`ctx.modelRegistry.find(provider, id)` resolves exact configured ids. The extension's
+`pi.setModel` returns false on unavailable authentication; `AgentSession.setModel` checks auth
+before replacing the model. A successful selection may choose/clamp thinking; the bridge
+reapplies the destination effort, or the previous level if unset, subject to native support.
+`before_agent_start.systemPromptOptions.sections` is mutable and preserves other sections
+(`examples/extensions/prompt-customizer.ts`); `ctx.ui.setStatus` renders Go's mode label.
+Runtime contracts and the prompt-only/no-tool-guard limit: [pi-work-modes.md](pi-work-modes.md).
+
+**[live]** November 3, 2026 (brief 63), this build with bundled pi 1.4.0, private HOME,
+`REWAKE_DIR` and project under `/tmp`, source shell, loopback model only, no login or existing
+agent directory: main started advisor, review work review, code work build, analysis advisor,
+and a review-type template overriding start mode started build. Global start was advisor,
+without displacing review/code defaults. An explicit worker model/thinking suffix beat the
+configured build selections without changing its stance. Focused native Shift+Tab
+cycled all modes, refused during a held model response, and preserved unset selections;
+configured destinations changed model/effort. Native status, list's separate Mode column and
+face rule agreed with observations. Every captured loopback HTTP request carried its stance
+instructions and main's orchestrator qualification. Ctrl+L opened the native model selector;
+Shift+Tab/Alt+T there changed neither stance nor effort. Split bracketed paste did not cycle.
+Focused face Shift+Tab, Alt+T and Ctrl+T did not leak to the pty/main; thinking cycling changed
+native observations. No paid real-provider run was performed; no credential or transcript
+files were read, copied or linked. Text evidence: `.scratch/pi-mode-live.txt`,
+`.scratch/pi-mode-native-*.txt`, `.scratch/pi-mode-face-*.txt` and the captured stance sections
+in `.scratch/pi-mode-requests.json` (local probe artifacts, not repository records).
 
 ## Holding a run's end (November 3, 2026, 1.4.0)
 

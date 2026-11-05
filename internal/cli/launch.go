@@ -13,6 +13,7 @@ import (
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/core/role"
+	"github.com/praline-labs/rewake/internal/core/workmode"
 	"github.com/praline-labs/rewake/internal/host"
 	"github.com/praline-labs/rewake/internal/host/launch"
 	"github.com/praline-labs/rewake/internal/infra/build"
@@ -73,6 +74,14 @@ func handleLaunch(h adapter.Harness) func(*Context, Call) error {
 				return &FailedError{Message: "the room's directory could not be recorded: " + err.Error()}
 			}
 		}
+		var modes workmode.Config
+		if _, ok := h.(adapter.WorkModesHarness); ok {
+			aliases := ctx.launchAliases()
+			if err := aliases.Err(); err != nil {
+				return &UsageError{Command: call.Command, Message: err.Error()}
+			}
+			modes = aliases.Modes(id.template)
+		}
 		// Last of the preparations: every refusal above leaves no checkout
 		// behind.
 		args, checkout, err := takeWorktree(h, call, ctx.Stderr)
@@ -107,6 +116,7 @@ func handleLaunch(h adapter.Harness) func(*Context, Call) error {
 			WorktreeEntry: id.enter,
 			Mirror:        id.dev,
 			WorkType:      id.work,
+			Modes:         modes,
 		})
 		if checkout != nil {
 			checkout.settle(err != nil || code != 0)

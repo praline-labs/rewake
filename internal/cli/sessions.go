@@ -113,6 +113,9 @@ func sessionViewsOf(dir string, sessions []registry.Session, visible bool) []ses
 		}
 		if visible {
 			view.Telemetry = sessionSnapshot(dir, view.Name, view.Epoch())
+			if view.Telemetry != nil {
+				view.Mode = view.Telemetry.Mode
+			}
 			// The harness's own name wins, less what it adds in parentheses
 			// — a window the Context column shows truly; the template's
 			// label stands in for a harness that gives none.

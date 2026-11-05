@@ -83,7 +83,7 @@ func telemetryInto(row *SessionRow, t *session.Snapshot) {
 	} else {
 		row.Model = t.Model
 	}
-	row.Effort, row.Thinking = t.Effort, t.Thinking
+	row.Effort, row.Thinking, row.Mode = t.Effort, t.Thinking, t.Mode
 	if t.ContextUsed != nil {
 		row.Used = ptr(int(*t.ContextUsed))
 	}

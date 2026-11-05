@@ -4,14 +4,14 @@
 // imports these types, the shapes of what a face posts and the contract's
 // number alone, so a reload of the face never needs the shell to change.
 
-import { permissionModeValues, thinkingLevelValues } from "./mirror.gen.ts";
+import { permissionModeValues, thinkingLevelValues, workModeValues } from "./mirror.gen.ts";
 import { count, flag, list, type Of, one, optional, type Shape, serial, text } from "./shape.ts";
 
 // contract is the version of these messages, raised with any change of
 // them: start carries the shell's, and a face that speaks another draws
 // nothing. The shell holds what a face sends to it to the shapes below
 // (shell/src/face/check.ts).
-export const contract = 5;
+export const contract = 6;
 
 // refusal is a face's answer to a start of another contract. Its words, and
 // the shapes of start, ping, pong and error, are the one part no contract
@@ -92,9 +92,11 @@ export type ToFace =
   // unfold opens everything the face folds, or closes it again: the
   // person's ctrl+o, kept by the shell across a reload.
   | { kind: "unfold"; all: boolean }
-  // thinking is the person's shift+tab: the session's thinking level moves
+  // thinking is the person's Alt+T: the session's thinking level moves
   // on where the session takes it, the answer coming back under its id.
+  | { kind: "thinkingVisible" }
   | { kind: "thinking"; id: string }
+  | { kind: "workmode"; id: string }
   | { kind: "ping"; n: number };
 
 // Pointing is what the pointer did with the left button: pressed, dragged
@@ -109,8 +111,8 @@ export type Link = (typeof links)[number];
 // fromFace are the shapes of what a face posts, by their kind.
 export const fromFace = {
   // mode is the session's permission mode, and level its thinking level,
-  // which shift+tab moves, both as the mirror says them: the input's rule
-  // shows the mode, else the level.
+  // both as the mirror says them. workMode is a separate runtime stance,
+  // shown on pi's input rule; level stays on the strip.
   lines: {
     lines: list(faceLine, "rows", "a row"),
     turn: text("name"),
@@ -118,6 +120,7 @@ export const fromFace = {
     prompts: flag,
     mode: optional(one(permissionModeValues)),
     level: optional(one(thinkingLevelValues)),
+    workMode: optional(one(workModeValues)),
   },
   error: { text: text("text") },
   // copy is text for the person's clipboard: a selection, or the part a

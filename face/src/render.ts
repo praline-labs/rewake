@@ -267,9 +267,13 @@ export function bodyOf(
   width: number,
   want = Infinity,
   view: Opened = shut,
+  hideThinking = false,
 ): { rows: FaceLine[]; whole: boolean } {
   const rows: FaceLine[] = [];
-  const entries = entriesOf(model.items, model.turn === "working");
+  const entries = entriesOf(
+    hideThinking ? model.items.filter((i) => i.kind !== "thinking") : model.items,
+    model.turn === "working",
+  );
   let i = entries.length - 1;
   for (; i >= 0 && rows.length < want; i--) {
     const entry = entries[i];

@@ -37,11 +37,12 @@ type frame struct {
 	Focus    string  `json:"focus,omitempty"`
 	// Code names the extension's check that refused a control command, and
 	// Native the raw result of its native call; the host words both
-	// (control.go). Levels are the thinking levels the face's shift+tab
+	// (control.go). Levels are the thinking levels the face's Alt+T
 	// cycles (native.go).
 	Code   string          `json:"code,omitempty"`
 	Native json.RawMessage `json:"native,omitempty"`
 	Levels []string        `json:"levels,omitempty"`
+	Mode   *modePlan       `json:"mode,omitempty"`
 	// Mirror, in hello's answer, says rewake's face draws the run; Events
 	// are pi's own events an events frame carries (translate.go).
 	Mirror bool  `json:"mirror,omitempty"`
@@ -62,7 +63,7 @@ type frame struct {
 
 const (
 	maxFrame        = 4 << 20
-	protocolVersion = 3
+	protocolVersion = 4
 )
 
 var errClosed = errors.New("the extension connection closed")

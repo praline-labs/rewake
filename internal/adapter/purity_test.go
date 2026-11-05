@@ -95,7 +95,7 @@ func agents(t *testing.T) []agent {
 			described: map[string]string{"mod/hooks/tools.ts": "tool.description", "mod/hooks/asks.ts": "option.description"},
 		},
 		{
-			name: "pi's extension", files: shipped(t, "pi/run.go", "pi"), external: []string{"@earendil-works/pi-coding-agent", "node:crypto", "node:net"},
+			name: "pi's extension", files: shipped(t, "pi/run.go", "pi"), external: []string{"@earendil-works/pi-coding-agent", "@earendil-works/pi-tui", "node:crypto", "node:net"},
 			register:  regexp.MustCompile(`\.registerTool\(`),
 			described: map[string]string{"tools.ts": "entry.description"},
 			mirrored:  true,

@@ -6,7 +6,7 @@ package mirror
 const (
 	// Version is the version of the lines, which hello carries; one build per room makes it a
 	// guard, not a negotiation.
-	Version = 1
+	Version = 2
 	// MaxItemBytes bounds one item serialized: a longer text keeps its head and its tail with a
 	// cut mark between.
 	MaxItemBytes = 262144
@@ -75,6 +75,10 @@ type Line struct {
 	// did.
 	Retry *int `json:"retry,omitempty"`
 
+	// WorkMode is the observed runtime work stance, independent of permissions, on begin and
+	// stance.
+	WorkMode *WorkMode `json:"workMode,omitempty"`
+
 	// Mode is the session's permission mode, on begin and mode; absent while the session has not
 	// said it.
 	Mode *PermissionMode `json:"mode,omitempty"`
@@ -106,6 +110,7 @@ const (
 	LineOpTurn   LineOp = "turn"
 	LineOpMode   LineOp = "mode"
 	LineOpLevel  LineOp = "level"
+	LineOpStance LineOp = "stance"
 	LineOpDrop   LineOp = "drop"
 	LineOpAnswer LineOp = "answer"
 )
@@ -230,6 +235,16 @@ const (
 	PermissionModeUnasked PermissionMode = "unasked"
 )
 
+// WorkMode is a runtime working stance, never a permission grant.
+type WorkMode string
+
+// The values of WorkMode.
+const (
+	WorkModeReview  WorkMode = "review"
+	WorkModeAdvisor WorkMode = "advisor"
+	WorkModeBuild   WorkMode = "build"
+)
+
 // ThinkingLevel is how much the session's model thinks before it answers, in the words of the
 // harness that moves it, from not at all to the most.
 type ThinkingLevel string
@@ -259,9 +274,9 @@ type Input struct {
 }
 
 // InputKind is what the face may send: a prompt, typed as the person; an interrupt, the
-// person's Esc stopping the turn that works, as the harness's own Esc does; thinking, the
-// person's shift+tab moving the session's thinking level to the next, as the harness's own key
-// does.
+// person's Esc stopping the turn that works, as the harness's own Esc does; work-mode,
+// shift+tab cycling the runtime stance; thinking, Alt+T moving the session's thinking level to
+// the next, as the harness's own key does.
 type InputKind string
 
 // The values of InputKind.
@@ -269,4 +284,5 @@ const (
 	InputKindPrompt    InputKind = "prompt"
 	InputKindInterrupt InputKind = "interrupt"
 	InputKindThinking  InputKind = "thinking"
+	InputKindWorkmode  InputKind = "workmode"
 )

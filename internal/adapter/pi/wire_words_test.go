@@ -19,14 +19,15 @@ import (
 
 // frameSays is each type of the frame and the fields it carries.
 var frameSays = map[string]string{
-	"frame":     "action arguments argv code error events focus from id isError levels mirror native notice ok op outcome pending protocol ran refused request sequence state steered text thread timeoutMs tool tools turn",
+	"frame":     "action arguments argv code error events focus from id isError levels mirror mode native notice ok op outcome pending protocol ran refused request sequence state steered text thread timeoutMs tool tools turn",
 	"sample":    "compacting idle native sequence",
+	"modePlan":  "busy effort failed instructions model name provider status",
 	"toolEntry": "description inputSchema label name",
 	"Ran":       "error exitCode killed stderr stdout stdoutCut",
 }
 
 // frameOps are the ops the extension sends or answers.
-var frameOps = "answer closing compacted compaction-result control events hello interrupt prompt state thinking tool-plan tool-result tools trace turn-end turn-start wake"
+var frameOps = "answer closing compacted compaction-result control events hello interrupt mode-cycle mode-key prompt state thinking thinking-cycle tool-plan tool-result tools trace turn-end turn-start wake"
 
 // words are a type's fields as JSON names them, and those of the types they
 // hold, but pi's events.

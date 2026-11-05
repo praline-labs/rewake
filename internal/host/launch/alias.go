@@ -18,6 +18,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/core/role"
+	"github.com/praline-labs/rewake/internal/core/workmode"
 	"github.com/praline-labs/rewake/internal/core/worktype"
 )
 
@@ -60,8 +61,9 @@ type Alias struct {
 	EnterWorktree bool `toml:"enter_worktree"`
 	// Type is the kind of work its worker does unless space open names
 	// another (docs/worker-types.md).
-	Type   string        `toml:"type"`
-	Launch AliasSettings `toml:"launch"`
+	Type   string          `toml:"type"`
+	Launch AliasSettings   `toml:"launch"`
+	Pi     workmode.Config `toml:"pi"`
 }
 
 // AliasSettings are the portable settings of a worker. The harness turns
@@ -112,6 +114,7 @@ type Set struct {
 	skillsNever map[string]string
 	// pendingOff is what the project file asked, applied once every file is read.
 	pendingOff []offRequest
+	pi         workmode.Config
 }
 
 // Names are the aliases this process knows, in order, for a refusal that says

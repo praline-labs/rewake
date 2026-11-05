@@ -64,7 +64,7 @@ export function mirror(dir: string, served: Served = {}) {
       { id: "p", kind: "prompt", status: "settled", text: served.prompt ?? "" },
     ];
   const lines = [
-    { op: "hello", v: 1, inputs: served.inputs ?? ["prompt"] },
+    { op: "hello", v: 2, inputs: served.inputs ?? ["prompt"] },
     { op: "begin", items: items.length, dropped: 0, turn: "idle", ...served.begin },
     ...items.map((item) => ({ op: "item", item })),
     { op: "end" },

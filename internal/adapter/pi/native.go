@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/praline-labs/rewake/internal/core/session"
+	"github.com/praline-labs/rewake/internal/core/workmode"
 )
 
 // What the extension read of the session comes as pi answered it (ctx's
@@ -21,6 +22,7 @@ type nativeState struct {
 	Model         json.RawMessage `json:"model"`
 	ThinkingLevel json.RawMessage `json:"thinkingLevel"`
 	LastAssistant json.RawMessage `json:"lastAssistant"`
+	WorkMode      string          `json:"workMode"`
 }
 
 type nativeModel struct {
@@ -81,6 +83,11 @@ func (r *run) projectLocked(thread string, raw json.RawMessage, now time.Time, o
 	var level string
 	_ = json.Unmarshal(parts.ThinkingLevel, &level)
 	settings := &session.Settings{}
+	if workmode.Valid(parts.WorkMode) {
+		settings.Mode = &parts.WorkMode
+		r.mode = parts.WorkMode
+		r.mirrorWorkMode(parts.WorkMode)
+	}
 	if model != nil {
 		settings.Model = &model.ID
 		if model.Name != "" {
@@ -199,7 +206,7 @@ func tierName(seconds int64) string {
 	return strconv.FormatInt(seconds, 10) + "s"
 }
 
-// thinkingLevels are pi's thinking levels in the order its shift+tab cycles
+// thinkingLevels are pi's thinking levels in the order native thinking cycles
 // them (pi-ai's getSupportedThinkingLevels, read on 1.4.0).
 var thinkingLevels = []string{"off", "minimal", "low", "medium", "high", "xhigh", "max"}
 

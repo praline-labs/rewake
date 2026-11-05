@@ -113,6 +113,7 @@ const modeColour = (mode: PermissionMode | undefined, theme: Theme): RGBA => {
 // partColour is a part of the rule in its own colour: a mode's, or a
 // thinking level's as pi colours it; the rule's grey for the rest.
 const partColour = (part: RulePart, theme: Theme): RGBA | undefined => {
+  if (part.workMode) return colour(theme.look.suggestion);
   if (part.mode) return modeColour(part.mode, theme);
   const level = part.level && theme.look.thinking[part.level];
   return level ? colour(level) : undefined;

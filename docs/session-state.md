@@ -36,11 +36,14 @@ missing or stale altogether ends the line with `state unavailable/stale`
 and a harness common to every row appear once in the header, and differing values add
 Directory and Harness columns. A verified main sees Session, Role, Status, Model, Effort,
 Context, Compactions and Age, a Type column when some worker was raised for a type of work,
-and a Cache column when some harness reports its prompt cache
+a Mode column when a harness reports its runtime stance, and a Cache column when some harness reports its prompt cache
 (`internal/cli/session_table.go`). Worker and plain-shell tables leave out every telemetry
 column. Addresses and values are never cropped; quoted paths and settings escape control
 characters, so a value cannot introduce another row. Machine-readable output keeps the full
-model, exact values, field visibility and the empty list's shape.
+model, exact values, field visibility and the empty list's shape. List entries carry optional
+`mode` beside the unchanged `role` and `type`, taken from observed telemetry, not launch intent.
+The snapshot and room view carry that same effective mode; only a verified main sees it.
+It is separate from a harness's permission mode ([pi-work-modes.md](pi-work-modes.md)).
 
 ## Activity
 

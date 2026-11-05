@@ -15,14 +15,15 @@ import (
 	"github.com/praline-labs/rewake/internal/core/mirror"
 	"github.com/praline-labs/rewake/internal/core/session"
 	"github.com/praline-labs/rewake/internal/core/sessiontools"
+	"github.com/praline-labs/rewake/internal/core/workmode"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
-//go:embed extension.ts management.ts tools.ts stream.ts forward.ts faced.ts
+//go:embed extension.ts management.ts tools.ts stream.ts forward.ts faced.ts modes.ts editor.ts protocol.ts
 var extensions embed.FS
 
 // modules are the extension's files, written beside it for each run.
-var modules = []string{"extension.ts", "management.ts", "tools.ts", "stream.ts", "forward.ts", "faced.ts"}
+var modules = []string{"extension.ts", "management.ts", "tools.ts", "stream.ts", "forward.ts", "faced.ts", "modes.ts", "editor.ts", "protocol.ts"}
 
 type run struct {
 	file, socket, controlDir string
@@ -42,6 +43,9 @@ type run struct {
 	// translate turns pi's events into the model's (translate.go).
 	translate *translator
 	observed  observations
+	modes     workmode.Config
+	initial   *modePlan
+	mode      string
 	// interrupts are who stopped which turn, until it ends (control.go); a
 	// handover waits for an open turn, so none outlives this image.
 	interrupts  control.Interrupts

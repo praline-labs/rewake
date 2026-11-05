@@ -21,7 +21,7 @@ const model = (...items: Item[]) => {
 test("the face draws the tail of the model, marks a gap, and scrolls back", () => {
   const m = new FaceModel();
   for (const line of [
-    { op: "hello", v: 1 },
+    { op: "hello", v: 2 },
     { op: "begin", items: 1, turn: "idle" },
     { op: "item", item: { id: "p", kind: "prompt", status: "settled", text: "count" } },
     { op: "end" },

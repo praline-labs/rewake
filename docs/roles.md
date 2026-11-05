@@ -49,7 +49,15 @@ without waking the same failing conversation. Old records with role `worker` are
 reporting fallback inside the catalogue.
 The write role reports like general.
 
-Main's briefing holds when a project hides every `write` template (`[aliases] off`): it delegates to a template that fits, and where none writes code it writes the code itself and gives the reviewer the review. `rewake workers` reads the catalogue each time and says so, so a mid-session change of the file needs no restart. rewake grants main no permissions beyond its harness's.
+Main remains an orchestrator even when a project hides every `write` template (`[aliases] off`):
+it does not write product code itself. It asks for a suitable writer template or the decision
+needed to proceed. `rewake workers` reads the catalogue each time and says when none writes
+code, so a mid-session file change needs no restart. Runtime [pi work modes](pi-work-modes.md)
+change stance, never the role's mail/reporting or Git authority; main delegates in every mode.
+Review/advisor are prompt-only read-only guidance, not tool or permission boundaries.
+
+**Owner decision, November 3, 2026:** no missing-writer fallback gives main implementation work;
+build mode does not change that.
 
 ## What a session is told
 

@@ -1,23 +1,27 @@
 // The input's top rule (docs/face.md, "The look"): at its left end the
 // session's permission mode, as the terminal program names it under its
-// input, or else the thinking level shift+tab moves, as pi names it,
-// `── ◆ high (shift+tab to cycle) ─`, both as the mirror says them; at its right the run's
+// input, or pi's runtime work mode. A thinking level is a fallback before
+// the mode is observed. All come from the mirror; at its right the run's
 // room work, as Claude Code's hint line ends with it (internal/core/work),
 // `── brief 61 1/3 ─`, and nothing without work. A narrow pane drops the
 // level's hint first, then the mode or the level, then cuts the work with …;
 // whatever its role, a session's rule is drawn the same.
 
-import type { PermissionMode, ThinkingLevel } from "../../../face/src/mirror.gen.ts";
+import type { PermissionMode, ThinkingLevel, WorkMode } from "../../../face/src/mirror.gen.ts";
 
 // Left is what may stand at the rule's left, as the face heard it from the
-// session's mirror: a session that says a mode shows it, one that says the
-// level shift+tab moves shows that, and a work mode of pi's would come as a
-// mode.
-export type Left = { mode?: PermissionMode; level?: ThinkingLevel };
+// session's mirror. Runtime work mode is separate from permission mode;
+// neither is inferred from role or work type.
+export type Left = { mode?: PermissionMode; level?: ThinkingLevel; workMode?: WorkMode };
 
 // RulePart is a run of the rule's text, in the rule's colour unless it
 // names the mode or the thinking level, drawn in that one's colour.
-export type RulePart = { text: string; mode?: PermissionMode; level?: ThinkingLevel };
+export type RulePart = {
+  text: string;
+  mode?: PermissionMode;
+  level?: ThinkingLevel;
+  workMode?: WorkMode;
+};
 
 // modeNames are the modes as the terminal program shows them; the default
 // one says nothing.
@@ -56,12 +60,16 @@ const tail = (text?: string) => (text ? ` ${text} ─` : "");
 
 // lefts are what may stand at the rule's left, the widest first: the mode,
 // or the thinking level with its hint, then without.
-function lefts({ mode, level }: Left = {}): RulePart[][] {
+function lefts({ mode, level, workMode }: Left = {}): RulePart[][] {
+  if (workMode) {
+    const label = { text: `◆ ${workMode}`, workMode };
+    return [[label, { text: cycleHint }], [label]];
+  }
   const named = mode ? modeNames[mode] : undefined;
   if (named) return [[{ text: named, mode }]];
   if (!level) return [];
   const label = { text: levelName(level), level };
-  return [[label, { text: cycleHint }], [label]];
+  return [[label, { text: " (alt+t to cycle)" }], [label]];
 }
 
 // ruleParts is the rule cells wide: `── left ` at its left, ` work ─` at its
@@ -98,7 +106,7 @@ export function withMore(parts: RulePart[], hidden: number): RulePart[] {
   const label = ` ↑ ${hidden} more `;
   let best: { at: number; start: number; length: number } | undefined;
   parts.forEach((part, at) => {
-    if (part.mode || part.level) return;
+    if (part.mode || part.level || part.workMode) return;
     for (const run of part.text.matchAll(/─+/g)) {
       const length = run[0].length;
       if (!best || length > best.length) best = { at, start: run.index, length };

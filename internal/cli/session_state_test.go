@@ -41,7 +41,8 @@ func saveState(t *testing.T, dir, name, epoch string, count uint64) {
 	filled := 42
 	model, effort := "fixture-model", "high"
 	activity := "working"
-	snapshot := session.Snapshot{Activity: &activity, ActivityAt: &now, ActivityFresh: true, Selection: "ready", Fresh: true, ContextFresh: true, SettingsFresh: true, PublishedAt: &now, ObservedAt: &now, ContextAt: &now, SettingsAt: &now, ContextUsed: &used, ContextWindow: &window, FilledPercent: &filled, Compactions: &count, Coverage: "observed", Model: &model, Effort: &effort}
+	runtimeMode := "review"
+	snapshot := session.Snapshot{Activity: &activity, ActivityAt: &now, ActivityFresh: true, Selection: "ready", Fresh: true, ContextFresh: true, SettingsFresh: true, PublishedAt: &now, ObservedAt: &now, ContextAt: &now, SettingsAt: &now, ContextUsed: &used, ContextWindow: &window, FilledPercent: &filled, Compactions: &count, Coverage: "observed", Model: &model, Effort: &effort, Mode: &runtimeMode}
 	if err := session.Save(dir, name, epoch, snapshot); err != nil {
 		t.Fatal(err)
 	}
@@ -66,6 +67,10 @@ func TestSessionStateVisibilityInListTextAndJSON(t *testing.T) {
 				}
 				if role == "main" && !asJSON && (!strings.Contains(out, "\"fixture-model\"") || !strings.Contains(out, "\"high\"") || !strings.Contains(out, self.Name) || !strings.Contains(out, "working") || !strings.Contains(out, "Compactions")) {
 					t.Fatal("main state or configured settings missing")
+				}
+				modeVisible := strings.Contains(out, `"mode": "review"`) || strings.Contains(out, "Mode") && strings.Contains(out, "review")
+				if modeVisible != (role == "main") {
+					t.Fatalf("mode visibility %s: %s", role, out)
 				}
 				if role == "main" && asJSON && !strings.Contains(out, `"contextWindowTokens": 272123`) {
 					t.Fatal("JSON rounded window")

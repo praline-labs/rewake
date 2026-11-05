@@ -90,6 +90,9 @@ func TestAnIdlePiRunHandsItsConnectionOver(t *testing.T) {
 
 	// What the face's translator holds goes over in its memory file: a
 	// block streaming in the old image settles under its id in the next.
+	before.mu.Lock()
+	before.mode = "build"
+	before.mu.Unlock()
 	opened := before.translate.take([]raw{{Event: "agent_start"}, {Event: "message_update", Type: "text_delta", Delta: "Hel"}})
 	handed, err := before.HandOver()
 	if err != nil {
@@ -123,6 +126,12 @@ func TestAnIdlePiRunHandsItsConnectionOver(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(after.Close)
+	after.mu.Lock()
+	mode := after.mode
+	after.mu.Unlock()
+	if mode != "build" {
+		t.Fatalf("handover lost live mode: %q", mode)
+	}
 	if settled := after.translate.take([]raw{{Event: "message_update", Type: "text_end", Content: json.RawMessage(`"Hello"`)}}); len(settled) != 1 || len(opened) != 2 || settled[0].ID != opened[1].ID || settled[0].Turn != opened[0].Turn {
 		t.Fatalf("the block streaming across the handover: %+v, then %+v", opened, settled)
 	}
@@ -153,6 +162,7 @@ func TestAnIdlePiRunHandsItsConnectionOver(t *testing.T) {
 // switch of the room's build admits only a build that takes the same
 // handover.pi, so a changed handedState raises handoverVersion.
 var handedShapes = map[int]string{
+	4: `Version int "version"; PID int "pid"; Start uint64 "start"; Thread string "thread"; Next int64 "next"; Unread []uint8 "unread,omitempty"; Cache *pi.cacheSeen "cache,omitempty" {Thread string "thread"; Of json.RawMessage "of,omitempty"; Read int64 "read"; Write int64 "write"; Input int64 "input"; TTL int64 "ttl,omitempty"; ExpiresAt int64 "expiresAt,omitempty"}; Mode string "mode,omitempty"; Translator int "translator"`,
 	1: `Version int "version"; PID int "pid"; Start uint64 "start"; Thread string "thread"; Next int64 "next"`,
 	2: `Version int "version"; PID int "pid"; Start uint64 "start"; Thread string "thread"; Next int64 "next"; Unread []uint8 "unread,omitempty"`,
 	3: `Version int "version"; PID int "pid"; Start uint64 "start"; Thread string "thread"; Next int64 "next"; Unread []uint8 "unread,omitempty"; Cache *pi.cacheSeen "cache,omitempty" {Thread string "thread"; Of json.RawMessage "of,omitempty"; Read int64 "read"; Write int64 "write"; Input int64 "input"; TTL int64 "ttl,omitempty"; ExpiresAt int64 "expiresAt,omitempty"}; Translator int "translator"`,

@@ -8,6 +8,7 @@ import type {
   PermissionMode,
   ThinkingLevel,
   TurnState,
+  WorkMode,
 } from "./mirror.gen.ts";
 import { bounds } from "./mirror.gen.ts";
 
@@ -26,9 +27,10 @@ export class FaceModel {
   retry = 0;
   dropped = 0;
   // mode is the session's permission mode, and level the thinking level the
-  // face's shift+tab moves, each unknown until the session says it.
+  // face's Alt+T moves, each unknown until the session says it.
   mode: PermissionMode | undefined;
   level: ThinkingLevel | undefined;
+  workMode: WorkMode | undefined;
   inputs: InputKind[] = [];
   // ready is a snapshot whole: until its end the face shows what it had.
   ready = false;
@@ -50,6 +52,7 @@ export class FaceModel {
         this.stopped = line.stopped === true;
         this.mode = line.mode;
         this.level = line.level;
+        this.workMode = line.workMode;
         this.timed(line);
         return false;
       case "item":
@@ -77,6 +80,9 @@ export class FaceModel {
         return true;
       case "mode":
         this.mode = line.mode;
+        return true;
+      case "stance":
+        this.workMode = line.workMode;
         return true;
       case "level":
         this.level = line.level;

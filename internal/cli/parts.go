@@ -32,6 +32,7 @@ const (
 	handoverContract       = "handover"
 	mirrorHandoverContract = "handover.mirror"
 	switchContract         = "switch"
+	RoomViewVersion        = 2
 )
 
 // contractsOf is this build's: the host's channel and the mirror's lines,
@@ -42,6 +43,7 @@ func contractsOf(catalog adapter.Catalog) Contracts {
 	c := Contracts{
 		Speaks: map[string]string{
 			parts.HostContract:     strconv.Itoa(mainhost.Version),
+			"room-view":            strconv.Itoa(RoomViewVersion),
 			parts.MirrorContract:   strconv.Itoa(mirror.Version),
 			handoverContract:       strconv.Itoa(host.HandoverVersion),
 			mirrorHandoverContract: strconv.Itoa(mirror.HandedVersion),

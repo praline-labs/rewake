@@ -1,0 +1,31 @@
+import type { State } from "./management.ts";
+import type { ModePlan } from "./modes.ts";
+import type { Forwarded } from "./stream.ts";
+import type { ToolFields } from "./tools.ts";
+
+export type Frame = {
+  op: string;
+  id: number;
+  protocol?: number;
+  thread?: string;
+  turn?: string;
+  outcome?: string;
+  text?: string;
+  notice?: string;
+  ok?: boolean;
+  error?: string;
+  steered?: boolean;
+  state?: State;
+  sequence?: number;
+  pending?: boolean;
+  action?: string;
+  request?: string;
+  from?: string;
+  focus?: string;
+  code?: string;
+  native?: unknown;
+  levels?: string[];
+  mode?: ModePlan;
+  mirror?: boolean;
+  events?: Forwarded[];
+} & ToolFields;

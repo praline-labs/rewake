@@ -7,6 +7,7 @@ import (
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/core/role"
+	"github.com/praline-labs/rewake/internal/core/workmode"
 	"github.com/praline-labs/rewake/internal/core/worktype"
 	"github.com/praline-labs/rewake/internal/infra/build"
 )
@@ -43,6 +44,7 @@ type Request struct {
 	// WorkType is the kind of work the worker was raised for
 	// (adapter.LaunchRequest.WorkType).
 	WorkType worktype.Type
+	Modes    workmode.Config
 	// RoleReason says why the launch has its role, for the record and the
 	// briefing; empty says the role was selected with its flag.
 	RoleReason string

@@ -29,9 +29,10 @@ type Model struct {
 	turn    TurnState
 	// mode is the session's permission mode, and level its thinking level,
 	// each nil until the session says it.
-	mode  *PermissionMode
-	level *ThinkingLevel
-	parts map[string]*assembly
+	mode     *PermissionMode
+	workMode *WorkMode
+	level    *ThinkingLevel
+	parts    map[string]*assembly
 	// born numbers the assemblies, so the oldest goes first past a bound.
 	born    int
 	clients map[*client]struct{}
@@ -166,6 +167,11 @@ func (m *Model) apply(e Event) {
 		if e.Mode != "" && (m.mode == nil || *m.mode != e.Mode) {
 			m.mode = ptr(e.Mode)
 			m.send(Line{Op: LineOpMode, Mode: m.mode})
+		}
+	case EventWorkMode:
+		if e.WorkMode != "" && (m.workMode == nil || *m.workMode != e.WorkMode) {
+			m.workMode = ptr(e.WorkMode)
+			m.send(Line{Op: LineOpStance, WorkMode: m.workMode})
 		}
 	case EventLevel:
 		if e.Level != "" && (m.level == nil || *m.level != e.Level) {

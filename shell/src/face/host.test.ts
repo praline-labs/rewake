@@ -66,7 +66,7 @@ function silent(dir: string) {
   const path = join(dir, "s.sock");
   const open: { end(): void }[] = [];
   const lines = [
-    { op: "hello", v: 1, inputs: ["prompt"] },
+    { op: "hello", v: 2, inputs: ["prompt"] },
     { op: "begin", items: 0, dropped: 0, turn: "idle" },
     { op: "end" },
   ];
