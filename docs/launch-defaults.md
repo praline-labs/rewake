@@ -210,8 +210,9 @@ only from a template (October 19, 2026), and there is no `--harness` or `--role`
 space names the worker, and its room is main's whatever the checkout. Applied
 settings replace older copies in `args`, and flags after `--` replace those in turn; environment
 defaults fill what neither supplied. Under a `command` wrapper whose settings set
-`CLAUDE_CODE_AUTO_COMPACT_WINDOW`, that value wins over `--autocompact`; without one a worker's
-user settings no longer reach the run ([worker-profile.md](worker-profile.md)). A worktree
+`CLAUDE_CODE_AUTO_COMPACT_WINDOW`, that value wins over `--autocompact`. A Claude Code wrapper
+gets the same worker profile as a direct launch and must preserve its `CLAUDE_CONFIG_DIR` and one
+`--settings` argument ([worker-profile.md](worker-profile.md)). A worktree
 named in the alias is recorded as the space's checkout; an explicit space `--worktree` replaces
 it. rewake neither reads nor edits the person's wrapper or harness settings.
 

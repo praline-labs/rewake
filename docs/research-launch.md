@@ -473,7 +473,8 @@ logged-in folder needs credentials; the workers' real folder has the flag set al
 
 ## Claude Code's cross-session inbound gate
 
-**[the binary's bundled source, installed 2.1.280; September 23, 2026]** Every line that
+**[the binary's bundled source, installed 2.1.280; September 23, 2026; the source-selection
+order and explicit-accept path rechecked on installed 2.1.310, November 5, 2026]** Every line that
 reaches a session's inbox socket passes a receive-side gate before it joins the queue. What
 it does to rewake's line in a running session is in
 [research.md](research.md#the-inbound-gate-on-rewakes-line); this is what the code states.

@@ -34,9 +34,11 @@ const statusWaitDelay = 2 * time.Second
 // owner's decision, October 23, 2026). `claude auth status` exits 1 with
 // loggedIn false when there is none (probed on 2.1.302). A task sent before
 // the login is delivered, its turn stops at once on the missing login, and
-// the task stays unread (probed on 2.1.302). Under a wrapper the wrapper
-// decides the configuration; a status that cannot be read, or does not
-// answer in time, says nothing.
+// the task stays unread (probed on 2.1.302). A wrapper still gets the worker
+// profile, but no status probe: it may choose a configuration by a role this
+// pre-launch check does not know, and a wrong role or authentication backend
+// would produce a false login notice. A status that cannot be read, or does
+// not answer in time, likewise says nothing.
 func (claudeHarness) WorkerNotice(command string) string {
 	if command != "" {
 		return ""

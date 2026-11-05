@@ -7,7 +7,8 @@ package adapter
 type WorkerReadiness interface {
 	// WorkerNotice says what a worker still lacks and what the person does
 	// in its pane, or "" when nothing is missing or the harness cannot tell.
-	// command is the wrapper the template names, which then decides the
-	// configuration the harness starts with.
+	// command is the wrapper the template names. A harness may skip the
+	// probe for one: the wrapper's role-sensitive configuration is unknown
+	// before the worker's launch, so a guessed role could misstate the login.
 	WorkerNotice(command string) string
 }

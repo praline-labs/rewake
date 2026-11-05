@@ -24,7 +24,7 @@ func TestRunSettingsWithEntry(t *testing.T) {
 	root := t.TempDir()
 	read := "Read(/" + filepath.ToSlash(root) + "/**)"
 	passed, enter, notes, err := runSettings(map[string]any{"autoMemoryEnabled": false}, t.TempDir(), root, "opus", true, "/run", "", "")
-	if err != nil || !enter || len(notes) != 0 || !slices.Equal(permissions(passed)["allow"].([]any), []any{read, enterTool}) || permissions(passed)["deny"] != nil {
+	if err != nil || !enter || len(notes) != 0 || overlayOf(t, passed)[crossSessionSetting] != "accept" || !slices.Equal(permissions(passed)["allow"].([]any), []any{read, enterTool}) || permissions(passed)["deny"] != nil {
 		t.Fatalf("entry: %s %v %v %v", passed, enter, notes, err)
 	}
 	passed, enter, _, _ = runSettings(map[string]any{}, t.TempDir(), root, "opus", false, "/run", "", "")

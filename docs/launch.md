@@ -162,16 +162,26 @@ rewake --command my-claude claude
   the other flags, so a `CLAUDE_CODE_AUTO_COMPACT_WINDOW` the wrapper sets still wins, as for
   a typed `--autocompact`; a person's own `--settings` is not read, and the flag, being on
   the command line, outranks a window set there.
-- Main's status line: a launch of main with a run directory, not under `--command`, adds one
-  `--settings` holding only `statusLine`, rewake's command, which runs the person's own and
+- Main's settings: a launch of main not under `--command` adds one
+  `--settings` holding `crossSessionInbound: "accept"` and, with a run directory, `statusLine`,
+  rewake's command, which runs the person's own and
   tells the host the model's name, thinking, effort and the cache's life
   ([claude.md](claude.md#the-cache-ttl)). A caller's own `--settings` reaches main's harness as
   given in its place: rewake neither reads nor merges it, and the launch notes that main's row
-  then lacks those. A caller's `--setting-sources` likewise leaves main without rewake's status
-  line, with the same note. A worker's of either is refused, since the worker profile owns both.
-- **The workers' profile.** Every launch but main's, unless `--command` names a wrapper, sets
+  then lacks those. A caller's `--setting-sources` does not replace rewake's settings. A worker's
+  `--settings` or `--setting-sources` is refused, since the worker profile owns both.
+- **Peer messages under every permission mode.** The run's settings accept cross-session
+  messages, so `bypassPermissions` does not hold rewake's classless notice for the person's
+  approval. This accepts other senders on the same inbound channel too and overrides a
+  `crossSessionInbound` value in the user's settings; managed policy and project/local settings
+  can still tighten it to `hold` or `refuse`. Main under `--command`, or any launch with its own
+  `--settings`, keeps that settings layer alone: its wrapper or caller adds
+  `crossSessionInbound: "accept"` if it wants the same behavior.
+- **The workers' profile.** Every launch but main's sets
   `CLAUDE_CONFIG_DIR` to the workers' service folder and adds one `--settings` with what the run
-  alone gets: [worker-profile.md](worker-profile.md).
+  alone gets, through `--command` too: the wrapper replaces the program, not the profile. It
+  must preserve that variable and pass rewake's settings through unchanged rather than add a
+  second `--settings`: [worker-profile.md](worker-profile.md).
 - Every role launches here: the run's mod reports each turn's end once its
   hello is admitted, after the harness starts, and a task to the run fails until then
   ([claude-turns.md](claude-turns.md#readiness-and-admission)). A cause the adapter knows

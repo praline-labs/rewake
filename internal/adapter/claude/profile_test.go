@@ -9,6 +9,8 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/core/role"
+	"github.com/praline-labs/rewake/internal/infra/build/buildtest"
+	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
 // privateHome keeps a test's worker launch from reading the person's own
@@ -141,15 +143,93 @@ func TestTheServiceFolderIsNeverOverwritten(t *testing.T) {
 	}
 }
 
-// A wrapper decides the configuration it starts Claude Code with; the
-// profile stays out of its way, as a wrapper's worker launched before it did.
+// A wrapper replaces the worker's program alone. Its launch gets the same
+// service folder, run settings, checkout entry and inherited environment as a
+// direct one, including the status line, memory, briefs and MCP file.
 func TestWorkerProfileUnderCommand(t *testing.T) {
-	plan, err := profileLaunch(t, t.TempDir(), role.Write, "my-claude", nil, "--settings", "mine.json")
+	base := t.TempDir()
+	if err := os.Chmod(base, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	home := filepath.Join(base, "home")
+	if err := os.MkdirAll(home, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("HOME", home)
+	dir := profileDir(home)
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "mcp.json"), []byte("{}"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	room := buildtest.Room(t, base, state.DefaultRoom)
+	request := adapter.LaunchRequest{
+		Name: "api", Dir: base, RoomDir: room, Intro: true, Role: role.Write, Template: "writer",
+		RunDir: filepath.Join(room, "runs", "api.e1"), Executable: "/rewake", WorktreeEntry: true,
+		Socket: filepath.Join(base, "api.sock"),
+		Env:    []string{"HOME=" + home, "CLAUDE_CONFIG_DIR=/elsewhere", "WRAPPER_MARK=kept"},
+	}
+	plain, err := New().Launch(request)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if slices.ContainsFunc(plan.Env, func(kv string) bool { return strings.HasPrefix(kv, configDirEnv+"=") }) || !slices.Equal(adapter.FlagValues(plan.Args, settingsFlag), []string{"mine.json"}) || !strings.Contains(strings.Join(plan.Notes, "\n"), "--command") {
-		t.Fatalf("the profile reached a wrapper's launch: %q %q", plan.Args, plan.Notes)
+	request.Command = "my-claude"
+	wrapped, err := New().Launch(request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if wrapped.Command != "my-claude" || plain.Command != "claude" {
+		t.Fatalf("programs: plain %q, wrapped %q", plain.Command, wrapped.Command)
+	}
+	if !slices.Equal(plain.Args, wrapped.Args) || !slices.Equal(plain.Env, wrapped.Env) {
+		t.Fatalf("the launches differ:\nplain   %q %q\nwrapped %q %q", plain.Args, plain.Env, wrapped.Args, wrapped.Env)
+	}
+	settings := adapter.FlagValues(wrapped.Args, settingsFlag)
+	if len(settings) != 1 || overlayOf(t, settings[0])[crossSessionSetting] != "accept" {
+		t.Fatalf("run settings: %q", settings)
+	}
+	for _, want := range []string{configDirEnv + "=" + dir, "WRAPPER_MARK=kept", adapter.WorktreeEnterEnv + "=1"} {
+		if !slices.Contains(wrapped.Env, want) {
+			t.Errorf("environment lacks %q: %q", want, wrapped.Env)
+		}
+	}
+	if slices.Contains(wrapped.Env, "CLAUDE_CONFIG_DIR=/elsewhere") {
+		t.Errorf("the inherited configuration directory won: %q", wrapped.Env)
+	}
+	if values := adapter.FlagValues(wrapped.Args, mcpConfigFlag); !slices.Equal(values, []string{filepath.Join(dir, "mcp.json")}) {
+		t.Errorf("MCP file: %q", values)
+	}
+	intro := adapter.FlagValues(wrapped.Args, introFlag)
+	if len(intro) != 1 || !strings.Contains(intro[0], "\n"+entryBrief.Title+"\n") {
+		t.Errorf("checkout briefing: %q", intro)
+	}
+}
+
+// Main through a wrapper keeps the wrapper's settings and never gets the
+// workers' service folder.
+func TestMainProfileUnderCommand(t *testing.T) {
+	home := t.TempDir()
+	plan, err := profileLaunch(t, home, role.Main, "my-claude", nil, "--settings", "mine.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if slices.ContainsFunc(plan.Env, func(kv string) bool { return strings.HasPrefix(kv, configDirEnv+"=") }) || !slices.Equal(adapter.FlagValues(plan.Args, settingsFlag), []string{"mine.json"}) {
+		t.Fatalf("the worker profile reached main: %q %q", plan.Args, plan.Env)
+	}
+	if _, err := os.Stat(profileDir(home)); !os.IsNotExist(err) {
+		t.Fatalf("the worker folder was made: %v", err)
+	}
+}
+
+func TestWorkerSettingsAreRefusedWithAndWithoutCommand(t *testing.T) {
+	for _, command := range []string{"", "my-claude"} {
+		for _, args := range [][]string{{settingsFlag, "{}"}, {settingsFlag + "={}"}, {settingSourcesFlag, "user"}, {settingSourcesFlag + "=user"}} {
+			_, err := profileLaunch(t, t.TempDir(), role.Write, command, nil, args...)
+			if err == nil || !strings.Contains(err.Error(), args[0]) && !strings.Contains(err.Error(), strings.SplitN(args[0], "=", 2)[0]) {
+				t.Errorf("command %q, args %q: %v", command, args, err)
+			}
+		}
 	}
 }
 

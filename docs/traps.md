@@ -244,13 +244,13 @@ showed nothing until a moment later it printed `Released 1 held cross-session me
 Claude's queue (permissions are prompting again).` The write had succeeded; a successful
 write is all the adapter knows, and the receiver's inbound gate decides afterwards.
 
-Three ways it happens. A line that arrives in the first two hundred milliseconds or so
-after the socket appears is held until the interface is up, then released — with that
-misleading "prompting again", since the release counts as a mode change. A receiver in
-`bypassPermissions`, or in `plan` with bypass available, holds every rewake line: the line
-asserts no permission-mode class, a prompt waits for the person, and unless they approve
-it the message is dropped at a deadline, five minutes by default. And `crossSessionInbound` set to `hold` or `refuse` anywhere the
-receiver reads it holds or refuses regardless of mode. The receiver reports each of these
+Three ways it happened. A line that arrived in the first two hundred milliseconds or so
+after the socket appeared was held until the interface was up, then released — with that
+misleading "prompting again", since the release counted as a mode change. A receiver in
+`bypassPermissions`, or in `plan` with bypass available, held every rewake line: the line
+asserts no permission-mode class, a prompt waited for the person, and unless they approved
+it the message was dropped at a deadline, five minutes by default. And `crossSessionInbound` set to `hold` or `refuse` anywhere the
+receiver reads it holds or refuses regardless of mode. The receiver reported each of these
 only to a reply socket named in the line, and rewake named none, so nothing told the
 sender.
 
@@ -263,9 +263,14 @@ its status line until S9, October 11, 2026, and since the status line left for a
 three seconds from the start of the session's lane. That makes the startup hold rarer,
 but proves nothing about readiness: nothing tells rewake the session's interface is up,
 and a session slower to start can still hold the first line. It is then reported like
-any hold — `held` to the sender, delivered or failed as the receipts come. What stays: a
-hold is still a hold — the message waits for the person at the receiving session, and
-rewake does not release it.
+any hold — `held` to the sender, delivered or failed as the receipts come.
+
+Since November 5, 2026 the run settings rewake owns also set `crossSessionInbound: "accept"`,
+so bypass no longer asks for approval. This explicitly accepts other senders on the inbound
+channel too and overrides the user's value; managed policy and project/local `hold` or
+`refuse` still apply. Main under `--command`, or a launch with its own `--settings`, needs the
+same key in that settings layer. A remaining hold is still a hold — the message waits for the
+person at the receiving session, and rewake does not release it.
 The mechanism is in [delivery-adapters.md](delivery-adapters.md#claude-code). Details: [research-launch.md](research-launch.md#claude-codes-cross-session-inbound-gate),
 [research.md](research.md#the-inbound-gate-on-rewakes-line).
 

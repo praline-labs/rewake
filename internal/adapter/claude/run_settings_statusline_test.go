@@ -38,11 +38,12 @@ func TestRunSettingsSetTheStatusLineOfARunWithAMod(t *testing.T) {
 	}
 }
 
-// Main's launch gets the status line alone in its --settings, rewake's
-// whatever the person's settings.json names, and one with --setting-sources
-// gets it too; a launch with its own --settings keeps it and is told why
-// main's row lacks the name, and one with no run directory or under
-// --command gets nothing.
+// Main's launch gets peer-message acceptance and, with a run directory, the
+// status line in its one --settings, whatever the person's settings.json
+// names. One with --setting-sources gets both; one with its own --settings
+// keeps it and is told why main's row lacks the name. A wrapped main gets no
+// competing settings. With no run directory the status line is absent, but
+// peer-message acceptance still applies.
 func TestMainsLaunchGetsTheStatusLineAlone(t *testing.T) {
 	folder := t.TempDir()
 	t.Setenv(configDirEnv, folder)
@@ -59,7 +60,7 @@ func TestMainsLaunchGetsTheStatusLineAlone(t *testing.T) {
 	}
 	overlay := overlayOf(t, got.args[1])
 	line, _ := overlay["statusLine"].(map[string]any)
-	if len(overlay) != 1 || fmt.Sprint(line["refreshInterval"]) != "30" || line["command"] == "mine" {
+	if len(overlay) != 2 || overlay[crossSessionSetting] != "accept" || fmt.Sprint(line["refreshInterval"]) != "30" || line["command"] == "mine" {
 		t.Fatalf("the overlay: %v", overlay)
 	}
 	for _, own := range [][]string{{settingsFlag, "{}"}, {settingsFlag + "={}"}} {
@@ -70,9 +71,10 @@ func TestMainsLaunchGetsTheStatusLineAlone(t *testing.T) {
 	if got := mainSettings(request, []string{settingSourcesFlag, "user"}); len(got.args) != 2 {
 		t.Fatalf("with --setting-sources: %+v", got)
 	}
-	for _, request := range []adapter.LaunchRequest{{Role: role.Main}, {Role: role.Main, RunDir: "/run", Command: "wrapper"}} {
-		if got := mainSettings(request, nil); got.args != nil || got.notes != nil {
-			t.Fatalf("%+v: %+v", request, got)
-		}
+	if got := mainSettings(adapter.LaunchRequest{Role: role.Main}, nil); len(got.args) != 2 || len(overlayOf(t, got.args[1])) != 1 || overlayOf(t, got.args[1])[crossSessionSetting] != "accept" {
+		t.Fatalf("without a run directory: %+v", got)
+	}
+	if got := mainSettings(adapter.LaunchRequest{Role: role.Main, RunDir: "/run", Command: "wrapper"}, nil); got.args != nil || got.notes != nil {
+		t.Fatalf("under --command: %+v", got)
 	}
 }

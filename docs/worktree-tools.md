@@ -165,8 +165,8 @@ format or protocol changes.
   entry, noted, and a deny they wrote in another form (a rule with a specifier) stays and wins.
   A whole-tool deny would hide the tool from the mod's own call too. Only then the run gets
   `REWAKE_WORKTREE_ENTER=1`
-  (`adapter.WorktreeEnterEnv`), which no run inherits; under `--command`, whose wrapper decides
-  the settings, the variable is set and the deny is the wrapper's. It is not a boundary — a
+  (`adapter.WorktreeEnterEnv`), which no run inherits; under `--command` the same run settings
+  and variable apply, and the wrapper must pass them through. It is not a boundary — a
   session's own command could set it — only the run's way to say what its template allows.
 - **`rewake worktree enter [<name>] --json`**, a change (the room's lease), knows the run by
   `ownRunIn` and refuses without `REWAKE_WORKTREE_ENTER=1`. With no checkout claimed by this

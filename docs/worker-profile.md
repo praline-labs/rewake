@@ -7,9 +7,9 @@ description: The Claude Code workers' profile: the service folder, login, onboar
 Every Claude Code launch but main's sets `CLAUDE_CONFIG_DIR` to rewake's service folder and adds
 one `--settings` with what the run alone gets. The profile is the worker role's, not an alias's:
 a worker raised from any alias gets it, and main is exactly the person's Claude Code. Under
-`--command` it is not applied, with a launch note: the wrapper decides the configuration Claude
-Code starts with, its `CLAUDE_CONFIG_DIR` among it, rewake sets none and `space open` asks after
-no login. The rest of a Claude Code launch is in [launch.md](launch.md#claude-code); the probes
+`--command` the same profile applies: the wrapper replaces the program alone and must preserve
+the variable and the one settings argument rewake adds, not reset either or add a second
+`--settings`. The rest of a Claude Code launch is in [launch.md](launch.md#claude-code); the probes
 behind the facts here are in
 [research-launch.md](research-launch.md#a-configuration-directory-of-the-workers).
 
@@ -43,7 +43,10 @@ The login is the person's, once, in a worker's pane. `space open` of a Claude Co
 status --json` under that variable; when it answers `loggedIn: false` (exit 1) the worker is
 opened all the same, and the answer adds a line — `notice` under `--json` — telling main the
 workers' Claude Code is not logged in and the person is to type `/login` once in this
-worker's pane; main passes it on. A status that cannot be read, or does not answer within ten seconds — two
+worker's pane; main passes it on. A wrapped worker gets the same profile, but its status is not
+probed: a wrapper may choose its configuration by the worker's role, which this pre-launch check
+does not know, and a guessed role or a different authentication backend could report a false
+missing login. A status that cannot be read, or does not answer within ten seconds — two
 more for its output, should a wrapper's child hold it open —, adds nothing. Not logged in,
 Claude Code shows no login screen of its own: the worker starts to its prompt, the footer
 saying "Not logged in · Run /login", its mod live. A task sent before the login is delivered,
@@ -108,10 +111,14 @@ run's allow, so each run's `--settings` denies it unless its template enters (be
 ## The run's --settings
 
 The run's `--settings` is a JSON object of what this run alone gets, merged by Claude
-Code over the folder's settings: the worker's memory and `EnterWorktree`, allowed for a
+Code over the folder's settings: `crossSessionInbound: "accept"`, so a worker in
+`bypassPermissions` does not hold rewake's classless notice for a person's approval; the worker's
+memory and `EnterWorktree`, allowed for a
 template with `enter_worktree = true`, denied for every other run, and, for a run with a mod,
 rewake's `statusLine`, which prints nothing, so the person's own line is off in the run
-([claude.md](claude.md#the-cache-ttl)). `--settings` is single-use — a
+([claude.md](claude.md#the-cache-ttl)). Accepting peer messages applies to other senders on the
+same inbound channel too and overrides the folder's own `crossSessionInbound`; managed policy and
+project/local `hold` or `refuse` still win. `--settings` is single-use — a
 second one replaces the first, not merges — so the profile owns it: a worker's `--settings`
 or `--setting-sources` after `--` is refused, naming the profile. An `env` value in the
 user settings beats both `--autocompact` and the process environment, and `env` in

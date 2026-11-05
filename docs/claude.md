@@ -300,8 +300,9 @@ The mod cannot read how long the prompt cache lives; Claude Code's status-line i
 as `prompt_cache` (`warm`, `ttl` of `5m` or `1h`, `expires_at` in epoch seconds, …) once a
 request was made (read from the strings of 2.1.302). Every run with a mod therefore sets
 `statusLine` in its `--settings` — `'<rewake>' statusline`, `refreshInterval` 30 — which beats every
-settings file but a managed one: a worker's in its overlay, main's in a `--settings` of that key
-alone. Main has none where its launch passes a `--settings` of its own, which a second would
+settings file but a managed one: a worker's in its overlay, main's beside
+`crossSessionInbound: "accept"`. Main has no status line where its launch passes a `--settings`
+of its own, which a second would
 replace — the launch says so in a note, and the person's own line then stays — and none under
 `--command`. Claude Code merges the key field by field, so the person's `padding` stands. The hidden
 `rewake statusline` reads that input, posts `ttl`, `expiresAt` and `warm`, the effort, the model's

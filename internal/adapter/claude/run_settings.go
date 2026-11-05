@@ -30,6 +30,12 @@ var entryBrief = role.Section{
 // refuses the model's own call.
 const enterTool = "EnterWorktree"
 
+// crossSessionSetting accepts peer messages independently of the session's
+// permission mode. Without it a bypass session holds rewake's notice, which
+// asserts no permission-mode class, for a person's approval. Project and
+// local settings may still tighten it (docs/research-launch.md).
+const crossSessionSetting = "crossSessionInbound"
+
 // runSettings is the one --settings a worker's launch passes, as a JSON
 // object: what this run alone gets over the folder's settings.json, which
 // Claude Code reads itself as the user's settings — its memory, under the
@@ -42,7 +48,7 @@ const enterTool = "EnterWorktree"
 // enter. A worker raised from no template — only a test build's direct
 // launch — has no memory.
 func runSettings(settings map[string]any, folder, root, memoryKey string, enter bool, runDir, executable, briefs string) (string, bool, []string, error) {
-	overlay := map[string]any{}
+	overlay := map[string]any{crossSessionSetting: "accept"}
 	if memoryKey != "" && settings["autoMemoryEnabled"] != false {
 		dir, err := memoryDir(folder, root, memoryKey)
 		if err != nil {
@@ -109,26 +115,27 @@ func deniedIn(settings map[string]any) []any {
 	return deny
 }
 
-// mainSettings is the one --settings main's launch passes: the status line
-// alone, so the host hears the model's name, its thinking, the cache's life
-// and a changed effort as a worker's does, and the person's own line is off
-// in the run (docs/claude.md#the-cache-ttl). None where the launch has no run
-// directory for the mod, under --command, whose wrapper decides the
-// configuration, or where the person passes a --settings of their own, which
-// a second would replace.
+// mainSettings is the one --settings main's launch passes: peer messages are
+// accepted whatever permission mode the run is in, and a run with a mod gets
+// the status line, so the host hears the model's name, its thinking, the
+// cache's life and a changed effort as a worker's does, and the person's own
+// line is off in the run (docs/claude.md#the-cache-ttl). Under --command, or
+// where the person passes a --settings of their own, rewake adds no second
+// one: that settings layer is the wrapper's or the person's to complete.
 func mainSettings(request adapter.LaunchRequest, args []string) profile {
-	switch {
-	case request.RunDir == "", request.Command != "":
+	if request.Command != "" {
 		return profile{}
 	}
 	if adapter.HasFlag(args, settingsFlag) {
 		return profile{notes: []string{"no status line of rewake's: the launch passes its own " + settingsFlag + ", so main's row shows the model's id and no cache life, and the person's own status line stays"}}
 	}
-	executable := orSelf(request.Executable)
-	if executable == "" {
-		return profile{}
+	overlay := map[string]any{crossSessionSetting: "accept"}
+	if request.RunDir != "" {
+		if executable := orSelf(request.Executable); executable != "" {
+			overlay["statusLine"] = statusLineSetting(executable)
+		}
 	}
-	data, err := json.Marshal(map[string]any{"statusLine": statusLineSetting(executable)})
+	data, err := json.Marshal(overlay)
 	if err != nil {
 		return profile{}
 	}

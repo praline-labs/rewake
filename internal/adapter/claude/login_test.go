@@ -24,8 +24,8 @@ func fakeClaude(t *testing.T, answer string, exit int) string {
 }
 
 // While the folder has no login, main is told to have the person log in in
-// the worker's pane; a login, a wrapper, or a status that says nothing tells
-// it nothing.
+// the worker's pane; a login or a status that says nothing tells it nothing.
+// A wrapper is not probed for a login it may configure by the worker's role.
 func TestMainIsToldTheWorkersHaveNoLogin(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
@@ -38,8 +38,16 @@ func TestMainIsToldTheWorkersHaveNoLogin(t *testing.T) {
 	if asked, _ := os.ReadFile(seen); strings.TrimSpace(string(asked)) != dir+" auth status --json" {
 		t.Fatalf("asked %q", asked)
 	}
-	if notice := New().(claudeHarness).WorkerNotice("my-claude"); notice != "" {
+	wrapper := filepath.Join(filepath.Dir(seen), "my-claude")
+	called := wrapper + ".called"
+	if err := os.WriteFile(wrapper, []byte("#!/bin/sh\nprintf called > "+called+"\nprintf '%s\\n' '{\"loggedIn\":false}'\nexit 1\n"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if notice := New().(claudeHarness).WorkerNotice(wrapper); notice != "" {
 		t.Fatalf("under a wrapper: %q", notice)
+	}
+	if _, err := os.Stat(called); !os.IsNotExist(err) {
+		t.Fatalf("the wrapper was probed: %v", err)
 	}
 	fakeClaude(t, `{"loggedIn": true}`, 0)
 	if notice := New().(claudeHarness).WorkerNotice(""); notice != "" {

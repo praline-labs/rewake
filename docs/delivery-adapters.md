@@ -33,7 +33,13 @@ seconds ([research.md](research.md#how-a-socket-message-is-drawn)).
 **The inbound gate and its receipts.** A successful write says only that the line reached the
 session. Its inbound gate then accepts the line, holds it, or refuses it
 ([research-launch.md](research-launch.md#claude-codes-cross-session-inbound-gate)), and tells
-a sender that asks. So every line asks: it carries `"from":"uds:<reply socket>"` and a UUID
+a sender that asks. Where rewake owns the run's `--settings`, it sets
+`crossSessionInbound: "accept"`: a session in `bypassPermissions` therefore does not hold
+rewake's classless notice for the person's approval. The explicit accept covers other senders
+on the same inbound channel too and overrides the user's setting; managed policy and
+project/local `hold` or `refuse` still tighten it. Main under `--command`, and any launch with
+its own `--settings`, keeps that one settings layer, whose wrapper or caller decides whether to
+set the same key. Every line asks for receipts: it carries `"from":"uds:<reply socket>"` and a UUID
 `"msg_id"`, and the wrapper listens on that reply socket (`internal/adapter/claude/lane.go`).
 The receiver sends a receipt only to a `.sock` in the same directory as its own socket, and
 only after checking that the listener is the process that wrote the line — the same pid, uid
