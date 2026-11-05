@@ -3,6 +3,7 @@ import type {
   ExtensionContext,
   ThinkingLevel,
 } from "@earendil-works/pi-coding-agent";
+import { faceThinking } from "./faced.ts";
 import type { Frame } from "./protocol.ts";
 
 // Every word and destination comes from Go. This bridge only calls native
@@ -21,6 +22,8 @@ export type ModePlan = {
 export class Modes {
   current: ModePlan | undefined;
   changing = false;
+  private stopped = false;
+  private waiting: (() => void)[] = [];
 
   constructor(
     private pi: ExtensionAPI,
@@ -31,23 +34,67 @@ export class Modes {
     private changed: () => void,
     private warn: (text: string) => void,
   ) {
-    pi.on("before_agent_start", (event) => {
-      if (this.current)
-        event.systemPromptOptions.sections.rewake_work_mode = this.current.instructions;
+    // Input precedes native preflight; custom-message wakes bypass input.
+    // The run hook covers both, including an input already in preflight
+    // when a switch closed admission. Throwing here would not stop pi.
+    pi.on("input", async () => ({
+      action: (await this.admit(() => {})) ? "continue" : "handled",
+    }));
+    pi.on("before_agent_start", async (event, ctx) => {
+      if (
+        !(await this.admit(() => {
+          if (this.current)
+            event.systemPromptOptions.sections.rewake_work_mode = this.current.instructions;
+        }))
+      )
+        ctx.abort();
     });
+    pi.on("session_before_compact", async () => {
+      if (!(await this.admit(() => {}))) return { cancel: true };
+    });
+  }
+
+  get blocked(): boolean {
+    return this.stopped || !this.current || this.changing;
+  }
+
+  // Start closed, and close synchronously before the first native mutation.
+  // Execute the caller in the admission check's continuation, not after an
+  // extra await that could allow another switch to overtake it.
+  async admit(run: () => void): Promise<boolean> {
+    while (!this.stopped && this.blocked) {
+      await new Promise<void>((resolve) => this.waiting.push(resolve));
+    }
+    if (this.stopped) return false;
+    run();
+    return true;
+  }
+
+  private release() {
+    for (const resume of this.waiting.splice(0)) resume();
+  }
+
+  private stop(ctx: ExtensionContext | undefined) {
+    if (this.stopped) return;
+    this.stopped = true;
+    this.release();
+    ctx?.shutdown();
   }
 
   async apply(plan: ModePlan, initial = false): Promise<Partial<Frame>> {
     const ctx = this.context();
-    if (!ctx || this.changing || !ctx.isIdle() || this.busy()) {
+    if (!ctx || this.stopped || this.changing || !ctx.isIdle() || this.busy()) {
+      if (initial) this.stop(ctx);
       return { error: plan.busy };
     }
     this.changing = true;
+    const previous = this.pi.getThinkingLevel();
+    const previousModel = ctx.model;
+    const previousMode = this.current;
     try {
-      const previous = this.pi.getThinkingLevel();
       if (plan.model && plan.provider) {
         const model = ctx.modelRegistry.find(plan.provider, plan.model);
-        if (!model || !(await this.pi.setModel(model))) return { error: plan.failed };
+        if (!model || !(await this.pi.setModel(model))) throw new Error(plan.failed);
       }
       // setModel may select its own thinking default. An unset destination
       // effort preserves the previous level, subject to native clamping.
@@ -57,10 +104,30 @@ export class Modes {
       this.changed();
       return { ok: true };
     } catch {
+      const committed = this.current !== previousMode;
+      this.current = previousMode;
+      // Native model selection can mutate before its awaited handlers end.
+      // Keep admission closed through restoration too; never resume a turn
+      // with a refused destination's model and the old instructions.
+      try {
+        const mutated = ctx.model !== previousModel || this.pi.getThinkingLevel() !== previous;
+        if (
+          ctx.model !== previousModel &&
+          (!previousModel || !(await this.pi.setModel(previousModel)))
+        )
+          throw new Error(plan.failed);
+        if (this.pi.getThinkingLevel() !== previous) this.pi.setThinkingLevel(previous);
+        if (committed && previousMode && ctx.hasUI)
+          ctx.ui.setStatus("rewake_work_mode", previousMode.status);
+        if (mutated || committed) this.changed();
+      } catch {
+        this.stop(ctx);
+      }
       return { error: plan.failed };
     } finally {
       this.changing = false;
-      if (initial && !this.current) ctx.shutdown();
+      if (initial && !this.current) this.stop(ctx);
+      this.release();
     }
   }
 
@@ -76,20 +143,44 @@ export class Modes {
     }
   }
 
-  async thinking(): Promise<void> {
+  async thinking(levels?: string[]): Promise<Partial<Frame>> {
     try {
-      const reply = await this.ask({ op: "thinking-cycle", state: this.state() });
+      const reply: Partial<Frame> = levels
+        ? { ok: levels.length > 0, levels }
+        : await this.ask({ op: "thinking-cycle", state: this.state() });
       if (!reply.ok || !reply.levels?.length) {
         if (reply.error) this.warn(reply.error);
-        return;
+        return reply;
       }
-      const levels = reply.levels as ThinkingLevel[];
-      const at = levels.indexOf(this.pi.getThinkingLevel());
-      const next = levels[(at + 1) % levels.length];
-      if (next !== undefined) this.pi.setThinkingLevel(next);
-      this.changed();
+      const result = this.changeThinking(reply.levels);
+      if (result.error) this.warn(result.error);
+      return result;
     } catch {
       if (this.current) this.warn(this.current.failed);
+      return { ok: false };
+    }
+  }
+
+  private changeThinking(levels: string[]): Partial<Frame> {
+    const ctx = this.context();
+    if (!ctx || !this.current || this.stopped || this.changing || this.busy())
+      return { error: this.current?.busy };
+    this.changing = true;
+    const previous = this.pi.getThinkingLevel();
+    try {
+      if (!faceThinking(this.pi, true, levels).ok) throw new Error(this.current.failed);
+      this.changed();
+      return { ok: true };
+    } catch {
+      try {
+        this.pi.setThinkingLevel(previous);
+      } catch {
+        this.stop(ctx);
+      }
+      return { error: this.current.failed };
+    } finally {
+      this.changing = false;
+      this.release();
     }
   }
 }

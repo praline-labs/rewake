@@ -59,15 +59,22 @@ Initial model/effort precedence is explicit harness flags, starting-mode fields,
 launch defaults. Explicit model scope and a model's thinking suffix count as explicit
 selections. Later cycles apply only destination fields that are set; an unset field preserves
 the current selection, subject to native model capability clamping. Exact registry lookup or
-native model-selection failure visibly refuses the switch before changing mode or effort.
-An invalid configured startup selection ends the launch rather than continuing with a silent
-substitute.
+native model-selection failure visibly refuses the switch and restores the prior usable
+model/effort before admitting work. If restoration fails, the session ends rather than running
+a mixed state. An invalid or busy initial selection ends the launch instead of silently
+discarding its instructions.
 
 ## Keys and observed state
 
 Shift+Tab cycles `review -> advisor -> build -> review`, only idle and not compacting. Busy
 requests are refused, not queued for a later turn. Alt+T cycles native thinking; Ctrl+T toggles
 thinking visibility. There is no model-callable mode switch and no reviewer-only allowlist.
+
+Turn admission starts closed until initial instructions and native selections commit. Each
+mode or thinking application closes it before its first native mutation, through commit or
+restoration. Native input and run preparation await it; face prompts wait without being
+submitted early. Wakes receive the existing pending receipt for the host to retry, not a
+premature acknowledgment or an unbounded wait. A compaction cannot start in that gap either.
 
 Native pi uses a documented `CustomEditor` subclass: only focused editor Shift+Tab/Alt+T are
 intercepted, with all other editing, paste and rendering delegated to native pi. Dialogs keep

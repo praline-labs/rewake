@@ -1,7 +1,22 @@
+import type { Socket } from "node:net";
 import type { State } from "./management.ts";
 import type { ModePlan } from "./modes.ts";
 import type { Forwarded } from "./stream.ts";
 import type { ToolFields } from "./tools.ts";
+
+type Waiter = {
+  resolve: (frame: Frame) => void;
+  reject: (error: Error) => void;
+  timer: ReturnType<typeof setTimeout>;
+};
+export type Link = {
+  socket: Socket;
+  thread: string;
+  ready: boolean;
+  next: number;
+  waiting: Map<number, Waiter>;
+};
+export type Turn = { id: string; link: Link; text: string; reason: string };
 
 export type Frame = {
   op: string;

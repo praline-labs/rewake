@@ -1,4 +1,4 @@
-// The person's Esc and shift+tab in the face, run by go test
+// The person's Esc and Alt+T in the face, run by go test
 // (worktree_tool_test.go). What pi's screen shows of the run Esc stops is
 // the wrapper's translation (translate_test.go).
 import { expect, test } from "bun:test";
@@ -22,10 +22,10 @@ test("Esc stops a working pi through its own abort, and leaves an idle one alone
   expect(aborted).toBe(1);
 });
 
-// pi's shift+tab moves the level to the next of those the wrapper read off
+// pi's Alt+T moves the level to the next of those the wrapper read off
 // its model and wraps round to off (core/agent-session.js
 // cycleThinkingLevel, read on 1.4.0; native.go, levelsOf).
-test("shift+tab moves pi's thinking level on as pi's own does", () => {
+test("Alt+T moves pi's thinking level on as pi's own does", () => {
   const levels = ["off", "low", "medium", "high", "xhigh"];
   let level = "high";
   const pi = {

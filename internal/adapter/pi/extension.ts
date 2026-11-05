@@ -1,31 +1,17 @@
 import { randomUUID } from "node:crypto";
-import { createConnection, type Socket } from "node:net";
+import { createConnection } from "node:net";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { modeEditor } from "./editor.ts";
-import { faceInterrupt, facePrompt, faceThinking } from "./faced.ts";
+import { faceInterrupt, facePrompt } from "./faced.ts";
 import { Modes } from "./modes.ts";
-import type { Frame } from "./protocol.ts";
+import type { Frame, Link, Turn } from "./protocol.ts";
 
-export type { Frame } from "./protocol.ts";
+export type { Frame, Link, Turn } from "./protocol.ts";
 
 import { forward } from "./forward.ts";
 import { management, thrown } from "./management.ts";
 import { Stream } from "./stream.ts";
 import { Tools } from "./tools.ts";
-
-type Waiter = {
-  resolve: (frame: Frame) => void;
-  reject: (error: Error) => void;
-  timer: ReturnType<typeof setTimeout>;
-};
-export type Link = {
-  socket: Socket;
-  thread: string;
-  ready: boolean;
-  next: number;
-  waiting: Map<number, Waiter>;
-};
-export type Turn = { id: string; link: Link; text: string; reason: string };
 
 const maxFrame = 4 << 20;
 const socketPath = process.env.REWAKE_PI_SOCKET;
@@ -131,12 +117,26 @@ export default function (pi: ExtensionAPI) {
       if (waiter) {
         clearTimeout(waiter.timer);
         link.waiting.delete(frame.id);
-        // A wake may follow hello in this same data chunk, before promises resume.
+        // Wire readiness is not turn admission: Modes holds that until
+        // initialization commits, even for a wake in hello's data chunk.
         if (frame.id === 1 && frame.ok) link.ready = true;
         waiter.resolve(frame);
       }
       return;
     }
+    if (frame.op === "prompt") {
+      void modes
+        .admit(() => dispatch(link, frame))
+        .then((admitted) => {
+          if (!admitted) close(link);
+        })
+        .catch(() => close(link));
+      return;
+    }
+    dispatch(link, frame);
+  }
+
+  function dispatch(link: Link, frame: Frame) {
     const respond = (reply: Partial<Frame>) => {
       try {
         send(link, { op: "answer", id: frame.id, ...reply });
@@ -178,7 +178,8 @@ export default function (pi: ExtensionAPI) {
       return;
     }
     if (frame.op === "thinking") {
-      respond(faceThinking(pi, stream.on, frame.levels));
+      if (!stream.on) respond({ ok: false });
+      else void modes.thinking(frame.levels ?? []).then(respond);
       return;
     }
     if (frame.op === "tools") {
@@ -187,10 +188,12 @@ export default function (pi: ExtensionAPI) {
       return;
     }
     if (frame.op === "control") {
-      void managed
-        .control(link, frame)
-        .then(respond)
-        .catch((error) => respond({ outcome: "failed", native: thrown(error) }));
+      if (modes.changing) respond({ outcome: "refused", code: "busy" });
+      else
+        void managed
+          .control(link, frame)
+          .then(respond)
+          .catch((error) => respond({ outcome: "failed", native: thrown(error) }));
       return;
     }
     if (frame.op === "trace") {
@@ -201,6 +204,7 @@ export default function (pi: ExtensionAPI) {
     if (frame.op !== "wake") reply = { error: "unknown host operation" };
     else if (typeof frame.notice !== "string" || !frame.notice)
       reply = { error: "a wake needs a notice" };
+    else if (modes.blocked) reply = { pending: true };
     else if (managed.busy()) reply = { pending: true, error: "compaction in progress" };
     else {
       const steered = !context.isIdle();
@@ -291,11 +295,11 @@ export default function (pi: ExtensionAPI) {
         link.ready = true;
         delay = 250;
         tools.take(reply.tools);
+        stream.on = reply.mirror === true;
         if (reply.mode && !modes.current) {
           const selected = await modes.apply(reply.mode, true);
           if (selected.error) warn(selected.error);
         }
-        stream.on = reply.mirror === true;
         stream.kick();
       } catch {
         close(link);

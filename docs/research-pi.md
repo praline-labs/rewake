@@ -845,6 +845,29 @@ files were read, copied or linked. Text evidence: `.scratch/pi-mode-live.txt`,
 `.scratch/pi-mode-native-*.txt`, `.scratch/pi-mode-face-*.txt` and the captured stance sections
 in `.scratch/pi-mode-requests.json` (local probe artifacts, not repository records).
 
+### Admission correction (November 5, 2026, 1.4.0)
+
+Rechecked `dist/core/agent-session.js` (`prompt`, `_prepareRun`, `setModel`) and
+`extensions/runner.js` (`emitInput`, `emitBeforeAgentStart`). Input handlers are awaited before
+user preflight; custom-message wakes bypass them. Both kinds await `before_agent_start`,
+but native compaction preparation precedes that hook. Model selection writes model/thinking
+before awaiting `model_select` handlers. Thinking mutation is synchronous; its notification
+handlers are not awaited. A thrown run/input handler is reported and ignored, not a veto;
+failed initialization therefore consumes input or calls `ctx.abort()` and requests shutdown.
+`session_before_compact` can await admission and return `cancel: true` after shutdown.
+
+**[live RPC]** Review of brief 63 reproduced two races in private HOME/agent/project directories
+with bundled pi and loopback HTTP: a wake in hello's answer chunk ran without any stance;
+a wake during a 500 ms model-select handler used the destination model with review instructions.
+The extension now holds native input/run preparation and face prompts until initialization or
+selection commits (or restoration finishes). Blocked wakes receive `pending` immediately:
+Go's wake has a five-second acknowledgment bound and never retries an unknown outcome.
+The copied synthetic peers were extended to honor that existing pending/retry exchange;
+against the same old commit they still reproduced both defects, and with the fix each delivered
+exactly one correctly instructed request. No paid provider, credentials or transcripts were used.
+Local evidence: `.scratch/review63-{startup,switch}-{red,green}.json`, copied probe scripts,
+and `.scratch/review63-unit-{red,green}.log`. This RPC check is not a terminal validation.
+
 ## Holding a run's end (November 3, 2026, 1.4.0)
 
 Whether the extension can hold a run's end while it asks the wrapper, and continue it (brief
