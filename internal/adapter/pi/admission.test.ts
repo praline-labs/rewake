@@ -37,6 +37,8 @@ test("wire admission returns pending wakes and retains face prompts until initia
   let peer: Socket | undefined;
   let buffer = "";
   const received: Frame[] = [];
+  let nextPlan = plan("build", "second");
+  let stoppedStartup = false;
   const send = (frame: Frame) => peer?.write(`${JSON.stringify(frame)}\n`);
   const server = createServer((connected) => {
     peer = connected;
@@ -53,17 +55,16 @@ test("wire admission returns pending wakes and retains face prompts until initia
         if (frame.op === "hello") {
           answer.mode = plan("review", "first");
           answer.mirror = true;
+          const opening: Frame[] = [
+            answer,
+            { op: "wake", id: 100, thread: "thread", notice: "mail" },
+          ];
+          if (stoppedStartup)
+            opening.push({ op: "prompt", id: 202, thread: "thread", text: "stopped prompt" });
           // One write preserves the reviewer's exact startup ordering.
-          connected.write(
-            `${JSON.stringify(answer)}\n${JSON.stringify({
-              op: "wake",
-              id: 100,
-              thread: "thread",
-              notice: "mail",
-            })}\n`,
-          );
+          connected.write(`${opening.map((frame) => JSON.stringify(frame)).join("\n")}\n`);
         } else {
-          if (frame.op === "mode-cycle") answer.mode = plan("build", "second");
+          if (frame.op === "mode-cycle") answer.mode = nextPlan;
           send(answer);
         }
       }
@@ -78,6 +79,16 @@ test("wire admission returns pending wakes and retains face prompts until initia
   let level = "low";
   let hold = Promise.withResolvers<void>();
   let selected = Promise.withResolvers<void>();
+  let refuseSelection = false;
+  let restoring = false;
+  const restored = Promise.withResolvers<void>();
+  const restoreHold = Promise.withResolvers<void>();
+  let thread = "thread";
+  let idle = true;
+  let shutdowns = 0;
+  let aborts = 0;
+  let compactions = 0;
+  let completeCompact: (() => void) | undefined;
   const calls: { text: string; model: string; level: string }[] = [];
   const take = (text: string) => calls.push({ text, model: model.id, level });
   const native = {
@@ -92,8 +103,19 @@ test("wire admission returns pending wakes and retains face prompts until initia
       model = next;
       level = "medium";
       await emit("model_select", {});
+      if (restoring) {
+        restored.resolve();
+        await restoreHold.promise;
+        restoring = false;
+        return true;
+      }
       selected.resolve();
       await hold.promise;
+      if (refuseSelection) {
+        refuseSelection = false;
+        restoring = true;
+        return false;
+      }
       return true;
     },
     sendMessage: (message: { content: string }) => take(message.content),
@@ -102,7 +124,13 @@ test("wire admission returns pending wakes and retains face prompts until initia
   const ctx = {
     mode: "rpc",
     hasUI: false,
-    isIdle: () => true,
+    isIdle: () => idle,
+    shutdown: () => shutdowns++,
+    abort: () => aborts++,
+    compact: (options: { onComplete: (result: unknown) => void }) => {
+      compactions++;
+      completeCompact = () => options.onComplete({ tokensBefore: 12, estimatedTokensAfter: 4 });
+    },
     get model() {
       return model;
     },
@@ -110,7 +138,7 @@ test("wire admission returns pending wakes and retains face prompts until initia
       return level;
     },
     getContextUsage: () => null,
-    sessionManager: { getSessionId: () => "thread" },
+    sessionManager: { getSessionId: () => thread },
     modelRegistry: { find: (provider: string, id: string) => ({ provider, id }) },
   };
   const answer = (id: number) => received.find((frame) => frame.op === "answer" && frame.id === id);
@@ -141,7 +169,13 @@ test("wire admission returns pending wakes and retains face prompts until initia
     send({ op: "wake", id: 104, thread: "thread", notice: "later mail" });
     send({ op: "prompt", id: 105, thread: "thread", text: "later prompt" });
     send({ op: "thinking", id: 106, thread: "thread", levels: ["off", "low", "high"] });
-    await until(() => !!answer(104) && !!answer(106));
+    send({ op: "control", id: 108, thread, action: "compact" });
+    send({ op: "control", id: 109, thread, action: "interrupt" });
+    await until(() => !!answer(104) && !!answer(106) && !!answer(108) && !!answer(109));
+    for (const id of [108, 109])
+      expect(answer(id)).toMatchObject({ outcome: "refused", code: "busy" });
+    expect(compactions).toBe(0);
+    expect(aborts).toBe(0);
     expect(answer(104)?.pending).toBe(true);
     expect(answer(106)?.error).toBe("go busy");
     expect(answer(105)).toBeUndefined();
@@ -156,8 +190,68 @@ test("wire admission returns pending wakes and retains face prompts until initia
       { text: "later prompt", model: "second", level: "high" },
       { text: "later mail", model: "second", level: "high" },
     ]);
+
+    // A native refusal may happen after mutation. The old target must be
+    // revalidated only after restoration, not when its prompt first arrived.
+    hold = Promise.withResolvers<void>();
+    selected = Promise.withResolvers<void>();
+    nextPlan = plan("review", "first");
+    refuseSelection = true;
+    send({ op: "mode-key", id: 110, thread });
+    await selected.promise;
+    hold.resolve();
+    await restored.promise;
+    send({ op: "prompt", id: 111, thread, text: "stale prompt" });
+    send({ op: "control", id: 112, thread, action: "compact" });
+    send({ op: "control", id: 113, thread, action: "interrupt" });
+    send({ op: "wake", id: 114, thread, notice: "restoring mail" });
+    await until(() => !!answer(112) && !!answer(113) && !!answer(114));
+    for (const id of [112, 113])
+      expect(answer(id)).toMatchObject({ outcome: "refused", code: "busy" });
+    expect(answer(114)?.pending).toBe(true);
+    expect(answer(111)).toBeUndefined();
+    expect(compactions).toBe(0);
+    expect(aborts).toBe(0);
+    thread = "replacement";
+    restoreHold.resolve();
+    await until(() => !!answer(110) && !!answer(111));
+    expect(answer(110)?.error).toBe("go failed");
+    expect(answer(111)).toMatchObject({ outcome: "refused", code: "conversation" });
+    expect(calls).toHaveLength(4);
+    thread = "thread";
+
+    // Management still owns its pending compact and its result callbacks.
+    send({ op: "control", id: 120, thread, action: "compact" });
+    await until(() => compactions === 1);
+    send({ op: "wake", id: 121, thread, notice: "compacting mail" });
+    send({ op: "prompt", id: 122, thread, text: "compacting prompt" });
+    await until(() => !!answer(121) && !!answer(122));
+    expect(answer(121)).toMatchObject({ pending: true, error: "compaction in progress" });
+    expect(answer(122)?.error).toBe(
+      "pi is compacting its context; send it again once that is done",
+    );
+    expect(calls).toHaveLength(4);
+    completeCompact?.();
+    await until(() => !!answer(120));
+    expect(answer(120)?.outcome).toBe("done");
+    send({ op: "wake", id: 123, thread, notice: "compacting mail" });
+    await until(() => !!answer(123));
+    expect(answer(123)?.ok).toBe(true);
+    expect(calls).toHaveLength(5);
+
+    await emit("session_shutdown", { reason: "quit" });
+    hooks.clear();
+    stoppedStartup = true;
+    idle = false;
+    extension(native as never);
+    await emit("session_start", {});
+    await until(() => peer?.destroyed === true);
+    expect(shutdowns).toBe(1);
+    expect(answer(202)).toBeUndefined();
+    expect(calls).toHaveLength(5);
   } finally {
     hold.resolve();
+    restoreHold.resolve();
     await emit("session_shutdown", { reason: "quit" });
     peer?.destroy();
     await new Promise<void>((resolve) => server.close(() => resolve()));

@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { createConnection } from "node:net";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { modeEditor } from "./editor.ts";
-import { faceInterrupt, facePrompt } from "./faced.ts";
+import { faceInterrupt } from "./faced.ts";
 import { Modes } from "./modes.ts";
 import type { Frame, Link, Turn } from "./protocol.ts";
 
@@ -30,7 +30,7 @@ export default function (pi: ExtensionAPI) {
     () => context,
     () => current,
     () => turn,
-    () => modes?.current?.name,
+    () => modes?.name,
     (link, fields) => {
       void ask(link, fields).catch(() => {
         if (fields.op !== "state")
@@ -68,6 +68,7 @@ export default function (pi: ExtensionAPI) {
     managed.sample,
     managed.changed,
     warn,
+    managed.control,
   );
   modeEditor(pi, modes);
 
@@ -124,15 +125,6 @@ export default function (pi: ExtensionAPI) {
       }
       return;
     }
-    if (frame.op === "prompt") {
-      void modes
-        .admit(() => dispatch(link, frame))
-        .then((admitted) => {
-          if (!admitted) close(link);
-        })
-        .catch(() => close(link));
-      return;
-    }
     dispatch(link, frame);
   }
 
@@ -144,29 +136,44 @@ export default function (pi: ExtensionAPI) {
         close(link);
       }
     };
-    if (
-      link !== current ||
-      !link.ready ||
-      !context ||
-      frame.thread !== context.sessionManager.getSessionId()
-    ) {
+    const addressed = () =>
+      link === current &&
+      link.ready &&
+      context &&
+      frame.thread === context.sessionManager.getSessionId()
+        ? context
+        : undefined;
+    const conversation = () =>
       respond({
         outcome: "refused",
         code: "conversation",
         error: "the delivery conversation is no longer current",
       });
+    if (frame.op === "prompt") {
+      void modes
+        .prompt(frame.text, () => {
+          const ctx = addressed();
+          return ctx ? { context: ctx, drawn: stream.on } : undefined;
+        })
+        .then((result) => {
+          if (result.kind === "closed") close(link);
+          else if (result.kind === "conversation") conversation();
+          else respond(result.reply);
+        })
+        .catch(() => close(link));
+      return;
+    }
+    const ctx = addressed();
+    if (!ctx) {
+      conversation();
       return;
     }
     if (frame.op === "state") {
       respond({ ok: true, state: managed.sample() });
       return;
     }
-    if (frame.op === "prompt") {
-      respond(facePrompt(pi, stream.on, context.isIdle(), managed.busy(), frame.text));
-      return;
-    }
     if (frame.op === "interrupt") {
-      respond(faceInterrupt(stream.on, context, managed.busy()));
+      respond(faceInterrupt(stream.on, ctx, managed.busy()));
       return;
     }
     if (frame.op === "mode-key") {
@@ -188,37 +195,17 @@ export default function (pi: ExtensionAPI) {
       return;
     }
     if (frame.op === "control") {
-      if (modes.changing) respond({ outcome: "refused", code: "busy" });
-      else
-        void managed
-          .control(link, frame)
-          .then(respond)
-          .catch((error) => respond({ outcome: "failed", native: thrown(error) }));
+      void modes
+        .control(link, frame)
+        .then(respond)
+        .catch((error) => respond({ outcome: "failed", native: thrown(error) }));
       return;
     }
     if (frame.op === "trace") {
       respond(managed.trace(frame.text ?? ""));
       return;
     }
-    let reply: Partial<Frame>;
-    if (frame.op !== "wake") reply = { error: "unknown host operation" };
-    else if (typeof frame.notice !== "string" || !frame.notice)
-      reply = { error: "a wake needs a notice" };
-    else if (modes.blocked) reply = { pending: true };
-    else if (managed.busy()) reply = { pending: true, error: "compaction in progress" };
-    else {
-      const steered = !context.isIdle();
-      try {
-        pi.sendMessage(
-          { customType: "rewake_notice", content: frame.notice, display: true },
-          { triggerTurn: true, deliverAs: "steer" },
-        );
-        reply = { ok: true, steered };
-      } catch {
-        reply = { error: "the harness did not accept the notice" };
-      }
-    }
-    respond(reply);
+    respond(frame.op === "wake" ? modes.wake(frame.notice) : { error: "unknown host operation" });
   }
 
   function schedule() {
@@ -296,10 +283,7 @@ export default function (pi: ExtensionAPI) {
         delay = 250;
         tools.take(reply.tools);
         stream.on = reply.mirror === true;
-        if (reply.mode && !modes.current) {
-          const selected = await modes.apply(reply.mode, true);
-          if (selected.error) warn(selected.error);
-        }
+        await modes.initialize(reply.mode);
         stream.kick();
       } catch {
         close(link);

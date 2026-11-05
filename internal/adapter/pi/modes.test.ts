@@ -55,6 +55,7 @@ function rig() {
     () => ({ sequence: 1, idle, compacting: false, native: {} }) as never,
     () => changed++,
     (text) => warnings.push(text),
+    async () => ({ outcome: "done" }),
   );
   return {
     modes,
@@ -71,8 +72,9 @@ function rig() {
     accepts: (value: boolean) => {
       accepted = value;
     },
-    destination: (plan: ModePlan) => {
+    select: (plan: ModePlan) => {
       destination = plan;
+      return modes.cycle();
     },
   };
 }
@@ -87,40 +89,43 @@ const plan = (name: string, extra: Partial<ModePlan> = {}): ModePlan => ({
 
 test("the bridge applies Go's mode and keeps unset selections, including after a model change", async () => {
   const r = rig();
-  expect(await r.modes.apply(plan("review"))).toEqual({ ok: true });
+  await r.modes.initialize(plan("review"));
   expect(r.values()).toEqual({ model: { provider: "p", id: "first" }, effort: "low", changed: 1 });
-  r.destination(plan("advisor", { provider: "p", model: "second" }));
-  expect(await r.modes.cycle()).toEqual({ ok: true });
+  expect(await r.select(plan("advisor", { provider: "p", model: "second" }))).toEqual({ ok: true });
   expect(r.asks[0].op).toBe("mode-cycle");
   expect(r.values()).toEqual({ model: { provider: "p", id: "second" }, effort: "low", changed: 2 });
-  expect(r.modes.current?.name).toBe("advisor");
+  expect(r.modes.name).toBe("advisor");
   expect(r.status).toEqual(["mode: review", "mode: advisor"]);
+  // A reconnect's hello does not replace an already observed stance.
+  await r.modes.initialize(plan("review"));
+  expect(r.modes.name).toBe("advisor");
   const event = { systemPromptOptions: { sections: { existing: "kept" } } };
   await r.handlers.get("before_agent_start")?.(event);
   expect(event.systemPromptOptions.sections).toEqual({
     existing: "kept",
     rewake_work_mode: "go-owned advisor",
   });
-  await r.modes.apply(plan("build", { effort: "high" }));
+  await r.select(plan("build", { effort: "high" }));
   expect(r.values().effort).toBe("high");
 });
 
 test("busy and failed registry/model selection leave all three live values unchanged", async () => {
   const r = rig();
-  await r.modes.apply(plan("review"));
+  await r.modes.initialize(plan("review"));
   const before = r.values();
   r.idle(false);
-  expect(await r.modes.apply(plan("build", { effort: "high" }))).toEqual({ error: "go busy" });
+  expect(await r.select(plan("build", { effort: "high" }))).toEqual({ error: "go busy" });
   r.idle(true);
   expect(
-    await r.modes.apply(plan("build", { provider: "p", model: "missing", effort: "high" })),
+    await r.select(plan("build", { provider: "p", model: "missing", effort: "high" })),
   ).toEqual({ error: "go failed" });
   r.accepts(false);
-  r.destination(plan("build", { provider: "p", model: "second", effort: "high" }));
-  expect(await r.modes.cycle()).toEqual({ error: "go failed" });
-  expect(r.warnings).toEqual(["go failed"]);
+  expect(await r.select(plan("build", { provider: "p", model: "second", effort: "high" }))).toEqual(
+    { error: "go failed" },
+  );
+  expect(r.warnings).toEqual(["go busy", "go failed", "go failed"]);
   expect(r.values()).toEqual(before);
-  expect(r.modes.current?.name).toBe("review");
+  expect(r.modes.name).toBe("review");
   expect(r.status).toEqual(["mode: review"]);
 });
 
@@ -135,14 +140,14 @@ test("a native start waits for the initial instructions instead of running with 
   });
   await Promise.resolve();
   expect(started).toBe(false);
-  expect(await r.modes.apply(plan("review"), true)).toEqual({ ok: true });
+  await r.modes.initialize(plan("review"));
   await starting;
   expect(event.systemPromptOptions.sections.rewake_work_mode).toBe("go-owned review");
 });
 
-test("native starts wait through asynchronous model selection and see the committed stance", async () => {
+test("native starts and compaction wait through asynchronous selection and see the committed stance", async () => {
   const r = rig();
-  await r.modes.apply(plan("review"));
+  await r.modes.initialize(plan("review"));
   const selected = Promise.withResolvers<void>();
   const finish = Promise.withResolvers<void>();
   const setModel = r.native.setModel;
@@ -152,31 +157,37 @@ test("native starts wait through asynchronous model selection and see the commit
     await finish.promise;
     return true;
   };
-  const switching = r.modes.apply(
-    plan("build", { provider: "p", model: "second", effort: "high" }),
-  );
+  const switching = r.select(plan("build", { provider: "p", model: "second", effort: "high" }));
   await selected.promise;
   const event = prompt();
   let started = false;
+  let compacted = false;
   const starting = Promise.resolve(r.handlers.get("before_agent_start")?.(event)).then(() => {
     started = true;
   });
+  const compacting = Promise.resolve(r.handlers.get("session_before_compact")?.(prompt())).then(
+    (result) => {
+      compacted = true;
+      return result;
+    },
+  );
   try {
     await Promise.resolve();
     expect(started).toBe(false);
-    expect(r.modes.current?.name).toBe("review");
+    expect(compacted).toBe(false);
   } finally {
     finish.resolve();
     await switching;
     await starting;
   }
+  expect(await compacting).toBeUndefined();
   expect(event.systemPromptOptions.sections.rewake_work_mode).toBe("go-owned build");
   expect(r.values().effort).toBe("high");
 });
 
 test("a refused selection restores native state even if the native model already changed", async () => {
   const r = rig();
-  await r.modes.apply(plan("review"));
+  await r.modes.initialize(plan("review"));
   const before = r.values();
   const setModel = r.native.setModel;
   const restoring = Promise.withResolvers<void>();
@@ -188,22 +199,19 @@ test("a refused selection restores native state even if the native model already
     await finish.promise;
     return true;
   };
-  const switching = r.modes.apply(
-    plan("build", { provider: "p", model: "second", effort: "high" }),
-  );
+  const switching = r.select(plan("build", { provider: "p", model: "second", effort: "high" }));
   await restoring.promise;
-  let admitted = false;
-  const waiting = r.modes.admit(() => {
-    admitted = true;
-  });
+  const event = prompt();
+  const waiting = r.handlers.get("before_agent_start")?.(event);
   await Promise.resolve();
-  expect(admitted).toBe(false);
+  expect(event.systemPromptOptions.sections).toEqual({});
   finish.resolve();
   expect(await switching).toEqual({ error: "go failed" });
-  expect(await waiting).toBe(true);
+  await waiting;
+  expect(event.systemPromptOptions.sections.rewake_work_mode).toBe("go-owned review");
   expect(r.values().model).toEqual(before.model);
   expect(r.values().effort).toBe(before.effort);
-  expect(r.modes.current?.name).toBe("review");
+  expect(r.modes.name).toBe("review");
 });
 
 test("busy initialization stops rather than dropping its plan and opening an uninitialized run", async () => {
@@ -211,36 +219,44 @@ test("busy initialization stops rather than dropping its plan and opening an uni
   r.idle(false);
   const starting = r.handlers.get("before_agent_start")?.(prompt());
   const input = r.handlers.get("input")?.(prompt());
-  expect(await r.modes.apply(plan("review"), true)).toEqual({ error: "go busy" });
+  const compacting = r.handlers.get("session_before_compact")?.(prompt());
+  await r.modes.initialize(plan("review"));
+  expect(r.warnings).toEqual(["go busy"]);
   await starting;
   expect(await input).toEqual({ action: "handled" });
+  expect(await compacting).toEqual({ cancel: true });
   expect(r.stopped()).toEqual({ shutdowns: 1, aborts: 1 });
 });
 
 test("native and face thinking close admission before mutation and cannot overtake a mode selection", async () => {
   const r = rig();
-  await r.modes.apply(plan("review"));
+  await r.modes.initialize(plan("review"));
   const setLevel = r.native.setThinkingLevel;
-  const admitted: string[] = [];
+  const event = prompt();
+  let preparing: unknown;
   r.native.setThinkingLevel = (level) => {
-    expect(r.modes.blocked).toBe(true);
-    void r.modes.admit(() => {
-      admitted.push(r.values().effort);
-    });
+    preparing = r.handlers.get("before_agent_start")?.(event);
     setLevel(level);
-    expect(admitted).toEqual([]);
+    expect(event.systemPromptOptions.sections).toEqual({});
   };
+  r.idle(false); // Thinking is not restricted to an idle turn.
   expect(await r.modes.thinking()).toEqual({ ok: true });
-  expect(admitted).toEqual(["high"]);
+  await preparing;
+  expect(r.values().effort).toBe("high");
+  expect(event.systemPromptOptions.sections.rewake_work_mode).toBe("go-owned review");
+  r.idle(true);
   r.native.setThinkingLevel = setLevel;
   const finish = Promise.withResolvers<void>();
+  const selected = Promise.withResolvers<void>();
   const setModel = r.native.setModel;
   r.native.setModel = async (next) => {
     await setModel(next);
+    selected.resolve();
     await finish.promise;
     return true;
   };
-  const switching = r.modes.apply(plan("build", { provider: "p", model: "second", effort: "low" }));
+  const switching = r.select(plan("build", { provider: "p", model: "second", effort: "low" }));
+  await selected.promise;
   expect(await r.modes.thinking(["off", "low", "high"])).toEqual({ error: "go busy" });
   finish.resolve();
   await switching;
