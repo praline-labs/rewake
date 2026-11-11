@@ -525,10 +525,10 @@ strip under it, and its room work at its input, main's awaited reports on its st
 has two rows less.
 
 ```
-~/.rewake2-worktrees/rewake-44a66b/wt-5928f6 · ⎇ brief60-pane-facts   write-claude (code)   the top row
+~/.rewake2-worktrees/rewake-44a66b/wt-5928f6 · ⎇ brief60-pane-facts   write-claude   the top row
   … the session's own screen, native or drawn by rewake's face …
   ── ⏵⏵ auto mode ─────────────── brief 57 3/6 ─                             the face's input rule
-  ── ◆ high (shift+tab to cycle) ─ brief 57 3/6 ─                            the same for pi
+  ── ◆ build (shift+tab to cycle) ─ brief 57 3/6 ─                           the same for pi
   ⏵⏵ auto mode on (shift+tab to cycle) · brief 57 3/6                         or Claude Code's hint line
 <model> low · 90% 42m                                                  230k/1M   the strip
 ```
@@ -539,12 +539,12 @@ has two rows less.
   entry moves and a `cd` in Bash does not; pi's directory is the one it started in, its record's
   `cwd`. A worker whose row is not read yet shows its space's checkout. At the row's right edge
   stands the session's rewake name, `review-pi`, `main-claude`, for every pane, at least ` · `'s
-  width from the path (the owner, October 31, 2026, brief 62), and a worker's type of work in
-  brackets after it, `write-claude (code)`, which was on the strip until November 1, 2026 (the
-  owner's word); main has none. The top row is the only place a pane's name stands. Too long, the
+  width from the path (the owner, October 31, 2026, brief 62). The worker type's brackets, which
+  stood there until this change, are gone: a session's one runtime work mode is drawn at the
+  input's left rule, not on the top row. The top row is the only place a pane's name stands. Too long, the
   path loses whole directories from its start, `…/worktrees/wt-3836d0`, then letters of its last
   down to `…` and one; then the branch goes, the path taking its room again; then the path goes and
-  the name with its type is cut at its end, so the type goes first, `write-claude (co…`. A press on it chooses the pane. The briefs, shown in a worker's place, take the
+  the name is cut at its end, `review-pi…`. A press on it chooses the pane. The briefs, shown in a worker's place, take the
   row into their own height, so their strip stands where a pane's does.
 - **At the input**: the run's room work, the room view's `work` (`internal/core/work`): its open
   briefs with their ticks, `brief 57 3/6`, and the reports it waits on, `⧗ 3`; nothing when there is

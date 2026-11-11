@@ -3,6 +3,7 @@
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { bounds } from "../../../face/src/mirror.gen.ts";
 import { FaceHost, type FaceState } from "./host.ts";
 
 export const worker = new URL("../../../face/src/worker.ts", import.meta.url).pathname;
@@ -64,7 +65,7 @@ export function mirror(dir: string, served: Served = {}) {
       { id: "p", kind: "prompt", status: "settled", text: served.prompt ?? "" },
     ];
   const lines = [
-    { op: "hello", v: 2, inputs: served.inputs ?? ["prompt"] },
+    { op: "hello", v: bounds.version, inputs: served.inputs ?? ["prompt"] },
     { op: "begin", items: items.length, dropped: 0, turn: "idle", ...served.begin },
     ...items.map((item) => ({ op: "item", item })),
     { op: "end" },

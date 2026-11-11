@@ -40,7 +40,7 @@ func (harness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, error)
 		}
 		args = adapter.AddFlags(args, sessionIDFlag, request.Conversation)
 	}
-	args = harness{}.StartModeArgs(args, request.Modes, request.WorkType.Name, false, nil)
+	args = harness{}.StartModeArgs(args, request.Modes, request.Mode.Name, false, nil)
 	args, notes, err := adapter.ApplyDefaults(args, defaults())
 	if err != nil {
 		return adapter.LaunchPlan{}, err

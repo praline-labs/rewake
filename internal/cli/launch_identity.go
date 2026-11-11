@@ -8,7 +8,7 @@ import (
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/core/space"
-	"github.com/praline-labs/rewake/internal/core/worktype"
+	"github.com/praline-labs/rewake/internal/core/workmode"
 	"github.com/praline-labs/rewake/internal/host"
 	"github.com/praline-labs/rewake/internal/host/spacehost"
 	"github.com/praline-labs/rewake/internal/infra/proc"
@@ -33,8 +33,9 @@ type launchIdentity struct {
 	enter bool
 	// dev says the space was opened with --dev: rewake's face draws it.
 	dev bool
-	// work is the kind of work the space raised the worker for.
-	work worktype.Type
+	// mode is the runtime work mode the space raised the worker in, resolved
+	// in main's directory where the project's mode files are.
+	mode workmode.Mode
 }
 
 // identifyLaunch is identify; a test of the launch's other steps replaces it.
@@ -72,9 +73,9 @@ func spaceIdentity(value string) (launchIdentity, error) {
 	_ = os.Unsetenv(spacehost.WorkerTemplateEnv)
 	enter := os.Getenv(spacehost.WorkerEnterEnv) == "1"
 	_ = os.Unsetenv(spacehost.WorkerEnterEnv)
-	work := worktype.Type{Name: os.Getenv(spacehost.WorkerTypeEnv), Text: os.Getenv(spacehost.WorkerTypeTextEnv)}
-	_ = os.Unsetenv(spacehost.WorkerTypeEnv)
-	_ = os.Unsetenv(spacehost.WorkerTypeTextEnv)
+	mode := workmode.Mode{Name: os.Getenv(spacehost.WorkerModeEnv), Text: os.Getenv(spacehost.WorkerModeTextEnv)}
+	_ = os.Unsetenv(spacehost.WorkerModeEnv)
+	_ = os.Unsetenv(spacehost.WorkerModeTextEnv)
 	refuse := func(why string) (launchIdentity, error) {
 		return launchIdentity{}, &FailedError{Message: fmt.Sprintf(
 			"%s=%s names the space this worker belongs to, but %s; a person starts main, and main starts workers with rewake space open.",
@@ -110,7 +111,7 @@ func spaceIdentity(value string) (launchIdentity, error) {
 	if !found || part.Spaces {
 		return refuse("its record names no worker's role")
 	}
-	return launchIdentity{name: record.Worker.Name, room: room, part: part, reason: "raised by main with rewake space open as " + part.ID, template: template, enter: enter, work: work, dev: record.Worker.Dev}, nil
+	return launchIdentity{name: record.Worker.Name, room: room, part: part, reason: "raised by main with rewake space open as " + part.ID, template: template, enter: enter, mode: mode, dev: record.Worker.Dev}, nil
 }
 
 // thisRun is this process's run epoch, as its space host records it.

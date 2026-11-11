@@ -4,14 +4,14 @@
 // imports these types, the shapes of what a face posts and the contract's
 // number alone, so a reload of the face never needs the shell to change.
 
-import { permissionModeValues, thinkingLevelValues, workModeValues } from "./mirror.gen.ts";
+import { permissionModeValues, thinkingLevelValues } from "./mirror.gen.ts";
 import { count, flag, list, type Of, one, optional, type Shape, serial, text } from "./shape.ts";
 
 // contract is the version of these messages, raised with any change of
 // them: start carries the shell's, and a face that speaks another draws
 // nothing. The shell holds what a face sends to it to the shapes below
 // (shell/src/face/check.ts).
-export const contract = 6;
+export const contract = 7;
 
 // refusal is a face's answer to a start of another contract. Its words, and
 // the shapes of start, ping, pong and error, are the one part no contract
@@ -120,7 +120,7 @@ export const fromFace = {
     prompts: flag,
     mode: optional(one(permissionModeValues)),
     level: optional(one(thinkingLevelValues)),
-    workMode: optional(one(workModeValues)),
+    workMode: optional(text("name")),
   },
   error: { text: text("text") },
   // copy is text for the person's clipboard: a selection, or the part a

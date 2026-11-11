@@ -910,7 +910,7 @@ before replacing the model. A successful selection may choose/clamp thinking; th
 reapplies the destination effort, or the previous level if unset, subject to native support.
 `before_agent_start.systemPromptOptions.sections` is mutable and preserves other sections
 (`examples/extensions/prompt-customizer.ts`); `ctx.ui.setStatus` renders Go's mode label.
-Runtime contracts and the prompt-only/no-tool-guard limit: [pi-work-modes.md](pi-work-modes.md).
+Runtime contracts and the prompt-only/no-tool-guard limit: [work-modes.md](work-modes.md).
 
 **[live]** November 3, 2026 (brief 63), this build with bundled pi 1.4.0, private HOME,
 `REWAKE_DIR` and project under `/tmp`, source shell, loopback model only, no login or existing
@@ -987,6 +987,18 @@ credential or transcript files were read, copied or linked. Local artifacts in t
 checkout: `.scratch/pi107-probe.py`, `.scratch/pi107-hold.ts`,
 `.scratch/pi107-observe.ts`, `.scratch/pi107-probe-result.json` and
 `.scratch/pi107-probe.log`.
+
+## No native work-mode registry (November 11, 2026, 1.4.0 installed, 1.5.2 pinned)
+
+Rechecked before consolidating the work types into one runtime work mode (brief 113): pi has no
+native named registry of build/plan/work modes to reuse. `pi --help` of the installed 1.4.0 lists
+`--mode <mode>` as the **output** mode only — `text`, `json` or `rpc` — and no flag selects a
+behavioral stance, so rewake does not pass one. The bundled 1.5.2 pin was checked the same way by
+the design that this brief implements; the 1.4.0 facts in the section above (focused
+`CustomEditor` keyboard path, mutable `systemPromptOptions.sections`, `ctx.ui.setStatus`, native
+model lookup and clamping) are unchanged there. Every rewake work mode is therefore
+extension-owned and equal: Go owns the catalogue, precedence, section text and wording, native pi
+applies model, thinking and section, and no plan-mode example is loaded.
 
 ## Holding a run's end (November 3, 2026, 1.4.0)
 

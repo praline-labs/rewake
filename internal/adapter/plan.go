@@ -5,7 +5,6 @@ import (
 	"github.com/praline-labs/rewake/internal/core/mirror"
 	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/core/workmode"
-	"github.com/praline-labs/rewake/internal/core/worktype"
 )
 
 // LaunchRequest is what the wrapper knows before starting a harness.
@@ -68,7 +67,7 @@ type LaunchRequest struct {
 	// flag, or refuses: a launch that dropped it would leave a record naming
 	// a conversation that does not exist.
 	Conversation string
-	// Template is the worker catalogue's alias a space was opened with, empty
+	// Template is the worker catalog's alias a space was opened with, empty
 	// for main and for a test build's direct worker launch: an adapter may
 	// keep what one template's workers share, its memory on Claude Code
 	// (docs/worker-profile.md).
@@ -82,10 +81,12 @@ type LaunchRequest struct {
 	// face (docs/face.md): an adapter offering it (MirrorHarness) feeds it
 	// what its harness says and carries its inputs back; held in memory only.
 	Mirror *mirror.Model
-	// WorkType is the kind of work the worker was raised for, which its
-	// briefing carries (docs/worker-types.md); empty Name for none.
-	WorkType worktype.Type
-	Modes    workmode.Config
+	// Mode is the runtime work mode the session runs in, its complete
+	// behavioral text included (docs/work-modes.md). A harness that switches
+	// it at runtime takes the text from its service; one that cannot reads it
+	// in the briefing.
+	Mode  workmode.Mode
+	Modes workmode.Config
 	// Shell says the run is main's in rewake's shell, drawn on a pane whose
 	// terminal keeps no scrollback before a pane attached: an adapter whose
 	// harness can scroll its own history turns that on (docs/shell.md).
@@ -280,5 +281,5 @@ type Flag struct {
 
 // BriefContext carries identity to the shared text package without assembling prose.
 func (r LaunchRequest) BriefContext() brief.Context {
-	return brief.Context{Name: r.Name, Room: r.Room, Role: r.Role, Reason: r.RoleReason, Work: r.WorkType}
+	return brief.Context{Name: r.Name, Room: r.Room, Role: r.Role, Reason: r.RoleReason}
 }

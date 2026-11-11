@@ -1,7 +1,7 @@
 // What the shell keeps of one face and how a host of it is set up
 // (host.ts).
 import type { FaceLine, Link } from "../../../face/src/messages.ts";
-import type { PermissionMode, ThinkingLevel, WorkMode } from "../../../face/src/mirror.gen.ts";
+import type { PermissionMode, ThinkingLevel } from "../../../face/src/mirror.gen.ts";
 
 export type FaceState = {
   lines: FaceLine[];
@@ -12,7 +12,7 @@ export type FaceState = {
   // Alt+T moves, as the face heard them from the mirror.
   mode?: PermissionMode;
   level?: ThinkingLevel;
-  workMode?: WorkMode;
+  workMode?: string;
   // error is the face's last failure, shown in its header until it draws again.
   error?: string;
   // said is the answer to the last prompt.

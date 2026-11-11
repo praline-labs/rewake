@@ -62,18 +62,18 @@ test("the banner stands right after where the keys go, never in the prefix's lis
 
 test("the shell says the contracts it loaded", () => {
   expect(contracts()).toEqual({
-    shell: { requires: { host: String(version), face: String(contract), "room-view": "2" } },
-    face: { speaks: { face: String(contract) }, requires: { mirror: "2" } },
+    shell: { requires: { host: String(version), face: String(contract), "room-view": "3" } },
+    face: { speaks: { face: String(contract) }, requires: { mirror: "3" } },
   });
 });
 
 // Found in review: a compiled face moves only with its shell, so the hello
 // carries its contracts, and the host judges a restart of the shell by them.
 test("the hello carries the contracts of a face compiled into the shell", () => {
-  const own = { host: String(version), face: String(contract), "room-view": "2" };
+  const own = { host: String(version), face: String(contract), "room-view": "3" };
   expect(helloContracts(true)).toEqual({
     requires: own,
-    face: { speaks: { face: String(contract) }, requires: { mirror: "2" } },
+    face: { speaks: { face: String(contract) }, requires: { mirror: "3" } },
   });
   expect(helloContracts(false)).toEqual({ requires: own });
 });

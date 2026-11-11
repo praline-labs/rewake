@@ -40,8 +40,10 @@ type Event struct {
 	// Mode is the session's permission mode, on a mode event.
 	Mode PermissionMode
 	// Level is the session's thinking level, on a level event.
-	Level    ThinkingLevel
-	WorkMode WorkMode
+	Level ThinkingLevel
+	// WorkMode is the observed runtime work mode's name, whatever the
+	// session's catalog calls it.
+	WorkMode string
 }
 
 // EventKind is what an event says.

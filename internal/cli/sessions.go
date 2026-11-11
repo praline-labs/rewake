@@ -82,9 +82,9 @@ func handleList(ctx *Context, _ Call) error {
 	})
 }
 
-// spaceWorkers maps a worker's run to its space record's worker, for the type
-// and the model label its space was opened with. A space record that does not
-// read leaves its worker without them.
+// spaceWorkers maps a worker's run to its space record's worker, for the model
+// label its space was opened with. A space record that does not read leaves
+// its worker without it.
 func spaceWorkers(dir string) map[string]space.Worker {
 	records, _, _ := space.List(dir)
 	workers := map[string]space.Worker{}
@@ -96,9 +96,9 @@ func spaceWorkers(dir string) map[string]space.Worker {
 	return workers
 }
 
-// sessionViewsOf is the sessions as a list shows them: their roles and
-// types, and, to a reader allowed the session state, their telemetry, the
-// model named as the table names it.
+// sessionViewsOf is the sessions as a list shows them: their roles, and, to a
+// reader allowed the session state, their telemetry, the model named as the
+// table names it.
 func sessionViewsOf(dir string, sessions []registry.Session, visible bool) []sessionView {
 	workers := spaceWorkers(dir)
 	var views []sessionView
@@ -107,7 +107,7 @@ func sessionViewsOf(dir string, sessions []registry.Session, visible bool) []ses
 		sessions[index].Room = room
 		sessions[index].Role = role.Of(sessions[index].Role).ID
 		worker := workers[sessions[index].Epoch()]
-		view := sessionView{Session: sessions[index], Type: worker.Type}
+		view := sessionView{Session: sessions[index]}
 		if !visible {
 			view.MessagingReadyAt = nil
 		}

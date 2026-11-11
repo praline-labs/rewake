@@ -142,8 +142,8 @@ rewake --command my-claude claude
   the harness.
 - Add `--messaging-socket-path <base>/v2/rooms/<room>/sock/<name>.<epoch>.sock` unless the user passed
   their own; before launch, remove a stale socket file at the same path.
-- Add one `--append-system-prompt`: rewake's briefing (turned off by `--no-intro`), which ends,
-  for a worker raised for a type, with the type's text ([worker-types.md](worker-types.md)), then
+- Add one `--append-system-prompt`: rewake's briefing (turned off by `--no-intro`), which carries
+  the session's runtime work mode as its behavioral section ([work-modes.md](work-modes.md)), then
   the caller's own `--append-system-prompt`,
   joined by blank lines. Claude Code keeps only the last `--append-system-prompt` (2.1.302:
   of two, the first is lost; `--append-system-prompt-file` applies beside it), so the
@@ -234,8 +234,8 @@ for main, whose catalogue it is part of.
 
 The adapter embeds `extension.ts`, its management module and its `worktree_status` tool
 ([worktree-tools.md](worktree-tools.md)), writing them in the run directory. It adds `-e <extension.ts>` and, unless `--no-intro`, its briefing through the
-repeatable `--append-system-prompt`, the type's text at its end for a worker raised for one
-([worker-types.md](worker-types.md)). That flag turns off pi's own discovery of
+repeatable `--append-system-prompt`, which carries no work mode: pi's extension injects that one
+section per request ([work-modes.md](work-modes.md)). That flag turns off pi's own discovery of
 `APPEND_SYSTEM.md`, so the adapter adds, after the briefing, the file pi
 would have read: the project's `.pi/APPEND_SYSTEM.md` in the working directory when the project
 is trusted — the last of the launch's `--approve`, `-a`, `--no-approve` and `-na` decides, as pi
@@ -375,8 +375,8 @@ The system layer uses an independent briefing for general, write or main from
 reports, the limits and the mail. Each names its identity and selection reason, explains the commands that role
 needs, and points to guide for the full contract.
 Write may commit; main delegates and reads results. All ask for the point of a message in its first line. Per-role
-snapshots make wording changes reviewable. A worker raised for a type gets, after its role's
-sections, `YOUR KIND OF WORK: <type>` and the type's text ([worker-types.md](worker-types.md)).
+snapshots make wording changes reviewable. A harness that cannot switch modes reads the session's
+runtime work mode after its role's sections, as one section ([work-modes.md](work-modes.md)).
 
 ### First input
 

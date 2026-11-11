@@ -115,31 +115,36 @@ enter_worktree = true
 	}
 }
 
-// The worker's kind of work is resolved at space open: a typed --type wins,
-// --no-type leaves the template's out, else the template's type; one that is
-// not there, or that an alias file turned off, is refused before anything
-// starts, saying where.
-func TestRaisingResolvesTheType(t *testing.T) {
+// The worker's runtime work mode is resolved at space open: a typed
+// --work-mode wins, else the template's start_mode, else the merged global
+// one, else advisor; one that is not there is refused before anything starts,
+// saying which exist.
+func TestRaisingResolvesTheWorkMode(t *testing.T) {
 	set := typesRoom(t, map[string]string{
-		"home/.config/rewake/aliases.toml": "[types]\noff = [\"process\"]\n\n[alias.coder]\nharness = \"agent\"\ntype = \"code\"\n\n" +
-			"[alias.plain]\nharness = \"agent\"\n\n[alias.stale]\nharness = \"agent\"\ntype = \"process\"\n",
-		"work/.rewake/types/study.md": typeFile("ours", "the project's study"),
+		"home/.config/rewake/aliases.toml": `[pi]
+start_mode = "review"
+
+[alias.builds]
+harness = "agent"
+[alias.builds.pi]
+start_mode = "build"
+
+[alias.plain]
+harness = "agent"
+
+`,
+		"work/.rewake/modes/audit.md": typeFile("ours", "the project's audit"),
 	})
 	for _, c := range []struct {
 		request       Request
 		want, refused string
 	}{
-		{Request{Alias: "coder"}, "code", ""},
-		{Request{Alias: "coder", Type: typed("study")}, "study", ""},
-		{Request{Alias: "coder", NoType: true}, "", ""},
-		{Request{Alias: "plain"}, "", ""},
-		{Request{Alias: "plain", Type: typed("review")}, "review", ""},
-		{Request{Alias: "plain", Type: typed("process")}, "", "turned off in the user alias file"},
-		{Request{Alias: "plain", Type: typed("nothing")}, "", `no type "nothing"`},
-		{Request{Alias: "plain", Type: typed("")}, "", "--type needs a name"},
-		{Request{Alias: "stale"}, "", `alias "stale" names type = "process"`},
-		{Request{Alias: "stale", NoType: true}, "", ""},
-		{Request{Alias: "coder", Type: typed("study"), NoType: true}, "", "ask opposite things"},
+		{Request{Alias: "plain"}, "review", ""},
+		{Request{Alias: "plain", Mode: typed("audit")}, "audit", ""},
+		{Request{Alias: "builds"}, "build", ""},
+		{Request{Alias: "builds", Mode: typed("process")}, "process", ""},
+		{Request{Alias: "plain", Mode: typed("nothing")}, "", `no mode "nothing"`},
+		{Request{Alias: "plain", Mode: typed("")}, "", "--work-mode needs a mode's name"},
 	} {
 		raised, err := set.Raise(workers, c.request)
 		if c.refused != "" {
@@ -148,9 +153,13 @@ func TestRaisingResolvesTheType(t *testing.T) {
 			}
 			continue
 		}
-		if err != nil || raised.Work.Name != c.want || (c.want != "" && raised.Work.Text == "") {
-			t.Errorf("%+v: %+v %v, want type %q", c.request, raised.Work, err, c.want)
+		if err != nil || raised.Mode.Name != c.want || raised.Mode.Text == "" {
+			t.Errorf("%+v: %+v %v, want mode %q", c.request, raised.Mode, err, c.want)
 		}
+	}
+	set = typesRoom(t, map[string]string{"home/.config/rewake/aliases.toml": "[alias.broken]\nharness = \"agent\"\n[alias.broken.pi]\nstart_mode = \"plan\"\n"})
+	if err := set.Err(); err == nil || !strings.Contains(err.Error(), "there is no plan mode") {
+		t.Fatalf("a template starting in plan: %v", err)
 	}
 }
 

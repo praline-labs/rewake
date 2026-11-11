@@ -7,7 +7,7 @@
 
 // RoomView is the room as the shell draws it.
 export interface RoomView {
-  // v is the room-view contract version, 2 with runtime work modes.
+  // v is the room-view contract version, 3: the observed work mode replaces the worker type.
   v?: number
   // room is the room's name.
   room: string
@@ -113,8 +113,6 @@ export interface SessionRow {
   name: string
   // own marks the shell's own main, the run the caller proved to be.
   own?: boolean
-  // type is the type of a worker opened with one.
-  type?: string
   // cwd is the directory the session started in.
   cwd: string
   // path is the directory the session works in now, for the pane's top row: where its harness

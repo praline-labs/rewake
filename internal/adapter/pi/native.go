@@ -83,7 +83,7 @@ func (r *run) projectLocked(thread string, raw json.RawMessage, now time.Time, o
 	var level string
 	_ = json.Unmarshal(parts.ThinkingLevel, &level)
 	settings := &session.Settings{}
-	if workmode.Valid(parts.WorkMode) {
+	if workmode.ValidName(parts.WorkMode) {
 		settings.Mode = &parts.WorkMode
 		r.mode = parts.WorkMode
 		r.mirrorWorkMode(parts.WorkMode)

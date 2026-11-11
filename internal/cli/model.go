@@ -53,6 +53,10 @@ type Command struct {
 	Summary string
 	// Options are the flags of this command, beyond the global ones.
 	Options []Option
+	// Removed are flags the command took before, each with what replaced it:
+	// a call that still gives one is refused with that, not only with "does
+	// not take it". It is never parsed.
+	Removed map[string]string
 	// Examples are real invocations: whoever reads them copies them as-is.
 	Examples []string
 	// Next names what one usually runs after this command.

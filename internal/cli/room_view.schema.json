@@ -7,7 +7,7 @@
       "type": "object",
       "description": "is the room as the shell draws it.",
       "properties": {
-        "v": {"type":"integer", "description":"is the room-view contract version, 2 with runtime work modes."},
+        "v": {"type":"integer", "description":"is the room-view contract version, 3: the observed work mode replaces the worker type."},
         "room": {"type": "string", "description": "is the room's name."},
         "asMain": {"type": "boolean", "description": "says the caller proved to be the shell of the room's main: only then does the view carry the sessions' telemetry and the briefs."},
         "spaces": {"type": "array", "items": {"$ref": "#/$defs/SpaceRow"}, "description": "are the spaces not over, in the order they opened."},
@@ -94,7 +94,6 @@
       "properties": {
         "name": {"type": "string", "description": "is the session's name."},
         "own": {"type": "boolean", "description": "marks the shell's own main, the run the caller proved to be."},
-        "type": {"type": "string", "description": "is the type of a worker opened with one."},
         "cwd": {"type": "string", "description": "is the directory the session started in."},
         "path": {"type": "string", "description": "is the directory the session works in now, for the pane's top row: where its harness says it runs (a worktree entry moves it), else where it started."},
         "branch": {"type": "string", "description": "is the branch checked out at path: its space's own checkout while it works there, else what is checked out at path, a detached head as its short commit; absent outside a repository."},

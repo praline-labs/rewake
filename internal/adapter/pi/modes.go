@@ -20,9 +20,11 @@ type modePlan struct {
 	Failed       string `json:"failed"`
 }
 
-func planMode(name string, fields workmode.Fields, main bool) *modePlan {
+// planMode renders one mode's complete behavioral section, the only one the
+// session's requests carry: a switch replaces it, never adds another.
+func planMode(mode workmode.Mode, fields workmode.Fields, main bool) *modePlan {
 	p := &modePlan{
-		Name: name, Instructions: workmode.Instructions(name, main), Status: "mode: " + name + " (shift+tab)", Effort: fields.Effort,
+		Name: mode.Name, Instructions: workmode.Instructions(mode, main), Status: "mode: " + mode.Name + " (shift+tab)", Effort: fields.Effort,
 		Busy: "work mode was not changed: the session is busy", Failed: "work mode was not changed: the configured model could not be selected",
 	}
 	if fields.Model != "" {
@@ -33,8 +35,8 @@ func planMode(name string, fields workmode.Fields, main bool) *modePlan {
 
 // StartModeArgs runs before ordinary defaults. Workers overlay their template
 // before the arguments explicitly typed after -- are merged.
-func (harness) StartModeArgs(args []string, c workmode.Config, kind string, replace bool, typed []string) []string {
-	f := c.Fields(c.Start(kind))
+func (harness) StartModeArgs(args []string, c workmode.Config, mode string, replace bool, typed []string) []string {
+	f := c.Fields(mode)
 	explicit := args
 	if replace {
 		explicit = typed
@@ -83,11 +85,11 @@ func dropModeFlags(args []string, flags ...string) []string {
 	return append(kept, args[len(visible):]...)
 }
 
-// initialMode validates a configured startup model through the registry too:
-// pi's CLI may otherwise fuzzy-match a misspelled exact model id.
+// initialMode validates a configured startup mode and model through the
+// registry too: pi's CLI may otherwise fuzzy-match a misspelled exact model id.
 func initialMode(request adapter.LaunchRequest) *modePlan {
-	name := request.Modes.Start(request.WorkType.Name)
-	f := request.Modes.Fields(name)
+	mode := request.Mode
+	f := request.Modes.Fields(mode.Name)
 	args := request.Args
 	if adapter.HasFlag(args, "--provider") || (adapter.HasFlag(args, "--model") || adapter.HasFlag(args, "--models")) && !sameFlag(args, "--model", f.Model) {
 		f.Model = ""
@@ -95,7 +97,7 @@ func initialMode(request adapter.LaunchRequest) *modePlan {
 	if thinkingNamed(args) && !sameFlag(args, "--thinking", f.Effort) {
 		f.Effort = ""
 	}
-	return planMode(name, f, request.Role.Spaces)
+	return planMode(mode, f, request.Role.Spaces)
 }
 
 func sameFlag(args []string, flag, value string) bool {
@@ -106,8 +108,8 @@ func sameFlag(args []string, flag, value string) bool {
 func (r *run) helloMode() *modePlan {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if workmode.Valid(r.mode) {
-		return planMode(r.mode, workmode.Fields{}, r.hostsSpaces)
+	if value, ok := workmode.Find(r.modes.Catalog, r.mode); ok {
+		return planMode(value, workmode.Fields{}, r.hostsSpaces)
 	}
 	return r.initial
 }
@@ -119,11 +121,15 @@ func (r *run) cycleMode(l *link, request frame) frame {
 	if r.observed.link != l || request.State == nil || !request.State.Idle || request.State.Compacting {
 		return frame{Error: "work mode was not changed: the session is busy"}
 	}
-	if !workmode.Valid(r.mode) {
+	if _, ok := workmode.Find(r.modes.Catalog, r.mode); !ok {
 		return frame{Error: "work mode is not available yet"}
 	}
-	next := workmode.Next(r.mode)
-	return frame{OK: true, Mode: planMode(next, r.modes.Fields(next), r.hostsSpaces)}
+	next := workmode.Next(r.mode, r.modes.Catalog)
+	value, ok := workmode.Find(r.modes.Catalog, next)
+	if !ok {
+		return frame{Error: "work mode is not available yet"}
+	}
+	return frame{OK: true, Mode: planMode(value, r.modes.Fields(next), r.hostsSpaces)}
 }
 
 func (r *run) cycleThinking(l *link, request frame) frame {

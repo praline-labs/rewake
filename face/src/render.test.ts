@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import type { FaceLine } from "./messages.ts";
-import type { Item } from "./mirror.gen.ts";
+import { bounds, type Item } from "./mirror.gen.ts";
 import { FaceModel } from "./model.ts";
 import { fill, linesOf, render } from "./render.ts";
 import { turnLine } from "./turn.ts";
@@ -21,7 +21,7 @@ const model = (...items: Item[]) => {
 test("the face draws the tail of the model, marks a gap, and scrolls back", () => {
   const m = new FaceModel();
   for (const line of [
-    { op: "hello", v: 2 },
+    { op: "hello", v: bounds.version },
     { op: "begin", items: 1, turn: "idle" },
     { op: "item", item: { id: "p", kind: "prompt", status: "settled", text: "count" } },
     { op: "end" },

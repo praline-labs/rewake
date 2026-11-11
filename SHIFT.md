@@ -67,8 +67,6 @@ Open a document for numbers, commands and names: the map only points.
   sections: The list
 - `docs/permission-requests.md` — A worker's permission requests and questions carried to main as a notify and answered with rewake answer: what is carried, the path through the mod, what main sees.
   sections: What is carried · The path · What main sees · A dialog nobody is asked about · The command · Known limits
-- `docs/pi-work-modes.md` — pi runtime review, advisor and build stances: prompt-only instructions, optional model and effort fields, native/face keys, observed display and compatibility.
-  sections: Configuration and startup · Keys and observed state · Compatibility
 - `docs/prior-art.md` — Other tools that pass messages between agent sessions, and what rewake takes from each or avoids.
   sections: Prior art
 - `docs/project.md` — What rewake is and why: its essence, its philosophy and what the tool does; changed only by the owner's decision.
@@ -115,8 +113,8 @@ Open a document for numbers, commands and names: the map only points.
   sections: Install · Log in · Start main · Worker templates · A project's `.rewake/` · The workers' own settings · The shell · Stop and restart · Where things live · Upgrading
 - `docs/worker-profile.md` — The Claude Code workers' profile: the service folder, login, onboarding and trust, rewake's defaults in settings.json and their upgrades, the run's own settings, memory.
   sections: The service folder · The login · Onboarding and trust · Skills, plugins and MCP servers · settings.json: the workers' user settings · Retired defaults · The run's --settings · Main's checkout is readable · The worker's memory · A template that enters a checkout · The person edits the file · An upgrade adds only the newer defaults · A file rewake cannot read
-- `docs/worker-types.md` — Worker types: the kinds of work a worker is launched for, their briefing sections, where a type is defined, and the memory by type.
-  sections: Where types come from · Turning built-in types off · Raising a worker for a type · Memory · The project's `.rewake/` · In `rewake list`
+- `docs/work-modes.md` — A session's one runtime work mode: its complete behavioral text, where a mode is defined, how it is selected, model and effort per mode, runtime switching and observed state, memory, and the contracts it touches.
+  sections: The built-ins · Where modes come from · The old worker types · Selecting the start · Model, thinking and switching · The native boundary · Memory · In `rewake list` · Compatibility
 - `docs/worktree-tools.md` — A worker entering a checkout mid-session, the worktree status tool and its close forecast, and main's list and land tools.
   sections: A template's `worktree = true` · `rewake worktree status` · The `worktree_status` tool · Main's `worktree_list` and `worktree_land` · A worker's entry: `enter_worktree = true` and `worktree_enter`
 - `docs/worktree.md` — Checkouts rewake makes for a launch: creation, records, land and finish, removal and what keeps one.

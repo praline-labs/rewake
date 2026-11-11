@@ -17,14 +17,14 @@ import (
 // autoMemoryDirectory from --settings, an absolute path only — a relative
 // one is ignored for its shared default (probed on 2.1.302).
 
-// memoryKey names a worker's memory within its project: its type when the
-// space raised it for one, what it learns being about the project and the
-// kind of work rather than the model; else its template, as before types
-// (main's decision, October 21, 2026). A template of a type's name shares
-// that type's memory. Empty for a worker raised from no template.
+// memoryKey names a worker's memory within its project: its runtime work
+// mode, what it learns being about the project and the kind of work rather
+// than the model (main's decision, October 21, 2026, when modes were worker
+// types). A template of a mode's name shares that mode's memory. Empty for a
+// worker raised from no template.
 func memoryKey(request adapter.LaunchRequest) string {
-	if request.Template != "" && request.WorkType.Name != "" {
-		return request.WorkType.Name
+	if request.Template != "" && request.Mode.Name != "" {
+		return request.Mode.Name
 	}
 	return request.Template
 }

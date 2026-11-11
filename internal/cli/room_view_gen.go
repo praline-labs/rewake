@@ -4,7 +4,7 @@ package cli
 
 // RoomView is the room as the shell draws it.
 type RoomView struct {
-	// V is the room-view contract version, 2 with runtime work modes.
+	// V is the room-view contract version, 3: the observed work mode replaces the worker type.
 	V *int `json:"v,omitempty"`
 
 	// Room is the room's name.
@@ -158,9 +158,6 @@ type SessionRow struct {
 
 	// Own marks the shell's own main, the run the caller proved to be.
 	Own *bool `json:"own,omitempty"`
-
-	// Type is the type of a worker opened with one.
-	Type *string `json:"type,omitempty"`
 
 	// Cwd is the directory the session started in.
 	Cwd string `json:"cwd"`

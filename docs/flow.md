@@ -126,8 +126,9 @@ same steps, with its name, role and room from the space's record.
    message is announced with `Rewake:`, and that `rewake guide` has the complete rules
    ([roles.md](roles.md#what-a-session-is-told)).
    The golden copies are in `internal/core/brief/testdata/`. Pi's runtime
-   [work mode](pi-work-modes.md) adds its Go-owned stance before each model request, without
-   replacing those briefings or granting authority. Main delegates in every mode.
+   [work mode](work-modes.md) injects its one Go-owned section before each model request, in
+   place of any earlier one, without replacing those briefings or granting authority; a harness
+   that cannot switch reads that section in the briefing instead. Main delegates in every mode.
 9. **Serving.** The wrapper watches `inbox/<name>/` with inotify, polls every
    second as the safety net, sweeps old mail every ten minutes, and waits for
    the harness to exit.
@@ -349,9 +350,9 @@ the record, the worker never started — and starts in a pseudo-terminal it owns
 the template's `worktree = true` ([worktree-tools.md](worktree-tools.md)) —, `--command <wrapper>` before the harness when the
 alias names one, with main's base, `REWAKE_SPACE=<room>/<space id>` — and
 `REWAKE_SPACE_ENTER=1` for a template's `enter_worktree = true`, whose worker may claim its one
-checkout later, which the host then captures as a launch's, and `REWAKE_SPACE_TYPE` with its
-text for a worker raised for a kind of work, its briefing's last section
-([worker-types.md](worker-types.md)) — and none of main's session in its environment; the launch believes the variable only from its parent, that space's host. From there the worker is any session: Act
+checkout later, which the host then captures as a launch's, and `REWAKE_SPACE_WORK_MODE` with its
+text for the worker's runtime work mode ([work-modes.md](work-modes.md)) — and none of main's
+session in its environment; the launch believes the variable only from its parent, that space's host. From there the worker is any session: Act
 1 for it, its record `sessions/api-pi.json`. The space host records the worker's run, open;
 the command answers once that run is registered, within 30 s. A pi worker shares the login in
 rewake's pi directory; if it has none, the person logs in with `/login` in its pane.

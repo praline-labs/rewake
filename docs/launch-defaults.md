@@ -143,7 +143,8 @@ role = "write"
 args = []
 command = "pi-worker"
 description = "A patch worker"
-type = "code"
+[alias.pi-write.pi]
+start_mode = "build"
 [alias.pi-write.launch]
 model = "chosen-model"
 effort = "high"
@@ -156,7 +157,7 @@ effort = "high"
 | `args` | Arguments handed to the harness as written. |
 | `command` | The program started in place of the harness, a wrapper that runs it; becomes the worker launch's `--command`. User file only. |
 | `description` | One line saying when to choose the worker. |
-| `type` | The kind of work its worker does unless `space open --type` or `--no-type` says otherwise ([worker-types.md](worker-types.md)). |
+| `[alias.<name>.pi] start_mode` | The runtime work mode its worker starts in unless `space open --work-mode` says otherwise ([work-modes.md](work-modes.md#selecting-the-start)). |
 | `[alias.<name>.launch] model` | Applied by the adapter: `--model` on Claude Code and pi. |
 | `launch.effort` | Applied as Claude Code's `--effort` or pi's `--thinking`. |
 | `launch.context` | The auto-compact window, applied on Claude Code as `--autocompact`: `auto`, or 100k–1M tokens such as `300k` or `1M`, any other value refused. Shown only on a harness without such a flag (pi). On Claude Code the strip and `rewake list` show it as the window and measure the fill against it, since the mod reports only the model's. |
@@ -172,11 +173,11 @@ apply; flags that should not go in `args`), under "fields whose place is elsewhe
 file is refused then, so it is rewritten once.
 
 **The project file's place, since October 21, 2026** (the owner's decision): a project's aliases
-live in `.rewake/aliases.toml`, beside its types in `.rewake/types/`. A `.rewake.toml` in the
+live in `.rewake/aliases.toml`, beside its modes in `.rewake/modes/`. A `.rewake.toml` in the
 working directory, where they lived before, refuses the catalogue, naming the new place: read
 silently or skipped, either would open workers other than the project says. Nothing is moved
-for the person. Either alias file may also hold `[types] off = [...]`, the built-in types it
-turns off ([worker-types.md](worker-types.md)).
+for the person. The old `[types] off = [...]` is refused with where a mode file goes
+([work-modes.md](work-modes.md#the-old-worker-types)); built-in modes are not turned off.
 
 **A project turns templates off** (the owner's, October 26, 2026): `[aliases] off = ["patch-write"]`
 in `.rewake/aliases.toml` hides those templates of the merged catalogue, the user's included, for
@@ -192,12 +193,11 @@ With no launchable `write` template left, main remains an orchestrator, not a wr
 then says `No template writes code here: main remains the orchestrator; ask the owner for a writer template.`
 (`--json`: `noWriter`). It must not substitute its own implementation.
 
-For pi, [work modes](pi-work-modes.md) add optional startup model/effort fields before ordinary
-launch defaults: explicit harness flags win, then the starting mode, then these defaults.
-Global `[pi]` fields merge user then project; `[alias.<name>.pi]` overlays that result, without
-changing whole-template replacement. Start precedence is template `start_mode`, then review/code
-type defaults (review/build), then global `start_mode`, then advisor. Global start covers main
-and otherwise-advisor workers; it does not displace review/code.
+[Work modes](work-modes.md) add optional startup model/effort fields before ordinary launch
+defaults: explicit harness flags win, then the starting mode, then these defaults. Global `[pi]`
+fields merge user then project; `[alias.<name>.pi]` overlays that result, without changing
+whole-template replacement. Start precedence is `space open --work-mode`, template `start_mode`,
+global `start_mode`, then advisor, main included; type-derived defaults are gone.
 
 **A project file may not choose a role, or the program.** `role` and `command` belong in the
 user's own file; an alias in `.rewake/aliases.toml` that carries one is refused by name. The program is
@@ -207,11 +207,12 @@ happens to be in should not decide that or what a worker may do. The user file i
 
 `rewake workers` is a view available to any role, even outside a session. It reads the user
 file and the current directory's `.rewake/aliases.toml`, a project alias replacing the user's of
-the same name and the project's `[aliases] off` removing templates, and shows name, harness, role, command (the harness when none), description, type
-and each setting's value marked applied or shown only, and the label, omitting main-only
-harnesses without rejecting the other templates, then the types `space open --type` takes;
-`--json` returns `workers`, whose `model`, `effort` and `context` each have `value` and
-`applied`, with `label` when one is set, and `types`. rewake ships no templates: an empty
+the same name and the project's `[aliases] off` removing templates, and shows name, harness, role, command (the harness when none), description, its `start_mode`
+and why `space open` would refuse that mode, each setting's value marked applied or shown only,
+and the label, omitting main-only harnesses without rejecting the other templates, then the mode
+catalogue in cycle order with each mode's source and description; `--json` returns `workers`,
+whose `model`, `effort` and `context` each have `value` and `applied`, with `label` when one is
+set, and `modes`. rewake ships no templates: an empty
 or main-only catalogue answers `No launchable worker templates: define [alias.<name>] for a worker-capable harness in ...`, and `space open --alias`
 with none defined refuses with `no templates are defined; rewake workers --help says where` in
 place of the empty `available:` list. The fields are listed once, on `rewake workers --help`; a

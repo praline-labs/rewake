@@ -214,6 +214,12 @@ func unknownFlagError(command *Command, name string) error {
 	if command == nil {
 		return &UsageError{Message: fmt.Sprintf("No global flag --%s. Run rewake for the map.", name)}
 	}
+	if replaced, gone := command.Removed[name]; gone {
+		return &UsageError{
+			Command: command,
+			Message: fmt.Sprintf("%s no longer takes --%s: %s", command.Name, name, replaced),
+		}
+	}
 	return &UsageError{
 		Command: command,
 		Message: fmt.Sprintf("%s does not take --%s. Its flags are listed below.", command.Name, name),

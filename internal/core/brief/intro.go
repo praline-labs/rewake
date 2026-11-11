@@ -3,7 +3,7 @@ package brief
 
 import (
 	"github.com/praline-labs/rewake/internal/core/role"
-	"github.com/praline-labs/rewake/internal/core/worktype"
+	"github.com/praline-labs/rewake/internal/core/workmode"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -17,9 +17,11 @@ type Context struct {
 	// role texts need about it — how it commits, say — which the role texts, naming no harness, leave to its adapter
 	// (docs/rules/adapter-api.md#launch). Empty adds nothing.
 	Harness role.Section
-	// Work is the kind of work the worker was raised for, its text after
-	// the role's sections (docs/worker-types.md). Empty Name adds nothing.
-	Work worktype.Type
+	// Mode is the runtime work mode whose complete behavioral section follows
+	// the role's sections (docs/work-modes.md). Empty Name adds nothing: a
+	// harness that switches the mode at runtime injects the section itself,
+	// so the launch's briefing never carries a second, stale one.
+	Mode workmode.Mode
 }
 
 // Intro renders the independent system briefing of the selected role.

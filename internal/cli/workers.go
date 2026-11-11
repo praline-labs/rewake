@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/praline-labs/rewake/internal/core/role"
-	"github.com/praline-labs/rewake/internal/core/worktype"
+	"github.com/praline-labs/rewake/internal/core/workmode"
 	"github.com/praline-labs/rewake/internal/host/launch"
 )
 
@@ -26,21 +26,24 @@ type workerTemplate struct {
 	Worktree bool `json:"worktree"`
 	// EnterWorktree says the worker may enter one mid-session instead.
 	EnterWorktree bool `json:"enterWorktree"`
-	// Type is the template's default kind of work; TypeProblem why space
-	// open would refuse it — not there, or turned off.
-	Type        string        `json:"type,omitempty"`
-	TypeProblem string        `json:"typeProblem,omitempty"`
-	Model       workerSetting `json:"model"`
-	Effort      workerSetting `json:"effort"`
-	Context     workerSetting `json:"context"`
+	// StartMode is the runtime work mode space open starts this worker in:
+	// the template's start_mode, else the merged global one, else advisor.
+	// StartProblem is why space open would refuse it, when the mode is not
+	// there.
+	StartMode    string        `json:"startMode"`
+	StartProblem string        `json:"startProblem,omitempty"`
+	Model        workerSetting `json:"model"`
+	Effort       workerSetting `json:"effort"`
+	Context      workerSetting `json:"context"`
 	// Label names the model where the harness gives it no name of its own.
 	Label string `json:"label,omitempty"`
 }
 
 type workersListing struct {
 	Workers []workerTemplate `json:"workers"`
-	// Types are the kinds of work space open --type takes.
-	Types []worktype.Type `json:"types"`
+	// Modes are the runtime work modes space open --work-mode takes, in the
+	// cycle's order: the built-ins first, then the custom-only names sorted.
+	Modes []workmode.Mode `json:"modes"`
 	// NoWriter says no launchable template has the write role;
 	// main still delegates implementation.
 	NoWriter bool `json:"noWriter"`
@@ -49,14 +52,14 @@ type workersListing struct {
 func workersCommand() *Command {
 	return &Command{
 		Name: "workers", MaxPositionals: 0,
-		Summary:  "List the workers main can open by alias, without starting anything.",
+		Summary:  "List the workers main can open by alias, and the runtime work modes they start in, without starting anything.",
 		Options:  []Option{jsonOption},
 		Examples: []string{"rewake workers", "rewake workers --json"},
 		Next:     []string{"rewake space open <name> --alias <alias>"},
 		Notes: []string{
-			"Any role may read this catalog. Only worker-capable templates are listed; aliases on a main-only harness are omitted, and space open refuses them by name, through command wrappers too. New workers are pi only; Claude Code still launches main and existing sessions stay running. rewake ships no templates: each is an [alias.<name>] in the user alias file, ~/.config/rewake/aliases.toml, or in .rewake/aliases.toml of the directory the command runs in — not the room's, so run workers and space open from the project's top, where its file, its types and its [aliases] off are read. A project alias with the user's name replaces the user's whole, role and command included. The project file may not set role or command. It may hold [aliases] off = [\"<alias>\", ...], which hides those templates of the merged catalog, the user's included; a name that is no template, or one the same file defines, refuses the catalog, and so does [aliases] off in the user file. A .rewake.toml in the directory is refused: the project file is .rewake/aliases.toml. An unreadable file refuses the listing rather than silently omit workers.",
-			"Types are the kinds of work a worker is raised for, each a text that follows its role's briefing: rewake's built-in " + builtInTypes() + "; the person's ~/.config/rewake/types/<type>.md; the project's .rewake/types/<type>.md. The nearest of one name wins. A type file is Markdown opening with a TOML front matter between two +++ lines that holds description = \"<one line>\", at most 32 KiB. [types] off = [\"<built-in type>\", ...] in either alias file hides those built-in ones; a file of the same name still stands. An alias's type = \"<type>\" is its default, shown with why space open would refuse it when it is not there or turned off.",
-			"An alias: [alias.<name>] with harness = \"<id>\"; role = \"write\" or \"general\" (general when absent); args = [the harness's arguments]; command = \"<program>\", a wrapper that runs the harness; description; type = \"<type>\"; worktree = true, a worker started in a new worktree of its own, which --worktree=<name> on space open names and --no-worktree leaves out; enter_worktree = true, retained for existing worker-profile internals on a harness that supports entry, refused beside worktree = true. And [alias.<name>.launch] with model and effort, which become the harness's flags; context, the window auto-compaction keeps to — Claude Code's --autocompact, auto or 100k to 1M such as 300k —, applied where the harness has a flag for it and only shown elsewhere; and label, how the strip and rewake list name the model where the harness gives it no name. For pi, [pi] and [alias.<name>.pi] take start_mode = review, advisor or build; [pi.modes.<mode>] and [alias.<name>.pi.modes.<mode>] take model = provider/model-id and effort. Global fields merge user then project; the selected template overlays them. Start precedence is template start_mode, review/code type defaults, global start_mode, then advisor (main included). Initial explicit harness flags win, then the starting mode, then ordinary launch defaults. Review/advisor are prompt-only read-only stances, not permissions. space open --help says how harness flags after -- meet the template's.",
+			"Any role may read this catalog. Only worker-capable templates are listed; aliases on a main-only harness are omitted, and space open refuses them by name, through command wrappers too. New workers are pi only; Claude Code still launches main and existing sessions stay running. rewake ships no templates: each is an [alias.<name>] in the user alias file, ~/.config/rewake/aliases.toml, or in .rewake/aliases.toml of the directory the command runs in — not the room's, so run workers and space open from the project's top, where its file, its modes and its [aliases] off are read. A project alias with the user's name replaces the user's whole, role and command included. The project file may not set role or command. It may hold [aliases] off = [\"<alias>\", ...], which hides those templates of the merged catalog, the user's included; a name that is no template, or one the same file defines, refuses the catalog, and so does [aliases] off in the user file. A .rewake.toml in the directory is refused: the project file is .rewake/aliases.toml. An unreadable file refuses the listing rather than silently omit workers.",
+			"A work mode is the session's one runtime behavioral section, and every session has one: " + builtInModes() + " are rewake's, each a complete text that replaces any other. The person's ~/.config/rewake/modes/<mode>.md and the project's .rewake/modes/<mode>.md hold their own, the nearest of one name winning; a file of a built-in's name replaces its text and keeps its place in the cycle. A mode file is Markdown opening with a TOML front matter between two +++ lines that holds description = \"<one line>\", at most 32 KiB. The cycle is review, advisor, build, process, then the custom-only names sorted. An old type directory or [types] section is refused with where its files go; a type's text moves to modes/<name>.md unchanged, and a custom code or analysis text takes the name it is meant to answer to.",
+			"An alias: [alias.<name>] with harness = \"<id>\"; role = \"write\" or \"general\" (general when absent); args = [the harness's arguments]; command = \"<program>\", a wrapper that runs the harness; description; worktree = true, a worker started in a new worktree of its own, which --worktree=<name> on space open names and --no-worktree leaves out; enter_worktree = true, retained for existing worker-profile internals on a harness that supports entry, refused beside worktree = true. And [alias.<name>.launch] with model and effort, which become the harness's flags; context, the window auto-compaction keeps to — Claude Code's --autocompact, auto or 100k to 1M such as 300k —, applied where the harness has a flag for it and only shown elsewhere; and label, how the strip and rewake list name the model where the harness gives it no name. Modes are configured by [pi] and [alias.<name>.pi] with start_mode = \"<mode>\"; [pi.modes.<mode>] and [alias.<name>.pi.modes.<mode>] take model = provider/model-id and effort. Global fields merge user then project; the selected template overlays them. Start precedence is space open --work-mode, template start_mode, global start_mode, then advisor (main included); a configured or typed mode the catalog does not hold is refused. Initial explicit harness flags win, then the starting mode, then ordinary launch defaults. Review and advisor are prompt-only read-only guidance, not permissions. space open --help says how harness flags after -- meet the template's.",
 		},
 		Access: viewForm, Handler: handleWorkers,
 	}
@@ -67,7 +70,7 @@ func handleWorkers(ctx *Context, call Call) error {
 	if err := aliases.Err(); err != nil {
 		return &UsageError{Command: call.Command, Message: err.Error()}
 	}
-	out := workersListing{Workers: []workerTemplate{}, Types: aliases.Types()}
+	out := workersListing{Workers: []workerTemplate{}, Modes: aliases.Catalog()}
 	for _, name := range aliases.Names() {
 		template, err := aliases.Template(name, ctx.table.catalog)
 		if err != nil {
@@ -78,12 +81,10 @@ func handleWorkers(ctx *Context, call Call) error {
 			return &UsageError{Command: call.Command, Message: err.Error()}
 		}
 		view := workerView(template)
-		if template.Type != "" {
-			// Shown, not refused: the template still opens with --type or
-			// --no-type.
-			if _, err := aliases.Type(template.Type); err != nil {
-				view.TypeProblem = err.Error()
-			}
+		view.StartMode = aliases.Modes(template.Name).Start()
+		// Shown, not refused: the template still opens with --work-mode.
+		if _, err := aliases.Mode(view.StartMode); err != nil {
+			view.StartProblem = err.Error()
 		}
 		out.Workers = append(out.Workers, view)
 	}
@@ -96,9 +97,9 @@ func handleWorkers(ctx *Context, call Call) error {
 	return printValue(ctx, out, out.lines)
 }
 
-// builtInTypes names the types rewake ships, for the help pages.
-func builtInTypes() string {
-	return strings.Join(worktype.Names(worktype.BuiltIns()), ", ")
+// builtInModes names the modes rewake ships, for the help pages.
+func builtInModes() string {
+	return strings.Join(workmode.Names(workmode.BuiltIns()), ", ")
 }
 
 // launchAliases reads the catalog once per process, saying what is wrong
@@ -124,7 +125,6 @@ func workerView(template launch.Template) workerTemplate {
 	return workerTemplate{
 		Name: template.Name, Harness: template.Harness.ID(), Role: template.Role.ID,
 		Command: command, Description: template.Description, Worktree: template.Worktree, EnterWorktree: template.EnterWorktree,
-		Type:    template.Type,
 		Model:   workerSetting{Value: settings.Model, Applied: template.Applied.Model},
 		Effort:  workerSetting{Value: settings.Effort, Applied: template.Applied.Effort},
 		Context: workerSetting{Value: settings.Context, Applied: template.Applied.Context},
@@ -137,11 +137,11 @@ func (l workersListing) lines() []string {
 	if l.NoWriter {
 		lines = append(lines, "", "No template writes code here: main remains the orchestrator; ask the owner for a writer template.")
 	}
-	lines = append(lines, "", "Types (space open --type <type>):")
-	if len(l.Types) == 0 {
+	lines = append(lines, "", "Modes in cycle order (space open --work-mode <mode>):")
+	if len(l.Modes) == 0 {
 		lines = append(lines, "  none")
 	}
-	for _, value := range l.Types {
+	for _, value := range l.Modes {
 		where := value.Source
 		if value.Path != "" {
 			where += " " + value.Path
@@ -164,11 +164,9 @@ func (l workersListing) workerLines() []string {
 		if w.EnterWorktree {
 			line += " enter_worktree"
 		}
-		if w.Type != "" {
-			line += " type=" + w.Type
-			if w.TypeProblem != "" {
-				line += " (not available: " + w.TypeProblem + ")"
-			}
+		line += " start_mode=" + w.StartMode
+		if w.StartProblem != "" {
+			line += " (not available: " + w.StartProblem + ")"
 		}
 		for _, setting := range []struct {
 			name  string

@@ -265,11 +265,12 @@ task the worker leaves pending, and runs `rewake space close`; the space host en
 the record closes with main's reason, and main's `rewake inbox --awaited` reads the task as lost,
 its worker ended — while main itself runs on.
 
-`fixture-space-type` is a worker raised for a kind of work: a project's `.rewake/aliases.toml`
-names a template whose type is the project's own `.rewake/types/survey.md`; main, working in that
-project, opens the space without `--type`, and the worker's briefing carries the type's text. The
-type crosses from main's `space open` through the space host's environment into the worker's
-launch, which only a run of all three shows.
+`fixture-space-mode` is a worker raised in a runtime work mode: a project's
+`.rewake/aliases.toml` names a template whose `start_mode` is the project's own
+`.rewake/modes/survey.md`; main, working in that project, opens the space without `--work-mode`,
+and the worker's briefing carries that one mode section. The mode crosses from main's
+`space open` through the space host's environment into the worker's launch, which only a run of
+all three shows.
 
 `fixture-space-worktree` is a worker opened from a template with `worktree = true`: main opens
 it in a repository, the worker works in a checkout of its own and asks `rewake worktree status`,

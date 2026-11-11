@@ -6,7 +6,7 @@ package mirror
 const (
 	// Version is the version of the lines, which hello carries; one build per room makes it a
 	// guard, not a negotiation.
-	Version = 2
+	Version = 3
 	// MaxItemBytes bounds one item serialized: a longer text keeps its head and its tail with a
 	// cut mark between.
 	MaxItemBytes = 262144
@@ -75,9 +75,9 @@ type Line struct {
 	// did.
 	Retry *int `json:"retry,omitempty"`
 
-	// WorkMode is the observed runtime work stance, independent of permissions, on begin and
-	// stance.
-	WorkMode *WorkMode `json:"workMode,omitempty"`
+	// WorkMode is the observed runtime work mode by name, independent of permissions, on begin and
+	// stance; any name of the session's mode catalogue.
+	WorkMode *string `json:"workMode,omitempty"`
 
 	// Mode is the session's permission mode, on begin and mode; absent while the session has not
 	// said it.
@@ -233,16 +233,6 @@ const (
 	PermissionModeAuto    PermissionMode = "auto"
 	PermissionModeBypass  PermissionMode = "bypass"
 	PermissionModeUnasked PermissionMode = "unasked"
-)
-
-// WorkMode is a runtime working stance, never a permission grant.
-type WorkMode string
-
-// The values of WorkMode.
-const (
-	WorkModeReview  WorkMode = "review"
-	WorkModeAdvisor WorkMode = "advisor"
-	WorkModeBuild   WorkMode = "build"
 )
 
 // ThinkingLevel is how much the session's model thinks before it answers, in the words of the

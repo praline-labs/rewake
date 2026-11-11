@@ -52,15 +52,18 @@ effort="minimal"`,
 		t.Fatal(err)
 	}
 	got := s.Modes("writer")
-	if got.StartMode != "build" || got.Start("review") != "build" || !got.TemplateStart || got.Modes.Review != (workmode.Fields{Model: "p/m", Effort: "medium"}) || got.Modes.Build.Effort != "minimal" {
+	if got.Start() != "build" || got.Modes["review"] != (workmode.Fields{Model: "p/m", Effort: "medium"}) || got.Modes["build"].Effort != "minimal" {
 		t.Fatalf("merged %+v", got)
 	}
-	if got.Modes.Review.Effort == "low" {
+	if got.Modes["review"].Effort == "low" {
 		t.Fatal("replaced template leaked fields")
 	}
 	global := s.Modes("")
-	if global.Start("review") != "review" || global.Start("code") != "build" || global.Start("") != "advisor" {
-		t.Fatalf("global/type precedence: %+v", global)
+	if global.Start() != "advisor" {
+		t.Fatalf("global start: %+v", global)
+	}
+	if _, ok := workmode.Find(global.Catalog, "process"); !ok {
+		t.Fatalf("the catalog does not travel with the config: %+v", global.Catalog)
 	}
 	if !strings.Contains(readSet(t, `[pi.modes.advisor]
 effort="wrong"`, true).Err().Error(), "effort") {

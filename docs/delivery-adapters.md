@@ -131,7 +131,7 @@ initialization, selection or restoration, the extension answers `pending` immedi
 queuing the notice. Once admission opens, compaction separately refuses queue acceptance with
 `pending` and its existing compaction detail. The host owns retry in either case; a wake does
 not wait inside the extension. Native selection/admission ownership is in
-[pi-work-modes.md](pi-work-modes.md).
+[work-modes.md](work-modes.md).
 
 `agent_start` is acknowledged before model work. `agent_end` supplies the last assistant text,
 while `agent_settled` reports the end after automatic work. An aborted settled event reports

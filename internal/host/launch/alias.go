@@ -19,7 +19,6 @@ import (
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/core/workmode"
-	"github.com/praline-labs/rewake/internal/core/worktype"
 )
 
 // Where aliases are read from, weakest first. The project file wins because it
@@ -33,8 +32,8 @@ const (
 	projectDir = ".rewake"
 	// movedProjectFile held a project's aliases until October 21, 2026.
 	movedProjectFile = ".rewake.toml"
-	// typesDir holds types, beside the alias file in both places.
-	typesDir = "types"
+	// modesDir holds the modes, beside the alias file in both places.
+	modesDir = "modes"
 )
 
 // Alias is one worker of the catalog.
@@ -58,12 +57,9 @@ type Alias struct {
 	Worktree bool `toml:"worktree"`
 	// EnterWorktree lets the worker, started without a checkout, enter one
 	// rewake makes for it mid-session, once (docs/worktree-tools.md).
-	EnterWorktree bool `toml:"enter_worktree"`
-	// Type is the kind of work its worker does unless space open names
-	// another (docs/worker-types.md).
-	Type   string          `toml:"type"`
-	Launch AliasSettings   `toml:"launch"`
-	Pi     workmode.Config `toml:"pi"`
+	EnterWorktree bool            `toml:"enter_worktree"`
+	Launch        AliasSettings   `toml:"launch"`
+	Pi            workmode.Config `toml:"pi"`
 }
 
 // AliasSettings are the portable settings of a worker. The harness turns
@@ -99,10 +95,14 @@ type Set struct {
 	// problems are files that could not be read, which refuse the catalog
 	// through Err rather than leave a worker silently absent.
 	problems []string
-	// types are the type files read, a project's replacing the user's of
-	// the same name; off names the built-in types turned off, with where.
-	types map[string]worktype.Type
-	off   map[string]string
+	// modes are the mode files read, a project's replacing the user's of the
+	// same name; a built-in of that name keeps its place in the cycle.
+	modes map[string]workmode.Mode
+	// paths is where each alias was read, for a refusal that names the file.
+	paths map[string]string
+	// piSource is where the global [pi] settings were last read, for a
+	// refusal that names the file.
+	piSource string
 	// aliasOff names the aliases a project file turned off, with where; they
 	// are gone from aliases, and Template refuses them by name.
 	aliasOff map[string]string
@@ -157,9 +157,6 @@ type Template struct {
 	Worktree bool
 	// EnterWorktree says it may enter one mid-session instead.
 	EnterWorktree bool
-	// Type is its default kind of work, as the alias names it; space open
-	// resolves it (Set.Type).
-	Type string
 	// Applied says which of the settings became flags.
 	Applied struct{ Model, Effort, Context bool }
 }
@@ -198,7 +195,7 @@ func (s *Set) Template(name string, catalog adapter.Catalog) (Template, error) {
 	template := Template{
 		Name: name, Harness: h, Role: part, Command: value.Command,
 		Description: value.Description, Args: slices.Clone(value.Args), Settings: value.Launch,
-		Worktree: value.Worktree, EnterWorktree: value.EnterWorktree, Type: value.Type,
+		Worktree: value.Worktree, EnterWorktree: value.EnterWorktree,
 	}
 	if err := worktreeField(h, value); err != nil {
 		return Template{}, fmt.Errorf("alias %q in %s: %w", name, source, err)
@@ -283,9 +280,6 @@ func settingFlags(h adapter.Harness, settings AliasSettings, template *Template)
 // A worker that fails three layers down, complaining about a flag the person
 // never typed, is worse than no alias at all.
 func (a Alias) check(name, source string, knownHarnesses []string, fromProject bool) error {
-	if a.Type != "" && !worktype.ValidName(a.Type) {
-		return fmt.Errorf("alias %q in %s has type = %q, which cannot name a type; rewake workers lists them", name, source, a.Type)
-	}
 	for _, value := range []string{a.Description, a.Launch.Model, a.Launch.Effort, a.Launch.Context, a.Launch.Label} {
 		if strings.ContainsAny(value, "\r\n") {
 			return fmt.Errorf("alias %q in %s has a multiline description or launch setting; each must be one line", name, source)

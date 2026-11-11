@@ -9,13 +9,15 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/core/role"
-	"github.com/praline-labs/rewake/internal/core/worktype"
+	"github.com/praline-labs/rewake/internal/core/workmode"
 )
 
-// A pi run gets the worker's type in its briefing, and then the
-// APPEND_SYSTEM.md pi would have found itself, which the briefing's flag
-// turns off: the project's when trusted, else the agent directory's; none
-// when the caller's own flag turned discovery off, as pi would.
+// A pi run's briefing carries the role and then the APPEND_SYSTEM.md pi would
+// have found itself, which the briefing's flag turns off: the project's when
+// trusted, else the agent directory's; none when the caller's own flag turned
+// discovery off, as pi would. It carries no work mode: pi's extension injects
+// that one section per request, so a switch replaces it rather than stack
+// against the launch (the defect this guards).
 func TestABriefingKeepsWhatPiWouldAppend(t *testing.T) {
 	write := func(path string) {
 		t.Helper()
@@ -45,7 +47,7 @@ func TestABriefingKeepsWhatPiWouldAppend(t *testing.T) {
 	} {
 		request := launchRequest(t)
 		request.Args, request.Intro, request.Role = c.args, true, role.Write
-		request.WorkType = worktype.Type{Name: "study", Text: "STUDY-TEXT"}
+		request.Mode = workmode.Mode{Name: "study", Text: "STUDY-TEXT", Source: workmode.User}
 		_ = os.RemoveAll(filepath.Join(work, ".pi"))
 		if c.project {
 			write(filepath.Join(work, ".pi", "APPEND_SYSTEM.md"))
@@ -63,8 +65,11 @@ func TestABriefingKeepsWhatPiWouldAppend(t *testing.T) {
 		}
 		appended := adapter.FlagValues(plan.Args, appendFlag)
 		ours := slices.IndexFunc(appended, func(text string) bool { return strings.Contains(text, `session "api"`) })
-		if ours < 0 || !strings.Contains(appended[ours], "YOUR KIND OF WORK: study\n") || !strings.Contains(appended[ours], "STUDY-TEXT") {
-			t.Fatalf("%v: no briefing with the type in %q", c.args, appended)
+		if ours < 0 {
+			t.Fatalf("%v: no briefing in %q", c.args, appended)
+		}
+		if strings.Contains(appended[ours], "STUDY-TEXT") || strings.Contains(appended[ours], "YOUR KIND OF WORK") || strings.Contains(appended[ours], "Runtime work mode") {
+			t.Fatalf("%v: the launch briefing carries a work mode, which the extension injects per request: %q", c.args, appended[ours])
 		}
 		var after []string
 		if ours+1 < len(appended) {

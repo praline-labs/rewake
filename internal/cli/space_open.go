@@ -20,8 +20,8 @@ type spaceOpened struct {
 	Room      string `json:"room"`
 	SessionID string `json:"sessionId,omitempty"`
 	Worktree  bool   `json:"worktree,omitempty"`
-	// Type is the kind of work the worker was raised for, when it has one.
-	Type string `json:"type,omitempty"`
+	// Mode is the runtime work mode the worker runs in.
+	Mode string `json:"mode,omitempty"`
 	// Dev says rewake's own face draws the worker.
 	Dev bool `json:"dev,omitempty"`
 	// Notice is what the worker still lacks that the person gives in its
@@ -31,8 +31,8 @@ type spaceOpened struct {
 
 func (o spaceOpened) lines() []string {
 	kind := o.Role
-	if o.Type != "" {
-		kind += ", type " + o.Type
+	if o.Mode != "" {
+		kind += ", mode " + o.Mode
 	}
 	if o.Dev {
 		kind += ", dev"
@@ -89,7 +89,7 @@ func handleSpaceOpen(ctx *Context, call Call) error {
 	}
 	answer := spaceOpened{
 		Space: name, ID: opened.Record.ID, Session: opened.Session, Harness: worker.Harness.ID(), Role: worker.Role.ID,
-		Room: filepath.Base(dir), SessionID: opened.Record.Worker.SessionID, Worktree: worker.Worktree != "", Type: worker.Work.Name,
+		Room: filepath.Base(dir), SessionID: opened.Record.Worker.SessionID, Worktree: worker.Worktree != "", Mode: worker.Mode.Name,
 		Dev: opened.Record.Worker.Dev, Notice: opened.Notice,
 	}
 	return printValue(ctx, answer, answer.lines)
@@ -107,7 +107,7 @@ func spaceRequest(call Call) launch.Request {
 	return launch.Request{
 		Alias:    call.Flags["alias"],
 		Worktree: typed("worktree"), NoWorktree: call.Switch("no-worktree"),
-		Type: typed("type"), NoType: call.Switch("no-type"),
+		Mode: typed("work-mode"),
 		Args: call.Positionals[2:],
 	}
 }

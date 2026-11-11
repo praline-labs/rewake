@@ -107,10 +107,6 @@ type Worker struct {
 	// <name>-<harness>.
 	Name string `json:"name"`
 	Role string `json:"role"`
-	// Type is the worker type the space was opened with, its name only (the
-	// text travels in the spec); optional, absent from records of before the
-	// field and of a worker without a type.
-	Type string `json:"type,omitempty"`
 	// Label is the template's name for its model (launch.label), shown when
 	// the harness gives none; optional, absent from older records.
 	Label string `json:"label,omitempty"`

@@ -257,6 +257,7 @@ func (claudeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, 
 	var parts []promptPart
 	if request.Intro {
 		context := request.BriefContext()
+		context.Mode = request.Mode
 		if worker.enter {
 			context.Harness = entryBrief
 		}

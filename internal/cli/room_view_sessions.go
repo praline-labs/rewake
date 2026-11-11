@@ -35,9 +35,6 @@ func sessionRowsOf(dir string, records []space.Record, views []sessionView, main
 		if asMain && view.Name == mainName {
 			row.Own = ptr(true)
 		}
-		if view.Type != "" {
-			row.Type = ptr(view.Type)
-		}
 		// The space's record names its checkout's branch; a session that
 		// moved elsewhere is read where it is.
 		if checkout, ok := checkouts[view.Name]; ok && filepath.Clean(checkout.Path) == filepath.Clean(row.Path) {

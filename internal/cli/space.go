@@ -27,12 +27,15 @@ func spaceGroup() Group {
 			Args:           "list | open <name> --alias <alias> [options] [-- <harness args...>] | close <name>",
 			MaxPositionals: Variadic,
 			Summary:        "List this room's spaces, or, from main, open one — start a worker that lives no longer than main's run — or close one.",
+			Removed: map[string]string{
+				"type":    "a worker's kind of work is now its runtime work mode: name it with --work-mode <mode>, or set start_mode under [alias.<name>.pi] (code became build, analysis advisor; review and process keep their names)",
+				"no-type": "every session has one runtime work mode now, so there is no untyped worker: --work-mode names the mode, else the template's start_mode, else the global one, else advisor",
+			},
 			Options: []Option{
 				{Flag: "--alias", Value: "<alias>", Summary: "open, required: the worker's template from rewake workers; supplies its harness, role, wrapper and arguments."},
 				{Flag: "--worktree", Summary: "open: start the worker in a new worktree, as the harness's own --worktree launch does; --worktree=<name> names it. Wins over the template's worktree = true. A .worktreeinclude at the repository's top names the ignored files, a .env or a local configuration, copied into the new checkout (rewake worktree --help)."},
 				{Flag: "--no-worktree", Summary: "open: start the worker without a worktree although its template has worktree = true."},
-				{Flag: "--type", Value: "<type>", Summary: "open: the kind of work the worker is raised for, a type of rewake workers, whose text follows its role's briefing. Wins over the template's type."},
-				{Flag: "--no-type", Summary: "open: raise the worker with no type although its template names one."},
+				{Flag: "--work-mode", Value: "<mode>", Summary: "open: the runtime work mode the worker runs in, a mode of rewake workers, whose complete text is its behavioral section. Wins over the template's start_mode, then the global one. A session switches it at runtime where its harness can."},
 				{Flag: "--dev", Summary: "open: draw the worker with rewake's own face as well as its harness's, switched in the shell with the prefix then v (docs/face.md); refused on a harness without it. A pi worker is drawn so without it."},
 				jsonOption,
 			},
@@ -40,7 +43,7 @@ func spaceGroup() Group {
 				"rewake space list", "rewake space list --json",
 				"rewake space open api --alias pi-write",
 				"rewake space open api --alias pi-write -- --thinking low",
-				"rewake space open study --alias pi-general --type analysis",
+				"rewake space open study --alias pi-general --work-mode advisor",
 				"rewake space open api --alias pi-write --worktree=fix-login",
 				"rewake space open docs --alias pi-general --json",
 				"rewake space open face --alias pi-write --dev",
@@ -49,7 +52,7 @@ func spaceGroup() Group {
 			Next: []string{"rewake send <name>-<harness> \"text\""},
 			Notes: []string{
 				"A main-only harness is refused before any space is created, even with a command wrapper; rewake workers omits its templates. A worker is raised only from a template: --alias starts the worker an alias of rewake workers describes — its harness, role, command and arguments, with its model and effort, and its context where the harness has a flag for it. The space names the worker and its room. Harness flags after -- go after the template's arguments, and each the harness takes only once replaces the template's copy, an applied model, effort or context included.",
-				"A type is the kind of work — " + builtInTypes() + ", or one of the person's or the project's own: --type names it, else the template's type = \"<type>\", else none; --no-type leaves the template's out. Its text, resolved here in main's directory, follows the worker's role briefing; it changes how the worker works, never what it may do. A type that is not there, or a built-in one an alias file's [types] off turned off, is refused with where.",
+				"A work mode is the worker's one runtime behavioral section — " + builtInModes() + ", or one of the person's or the project's own under modes/<name>.md: --work-mode names it, else the template's [alias.<name>.pi] start_mode, else the global [pi] start_mode, else advisor. Its text, resolved here in main's directory, is the complete section the worker reads in place of any other; it changes how the worker works, never what it may do. A harness that can switch modes replaces that one section at runtime. A mode that is not there is refused with the modes available.",
 				"open is main's: refused from any other role, and from a run whose spaces are not live. The worker is an ordinary launch of rewake in main's room whatever its checkout, named <name>-<harness>, started in main's working directory; the only way to start one, since a person's rewake <harness> is always main. Put the harness's flags — permission flags, a model — after --; the options before it belong to space open. rewake types nothing into the worker on its own: what it needs to start unattended goes there; the person types into it from main's shell, where main runs whenever it was started on a terminal, which shows each worker's terminal beside main's. rewake chooses the session id of a harness that takes one and keeps it in the record.",
 				"The worker runs in a pseudo-terminal of a space host, a rewake process detached from main and no descendant of it. The space host checks main's run once a second; once that run has ended — by /exit, a crash or a kill — it sends the worker's process group SIGHUP, then SIGTERM after a second, then SIGKILL after five more, records what it observed, and exits.",
 				"open answers once the worker's session is registered, within 30 seconds, or says why the space did not open — a worker that exited at once is named with the last line it wrote. A pi worker shares the login of ~/.config/rewake/pi/agent with a pi main and opens with no such word: where pi was never logged in there, the person types /login once in its pane.",
@@ -57,7 +60,7 @@ func spaceGroup() Group {
 				"Each space shows its main, its worker's name, harness and role, the session id rewake chose for the worker's conversation (none for a harness that takes none), its checkout and branch. A closed space keeps them.",
 				"States: opening — the record is written, the worker not yet started; open — the worker runs; closing; closed — over, no checkout left; kept — over, its checkout left. A space not over whose main has ended reads \"main ended\"; one whose main cannot be told from here reads \"main unknown\".",
 				"A kept checkout is listed with what was found in it — changes, commits, a Git lock, or that it could not be looked at —, why the close kept it, and the Git commands that clear it once what is wanted is merged; each refuses rather than lose work. It stays listed until the checkout is gone, and one that cannot be looked at stays too. A close removes the checkout and its branch itself only when nothing would be lost: no changes, no edits hidden by an assume-unchanged or skip-worktree mark, no lock or submodule, and every commit on another local branch; files git ignores go with it, which rewake worktree rm would keep.",
-				"Exit 0 listed, opened or closed; 1 the spaces could not be read, the space did not open, or did not close within the bound, or belongs to another run of main; 2 a wrong call — not main, no --alias or no such alias, no such type or one turned off, a name that cannot be one, no open space of that name.",
+				"Exit 0 listed, opened or closed; 1 the spaces could not be read, the space did not open, or did not close within the bound, or belongs to another run of main; 2 a wrong call — not main, no --alias or no such alias, no such work mode, a name that cannot be one, no open space of that name.",
 			},
 			Access:  spaceAccess,
 			Handler: handleSpace,
@@ -78,7 +81,7 @@ func spaceAccess(call Call) access {
 
 // openOnlyFlags are the space flags only open takes; list and close refuse
 // them rather than run as if they were not there.
-var openOnlyFlags = []string{"alias", "worktree", "no-worktree", "type", "no-type"}
+var openOnlyFlags = []string{"alias", "worktree", "no-worktree", "work-mode"}
 
 // spaceView is one space as list reports it.
 type spaceView struct {

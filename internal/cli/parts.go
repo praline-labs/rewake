@@ -32,7 +32,7 @@ const (
 	handoverContract       = "handover"
 	mirrorHandoverContract = "handover.mirror"
 	switchContract         = "switch"
-	RoomViewVersion        = 2
+	RoomViewVersion        = 3
 )
 
 // contractsOf is this build's: the host's channel and the mirror's lines,

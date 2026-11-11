@@ -5,64 +5,43 @@ import (
 	"testing"
 )
 
-func TestDefaultsCycleAndStances(t *testing.T) {
-	for kind, want := range map[string]string{"": Advisor, "analysis": Advisor, "process": Advisor, "custom": Advisor, "review": Review, "code": Build} {
-		if got := (Config{}).Start(kind); got != want {
-			t.Errorf("%q: %s", kind, got)
-		}
-		if got := (Config{StartMode: Review, TemplateStart: true}).Start(kind); got != Review {
-			t.Errorf("override %q: %s", kind, got)
+// The built-in modes parse — BuiltIns panics on one that does not — and are
+// the disciplines main was given, process included.
+func TestTheBuiltInModes(t *testing.T) {
+	builtins := BuiltIns()
+	if got := strings.Join(Names(builtins), ","); got != "advisor,build,process,review" {
+		t.Fatalf("built-in modes: %s", got)
+	}
+	for _, value := range builtins {
+		if value.Source != BuiltIn || value.Path != "" || value.Text == "" || strings.Contains(value.Text, "+++") {
+			t.Fatalf("%+v", value)
 		}
 	}
-	for kind, want := range map[string]string{"review": Review, "code": Build, "": Advisor, "analysis": Advisor, "process": Advisor} {
-		if got := (Config{StartMode: Advisor}).Start(kind); got != want {
-			t.Errorf("global displaced type %q: %s", kind, got)
-		}
-	}
-	if got := (Config{StartMode: Review}).Start("code"); got != Build {
-		t.Fatal("global review displaced code", got)
-	}
-	if got := (Config{StartMode: Build}).Start("analysis"); got != Build {
-		t.Fatal("global fallback ignored", got)
-	}
-	mode := Review
-	for _, want := range []string{Advisor, Build, Review} {
-		mode = Next(mode)
-		if mode != want {
-			t.Fatal(mode, want)
-		}
-	}
-	for mode, words := range map[string][]string{
-		Review:  {"correctness and regression", "precise files and lines", "Do not edit the code under review", "Git metadata", "coordination remain allowed"},
-		Advisor: {"concrete recommendations", "Do not make product edits", "Git metadata", "coordination remain allowed"},
-		Build:   {"named scope", "verify", "review and commit discipline", "no Git authority", "evidence and assumptions"},
-	} {
-		text := Instructions(mode, false)
-		for _, word := range words {
-			if !strings.Contains(text, word) {
-				t.Errorf("%s lacks %q", mode, word)
-			}
-		}
-		if !strings.Contains(Instructions(mode, true), "do not write product code yourself") {
-			t.Error("main loses orchestration", mode)
-		}
+	if builtins[Process].Description == builtins[Advisor].Description || !strings.Contains(builtins[Process].Text, "procedure") {
+		t.Fatal("process is not its own discipline", builtins[Process])
 	}
 }
 
-func TestOverlayAndValidation(t *testing.T) {
-	user := Config{StartMode: Advisor, Modes: Modes{Review: Fields{Model: "p/m", Effort: "high"}}}
-	project := Config{Modes: Modes{Review: Fields{Effort: "low"}, Build: Fields{Model: "p/b"}}}
-	template := Config{StartMode: Build, Modes: Modes{Review: Fields{Effort: "medium"}}}
-	got := user.Overlay(project).Overlay(template)
-	if got.Start("") != Build || got.Modes.Review != (Fields{Model: "p/m", Effort: "medium"}) || got.Modes.Build.Model != "p/b" {
-		t.Fatalf("%+v", got)
+// A mode's file is refused, never half read, when it is not what it should be:
+// a session told nothing or a broken text is worse than a refusal at space
+// open.
+func TestAModeFileIsReadOrRefused(t *testing.T) {
+	good, err := Parse("study", []byte("+++\r\ndescription = \" Look things up \"\r\n+++\r\n\r\nRead first.\r\nThen answer.\r\n"))
+	if err != nil || good.Description != "Look things up" || good.Text != "Read first.\nThen answer." {
+		t.Fatalf("%+v %v", good, err)
 	}
-	for _, c := range []Config{{StartMode: "plan"}, {Modes: Modes{Review: Fields{Model: "bare"}}}, {Modes: Modes{Advisor: Fields{Effort: "extreme"}}}} {
-		if c.Check() == nil {
-			t.Fatalf("accepted %+v", c)
+	for _, c := range []struct{ name, raw, refused string }{
+		{".hidden", "+++\ndescription = \"x\"\n+++\ntext", "cannot name a mode"},
+		{"study", "description = \"x\"\ntext", "front matter"},
+		{"study", "+++\ndescription = \"x\"\ntext", "front matter"},
+		{"study", "+++\ndescription = \"x\"\nrole = \"write\"\n+++\ntext", "field a mode does not"},
+		{"study", "+++\ndescription = [\n+++\ntext", "not TOML"},
+		{"study", "+++\n\n+++\ntext", "needs description"},
+		{"study", "+++\ndescription = \"x\"\n+++\n \n", "no text"},
+		{"study", "+++\ndescription = \"x\"\n+++\n" + strings.Repeat("a", MaxSize), "KiB"},
+	} {
+		if _, err := Parse(c.name, []byte(c.raw)); err == nil || !strings.Contains(err.Error(), c.refused) {
+			t.Errorf("%s %q: %v, want %q", c.name, c.raw, err, c.refused)
 		}
-	}
-	if got.Check() != nil {
-		t.Fatal(got.Check())
 	}
 }

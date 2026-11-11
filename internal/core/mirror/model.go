@@ -30,7 +30,7 @@ type Model struct {
 	// mode is the session's permission mode, and level its thinking level,
 	// each nil until the session says it.
 	mode     *PermissionMode
-	workMode *WorkMode
+	workMode *string
 	level    *ThinkingLevel
 	parts    map[string]*assembly
 	// born numbers the assemblies, so the oldest goes first past a bound.

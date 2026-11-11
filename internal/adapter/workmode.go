@@ -8,5 +8,5 @@ import "github.com/praline-labs/rewake/internal/core/workmode"
 // remove lower-priority conflicting selections, including a model's effort
 // suffix or a model scope, before that merge.
 type WorkModesHarness interface {
-	StartModeArgs(args []string, config workmode.Config, kind string, replace bool, typed []string) []string
+	StartModeArgs(args []string, config workmode.Config, mode string, replace bool, typed []string) []string
 }

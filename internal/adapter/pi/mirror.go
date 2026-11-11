@@ -8,6 +8,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/core/mail"
 	"github.com/praline-labs/rewake/internal/core/mirror"
+	"github.com/praline-labs/rewake/internal/core/workmode"
 )
 
 // Mirrors offers rewake's own face: the extension sends the conversation of
@@ -39,8 +40,8 @@ func (r *run) mirrorLevel(level string) {
 }
 
 func (r *run) mirrorWorkMode(mode string) {
-	if r.mirror != nil {
-		r.mirror.Apply(mirror.Event{Kind: mirror.EventWorkMode, WorkMode: mirror.WorkMode(mode)})
+	if r.mirror != nil && workmode.ValidName(mode) {
+		r.mirror.Apply(mirror.Event{Kind: mirror.EventWorkMode, WorkMode: mode})
 	}
 }
 

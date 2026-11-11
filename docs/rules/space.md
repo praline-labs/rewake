@@ -32,7 +32,7 @@ What a space guarantees about its worker, its record and its closing; how a spac
   - `internal/host/spacehost/stop_test.go` `TestTheCloseSequenceEndsAWorkerThatIgnoresHangupAndTerm`
   - `test/workflow/fixture_space_test.go` `TestFixtureSpace`
 
-- **SP2. The record comes first.** A space's record — the worker's harness, name, role, the worker type's name when it has one,
+- **SP2. The record comes first.** A space's record — the worker's harness, name, role,
   session id where the harness takes one, the checkout's path and branch — is written before
   the worker starts, and every later state is written before the act it names is answered. A
   record is closed only from what was observed — the worker's end, the checkout's state — never

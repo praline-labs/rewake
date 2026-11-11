@@ -7,12 +7,12 @@
 // level's hint first, then the mode or the level, then cuts the work with …;
 // whatever its role, a session's rule is drawn the same.
 
-import type { PermissionMode, ThinkingLevel, WorkMode } from "../../../face/src/mirror.gen.ts";
+import type { PermissionMode, ThinkingLevel } from "../../../face/src/mirror.gen.ts";
 
 // Left is what may stand at the rule's left, as the face heard it from the
 // session's mirror. Runtime work mode is separate from permission mode;
-// neither is inferred from role or work type.
-export type Left = { mode?: PermissionMode; level?: ThinkingLevel; workMode?: WorkMode };
+// neither is inferred from role or from a template's start.
+export type Left = { mode?: PermissionMode; level?: ThinkingLevel; workMode?: string };
 
 // RulePart is a run of the rule's text, in the rule's colour unless it
 // names the mode or the thinking level, drawn in that one's colour.
@@ -20,7 +20,7 @@ export type RulePart = {
   text: string;
   mode?: PermissionMode;
   level?: ThinkingLevel;
-  workMode?: WorkMode;
+  workMode?: string;
 };
 
 // modeNames are the modes as the terminal program shows them; the default

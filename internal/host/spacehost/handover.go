@@ -28,7 +28,7 @@ import (
 // without seeing it (docs/space.md#a-switch-of-the-rooms-build).
 
 // HandoverVersion is the shape of Handover: an image adopts only its own.
-const HandoverVersion = 1
+const HandoverVersion = 2
 
 // ContractName is the contract of a space host's handed terminal, and
 // Contract its version: the handover's and the screen file's together

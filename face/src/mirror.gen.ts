@@ -9,7 +9,7 @@
 export const bounds = {
   // version is the version of the lines, which hello carries; one build per room makes it a
   // guard, not a negotiation.
-  version: 2,
+  version: 3,
   // maxItemBytes bounds one item serialized: a longer text keeps its head and its tail with a
   // cut mark between.
   maxItemBytes: 262144,
@@ -64,9 +64,9 @@ export interface Line {
   // since, the session trying again, on begin and turn while the turn works; absent when none
   // did.
   retry?: number
-  // workMode is the observed runtime work stance, independent of permissions, on begin and
-  // stance.
-  workMode?: WorkMode
+  // workMode is the observed runtime work mode by name, independent of permissions, on begin
+  // and stance; any name of the session's mode catalogue.
+  workMode?: string
   // mode is the session's permission mode, on begin and mode; absent while the session has not
   // said it.
   mode?: PermissionMode
@@ -147,10 +147,6 @@ export const permitByValues: readonly PermitBy[] = ["rule", "mode", "classifier"
 // instead.
 export type PermissionMode = "default" | "plan" | "edits" | "auto" | "bypass" | "unasked"
 export const permissionModeValues: readonly PermissionMode[] = ["default", "plan", "edits", "auto", "bypass", "unasked"]
-
-// WorkMode is a runtime working stance, never a permission grant.
-export type WorkMode = "review" | "advisor" | "build"
-export const workModeValues: readonly WorkMode[] = ["review", "advisor", "build"]
 
 // ThinkingLevel is how much the session's model thinks before it answers, in the words of the
 // harness that moves it, from not at all to the most.

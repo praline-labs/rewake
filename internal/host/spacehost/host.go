@@ -283,8 +283,8 @@ func (h *host) command() (*exec.Cmd, error) {
 	if h.spec.Enter {
 		env = append(env, WorkerEnterEnv+"=1")
 	}
-	if h.spec.Type != "" {
-		env = append(env, WorkerTypeEnv+"="+h.spec.Type, WorkerTypeTextEnv+"="+h.spec.TypeText)
+	if h.spec.Mode != "" {
+		env = append(env, WorkerModeEnv+"="+h.spec.Mode, WorkerModeTextEnv+"="+h.spec.ModeText)
 	}
 	cmd := exec.Command(self, h.spec.Args...)
 	cmd.Dir, cmd.Env = h.spec.Cwd, env

@@ -5,6 +5,7 @@
 import { Face } from "./face.ts";
 import type { Socket, Wire } from "./link.ts";
 import { contract, type FaceLine, type FromFace, type ToFace } from "./messages.ts";
+import { bounds } from "./mirror.gen.ts";
 import type { Timers } from "./ticker.ts";
 
 // epoch is the moment a test's clock starts at.
@@ -96,7 +97,7 @@ export function faced(served: Served = {}, width = 80, height = 24) {
       w.data(
         s,
         linesOf([
-          { op: "hello", v: 2, inputs: served.inputs ?? ["prompt"] },
+          { op: "hello", v: bounds.version, inputs: served.inputs ?? ["prompt"] },
           { op: "begin", items: items.length, dropped: 0, turn: "idle", ...served.begin },
           ...items.map((item) => ({ op: "item", item })),
           { op: "end" },

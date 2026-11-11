@@ -17,6 +17,7 @@ import (
 // admits only a build that takes the same, so a changed shape raises
 // HandoverVersion, or ScreenVersion for the screen's: the contract is both.
 var handoverShapes = map[string]string{
+	"2": "d7228bcffae9d7ce8e8a183b02921920002a184b8d1bcb76a1df69da2282fed3",
 	"1": "bde0c1106b5fa47d171c8a5f681fae7a4eedd19e89fdc41b737a182e1cabfce0",
 }
 

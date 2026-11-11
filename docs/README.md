@@ -29,14 +29,14 @@ A person using rewake reads [user-guide.md](user-guide.md) alone. An agent worki
      for the mod;
    - **launch, spaces, the shell**: [launch.md](launch.md), [rules/launch.md](rules/launch.md) →
      [launch-defaults.md](launch-defaults.md)
-     → [worker-profile.md](worker-profile.md) → [worker-types.md](worker-types.md) →
+     → [worker-profile.md](worker-profile.md) → [work-modes.md](work-modes.md) →
      [space.md](space.md) → [rules/space.md](rules/space.md) → [shell.md](shell.md) →
      [screen.md](screen.md) → [face.md](face.md), [research-face.md](research-face.md) → [worktree.md](worktree.md), [worktree-tools.md](worktree-tools.md), [briefs.md](briefs.md),
      [research-herdr.md](research-herdr.md) for the terminal manager main may run in;
    - **main's view**: [session-state.md](session-state.md) → [remote-control.md](remote-control.md)
      → [permission-requests.md](permission-requests.md);
    - **state and the layout**: [rules/state.md](rules/state.md), [rules/layout.md](rules/layout.md);
-   - **roles and runtime stance**: [roles.md](roles.md), [pi-work-modes.md](pi-work-modes.md);
+   - **roles and runtime work modes**: [roles.md](roles.md), [work-modes.md](work-modes.md);
    - **tests**: [testing.md](testing.md) → [testing-cases.md](testing-cases.md),
      [legacy.md](legacy.md);
    - **installing and releasing**: [install.md](install.md);

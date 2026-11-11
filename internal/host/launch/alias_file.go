@@ -11,7 +11,6 @@ import (
 	"github.com/pelletier/go-toml/v2"
 
 	"github.com/praline-labs/rewake/internal/core/workmode"
-	"github.com/praline-labs/rewake/internal/core/worktype"
 )
 
 // Load reads the user's files and then the project's: the alias files, then
@@ -30,25 +29,32 @@ func LoadIn(working string) *Set {
 	set := newSet()
 	if home, err := os.UserHomeDir(); err == nil {
 		dir := filepath.Join(home, ".config", userDir)
+		set.readModes(filepath.Join(dir, modesDir), workmode.User)
+		set.refuseModesDir(filepath.Join(dir, typesDir))
 		set.read(filepath.Join(dir, userFile), "the user alias file", true)
-		set.readTypes(filepath.Join(dir, typesDir), worktype.User)
 	}
 	if working != "" {
 		// This directory only, like the settings file: a parent directory does
 		// not get to decide how a session launches.
 		set.refuseMoved(filepath.Join(working, movedProjectFile))
 		dir := filepath.Join(working, projectDir)
+		set.readModes(filepath.Join(dir, modesDir), workmode.Project)
+		set.refuseModesDir(filepath.Join(dir, typesDir))
 		set.read(filepath.Join(dir, userFile), "the project alias file", false)
-		set.readTypes(filepath.Join(dir, typesDir), worktype.Project)
 	}
 	set.applyAliasesOff()
+	set.checkModeNames()
 	return set
 }
 
+// typesDir is the directory of the worker types of before this change, which
+// is refused with where its files go rather than read as if nothing changed.
+const typesDir = "types"
+
 func newSet() *Set {
 	return &Set{
-		aliases: map[string]Alias{}, sources: map[string]string{}, fromProject: map[string]bool{},
-		types: map[string]worktype.Type{}, off: map[string]string{}, aliasOff: map[string]string{},
+		aliases: map[string]Alias{}, sources: map[string]string{}, paths: map[string]string{},
+		fromProject: map[string]bool{}, modes: map[string]workmode.Mode{}, aliasOff: map[string]string{},
 	}
 }
 
@@ -84,11 +90,6 @@ func (s *Set) read(path, description string, user bool) {
 	var file struct {
 		Alias map[string]Alias `toml:"alias"`
 		Pi    workmode.Config  `toml:"pi"`
-		// Types turns built-in types off: the person's or the project's
-		// choice of which of rewake's texts main is offered.
-		Types struct {
-			Off []string `toml:"off"`
-		} `toml:"types"`
 		// Aliases turns templates of the merged catalog off for a project.
 		Aliases struct {
 			Off []string `toml:"off"`
@@ -133,11 +134,10 @@ func (s *Set) read(path, description string, user bool) {
 			return
 		}
 	}
-	s.pi = s.pi.Overlay(file.Pi)
-	if err := s.turnOff(file.Types.Off, description, path); err != nil {
-		s.unreadable(err.Error())
-		return
+	if file.Pi.StartMode != "" || len(file.Pi.Modes) > 0 {
+		s.piSource = fmt.Sprintf("%s at %s", description, path)
 	}
+	s.pi = s.pi.Overlay(file.Pi)
 	if err := s.noteAliasesOff(file.Aliases.Off, file.Alias, description, path, user); err != nil {
 		s.unreadable(err.Error())
 		return
@@ -158,8 +158,15 @@ func (s *Set) read(path, description string, user bool) {
 	for name, value := range file.Alias {
 		s.aliases[name] = value
 		s.sources[name] = description
+		s.paths[name] = path
 		s.fromProject[name] = !user
 	}
+}
+
+// fieldMoves says what a field the file no longer has became, so a file
+// written before is rewritten once rather than guessed at.
+var fieldMoves = map[string]string{
+	"type": `a worker's kind of work is now its runtime work mode: put start_mode = "<mode>" under [alias.<name>.pi], mapping code to build and analysis to advisor (review and process keep their names), and use --work-mode instead of --type on space open`,
 }
 
 // removedFields are the fields aliases lost on October 19, 2026, when they
@@ -181,7 +188,12 @@ func unknownFields(description, path string, strict *toml.StrictMissingError) st
 		line, _ := field.Position()
 		// A key here is alias.<name>.<field>; the field is what was removed.
 		why, gone := "", false
-		if len(key) > 2 && key[0] == "alias" {
+		if len(key) == 3 && key[0] == "alias" {
+			why, gone = fieldMoves[key[2]]
+		} else if key[0] == "types" {
+			why, gone = `the [types] section is no longer read: a worker's kind of work is its runtime work mode, a file under modes/<name>.md (built-in: advisor, build, review, process). Move each type file there, keeping its front matter and text; code is now build and analysis is advisor, so a custom code.md or analysis.md needs a name of its own`, true
+		}
+		if len(key) > 2 && key[0] == "alias" && !gone {
 			why, gone = removedFields[strings.Join(key[2:], ".")]
 		}
 		if gone {

@@ -17,7 +17,6 @@ import (
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/core/workmode"
-	"github.com/praline-labs/rewake/internal/core/worktype"
 	"github.com/praline-labs/rewake/internal/host/delivery"
 	"github.com/praline-labs/rewake/internal/host/switching"
 	"github.com/praline-labs/rewake/internal/infra/state"
@@ -36,7 +35,7 @@ const HandoverEnv = "REWAKE_HANDOVER"
 
 // HandoverVersion is the version of Handover; an image adopts only its own,
 // and a switch of the room admits only a build that takes the same.
-const HandoverVersion = 6
+const HandoverVersion = 7
 
 // reexecMark is the file of the run's directory where the outcome of the last
 // request to re-execute is written, for whoever sent the signal.
@@ -57,8 +56,8 @@ type Handover struct {
 	RoleReason    string          `json:"roleReason,omitempty"`
 	Template      string          `json:"template,omitempty"`
 	WorktreeEntry bool            `json:"worktreeEntry,omitempty"`
-	WorkType      worktype.Type   `json:"workType"`
-	WorkTypeText  string          `json:"workTypeText,omitempty"`
+	Mode          workmode.Mode   `json:"mode"`
+	ModeText      string          `json:"modeText,omitempty"`
 	Modes         workmode.Config `json:"modes"`
 	HarnessPID    int             `json:"harnessPid"`
 	HarnessStart  uint64          `json:"harnessStart"`
@@ -112,12 +111,12 @@ func ReadHandover(spec string) (*Handover, error) {
 // Request is the launch the handover continues; the caller adds its own
 // callbacks.
 func (h *Handover) Request(harness adapter.Harness) Request {
-	workType := h.WorkType
-	workType.Text = h.WorkTypeText
+	mode := h.Mode
+	mode.Text = h.ModeText
 	return Request{
 		Harness: harness, Dir: h.Dir, Name: h.Name, Args: h.Args, Intro: h.Intro, Command: h.Command,
 		Role: role.Of(h.Role), RoleReason: h.RoleReason, Template: h.Template,
-		WorktreeEntry: h.WorktreeEntry, WorkType: workType, Modes: h.Modes, Mirror: h.Mirror, Shell: h.Shell, Handover: h,
+		WorktreeEntry: h.WorktreeEntry, Mode: mode, Modes: h.Modes, Mirror: h.Mirror, Shell: h.Shell, Handover: h,
 	}
 }
 
@@ -272,7 +271,7 @@ func (r *reexec) exec(handing adapter.Handover, park *switching.Park, memory del
 	h := Handover{
 		Version: HandoverVersion, Harness: r.request.Harness.ID(), Dir: r.request.Dir, Name: r.session.Name, Epoch: r.session.Epoch(),
 		Args: r.request.Args, Intro: r.request.Intro, Command: r.request.Command, Role: r.session.Role, RoleReason: r.session.RoleReason,
-		Template: r.request.Template, WorktreeEntry: r.request.WorktreeEntry, WorkType: r.request.WorkType, WorkTypeText: r.request.WorkType.Text, Modes: r.request.Modes,
+		Template: r.request.Template, WorktreeEntry: r.request.WorktreeEntry, Mode: r.request.Mode, ModeText: r.request.Mode.Text, Modes: r.request.Modes,
 		HarnessPID: r.harness.Pid, HarnessStart: r.start, Service: handed.State, Park: park, Mirror: r.request.Mirror,
 		Shell: r.request.Shell, Notices: notices, Delivery: &memory,
 	}

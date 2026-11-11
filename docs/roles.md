@@ -52,8 +52,8 @@ The write role reports like general.
 Main remains an orchestrator even when a project hides every `write` template (`[aliases] off`):
 it does not write product code itself. It asks for a suitable writer template or the decision
 needed to proceed. `rewake workers` reads the catalogue each time and says when none writes
-code, so a mid-session file change needs no restart. Runtime [pi work modes](pi-work-modes.md)
-change stance, never the role's mail/reporting or Git authority; main delegates in every mode.
+code, so a mid-session file change needs no restart. The [runtime work mode](work-modes.md)
+changes discipline, never the role's mail/reporting or Git authority; main delegates in every mode.
 Review/advisor are prompt-only read-only guidance, not tool or permission boundaries.
 
 **Owner decision, November 3, 2026:** no missing-writer fallback gives main implementation work;
@@ -78,10 +78,11 @@ step names is in the command table, with each verb it spells — `worktree ls`, 
 says it is for, one that command takes: a session copies them. The one exception is the
 launch flag `--worktree` in worktree's explanation, which a harness declares.
 
-A worker raised for a type ([worker-types.md](worker-types.md)) gets one more section in its
-briefing, after its role's and before the harness's: `YOUR KIND OF WORK: <type>`, a line
-saying it changes how the worker works and not what it may do, and the type's text. The
-guide does not print it: a type belongs to one worker's launch, not to the role.
+A session's [runtime work mode](work-modes.md) is one more section, after the role's and before
+the harness's: its name, a line saying it changes how the worker works and not what it may do,
+and the mode's complete text. A harness that switches modes at runtime injects that one section
+per request and receives no mode in the launch briefing, so a switch never stacks two. The guide
+does not print it: a mode belongs to one session's launch, not to the role.
 
 **Owner decision, September 29, 2026:** the briefings are what a session in any project
 gets, with no rewake repository at hand, so they teach the craft of the role and not

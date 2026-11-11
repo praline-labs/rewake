@@ -8,7 +8,6 @@ import (
 	"github.com/praline-labs/rewake/internal/core/registry"
 	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/core/workmode"
-	"github.com/praline-labs/rewake/internal/core/worktype"
 	"github.com/praline-labs/rewake/internal/infra/build"
 )
 
@@ -41,10 +40,10 @@ type Request struct {
 	WorktreeEntry bool
 	// Mirror asks for rewake's own face (adapter.LaunchRequest.Mirror).
 	Mirror bool
-	// WorkType is the kind of work the worker was raised for
-	// (adapter.LaunchRequest.WorkType).
-	WorkType worktype.Type
-	Modes    workmode.Config
+	// Mode is the runtime work mode the session runs in
+	// (adapter.LaunchRequest.Mode), its text included.
+	Mode  workmode.Mode
+	Modes workmode.Config
 	// RoleReason says why the launch has its role, for the record and the
 	// briefing; empty says the role was selected with its flag.
 	RoleReason string

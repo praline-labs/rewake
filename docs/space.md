@@ -12,7 +12,7 @@ worker is [shell.md](shell.md); the checkout a worker gets is [worktree.md](work
 
 ## Opening
 
-`rewake space open <name> --alias <alias> [--worktree[=<name>] | --no-worktree] [--type <type> | --no-type] [--dev] -- <harness args>`
+`rewake space open <name> --alias <alias> [--worktree[=<name>] | --no-worktree] [--work-mode <mode>] [--dev] -- <harness args>`
 is main's way to start a worker. A worker is raised only from a template: `--alias` is
 required, `rewake workers` lists the person's worker aliases, and the alias supplies the
 harness, role, command wrapper, args and applied settings. New workers are pi only: a template
@@ -21,7 +21,7 @@ with a command wrapper; `workers` omits it without rejecting the rest of the cat
 Existing sessions keep running. There is no `--harness` or `--role`,
 and a call with either is refused as an unknown flag. The space owns the name and the room. The
 fields and their precedence are in [launch-defaults.md](launch-defaults.md#the-worker-catalogue),
-worker types in [worker-types.md](worker-types.md). `--dev` raises a dev worker, whose wrapper
+runtime work modes in [work-modes.md](work-modes.md). `--dev` raises a dev worker, whose wrapper
 serves its conversation to rewake's face ([face.md](face.md#the-dev-worker)); a pi worker is one without it.
 
 Opening is a change, refused unless main's run has `Spaces` live, and refused for a name whose
@@ -48,15 +48,15 @@ catalogue harness's `EnvNotInherited` (`spacehost.WorkerEnv`). The host then set
 to main's base, so the worker's room is main's room under the same base, `TERM`, and
 `REWAKE_SPACE=<room>/<space id>`. Beside it, as the open asked: `REWAKE_SPACE_TEMPLATE=<alias>`,
 `REWAKE_SPACE_ENTER=1` for a template that lets the worker enter a checkout mid-session, and
-`REWAKE_SPACE_TYPE=<type>` with `REWAKE_SPACE_TYPE_TEXT=<its text>` for a worker raised for a
-type, which `space open` resolved in main's directory. The person's preferences
+`REWAKE_SPACE_WORK_MODE=<mode>` with `REWAKE_SPACE_WORK_MODE_TEXT=<its text>` for the worker's
+runtime work mode, which `space open` resolved in main's directory. The person's preferences
 (`REWAKE_CLAUDE_MODEL`, `REWAKE_WORKTREES` and the like) stay.
 
 The launch is that worker, not main, only when `REWAKE_SPACE` names a space of an existing room
 that is `opening`, or already `open` on the launch's own run, and whose recorded host run — pid
 and start time — is the launch's parent. It then takes the name, role and room from the record,
-the template and the type from their companions, and unsets them; the type, else the template,
-names the worker's memory on Claude Code. Anything else is refused, exit 1, pointing to
+the template and the mode from their companions, and unsets them; the mode names the worker's
+memory on Claude Code. Anything else is refused, exit 1, pointing to
 `rewake space open`: a person who set the variable would start a worker past main.
 
 Where the harness takes a conversation id (`ConversationOffer`,
@@ -134,7 +134,7 @@ between two steps leaves the earlier one whole.
 | `id`, `name` | the space |
 | `state` | below |
 | `main` | the run that opened it: name, epoch (the wrapper's pid, start time and boot) and pid namespace |
-| `worker` | harness id, name, role, worker type, `dev` for a dev worker, the session id rewake drew before the launch (absent for a harness that takes none), and its run once its wrapper is seen running |
+| `worker` | harness id, name, role, `dev` for a dev worker, the session id rewake drew before the launch (absent for a harness that takes none), and its run once its wrapper is seen running; a record of before this change may still carry an obsolete `type`, ignored |
 | `checkout` | path and branch of the worktree the worker's launch made, once its session is seen there; absent for a worker started without one |
 | `host` | the space host's run, as an epoch, recorded before it checks anything |
 | `openedAt`, `closing` | when it opened; why it began to close |

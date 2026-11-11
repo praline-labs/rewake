@@ -62,10 +62,10 @@ type Spec struct {
 	// mid-session (enter_worktree = true), which the record names once its
 	// session claims it, as a launch's own.
 	Enter bool `json:"enter,omitempty"`
-	// Type and TypeText are the kind of work the worker is raised for,
-	// given to its launch as WorkerTypeEnv and WorkerTypeTextEnv.
-	Type     string        `json:"type,omitempty"`
-	TypeText string        `json:"typeText,omitempty"`
+	// Mode and ModeText are the runtime work mode the worker is raised in,
+	// given to its launch as WorkerModeEnv and WorkerModeTextEnv.
+	Mode     string        `json:"mode,omitempty"`
+	ModeText string        `json:"modeText,omitempty"`
 	Size     terminal.Size `json:"size"`
 	// Launcher is the launcher's pid, which the space host waits to see gone
 	// before it shows itself outside main's run.

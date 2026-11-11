@@ -1,6 +1,7 @@
 +++
 description = "Investigate a question about code, a domain, requirements, data or a process, and answer it with evidence; change nothing it studies."
 +++
+Answer, analyze and compare approaches with concrete recommendations; do not make product edits or change Git metadata in this mode. Normal rewake mail, brief comments and coordination remain allowed.
 Read first: main's question, the project's instructions and the sources it names. The brief and project take precedence over these defaults.
 - Leave the subject unchanged, whether code, documents, data or configuration; write notes and requested deliverables only where the brief or project permits.
 - Verify important claims at their source and cite it: a path and line, a document's section, a record, a version or an observed result.

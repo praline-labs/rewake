@@ -58,9 +58,10 @@ in `~/.config/rewake/aliases.toml` (mode `0600`) and change it to taste:
 harness = "pi"
 role = "write"
 description = "Writes and commits a change in a checkout of its own"
-type = "code"
 worktree = true
 args = []
+[alias.write.pi]
+start_mode = "build"
 
 [alias.write.launch]
 effort = "high"
@@ -68,12 +69,14 @@ effort = "high"
 [alias.review]
 harness = "pi"
 description = "Reviews a change and reports; edits nothing"
-type = "review"
+[alias.review.pi]
+start_mode = "review"
 
 [alias.helper]
 harness = "pi"
 description = "Answers a question about the code"
-type = "analysis"
+[alias.helper.pi]
+start_mode = "advisor"
 ```
 
 - `harness` is `pi` for new workers; Claude Code still launches main. Old Claude Code aliases
@@ -83,8 +86,9 @@ type = "analysis"
 - `args` reach the harness as written; `[alias.<name>.launch]` takes `model`, `effort`,
   `context` (Claude Code's auto-compact window, such as `300k`) and `label`. A template with no
   model or effort takes the launch defaults (below), else the harness's own.
-- `type` is the kind of work the worker is raised for: rewake's built-in `code`, `analysis`,
-  `process` and `review`, or one of your own (below).
+- `[alias.<name>.pi] start_mode` is the runtime work mode the worker starts in: rewake's built-in
+  `advisor`, `build`, `process` and `review`, or one of your own (below). Without one the worker
+  takes `[pi] start_mode` from either alias file, else `advisor`.
 - `worktree = true` starts the worker in a new checkout of its own, which main lands with
   `rewake worktree land` and the close removes once nothing in it would be lost.
 
@@ -120,10 +124,9 @@ A project can carry its own catalogue beside its code, read from the directory m
 - **`[aliases] off = ["helper"]`** in that file hides those of your templates in this project
   alone. With no launchable `write` template left, main remains the orchestrator and asks
   for a writer template; `rewake workers` says so.
-- **`[types] off = ["process"]`**, in either file, hides built-in types.
-- **`.rewake/types/<type>.md`** — a type of the project's own, which also wins over a built-in
-  of the same name; yours go in `~/.config/rewake/types/`. A type file opens with a TOML front
-  matter holding one `description` line:
+- **`.rewake/modes/<mode>.md`** — a runtime work mode of the project's own, which also replaces a
+  built-in's text of the same name; yours go in `~/.config/rewake/modes/`. A mode file opens with
+  a TOML front matter holding one `description` line:
 
   ```markdown
   +++
@@ -181,10 +184,10 @@ pane is typing to that worker: you may answer its dialog there before main does.
 | --- | --- |
 | `~/.config/rewake/aliases.toml` | your worker templates |
 | `~/.config/rewake/settings` | your launch defaults |
-| `~/.config/rewake/types/` | your own types |
+| `~/.config/rewake/modes/` | your own runtime work modes |
 | `~/.config/rewake/claude/worker/` | the Claude Code workers' configuration: login, conversations, `settings.json`, `CLAUDE.md`, their memory |
 | `~/.config/rewake/pi/agent/` | rewake's pi: login, settings, extensions, sessions |
-| `.rewake/` and `.rewake.env` in a project | the project's templates, types and launch defaults |
+| `.rewake/` and `.rewake.env` in a project | the project's templates, modes and launch defaults |
 | `$REWAKE_DIR/v2/`, by default `rewake-<uid>/v2/` in the system's temporary directory | the rooms: sessions, mail, spaces |
 | `$REWAKE_WORKTREES`, else `$XDG_DATA_HOME/rewake/worktrees/`, else `~/.local/share/rewake/worktrees/` | the checkouts made for `--worktree` |
 

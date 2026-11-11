@@ -3,7 +3,7 @@
   "title": "The mirror",
   "description": "What a session's wrapper serves of its conversation to rewake's own face (docs/face.md): JSON lines on the session's mirror socket, a snapshot of the model then its changes, and the inputs the face sends back. Held in memory only. The wrapper's types and the face's are generated from this file by go run ./tools/protogen, so the two cannot drift.",
   "x-bounds": {
-    "version": {"value": 2, "description": "is the version of the lines, which hello carries; one build per room makes it a guard, not a negotiation."},
+    "version": {"value": 3, "description": "is the version of the lines, which hello carries; one build per room makes it a guard, not a negotiation."},
     "maxItemBytes": {"value": 262144, "description": "bounds one item serialized: a longer text keeps its head and its tail with a cut mark between."},
     "maxFieldBytes": {"value": 65536, "description": "bounds a tool's input and its output each, cut as a text is."},
     "maxModelItems": {"value": 1000, "description": "bounds the items the model keeps: past it the oldest settled ones are dropped and counted."},
@@ -30,7 +30,7 @@
         "took": {"type": "integer", "description": "is how long the last turn worked, in milliseconds, on turn to idle from working and on begin while that is the latest turn."},
         "at": {"type": "integer", "description": "is when the last turn ended, in Unix milliseconds, with took."},
         "retry": {"type": "integer", "description": "is how many of the working turn's requests failed in a row with nothing come back since, the session trying again, on begin and turn while the turn works; absent when none did."},
-        "workMode": {"$ref": "#/$defs/WorkMode", "description": "is the observed runtime work stance, independent of permissions, on begin and stance."},
+        "workMode": {"type": "string", "description": "is the observed runtime work mode by name, independent of permissions, on begin and stance; any name of the session's mode catalogue."},
         "mode": {"$ref": "#/$defs/PermissionMode", "description": "is the session's permission mode, on begin and mode; absent while the session has not said it."},
         "level": {"$ref": "#/$defs/ThinkingLevel", "description": "is the session's thinking level, which the face's thinking input moves on, on begin and level; absent while the session has not said it, and from a session whose level the face does not move."},
         "ok": {"type": "boolean", "description": "says whether the input was taken, on answer."},
@@ -97,11 +97,6 @@
       "type": "string",
       "description": "is how the session's calls are permitted: asked as configured, planning only, edits accepted, a classifier deciding, every check bypassed, or never asking and refusing instead.",
       "enum": ["default", "plan", "edits", "auto", "bypass", "unasked"]
-    },
-    "WorkMode": {
-      "type": "string",
-      "description": "is a runtime working stance, never a permission grant.",
-      "enum": ["review", "advisor", "build"]
     },
     "ThinkingLevel": {
       "type": "string",

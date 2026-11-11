@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/praline-labs/rewake/internal/adapter"
+	"github.com/praline-labs/rewake/internal/core/workmode"
 )
 
 // maxArgument is the longest one argument of a launch may be: Linux holds each
@@ -30,16 +31,16 @@ func composePrompt(parts []promptPart, request adapter.LaunchRequest) (string, e
 	for _, part := range parts {
 		texts = append(texts, part.text)
 		size := fmt.Sprintf("%s %d bytes", part.what, len(part.text))
-		if part.what == "rewake's briefing" && request.WorkType.Name != "" {
-			size += fmt.Sprintf(" (the type %q's text %d of it)", request.WorkType.Name, len(request.WorkType.Text))
+		if part.what == "rewake's briefing" && request.Mode.Name != "" {
+			size += fmt.Sprintf(" (the work mode %q's text %d of it)", request.Mode.Name, len(request.Mode.Text))
 		}
 		sizes = append(sizes, size)
 	}
 	prompt := strings.Join(texts, "\n\n")
 	if len(prompt) > maxArgument {
 		hint := "shorten one of them"
-		if request.WorkType.Name != "" {
-			hint += ", or open the worker with --no-type"
+		if request.Mode.Source != workmode.BuiltIn && request.Mode.Name != "" {
+			hint += ", or shorten the mode's own text at " + request.Mode.Path
 		}
 		return "", fmt.Errorf("the system prompt rewake would pass in one --append-system-prompt is %d bytes, %d over the %d one argument of a launch may hold: %s; %s",
 			len(prompt), len(prompt)-maxArgument, maxArgument, strings.Join(sizes, ", "), hint)

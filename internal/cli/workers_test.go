@@ -150,10 +150,10 @@ func TestSpaceOpenAsksWhatWasTyped(t *testing.T) {
 		argv []string
 		want string
 	}{
-		{[]string{"--alias", "w"}, `{"Alias":"w","Worktree":null,"NoWorktree":false,"Type":null,"NoType":false,"Args":[]}`},
-		{[]string{"--alias", "w", "--worktree", "--type", "code", "--", "--model", "m"}, `{"Alias":"w","Worktree":"true","NoWorktree":false,"Type":"code","NoType":false,"Args":["--model","m"]}`},
-		{[]string{"--alias", "w", "--worktree=fix", "--no-type", "--no-worktree"}, `{"Alias":"w","Worktree":"fix","NoWorktree":true,"Type":null,"NoType":true,"Args":[]}`},
-		{[]string{"--worktree=", "--type="}, `{"Alias":"","Worktree":"","NoWorktree":false,"Type":"","NoType":false,"Args":[]}`},
+		{[]string{"--alias", "w"}, `{"Alias":"w","Worktree":null,"NoWorktree":false,"Mode":null,"Args":[]}`},
+		{[]string{"--alias", "w", "--worktree", "--work-mode", "build", "--", "--model", "m"}, `{"Alias":"w","Worktree":"true","NoWorktree":false,"Mode":"build","Args":["--model","m"]}`},
+		{[]string{"--alias", "w", "--worktree=fix", "--no-worktree"}, `{"Alias":"w","Worktree":"fix","NoWorktree":true,"Mode":null,"Args":[]}`},
+		{[]string{"--worktree=", "--work-mode="}, `{"Alias":"","Worktree":"","NoWorktree":false,"Mode":"","Args":[]}`},
 	} {
 		parsed, err := ctx.table.parse(append([]string{"space", "open", "api"}, c.argv...))
 		if err != nil {

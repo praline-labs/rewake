@@ -24,7 +24,7 @@ type handedModel struct {
 	Turn     TurnState                 `json:"turn"`
 	Mode     *PermissionMode           `json:"mode,omitempty"`
 	Level    *ThinkingLevel            `json:"level,omitempty"`
-	WorkMode *WorkMode                 `json:"workMode,omitempty"`
+	WorkMode *string                   `json:"workMode,omitempty"`
 	Born     int                       `json:"born"`
 	Notices  int                       `json:"notices"`
 	Since    int                       `json:"since"`

@@ -101,7 +101,7 @@ func Open(o Opening) (Opened, error) {
 	record := space.Record{
 		Name:     o.Name,
 		Main:     space.Run{Name: o.Main, Run: o.Run, PIDNamespace: proc.Namespace()},
-		Worker:   space.Worker{Harness: h.ID(), Name: o.Name, Role: o.Worker.Role.ID, Type: o.Worker.Work.Name, Label: o.Worker.Label, Dev: dev},
+		Worker:   space.Worker{Harness: h.ID(), Name: o.Name, Role: o.Worker.Role.ID, Label: o.Worker.Label, Dev: dev},
 		OpenedAt: time.Now().UTC(),
 	}
 	var err error
@@ -157,7 +157,7 @@ func hostSpec(o Opening, id string, words []string) (Spec, error) {
 	return Spec{
 		Base: base, Room: filepath.Base(o.Dir), Dir: o.Dir, ID: id, Args: words, Cwd: cwd, Strip: strip, Size: workerSize,
 		Template: o.Worker.Template, Worktree: o.Worker.Worktree != "", Enter: o.Worker.Enter,
-		Type: o.Worker.Work.Name, TypeText: o.Worker.Work.Text,
+		Mode: o.Worker.Mode.Name, ModeText: o.Worker.Mode.Text,
 	}, nil
 }
 

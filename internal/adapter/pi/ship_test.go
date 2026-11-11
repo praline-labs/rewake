@@ -9,6 +9,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/core/role"
+	"github.com/praline-labs/rewake/internal/core/workmode"
 )
 
 // shippedPackage lays out pi's package under dir/node_modules as npm does.
@@ -75,6 +76,7 @@ func launchRequest(t *testing.T) adapter.LaunchRequest {
 	t.Setenv("REWAKE_PI_EFFORT", "")
 	return adapter.LaunchRequest{
 		Name: "api", Dir: dir, RoomDir: dir, Room: "default", Epoch: "1-1",
+		Mode:   workmode.Mode{Name: workmode.Advisor, Text: "ADVISE", Source: workmode.BuiltIn},
 		Socket: filepath.Join(dir, "api.sock"), RunDir: dir, Version: PinnedVersion,
 		Start: adapter.Start{Command: "/usr/bin/node", Args: []string{"/shipped/cli.js"}},
 		Env:   []string{"PATH=/usr/bin", AgentDirEnv + "=/home/someone/.pi/agent", SkipVersionCheckEnv + "=0"},

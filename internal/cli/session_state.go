@@ -61,9 +61,6 @@ func verdictOf(snapshot *session.Snapshot) session.Verdict {
 type sessionView struct {
 	Mode      *string           `json:"mode,omitempty"`
 	Telemetry *session.Snapshot `json:"telemetry,omitempty"`
-	// Type is the worker type of the space the session is the worker of;
-	// empty for main, a worker without a type and a session no space hosts.
-	Type string `json:"type,omitempty"`
 	registry.Session
 }
 

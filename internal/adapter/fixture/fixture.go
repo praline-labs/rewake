@@ -93,6 +93,9 @@ func (fixtureHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan,
 			notes = append(notes, "not adding the rewake briefing: the fixture's configuration in "+settings.path+" sets one")
 		} else {
 			context := request.BriefContext()
+			// The fixture cannot switch modes at runtime, so its briefing
+			// carries the one section, as a harness without the offer does.
+			context.Mode = request.Mode
 			run.brief = func() string { return brief.Intro(context) }
 		}
 	}

@@ -23,14 +23,14 @@ const WorkerTemplateEnv = "REWAKE_SPACE_TEMPLATE"
 // beside a WorkerSpaceEnv the launch believes.
 const WorkerEnterEnv = "REWAKE_SPACE_ENTER"
 
-// WorkerTypeEnv and WorkerTypeTextEnv carry the kind of work the space
-// raised the worker for, its name and its text as space open resolved them
-// in main's directory, where the project's types are: the worker's checkout
-// may not hold them. Believed, as the template is, only beside a
+// WorkerModeEnv and WorkerModeTextEnv carry the runtime work mode the space
+// raised the worker in, its name and its complete text as space open resolved
+// them in main's directory, where the project's modes are: the worker's
+// checkout may not hold them. Believed, as the template is, only beside a
 // WorkerSpaceEnv the launch believes.
 const (
-	WorkerTypeEnv     = "REWAKE_SPACE_TYPE"
-	WorkerTypeTextEnv = "REWAKE_SPACE_TYPE_TEXT"
+	WorkerModeEnv     = "REWAKE_SPACE_WORK_MODE"
+	WorkerModeTextEnv = "REWAKE_SPACE_WORK_MODE_TEXT"
 )
 
 // WorkerEnv is the environment the worker's launch gets: the space host's,
@@ -49,7 +49,7 @@ func WorkerEnv(env []string, base string, strip []string) ([]string, error) {
 	drop := map[string]bool{
 		state.SessionEnv: true, state.EpochEnv: true, state.RoomEnv: true, state.DirEnv: true,
 		Env: true, WorkerSpaceEnv: true, WorkerTemplateEnv: true, WorkerEnterEnv: true,
-		WorkerTypeEnv: true, WorkerTypeTextEnv: true,
+		WorkerModeEnv: true, WorkerModeTextEnv: true,
 	}
 	for _, name := range strip {
 		drop[name] = true

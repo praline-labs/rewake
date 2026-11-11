@@ -24,7 +24,7 @@ func TestTheNextImageAdoptsTheModelAsItWas(t *testing.T) {
 		Event{Kind: EventTool, ID: "c1", Turn: "t1", Name: "Read"},
 		Event{Kind: EventInput, ID: "c1", Text: strings.Repeat("x", MaxFieldBytes+10)},
 		Event{Kind: EventMode, Mode: PermissionModeDefault},
-		Event{Kind: EventWorkMode, WorkMode: WorkModeReview},
+		Event{Kind: EventWorkMode, WorkMode: "review"},
 	)
 	raw, err := model.Hand()
 	if err != nil {
@@ -45,7 +45,7 @@ func TestTheNextImageAdoptsTheModelAsItWas(t *testing.T) {
 	}
 	same("adopted")
 	after := []Event{
-		{Kind: EventWorkMode, WorkMode: WorkModeBuild},
+		{Kind: EventWorkMode, WorkMode: "build"},
 		{Kind: EventSettle, ID: "b2", Turn: "t1", Block: ItemKindText, Text: "one ", Part: 0, Of: 2},
 		{Kind: EventSettle, ID: "b2", Turn: "t1", Block: ItemKindText, Text: "two", Part: 1, Of: 2},
 		{Kind: EventResult, ID: "c1", Text: "read", Status: ItemStatusDone},

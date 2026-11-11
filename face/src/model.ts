@@ -8,7 +8,6 @@ import type {
   PermissionMode,
   ThinkingLevel,
   TurnState,
-  WorkMode,
 } from "./mirror.gen.ts";
 import { bounds } from "./mirror.gen.ts";
 
@@ -30,7 +29,9 @@ export class FaceModel {
   // face's Alt+T moves, each unknown until the session says it.
   mode: PermissionMode | undefined;
   level: ThinkingLevel | undefined;
-  workMode: WorkMode | undefined;
+  // workMode is the observed runtime work mode's name, whatever the session's
+  // catalogue calls it.
+  workMode: string | undefined;
   inputs: InputKind[] = [];
   // ready is a snapshot whole: until its end the face shows what it had.
   ready = false;

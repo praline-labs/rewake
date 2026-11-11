@@ -57,7 +57,7 @@ func buildGroups(catalog adapter.Catalog) []Group {
 				Options:        []Option{jsonOption},
 				Examples:       []string{"rewake list", "rewake list --json"},
 				Next:           []string{"rewake send <name> \"text\""},
-				Notes:          []string{sessionStateHelp, "A Type column appears when some session is the worker of a space opened with --type (or an alias type), and --json gives it as type; main and a worker without a type show -.", "Main is told once per launch when a session becomes available, and when one compacts or leaves; a main started later learns which are already available. Idleness alone resends nothing."},
+				Notes:          []string{sessionStateHelp, "A Mode column appears when some session reports the runtime work mode it runs in, and --json gives it as mode; a session that reports none shows -.", "Main is told once per launch when a session becomes available, and when one compacts or leaves; a main started later learns which are already available. Idleness alone resends nothing."},
 				Access:         viewForm,
 				Handler:        handleList,
 			},

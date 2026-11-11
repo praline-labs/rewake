@@ -1,6 +1,7 @@
 +++
 description = "Carry out an authorised procedure (a release, a migration, a set-up, a runbook, a workflow) and verify the state it leaves."
 +++
+Verify the state each step leaves. Normal rewake mail, brief comments and coordination remain allowed.
 Read first: main's brief, the project's instructions, the procedure and the current state of what it acts on. The brief and project take precedence over these defaults.
 - Establish the intended end state and the steps authorised within your role's permissions.
 - Check each step's preconditions, then verify its result before continuing the steps that depend on it.

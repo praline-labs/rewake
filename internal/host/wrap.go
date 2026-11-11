@@ -246,7 +246,7 @@ func (r *run) launchRequest(controlDir string) adapter.LaunchRequest {
 		Template:   request.Template,
 
 		WorktreeEntry: request.WorktreeEntry,
-		WorkType:      request.WorkType,
+		Mode:          request.Mode,
 		Modes:         request.Modes,
 		Mirror:        r.model,
 		Work: func() string {

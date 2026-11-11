@@ -7,7 +7,7 @@ import (
 
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/core/role"
-	"github.com/praline-labs/rewake/internal/core/worktype"
+	"github.com/praline-labs/rewake/internal/core/workmode"
 )
 
 // GeneratedWorktree is the worktree of a worker that asked for one without a
@@ -35,9 +35,9 @@ type Request struct {
 	// its name.
 	Worktree   *string
 	NoWorktree bool
-	// Type is --type, the kind of work by name.
-	Type   *string
-	NoType bool
+	// Mode is --work-mode, the runtime work mode by name; nil leaves the
+	// selection to the template's start_mode, then the merged global one.
+	Mode *string
 	// Args are the words typed after --, the harness's.
 	Args []string
 }
@@ -62,8 +62,9 @@ type Raised struct {
 	// Enter says the worker may enter a checkout mid-session: its template
 	// says enter_worktree = true and it starts without one.
 	Enter bool
-	// Work is the kind of work it is raised for, empty Name for none.
-	Work worktype.Type
+	// Mode is the runtime work mode it is raised in: the typed one, else the
+	// template's start, else advisor. It is never empty.
+	Mode workmode.Mode
 	// Label is the template's name for its model, empty when it has none.
 	Label string
 }
@@ -89,16 +90,16 @@ func (s *Set) Raise(catalog adapter.Catalog, request Request) (Raised, error) {
 	if err != nil {
 		return Raised{}, err
 	}
-	work, err := s.resolveType(request, template)
+	mode, err := s.resolveMode(request, template)
 	if err != nil {
 		return Raised{}, err
 	}
 	if modes, ok := template.Harness.(adapter.WorkModesHarness); ok {
-		aliasArgs = modes.StartModeArgs(aliasArgs, s.Modes(request.Alias), work.Name, true, typedArgs)
+		aliasArgs = modes.StartModeArgs(aliasArgs, s.Modes(request.Alias), mode.Name, true, typedArgs)
 	}
 	return Raised{
 		Harness: template.Harness, Role: template.Role, Command: template.Command, Template: request.Alias,
-		Worktree: checkout, Enter: template.EnterWorktree && checkout == "", Work: work, Label: template.Settings.Label,
+		Worktree: checkout, Enter: template.EnterWorktree && checkout == "", Mode: mode, Label: template.Settings.Label,
 		Args: MergeArguments(aliasArgs, typedArgs, template.Harness.SingleUseFlags()),
 	}, nil
 }
@@ -109,27 +110,22 @@ func (r Raised) Launch(conversation string) ([]string, error) {
 	return WorkerArgs(r.Harness, Worker{Command: r.Command, Args: r.Args, Worktree: r.Worktree, Conversation: conversation})
 }
 
-// resolveType resolves the worker's kind of work: a typed --type, else none
-// for --no-type, else the template's type, else none. One that is not there,
-// or is turned off, is refused.
-func (s *Set) resolveType(request Request, template Template) (worktype.Type, error) {
-	switch {
-	case request.Type != nil && request.NoType:
-		return worktype.Type{}, refuse("--type and --no-type ask opposite things; give one.")
-	case request.Type != nil && *request.Type == "":
-		return worktype.Type{}, refuse("--type needs a name; rewake workers lists the types.")
-	case request.NoType:
-		return worktype.Type{}, nil
-	case request.Type != nil:
-		return s.Type(*request.Type)
-	case template.Type != "":
-		value, err := s.Type(template.Type)
-		if err != nil {
-			return worktype.Type{}, fmt.Errorf("alias %q names type = %q: %w; give --type or --no-type", template.Name, template.Type, err)
-		}
-		return value, nil
+// resolveMode resolves the worker's runtime work mode: a typed --work-mode,
+// else the template's start_mode, else the merged global one, else advisor.
+// A mode that is not there is refused, with the mode to give instead.
+func (s *Set) resolveMode(request Request, template Template) (workmode.Mode, error) {
+	if request.Mode != nil && *request.Mode == "" {
+		return workmode.Mode{}, refuse("--work-mode needs a mode's name; rewake workers lists the modes.")
 	}
-	return worktype.Type{}, nil
+	if request.Mode != nil {
+		return s.Mode(*request.Mode)
+	}
+	name := s.Modes(request.Alias).Start()
+	value, err := s.Mode(name)
+	if err != nil {
+		return workmode.Mode{}, fmt.Errorf("alias %q starts in mode %q: %w; give --work-mode", template.Name, name, err)
+	}
+	return value, nil
 }
 
 // resolveWorktree resolves the worker's worktree from what asks for one: a
