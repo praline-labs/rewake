@@ -116,3 +116,57 @@ func TestModePlansCycleOnlyIdleAndProjectOnlyObservedMode(t *testing.T) {
 		t.Fatal("the catalog lost process")
 	}
 }
+
+// A session carries one behavioral section at a time: a switch replaces the
+// previous mode's text instead of adding to it. Two defects of the old two
+// axes fail here — a reviewer switched to build kept the review type's text
+// beside build's stance (stacked, contradictory instructions), and a worker
+// whose kind of work was process could start in advisor's stance.
+func TestASwitchLeavesOneSectionAndProcessIsItsOwn(t *testing.T) {
+	builtins := workmode.BuiltIns()
+	markers := map[string]string{
+		workmode.Review:  "Report problems with precise files and lines",
+		workmode.Advisor: "do not make product edits",
+		workmode.Build:   "Implement the brief in its named scope",
+		workmode.Process: "Check each step's preconditions",
+	}
+	// The switch a reviewer makes: review's text does not survive into build,
+	// and no second header rides along.
+	built := planMode(builtins[workmode.Build], workmode.Fields{}, false)
+	if strings.Count(built.Instructions, "Runtime work mode:") != 1 {
+		t.Fatalf("build carries more than one behavioral section: %q", built.Instructions)
+	}
+	if strings.Contains(built.Instructions, markers[workmode.Review]) {
+		t.Fatalf("review's text survived into build: %q", built.Instructions)
+	}
+	// Process's own discipline, never advisor's: the reason process is a mode.
+	process := planMode(builtins[workmode.Process], workmode.Fields{}, false)
+	if !strings.Contains(process.Instructions, markers[workmode.Process]) || strings.Contains(process.Instructions, markers[workmode.Advisor]) {
+		t.Fatalf("process does not carry its own discipline: %q", process.Instructions)
+	}
+	// Every built-in, and a switch from each, carries exactly its own text.
+	for _, from := range workmode.Inventory(builtins) {
+		plan := planMode(from, workmode.Fields{}, false)
+		if strings.Count(plan.Instructions, "Runtime work mode:") != 1 || !strings.Contains(plan.Instructions, from.Text) {
+			t.Fatalf("%s lacks its one section: %q", from.Name, plan.Instructions)
+		}
+		next, ok := workmode.Find(workmode.Inventory(builtins), workmode.Next(from.Name, workmode.Inventory(builtins)))
+		if !ok {
+			t.Fatalf("no mode after %s", from.Name)
+		}
+		switched := planMode(next, workmode.Fields{}, false)
+		for name, marker := range markers {
+			if name != next.Name && strings.Contains(switched.Instructions, marker) {
+				t.Fatalf("%s after %s carries %s's text: %q", next.Name, from.Name, name, switched.Instructions)
+			}
+		}
+	}
+	// No mode is inferred: a template that names none starts in advisor, and
+	// process starts only by being named.
+	if start := (workmode.Config{}).Start(); start != workmode.Advisor {
+		t.Fatalf("an unnamed start is %q, not advisor", start)
+	}
+	if start := (workmode.Config{StartMode: workmode.Process}).Start(); start != workmode.Process {
+		t.Fatalf("a process start became %q", start)
+	}
+}
