@@ -140,7 +140,10 @@ unsets them.
 `rewake workers` shows the starting mode's configured model and effort as `start_model` and
 `start_effort`, saying they override the template's launch settings; that is configuration, not a
 dry run of the effective launch, since typed flags and later environment defaults may still
-differ. Initial model/effort precedence is explicit harness flags, the starting mode's fields, then
+differ. A launch whose selection comes from those fields says so in its launch note, naming the
+mode and never the value; a typed value that changes the selection stays explicit. A worker's
+arguments already carry the mode's fields when its launch begins, since `space open` resolved
+them, so the launch reads them as the mode's rather than as its own arguments. Initial model/effort precedence is explicit harness flags, the starting mode's fields, then
 existing launch defaults. Explicit model scope and a model's thinking suffix count as explicit
 selections. Later switches apply only the destination mode's fields that are set; an unset field
 preserves the current selection, subject to native model capability clamping. Exact registry

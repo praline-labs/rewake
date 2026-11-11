@@ -151,15 +151,26 @@ func defaults() []adapter.Default {
 
 // startingModeNotes names the mode whose configured fields supply this
 // launch's model or thinking level, and that they override the template's
-// launch settings. A field an explicit argument already names supplies
+// launch settings. A field an explicit argument names differently supplies
 // nothing, so nothing is said about it.
+//
+// A worker's arguments are prepared by the catalog's raise (launch.Set.Raise),
+// which replaces the template's launch settings with the starting mode's own
+// fields before the launch exists: a value equal to the mode's is therefore the
+// mode's selection even though it is written in the argv. A main launch's
+// arguments are the caller's own, so there only an absent flag is the mode's.
+// A typed value equal to the mode's cannot be told from the mode's own and is
+// reported as the mode's: the selection is the same, and this is a launch-time
+// diagnostic, never a model choice.
 func startingModeNotes(request adapter.LaunchRequest, args []string) []string {
 	fields := request.Modes.Fields(request.Mode.Name)
+	worker := request.Template != ""
 	var supplied []string
-	if fields.Model != "" && !adapter.HasFlag(args, "--model") && !adapter.HasFlag(args, "--models") && !adapter.HasFlag(args, "--provider") {
+	modelNamed := adapter.HasFlag(args, "--model") || adapter.HasFlag(args, "--models") || adapter.HasFlag(args, "--provider")
+	if fields.Model != "" && (!modelNamed || (worker && sameFlag(args, "--model", fields.Model))) {
 		supplied = append(supplied, "model")
 	}
-	if fields.Effort != "" && !thinkingNamed(args) {
+	if fields.Effort != "" && (!thinkingNamed(args) || (worker && sameFlag(args, "--thinking", fields.Effort))) {
 		supplied = append(supplied, "thinking level")
 	}
 	if len(supplied) == 0 {
