@@ -143,7 +143,11 @@ Each principle names where it comes from.
 under a name unique in its room; rooms keep separate groups of sessions apart, with no
 address across them. A room is the directory main was started in, and its workers belong to
 it wherever their checkouts are. Each session has a role: the main session hands out work and reads
-what comes back; the others take work and answer it. See [design.md](design.md#rooms)
+what comes back; the others take work and answer it. By default main does not implement what it
+hands out; a project may set `[main] implements = true` in its `.rewake/aliases.toml`, and main may
+then implement under its task, its runtime work mode and the project's rules. The policy is read
+when main starts, frozen for that run, and grants no permission, role or Git authority
+([roles.md](roles.md#main-implementation)). See [design.md](design.md#rooms)
 and [roles.md](roles.md).
 
 **Handing out work and reading what comes back.** The main session sends tasks to the

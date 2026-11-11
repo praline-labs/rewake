@@ -16,6 +16,12 @@ func workerAliases(t *testing.T, text string) string {
 	t.Helper()
 	home := t.TempDir()
 	t.Setenv("HOME", home)
+	// The catalog now answers from a live main when the room has one, so a
+	// test must name its own state: the default would be the person's.
+	t.Setenv(state.DirEnv, filepath.Join(home, "state"))
+	t.Setenv(state.SessionEnv, "")
+	t.Setenv(state.EpochEnv, "")
+	t.Setenv(state.RoomEnv, "")
 	t.Chdir(t.TempDir())
 	path := filepath.Join(home, ".config", "rewake", "aliases.toml")
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
@@ -110,22 +116,59 @@ context = "large"
 	}
 }
 
-// With no write template left, main still delegates implementation.
+// No writer is inventory, not an authority decision: the listing says the
+// templates are missing and, apart from that, what main's policy is.
 func TestWorkersSaysWhenNoTemplateWrites(t *testing.T) {
 	workerAliases(t, "[alias.agent-general]\nharness = \"agent\"\n")
 	code, out, errOut := run("workers")
-	if code != ExitOK || strings.Count(out, "No template writes code here") != 1 {
+	if code != ExitOK || strings.Count(out, "No launchable write-role templates.") != 1 ||
+		!strings.Contains(out, "Implementation must be delegated: when implementation is requested") ||
+		strings.Contains(out, "main remains the orchestrator") {
 		t.Fatalf("no writer: %d %s %s", code, out, errOut)
 	}
 	workerAliases(t, "")
 	code, out, errOut = run("workers")
-	if code != ExitOK || strings.Count(out, "No template writes code here") != 1 || !strings.Contains(out, "No launchable worker templates") {
+	if code != ExitOK || strings.Count(out, "No launchable write-role templates.") != 0 ||
+		!strings.Contains(out, "No launchable worker templates. To delegate, define") || !strings.Contains(out, "Implementation must be delegated") {
 		t.Fatalf("an empty catalog: %d %s %s", code, out, errOut)
 	}
 	workerAliases(t, workerAliasesExample)
 	code, out, errOut = run("workers")
-	if code != ExitOK || strings.Contains(out, "No template writes code") {
+	if code != ExitOK || strings.Contains(out, "No launchable write-role templates") || strings.Contains(out, "Implementation must be delegated") {
 		t.Fatalf("a writer: %d %s %s", code, out, errOut)
+	}
+}
+
+// The starting mode's own model and effort are shown, with their source, and
+// do not change the template's launch settings' JSON meaning.
+func TestWorkersShowsTheStartingModesSelection(t *testing.T) {
+	workerAliases(t, workerAliasesExample+`
+[alias.agent-write.launch]
+model = "template/m"
+[alias.agent-write.pi]
+start_mode = "build"
+[alias.agent-write.pi.modes.build]
+model = "mode/m"
+effort = "high"
+`)
+	catalog := adapter.NewCatalog(workerSettingsHarness{})
+	code, out, errOut := runOn(catalog, "workers", "--json")
+	var view workersListing
+	if code != ExitOK || json.Unmarshal([]byte(out), &view) != nil {
+		t.Fatalf("workers: %d %s %s", code, out, errOut)
+	}
+	writer := view.Workers[1]
+	if writer.StartMode != "build" || writer.StartModeSettings == nil || writer.StartModeSettings.Model != "mode/m" || writer.StartModeSettings.Effort != "high" {
+		t.Fatalf("the starting mode's settings: %+v", writer)
+	}
+	if writer.Model.Value != "template/m" || !writer.Model.Applied {
+		t.Fatalf("the template's launch setting changed meaning: %+v", writer.Model)
+	}
+	code, out, errOut = runOn(catalog, "workers")
+	if code != ExitOK || !strings.Contains(out, `start_model="mode/m" (starting mode; overrides template model)`) ||
+		!strings.Contains(out, `start_effort="high" (starting mode; overrides template effort)`) ||
+		!strings.Contains(out, `model="template/m"`) {
+		t.Fatalf("workers lines: %d %s %s", code, out, errOut)
 	}
 }
 

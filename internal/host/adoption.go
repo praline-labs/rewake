@@ -51,7 +51,7 @@ func (adopting) plan(request Request, launch adapter.LaunchRequest) (adapter.Lau
 // announce says nothing: the image's stderr is the harness's terminal, where
 // a line drawn again lands inside the harness's own screen — pi's input box
 // after a switch (found in review, November 2, 2026).
-func (adopting) announce(registry.Session, adapter.LaunchPlan) {}
+func (adopting) announce(Request, registry.Session, adapter.LaunchPlan) {}
 
 func (a adopting) startService(ctx context.Context, service adapter.Service, note func(string)) error {
 	adopter, ok := service.(adapter.Handover)

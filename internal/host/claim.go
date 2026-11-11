@@ -69,6 +69,11 @@ func claimName(request Request, self int, selfStart uint64, boot, cwd string) (r
 				ServicePID: self, ServiceStart: selfStart, PIDNamespace: proc.Namespace(),
 				Boot: boot, Role: chosen.ID, RoleReason: reason, CWD: cwd, StartedAt: time.Now(),
 			}
+			if chosen.ID == role.Main.ID {
+				// Written once, here, and read back from the record for the rest
+				// of the run: editing the project file never changes a live main.
+				session.MainImplements = request.MainImplements
+			}
 			err = registry.Publish(request.Dir, session)
 			if err == nil {
 				return nil

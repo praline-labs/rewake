@@ -80,6 +80,13 @@ func handleLaunch(h adapter.Harness) func(*Context, Call) error {
 		if err := aliases.Err(); err != nil {
 			return &UsageError{Command: call.Command, Message: err.Error()}
 		}
+		// Main's authorship policy belongs to this launch alone: it is read
+		// here, before the worktree, and frozen in the record when the name
+		// is claimed. A worker never takes it from the same file.
+		mainPolicy := launch.MainPolicy{}
+		if id.part.ID == role.Main.ID {
+			mainPolicy = aliases.Main()
+		}
 		modes := aliases.Modes(id.template)
 		mode := id.mode
 		if mode.Name == "" {
@@ -120,6 +127,9 @@ func handleLaunch(h adapter.Harness) func(*Context, Call) error {
 			Command:    program,
 			OnClaimed:  onClaimed,
 			Lease:      lease,
+
+			MainImplements:     mainPolicy.Implements,
+			MainPolicyExplicit: mainPolicy.Explicit,
 
 			WorktreeEntry: id.enter,
 			Mirror:        id.dev,

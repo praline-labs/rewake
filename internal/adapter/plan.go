@@ -32,6 +32,16 @@ type LaunchRequest struct {
 	Epoch string
 	// Role determines reporting and additive permission requests.
 	Role role.Role
+	// MainImplements is main's launch-snapshotted authorship policy: whether
+	// the project lets it implement product changes itself (docs/roles.md).
+	// It is the record's value, never a fresh read of the alias file, and it
+	// shapes the same mode text at launch, hello/reconnect and each switch.
+	// A worker, and a role other than main, leaves it false.
+	MainImplements bool
+	// MainPolicyExplicit says a project file set [main] implements rather than
+	// the default deciding. The launch briefing says which, so a session need
+	// not open the file; nothing else reads it.
+	MainPolicyExplicit bool
 	// Command, when set, is the program started in place of the harness's
 	// own — a person's wrapper script around it, named with --command. It
 	// replaces the program and nothing else: every argument, variable, socket
@@ -287,5 +297,8 @@ type Flag struct {
 
 // BriefContext carries identity to the shared text package without assembling prose.
 func (r LaunchRequest) BriefContext() brief.Context {
-	return brief.Context{Name: r.Name, Room: r.Room, Role: r.Role, Reason: r.RoleReason, Migrations: r.Migrations}
+	return brief.Context{
+		Name: r.Name, Room: r.Room, Role: r.Role, Reason: r.RoleReason, Migrations: r.Migrations,
+		MainImplements: r.MainImplements, MainPolicyExplicit: r.MainPolicyExplicit,
+	}
 }

@@ -203,9 +203,26 @@ user's file (`belongs in a project's .rewake/aliases.toml, and to drop a templat
 it from this file`). A migration notice — the name with its file — is printed by every command
 that reads the catalogue, and a launch carries it into the session's briefing, so main can repair
 the file itself.
-With no launchable `write` template left, main remains an orchestrator, not a writer; `rewake workers`
-then says `No template writes code here: main remains the orchestrator; ask the owner for a writer template.`
-(`--json`: `noWriter`). It must not substitute its own implementation.
+With no launchable `write` template left, `rewake workers` says `No launchable write-role
+templates.` — inventory alone — and states main's authorship policy apart from it. With the default
+it adds that implementation must be delegated when it is requested, and with the project's
+`[main] implements = true` that main may implement under its work mode and the project's rules,
+asking for no writer template. `--json` keeps `noWriter` as the inventory boolean and adds
+`mainImplements` and `mainPolicySource` (`session` for a live main's frozen snapshot,
+`configuration` for what a fresh launch in the command's directory would take; see
+[roles.md](roles.md#main-implementation)).
+
+**Main's authorship is a project's policy**, in `.rewake/aliases.toml` alone:
+
+```toml
+[main]
+implements = true
+```
+
+Missing or false is the default: main delegates. True permits main to implement product changes
+itself, subject to the task, its work mode and the project's rules; it grants no permission and
+is read once when main starts, then frozen for that run. A user file that carries `[main]` is
+refused. This is not a role and does not change reporting, Git authority or a worker's limits.
 
 [Work modes](work-modes.md) add optional startup model/effort fields before ordinary launch
 defaults: explicit harness flags win, then the starting mode, then these defaults. Global `[pi]`
@@ -219,14 +236,87 @@ whatever runs with the person's credentials, and a file sitting in whatever dire
 happens to be in should not decide that or what a worker may do. The user file is held to
 `0600`, and a wider one produces a note.
 
+### Keeping templates on the machine
+
+A project shares what is true for everyone — its working modes, its `[aliases] off`, its
+`[main] implements` and its brief folder — and names in its own documentation the local templates
+its workflow expects. The templates themselves stay on each machine, because a template is the
+whole recipe: harness, role, command, launch settings and the model and effort its modes select.
+Only the user file may set `role` and `command`; a project definition replaces the user's template
+of the same name **whole**, so a shared definition without `role` would make even a user writer
+general. There is no field-level overlay and no named model profile: a shared recipe with a
+machine-local model would need one, and inheriting a credentials-bearing command or a write role
+into a materially different project recipe is worse than repeating three small definitions on each
+machine.
+
+A fresh machine's `~/.config/rewake/aliases.toml`, permissions 0600. The model strings are
+placeholders, not models to install: each person replaces them with exact IDs from this machine's
+own rewake pi registry, and effort may be added beside a model that supports it.
+
+```toml
+[alias.writer]
+harness = "pi"
+role = "write"
+worktree = true
+description = "Implements an assigned change"
+[alias.writer.pi]
+start_mode = "build"
+[alias.writer.pi.modes.build]
+model = "local-provider/writer-id"
+
+[alias.reviewer]
+harness = "pi"
+role = "general"
+description = "Reviews or advises; does not edit the subject"
+[alias.reviewer.pi]
+start_mode = "review"
+[alias.reviewer.pi.modes.review]
+model = "local-provider/reviewer-id"
+[alias.reviewer.pi.modes.advisor]
+model = "local-provider/reviewer-id"
+
+[alias.helper]
+harness = "pi"
+role = "general"
+description = "Investigates general questions"
+[alias.helper.pi]
+start_mode = "advisor"
+[alias.helper.pi.modes.advisor]
+model = "local-provider/helper-id"
+```
+
+The shared `.rewake/aliases.toml` of a project whose main reviews and implements, on a machine
+that defines those names:
+
+```toml
+[main]
+implements = true
+
+[pi]
+start_mode = "build"
+
+[aliases]
+off = ["writer", "helper"]
+```
+
+`off` is subtraction, not an allowlist: other locally installed templates stay available, and a
+machine dedicated to this workflow may instead define only `reviewer`. A machine with no templates
+gets the empty catalogue and cannot raise an invented worker. The starting-mode fields are the
+existing exact model selection ([work-modes.md](work-modes.md#model-thinking-and-switching)), not
+another precedence tier; a template's `launch.model` remains valid and local. Nothing is migrated
+or rewritten: choosing local templates and removing machine IDs from a shared file is the
+person's edit, and it changes the next launch, never a running session.
+
 `rewake workers` is a view available to any role, even outside a session. It reads the user
 file and the current directory's `.rewake/aliases.toml`, a project alias replacing the user's of
 the same name and the project's `[aliases] off` removing templates, and shows name, harness, role, command (the harness when none), description, its `start_mode`,
-each setting's value marked applied or shown only, and the label, omitting main-only harnesses
-without rejecting the other templates, then the mode catalogue in cycle order with each mode's
-name, source and description, never its text; `--json` returns `workers`,
-whose `model`, `effort` and `context` each have `value` and `applied`, with `label` when one is
-set, and `modes`. rewake ships no templates: an empty
+the starting mode's own `start_model` and `start_effort` when it configures them (marked as
+overriding the template's launch settings), each setting's value marked applied or shown only, and
+the label, omitting main-only harnesses without rejecting the other templates, then the mode
+catalogue in cycle order with each mode's name, source and description, never its text; `--json`
+returns `workers`, whose `model`, `effort` and `context` each have `value` and `applied`, with
+`label` when one is set, `startModeSettings` when the starting mode configures a model or effort,
+and `modes`. rewake ships no templates: an empty
 or main-only catalogue answers `No launchable worker templates: define [alias.<name>] for a worker-capable harness in ...`, and `space open --alias`
 with none defined refuses with `no templates are defined; rewake workers --help says where` in
 place of the empty `available:` list. The fields are listed once, on `rewake workers --help`; a

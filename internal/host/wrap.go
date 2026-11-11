@@ -149,6 +149,10 @@ func (r *run) claim(context.Context) error {
 	if err != nil {
 		return err
 	}
+	// The record is the run's one authorship snapshot: a launch wrote what it
+	// resolved when it claimed the name, and an adoption takes that same value
+	// back rather than rereading configuration that may have changed since.
+	r.takeAuthorship(session)
 	r.session, r.epoch = session, session.Epoch()
 	r.atUndo(func() {
 		// Ownership is settled once, before anything is removed. Asking again
@@ -183,6 +187,13 @@ func (r *run) claim(context.Context) error {
 	return nil
 }
 
+// takeAuthorship makes the claimed or adopted record the run's policy. It is
+// the only place a run reads the value: nothing below it opens the alias file,
+// so a configuration edit cannot change a live main's instructions.
+func (r *run) takeAuthorship(session registry.Session) {
+	r.request.MainImplements = session.MainImplements
+}
+
 // prepare makes what the harness is told of, plans the run and records where
 // it is served.
 func (r *run) prepare(context.Context) error {
@@ -215,7 +226,7 @@ func (r *run) prepare(context.Context) error {
 	r.closeService = closeOnce(plan.Service)
 	r.atUndo(r.closeService)
 	r.live.planned = plannedLive(request.Harness.Offers(), plan, controlDir)
-	r.entry.announce(r.session, plan)
+	r.entry.announce(r.request, r.session, plan)
 	r.session.Socket = plan.Socket
 	r.session.OwnsSocket = plan.OwnsSocket
 	return registry.Update(request.Dir, r.session)
@@ -237,6 +248,9 @@ func (r *run) launchRequest(controlDir string) adapter.LaunchRequest {
 		Socket:     registry.SocketFor(request.Dir, name, epoch),
 		Epoch:      epoch,
 		Role:       role.Of(session.Role),
+
+		MainImplements:     request.MainImplements,
+		MainPolicyExplicit: request.MainPolicyExplicit,
 
 		ControlDir: controlDir,
 		RunDir:     r.runDir,

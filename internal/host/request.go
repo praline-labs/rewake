@@ -51,6 +51,15 @@ type Request struct {
 	// RoleReason says why the launch has its role, for the record and the
 	// briefing; empty says the role was selected with its flag.
 	RoleReason string
+	// MainImplements is the authorship policy a main launch resolved from the
+	// project catalog before entering a worktree; claimName writes it into
+	// the record, which is then the run's one snapshot (docs/roles.md). A
+	// worker, and every role but main, leaves it false.
+	MainImplements bool
+	// MainPolicyExplicit says a project file set [main] implements rather than
+	// the default deciding; the start and the briefing say which. It is not
+	// persisted, since only the start's wording needs it.
+	MainPolicyExplicit bool
 	// OnTurn publishes a turn's end the run's TurnBoundary reported, and
 	// answers what the published end said.
 	OnTurn func(context.Context, registry.Session, adapter.TurnEnd) (mail.Outcome, error)

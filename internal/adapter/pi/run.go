@@ -30,6 +30,11 @@ type run struct {
 	// hostsSpaces is the run's role opening spaces: an admitted hello then
 	// proves SpacesCapability.
 	hostsSpaces bool
+	// mainImplements is main's authorship policy frozen at its launch: the
+	// mode sections this run plans, at launch, hello and each switch, say
+	// what a delegating or an implementing main may do. A worker's false is
+	// never consulted, since it does not host spaces.
+	mainImplements bool
 	// onClosing is LaunchRequest.Closing, nil outside rewake's shell: the
 	// extension's closing frame, at pi's quit, calls it.
 	onClosing func()

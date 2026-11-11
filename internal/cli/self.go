@@ -94,6 +94,6 @@ func callerPlaybook() *role.Playbook {
 	if err != nil {
 		return nil
 	}
-	play := role.Of(session.Role).Play
+	play := role.For(role.Of(session.Role), session.MainImplements)
 	return &play
 }

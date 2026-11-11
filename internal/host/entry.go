@@ -10,6 +10,7 @@ import (
 	"github.com/praline-labs/rewake/internal/adapter"
 	"github.com/praline-labs/rewake/internal/core/mirror"
 	"github.com/praline-labs/rewake/internal/core/registry"
+	"github.com/praline-labs/rewake/internal/core/role"
 	"github.com/praline-labs/rewake/internal/host/delivery"
 	"github.com/praline-labs/rewake/internal/infra/build"
 )
@@ -30,7 +31,7 @@ type entry interface {
 	plan(request Request, launch adapter.LaunchRequest) (adapter.LaunchPlan, error)
 	// announce says on stderr what the launch decided, before the harness
 	// takes the screen.
-	announce(session registry.Session, plan adapter.LaunchPlan)
+	announce(request Request, session registry.Session, plan adapter.LaunchPlan)
 	// startService starts the plan's service, or adopts what was handed over.
 	startService(ctx context.Context, service adapter.Service, note func(string)) error
 	// startHarness starts the plan's program, or takes the one running, and
@@ -81,8 +82,11 @@ func (launching) plan(request Request, launch adapter.LaunchRequest) (adapter.La
 	return request.Harness.Launch(launch)
 }
 
-func (launching) announce(session registry.Session, plan adapter.LaunchPlan) {
+func (launching) announce(request Request, session registry.Session, plan adapter.LaunchPlan) {
 	_, _ = fmt.Fprintf(os.Stderr, "rewake: room %s, role %s: %s\n", session.Room, session.Role, session.RoleReason)
+	if session.Role == role.Main.ID {
+		_, _ = fmt.Fprintln(os.Stderr, "rewake: "+mainPolicyNote(request.MainImplements, request.MainPolicyExplicit))
+	}
 	for _, note := range plan.Notes {
 		// Said once, on stderr, before the harness takes over the screen:
 		// these are things rewake decided not to do, and silence about them
@@ -114,3 +118,18 @@ func (launching) served(string)        {}
 
 // fail returns err at once: a launch that fails has started nothing.
 func (launching) fail(_ *run, err error) (int, error) { return 0, err }
+
+// mainPolicyNote says once, at a main launch, what authorship policy this run
+// froze and where it came from: the project's own answer, or the default when
+// nobody set one. It names the source, never a setting's value from elsewhere
+// (docs/rules/launch.md, L2).
+func mainPolicyNote(mainImplements, explicit bool) string {
+	switch {
+	case mainImplements:
+		return "main may implement product changes itself: the project's [main] implements = true, frozen for this run"
+	case explicit:
+		return "main delegates implementation: the project's [main] implements = false, frozen for this run"
+	default:
+		return "main delegates implementation: no project sets [main] implements, the default"
+	}
+}

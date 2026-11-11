@@ -58,7 +58,7 @@ func TestAHandoverKeepsEveryModesDiscipline(t *testing.T) {
 		if !ok {
 			t.Fatalf("no %q after the handover", name)
 		}
-		section := workmode.Instructions(got, false)
+		section := workmode.Instructions(got, false, false)
 		if strings.Count(section, "Runtime work mode:") != 1 || !strings.Contains(section, got.Text) {
 			t.Fatalf("%s after the handover reads %q", name, section)
 		}

@@ -18,7 +18,7 @@ for each role; harness adapters only pass the rendered strings. The record keeps
 | role | started by | turns reported | its playbook says |
 |---|---|---|---|
 | `general` | main, `space open --alias` of an alias with `role = "general"` or none | yes | take work, end your turn with the result; no Git metadata |
-| `main` | the person, `rewake <harness>` | no | hand out work, read reports; raise workers with `space open`, never by a launch |
+| `main` | the person, `rewake <harness>` | no | hand out work, read reports, raise workers with `space open`, never by a launch; implement only under the project's explicit policy |
 | `write` | main, `space open --alias` of an alias with `role = "write"` | yes | take work, end your turn with the result; you can commit when authorized |
 
 The briefing carries the role's whole playbook, the text of
@@ -49,15 +49,49 @@ without waking the same failing conversation. Old records with role `worker` are
 reporting fallback inside the catalogue.
 The write role reports like general.
 
-Main remains an orchestrator even when a project hides every `write` template (`[aliases] off`):
-it does not write product code itself. It asks for a suitable writer template or the decision
-needed to proceed. `rewake workers` reads the catalogue each time and says when none writes
-code, so a mid-session file change needs no restart. The [runtime work mode](work-modes.md)
-changes discipline, never the role's mail/reporting or Git authority; main delegates in every mode.
-Review/advisor are prompt-only read-only guidance, not tool or permission boundaries.
+By default main remains an orchestrator even when a project hides every `write` template
+(`[aliases] off`): it does not write product code itself, and a missing template is inventory
+rather than a decision. `rewake workers` reads the catalogue each time, says when none writes
+code, and states the authorship policy separately, so a mid-session file change needs no restart.
+The [runtime work mode](work-modes.md) changes discipline, never the role's mail/reporting or Git
+authority: a delegating main implements in no mode. Review/advisor are prompt-only read-only
+guidance, not tool or permission boundaries.
 
 **Owner decision, November 3, 2026:** no missing-writer fallback gives main implementation work;
 build mode does not change that.
+
+## Main implementation
+
+**Owner decision, November 11, 2026**, accepting the worker-catalogue design: whether main may
+implement is an explicit project policy, not something inferred from a missing template or from
+a runtime work mode.
+
+By default main hands out work and does not implement it. One project may choose otherwise for
+itself, in its own `.rewake/aliases.toml`:
+
+```toml
+[main]
+implements = true
+```
+
+Missing or false is the default and keeps the rule above. True **permits** main to implement
+product changes itself, only where the task, its runtime work mode and the project's rules allow
+it; it obliges nothing and grants no permission, no Git authority, no new role and no sandbox.
+Main still assigns work, answers blockers, reads reports and accepts it; its successful turns stay
+unreported. `advisor` and `review` keep their read-only text, and `process` stays an authorized
+procedure rather than a fallback for product code.
+
+The setting is project-only: a user file that carries `[main]` is refused, because whether main
+implements is one project's workflow rather than a default for every room the person starts. It
+is read once, at main's launch, in the directory the launch names and before a worktree is
+entered, and frozen in that run's record (`mainImplements`). Editing the file, compaction, a
+shell restart, wrapper adoption or a reconnect never changes it; a fresh main takes the value
+current at its launch. `rewake guide` and `rewake workers` in a live room read that frozen value;
+outside a live main, `workers` says the current configuration is what a fresh launch here would
+take. The launch states the resolved policy and whether a project set it or it is the default.
+
+`docs/project.md` and `GLOSSARY.md` carry the same rule. This repository's projects set no
+`[main] implements`, so the default holds and their rooms stay orchestrator-only.
 
 ## What a session is told
 
@@ -68,7 +102,9 @@ prints them again under YOUR ROLE, wrapped, with `--json` carrying them as `sect
 `<command> — <what for>`, each section as its title and `- ` lines, and the line pointing
 to `rewake guide`. The last section, MAIL (`role.Mail`), is the same for every role: the
 one rule every role shares — each message and final reply starts with a line stating its
-point — and what a session sees happen to its mail. Main's sections are HANDING OUT WORK,
+point — and what a session sees happen to its mail. Main's briefing also states the authorship
+policy its run froze and whether a project chose it or it is the default; the same policy
+rewrites main's delegation rule into the implementing one, and qualifies every mode section. Main's sections are HANDING OUT WORK,
 READING WHAT COMES BACK, LIMITS and OWNER DECISIONS
 (`internal/core/role/playbook_main.go`); write and general share their steps and the sections
 WORKING, REPORTING and MAIN AND PERMISSIONS, all but the line about Git

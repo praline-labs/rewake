@@ -22,9 +22,9 @@ type modePlan struct {
 
 // planMode renders one mode's complete behavioral section, the only one the
 // session's requests carry: a switch replaces it, never adds another.
-func planMode(mode workmode.Mode, fields workmode.Fields, main bool) *modePlan {
+func planMode(mode workmode.Mode, fields workmode.Fields, main, mainImplements bool) *modePlan {
 	p := &modePlan{
-		Name: mode.Name, Instructions: workmode.Instructions(mode, main), Status: "mode: " + mode.Name, Effort: fields.Effort,
+		Name: mode.Name, Instructions: workmode.Instructions(mode, main, mainImplements), Status: "mode: " + mode.Name, Effort: fields.Effort,
 		Busy: "work mode was not changed: the session is busy", Failed: "work mode was not changed: the configured model could not be selected",
 	}
 	if fields.Model != "" {
@@ -97,7 +97,7 @@ func initialMode(request adapter.LaunchRequest) *modePlan {
 	if thinkingNamed(args) && !sameFlag(args, "--thinking", f.Effort) {
 		f.Effort = ""
 	}
-	return planMode(mode, f, request.Role.Spaces)
+	return planMode(mode, f, request.Role.Spaces, request.MainImplements)
 }
 
 func sameFlag(args []string, flag, value string) bool {
@@ -109,7 +109,7 @@ func (r *run) helloMode() *modePlan {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if value, ok := workmode.Find(r.modes.Catalog, r.mode); ok {
-		return planMode(value, workmode.Fields{}, r.hostsSpaces)
+		return planMode(value, workmode.Fields{}, r.hostsSpaces, r.mainImplements)
 	}
 	return r.initial
 }
@@ -129,7 +129,7 @@ func (r *run) cycleMode(l *link, request frame) frame {
 	if !ok {
 		return frame{Error: "work mode is not available yet"}
 	}
-	return frame{OK: true, Mode: planMode(value, r.modes.Fields(next), r.hostsSpaces)}
+	return frame{OK: true, Mode: planMode(value, r.modes.Fields(next), r.hostsSpaces, r.mainImplements)}
 }
 
 func (r *run) cycleThinking(l *link, request frame) frame {

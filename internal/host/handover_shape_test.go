@@ -14,6 +14,7 @@ import (
 // admits only a build that takes the same, so a changed Handover raises
 // HandoverVersion.
 var handoverShapes = map[int]string{
+	8: "6bfc511d78d208986e333b44e2558b0c2c7ae37847957f3547401dc37e947225",
 	7: "7dc1ff177d5a9dbf0345990eb103a3f3baae8ff6e21bd5c8132667be9a0f4813",
 	6: "b1f9a548a8cff918aeb6c9384e2341238ecb82e4cb0c2632d994929e1c9f3313",
 	1: "a15c1ca7e2c400bd78be32764d513547e0dc1d21693149227891f9faedaea9de",

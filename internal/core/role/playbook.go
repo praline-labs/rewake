@@ -105,5 +105,5 @@ var writePlaybook = Playbook{
 var generalPlaybook = Playbook{
 	Heading:  "You are a worker: you take tasks from main or another session, do them, and answer by ending your turn.",
 	Steps:    executorSteps,
-	Sections: executorSections("Do not write .git or commit: committing is a write session's."),
+	Sections: executorSections("Do not write .git or commit; report your work to main."),
 }

@@ -376,8 +376,11 @@ The system layer uses an independent briefing for general, write or main from
 `internal/core/brief/roles.go`: the whole playbook of the role, with sections on the work, the
 reports, the limits and the mail. Each names its identity and selection reason, explains the commands that role
 needs, and points to guide for the full contract.
-Write may commit; main delegates and reads results. All ask for the point of a message in its first line. Per-role
-snapshots make wording changes reviewable. A harness that cannot switch modes reads the session's
+Write may commit. Main reads reports and, by default, delegates implementation; a project that
+sets `[main] implements = true` in its `.rewake/aliases.toml` lets it implement under the task, its
+work mode and the project's rules, and the briefing states that policy and whether a project chose
+it ([roles.md](roles.md#main-implementation)). All ask for the point of a message in its first
+line. Per-role snapshots make wording changes reviewable. A harness that cannot switch modes reads the session's
 runtime work mode after its role's sections, as one section ([work-modes.md](work-modes.md)). A
 session is also told, after its harness's section, each obsolete worker setting the catalogue
 skipped rather than refused, with its file, its line and what to write, so that main — which

@@ -77,6 +77,19 @@ const CommandFlag = "command"
 // two pages cannot drift apart.
 const Help = "Main opens workers from templates, rewake ships none: rewake workers --help says where they are defined and with which fields; rewake workers lists them and rewake space open <space> --alias <name> opens one."
 
+// MainPolicy is the project's [main] implements, resolved while the catalog
+// was read (docs/roles.md#main-implementation): whether main may implement
+// product changes itself, and whether a project file said so or it is the
+// default. The policy is read once, for a main launch, and frozen in that
+// run's record; it is not a role and grants no permission.
+type MainPolicy struct {
+	Implements bool
+	// Explicit says a project file set [main] implements, rather than the
+	// default deciding; a launch says which, so a person need not open the
+	// file to learn why main does or does not implement.
+	Explicit bool
+}
+
 // Set is what this process read.
 type Set struct {
 	aliases map[string]Alias
@@ -124,7 +137,14 @@ type Set struct {
 	// pendingOff is what the project file asked, applied once every file is read.
 	pendingOff []offRequest
 	pi         workmode.Config
+	// mainPolicy is the project's [main] implements; absent is the default,
+	// delegate. The user file may not set it.
+	mainPolicy MainPolicy
 }
+
+// Main is the [main] implements this project resolved, the default when no
+// project file sets it.
+func (s *Set) Main() MainPolicy { return s.mainPolicy }
 
 // Names are the aliases this process knows, in order, for a refusal that says
 // what does exist.

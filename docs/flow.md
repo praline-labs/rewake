@@ -100,7 +100,9 @@ same steps, with its name, role and room from the space's record.
    the boundary after the start ([claude-turns.md](claude-turns.md#readiness-and-admission)).
    Selecting a role requests no access. The record and intro say why the role was taken:
    "rewake <harness> always starts main, one per directory", or "raised by main with rewake
-   space open as <role>".
+   space open as <role>". A main launch also resolves the project's `[main] implements` from the
+   catalogue it read before the worktree, and the record keeps that one boolean for the run
+   (`mainImplements`); a worker never takes it from the same file ([roles.md](roles.md#main-implementation)).
 5. **The harness command line.** The user's arguments go through as written, save the
    exceptions each launch page's notes list: a `--help` written first, rewake's own
    `--worktree`. rewake adds, for one launch only and never into a config file:
@@ -125,10 +127,13 @@ same steps, with its name, role and room from the space's record.
    ending with MAIL: the shared rule of a first line stating the point, how a waiting
    message is announced with `Rewake:`, and that `rewake guide` has the complete rules
    ([roles.md](roles.md#what-a-session-is-told)).
-   The golden copies are in `internal/core/brief/testdata/`. Pi's runtime
-   [work mode](work-modes.md) injects its one Go-owned section before each model request, in
-   place of any earlier one, without replacing those briefings or granting authority; a harness
-   that cannot switch reads that section in the briefing instead. Main delegates in every mode.
+   The golden copies are in `internal/core/brief/testdata/`. Main's briefing also states the
+   authorship policy its launch froze and whether a project set it or it is the default. Pi's
+   runtime [work mode](work-modes.md) injects its one Go-owned section before each model request,
+   in place of any earlier one, without replacing those briefings or granting authority; a harness
+   that cannot switch reads that section in the briefing instead. A delegating main implements in
+   no mode; an opted-in one is told in every mode that implementation is permitted only where the
+   task, the mode and the project's rules allow it.
 9. **Serving.** The wrapper watches `inbox/<name>/` with inotify, polls every
    second as the safety net, sweeps old mail every ten minutes, and waits for
    the harness to exit.

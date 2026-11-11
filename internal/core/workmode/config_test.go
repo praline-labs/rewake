@@ -47,7 +47,7 @@ func TestDefaultsCycleAndInstructions(t *testing.T) {
 		if !ok {
 			t.Fatalf("no built-in %s", modeName)
 		}
-		text := Instructions(value, false)
+		text := Instructions(value, false, false)
 		if !strings.HasPrefix(text, "Runtime work mode: "+modeName+". Your role, permissions and the project's rules still apply. ") {
 			t.Errorf("%s lacks the mode header: %q", modeName, text[:80])
 		}
@@ -59,7 +59,7 @@ func TestDefaultsCycleAndInstructions(t *testing.T) {
 		if strings.Contains(text, "do not write product code yourself") {
 			t.Error("a non-main mode claims orchestration", modeName)
 		}
-		if !strings.Contains(Instructions(value, true), "do not write product code yourself") {
+		if !strings.Contains(Instructions(value, true, false), "do not write product code yourself") {
 			t.Error("main loses orchestration", modeName)
 		}
 	}

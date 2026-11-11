@@ -40,11 +40,16 @@ func (harness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, error)
 		}
 		args = adapter.AddFlags(args, sessionIDFlag, request.Conversation)
 	}
+	// The starting mode's own model and thinking level are an exact selection
+	// that overrides the template's launch settings; say which mode supplied
+	// it, without repeating the value (docs/rules/launch.md, L2).
+	notes := startingModeNotes(request, args)
 	args = harness{}.StartModeArgs(args, request.Modes, request.Mode.Name, false, nil)
-	args, notes, err := adapter.ApplyDefaults(args, defaults())
+	args, applied, err := adapter.ApplyDefaults(args, defaults())
 	if err != nil {
 		return adapter.LaunchPlan{}, err
 	}
+	notes = append(notes, applied...)
 	file := extensionPath(request)
 	// -e adds rewake's extension to those pi finds, the person's and the
 	// project's, which load as they would without rewake.
@@ -107,6 +112,7 @@ func (harness) Serve(request adapter.LaunchRequest) adapter.ServicePlan {
 	run.controlDir = request.ControlDir
 	run.modes, run.initial = request.Modes, initialMode(request)
 	run.hostsSpaces, run.onClosing = request.Role.Spaces, request.Closing
+	run.mainImplements = request.MainImplements
 	run.retention = envValue(request.Env, cacheRetentionEnv)
 	run.tools = sessiontools.Run{Executable: request.Executable, Dir: request.Dir, Room: request.Room, Session: request.Name, Epoch: request.Epoch, Role: request.Role.ID}
 	if request.Mirror != nil {
@@ -141,6 +147,25 @@ func defaults() []adapter.Default {
 		}, Apply: func(args []string, value string) []string { return adapter.AddFlags(args, "--model", value) }},
 		{Env: "REWAKE_PI_EFFORT", What: "reasoning effort", Present: thinkingNamed, Apply: func(args []string, value string) []string { return adapter.AddFlags(args, "--thinking", value) }},
 	}
+}
+
+// startingModeNotes names the mode whose configured fields supply this
+// launch's model or thinking level, and that they override the template's
+// launch settings. A field an explicit argument already names supplies
+// nothing, so nothing is said about it.
+func startingModeNotes(request adapter.LaunchRequest, args []string) []string {
+	fields := request.Modes.Fields(request.Mode.Name)
+	var supplied []string
+	if fields.Model != "" && !adapter.HasFlag(args, "--model") && !adapter.HasFlag(args, "--models") && !adapter.HasFlag(args, "--provider") {
+		supplied = append(supplied, "model")
+	}
+	if fields.Effort != "" && !thinkingNamed(args) {
+		supplied = append(supplied, "thinking level")
+	}
+	if len(supplied) == 0 {
+		return nil
+	}
+	return []string{fmt.Sprintf("the starting mode %q supplied the %s; it overrides the template's launch settings", request.Mode.Name, strings.Join(supplied, " and "))}
 }
 
 func continued(args []string) string {

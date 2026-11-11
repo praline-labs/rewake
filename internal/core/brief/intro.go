@@ -22,6 +22,13 @@ type Context struct {
 	// harness that switches the mode at runtime injects the section itself,
 	// so the launch's briefing never carries a second, stale one.
 	Mode workmode.Mode
+	// MainImplements and MainPolicyExplicit are the authorship policy this
+	// run's launch froze (docs/roles.md#main-implementation): whether main may
+	// implement product changes itself, and whether a project file chose that
+	// or it is the default. They are said in main's briefing and change its
+	// delegation rule; a worker, or a guide outside a session, passes false.
+	MainImplements     bool
+	MainPolicyExplicit bool
 	// Migrations are the obsolete worker settings the launch skipped rather
 	// than refused, each with its file and line and what to write instead:
 	// the session is told them so that main can repair the configuration it

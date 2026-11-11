@@ -26,7 +26,7 @@ func catalog(t *testing.T) []workmode.Mode {
 // The native status names the observed mode alone: it is a launch choice, so
 // no key is claimed beside it.
 func TestTheModeStatusNamesTheModeWithoutACycleKey(t *testing.T) {
-	p := planMode(workmode.BuiltIns()[workmode.Build], workmode.Fields{}, false)
+	p := planMode(workmode.BuiltIns()[workmode.Build], workmode.Fields{}, false, false)
 	if p.Status != "mode: build" {
 		t.Fatalf("the status says %q", p.Status)
 	}
@@ -78,7 +78,7 @@ func TestModePlansCycleOnlyIdleAndProjectOnlyObservedMode(t *testing.T) {
 	build := workmode.BuiltIns()[workmode.Build]
 	rig := newRig(t, func(r *run) {
 		r.mirror = m
-		r.initial = planMode(workmode.BuiltIns()[workmode.Review], workmode.Fields{}, false)
+		r.initial = planMode(workmode.BuiltIns()[workmode.Review], workmode.Fields{}, false, false)
 		r.modes = workmode.Config{
 			Modes:   map[string]workmode.Fields{workmode.Build: {Model: "p/second", Effort: "high"}},
 			Catalog: catalog(t),
@@ -142,7 +142,7 @@ func TestASwitchLeavesOneSectionAndProcessIsItsOwn(t *testing.T) {
 	}
 	// The switch a reviewer makes: review's text does not survive into build,
 	// and no second header rides along.
-	built := planMode(builtins[workmode.Build], workmode.Fields{}, false)
+	built := planMode(builtins[workmode.Build], workmode.Fields{}, false, false)
 	if strings.Count(built.Instructions, "Runtime work mode:") != 1 {
 		t.Fatalf("build carries more than one behavioral section: %q", built.Instructions)
 	}
@@ -150,13 +150,13 @@ func TestASwitchLeavesOneSectionAndProcessIsItsOwn(t *testing.T) {
 		t.Fatalf("review's text survived into build: %q", built.Instructions)
 	}
 	// Process's own discipline, never advisor's: the reason process is a mode.
-	process := planMode(builtins[workmode.Process], workmode.Fields{}, false)
+	process := planMode(builtins[workmode.Process], workmode.Fields{}, false, false)
 	if !strings.Contains(process.Instructions, markers[workmode.Process]) || strings.Contains(process.Instructions, markers[workmode.Advisor]) {
 		t.Fatalf("process does not carry its own discipline: %q", process.Instructions)
 	}
 	// Every built-in, and a switch from each, carries exactly its own text.
 	for _, from := range workmode.Inventory(builtins) {
-		plan := planMode(from, workmode.Fields{}, false)
+		plan := planMode(from, workmode.Fields{}, false, false)
 		if strings.Count(plan.Instructions, "Runtime work mode:") != 1 || !strings.Contains(plan.Instructions, from.Text) {
 			t.Fatalf("%s lacks its one section: %q", from.Name, plan.Instructions)
 		}
@@ -164,7 +164,7 @@ func TestASwitchLeavesOneSectionAndProcessIsItsOwn(t *testing.T) {
 		if !ok {
 			t.Fatalf("no mode after %s", from.Name)
 		}
-		switched := planMode(next, workmode.Fields{}, false)
+		switched := planMode(next, workmode.Fields{}, false, false)
 		for name, marker := range markers {
 			if name != next.Name && strings.Contains(switched.Instructions, marker) {
 				t.Fatalf("%s after %s carries %s's text: %q", next.Name, from.Name, name, switched.Instructions)
@@ -222,7 +222,62 @@ func TestAHelloAndACycleAfterHandoverCarryWholeDisciplines(t *testing.T) {
 	// A custom mode's own text survives the same boundary; it is a mode of the
 	// person's, not a built-in name.
 	audit, ok := workmode.Find(handed.Catalog, "audit")
-	if !ok || audit.Text != "AUDIT" || !strings.Contains(workmode.Instructions(audit, false), "AUDIT") {
+	if !ok || audit.Text != "AUDIT" || !strings.Contains(workmode.Instructions(audit, false, false), "AUDIT") {
 		t.Fatalf("a custom mode lost its text at the handover: %+v", audit)
+	}
+}
+
+// Main's authorship policy is in every Go-planned mode section, including the
+// one a reconnected extension receives at hello: the policy is neither a
+// worker's nor a value the extension resolves for itself.
+func TestTheAuthorshipPolicyReachesEveryPlanAndAHello(t *testing.T) {
+	for _, mode := range workmode.Inventory(workmode.BuiltIns()) {
+		name := mode.Name
+		implementing := planMode(mode, workmode.Fields{}, true, true)
+		if !strings.Contains(implementing.Instructions, "implementation is permitted only when the task, the mode and the project's rules allow it") ||
+			strings.Contains(implementing.Instructions, "do not write product code yourself") {
+			t.Errorf("%s: an implementing main's plan is %q", name, implementing.Instructions)
+		}
+		delegating := planMode(mode, workmode.Fields{}, true, false)
+		if !strings.Contains(delegating.Instructions, "do not write product code yourself") {
+			t.Errorf("%s: a delegating main's plan is %q", name, delegating.Instructions)
+		}
+		worker := planMode(mode, workmode.Fields{}, false, true)
+		if strings.Contains(worker.Instructions, "implementation is permitted") || strings.Contains(worker.Instructions, "orchestrator") {
+			t.Errorf("%s: a worker's plan carries main's policy: %q", name, worker.Instructions)
+		}
+	}
+	rig := newRig(t, func(r *run) {
+		r.modes = workmode.Config{Catalog: catalog(t)}
+		r.mode = workmode.Process
+		r.hostsSpaces, r.mainImplements = true, true
+	})
+	_, greeted := hello(t, rig, func(l *link, got frame) { l.answer(got, frame{OK: true}) })
+	if greeted.Mode == nil || !strings.Contains(greeted.Mode.Instructions, "implementation is permitted only when the task, the mode and the project's rules allow it") {
+		t.Fatalf("hello after a reconnect lost the policy: %+v", greeted.Mode)
+	}
+}
+
+// The starting mode's selection is said once, by the mode and source, and
+// never with the configured value: the catalog and the native strip show
+// what was selected (docs/rules/launch.md, L2).
+func TestAStartingModeSelectionIsSaidWithoutItsValue(t *testing.T) {
+	request := adapter.LaunchRequest{
+		Modes: workmode.Config{Modes: map[string]workmode.Fields{workmode.Build: {Model: "p/m", Effort: "high"}}},
+		Mode:  workmode.BuiltIns()[workmode.Build],
+	}
+	notes := startingModeNotes(request, nil)
+	if len(notes) != 1 || !strings.Contains(notes[0], `the starting mode "build" supplied the model and thinking level`) ||
+		!strings.Contains(notes[0], "overrides the template's launch settings") || strings.Contains(notes[0], "p/m") {
+		t.Fatalf("the note: %q", notes)
+	}
+	if notes := startingModeNotes(request, []string{"--model", "typed/model"}); len(notes) != 1 || strings.Contains(notes[0], "the model and") || !strings.Contains(notes[0], "thinking level") {
+		t.Fatalf("an explicit model is not the mode's: %q", notes)
+	}
+	if notes := startingModeNotes(request, []string{"--model", "typed/model", "--thinking", "low"}); len(notes) != 0 {
+		t.Fatalf("both explicit, yet: %q", notes)
+	}
+	if notes := startingModeNotes(adapter.LaunchRequest{Mode: workmode.BuiltIns()[workmode.Build]}, nil); len(notes) != 0 {
+		t.Fatalf("an unset selection was said: %q", notes)
 	}
 }

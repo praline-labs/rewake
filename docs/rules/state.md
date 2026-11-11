@@ -288,7 +288,11 @@ and `internal/cli/restart_rewake.go`.
   requires must equal the room's build's, or the attempt ends, naming the contract, and the room
   needs its restart. Among them `handover` (the wrapper's handed run), `handover.<adapter>` (an
   adapter's handed state), `handover.space` (a space host's handed terminal) and `handover.mainhost` (main's host's handed terminal, shell and loop), each made by `stream.Contract` from its handover's version and the screen file's (the handover's own number while the screen file is at its first version, `<handover>.<screen>` after), so a raise of the screen file's version alone is a contract the switch refuses, `switch` (the mark, the socket's messages, a parked image's
-  handover), `mod` and `extension`; each handed shape is pinned to its number by a test.
+  handover), `mod` and `extension`; each handed shape is pinned to its number by a test. The
+  handover rose to 8 with main's frozen authorship policy: the record carries it and the
+  handover's notices carry the record, so an older image, which has no field for it and would drop
+  a true value on its next record update, cannot adopt, and the switch names the restart the room
+  needs rather than silently forgetting an opt-in ([roles.md](../roles.md#main-implementation)).
 - **Asking.** Every wrapper, space host and main's host looks at the mark every 250 ms and,
   while it is asking, joins on the socket — again at the next look when nothing listened yet —
   answering `ready`, `busy <why>` or `cannot <why>`. One `cannot` ends the attempt at once,
@@ -432,6 +436,8 @@ Tests:
 - `internal/host/switching/join_test.go` `TestAParkedImageFollowsTheRecordWithoutItsLeader`
 - `internal/host/switching/join_test.go` `TestAParticipantJoinsALeaderThatServesLate`
 - `internal/host/handover_shape_test.go` `TestTheHandoverContractChangesWithItsShape`
+- `internal/host/policy_snapshot_test.go` `TestAnAdoptionTakesTheRunsFrozenPolicyNotTheProjectFile`
+- `internal/host/policy_snapshot_test.go` `TestAnOlderImageCannotAdoptAPolicyBearingRun`
 - `internal/host/handover_mirror_test.go` `TestAFaceReconnectsToTheModelHandedOver`
 - `internal/host/handover_mirror_test.go` `TestMainsWrapperHandsOverLikeAWorkers`
 - `internal/host/notices_handover_test.go` `TestMainsNoticesGoOverWithItsRun`

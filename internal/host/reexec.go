@@ -34,8 +34,14 @@ import (
 const HandoverEnv = "REWAKE_HANDOVER"
 
 // HandoverVersion is the version of Handover; an image adopts only its own,
-// and a switch of the room admits only a build that takes the same.
-const HandoverVersion = 7
+// and a switch of the room admits only a build that takes the same. It rose
+// to 8 when the session record gained main's frozen authorship policy: an
+// older image has no field for it, and its record update at prepare would drop
+// a true value, so such an image must refuse the run instead. The policy is
+// not a field of its own here: the record carries it, and the adoption reads it
+// back from there, which also changes the handover's shape through the record
+// its notices carry.
+const HandoverVersion = 8
 
 // reexecMark is the file of the run's directory where the outcome of the last
 // request to re-execute is written, for whoever sent the signal.
@@ -111,7 +117,8 @@ func ReadHandover(spec string) (*Handover, error) {
 }
 
 // Request is the launch the handover continues; the caller adds its own
-// callbacks.
+// callbacks. Main's authorship policy is not in the handover: Run.claim reads
+// it back from this run's record, the one snapshot a launch wrote.
 func (h *Handover) Request(harness adapter.Harness) Request {
 	return Request{
 		Harness: harness, Dir: h.Dir, Name: h.Name, Args: h.Args, Intro: h.Intro, Command: h.Command,

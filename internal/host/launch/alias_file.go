@@ -105,6 +105,10 @@ func (s *Set) decode(raw []byte, description, path string) (*aliasFile, map[stri
 type aliasFile struct {
 	Alias map[string]Alias `toml:"alias"`
 	Pi    workmode.Config  `toml:"pi"`
+	// Main is the project's authorship policy (docs/roles.md). A pointer
+	// keeps the section distinguishable from an absent one, and [main]
+	// itself from no section at all: the user file may hold neither.
+	Main *mainSection `toml:"main"`
 	// Aliases turns templates of the merged catalog off for a project.
 	Aliases struct {
 		Off []string `toml:"off"`
@@ -117,6 +121,12 @@ type aliasFile struct {
 	Skills struct {
 		Never []string `toml:"never"`
 	} `toml:"skills"`
+}
+
+// mainSection is [main]: whether main may implement product changes itself.
+// It is project-only; the program and credentials of main are the person's.
+type mainSection struct {
+	Implements *bool `toml:"implements"`
 }
 
 // read parses one file into the set. user says whether this is the file in the
@@ -155,6 +165,18 @@ func (s *Set) read(path, description string, user bool) {
 	if err := file.Pi.Check(); err != nil {
 		s.unreadable(fmt.Sprintf("%s at %s: [pi]: %v", description, path, err))
 		return
+	}
+	if file.Main != nil {
+		// Project-only: the setting chooses whether main writes product code,
+		// which is the workflow of one project rather than of every room the
+		// person starts. A user-global opt-in would change unrelated rooms.
+		if user {
+			s.unreadable(fmt.Sprintf("%s at %s has [main]; it belongs in a project's .rewake/aliases.toml, since whether main implements is one project's policy", description, path))
+			return
+		}
+		if file.Main.Implements != nil {
+			s.mainPolicy = MainPolicy{Implements: *file.Main.Implements, Explicit: true}
+		}
 	}
 	for name, value := range file.Alias {
 		if err := value.Pi.Check(); err != nil {
@@ -212,7 +234,7 @@ var removedFields = map[string]string{
 // unknownFields names every field the file has that an alias does not, the
 // removed ones with what took their place.
 func unknownFields(description, path string, fields []toml.DecodeError) string {
-	var removed, unknown []string
+	var removed, unknown, main []string
 	for _, field := range fields {
 		key := field.Key()
 		dotted := strings.Join(key, ".")
@@ -222,9 +244,12 @@ func unknownFields(description, path string, fields []toml.DecodeError) string {
 		if len(key) > 2 && key[0] == "alias" {
 			why, gone = removedFields[strings.Join(key[2:], ".")]
 		}
-		if gone {
+		switch {
+		case gone:
 			removed = append(removed, fmt.Sprintf("%s (line %d): %s", dotted, line, why))
-		} else {
+		case len(key) > 1 && key[0] == "main":
+			main = append(main, fmt.Sprintf("%s (line %d)", dotted, line))
+		default:
 			unknown = append(unknown, fmt.Sprintf("%s (line %d)", dotted, line))
 		}
 	}
@@ -234,6 +259,9 @@ func unknownFields(description, path string, fields []toml.DecodeError) string {
 	}
 	if len(unknown) > 0 {
 		parts = append(parts, "fields an alias does not have: "+strings.Join(unknown, ", "))
+	}
+	if len(main) > 0 {
+		parts = append(parts, "fields [main] does not have, which takes implements = true or false: "+strings.Join(main, ", "))
 	}
 	return fmt.Sprintf("%s at %s has %s; rewrite it as rewake workers --help shows", description, path, strings.Join(parts, "; and "))
 }

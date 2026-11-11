@@ -235,6 +235,10 @@ compatibility scan or fallback: an old record must not appear in a new room by a
   the one it started in), which the room view gives the pane's top row as `path`.
 - `pidNamespace` — the pid namespace the two pids belong to: a reader in another one cannot judge
   whether they are alive, and does not try.
+- `mainImplements` — optional, main only: the project's `[main] implements` resolved when it
+  launched, frozen for the run. Absent or false means main delegates, which is also how every
+  older record and every worker reads; editing the project file never changes it
+  ([roles.md](roles.md#main-implementation)).
 
 A session is alive as long as both the servicing process and the harness are alive. A view never
 deletes a record: it reports a dead record as no session and leaves it
@@ -253,7 +257,10 @@ removed and the attempt retried; for a live one, the name stays taken. Updating 
 ### Roles and names
 
 A session's role — what it is told, whether its turns are reported — and how its name is built
-from the role and the harness are in [roles.md](roles.md). A session's one [runtime work mode](work-modes.md)
+from the role and the harness are in [roles.md](roles.md). Main's authorship policy is one
+further, project-level fact the record carries: it is not a role, changes no reporting or
+permission, and only rewrites the delegation rule in main's playbook and the qualification of each
+mode section. A session's one [runtime work mode](work-modes.md)
 is separate: Go supplies the mode's complete section and optional selections, the harness applies
 them, and the observed mode travels through telemetry/mirror and handover, never the role or a
 worker type. There is no worker type any more.

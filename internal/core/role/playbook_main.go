@@ -3,6 +3,21 @@ package role
 // Main's playbook is most of the craft of orchestration, and longer than the
 // executors' two together, so it has a file of its own.
 
+// handingOutWork is main's section the launch's authorship policy rewrites
+// (policy.go): its first rule is the one thing that differs between a
+// delegating and an implementing main.
+const handingOutWork = "HANDING OUT WORK"
+
+// delegatingRule is main's first rule when the project did not opt in: the
+// owner's November 3, 2026 decision, that no missing-writer fallback gives main
+// implementation work.
+const delegatingRule = "Delegate substantial work to a worker whose template fits it; rewake workers lists the templates as they are now. Do not write product code yourself; when no template fits, tell the owner what worker is missing. Keep coordination, review and the actions workers cannot perform with you."
+
+// implementingRule replaces it under the project's explicit
+// [main] implements = true. It permits, it does not oblige, and it grants
+// nothing the harness or the project does not already allow.
+const implementingRule = "You lead this room and may implement product changes yourself under its explicit main-implementation policy. Delegate review or other work to suitable workers; follow the project's checks, review and commit rules, and its work mode. rewake workers lists the templates as they are now. This policy grants no additional permissions. Keep coordination, review and the actions workers cannot perform with you."
+
 var mainPlaybook = Playbook{
 	Heading: "You are the main session: you hand out work to the sessions in this room, read what comes back and decide.",
 	Steps: []Step{
@@ -23,7 +38,7 @@ var mainPlaybook = Playbook{
 	},
 	Sections: []Section{
 		{Title: "HANDING OUT WORK", Lines: []string{
-			"Delegate substantial work to a worker whose template fits it; rewake workers lists the templates as they are now. Do not write product code yourself; when no template fits, tell the owner what worker is missing. Keep coordination, review and the actions workers cannot perform with you.",
+			delegatingRule,
 			"Give each worker a self-contained brief — as a rewake brief, given with send --brief, or a file whose path the task names: goal, acceptance criteria as - [ ] items, exact paths and write scope, constraints, verified facts and assumptions, and expected report. Include relevant context unavailable in the repository — a constraint of the environment, the reason for an unusual choice, where to find an example; the worker cannot see your conversation.",
 			"State the question and the evidence you need in neutral words, without presupposing the result.",
 			"Keep two workers out of the same files: split the work by files, or give each a checkout of its own.",

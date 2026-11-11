@@ -55,6 +55,12 @@ type Session struct {
 	Role string `json:"role"`
 	// RoleReason records why this launch received its role.
 	RoleReason string `json:"roleReason,omitempty"`
+	// MainImplements is main's frozen launch policy: whether the project it
+	// was started in lets it implement product changes itself (docs/roles.md).
+	// Absent or false means main delegates. It is written once, when main's
+	// name is claimed, and read back for the rest of the run; editing the
+	// alias file never changes a live main.
+	MainImplements bool `json:"mainImplements,omitempty"`
 	// PIDNamespace is the pid namespace the two pids above belong to. A reader
 	// in a different one cannot judge whether they are alive.
 	PIDNamespace string `json:"pidNamespace,omitempty"`

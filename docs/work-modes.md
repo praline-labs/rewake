@@ -12,7 +12,9 @@ session reads: a switch replaces it, and nothing is stacked beside it.
 The owner's decision, November 3, 2026: review and advisor are prompt-only read-only guidance.
 There is no tool-call guard, command-safety parser, active-tool restriction or filesystem sandbox,
 and no plan mode anywhere. A mode is not a security boundary. Project instructions and the brief
-still take precedence, and main remains the orchestrator in every mode.
+still take precedence, and main stays within the authorship policy its run froze: a delegating
+main implements nothing in any mode, while an opted-in main may implement only where the task,
+the mode and the project's rules allow it ([roles.md](roles.md#main-implementation)).
 
 ## The built-ins
 
@@ -135,7 +137,10 @@ unsets them.
 
 ## Model, thinking and switching
 
-Initial model/effort precedence is explicit harness flags, the starting mode's fields, then
+`rewake workers` shows the starting mode's configured model and effort as `start_model` and
+`start_effort`, saying they override the template's launch settings; that is configuration, not a
+dry run of the effective launch, since typed flags and later environment defaults may still
+differ. Initial model/effort precedence is explicit harness flags, the starting mode's fields, then
 existing launch defaults. Explicit model scope and a model's thinking suffix count as explicit
 selections. Later switches apply only the destination mode's fields that are set; an unset field
 preserves the current selection, subject to native model capability clamping. Exact registry
@@ -189,7 +194,9 @@ state.
 Native status uses `ctx.ui.setStatus`. The face's input rule shows the observed mode at its left,
 `◆ build`, with no cycle hint, since the person chooses it at launch; model and thinking remain on
 the strip. The explicit `workmode` wire input is separate from permission mode and retained for
-compatibility, but no key sends it. Keys never reach the pty. Ctrl+T hides/shows the face's
+compatibility, but no key sends it. Every Go-planned section — the initial one, a reconnect's
+hello and each switch — carries the same authorship policy the run froze, so an opted-in main is
+not told to delegate by a later plan. Keys never reach the pty. Ctrl+T hides/shows the face's
 thinking rows without changing thinking effort. Only verified main readers see telemetry:
 `rewake list` has a separate Mode cell and optional JSON `mode`. Snapshot and room-view rows
 carry the same observed value. Wrapper handover preserves the live current mode, not the
@@ -215,8 +222,9 @@ who proved to be main's shell and only when some session reports one; `--json` c
 ## Compatibility
 
 - pi extension wire: **4**; pi adapter handover: **4**.
-- Host/wrapper handover: **7** (the runtime work mode and the whole resolved catalogue travel
-  with their texts in place of the worker type).
+- Host/wrapper handover: **8** (main's authorship policy is in the session record, and the
+  handover's notices carry the record; an older image has no field for it and would drop it on
+  its next record update, so it cannot adopt and the room needs the ordinary restart).
 - Space host handover: **2** (the worker's mode and its text in the spec).
 - Mirror wire: **3**, `workMode` a mode name rather than a three-name enum.
 - Mirror's handed model: **2**, its shape unchanged by this change.

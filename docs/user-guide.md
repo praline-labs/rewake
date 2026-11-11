@@ -124,8 +124,14 @@ A project can carry its own catalogue beside its code, read from the directory m
 - **`[aliases] off = ["helper"]`** in that file hides those of your templates in this project
   alone. A name your catalogue no longer has is already off and is ignored, so a project that
   still lists a template you deleted later launches as before; the notice asks you to drop the
-  name. With no launchable `write` template left, main remains the orchestrator and asks
-  for a writer template; `rewake workers` says so.
+  name. With no launchable `write` template left, main still delegates unless the project says
+  otherwise with the next setting; `rewake workers` states both facts separately.
+- **`[main] implements = true`**, in that file only, lets main implement product changes itself
+  in this project, subject to the task, its work mode and the project's rules. Missing or false
+  is the default and keeps main delegating; there is no user-global form, because whether main
+  writes code is one project's workflow. The value is read when main starts and frozen for that
+  run, so editing the file changes the next main, not the running one
+  ([roles.md](roles.md#main-implementation)).
 - **`.rewake/modes/<mode>.md`** — a runtime work mode of the project's own, which also replaces a
   built-in's text of the same name; yours go in `~/.config/rewake/modes/`. A mode file opens with
   a TOML front matter holding one `description` line:
@@ -136,6 +142,15 @@ A project can carry its own catalogue beside its code, read from the directory m
   +++
   Read the project's documentation map first. Change only the documents the brief names.
   ```
+
+**Templates stay on your machine; the project shares the rest.** A template is a whole recipe —
+harness, role, command, launch settings, and the model and effort its modes select — so the
+project carries its modes, its `[aliases] off`, its `[main] implements` and its brief folder, and
+its documentation names the local templates it expects. Your own file holds the complete
+templates, with role and command, and model IDs only from your machine's own pi registry; a
+project definition of the same name replaces yours whole, so a shared recipe with a machine-local
+model would need an overlay that rewake does not have. [launch-defaults.md](launch-defaults.md#keeping-templates-on-the-machine)
+has the two examples. Nothing is migrated or rewritten for you.
 
 Older settings of the separate worker type do not block a launch: a `type = "..."` in a template,
 a `[types]` section and a `types/` directory are skipped, and every command that reads the

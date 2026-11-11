@@ -9,7 +9,8 @@ Means: the sessions started from one launch directory: one main and the workers 
 Where: the room's state lives under `v2/rooms/<room>` of the state directory; the owner says «комната» for that folder: письма, брифы, кто жив.
 
 ## main
-Means: the orchestrator session of a room: it hands out tasks, reads the reports and decides; it writes no product code itself. `rewake claude` or `rewake pi` started by a person always starts a main.
+Means: the orchestrator session of a room: it hands out tasks, reads the reports and decides; by default it writes no product code itself. A project may set `[main] implements = true` in its `.rewake/aliases.toml`, and main may then implement product changes itself under its task, its work mode and the project's rules, frozen when it starts and granting no permission. `rewake claude` or `rewake pi` started by a person always starts a main.
+Where: [docs/roles.md](docs/roles.md#main-implementation).
 
 ## Worker
 Variants: workers
