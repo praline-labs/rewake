@@ -296,19 +296,12 @@ export class FaceHost {
     this.send({ kind: "escape", id });
   }
 
-  // workmode is Shift+Tab; a refusal shows as a prompt's does.
-  workmode() {
-    if (!this.worker) return;
-    const id = `m${++ids}`;
-    this.keep(id, { text: "", at: Date.now(), verb: "not changed" });
-    this.send({ kind: "workmode", id });
-  }
-
   toggleThinking() {
     this.send({ kind: "thinkingVisible" });
   }
 
-  // thinking is Alt+T, separate from the runtime work mode.
+  // thinking is Alt+T or Shift+Tab, separate from the retained workmode
+  // wire input no key sends now.
   thinking() {
     if (!this.worker) return;
     const id = `t${++ids}`;

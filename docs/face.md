@@ -44,8 +44,8 @@ the thinking **level** the face's Alt+T moves — `off`, `minimal`, `low`, `medi
 `xhigh` or `max`, pi's own words — absent until the session says it. Pi's extension says it at
 each change of level or model; the Claude Code mod says none. Pi's runtime **workMode** is a
 mode's name from the session's catalogue, built-in or the person's or the project's own, never a
-permission mode. It occupies the input's left rule and Shift+Tab cycles it; thinking stays on the
-strip. All are observed native values, not inferred from a role or a launch default
+permission mode. It occupies the input's left rule and is chosen at launch, not by a key; thinking
+stays on the strip. All are observed native values, not inferred from a role or a launch default
 ([work-modes.md](work-modes.md)).
 
 Every bound counts serialized bytes: an item is at most 256 KiB, a text past it keeping its head and
@@ -134,12 +134,14 @@ none, as Claude Code tells a mod of no retry
 An older face ignores the field; a face of this build with an older wrapper draws no retry.
 Nothing else changes; the schema's `version` stays, one build per room being its guard. A face
 sends `{id, kind: "prompt", text}`, `{id, kind: "interrupt", text: ""}` for the person's Esc, or
-`{id, kind: "thinking", text: ""}` for Alt+T or `{id, kind: "workmode", text: ""}` for Shift+Tab,
-and is answered `answer{id, ok, detail?}`. The mirror wire is version 3 and its model handover
-version 2, unchanged in shape; `workMode` carries the observed mode's name, built-in or the
-person's or the project's own ([work-modes.md](work-modes.md)). Hello's `inputs` lists the kinds the session takes (pi's all four,
-Claude Code's the prompt alone), and any other input is refused. A face whose queue passes 4096 lines or 4 MiB past its snapshot is cut off rather than
-given a gap, and reconnects for a fresh snapshot.
+`{id, kind: "thinking", text: ""}` for Alt+T or Shift+Tab; `{id, kind: "workmode", text: ""}` stays
+on the wire for a runtime stance cycle no key sends now. Each is answered
+`answer{id, ok, detail?}`. The mirror wire is version 3 and its model handover version 2,
+unchanged in shape; `workMode` carries the observed mode's name, built-in or the person's or the
+project's own ([work-modes.md](work-modes.md)). Hello's `inputs` lists the kinds the session
+takes (pi's all four, Claude Code's the prompt alone), and any other input is refused. A face
+whose queue passes 4096 lines or 4 MiB past its snapshot is cut off rather than given a gap, and
+reconnects for a fresh snapshot.
 
 **A switch of the room's build** (November 2, 2026) hands the model over in memory: at up to 4 MiB
 it does not fit the exec's environment, so the wrapper writes it (`Model.Hand`,
@@ -195,11 +197,10 @@ rewake's face the keys go to that input, never to the pty. Esc drops a selection
 the turn works, it interrupts it where the session takes an interrupt, whatever the input holds, as
 pi's own Esc stops its run: the face sends `interrupt` and the harness stops as on its own Esc, a
 refusal said under the input (`not interrupted: …`). Esc while idle, or to a session that takes no
-interrupt (a Claude Code dev worker), does nothing. Shift+Tab sends the explicit `workmode`
-input, cycling review -> advisor -> build -> process -> the custom names -> review, only idle;
-busy/model-selection failures are said
-under the input. Alt+T sends `thinking`: the wrapper supplies the last native model's supported
-levels, and the extension sets the next after the current one. An unsupported model refuses
+interrupt (a Claude Code dev worker), does nothing. Shift+Tab and Alt+T send `thinking`, not the
+work mode: the wrapper supplies the last native model's supported levels, and the extension sets
+the next after the current one. The runtime mode is a launch choice and no key cycles it; the
+`workmode` wire input remains for compatibility. An unsupported model refuses
 visibly. Ctrl+T hides/shows thinking rows, without changing effort. These keys never reach the
 pty, nor change permissions ([work-modes.md](work-modes.md)). `rewake screen`
 takes the window as the person sees it: the shadow window draws the face too.
@@ -340,10 +341,9 @@ what is under it, `fold.ts` runs of calls, `markdown.ts` and
   `⏵⏵ accept edits`, `⏵⏵ bypass permissions`, `⏵⏵ don't ask`, in native's colour for it (auto's
   amber, plan's teal, accept edits' violet, the other two red) and nothing for the default mode or
   one not yet said. Pi shows its observed runtime work mode instead: the mode's name, `◆ review`,
-  `◆ advisor`, `◆ build`, `◆ process` or a person's or project's own, with `(shift+tab to cycle)`
-  when it fits. This is the mirror's `workMode`, not
-  `PermissionMode`; the face hands both separately to the shell. Model/thinking stay on the
-  strip. Before a mode is observed a reported level can be a fallback, with an Alt+T hint.
+  `◆ advisor`, `◆ build`, `◆ process` or a person's or project's own, alone, with no cycle
+  hint. This is the mirror's `workMode`, not `PermissionMode`; the face hands both separately to
+  the shell. Model/thinking stay on the strip. Before a mode is observed a reported level can be a fallback, with an Alt+T hint.
   At its right only the run's room work, the room view's `work`
   (`internal/core/work`): its open briefs with their ticks, `brief 57 3/6`, and the reports it waits
   on, `⧗ 3`, the same text Claude Code's hint line ends with ([claude.md](claude.md#the-band));

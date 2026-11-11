@@ -43,7 +43,7 @@ The nearest of one name wins:
 3. rewake's built-ins.
 
 A nearer definition of a built-in's name replaces its text and keeps its built-in place in the
-cycle. A file is Markdown opening with a TOML front matter between two `+++` lines:
+catalogue's order. A file is Markdown opening with a TOML front matter between two `+++` lines:
 
 ```markdown
 +++
@@ -58,8 +58,8 @@ refuses the catalogue, naming it, as an alias file does: a mode silently absent 
 worker other than main asked for. Model and effort are **not** in the Markdown; they are alias
 TOML, below.
 
-`rewake workers` lists the modes in cycle order after the templates, each with its source, path and
-description; `--json` carries them as `modes`.
+`rewake workers` lists the modes in catalogue order after the templates, each with its source, path
+and description; `--json` carries them as `modes`.
 
 ## The old worker types
 
@@ -118,18 +118,24 @@ unsets them.
 
 Initial model/effort precedence is explicit harness flags, the starting mode's fields, then
 existing launch defaults. Explicit model scope and a model's thinking suffix count as explicit
-selections. Later cycles apply only the destination mode's fields that are set; an unset field
+selections. Later switches apply only the destination mode's fields that are set; an unset field
 preserves the current selection, subject to native model capability clamping. Exact registry
 lookup or native model-selection failure visibly refuses the switch and restores the prior usable
 model/effort before admitting work; if restoration fails, the session ends rather than running a
 mixed state. An invalid or busy initial selection ends the launch instead of silently discarding
 its instructions.
 
-Shift+Tab cycles, only idle and not compacting, in this order: review, advisor, build, process,
-then the custom-only names sorted by name, then back to review. An overridden built-in keeps its
-built-in position. Busy requests are refused, not queued for a later turn. Alt+T cycles native
-thinking; Ctrl+T toggles thinking visibility. There is no model-callable mode switch and no
-reviewer-only allowlist.
+The mode is a launch decision: `--work-mode`, or the template's `start_mode`, never a key of the
+person's. The runtime switch machinery stays for the wire (`mode-cycle`, and the face's
+`workmode` input) and is kept compatible, but no key reaches it. A switch applies only idle and
+not compacting, in catalogue order: review, advisor, build, process, then the custom-only names
+sorted by name, then back to review. An overridden built-in keeps its built-in position. Busy
+requests are refused, not queued for a later turn.
+
+Shift+Tab is pi's own thinking key and stays so in rewake: natively it follows
+`app.thinking.cycle`, and the face sends its thinking input, which moves the level as Alt+T does.
+Alt+T cycles native thinking; Ctrl+T toggles thinking visibility. There is no model-callable
+mode switch and no reviewer-only allowlist.
 
 Turn admission starts closed until initial instructions and native selections commit. Each mode or
 thinking application closes it before its first native mutation, through commit or restoration.
@@ -138,11 +144,12 @@ receive the existing pending receipt for the host to retry. Remote compact/inter
 refuse with `busy` while a selection is changing; thinking cycling need not wait for an idle turn,
 but refuses while selection or compaction is in progress.
 
-Native pi uses a documented `CustomEditor` subclass: only focused editor Shift+Tab/Alt+T are
-intercepted, with all other editing, paste and rendering delegated to native pi. This bare-pi
-integration does not chain a replacement editor installed by another extension; the last installed
-factory wins. It does not change personal keybinding/settings files, install a global raw input
-hook or draw a parallel editor. Source evidence is dated in
+Native pi uses a documented `CustomEditor` subclass: only focused editor Alt+T is intercepted,
+with all other editing, paste and rendering delegated to native pi; Shift+Tab is left to pi's own
+`app.thinking.cycle`. This bare-pi integration does not chain a replacement editor installed by
+another extension; the last installed factory wins. It does not change personal
+keybinding/settings files, install a global raw input hook or draw a parallel editor. Source
+evidence is dated in
 [research-pi.md](research-pi.md#work-mode-native-apis-november-3-2026-140).
 
 ## The native boundary
@@ -154,18 +161,21 @@ integration; there is no native mode emulation and no loaded plan-mode example. 
 the catalogue, precedence, prompt text, mode destinations, refusal/status wording and state
 projection. TypeScript resolves and calls native model/thinking APIs, injects the supplied
 section, publishes observed values and renders Go's status. Its `Modes` module owns
-initialization, selection/restoration and admission privately; callers use initialization, cycle,
-thinking, face prompt, wake and selection-side control operations, plus the observed mode name.
+initialization, selection/restoration and admission privately; callers use initialization, the
+retained wire cycle, thinking, face prompt, wake and selection-side control operations, plus the
+observed mode name.
 A successful native application publishes `workMode`; planning a switch does not change observed
 state.
 
-Native status uses `ctx.ui.setStatus`. The face's input rule shows the mode at its left; model and
-thinking remain on the strip. Its explicit `workmode` input is separate from permission mode, and
-keys never reach the pty. Ctrl+T hides/shows the face's thinking rows without changing thinking
-effort. Only verified main readers see telemetry: `rewake list` has a separate Mode cell and
-optional JSON `mode`. Snapshot and room-view rows carry the same observed value. Wrapper handover
-preserves the live current mode, not the configured start value; a reconnect keeps an already
-applied mode, and a new extension instance receives the observed mode's instructions in its hello.
+Native status uses `ctx.ui.setStatus`. The face's input rule shows the observed mode at its left,
+`◆ build`, with no cycle hint, since the person chooses it at launch; model and thinking remain on
+the strip. The explicit `workmode` wire input is separate from permission mode and retained for
+compatibility, but no key sends it. Keys never reach the pty. Ctrl+T hides/shows the face's
+thinking rows without changing thinking effort. Only verified main readers see telemetry:
+`rewake list` has a separate Mode cell and optional JSON `mode`. Snapshot and room-view rows
+carry the same observed value. Wrapper handover preserves the live current mode, not the
+configured start value; a reconnect keeps an already applied mode, and a new extension instance
+receives the observed mode's instructions in its hello.
 A harness that cannot switch at runtime reads the mode's section in its launch briefing instead;
 pi's launch briefing never carries one, so a switch cannot leave two contradictory sections.
 

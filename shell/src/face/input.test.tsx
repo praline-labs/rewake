@@ -5,7 +5,8 @@ import { expect, test } from "bun:test";
 import { testRender } from "@opentui/solid";
 import { createSignal } from "solid-js";
 import { themeOf } from "../theme.ts";
-import { draftOf, inputOf, inputRowsOf, setDraft } from "./faces.ts";
+import { draftOf, endFaces, faceOf, inputOf, inputRowsOf, setDraft, takeMirrors } from "./faces.ts";
+import { cleanup, mirror, scratch } from "./hostkit.ts";
 import { FaceInput } from "./input.tsx";
 import { cleaned, moreRule, Pastes, rowsFor } from "./paste.ts";
 import { ruleOf, ruleParts, withMore } from "./rule.ts";
@@ -175,6 +176,59 @@ test("Enter sends the text, and pi's new-line keys start a line", async () => {
   expect(draftOf("keys")).toBe("");
   expect(inputRowsOf("keys")).toBe(1);
   renderer.destroy();
+});
+
+// The person's Shift+Tab is pi's thinking key, in rewake's face as
+// natively; it is not a work-mode cycle, and a mode can only be chosen at
+// launch. Alt+T still moves the same level.
+test("Shift+Tab moves the thinking level, not the work mode, and never reaches the pty", async () => {
+  const wrapper = mirror(scratch(), {
+    begin: { level: "high" },
+    inputs: ["prompt", "thinking", "workmode"],
+  });
+  takeMirrors([["thinking", wrapper.path]]);
+  const heard = (kind: string) => wrapper.heard.filter((h) => h.kind === kind);
+  const wait = async (ok: () => boolean) => {
+    const end = Date.now() + 3000;
+    while (!ok() && Date.now() < end) await Bun.sleep(10);
+    expect(ok()).toBe(true);
+  };
+  try {
+    await wait(() => faceOf("thinking")?.link === "live");
+    const { renderOnce, mockInput, renderer } = await testRender(
+      () => (
+        <box width={40} height={10}>
+          <FaceInput
+            id="thinking"
+            width={40}
+            height={30}
+            theme={theme}
+            live={true}
+            active={() => true}
+            page={() => 10}
+          />
+        </box>
+      ),
+      { width: 40, height: 10, kittyKeyboard: true },
+    );
+    await renderOnce();
+    mockInput.pressTab({ shift: true });
+    await renderOnce();
+    await wait(() => heard("thinking").length === 1);
+    expect(heard("thinking")[0]?.text).toBe("");
+    expect(heard("workmode")).toEqual([]);
+    mockInput.pressKey("t", { meta: true });
+    await renderOnce();
+    await wait(() => heard("thinking").length === 2);
+    expect(heard("workmode")).toEqual([]);
+    // The keys stayed in the face: no draft was typed and the pty saw nothing.
+    expect(draftOf("thinking")).toBe("");
+    renderer.destroy();
+  } finally {
+    endFaces();
+    takeMirrors([]);
+    cleanup();
+  }
 });
 
 // A bracketed paste arrives whole, its newlines and blank lines kept; one

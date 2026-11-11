@@ -528,7 +528,7 @@ has two rows less.
 ~/.rewake2-worktrees/rewake-44a66b/wt-5928f6 · ⎇ brief60-pane-facts   write-claude   the top row
   … the session's own screen, native or drawn by rewake's face …
   ── ⏵⏵ auto mode ─────────────── brief 57 3/6 ─                             the face's input rule
-  ── ◆ build (shift+tab to cycle) ─ brief 57 3/6 ─                           the same for pi
+  ── ◆ build ─────────────────────── brief 57 3/6 ─                           the same for pi
   ⏵⏵ auto mode on (shift+tab to cycle) · brief 57 3/6                         or Claude Code's hint line
 <model> low · 90% 42m                                                  230k/1M   the strip
 ```
@@ -565,7 +565,8 @@ the strip had dropped the model and the limits and kept the context and the cach
 kept its brief, and Claude Code's hint line was cut to `· bri`, our tail first. Seen live on October 31,
 2026 (brief 62, pi 1.4.0, a private room): main's top row ended `main-pi` at its right edge and the
 worker's `p1-pi`, and the pi worker's rule read `── ◆ minimal (shift+tab to cycle) ───` with no name
-([research-pi.md](research-pi.md#the-face-of-a-pi-worker)).
+([research-pi.md](research-pi.md#the-face-of-a-pi-worker)). Since November 11, 2026 (brief 114) the
+rule shows the observed mode alone, with no key: the mode is chosen at launch.
 
 ## The strip
 

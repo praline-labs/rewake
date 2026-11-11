@@ -18,9 +18,10 @@ test("the input's rule carries the run's work, cut to a narrow pane", () => {
 });
 
 // A Claude Code session says its mode, as the terminal program names it under
-// its input; a pi session the thinking level its shift+tab moves, in pi's
-// words with the key (the owner, October 31, 2026). A narrow pane drops the
-// hint, then the mode or the level, then cuts the work.
+// its input; a pi session its observed work mode, chosen at launch and shown
+// with no cycle key, or the thinking level shift+tab moves, in pi's words
+// with its key (the owner, October 31, 2026). A narrow pane drops the hint,
+// then the mode or the level, then cuts the work.
 test("the rule's left is the session's mode, else its thinking level, from one input", () => {
   const cases: [Left, number, string | undefined, string][] = [
     [{ mode: "auto" }, 30, "⧗ 3", `── ⏵⏵ auto mode ${"─".repeat(8)} ⧗ 3 ─`],
@@ -53,9 +54,10 @@ test("the rule's left is the session's mode, else its thinking level, from one i
     text: "⏸ plan mode",
     mode: "plan",
   });
-  expect(ruleOf(80, "brief 1 0/2", { workMode: "build", level: "high" })).toContain(
-    "◆ build (shift+tab to cycle)",
-  );
+  const mode = ruleOf(80, "brief 1 0/2", { workMode: "build", level: "high" });
+  expect(mode).toContain("◆ build");
+  expect(mode).not.toContain("shift+tab");
+  expect(mode).not.toContain("cycle");
   expect(ruleOf(80, undefined, { workMode: "review", level: "high" })).not.toContain("◆ high");
   for (const said of [
     { mode: "bypass" },

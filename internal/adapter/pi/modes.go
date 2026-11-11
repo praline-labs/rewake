@@ -24,7 +24,7 @@ type modePlan struct {
 // session's requests carry: a switch replaces it, never adds another.
 func planMode(mode workmode.Mode, fields workmode.Fields, main bool) *modePlan {
 	p := &modePlan{
-		Name: mode.Name, Instructions: workmode.Instructions(mode, main), Status: "mode: " + mode.Name + " (shift+tab)", Effort: fields.Effort,
+		Name: mode.Name, Instructions: workmode.Instructions(mode, main), Status: "mode: " + mode.Name, Effort: fields.Effort,
 		Busy: "work mode was not changed: the session is busy", Failed: "work mode was not changed: the configured model could not be selected",
 	}
 	if fields.Model != "" {

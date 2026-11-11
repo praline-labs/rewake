@@ -5,8 +5,9 @@
 // `\`; it grows with its text to 30% of the pane, at least 5 rows, then
 // scrolls inside with `↑ N more` and `↓ N more` on its rules; a paste comes
 // whole with its newlines, a large one as pi's marker. Its keys never reach a
-// pty: the pane's widget is blurred while the face is shown. Alt+T moves
-// the session's thinking level on where it takes that, as pi's own key does.
+// pty: the pane's widget is blurred while the face is shown. Shift+Tab and
+// Alt+T move the session's thinking level on where it takes that, as pi's
+// own keys do.
 
 import type {
   KeyBinding,
@@ -33,7 +34,6 @@ import {
   toggleThinkingFace,
   unfoldFace,
   unselectFace,
-  workmodeFace,
 } from "./faces.ts";
 import { cleaned, type Paste, pastesOf, rowsFor } from "./paste.ts";
 
@@ -246,10 +246,11 @@ export function FaceInput(props: {
             return;
           }
           if (key.name === "escape") escapeFace(props.id);
-          // Mode and thinking keys never reach the underlying pty.
+          // Thinking keys never reach the underlying pty; Shift+Tab is
+          // thinking, as pi's own key, not a work-mode cycle.
           if (key.name === "tab" && key.shift) {
             key.preventDefault();
-            workmodeFace(props.id);
+            thinkingFace(props.id);
             return;
           }
           if (key.name === "t" && key.meta && !key.ctrl) {

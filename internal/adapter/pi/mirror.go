@@ -47,8 +47,9 @@ func (r *run) mirrorWorkMode(mode string) {
 
 // input carries an input of rewake's face to pi: a prompt typed there as
 // the person's, which the face shows once pi hears it as its input;
-// the person's Esc; Shift+Tab for runtime mode; or Alt+T for thinking,
-// through the levels read here off the last sample's model.
+// the person's Esc; Alt+T or Shift+Tab for thinking, through the levels read
+// here off the last sample's model; or the retained workmode input, which no
+// key sends now, for a runtime mode cycle.
 func (r *run) input(ctx context.Context, input mirror.Input) error {
 	l, thread := r.connection()
 	if l == nil {

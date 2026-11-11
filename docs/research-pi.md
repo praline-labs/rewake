@@ -241,7 +241,7 @@ harness pid and rechecks its process start time before accepting the first frame
 | Extension to host | `tool-result` | `tool`, `ran`: the command's raw end, `exitCode`, `stdout`, `stderr`, `killed`, `stdoutCut` past 1 MiB, or a start's `error`; answer the result's `text` and `isError` (November 3, 2026) |
 | Extension to host | `events` | `thread`, `events`: a batch of pi's own events, raw, with `part` and `lost` lines, which the wrapper's translator makes the face's neutral events of ([below](#the-face-of-a-pi-worker)); answer `ok`, or `error` for a run the face does not draw (November 3, 2026; before it `mirror`, the neutral events made in the extension, from October 31, 2026) |
 | Extension to host | `mode-cycle`, `thinking-cycle` | current `state` and `thread`; Go answers with a destination `mode` plan or supported `levels`, or an explicit refusal. A mode plan is not an observation. |
-| Host to extension | `mode-key` | a face mode-cycle request; uses the same native bridge as focused editor Shift+Tab and answers only after application/refusal. |
+| Host to extension | `mode-key` | a face mode-cycle request, retained on the wire though no key sends it now; it uses the same native bridge the focused editor's mode key did and answers only after application/refusal. |
 | Host to extension | `prompt` | `thread`, `text`: a prompt typed in rewake's face; answer `ok` and whether it was `steered`, or `error` while compacting, for an empty text or a run not drawn (October 31, 2026) |
 | Host to extension | `interrupt` | `thread`: the person's Esc in rewake's face; the extension calls `ctx.abort()` and answers `ok`, or `error` while pi is idle or compacting or for a run not drawn; an older extension answers `unknown host operation` (October 31, 2026) |
 | Extension to host | `closing` | `thread`; sent at `session_shutdown` whose `reason` is `"quit"`, before the link closes, waited for at most one second; a main's run in rewake's shell calls `LaunchRequest.Closing` (October 24, 2026) |
@@ -904,6 +904,12 @@ native dialogs and editing. `setEditorComponent` replaces the factory, so this i
 does not chain another extension's replacement editor. Bracketed paste stays with the native
 editor, including split paste input. Shutdown removes the replacement.
 
+Read again November 11, 2026 (brief 114), from the same sources: rewake's replacement editor takes
+only Alt+T. Focused Shift+Tab is delegated, so pi's own `app.thinking.cycle` moves the thinking
+level natively, and rewake's face sends the same `thinking` input for Shift+Tab as for Alt+T. No
+key cycles a work mode; the wire's `workmode` input and `mode-key` operation stay for
+compatibility.
+
 `ctx.modelRegistry.find(provider, id)` resolves exact configured ids. The extension's
 `pi.setModel` returns false on unavailable authentication; `AgentSession.setModel` checks auth
 before replacing the model. A successful selection may choose/clamp thinking; the bridge
@@ -919,7 +925,9 @@ and a review-type template overriding start mode started build. Global start was
 without displacing review/code defaults. An explicit worker model/thinking suffix beat the
 configured build selections without changing its stance. Focused native Shift+Tab
 cycled all modes, refused during a held model response, and preserved unset selections;
-configured destinations changed model/effort. Native status, list's separate Mode column and
+configured destinations changed model/effort. (This was the behaviour until November 11, 2026,
+brief 114: native and face Shift+Tab now follow pi's thinking cycle, and the rule carries no cycle
+hint.) Native status, list's separate Mode column and
 face rule agreed with observations. Every captured loopback HTTP request carried its stance
 instructions and main's orchestrator qualification. Ctrl+L opened the native model selector;
 Shift+Tab/Alt+T there changed neither stance nor effort. Split bracketed paste did not cycle.

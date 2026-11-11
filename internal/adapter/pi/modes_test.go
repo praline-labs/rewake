@@ -23,6 +23,15 @@ func catalog(t *testing.T) []workmode.Mode {
 	})
 }
 
+// The native status names the observed mode alone: it is a launch choice, so
+// no key is claimed beside it.
+func TestTheModeStatusNamesTheModeWithoutACycleKey(t *testing.T) {
+	p := planMode(workmode.BuiltIns()[workmode.Build], workmode.Fields{}, false)
+	if p.Status != "mode: build" {
+		t.Fatalf("the status says %q", p.Status)
+	}
+}
+
 func TestStartingModePrecedesDefaultsButNotExplicitFlags(t *testing.T) {
 	c := workmode.Config{Modes: map[string]workmode.Fields{workmode.Build: {Model: "p/m", Effort: "high"}}}
 	for _, args := range [][]string{nil, {"--model", "typed", "--thinking", "low"}, {"--models", "scope:medium"}} {

@@ -92,10 +92,12 @@ export type ToFace =
   // unfold opens everything the face folds, or closes it again: the
   // person's ctrl+o, kept by the shell across a reload.
   | { kind: "unfold"; all: boolean }
-  // thinking is the person's Alt+T: the session's thinking level moves
-  // on where the session takes it, the answer coming back under its id.
+  // thinking is the person's Alt+T or Shift+Tab: the session's thinking level
+  // moves on where the session takes it, the answer coming back under its id.
   | { kind: "thinkingVisible" }
   | { kind: "thinking"; id: string }
+  // workmode is a retained wire input for a runtime stance cycle; no key
+  // sends it now.
   | { kind: "workmode"; id: string }
   | { kind: "ping"; n: number };
 

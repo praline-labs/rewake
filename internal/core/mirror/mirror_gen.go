@@ -264,9 +264,9 @@ type Input struct {
 }
 
 // InputKind is what the face may send: a prompt, typed as the person; an interrupt, the
-// person's Esc stopping the turn that works, as the harness's own Esc does; work-mode,
-// shift+tab cycling the runtime stance; thinking, Alt+T moving the session's thinking level to
-// the next, as the harness's own key does.
+// person's Esc stopping the turn that works, as the harness's own Esc does; work-mode, a
+// retained runtime stance cycle no key sends now; thinking, Alt+T or shift+tab moving the
+// session's thinking level to the next, as the harness's own keys do.
 type InputKind string
 
 // The values of InputKind.

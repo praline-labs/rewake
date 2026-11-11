@@ -11,7 +11,8 @@ import type { PermissionMode, ThinkingLevel } from "../../../face/src/mirror.gen
 
 // Left is what may stand at the rule's left, as the face heard it from the
 // session's mirror. Runtime work mode is separate from permission mode;
-// neither is inferred from role or from a template's start.
+// neither is inferred from role or from a template's start. A work mode is
+// chosen at launch, so its label carries no cycle key.
 export type Left = { mode?: PermissionMode; level?: ThinkingLevel; workMode?: string };
 
 // RulePart is a run of the rule's text, in the rule's colour unless it
@@ -37,9 +38,6 @@ export const modeNames: Partial<Record<PermissionMode, string>> = {
 // `high`, or `thinking off` (its footer, read on 1.4.0).
 export const levelName = (level: string) => `◆ ${level === "off" ? "thinking off" : level}`;
 
-// cycleHint says the key, as the terminal program says it after its mode.
-const cycleHint = " (shift+tab to cycle)";
-
 const graphemes = new Intl.Segmenter();
 const line = (n: number) => "─".repeat(Math.max(n, 0));
 const width = (text: string) => Bun.stringWidth(text);
@@ -61,10 +59,7 @@ const tail = (text?: string) => (text ? ` ${text} ─` : "");
 // lefts are what may stand at the rule's left, the widest first: the mode,
 // or the thinking level with its hint, then without.
 function lefts({ mode, level, workMode }: Left = {}): RulePart[][] {
-  if (workMode) {
-    const label = { text: `◆ ${workMode}`, workMode };
-    return [[label, { text: cycleHint }], [label]];
-  }
+  if (workMode) return [[{ text: `◆ ${workMode}`, workMode }]];
   const named = mode ? modeNames[mode] : undefined;
   if (named) return [[{ text: named, mode }]];
   if (!level) return [];

@@ -122,7 +122,6 @@ export const unselectFace = (id: string) => faces.get(id)?.host.unselect();
 export const unfoldFace = (id: string) => faces.get(id)?.host.unfold();
 export const escapeFace = (id: string) => faces.get(id)?.host.escape();
 export const thinkingFace = (id: string) => faces.get(id)?.host.thinking();
-export const workmodeFace = (id: string) => faces.get(id)?.host.workmode();
 export const toggleThinkingFace = (id: string) => faces.get(id)?.host.toggleThinking();
 export const promptFace = (id: string, text: string) => faces.get(id)?.host.prompt(text) ?? false;
 
