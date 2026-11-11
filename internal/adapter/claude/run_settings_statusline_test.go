@@ -40,10 +40,12 @@ func TestRunSettingsSetTheStatusLineOfARunWithAMod(t *testing.T) {
 
 // Main's launch gets peer-message acceptance and, with a run directory, the
 // status line in its one --settings, whatever the person's settings.json
-// names. One with --setting-sources gets both; one with its own --settings
-// keeps it and is told why main's row lacks the name. A wrapped main gets no
-// competing settings. With no run directory the status line is absent, but
-// peer-message acceptance still applies.
+// names. One with --setting-sources gets both. One with its own --settings
+// gets no competing one: the run's mod keeps the status line in the settings
+// Claude Code reads, and a launch with no run directory for that mod is told
+// why main's row lacks the name. A wrapped main gets no competing settings
+// either. With no run directory the status line is absent, but peer-message
+// acceptance still applies.
 func TestMainsLaunchGetsTheStatusLineAlone(t *testing.T) {
 	folder := t.TempDir()
 	t.Setenv(configDirEnv, folder)
@@ -64,8 +66,11 @@ func TestMainsLaunchGetsTheStatusLineAlone(t *testing.T) {
 		t.Fatalf("the overlay: %v", overlay)
 	}
 	for _, own := range [][]string{{settingsFlag, "{}"}, {settingsFlag + "={}"}} {
-		if got := mainSettings(request, own); got.args != nil || len(got.notes) != 1 || !strings.Contains(got.notes[0], settingsFlag) {
+		if got := mainSettings(request, own); got.args != nil || got.notes != nil {
 			t.Fatalf("with the person's own %q: %+v", own, got)
+		}
+		if got := mainSettings(adapter.LaunchRequest{Role: role.Main}, own); got.args != nil || len(got.notes) != 1 || !strings.Contains(got.notes[0], settingsFlag) {
+			t.Fatalf("with the person's own %q and no mod: %+v", own, got)
 		}
 	}
 	if got := mainSettings(request, []string{settingSourcesFlag, "user"}); len(got.args) != 2 {

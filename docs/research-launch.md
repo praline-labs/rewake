@@ -376,6 +376,29 @@ Claude Code worker each started with a `--settings` whose `statusLine` is
 row under the input showed only native's hints and the band's tail. The project layer loses to
 the flag layer, as the order above says; a managed `statusLine` would still win.
 
+## A wrapper's own settings took the run's status line
+
+**[verified live, installed 2.1.322, no login, no model call; November 11, 2026]** The owner's
+main runs through `--command`, and that wrapper adds a `--settings` of its own **before**
+rewake's arguments — `exec claude "${settings_args[@]}" --dangerously-skip-permissions "$@"` —
+holding its model mapping and, for main, `crossSessionInbound: "accept"`. The flag is
+single-use, so its layer is the last the settings read is made of, and main's run showed the
+person's own status line with rewake's gone. Both halves were needed for that: rewake adds no
+`--settings` under `--command` (it would replace the wrapper's, which is the worse loss), and
+the wrapper's layer, having no `statusLine`, left the person's line from the user or project
+layer standing. The installed build's own read is not the cause: 2.1.322 merges and reports the
+layers as below; the launch simply named no line to keep.
+
+The fix is the mod's `settings.read` hook ([research-claude-mod.md](research-claude-mod.md#the-settings-read-hook-keeps-the-status-line)):
+the launch names the same setting in `REWAKE_STATUS_LINE`, and the hook puts it into the
+settings the engine runs under, so the wrapper's own keys stay and the read ends with rewake's
+line. The probe: the repository's `mod/` through `--plugin-dir`, in a private HOME with a
+trusted folder, `--settings '{"statusLine":{"type":"command","command":"echo OWNER-LINE"}}'`
+standing in for the wrapper's layer, and `REWAKE_STATUS_LINE` carrying
+`{"type":"command","command":"echo REWAKE-LINE","refreshInterval":30}`. A pseudo-terminal,
+no login, 12 s, the screen read back from its escapes: without the hook `OWNER-LINE` stood under
+the input; with it `REWAKE-LINE` did, drawn on the read that follows the plugin's load.
+
 ## A configuration directory of the workers
 
 **[verified live, installed 2.1.302, no login, no model call; October 23, 2026]** Run in private

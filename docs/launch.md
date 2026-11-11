@@ -162,12 +162,14 @@ rewake --command my-claude claude
   a wrapper's `CLAUDE_CODE_AUTO_COMPACT_WINDOW` still wins over the flag.
 - Main's settings: a launch of main not under `--command` adds one
   `--settings` holding `crossSessionInbound: "accept"` and, with a run directory, `statusLine`,
-  rewake's command, which runs the person's own and
+  rewake's command, which replaces the person's own and
   tells the host the model's name, thinking, effort and the cache's life
   ([claude.md](claude.md#the-cache-ttl)). A caller's own `--settings` reaches main's harness as
   given in its place: rewake neither reads nor merges it, and the launch notes that main's row
-  then lacks those. A caller's `--setting-sources` does not replace rewake's settings. A worker's
-  `--settings` or `--setting-sources` is refused, since the worker profile owns both.
+  then lacks those where there is no run directory for rewake's mod, which else keeps the
+  status line in the settings Claude Code reads. A caller's `--setting-sources` does not replace
+  rewake's settings. A worker's `--settings` or `--setting-sources` is refused, since the worker profile
+  owns both.
 - **Peer messages under every permission mode.** The run's settings accept cross-session
   messages, so `bypassPermissions` does not hold rewake's classless notice for the person's
   approval. This accepts other senders on the same inbound channel too and overrides a

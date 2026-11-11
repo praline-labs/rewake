@@ -62,7 +62,8 @@ func runSettings(settings map[string]any, folder, root, memoryKey string, enter 
 	}
 	// The status line is where Claude Code tells the cache's lifetime
 	// (statusline.go); it needs the run's host, which a launch with no run
-	// directory has no mod for.
+	// directory has no mod for, and the run's mod puts it into the settings
+	// Claude Code reads whatever layer the wrapper passed (hooks/settings.ts).
 	if executable := orSelf(executable); executable != "" && runDir != "" {
 		overlay["statusLine"] = statusLineSetting(executable)
 	}
@@ -121,13 +122,19 @@ func deniedIn(settings map[string]any) []any {
 // cache's life and a changed effort as a worker's does, and the person's own
 // line is off in the run (docs/claude.md#the-cache-ttl). Under --command, or
 // where the person passes a --settings of their own, rewake adds no second
-// one: that settings layer is the wrapper's or the person's to complete.
+// one: that settings layer is the wrapper's or the person's to complete, and
+// the run's mod puts the status line into the settings Claude Code reads
+// (hooks/settings.ts), so nothing of either is lost.
 func mainSettings(request adapter.LaunchRequest, args []string) profile {
 	if request.Command != "" {
 		return profile{}
 	}
 	if adapter.HasFlag(args, settingsFlag) {
-		return profile{notes: []string{"no status line of rewake's: the launch passes its own " + settingsFlag + ", so main's row shows the model's id and no cache life, and the person's own status line stays"}}
+		if request.RunDir != "" {
+			// The mod keeps the status line; there is no second layer to add.
+			return profile{}
+		}
+		return profile{notes: []string{"no status line of rewake's: the launch passes its own " + settingsFlag + " and has no run directory for rewake's mod, so main's row shows the model's id and no cache life, and the person's own status line stays"}}
 	}
 	overlay := map[string]any{crossSessionSetting: "accept"}
 	if request.RunDir != "" {

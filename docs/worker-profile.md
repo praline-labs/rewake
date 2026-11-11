@@ -120,7 +120,9 @@ Code over the folder's settings: `crossSessionInbound: "accept"`, so a worker in
 memory and `EnterWorktree`, allowed for a
 template with `enter_worktree = true`, denied for every other run, and, for a run with a mod,
 rewake's `statusLine`, which prints nothing, so the person's own line is off in the run
-([claude.md](claude.md#the-cache-ttl)). Accepting peer messages applies to other senders on the
+([claude.md](claude.md#the-cache-ttl)). The same setting goes to the run's mod in
+`REWAKE_STATUS_LINE`, which keeps it in the settings Claude Code reads when a `--command`
+wrapper's own `--settings` is the read's last layer. Accepting peer messages applies to other senders on the
 same inbound channel too and overrides the folder's own `crossSessionInbound`; managed policy and
 project/local `hold` or `refuse` still win. `--settings` is single-use — a
 second one replaces the first, not merges — so the profile owns it: a worker's `--settings`

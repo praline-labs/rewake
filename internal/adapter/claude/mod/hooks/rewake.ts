@@ -24,6 +24,7 @@ import { Mirror, type MirrorOutbox, serveMirror } from "./mirror.ts";
 import type { Host } from "./outbox.ts";
 import { cut, listed, loadKey, newId, nextDelay, Outbox } from "./outbox.ts";
 import { Permits } from "./permits.ts";
+import { serveSettings } from "./settings.ts";
 import { serveTools, Tools } from "./tools.ts";
 
 // The harness's reasons, mapped to the protocol's.
@@ -357,6 +358,9 @@ export const register: Register = (on) => {
     (mode) => mirror.moded(mode),
   );
   serveBand(on, band);
+
+  // The launch's status line, in the settings Claude Code reads.
+  serveSettings(on);
 
   // The conversation, for a run rewake's own face draws.
   serveMirror(on, mirror);

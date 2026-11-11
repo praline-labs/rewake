@@ -172,8 +172,8 @@ unknown when the launch passed none. The model's display name (`configuredModelN
 the session's thinking setting (`thinking`, on for a model without thinking as well) come from
 the same status line, main's as a worker's;
 `rewake list` drops a trailing parenthesis from the name. Not live: a session whose status line
-does not run — a launch with no run directory, an untrusted workspace, a main launched with a
-`--settings` of its own — shows the request's effort only, a turn late, the model's id and no
+does not run — a launch with no run directory, an untrusted workspace, a run whose mod did not
+load — shows the request's effort only, a turn late, the model's id and no
 thinking ([research-claude-mod.md](research-claude-mod.md#effort)). The session's directory now
 (`cwd`, `$.session.cwd()`, which a worktree entry moves) and the account's rate-limit windows
 (`rateLimits`: `kind`, whole `percent`, `resetsAt`, from `$.session.usage().rateLimits`, none off a

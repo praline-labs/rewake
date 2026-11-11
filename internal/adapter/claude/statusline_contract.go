@@ -13,13 +13,34 @@ import (
 )
 
 // The status line's contract (docs/claude.md#the-cache-ttl): the command a
-// run's --settings installs, and what `rewake statusline` takes from Claude
-// Code's JSON on stdin and tells the run's host. Running the line is
-// statusline.go.
+// run's --settings installs and its mod puts into the settings the engine reads,
+// and what `rewake statusline` takes from Claude Code's JSON on stdin and tells
+// the run's host. Running the line is statusline.go.
 
 // statusLineRefresh is how often Claude Code runs the command beside its own
 // events; the expiry it reports is absolute, so a slow timer loses nothing.
 const statusLineRefresh = 30
+
+// statusLineEnv names the statusLine setting in the run's environment, as JSON.
+// A --command wrapper may add a --settings of its own, and the flag is
+// single-use (docs/research-launch.md), so that layer is the last one and the
+// launch's statusLine would be lost with it; the run's mod reads this variable
+// and puts the setting into the settings Claude Code runs under
+// (docs/claude.md#the-cache-ttl).
+const statusLineEnv = "REWAKE_STATUS_LINE"
+
+// statusLineEnvValue is that variable's value for a run of this executable:
+// the setting the run's --settings holds as well, or false when there is none.
+func statusLineEnvValue(executable string) (string, bool) {
+	if executable == "" {
+		return "", false
+	}
+	data, err := json.Marshal(statusLineSetting(executable))
+	if err != nil {
+		return "", false
+	}
+	return string(data), true
+}
 
 // statusLineSetting is the run's statusLine: rewake's command, which prints
 // nothing, so the person's own line, which it shadows, is off in the run.

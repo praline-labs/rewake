@@ -282,6 +282,11 @@ worker type. There is no worker type any more.
   The mod registers `worktree_enter` and guards `EnterWorktree` by it, and
   `rewake worktree enter` refuses without it; not a boundary
   ([worktree-tools.md](worktree-tools.md#a-workers-entry-enter_worktree--true-and-worktree_enter)).
+- `REWAKE_STATUS_LINE=<json>` — the run's `statusLine` setting, as the launch would put it into
+  `--settings`, for a run that loads the mod: the module's `settings.read` hook puts it into the
+  settings Claude Code runs under, where a `--command` wrapper's own `--settings` cannot take it
+  away ([claude.md](claude.md#the-cache-ttl)). Set by the adapter, never inherited; a probe and
+  a launch with no mod get none.
 - Inherited Claude Code markers are stripped (list in research): otherwise `rewake claude`
   launched from inside another session would inherit that session's socket and have transcript
   saving disabled.

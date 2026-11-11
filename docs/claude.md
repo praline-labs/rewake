@@ -46,7 +46,8 @@ The mod's files are embedded from `internal/adapter/claude/mod/`, each named in 
 of `mod.go`, since a pattern skips the manifest's dot directory: the manifest `rewake`
 (`.claude-plugin/plugin.json`), `hooks/hooks.json`, the one module `hooks/rewake.ts` and the
 files it imports — `outbox.ts`, `heartbeat.ts`, `management.ts`, `asks.ts`, `calls.ts`,
-`dialogs.ts`, `closing.ts`, `tools.ts`, `enter.ts`, `mirror.ts`, `permits.ts`, `feed.ts` — and
+`dialogs.ts`, `closing.ts`, `tools.ts`, `enter.ts`, `mirror.ts`, `permits.ts`, `feed.ts`,
+`band.ts`, `settings.ts` — and
 the generated `protocol.gen.ts`. The run's service
 writes them into `<run dir>/mod` before the harness starts, and the launch passes
 `--plugin-dir <run dir>/mod` to that launch only. Nothing in the person's settings changes (L1);
@@ -56,7 +57,10 @@ The launch names the run's mod socket in `REWAKE_MOD_SOCKET`, replacing any inhe
 the adapter also lists among the variables a run does not inherit. The socket sits beside the
 run's inbox socket in the room's `sock/`, as `<name>.<epoch>.mod.sock` or a hashed name within
 the 103 bytes a socket's path may take; a killed wrapper's mod socket is swept with the dead
-reply sockets, by a dial refused.
+reply sockets, by a dial refused. Beside it the launch names the run's `statusLine` setting in
+`REWAKE_STATUS_LINE`, as JSON: the module's `settings.read` hook puts it into the settings the
+engine reads, where a `--command` wrapper's own `--settings` cannot take it away
+([the cache's life](#the-cache-ttl)).
 
 At `session.start` the module reads the socket's path and says hello; outside a rewake run it
 reports to nobody. `modhost` answers on the socket and writes the admitted hello to
@@ -303,21 +307,27 @@ installation a native compaction is not counted
 The mod cannot read how long the prompt cache lives; Claude Code's status-line input carries it
 as `prompt_cache` (`warm`, `ttl` of `5m` or `1h`, `expires_at` in epoch seconds, …) once a
 request was made (read from the strings of 2.1.302). Every run with a mod therefore sets
-`statusLine` in its `--settings` — `'<rewake>' statusline`, `refreshInterval` 30 — which beats every
-settings file but a managed one: a worker's in its overlay, main's beside
-`crossSessionInbound: "accept"`. Main has no status line where its launch passes a `--settings`
-of its own, which a second would
-replace — the launch says so in a note, and the person's own line then stays — and none under
-`--command`. Claude Code merges the key field by field, so the person's `padding` stands. The hidden
+`statusLine` — `'<rewake>' statusline`, `refreshInterval` 30 — which beats every
+settings file but a managed one. The launch puts it into the run's `--settings` — a worker's
+overlay, main's beside `crossSessionInbound: "accept"` — and names the same setting in
+`REWAKE_STATUS_LINE` for the run's mod, whose `settings.read` hook puts it into the settings
+Claude Code runs under (`hooks/settings.ts`). Both are needed: `--settings` is single-use, so a
+`--command` wrapper's own `--settings`, or one the person passes, is the last layer of the read
+and the flag's copy would be lost with it
+([research-launch.md](research-launch.md#a-wrappers-own-settings-took-the-runs-status-line)).
+A launch with no run directory for the mod has no status line at all, and where it also passes a
+`--settings` of its own the launch says so in a note: a second `--settings` would replace the
+one there, and the person's own line then stays. Claude Code merges the key field by field, so the person's
+`padding` stands, and a managed `statusLine` is left as the administrator wrote it. The hidden
 `rewake statusline` reads that input, posts `ttl`, `expiresAt` and `warm`, the effort, the model's
 name and `thinking.enabled` to the run's host at `status/line` (bounded at 2 s), and prints nothing,
 always exiting 0. So the person's own status line is off in every Claude Code session rewake runs,
 main and workers, and untouched outside rewake: what it would repeat — the model, the context, the
 cache's life, the account's limits (on main's) — is in rewake's strip under the pane (the owner's decision,
-October 31, 2026, brief 60; [shell.md](shell.md#the-strip)). A managed `statusLine` outranks
-rewake's, which then does not run. The expiry is absolute, so a slow timer loses nothing; the
-command runs after each response too. The stdin read is bounded in time (3 s) as well as size.
-Checked live: [research-launch.md](research-launch.md#a-runs-status-line-turns-off-the-persons).
+October 31, 2026, brief 60; [shell.md](shell.md#the-strip)). The expiry is absolute, so a slow
+timer loses nothing; the command runs after each response too. The stdin read is bounded in time
+(3 s) as well as size. Checked live: [research-launch.md](research-launch.md#a-runs-status-line-turns-off-the-persons),
+and, for the hook, [research-claude-mod.md](research-claude-mod.md#the-settings-read-hook-keeps-the-status-line).
 
 The host keeps the last in `Snapshot.CacheLife` (`cacheLife`: `ttl`, `expiresAt`, `warm`), beside
 `Cache`; `rewake list` shows the Cache cell as `90% 42m` (`—` once expired, `<1m`), the remaining
@@ -504,7 +514,7 @@ wrapper's exit ended the session and, for main, the room
 | The worker profile: the service folder, its settings and state, the memory directory | not written; the harness keeps what its launch pointed it at |
 | The briefing, and the refusals of arguments, a continued conversation and the run's checkout | not run |
 | The mod's files in the run directory, `--plugin-dir` | not written: the run keeps its directory, and the switch admits only a build of the same `mod` protocol |
-| `--settings` with the status line | not built: it is only an argument; the status line runs the room's `bin/rewake`, which the commit links to the new build |
+| `--settings` with the status line, and `REWAKE_STATUS_LINE` | not built: the first is only an argument, and the second rides in the environment the exec keeps; the status line runs the room's `bin/rewake`, which the commit links to the new build |
 | The mod's endpoint | adopted: its listener and the order of loads (above) |
 | The lane: its reply socket and the sweep (`sweepReplies`) | run: the reply socket, closed by the exec, is bound again at the same path; the sweep removes only sockets whose dial is refused, never the handed listener |
 | The defaults (`ApplyDefaults`, the worker's compaction window) | computed again for what the service reports, never passed on; a default changed since the start shows until the status line reports the run's own |
@@ -528,8 +538,8 @@ letters reached both workers after it.
 It reads no transcript file. A run the face does not draw sends no prompt text
 (`turn.start`'s text is not forwarded) and nothing of its conversation but the end's `answer`, which is
 the report; a drawn run's conversation goes to its own wrapper in memory and nowhere else
-([the mirror](#the-mirror)). It sets no status line — the launch does — sends no
-settings, and
+([the mirror](#the-mirror)). It chooses no status line — the launch does, and the mod only
+keeps it in the settings Claude Code reads — sends no settings, and
 does no heavy work in a hook: the hooks worker is shared and a mod that stalls it is unloaded. It
 draws nothing of the workers but the run's own work on the hint line under the input
 ([the band](#the-band)): rewake's shell draws them, on the person's terminal

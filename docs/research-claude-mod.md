@@ -839,3 +839,48 @@ API, no login; read against the `mods` skill of 2.1.310, the installed version. 
   `turn.complete` hooks of that next turn ran only after the hold ended. Esc then had nothing to
   stop, and a `$.prompt.submit` after the hold started a turn of its own, new id, the model
   reading `The probe102 plugin sent a message: …`: a whole turn, not a continuation.
+
+## The settings.read hook keeps the status line (November 11, 2026, 2.1.322)
+
+Whether a mod can put a setting into the settings Claude Code itself runs under, so a
+`--command` wrapper's own `--settings` cannot take rewake's status line away (brief 115). The
+installed build's own declarations were read in `.claude-plugin/types/claude-code/index.d.ts`,
+which 2.1.322 writes beside a loaded plugin, and the `mods` skill of 2.1.310 was the map; the
+probe ran the repository's own `mod/` through `--plugin-dir`, in a private HOME with a trusted
+folder, no login and no model call. **[live]**
+
+- **The engine's own read is an event.** `settings.read` fires on `$.settings.read` of a mod and,
+  since 2.1.304, on the read by which Claude Code builds the session's merged settings; it
+  repeats when the settings or the loaded plugins change, so the read after the plugin's load is
+  the one a mod's answer first reaches. A hook awaits `next(e)`, which answers `{ value }` with
+  the merged settings, or `{ deny }` from a later hook, and returns `{ value }` of its own; the
+  keys it names replace theirs in the session's settings, and one left out is unset — so the
+  answer is built from `next`'s value, spread and changed.
+- **One source's read is not the session's.** `e.source` is present for a read of one source,
+  `e.layers` then holding that layer alone; a hook that changes only the merged settings passes
+  those reads through.
+- **The layers.** `e.layers` is an array of `{ source, settings }`, lowest precedence first, the
+  sources named as declared — `user`, `project`, `local`, `flag`, `policy`, and `plugin` for what
+  the enabled plugins' settings make. Seen live: `user`, `project` and, with a `--settings` on
+  the command line, `flag` holding that layer's keys; a source with no settings is left out. A
+  `policy` layer is the managed settings and outranks every other source, so a `statusLine`
+  there is the administrator's and a hook must leave it.
+- **It moved the status line.** The folder's settings held `statusLine` `echo PERSON-LINE`; a
+  `--settings` layer held `echo OWNER-LINE`, and the hook answered with `echo REWAKE-LINE` from
+  `REWAKE_STATUS_LINE` in the run's environment. The footer drew `PERSON-LINE`/`OWNER-LINE` in
+  the first frame and `REWAKE-LINE` on the read after the load, in every run; the same mod
+  without the hook kept the flag layer's line. So the answer's `statusLine` is what the status
+  line runs, and rewake's line wins over a project's and over a wrapper's flag layer
+  ([research-launch.md](research-launch.md#a-wrappers-own-settings-took-the-runs-status-line)).
+- **What the loader demands.** `$.env.get` takes a literal variable name: the module, given
+  `$.env.get(statusLineEnv)`, did not load at all, the error naming the variables a module reads
+  are listed. Every `$` call stays spelled out at the call site as the skill says.
+- **With managed settings the hook may not run.** The skill's built-in `sec-default` guard can
+  skip a `--plugin-dir` mod's `settings.read` where managed settings exist or the session's
+  credential is a Team or Enterprise login; the debug log then says
+  `settings.read bypassed by cc-plugin-sec-default`. There a managed `statusLine` wins anyway;
+  where none is set, the launch's `--settings` layer is what remains.
+- **The test kit fires no settings read.** The test's `$` has `tool`, `command`, `config`,
+  `telemetry`, `prompt`, `skill`, `attribution`, `agent`, `session`, `turn`, `ui` and `classic`,
+  and no `settings` (2.1.322), so the mod's own tests call the hook it registers with the event
+  and the next handler the engine would give it (`tests/settings.test.ts`).

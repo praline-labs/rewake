@@ -226,6 +226,24 @@ agent. The role kept only the worker itself from reporting. The space host now d
 
 ## Arguments and continuing a conversation
 
+### A wrapper's `--settings` took rewake's status line out of main
+
+Main launched with `rewake --command <wrapper> claude` showed the person's own status line
+under its input, and its row in `rewake list` lost the model's name, its thinking and the
+cache's life. The wrapper added a `--settings` of its own — model mapping,
+`crossSessionInbound: "accept"` — and `--settings` is single-use, so that layer was the last the
+settings read was made of. rewake adds no `--settings` under `--command` (a second would replace
+the wrapper's, which is the worse loss), so rewake's line was never in the run: not a 2.1.322
+precedence change, a layer that was never named.
+
+Now the launch names the same setting in `REWAKE_STATUS_LINE` for the run's mod, whose
+`settings.read` hook puts it into the settings Claude Code reads, and the wrapper's own keys
+survive it. A managed `statusLine` is still the administrator's. A launch with no run directory
+for the mod, which also passes a `--settings` of its own, still says in a note that main's row
+lacks those.
+
+*November 11, 2026.*
+
 ### A positional prompt eaten by a variadic
 
 The greeting for Claude Code ended up inside the `--allowedTools` list: `<tools...>`

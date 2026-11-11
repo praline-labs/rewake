@@ -307,6 +307,11 @@ func (claudeHarness) Launch(request adapter.LaunchRequest) (adapter.LaunchPlan, 
 		// environment.
 		args = adapter.AddFlags(args, pluginDirFlag, modDir(request.RunDir))
 		env = modEnv(env, service.modSocket)
+		// The mod puts the run's status line into the settings Claude Code
+		// reads, where a wrapper's own --settings cannot take it away.
+		if line, ok := statusLineEnvValue(orSelf(request.Executable)); ok {
+			env = withEnv(env, statusLineEnv, line)
+		}
 	}
 	return adapter.LaunchPlan{
 		Command:     request.Program("claude"),
