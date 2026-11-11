@@ -97,9 +97,15 @@ type Set struct {
 	// write instead: the catalog runs on what is valid and main is told
 	// what to repair (alias_obsolete.go).
 	Migrations []string
-	// omitted names the templates an obsolete setting left unusable, with the
-	// migration notice that says what to fix; Template refuses them by name.
-	omitted map[string]string
+	// obsolete holds the definitions a file left out because its obsolete
+	// type is still there, the project's replacing the user's as a whole
+	// template does; resolveObsolete decides which one is in force
+	// (alias_obsolete.go).
+	obsolete map[string]obsoleteDef
+	// omitted names the templates an obsolete definition in force left
+	// unavailable, with the notice that says what to fix; Template checks
+	// their current settings and refuses them by name.
+	omitted map[string]obsoleteDef
 	// problems are files that could not be read, which refuse the catalog
 	// through Err rather than leave a worker silently absent.
 	problems []string
@@ -179,11 +185,54 @@ func (e *MainOnlyTemplateError) Error() string {
 	return fmt.Sprintf("alias %q uses %s, whose harness launches main only; choose a worker template from rewake workers", e.Alias, e.Harness)
 }
 
+// aliasDef is one definition of a template, with where it was read.
+type aliasDef struct {
+	value   Alias
+	source  string
+	path    string
+	project bool
+}
+
+// obsoleteDef is a definition an obsolete setting left out, with the migration
+// notice that says what to fix.
+type obsoleteDef struct {
+	aliasDef
+	notice string
+}
+
+// OmittedTemplateError names an alias an obsolete setting left unavailable,
+// with the migration notice that says what to fix. A listing checks the
+// alias's current settings and then leaves it out, as it does a main-only one.
+type OmittedTemplateError struct {
+	Alias, Notice string
+}
+
+func (e *OmittedTemplateError) Error() string {
+	return fmt.Sprintf("the alias %q is unavailable until its obsolete setting is fixed: %s", e.Alias, e.Notice)
+}
+
+// OmittedNames are the templates an obsolete definition left unavailable, in
+// order, for a listing that checks their current settings before leaving them
+// out.
+func (s *Set) OmittedNames() []string {
+	names := make([]string, 0, len(s.omitted))
+	for name := range s.omitted {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
+
 // Template resolves one alias, refusing one that would start something other
 // than what it says.
 func (s *Set) Template(name string, catalog adapter.Catalog) (Template, error) {
-	if notice, omitted := s.omitted[name]; omitted {
-		return Template{}, fmt.Errorf("the alias %q is unavailable until its obsolete setting is fixed: %s", name, notice)
+	if def, omitted := s.omitted[name]; omitted {
+		// Its current settings are checked as any other's: an obsolete type
+		// may leave a valid template out, never screen a malformed one.
+		if _, err := s.resolve(name, def.aliasDef, catalog); err != nil {
+			return Template{}, err
+		}
+		return Template{}, &OmittedTemplateError{Alias: name, Notice: def.notice}
 	}
 	if where, off := s.aliasOff[name]; off {
 		return Template{}, fmt.Errorf("the alias %q is turned off in %s ([aliases] off); %s", name, where, s.available())
@@ -192,7 +241,14 @@ func (s *Set) Template(name string, catalog adapter.Catalog) (Template, error) {
 	if !ok {
 		return Template{}, fmt.Errorf("no alias %q; %s", name, s.available())
 	}
-	if err := value.check(name, source, catalog.IDs(), s.fromProject[name]); err != nil {
+	return s.resolve(name, aliasDef{value: value, source: source, path: s.paths[name], project: s.fromProject[name]}, catalog)
+}
+
+// resolve turns one definition into what space open starts, refusing one that
+// would start something other than what it says.
+func (s *Set) resolve(name string, def aliasDef, catalog adapter.Catalog) (Template, error) {
+	value, source := def.value, def.source
+	if err := value.check(name, source, catalog.IDs(), def.project); err != nil {
 		return Template{}, err
 	}
 	h, _ := catalog.Find(value.Harness)

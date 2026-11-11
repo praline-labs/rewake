@@ -142,8 +142,12 @@ a `[types]` section and a `types/` directory are skipped, and every command that
 catalogue prints a notice naming the file, the line and what to write instead. A template whose
 `type` is skipped stays out of `rewake workers` and cannot be opened until it is fixed; the rest
 of the catalogue runs, and main reads the notices in its briefing and can repair the file
-([work-modes.md](work-modes.md#the-old-worker-types)). A file rewritten by hand is the only way:
-malformed TOML, an unknown field and a malformed value still refuse the catalogue.
+([work-modes.md](work-modes.md#the-old-worker-types)). Only the old shape is skipped: a `type`
+that is not a string, or a `[types]` section that is not `off = ["...", ...]`, refuses the file,
+and so does a broken setting beside an old `type` — the template is checked before it is left out.
+Your own file and the project's still replace one another whole, so only the definition in force
+is reported. A file rewritten by hand is the only way: malformed TOML, an unknown field and a
+malformed value still refuse the catalogue.
 
 ## The workers' own settings
 

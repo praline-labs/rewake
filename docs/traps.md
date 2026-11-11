@@ -250,8 +250,14 @@ Obsolete settings are skipped with a migration notice, not refused: an absent na
 alias `type` are gone with the worker type, and the notice names the file, the line and what to
 write. A template whose `type` was skipped stays out until it is fixed rather than starting under
 a default. The rest of the catalogue runs, every command prints the notices, and a launch carries
-them into main's briefing. What rewake cannot recognize — malformed TOML, an unknown field, a
-malformed value — still refuses the file.
+them into main's briefing. Only the old shape is skipped: a `type` that is not a string and a
+`[types]` section that is not `off = ["<name>", ...]` are malformed, as an unknown field is, and a
+template is checked against the current fields before it is left out — an old `type` never screens
+a broken `start_mode` or launch setting. The user's and the project's definitions still replace
+one another whole, so only the definition in force is omitted and reported: a valid project
+template replaces an obsolete user one, an obsolete project template hides the user's valid one.
+What rewake cannot recognize — malformed TOML, an unknown field, a malformed value — still refuses
+the file.
 
 *November 11, 2026, in a project's launch through another wrapper.*
 

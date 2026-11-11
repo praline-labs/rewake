@@ -175,6 +175,14 @@ func (s *Set) checkModeNames() {
 			s.unreadable(fmt.Sprintf("alias %q in %s: [alias.%s.pi] %v", name, s.paths[name], name, err))
 		}
 	}
+	// A template an obsolete setting left out is held to the same catalog:
+	// the type may leave it out, never make a typo in its mode harmless.
+	for _, name := range s.OmittedNames() {
+		def := s.omitted[name]
+		if err := def.value.Pi.Unknown(known); err != nil {
+			s.unreadable(fmt.Sprintf("alias %q in %s: [alias.%s.pi] %v", name, def.path, name, err))
+		}
+	}
 }
 
 // Modes gives a launch the merged global configuration and its selected

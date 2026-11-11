@@ -85,9 +85,20 @@ November 11, 2026). A template whose `type` is skipped is left out until it is f
 started under advisor or another default — read under a default it would work as something its
 person did not write — so `rewake workers` lists it in no template and `space open --alias` refuses
 it with the notice. The rest of the catalogue runs, and a launch carries the notices into the
-session's briefing, where main reads the file, the line and what to write. What rewake cannot
-recognize — malformed TOML, an unknown field, a malformed value — still refuses the file whole.
-Personal configuration is never rewritten.
+session's briefing, where main reads the file, the line and what to write.
+
+Only the old shape is skipped: a `type` holding a string, and a `[types]` section holding
+`off = ["<name>", ...]` and nothing else. Any other value or field there is malformed and refuses
+the file, as malformed TOML, an unknown field and a malformed current value do — recognizing an
+obsolete key never swallows its value. A definition is checked against the whole current schema
+before it is left out, at the catalogue and again when `rewake workers` lists or `space open` asks
+for it: an obsolete `type` may leave a valid template out, never screen a broken `start_mode`, a
+mode's model or effort, or a launch setting beside it.
+
+The two alias files still replace one another whole, so the definition in force decides: a valid
+project definition replaces an obsolete user one, and an obsolete project definition hides the
+user's valid one until it is fixed. Only the definition in force is left out and named in a notice;
+the other's type is not in force and is not reported. Personal configuration is never rewritten.
 
 ## Selecting the start
 

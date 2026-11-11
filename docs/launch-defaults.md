@@ -172,7 +172,13 @@ room), `main` (main is started with `rewake <harness>`), `launch.apply` (setting
 apply; flags that should not go in `args`), under "fields whose place is elsewhere". The whole
 file is refused then, so it is rewritten once. The worker type's old settings are the one
 exception: they are recognized as obsolete, skipped with a migration notice, and main starts on
-the rest ([work-modes.md](work-modes.md#the-old-worker-types)).
+the rest ([work-modes.md](work-modes.md#the-old-worker-types)). Only the old shape is skipped — a
+`type` holding a string and a `[types]` section holding `off = ["<name>", ...]` — and a definition
+is checked against the current fields before it is left out: a malformed value there, and a broken
+`start_mode`, mode or launch setting beside an old `type`, still refuses the file. A template the
+old `type` leaves out follows the same whole-template rule as any other: the user's and the
+project's definitions replace one another whole, only the definition in force is omitted, and its
+notice names that file.
 
 **The project file's place, since October 21, 2026** (the owner's decision): a project's aliases
 live in `.rewake/aliases.toml`, beside its modes in `.rewake/modes/`. A `.rewake.toml` in the

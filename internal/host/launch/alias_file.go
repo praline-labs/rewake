@@ -42,6 +42,7 @@ func LoadIn(working string) *Set {
 		set.noteModesDir(filepath.Join(dir, typesDir))
 		set.read(filepath.Join(dir, userFile), "the project alias file", false)
 	}
+	set.resolveObsolete()
 	set.applyAliasesOff()
 	set.checkModeNames()
 	return set
@@ -55,13 +56,15 @@ func newSet() *Set {
 	return &Set{
 		aliases: map[string]Alias{}, sources: map[string]string{}, paths: map[string]string{},
 		fromProject: map[string]bool{}, modes: map[string]workmode.Mode{}, aliasOff: map[string]string{},
-		omitted: map[string]string{},
+		obsolete: map[string]obsoleteDef{}, omitted: map[string]obsoleteDef{},
 	}
 }
 
-// decode reads one file, skipping the settings rewake recognizes as obsolete
-// and refusing the rest. nil says the file was refused, its reason recorded.
-func (s *Set) decode(raw []byte, description, path string) *aliasFile {
+// decode reads one file, sorting the settings rewake recognizes as obsolete
+// from the rest and refusing what it cannot read. A nil file says the file was
+// refused, its reason recorded; the obsolete map names the templates this file
+// left out, with the notice each would have if its definition is in force.
+func (s *Set) decode(raw []byte, description, path string) (*aliasFile, map[string]string) {
 	file := &aliasFile{}
 	decoder := toml.NewDecoder(bytes.NewReader(raw))
 	// A field rewake does not know is refused, not skipped: a silently
@@ -71,17 +74,20 @@ func (s *Set) decode(raw []byte, description, path string) *aliasFile {
 	decoder.DisallowUnknownFields()
 	err := decoder.Decode(file)
 	if err == nil {
-		return file
+		return file, nil
 	}
 	var strict *toml.StrictMissingError
 	if errors.As(err, &strict) {
-		// The obsolete settings are taken out first, so a file that also has
+		// The obsolete settings are sorted out first, so a file that also has
 		// an unknown field is refused for that field alone.
-		if unknown := s.degrade(file, strict.Errors, description, path); len(unknown) > 0 {
+		var values map[string]any
+		_ = toml.Unmarshal(raw, &values)
+		unknown, obsolete := s.degrade(values, strict.Errors, description, path)
+		if len(unknown) > 0 {
 			s.unreadable(unknownFields(description, path, unknown))
-			return nil
+			return nil, nil
 		}
-		return file
+		return file, obsolete
 	}
 	// Named, not skipped: a file that is there and unreadable is a mistake
 	// somebody wants to hear about.
@@ -92,7 +98,7 @@ func (s *Set) decode(raw []byte, description, path string) *aliasFile {
 		where = fmt.Sprintf("%s:%d:%d", path, line, column)
 	}
 	s.unreadable(fmt.Sprintf("%s at %s could not be read: %v", description, where, err))
-	return nil
+	return nil, nil
 }
 
 // aliasFile is one alias file: its templates, and the sections beside them.
@@ -142,7 +148,7 @@ func (s *Set) read(path, description string, user bool) {
 		s.unreadable("not reading " + description + ": " + err.Error())
 		return
 	}
-	file := s.decode(raw, description, path)
+	file, obsolete := s.decode(raw, description, path)
 	if file == nil {
 		return
 	}
@@ -178,6 +184,15 @@ func (s *Set) read(path, description string, user bool) {
 		s.skillsNever[name] = path
 	}
 	for name, value := range file.Alias {
+		if notice, stale := obsolete[name]; stale {
+			// Kept for its current settings to be checked, then resolved
+			// against the other layer whole (alias_obsolete.go).
+			s.obsolete[name] = obsoleteDef{
+				aliasDef: aliasDef{value: value, source: description, path: path, project: !user},
+				notice:   notice,
+			}
+			continue
+		}
 		s.aliases[name] = value
 		s.sources[name] = description
 		s.paths[name] = path

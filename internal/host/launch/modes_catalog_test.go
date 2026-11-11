@@ -211,3 +211,132 @@ func TestSpaceOpenRefusesAnOmittedTemplateWithWhatToWrite(t *testing.T) {
 		t.Fatalf("space open: %v", err)
 	}
 }
+
+// An obsolete type follows whole-template precedence: the layer that defines
+// the template whole decides, the unrelated templates are untouched, and only
+// a definition in force is omitted and named in a notice.
+func TestAnObsoleteTypeFollowsWholeTemplatePrecedence(t *testing.T) {
+	const kept = "[alias.keep]\nharness = \"agent\"\n"
+	userObsolete := "[alias.w]\nharness = \"agent\"\ntype = \"code\"\n" + kept
+	userValid := "[alias.w]\nharness = \"agent\"\ndescription = \"user w\"\n" + kept
+	projectObsolete := "[alias.w]\nharness = \"agent\"\ntype = \"code\"\n"
+	projectValid := "[alias.w]\nharness = \"agent\"\ndescription = \"project w\"\n"
+	for name, tc := range map[string]struct {
+		user, project        string
+		names, description   string
+		omitted, noticeNames string
+	}{
+		"obsolete user, valid project": {userObsolete, projectValid, "keep,w", "project w", "", ""},
+		"valid user, obsolete project": {userValid, projectObsolete, "keep", "", "w", "project alias file"},
+		"both obsolete":                {userObsolete, projectObsolete, "keep", "", "w", "project alias file"},
+		"obsolete user only":           {userObsolete, "", "keep", "", "w", "user alias file"},
+		"obsolete project only":        {"", projectObsolete + kept, "keep", "", "w", "project alias file"},
+	} {
+		s := offRoom(t, tc.user, tc.project)
+		if err := s.Err(); err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		if got := strings.Join(s.Names(), ","); got != tc.names {
+			t.Fatalf("%s: names %q, want %q", name, got, tc.names)
+		}
+		if _, err := s.Template("keep", catalog); err != nil {
+			t.Errorf("%s: the unrelated template: %v", name, err)
+		}
+		if tc.omitted == "" {
+			template, err := s.Template("w", catalog)
+			if err != nil || template.Description != tc.description {
+				t.Fatalf("%s: the valid definition in force: %+v %v", name, template, err)
+			}
+			if len(s.Migrations) != 0 {
+				t.Errorf("%s: a notice for a definition not in force: %v", name, s.Migrations)
+			}
+			continue
+		}
+		_, err := s.Template(tc.omitted, catalog)
+		if err == nil || !strings.Contains(err.Error(), `the alias "w" is unavailable until its obsolete setting is fixed`) {
+			t.Fatalf("%s: the omission: %v", name, err)
+		}
+		if len(s.Migrations) != 1 || !strings.Contains(s.Migrations[0], tc.noticeNames) || !strings.Contains(s.Migrations[0], "obsolete type field") {
+			t.Errorf("%s: notices: %v", name, s.Migrations)
+		}
+	}
+}
+
+// Recognizing an obsolete key must not swallow its value: only the old form is
+// skipped, and a malformed one refuses the file as any unknown field does.
+func TestTheObsoleteFormsMustStillBeWellFormed(t *testing.T) {
+	for name, tc := range map[string]struct{ file, want string }{
+		"type is not a string":       {"[alias.w]\nharness = \"agent\"\ntype = 42\n", "must be a string"},
+		"type is a list":             {"[alias.w]\nharness = \"agent\"\ntype = [\"code\"]\n", "must be a string"},
+		"type is a table":            {"[alias.w]\nharness = \"agent\"\n[alias.w.type]\nname = \"code\"\n", "must be a string"},
+		"types is not a table":       {"types = 5\n", "obsolete [types] section"},
+		"types off is not a list":    {"[types]\noff = 42\n", "obsolete [types] section"},
+		"types off holds a number":   {"[types]\noff = [\"process\", 42]\n", "obsolete [types] section"},
+		"types has an unknown field": {"[types]\ncolro = \"blue\"\n", "obsolete [types] section"},
+		"types has a subtable":       {"[types.review]\ndescription = \"x\"\n", "obsolete [types] section"},
+	} {
+		s := typesRoom(t, map[string]string{"work/.rewake/aliases.toml": tc.file})
+		err := s.Err()
+		if err == nil || !strings.Contains(err.Error(), tc.want) {
+			t.Errorf("%s: %v, want %q", name, err, tc.want)
+		}
+	}
+}
+
+// The old form stays eligible for a notice, including the inline table.
+func TestTheWellFormedObsoleteFormsAreSkipped(t *testing.T) {
+	for name, file := range map[string]string{
+		"section": "[types]\noff = [\"process\"]\n",
+		"inline":  "types = { off = [\"process\"] }\n",
+		"empty":   "[types]\n",
+	} {
+		s := typesRoom(t, map[string]string{"work/.rewake/aliases.toml": file})
+		if err := s.Err(); err != nil {
+			t.Errorf("%s: %v", name, err)
+			continue
+		}
+		if len(s.Migrations) != 1 || !strings.Contains(s.Migrations[0], "[types] section is no longer read") {
+			t.Errorf("%s: notices: %v", name, s.Migrations)
+		}
+	}
+}
+
+// An obsolete type may leave a valid template out; it may not screen a
+// malformed current setting. The current schema is checked first, at the
+// catalog and again when the omitted alias is asked for or listed.
+func TestAnObsoleteTypeDoesNotHideMalformedModernSettings(t *testing.T) {
+	typed := "[alias.w]\nharness = \"agent\"\ntype = \"code\"\n"
+	for name, tc := range map[string]struct{ file, want string }{
+		"start_mode plan":       {typed + "[alias.w.pi]\nstart_mode = \"plan\"\n", "plan"},
+		"start_mode unknown":    {typed + "[alias.w.pi]\nstart_mode = \"nowhere\"\n", "catalog does not hold"},
+		"mode effort malformed": {typed + "[alias.w.pi.modes.study]\neffort = \"loud\"\n", "effort"},
+		"mode model malformed":  {typed + "[alias.w.pi.modes.study]\nmodel = \"no-provider\"\n", "provider/model-id"},
+	} {
+		s := typesRoom(t, map[string]string{"work/.rewake/aliases.toml": tc.file})
+		if err := s.Err(); err == nil || !strings.Contains(err.Error(), tc.want) {
+			t.Errorf("%s: %v, want %q", name, err, tc.want)
+		}
+	}
+	// A field the adapter checks is refused when the omitted alias is asked
+	// for, by the same resolver a listed template goes through.
+	s := typesRoom(t, map[string]string{"work/.rewake/aliases.toml": typed + "[alias.w.launch]\ncontext = \"bad\"\n"})
+	if err := s.Err(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.Template("w", catalog); err == nil || !strings.Contains(err.Error(), "context bad is not a window") {
+		t.Fatalf("the malformed setting: %v", err)
+	}
+	for name, tc := range map[string]struct{ file, want string }{
+		"unknown harness": {"[alias.w]\nharness = \"nothing\"\ntype = \"code\"\n", "which is not a harness"},
+		"main's role":     {"[alias.w]\nharness = \"agent\"\ntype = \"code\"\nrole = \"main\"\n", `a worker's role is "write" or "general"`},
+		"empty argument":  {"[alias.w]\nharness = \"agent\"\ntype = \"code\"\nargs = [\"\"]\n", "empty argument"},
+	} {
+		set := typesRoom(t, map[string]string{"work/.rewake/aliases.toml": tc.file})
+		if err := set.Err(); err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		if _, err := set.Template("w", catalog); err == nil || !strings.Contains(err.Error(), tc.want) {
+			t.Errorf("%s: the malformed setting: %v, want %q", name, err, tc.want)
+		}
+	}
+}
