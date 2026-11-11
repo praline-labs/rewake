@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 
@@ -29,6 +30,9 @@ func (l *lander) put(ctx context.Context) (string, string) {
 	// one is in place.
 	if err := os.Remove(filepath.Join(l.install, parts.FileName)); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return "", err.Error()
+	}
+	if why := l.installPi(ctx); why != "" {
+		return "", why
 	}
 	digest, err := l.goDigest(ctx, l.root)
 	if err != nil {
@@ -90,6 +94,36 @@ func (l *lander) made(ctx context.Context, digest, binary string) (parts.Manifes
 		m.Harnesses = append(m.Harnesses, parts.HarnessPart("pi", pi.Package, version))
 	}
 	return parts.Make(m)
+}
+
+// Like scripts/pack.sh, read the literal pin from the landed sources:
+// this land process was compiled before it merged the target.
+var piPinLine = regexp.MustCompile(`(?m)^[\t ]*PinnedVersion *= "([^"\r\n]+)"$`)
+
+// installPi puts the landed pin beside the binary before made records it.
+// A new binary alone cannot launch pi when the package still has the old pin.
+func (l *lander) installPi(ctx context.Context) string {
+	path := filepath.Join(l.root, "internal", "adapter", "pi", "ship.go")
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Sprintf("read the landed pi pin: %v", err)
+	}
+	pins := piPinLine.FindAllSubmatch(data, -1)
+	if len(pins) != 1 {
+		return fmt.Sprintf("%s names no unique literal PinnedVersion", path)
+	}
+	pin := string(pins[0][1])
+	if installedPi(l.install) == pin {
+		return ""
+	}
+	r := l.run(ctx, command{dir: l.root, name: "npm", args: []string{"install", "--prefix", l.install, "--save-exact", pi.Package + "@" + pin}, limit: buildLimit}, l.log)
+	if !r.ok() {
+		return "npm install: " + r.why()
+	}
+	if version := installedPi(l.install); version != pin {
+		return fmt.Sprintf("pi %q is installed after npm install; want %s", version, pin)
+	}
+	return ""
 }
 
 // installedPi is the version of the pi npm installed beside the build, or ""

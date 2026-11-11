@@ -397,7 +397,7 @@ image exited.
 **A failed adoption holds its harness.** The harness is the wrapper's child on the wrapper's
 terminal, and an image that exits hangs that terminal up: on November 3, 2026 one adoption's
 failure ended main's Claude Code and with it the shell, the room and its writer
-([traps.md](../traps.md#after-rewake-restart-rewake-mains-claude-code-ended-and-the-room-with-it)).
+([traps-restarts.md](../traps-restarts.md#after-rewake-restart-rewake-mains-claude-code-ended-and-the-room-with-it)).
 An adoption that fails before it has its harness now keeps it: it closes what was handed over
 and what it started, so the mod's or the extension's next request finds nobody. It passes on
 the signals of the catch the run took, which hold what came during the adoption, and answers stops

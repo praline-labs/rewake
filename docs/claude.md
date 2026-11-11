@@ -496,7 +496,7 @@ the run is served with: the lane, the mod's server and the plan's socket (`servi
 `serve.go`), which a launch composes too. It refuses nothing and writes nothing a start would. A check meant for a harness not yet started fails on
 the one running. Until then the stale socket's check refused the run's own live socket, and the
 wrapper's exit ended the session and, for main, the room
-([traps.md](traps.md#after-rewake-restart-rewake-mains-claude-code-ended-and-the-room-with-it)).
+([traps-restarts.md](traps-restarts.md#after-rewake-restart-rewake-mains-claude-code-ended-and-the-room-with-it)).
 
 | Step of a launch | On an adoption |
 |---|---|

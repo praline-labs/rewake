@@ -40,7 +40,7 @@ run on, and closing the window still ends everything.
   it. A host killed outright closes main's pty the same way, by the kernel. SIGPIPE is no sign of
   the terminal: Go delivers it for a write to any socket whose peer left, a shell or a client of
   `host.sock` gone with main's bytes unread, and read as a hangup it closed the room on a restart
-  ([traps.md](traps.md#rewake-restart-shell-answered-rewake-is-closing-and-the-whole-room-closed),
+  ([traps-restarts.md](traps-restarts.md#rewake-restart-shell-answered-rewake-is-closing-and-the-whole-room-closed),
   November 3, 2026). The host takes it so the write fails where it is made, and does nothing more.
 - **Who answers the person's terminal.** The shell asks the terminal for its colours, as before
   ([below](#what-the-widget-lacks-and-what-the-shell-does-about-it)). The first shell's answer

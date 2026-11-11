@@ -40,7 +40,8 @@ A person using rewake reads [user-guide.md](user-guide.md) alone. An agent worki
    - **tests**: [testing.md](testing.md) → [testing-cases.md](testing-cases.md),
      [legacy.md](legacy.md);
    - **installing and releasing**: [install.md](install.md);
-   - **when something misbehaves**: [traps.md](traps.md).
+   - **when something misbehaves**: [traps.md](traps.md), with restart failures in
+     [traps-restarts.md](traps-restarts.md).
 
 ## Where each kind of document goes
 
@@ -52,7 +53,8 @@ A person using rewake reads [user-guide.md](user-guide.md) alone. An agent worki
 - **Facts about a harness** — the research documents (`research*.md`): dated records, each fact
   with the version and the way it was obtained, re-checked before an adapter is touched. Only
   they keep dates and observations.
-- **What surprised** — [traps.md](traps.md), by symptom.
+- **What surprised** — [traps.md](traps.md), by symptom; main's host and room-switch failures
+  in [traps-restarts.md](traps-restarts.md).
 - **The open work and its order** — [roadmap/README.md](roadmap/README.md); a landed step leaves
   it, and its commit's subject is its record.
 - **A design page** — for a step that changes the protocol or the state (`AGENTS.md`, "Delegation

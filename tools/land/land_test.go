@@ -9,22 +9,26 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/praline-labs/rewake/internal/adapter/pi"
 )
 
 // repo is a checkout on v2 with an origin to push to; git is real, go and
-// bun are the test's.
+// bun and npm are the test's.
 type repo struct {
 	t       *testing.T
 	root    string
 	origin  string
 	install string
-	// red names the checks that fail; calls records go and bun.
+	// red names the checks that fail; calls records go, bun and npm.
 	red   map[string]bool
 	calls []string
 	// shellContracts is what the shell says of its contracts.
 	shellContracts string
 	// handover is the handover contract the built rewake speaks.
 	handover string
+	// piPin is the pin the landed sources and built binary require.
+	piPin string
 }
 
 func newRepo(t *testing.T) *repo {
@@ -37,12 +41,13 @@ func newRepo(t *testing.T) *repo {
 	for _, name := range []string{"GIT_AUTHOR_EMAIL", "GIT_COMMITTER_EMAIL"} {
 		t.Setenv(name, "owner@example.com")
 	}
-	r := &repo{t: t, root: t.TempDir(), origin: t.TempDir(), install: t.TempDir(), red: map[string]bool{}, shellContracts: shellSays("1", "5"), handover: "1"}
+	r := &repo{t: t, root: t.TempDir(), origin: t.TempDir(), install: t.TempDir(), red: map[string]bool{}, shellContracts: shellSays("1", "5"), handover: "1", piPin: pi.PinnedVersion}
 	r.git(r.origin, "init", "--bare", "-q")
 	r.git(r.root, "init", "-q", "-b", branch)
 	r.write("AGENTS.md", "## Commits\n\n```\nCo-Authored-By: One <one@example.com>\nCo-Authored-By: Two <two@example.com>\n```\n")
 	r.write("shell/app.ts", "1\n")
 	r.write("face/src/worker.ts", "1\n")
+	r.write("internal/adapter/pi/ship.go", "package pi\nconst (\n\tPinnedVersion = \""+r.piPin+"\"\n)\n")
 	r.write(".gitignore", ".scratch/\n")
 	r.commit("Start")
 	r.git(r.root, "remote", "add", "origin", r.origin)
@@ -96,6 +101,17 @@ func (r *repo) run(ctx context.Context, c command, log io.Writer) result {
 	line := strings.Join(append([]string{c.name}, c.args...), " ")
 	r.calls = append(r.calls, line)
 	switch {
+	case c.name == "npm":
+		want := []string{"install", "--prefix", r.install, "--save-exact", pi.Package + "@" + r.piPin}
+		if !slices.Equal(c.args, want) || c.dir != r.root || c.limit <= 0 {
+			r.t.Fatalf("npm command: %+v, want %v in %s with a time limit", c, want, r.root)
+		}
+		if r.red["npm"] {
+			return result{code: 1, stderr: "npm install failed"}
+		}
+		if !r.red["pi-version"] {
+			r.installPi(r.piPin)
+		}
 	case strings.Contains(line, "-race"):
 		if r.red["race"] {
 			return result{code: 1, stdout: "--- FAIL: TestSomething (0.01s)\nFAIL\tgithub.com/praline-labs/rewake/internal/cli\t3.2s\n"}
@@ -105,7 +121,7 @@ func (r *repo) run(ctx context.Context, c command, log io.Writer) result {
 			return result{code: 1, stdout: "--- FAIL: TestWorkflow/brief (2.00s)\n"}
 		}
 	case strings.HasPrefix(line, filepath.Join(r.install, "rewake")+" --version"):
-		return result{stdout: `{"version":"dev","contracts":{"speaks":{"host":"1","mirror":"1","handover":"` + r.handover + `"},"requires":{}}}`}
+		return result{stdout: `{"version":"dev","contracts":{"speaks":{"host":"1","mirror":"1","handover":"` + r.handover + `"},"requires":{"pi":"` + r.piPin + `"}}}`}
 	case line == "bun src/main.tsx --contracts":
 		return result{stdout: r.shellContracts}
 	case strings.HasPrefix(line, "go build"):
@@ -278,8 +294,8 @@ func TestNoPushIsADryRun(t *testing.T) {
 	if code != exitDone || r.at(branch) != old || r.git(r.origin, "rev-parse", branch) != old {
 		t.Fatalf("exit %d, v2 %s\n%s", code, r.at(branch), out)
 	}
-	if slices.ContainsFunc(r.calls, func(c string) bool { return strings.HasPrefix(c, "go build") }) {
-		t.Errorf("a dry run built: %v", r.calls)
+	if slices.ContainsFunc(r.calls, func(c string) bool { return strings.HasPrefix(c, "go build") || strings.HasPrefix(c, "npm ") }) {
+		t.Errorf("a dry run installed: %v", r.calls)
 	}
 }
 

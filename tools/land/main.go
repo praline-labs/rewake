@@ -87,7 +87,13 @@ Run from the main checkout with v2 checked out and a clean tree. The steps:
                 only when shell/ or face/ changed between the old v2 and
                 the new
       face      the same in face/, only when face/ changed
-  - on green: git push origin v2, then go build of cmd/rewake into
+  - on green: git push origin v2, then read the bundled pi pin from the
+    landed sources (not the pre-merge land process) and ensure it is
+    installed beside the binary: skip npm at the pin, otherwise npm install
+    --prefix <install> --save-exact <package>@<pin>, and check it back. An npm
+    failure or wrong version fails installation with no manifest or binary
+    replacement; v2 is already pushed and the room keeps its old build.
+    Then go build of cmd/rewake into
     <install>/rewake.next, renamed over <install>/rewake, only when the
     digest of rewake's sources differs from the installed build's; then
     <install>/manifest.json, the parts installed, and a last line of what

@@ -85,6 +85,13 @@ ln -sf "$dir/rewake" ~/.local/bin/rewake
   dependency. The version is `PinnedVersion` in `internal/adapter/pi/ship.go`; when an update
   changes it, install that one, or the start of a pi session refuses, naming both versions.
   `REWAKE_PI=<pi package directory or entry script>` names another copy instead.
+  `tools/land` maintains this bundled package too: before building and writing the manifest, it
+  reads the literal `PinnedVersion` from the landed tree's `ship.go`, not the land process
+  compiled before the merge. It skips npm when that exact pin is already installed, otherwise
+  runs `npm install --prefix
+  <install> --save-exact <package>@<pin>` and checks the installed version back. An npm failure
+  or a different version fails installation, leaving no manifest; the landed commit is already
+  pushed and running rooms still have their old build.
 
 ### A second build beside an installed one
 

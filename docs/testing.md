@@ -148,7 +148,11 @@ the owner's rule, a swap right after landing and green checks. It builds only wh
 rewake's sources differs from the installed manifest's, or the binary there is not the file that
 manifest names, since every build's bytes differ by its
 time and would ask for a room restart; a skipped build keeps the installed binary's file in the
-manifest. Then it writes `manifest.json` beside the build
+manifest. Before building, it reads the bundled pi pin from the landed tree, not the land
+process compiled before the merge, ensures that exact pin is installed with npm under the
+install's prefix and checks the version back; an exact installed pin skips npm. A failed
+npm call or wrong version fails the install after the push, leaves no manifest, and keeps the
+old binary. Then it writes `manifest.json` beside the build
 ([install.md](install.md#the-parts-and-what-an-update-restarts)), with the contracts the built
 `rewake --version --json` and `bun src/main.tsx --contracts` in `shell/` say, and ends with what
 this landing needs restarted, the plan from the old manifest to the new: `restart: rewake
