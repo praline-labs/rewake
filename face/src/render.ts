@@ -87,8 +87,10 @@ function toolLines(item: Item, width: number, view: Opened): FaceLine[] {
   return out;
 }
 
-// A summary of the model's thinking shows as pi's screen draws it: markdown,
-// faint and italic, whole; a long one folds after this many rows.
+// A summary of the model's thinking shows as pi's screen draws it: markdown
+// for its layout, one faint italic stream — headings, emphasis and inline
+// code keep their rows but take no colour, bold or underline of their own
+// (brief 117). A long one folds after this many rows.
 const thinkingRows = 10;
 
 // thinkingLines is a thinking block: its summary after a faint `∴`, or only
@@ -99,8 +101,15 @@ function thinkingLines(item: Item, width: number, view: Opened): FaceLine[] {
     return wrapSpans([{ text: "∴ Thinking", tone: "faint", italic: true }], width).map((spans) => ({
       spans,
     }));
+  // Markdown lays the block out, but one faint tone draws all of it: no span
+  // keeps a markdown colour, bold or underline, nor a fenced block's number
+  // (brief 117).
+  const uniform = (span: Span): Span => {
+    const { code: _, bold: __, underline: ___, ...rest } = span;
+    return { ...rest, tone: "faint" };
+  };
   const rows = markdownRows(text, width - 2, { text: "", tone: "faint", italic: true }).map((row) =>
-    row.map(({ code: _, ...span }) => span),
+    row.map(uniform),
   );
   const open = view.open({ kind: "more", id: item.id });
   const more = rows.length - thinkingRows;

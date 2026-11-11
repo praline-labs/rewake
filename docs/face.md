@@ -267,9 +267,11 @@ what is under it, `fold.ts` runs of calls, `markdown.ts` and
   widest cell exceeds that, the cells wrapped; a fenced block as written.
 - **Thinking**: the block's text, when the session sent any (the summary a provider streams, which
   pi's own screen draws as markdown in its thinking colour, italic, whole — read in
-  `assistant-message.js` of the bundled 1.4.0, October 31, 2026, brief 54), as markdown rows faint and
-  italic after a faint `∴ ` hung at two columns; more than ten rows fold to ten and `… +N lines`,
-  which a click opens.
+  `assistant-message.js` of the bundled 1.4.0, October 31, 2026, brief 54), laid out by the same
+  markdown as a reply but drawn as one faint italic stream after a faint `∴ ` hung at two
+  columns: headings, bold and inline code keep their rows, not their bold, underline or code
+  colour (brief 117, the owner seeing word-level highlighting inside reasoning). More than ten
+  rows fold to ten and `… +N lines`, which a click opens.
   A block with no text is the faint italic `∴ Thinking`, as the terminal draws it. Claude Code's
   mod carries thinking text only where the session gives it; it is drawn the same.
 - **Runs**: consecutive Read, Grep, Glob and Bash calls fold into one faint row hung at two columns,
