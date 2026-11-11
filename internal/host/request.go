@@ -44,6 +44,10 @@ type Request struct {
 	// (adapter.LaunchRequest.Mode), its text included.
 	Mode  workmode.Mode
 	Modes workmode.Config
+	// Migrations are the obsolete worker settings the launch's catalog
+	// skipped rather than refused (adapter.LaunchRequest.Migrations): the
+	// briefing carries them so main can repair what it starts under.
+	Migrations []string
 	// RoleReason says why the launch has its role, for the record and the
 	// briefing; empty says the role was selected with its flag.
 	RoleReason string

@@ -235,6 +235,26 @@ for any prompt.
 
 *September 17, 2026.*
 
+## The worker catalogue
+
+### Obsolete worker settings refused every launch instead of being skipped
+
+A project's `.rewake/aliases.toml` turned off two templates the user's catalogue no longer held,
+and its file still carried a template with the old `type`. Every catalogue command and every main
+launch through that project refused — `turns off "<name>" in [aliases] off, which is no alias of
+the catalog` — so nobody started to hear that the file needed editing, and a main could not start
+to repair it.
+
+Obsolete settings are skipped with a migration notice, not refused: an absent name in
+`[aliases] off` hides nothing and is already off; a `[types]` section, a `types/` directory and an
+alias `type` are gone with the worker type, and the notice names the file, the line and what to
+write. A template whose `type` was skipped stays out until it is fixed rather than starting under
+a default. The rest of the catalogue runs, every command prints the notices, and a launch carries
+them into main's briefing. What rewake cannot recognize — malformed TOML, an unknown field, a
+malformed value — still refuses the file.
+
+*November 11, 2026, in a project's launch through another wrapper.*
+
 ## Delivery and its proofs
 
 ### A message reported delivered was held by Claude Code — the status is now honest

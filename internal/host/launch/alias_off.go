@@ -26,13 +26,14 @@ func (s *Set) noteAliasesOff(names []string, own map[string]Alias, description, 
 }
 
 // applyAliasesOff hides the listed templates once the user's and the project's
-// files are merged. A name that is no template of the merged catalog refuses
-// it, as an unknown field does: a typo would leave on what was meant off.
+// files are merged. `off` is subtraction from the catalog: a name no file
+// holds any more is already off, so a list that still names a template removed
+// from the user's or the project's file skips it with a migration notice
+// instead of refusing every launch in that project.
 func (s *Set) applyAliasesOff() {
 	for _, request := range s.pendingOff {
 		if _, ok := s.aliases[request.name]; !ok {
-			s.unreadable(fmt.Sprintf("%s at %s turns off %q in [aliases] off, which is no alias of the catalog; %s",
-				request.description, request.path, request.name, s.available()))
+			s.Migrations = append(s.Migrations, fmt.Sprintf("%s at %s turns off %q in [aliases] off, which no template of the catalog holds any more; it is already off, so nothing is hidden and the launch goes on. Remove the name from the list.", request.description, request.path, request.name))
 			continue
 		}
 		s.aliasOff[request.name] = request.description

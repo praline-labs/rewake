@@ -248,6 +248,7 @@ func (r *run) launchRequest(controlDir string) adapter.LaunchRequest {
 		WorktreeEntry: request.WorktreeEntry,
 		Mode:          request.Mode,
 		Modes:         request.Modes,
+		Migrations:    request.Migrations,
 		Mirror:        r.model,
 		Work: func() string {
 			return work.TailOf(work.Of(launch.QuietBriefHome(request.Dir), name, epoch), session.Role == role.Main.ID)

@@ -122,7 +122,9 @@ A project can carry its own catalogue beside its code, read from the directory m
   brief; a barred one a skill links is left out, and the letter says so
   ([briefs.md](briefs.md#skills)).
 - **`[aliases] off = ["helper"]`** in that file hides those of your templates in this project
-  alone. With no launchable `write` template left, main remains the orchestrator and asks
+  alone. A name your catalogue no longer has is already off and is ignored, so a project that
+  still lists a template you deleted later launches as before; the notice asks you to drop the
+  name. With no launchable `write` template left, main remains the orchestrator and asks
   for a writer template; `rewake workers` says so.
 - **`.rewake/modes/<mode>.md`** — a runtime work mode of the project's own, which also replaces a
   built-in's text of the same name; yours go in `~/.config/rewake/modes/`. A mode file opens with
@@ -134,6 +136,14 @@ A project can carry its own catalogue beside its code, read from the directory m
   +++
   Read the project's documentation map first. Change only the documents the brief names.
   ```
+
+Older settings of the separate worker type do not block a launch: a `type = "..."` in a template,
+a `[types]` section and a `types/` directory are skipped, and every command that reads the
+catalogue prints a notice naming the file, the line and what to write instead. A template whose
+`type` is skipped stays out of `rewake workers` and cannot be opened until it is fixed; the rest
+of the catalogue runs, and main reads the notices in its briefing and can repair the file
+([work-modes.md](work-modes.md#the-old-worker-types)). A file rewritten by hand is the only way:
+malformed TOML, an unknown field and a malformed value still refuse the catalogue.
 
 ## The workers' own settings
 

@@ -83,3 +83,50 @@ func TestGuideSaysAPersonStartsOnlyMain(t *testing.T) {
 		t.Fatalf("guide=%d %s %s", code, out, errOut)
 	}
 }
+
+// A project that still carries the old worker type and lists a template the
+// catalog no longer has does not block main: it starts on the rest, and its
+// briefing names each obsolete setting with what to write
+// (docs/work-modes.md#the-old-worker-types).
+func TestAMainLaunchesOnAStaleProjectFileAndIsToldWhatToFix(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	dir := t.TempDir()
+	if err := os.Chmod(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv(state.DirEnv, dir)
+	t.Setenv(state.RoomEnv, "")
+	project := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(project, ".rewake"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	stale := "[alias.gone]\nharness = \"agent\"\ntype = \"code\"\n[alias.kept]\nharness = \"agent\"\n[aliases]\noff = [\"removed-write\"]\n"
+	if err := os.WriteFile(filepath.Join(project, ".rewake", "aliases.toml"), []byte(stale), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	t.Chdir(project)
+	h := testCatalog().All()[0]
+	t.Setenv("PATH", launchPath(t, h))
+	parsed, err := testTable().parse([]string{h.ID()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	outsideAnySession(t)
+	probe := &roleLaunchProbe{Harness: h}
+	if err := handleLaunch(probe)(&Context{Stdout: io.Discard, Stderr: io.Discard, table: testTable()}, parsed.Call); err != nil {
+		t.Fatalf("a stale project file blocked main: %v", err)
+	}
+	intro := brief.Intro(probe.request.BriefContext())
+	for _, want := range []string{
+		"skipped as obsolete",
+		"alias.gone",
+		"obsolete type field",
+		"start_mode",
+		`turns off "removed-write" in [aliases] off`,
+		"already off",
+	} {
+		if !strings.Contains(intro, want) {
+			t.Errorf("main's briefing lacks %q: %s", want, intro)
+		}
+	}
+}

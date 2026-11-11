@@ -86,35 +86,92 @@ func TestTheNearestModeWins(t *testing.T) {
 	}
 }
 
-// The types of before this change are refused, each naming where its file
-// goes, rather than read as if the mode were its type.
-func TestTheOldTypeSyntaxIsRefusedWithWhereItGoes(t *testing.T) {
+// The types of before this change are skipped with a migration notice naming
+// where each goes, rather than refusing a catalog that still carries one: main
+// must start on what is valid and learn what to fix (docs/work-modes.md#the-old-worker-types).
+func TestTheOldTypeSyntaxIsSkippedWithWhereItGoes(t *testing.T) {
+	for _, c := range []struct {
+		files   map[string]string
+		skipped []string
+		names   string
+	}{
+		{
+			map[string]string{"home/.config/rewake/types/code.md": typeFile("mine", "text")},
+			[]string{"types", "no longer read and is skipped", "modes", "code is now build"},
+			"",
+		},
+		{
+			map[string]string{"work/.rewake/types/study.md": typeFile("ours", "text")},
+			[]string{filepath.Join(".rewake", "types"), "modes", "review and process keep theirs"},
+			"",
+		},
+		{
+			map[string]string{"home/.config/rewake/aliases.toml": "[types]\noff = [\"process\"]\n"},
+			[]string{"types", "[types] section is no longer read", "modes/<name>.md"},
+			"",
+		},
+		{
+			map[string]string{
+				"work/.rewake/modes/study.md": typeFile("ours", "text"),
+				"work/.rewake/aliases.toml":   "[alias.w]\nharness = \"agent\"\ntype = \"study\"\n[alias.kept]\nharness = \"agent\"\n",
+			},
+			[]string{"alias.w", "obsolete type field", "left out until it is fixed", "start_mode", "aliases.toml:3"},
+			"kept",
+		},
+	} {
+		set := typesRoom(t, c.files)
+		if err := set.Err(); err != nil {
+			t.Fatalf("refused %v: %v", c.files, err)
+		}
+		if got := strings.Join(set.Names(), ","); got != c.names {
+			t.Errorf("%v: names %q, want %q", c.files, got, c.names)
+		}
+		notices := strings.Join(set.Migrations, "\n")
+		for _, want := range c.skipped {
+			if !strings.Contains(notices, want) {
+				t.Errorf("%v: notices %q lack %q", c.files, notices, want)
+			}
+		}
+	}
+}
+
+// A template whose obsolete type is skipped is left out rather than started
+// under a default, and space open refuses it with what to write.
+func TestAnOmittedTemplateIsRefusedWithWhatToWrite(t *testing.T) {
+	set := typesRoom(t, map[string]string{
+		"work/.rewake/aliases.toml": "[alias.w]\nharness = \"agent\"\ntype = \"code\"\n",
+	})
+	if err := set.Err(); err != nil {
+		t.Fatal(err)
+	}
+	_, err := set.Template("w", catalog)
+	if err == nil || !strings.Contains(err.Error(), `the alias "w" is unavailable`) || !strings.Contains(err.Error(), "start_mode") {
+		t.Fatalf("the omission: %v", err)
+	}
+}
+
+// What rewake cannot recognize still refuses the file: a malformed value and a
+// field no alias has, beside the obsolete settings it does recognize.
+func TestTheObsoleteSettingsDoNotSoftenTheOtherRefusals(t *testing.T) {
 	for _, c := range []struct {
 		files   map[string]string
 		refused []string
 	}{
 		{
-			map[string]string{"home/.config/rewake/types/code.md": typeFile("mine", "text")},
-			[]string{"types", "modes", "code is now build"},
-		},
-		{
-			map[string]string{"home/.config/rewake/aliases.toml": "[types]\noff = [\"process\"]\n"},
-			[]string{"types (line 1)", "[types] section is no longer read", "modes/<name>.md"},
-		},
-		{
-			map[string]string{
-				"work/.rewake/modes/study.md": typeFile("ours", "text"),
-				"work/.rewake/aliases.toml":   "[alias.w]\nharness = \"agent\"\ntype = \"study\"\n",
-			},
-			[]string{"alias.w.type", "start_mode", "--work-mode"},
-		},
-		{
-			map[string]string{"home/.config/rewake/aliases.toml": "[pi.modes.nowhere]\neffort = \"high\"\n"},
+			map[string]string{"home/.config/rewake/aliases.toml": "[pi.modes.nowhere]\neffort = \"high\"\n[types]\noff = [\"process\"]\n"},
 			[]string{"[pi]", `"nowhere"`, "catalog does not hold"},
 		},
 		{
-			map[string]string{"home/.config/rewake/aliases.toml": "[alias.w]\nharness = \"agent\"\n[alias.w.pi.modes.nothing]\neffort = \"low\"\n"},
+			map[string]string{"home/.config/rewake/aliases.toml": "[alias.w]\nharness = \"agent\"\n[alias.w.pi.modes.nothing]\neffort = \"low\"\n[types]\noff = [\"process\"]\n"},
 			[]string{"alias \"w\"", "nothing"},
+		},
+		{
+			map[string]string{"work/.rewake/aliases.toml": "[alias.w]\nharness = \"agent\"\ntype = \"code\"\ncolor = \"blue\"\n"},
+			[]string{"alias.w.color", "fields an alias does not have"},
+		},
+		{
+			map[string]string{"work/.rewake/aliases.toml": "[alias.w]\nharness = \"agent\"\ntype = \n"},
+			[]string{"could not be read"},
 		},
 	} {
 		set := typesRoom(t, c.files)
@@ -140,5 +197,17 @@ func TestTheOldProjectFileAndABrokenModeAreRefused(t *testing.T) {
 	set = typesRoom(t, map[string]string{"work/.rewake/modes/study.md": "no front matter"})
 	if err := set.Err(); err == nil || !strings.Contains(err.Error(), "study.md") {
 		t.Fatalf("a broken mode: %v", err)
+	}
+}
+
+// space open refuses a template the obsolete type left out, with what to write
+// rather than a bare "no alias".
+func TestSpaceOpenRefusesAnOmittedTemplateWithWhatToWrite(t *testing.T) {
+	set := typesRoom(t, map[string]string{
+		"work/.rewake/aliases.toml": "[alias.w]\nharness = \"agent\"\ntype = \"code\"\n",
+	})
+	_, err := set.Raise(workers, Request{Alias: "w"})
+	if err == nil || !strings.Contains(err.Error(), `the alias "w" is unavailable`) || !strings.Contains(err.Error(), "start_mode") {
+		t.Fatalf("space open: %v", err)
 	}
 }

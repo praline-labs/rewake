@@ -92,6 +92,14 @@ type Set struct {
 	// Notes are advisories for the person, such as a user file open to
 	// others; they are printed and refuse nothing.
 	Notes []string
+	// Migrations are the obsolete settings this process skipped rather than
+	// refused, each naming its file, its line where there is one and what to
+	// write instead: the catalog runs on what is valid and main is told
+	// what to repair (alias_obsolete.go).
+	Migrations []string
+	// omitted names the templates an obsolete setting left unusable, with the
+	// migration notice that says what to fix; Template refuses them by name.
+	omitted map[string]string
 	// problems are files that could not be read, which refuse the catalog
 	// through Err rather than leave a worker silently absent.
 	problems []string
@@ -174,6 +182,9 @@ func (e *MainOnlyTemplateError) Error() string {
 // Template resolves one alias, refusing one that would start something other
 // than what it says.
 func (s *Set) Template(name string, catalog adapter.Catalog) (Template, error) {
+	if notice, omitted := s.omitted[name]; omitted {
+		return Template{}, fmt.Errorf("the alias %q is unavailable until its obsolete setting is fixed: %s", name, notice)
+	}
 	if where, off := s.aliasOff[name]; off {
 		return Template{}, fmt.Errorf("the alias %q is turned off in %s ([aliases] off); %s", name, where, s.available())
 	}

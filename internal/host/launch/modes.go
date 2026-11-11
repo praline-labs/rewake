@@ -59,10 +59,11 @@ func (s *Set) readModes(dir, source string) {
 	}
 }
 
-// refuseModesDir refuses the types directory of before this change, naming
-// where its files go: read silently, or left unread, either would start
-// workers without the discipline their person wrote for them.
-func (s *Set) refuseModesDir(dir string) {
+// noteModesDir skips the types directory of before this change with a
+// migration notice, naming where its files go: refusing it blocked every
+// launch in a project that still carried one, and reading it silently would
+// start workers without the discipline their person wrote for them.
+func (s *Set) noteModesDir(dir string) {
 	entries, err := os.ReadDir(dir)
 	if os.IsNotExist(err) {
 		return
@@ -77,7 +78,7 @@ func (s *Set) refuseModesDir(dir string) {
 	if len(names) == 0 {
 		files = "it is empty"
 	}
-	s.unreadable(fmt.Sprintf("%s is no longer read: a worker's kind of work is its runtime work mode, a file under %s; move each file there, keeping its front matter and text. code is now build and analysis is advisor, so a custom code.md or analysis.md needs a name of its own; review and process keep theirs. %s",
+	s.Migrations = append(s.Migrations, fmt.Sprintf("%s is no longer read and is skipped: a worker's kind of work is its runtime work mode, a file under %s; move each file there, keeping its front matter and text. code is now build and analysis is advisor, so a custom code.md or analysis.md needs a name of its own; review and process keep theirs. %s",
 		dir, filepath.Join(filepath.Dir(dir), modesDir), files))
 }
 

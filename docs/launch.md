@@ -376,7 +376,11 @@ reports, the limits and the mail. Each names its identity and selection reason, 
 needs, and points to guide for the full contract.
 Write may commit; main delegates and reads results. All ask for the point of a message in its first line. Per-role
 snapshots make wording changes reviewable. A harness that cannot switch modes reads the session's
-runtime work mode after its role's sections, as one section ([work-modes.md](work-modes.md)).
+runtime work mode after its role's sections, as one section ([work-modes.md](work-modes.md)). A
+session is also told, after its harness's section, each obsolete worker setting the catalogue
+skipped rather than refused, with its file, its line and what to write, so that main — which
+starts on the valid rest — can repair the configuration it runs under
+([work-modes.md](work-modes.md#the-old-worker-types)).
 
 ### First input
 

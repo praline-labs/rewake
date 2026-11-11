@@ -22,6 +22,11 @@ type Context struct {
 	// harness that switches the mode at runtime injects the section itself,
 	// so the launch's briefing never carries a second, stale one.
 	Mode workmode.Mode
+	// Migrations are the obsolete worker settings the launch skipped rather
+	// than refused, each with its file and line and what to write instead:
+	// the session is told them so that main can repair the configuration it
+	// starts under (docs/work-modes.md#the-old-worker-types).
+	Migrations []string
 }
 
 // Intro renders the independent system briefing of the selected role.
