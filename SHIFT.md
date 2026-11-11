@@ -105,8 +105,10 @@ Open a document for numbers, commands and names: the map only points.
   sections: Delivery · Launch, reports and what a main waits on · A worktree · Actions on a sent message · Conversations · A stop, and steering a session · The live set · Spaces
 - `docs/testing.md` — How rewake is tested: the tiers, the fault build, the fixture column, running and reading the workflow suite, the checks before a publication, and the traps it has paid for.
   sections: The tiers · Running it · Checking a new harness version before updating · Reading a result · Which tests to write · Extending the suite · Traps this suite has already paid for
-- `docs/traps.md` — What misbehaves in rewake and the harnesses it lives with, by symptom — roles and reports, tests next to a live session, arguments, delivery, main's host and its shell, a switch of the room's build — each entry dated, with its cause and what to do.
-  sections: Roles and reports · Tests next to a live session · Arguments and continuing a conversation · Delivery and its proofs · Main's host and its shell · A switch of the room's build
+- `docs/traps-restarts.md` — Restart traps — main's host closing on SIGPIPE and a room switch repeating a launch against a running harness — each with its live failure, cause and remedy.
+  sections: Main's host and its shell · A switch of the room's build
+- `docs/traps.md` — What misbehaves in rewake and the harnesses it lives with, by symptom — roles and reports, tests next to a live session, arguments, delivery and installation — each entry dated, with its cause and what to do; restart traps are in traps-restarts.md.
+  sections: Roles and reports · Tests next to a live session · Arguments and continuing a conversation · Delivery and its proofs · Installation · Restart traps
 - `docs/turn-outcomes.md` — What each turn end reports — finished, error, stopped or pending — who it goes to, and the hold that keeps an interim end from closing a task.
   sections: Failed turns · Unclaimed answers · Interim turn ends (`rewake pending`) · The confirmation · Stops
 - `docs/user-guide.md` — The person's guide — the few things only the person does: install, logins, starting main, the worker templates, a project's .rewake/, the shell's keys, stopping and restarting, where things live, upgrading.
