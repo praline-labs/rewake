@@ -1000,7 +1000,13 @@ Read in the pinned package rewake ships, `@earendil-works/pi-coding-agent` 1.5.2
 - `docs/extensions.md`, "ctx.mode", defines the extension's `ctx.mode` as `"tui"`, `"rpc"`,
   `"json"` or `"print"`: the same output mode again, guarded as `ctx.mode === "tui"`.
 - `docs/keybindings.md` binds `app.thinking.cycle` to shift+tab, a thinking level and not a mode;
-  nothing in the package's documentation names a work mode, a build mode or a plan mode.
+  the package ships no named work-mode or build-mode registry. Extension-defined modes do exist as
+  examples, not as a native facility: `docs/extensions.md` shows a third-party "Toggle plan mode"
+  shortcut (line 1871), a `plan` flag that "Start[s] in plan mode" (1884), and the bundled
+  `plan-mode/` example, which is "Full plan mode implementation" built from `registerCommand`,
+  `registerShortcut`, `registerFlag`, `setStatus`, `setWidget`, `sendMessage` and `setActiveTools`
+  (3339). Such an extension owns its own mode; pi still names no mode for the agent, and rewake
+  loads no plan-mode example and adds no plan mode of its own — the conclusion holds either way.
 
 Every rewake work mode is therefore extension-owned and equal, on the route this document already
 records: Go owns the catalog, precedence, section text and wording; native pi applies model,
