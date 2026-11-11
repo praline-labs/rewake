@@ -997,11 +997,11 @@ Read in the pinned package rewake ships, `@earendil-works/pi-coding-agent` 1.5.2
 - `dist/cli/args.js` takes `--mode` and accepts only `text`, `json` and `rpc` — its diagnostic is
   "--mode requires text, json, or rpc" and its help line reads "Output mode: text (default), json,
   or rpc". It selects output, not behavior, so rewake never passes it for a work mode.
-- `docs/extensions.md`, "ctx.mode", defines the extension's `ctx.mode` as `"tui"`, `"rpc"`,
+- `pi-coding-agent/docs/extensions.md`, "ctx.mode", defines the extension's `ctx.mode` as `"tui"`, `"rpc"`,
   `"json"` or `"print"`: the same output mode again, guarded as `ctx.mode === "tui"`.
-- `docs/keybindings.md` binds `app.thinking.cycle` to shift+tab, a thinking level and not a mode;
+- `pi-coding-agent/docs/keybindings.md` binds `app.thinking.cycle` to shift+tab, a thinking level and not a mode;
   the package ships no named work-mode or build-mode registry. Extension-defined modes do exist as
-  examples, not as a native facility: `docs/extensions.md` shows a third-party "Toggle plan mode"
+  examples, not as a native facility: `pi-coding-agent/docs/extensions.md` shows a third-party "Toggle plan mode"
   shortcut (line 1871), a `plan` flag that "Start[s] in plan mode" (1884), and the bundled
   `plan-mode/` example, which is "Full plan mode implementation" built from `registerCommand`,
   `registerShortcut`, `registerFlag`, `setStatus`, `setWidget`, `sendMessage` and `setActiveTools`
