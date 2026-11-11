@@ -6,8 +6,8 @@ description: pi's adapter: how it launches, wakes and hears turns, its wire cont
 
 Verified October 18, 2026 against installed `@earendil-works/pi-coding-agent` 1.2.0.
 This package, not the older reference checkout, is the source for this adapter. Since
-October 19, 2026 pi is shipped with rewake at a pinned version, **1.3.0** then and **1.4.0** since
-October 27, 2026 ([below](#the-bundled-pi)), which a launch of the
+October 19, 2026 pi is shipped with rewake at a pinned version, **1.3.0** then, **1.4.0** on
+October 27, 2026, and **1.5.2** since November 11, 2026 ([below](#the-bundled-pi)), which a launch of the
 shipped copy requires exactly ([below](#the-bundled-pi)); the minimum, **1.2.0**, holds a pi
 named with `--command`, and the gate refuses older or unreadable versions. Main also compared the 1.3.0 package on October 18: its extension
 declarations were byte-identical to 1.2.0 and its changelog contained no extension, event or
@@ -467,6 +467,90 @@ tests) pass. Not run, because they need a model and the owner's login: a turn's 
 main through the bundled 1.4.0, and the telemetry's thinking level and `model.reasoning` on a real
 model. `scripts/pack.sh 0.0.1` wrote `"@earendil-works/pi-coding-agent": "1.4.0"` into the entry's
 dependencies.
+
+**Raised to 1.5.2, November 11, 2026 (brief 110).** Fresh, separate npm installs of
+`@earendil-works/pi-coding-agent@1.4.0` and `@1.5.2`, including their respective 1.4.0 and
+1.5.2 `pi-tui`/`pi-ai` dependencies, were compared under `.scratch/pi110/{old,new}`. These
+are package-source observations, not a claim that every upstream feature was exercised:
+
+- `package.json`: `bin.pi` remains `dist/bundle/cli.js`, `engines.node` remains
+  `>=22.19.0`; `NodeMinimum` therefore stays 22.19.0. The entry script is byte-identical:
+  it enables Node's compile cache and loads `./cli-runtime.js` in the same process.
+- `CHANGELOG.md`: read all additions for 1.5.0, 1.5.1 and 1.5.2. Tool validation moved to
+  pi-schema; rewake registers ordinary JSON Schemas, not TypeBox refinements or codecs.
+  The other declared breaks concern custom grep operations and provider payloads, neither
+  implemented by rewake. Model defaults, provider transports, rendering and native session
+  handling also changed; a minor version was not taken as evidence of compatibility.
+- `dist/core/extensions/types.d.ts`: additions concern renderer keybinding hints, custom
+  UI blocked status and Markdown transformers/metadata. The lifecycle, context, selection,
+  compaction and message methods rewake uses retain their declarations. In
+  `dist/core/extensions/loader.js`, registration still refreshes dynamically and hides
+  dropped tools; import resolution now canonicalizes symlinks and supplies pi-ai's legacy
+  TypeBox exports through an extension view. `dist/core/exec.{js,d.ts}` adds an output cap
+  and `truncated`, fixes UTF-8 and termination, and retains `code`/`killed` and inherited env.
+- `dist/cli/args.js`: parsing is unchanged (only help text differs); `dist/main.js` still
+  initializes agent-directory settings and HTTP before checking `--version`. New auth
+  commands and missing-directory resume/fork handling do not change rewake's flags.
+  `dist/core/settings-manager.js` adds extension-changelog versions; resource loading in
+  `dist/core/resource-loader.js` still honors explicit `-e`, trust overrides and appended
+  prompts, with path normalization and package-install warning changes.
+- `dist/utils/clipboard.js` is byte-identical. `clipboard-command.js` now starts helpers
+  from `/`, retaining detached writers and the same clipboard/OSC 52 selection. In
+  `pi-tui/dist/tui-alt-screen.js`, double-click words gain joiners and focused selectors
+  receive page keys; Kitty image redraws change, not mouse enablement or copy-on-select.
+- Editor/TUI comparison: `pi-tui/dist/components/editor.js` adds autocomplete paging and
+  fixes paste-marker renumbering; `dist/keys.js` adds functional-key handling;
+  `dist/keybindings.js` adds a paging helper; `dist/tui.js` strips cursor markers from output.
+  Coding-agent's `dist/modes/interactive/components/custom-editor.js` delegates selector
+  page keys before paste. `interactive-mode.js` preserves expanded paste text on editor
+  replacement and leaves open dialogs focused. The `CustomEditor` subclass/factory and
+  `matchesKey` used by rewake remain valid. Native footer and both theme JSON files are
+  byte-identical; assistant rendering adds Markdown reuse/metadata and hidden-block spacing,
+  without changing the streamed fields consumed by the face.
+- Native admission/work modes: in `dist/core/agent-session.js`, `setModel`,
+  `setThinkingLevel`, `_prepareRun`, `_startRun`, `_runInputHandlers`, `sendCustomMessage`,
+  `sendUserMessage`, `compact`, `_runAutoCompaction`, `_compactBeforeNextAssistantResponse`
+  and `abort` are byte-identical methods. `prompt` now reserves preflight against tree
+  navigation; reload refuses busy/compacting runs. `dist/core/extensions/runner.js` retains
+  the identical `emitInput`, `emitBeforeAgentStart` and context creation: hooks are awaited,
+  thrown input/run hooks are not vetoes, model mutation precedes its awaited notification,
+  and structured prompt sections stay mutable. No adapter/face compatibility change is needed.
+- `dist/core/settings-defaults.js` changes cache warming from `streaming` to `idle`.
+  The previously recorded limit now applies by default: rewake does not observe idle cache
+  refreshes, so its estimated TTL can understate the remaining life. No setting is overridden.
+
+**[live]** November 11, 2026, the packages built by `scripts/pack.sh 0.0.1` were packed and
+installed globally into a scratch prefix through a loopback registry serving only rewake's
+entry/platform packages; npm fetched pi and its dependencies from the public registry. The
+installed entry's dependency is exactly `"@earendil-works/pi-coding-agent": "1.5.2"`, read
+from `PinnedVersion` by the unchanged script. Through the installed shim and compiled shell,
+pty 120 by 40, fresh private HOME/project and short `REWAKE_DIR` under `/tmp`, whitelisted
+environment plus proxy variables, `--offline`, no credentials copied or linked:
+
+| Check | Seen |
+|---|---|
+| installed shipped copy, no `REWAKE_PI` | screen `v1.5.2`, `[Extensions]` naming the run's `extension.ts`; `main-pi` had live wake, turn-boundary, telemetry, control and spaces |
+| `REWAKE_PI` at fresh 1.4.0 package | exit 1, `pi 1.4.0 was found where rewake's own copy should be; this rewake runs pi 1.5.2`; no session claimed |
+| `--command` at 1.4.0 entry | screen `v1.4.0` and live boundary; a separate no-prompt RPC start captured `pi 1.4.0 named with --command is not the 1.5.2 this rewake was checked with`, exited 0 on stdin close |
+
+The terminal starts were ended by signalling their own private hosts (exit 129), not by
+closing any owner's session. Initial probe-driver errors (a list read as an object and a
+quit sent before input settled) were corrected and the complete probe rerun; no paid prompt
+ran. Final evidence: `.scratch/pi110/live-result.json`, `shipped.ansi`, `command-old.ansi`,
+`install-layout.log`, and the package diffs alongside them. Neither `~/.pi` nor `~/.claude`
+was created in the final private HOME. No owner configuration or running session was touched.
+
+Checks passed: Go tests of `internal/adapter/pi`, `internal/host/launch`,
+`internal/adapter/catalog`, `internal/infra/parts` and `scripts`; extension `bun test` (27 tests);
+`bun install --frozen-lockfile && bun run check` in both `shell/` and `face/`;
+`go test -p 4 -race -shuffle=on -timeout 20m ./...`; six workflow scenarios with
+`REWAKE_WORKFLOW=1`, `-count=1 -v`: wrapped-launch, fixture-live, task-report, fixture-steered,
+fixture-reexec and fixture-switch. All Go runs cleared the four session variables.
+Deliberately not run: paid-provider turns/login/logout; real-model answer delivery and
+compaction; a new live face/native-key/admission-race or wrapper-adoption probe; clipboard
+integration with a real desktop; third-party extensions (out of scope); the full publication
+gate (no release). Those native contracts were source-compared and covered by existing unit
+and fixture tests, not newly accepted on a real model.
 
 ## A mirror of a live session for an interface of rewake's own (October 28, 2026, 1.4.0)
 

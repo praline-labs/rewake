@@ -16,7 +16,7 @@ import (
 // the one version this build was checked with. NodeMinimum is that pi's own
 // engines field, which it does not check itself.
 const (
-	PinnedVersion = "1.4.0"
+	PinnedVersion = "1.5.2"
 	NodeMinimum   = "22.19.0"
 	// Package is the npm package of pi, a dependency of rewake's own.
 	Package = "@earendil-works/pi-coding-agent"
