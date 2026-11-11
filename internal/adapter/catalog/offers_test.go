@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/adapter"
+	"github.com/praline-labs/rewake/internal/adapter/claude"
+	"github.com/praline-labs/rewake/internal/adapter/pi"
 )
 
 // launchRequest is a launch of a role that opens spaces, in a short private directory, so no
@@ -67,6 +69,30 @@ func TestEveryHarnessAnswersWhetherItNamesItsConversation(t *testing.T) {
 				t.Fatalf("the launch's arguments %q do not carry %s %s", plan.Args, answer.Flag, id)
 			}
 		})
+	}
+}
+
+// Launch policy is independent of what existing runs serve. Claude Code still
+// plans main; pi permits workers and a zero offer does not forbid them.
+func TestClaudeLaunchesMainOnlyAndPiStillPermitsWorkers(t *testing.T) {
+	h := claude.New()
+	if !h.Offers().MainOnly || pi.New().Offers().MainOnly || (adapter.Offer{}).MainOnly {
+		t.Fatal("the main-only launch policy is not declared by the adapters")
+	}
+	for _, command := range []string{"", "/bin/custom-wrapper"} {
+		request := launchRequest(t)
+		request.Command = command
+		plan, err := h.Launch(request)
+		if err != nil {
+			t.Fatalf("Claude Code main with command %q: %v", command, err)
+		}
+		want := "claude"
+		if command != "" {
+			want = command
+		}
+		if plan.Command != want {
+			t.Fatalf("Claude Code main starts %q, want %q", plan.Command, want)
+		}
 	}
 }
 

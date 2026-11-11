@@ -43,6 +43,9 @@ func handleLaunch(h adapter.Harness) func(*Context, Call) error {
 		if err != nil {
 			return err
 		}
+		if h.Offers().MainOnly && id.part.ID != role.Main.ID {
+			return &FailedError{Message: fmt.Sprintf("%s launches main only; a %s worker cannot start on it. Choose a worker template from rewake workers.", h.Title(), id.part.ID)}
+		}
 		if err := refuseReportingRole(h, id.part); err != nil {
 			return err
 		}

@@ -7,8 +7,10 @@ description: rewake's own face for a live session — the mirror model in the se
 A worker's pane shows one of two **faces**: `native`, the harness's own TUI as the pty draws it, or
 `rewake`, drawn by rewake's shell from the **mirror**, a harness-free model of the session's
 conversation kept in the session's wrapper. A **dev worker** is one raised with the mirror on
-(`rewake space open … --dev`); the face draws dev workers on Claude Code and every pi worker, dev
-without the flag (the owner's word, October 31, 2026: pi drawn as Claude Code looks).
+(`rewake space open … --dev`); the face draws existing Claude Code dev workers and every pi
+worker, dev without the flag (the owner's word, October 31, 2026: pi drawn as Claude Code looks).
+New workers are pi only (owner, November 11, 2026); the Claude Code mirror remains served for
+existing runs, not as a way to raise a new dev worker.
 
 **The owner's word (October 28, 2026):** a conversation drawn by rewake's face passes to the shell as
 data in memory only. The mirror reads no transcript file and writes nothing: prompt, reply and tool

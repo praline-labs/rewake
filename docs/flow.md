@@ -55,8 +55,8 @@ sock/space.<id>.sock             the worker's screen, served by its space host t
 `rewake claude` starts main-claude, the sender in this example, in the room of its directory;
 the owner runs it from a terminal outside any session, and a launch from a shell inside a
 rewake session is refused with exit 2 before any step below
-([launch.md](launch.md#no-session-inside-a-session)). Main raises the receiver, api-claude, with
-`rewake space open api --alias claude-write` ([A space](#a-space-main-starts-a-worker)); that worker's launch goes through the
+([launch.md](launch.md#no-session-inside-a-session)). Main raises the receiver, api-pi, with
+`rewake space open api --alias pi-write` ([A space](#a-space-main-starts-a-worker)); that worker's launch goes through the
 same steps, with its name, role and room from the space's record.
 
 1. **The directory.** The wrapper resolves the `REWAKE_DIR` base, its root `v2/` and
@@ -141,7 +141,7 @@ shown as a session whose state is unknown.
 
 ## Act 2. A task is sent
 
-`rewake send write-claude "run the smoke and report what failed"` — from the main
+`rewake send write-pi "run the smoke and report what failed"` — from the main
 session's shell, or from a person's shell in the same room. A shell without
 `REWAKE_ROOM` takes the room of its working directory. Commands cannot name a different room.
 
@@ -158,19 +158,19 @@ session's shell, or from a person's shell in the same room. A shell without
    next, exit 2: that role never reports, so it could never answer. A letter to a run
    whose Wake is not live is written and reported accepted, exit 3, at once: no notice
    can reach it until its Wake is live, and it reads the letter with `rewake inbox`.
-4. **The file.** `inbox/write-claude/<id>.json.tmp`, renamed to `.json`. The id is
+4. **The file.** `inbox/write-pi/<id>.json.tmp`, renamed to `.json`. The id is
    time-sortable. Nothing else is touched: the sender does not deliver.
 5. **The wait.** The sender polls `<id>.status` for up to `--wait` seconds (5
-   by default; a question's delivery 5 at most) and prints one line: `Rewake: delivered to write-claude via socket`,
-   `Rewake: pending for write-claude: …` or `Rewake: held for write-claude: …` (exit 3),
-   or `Rewake: failed for write-claude: …` (exit 1). A task or a question is announced
+   by default; a question's delivery 5 at most) and prints one line: `Rewake: delivered to write-pi via socket`,
+   `Rewake: pending for write-pi: …` or `Rewake: held for write-pi: …` (exit 3),
+   or `Rewake: failed for write-pi: …` (exit 1). A task or a question is announced
    at once; a `--notify` waits up to four seconds for company (Act 3), and the send
    waits with it — inside its five, so it still answers delivered.
 6. **The id.** Unless the send failed, a second line gives the message's id,
    `id <id>`. It is how the sender acts on the message later, while it is its own
    run: `rewake withdraw <id>` takes it back unread, leaving a withdrawn note under
    the same id where a notice went out; `rewake edit <id> "..."` does that and sends
-   the new text as a new letter; `rewake send write-claude "..." --to <id>` adds to the
+   the new text as a new letter; `rewake send write-pi "..." --to <id>` adds to the
    task, and one report settles both. A short tail of the id is enough
    ([delivery-sent.md](delivery-sent.md)).
 7. **A brief.** Main's `--brief 3` on a task or a question gives the recipient's run brief 3,
@@ -294,7 +294,7 @@ session's waits.
    matches the original run and wait; newly read messages remain owed to the next
    result.
 4. **The sender is woken** by its own wrapper, through Act 3, with
-   `Rewake: write-claude finished, 1 new message(s)`. The sender reads it with
+   `Rewake: write-pi finished, 1 new message(s)`. The sender reads it with
    `rewake inbox`; a `finished` asks for nothing back, so the exchange ends
    here. The main session never reports successful turns, which is
    what keeps two sessions from waking each other forever.
@@ -335,28 +335,28 @@ hold an end lets the core ask once, before that report, whether the work is done
 
 ## A space: main starts a worker
 
-Main can read `rewake workers` and run `rewake space open api --alias claude-write --worktree
+Main can read `rewake workers` and run `rewake space open api --alias pi-write --worktree
 -- <harness args>` from its shell, while its run has `Spaces` live. The alias supplies its
 harness, worker wrapper, role and applied settings; an alias is no launch of its own, and a
-worker is raised only from one. Listing is a view for any role, not a launch. Opening writes the record, `spaces/<id>.json`, opening,
+worker is raised only from one. New workers are pi only: main-only harnesses are omitted
+from the listing and refused by alias before the space record is created, through command
+wrappers too. Existing sessions are left running. Listing is a view for any role, not a launch. Opening writes the record, `spaces/<id>.json`, opening,
 and re-executes rewake as a launcher in a session of its own; the launcher starts the
 **space host** and exits, so the space host is nobody's child in main's tree. The space host
 records its own run, checks that its chain of parents does not meet main's wrapper — or closes
 the record, the worker never started — and starts in a pseudo-terminal it owns an ordinary
-`rewake claude --worktree <harness args>` — the worktree resolved once from the typed flag and
+`rewake pi --worktree <harness args>` — the worktree resolved once from the typed flag and
 the template's `worktree = true` ([worktree-tools.md](worktree-tools.md)) —, `--command <wrapper>` before the harness when the
 alias names one, with main's base, `REWAKE_SPACE=<room>/<space id>` — and
 `REWAKE_SPACE_ENTER=1` for a template's `enter_worktree = true`, whose worker may claim its one
 checkout later, which the host then captures as a launch's, and `REWAKE_SPACE_TYPE` with its
 text for a worker raised for a kind of work, its briefing's last section
 ([worker-types.md](worker-types.md)) — and none of main's session in its environment; the launch believes the variable only from its parent, that space's host. From there the worker is any session: Act
-1 for it, its record `sessions/api-claude.json`. The space host records the worker's run, open;
-the command answers once that run is registered, within 30 s. A harness whose workers need
-something only the person gives in the worker's pane adds it to the answer: a Claude Code
-worker whose configuration directory has no login yet opens all the same, and the answer tells
-main the person is to type `/login` once in that pane ([launch.md](launch.md#claude-code)).
+1 for it, its record `sessions/api-pi.json`. The space host records the worker's run, open;
+the command answers once that run is registered, within 30 s. A pi worker shares the login in
+rewake's pi directory; if it has none, the person logs in with `/login` in its pane.
 
-Main sends `api-claude` a task, and its report comes back as in Acts 2 to 5. When main was
+Main sends `api-pi` a task, and its report comes back as in Acts 2 to 5. When main was
 started in the shell — at a terminal, always — main runs on the pty of its host, the pane's process,
 and the shell feeds main's pane and each worker's from their hosts' sockets, so it can be restarted
 while they work; Ctrl+\\ then a key chooses the worker shown

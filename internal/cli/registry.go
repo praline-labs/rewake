@@ -258,8 +258,8 @@ func launchCommand(h adapter.Harness) *Command {
 }
 
 // flow is the worked order printed in the guide: real invocations, not shapes.
-// A harness that reports no turn's end starts only a main session and takes no
-// task, so it shows that start and none of the task's steps.
+// A main-only harness, or one without reports or spaces, shows its main
+// launch but no worker raised on that harness.
 func flow(catalog adapter.Catalog) []FlowStep {
 	steps := []FlowStep{}
 	last := ""
@@ -272,7 +272,7 @@ func flow(catalog adapter.Catalog) []FlowStep {
 			Command: "rewake " + h.ID(),
 			Summary: fmt.Sprintf("Start %s as main-%s in the room of this directory, %s; a second main here is refused.", h.Title(), h.ID(), where),
 		})
-		if !reportsTurns(h) || !h.Offers().Spaces {
+		if h.Offers().MainOnly || !reportsTurns(h) || !h.Offers().Spaces {
 			continue
 		}
 		if last == "" {

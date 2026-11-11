@@ -34,11 +34,13 @@ on OpenTUI with Solid, inside the person's terminal, so its layout can be custom
 A person's launch — `rewake claude` or `rewake pi` — is always the main session, in the shell
 whenever it runs in a terminal; the room
 is the directory it is started in, with one main per directory; workers are raised only by main,
-later also from the shell; a Claude Code worker runs with rewake's own profile, which turns off
-by default what an unattended worker should not use, and reads a service folder of rewake's where
-the person adds instructions and edits the settings file that holds those defaults; skills reach a
-worker only through a brief, which names them from main's own (the owner's decision, October 28,
-2026).
+later also from the shell; skills reach a worker only through a brief, which names them from
+main's own (the owner's decision, October 28, 2026).
+
+Decided by the owner, November 11, 2026: new workers are pi only. Claude Code remains supported
+for main sessions; existing sessions are neither ended nor migrated. A template's command
+wrapper cannot bypass this launch policy. Existing Claude Code workers keep their profile and
+service folder ([worker-profile.md](worker-profile.md)).
 
 **Who calls it.** One person starts the main session; main starts the rest. The commands are called by the agents
 themselves, from their own shell or through the tools their harness offers them. So the
@@ -150,12 +152,12 @@ only one that steers other sessions. See [flow.md](flow.md) and
 [roles.md](roles.md#what-a-session-is-told).
 
 **Different harnesses in one room, both ways.** Sessions on different harnesses work
-together in one room: a main session on Claude Code hands out work to sessions on pi and
-reads their reports, and the other way round, through the same mail and the same rules as
-between two sessions of one harness.
+together in one room: a main session on Claude Code hands out work to pi workers and reads
+their reports, through the same mail and rules as a pi main with pi workers. Existing
+Claude Code workers remain supported, including their mail with pi sessions.
 
 **Main starts its workers.** The main session opens a space: rewake starts a worker on the
-harness main names, with the model and effort main picks and in a checkout of its own if
+worker-capable harness its template names, with the model and effort main picks and in a checkout of its own if
 asked, outside main's process tree, in a pseudo-terminal rewake holds; the worker joins main's
 room as any session, and ends when main's run ends. In the shell, which a main's launch starts
 whenever it runs in a terminal, main runs in the shell's own terminal pane and each worker's pane is fed from the pseudo-terminal
@@ -199,7 +201,7 @@ and the core does without whatever is missing, saying so rather than pretending.
 run actually has is checked when it starts, not assumed from what the adapter offers.
 See [adapter-api.md](rules/adapter-api.md#the-capabilities).
 
-**Main answers a worker's permission requests and questions.** When a worker on Claude Code
+**Main answers an existing worker's permission requests and questions.** When an existing worker on Claude Code
 asks for a permission or the model asks a question, the request comes to main as a letter with
 its choices — allow once, allow for this session, refuse with a reason, or the question's own
 options — and main answers with `rewake answer`; the worker's call goes on with that answer. A

@@ -22,6 +22,9 @@ const (
 // which only the run can prove (docs/rules/adapter-api.md#two-levels-offered-and-live).
 // The zero value offers Launch alone, which every adapter has.
 type Offer struct {
+	// MainOnly restricts new launches to main; existing runs remain served.
+	// The zero value permits workers too.
+	MainOnly bool
 	// Wake says a notice can reach a running session.
 	Wake         bool
 	TurnBoundary TurnBoundaryOffer

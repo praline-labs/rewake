@@ -15,7 +15,10 @@ worker is [shell.md](shell.md); the checkout a worker gets is [worktree.md](work
 `rewake space open <name> --alias <alias> [--worktree[=<name>] | --no-worktree] [--type <type> | --no-type] [--dev] -- <harness args>`
 is main's way to start a worker. A worker is raised only from a template: `--alias` is
 required, `rewake workers` lists the person's worker aliases, and the alias supplies the
-harness, role, command wrapper, args and applied settings; there is no `--harness` or `--role`,
+harness, role, command wrapper, args and applied settings. New workers are pi only: a template
+whose adapter offers `MainOnly` is refused by alias before any space record is created, even
+with a command wrapper; `workers` omits it without rejecting the rest of the catalogue.
+Existing sessions keep running. There is no `--harness` or `--role`,
 and a call with either is refused as an unknown flag. The space owns the name and the room. The
 fields and their precedence are in [launch-defaults.md](launch-defaults.md#the-worker-catalogue),
 worker types in [worker-types.md](worker-types.md). `--dev` raises a dev worker, whose wrapper
@@ -64,9 +67,7 @@ not by itself a continuation; resume, continue, session and fork flags are still
 harness without it gets no id, and its record says so. The worker's session is
 `<name>-<harness>`; the address is not stored, it follows from the name and the harness.
 
-What a harness needs to start unattended beyond what its adapter sets — a Claude Code worker's
-onboarding and folder trust are set by the workers' profile ([launch.md](launch.md)) — main
-passes after `--`, a permission mode among it. rewake types nothing into the worker on its own,
+What a harness needs to start unattended beyond what its adapter sets, main passes after `--`. rewake types nothing into the worker on its own,
 only the person's keys from main's shell.
 
 ## The stream to the shell

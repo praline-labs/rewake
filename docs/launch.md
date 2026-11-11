@@ -50,7 +50,10 @@ A person's launch is `rewake [--command
 <program>] [--no-intro] <harness> [the harness's flags]` and nothing else: it always starts
 **main**, `main-<harness>`, and the person never starts a worker from a terminal. There is no
 role, name, room or shell flag. Workers are raised by main alone, with `rewake space open`
-([space.md](space.md)).
+([space.md](space.md)). New workers are pi only (owner, November 11, 2026). The adapter's
+`Offer.MainOnly` makes Claude Code main-only: the resolved role is checked before shell entry
+or any room effect, including under `--command`. Existing sessions are not ended or migrated;
+adoption and serving do not repeat this launch check.
 
 - **The room is the launch directory**, resolved with symlinks followed. Its name on disk is
   `v2/rooms/<slug>-<hash>`: the directory's last element in lower case, every run of
@@ -154,14 +157,9 @@ rewake --command my-claude claude
   `--allowedTools "Bash(rewake:*)"`, only when the caller passed no allow list of their
   own under either spelling, `--allowedTools` or `--allowed-tools`. This adds a rule for
   the run without touching the user's settings.
-- Keep auto-compaction to a window: `--autocompact 272k`, the owner's default (October 27, 2026),
-  for a worker's launch only (main keeps the model's own window; corrected October 27, 2026), unless the launch already carries `--autocompact` — typed, or from
-  a template's `launch.context` — or `REWAKE_CLAUDE_CONTEXT` names a window, main's included
-  ([launch-defaults.md](launch-defaults.md#the-context-window)). It is a flag of this run
-  alone, as the other additions are (L1). Under `--command` it is passed to the wrapper like
-  the other flags, so a `CLAUDE_CODE_AUTO_COMPACT_WINDOW` the wrapper sets still wins, as for
-  a typed `--autocompact`; a person's own `--settings` is not read, and the flag, being on
-  the command line, outranks a window set there.
+- Main keeps the model's own window unless `--autocompact` or `REWAKE_CLAUDE_CONTEXT`
+  names one ([launch-defaults.md](launch-defaults.md#the-context-window)). Under `--command`
+  a wrapper's `CLAUDE_CODE_AUTO_COMPACT_WINDOW` still wins over the flag.
 - Main's settings: a launch of main not under `--command` adds one
   `--settings` holding `crossSessionInbound: "accept"` and, with a run directory, `statusLine`,
   rewake's command, which runs the person's own and
@@ -177,16 +175,12 @@ rewake --command my-claude claude
   can still tighten it to `hold` or `refuse`. Main under `--command`, or any launch with its own
   `--settings`, keeps that settings layer alone: its wrapper or caller adds
   `crossSessionInbound: "accept"` if it wants the same behavior.
-- **The workers' profile.** Every launch but main's sets
-  `CLAUDE_CONFIG_DIR` to the workers' service folder and adds one `--settings` with what the run
-  alone gets, through `--command` too: the wrapper replaces the program, not the profile. It
-  must preserve that variable and pass rewake's settings through unchanged rather than add a
-  second `--settings`: [worker-profile.md](worker-profile.md).
-- Every role launches here: the run's mod reports each turn's end once its
-  hello is admitted, after the harness starts, and a task to the run fails until then
-  ([claude-turns.md](claude-turns.md#readiness-and-admission)). A cause the adapter knows
-  will keep the mod from loading refuses a role that owes reports before anything is
-  started, exit 1, naming the cause; a silent role starts with the cause printed as a note.
+- **Existing workers' profile.** The worker service folder, settings and memory remain in
+  place, with their internals retained: [worker-profile.md](worker-profile.md). No new worker
+  launches here, even from an old alias or through a command wrapper.
+- The run's mod reports turn ends after its hello is admitted; a task to the run fails until
+  then ([claude-turns.md](claude-turns.md#readiness-and-admission)). Main starts with a note
+  when a known cause would keep the mod from loading.
 
 ### Claude Code telemetry
 
@@ -362,9 +356,8 @@ another local branch among it ([SP7](rules/space.md)); one that stays is cleared
 `rewake worktree finish <topic>` or `rm`. A template may say `worktree = true` instead of the
 typed flag, which then names the checkout, and `--no-worktree` leaves it out; the worker's
 `worktree_status` tool tells it its checkout and what the close would do with it
-([worktree-tools.md](worktree-tools.md)). A Claude Code template may say `enter_worktree = true`
-instead: the worker starts where main works and enters one checkout of its own mid-session
-through its `worktree_enter` tool, which the close releases the same way.
+([worktree-tools.md](worktree-tools.md)). Existing Claude Code workers retain mid-session
+checkout entry; a new worker cannot be raised from such a template.
 A writer's uncommitted edits then never mix with what is being checked or committed in
 the main checkout at the same time.
 

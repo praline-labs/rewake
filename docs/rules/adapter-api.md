@@ -60,6 +60,12 @@ Tests:
 
 ### Launch
 
+`Offer.MainOnly` restricts new launches to main. Its zero value permits workers; Claude Code
+sets it, pi does not (owner, November 11, 2026). The CLI checks the resolved role before shell
+entry or any room effect, regardless of `--command`. Template resolution refuses it by alias
+before space creation; `workers` omits those aliases and computes `noWriter` from the rest.
+This static launch policy never changes an existing run's service or adoption.
+
 Launch is the `Harness` interface of `internal/adapter/plan.go`, shown without its comments:
 
 ```go
@@ -188,7 +194,7 @@ exit 1, naming why. Notifies and reads still work through the shell; the shell n
 in for the boundary.
 
 Claude Code's boundary reports and holds no end, proven by its run's mod after the harness
-starts, so a role that owes reports launches on it. A cause the adapter knows will keep the mod
+starts. Existing workers retain it; new launches are main only. A cause the adapter knows will keep the mod
 from loading — the mod socket's path past what a unix socket allows, no run directory or inbox
 socket, the mod's files not written, its endpoint not listening — refuses such a launch before
 the harness starts, exit 1, naming the cause by where it is, and leaves a silent role going

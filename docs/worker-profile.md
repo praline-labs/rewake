@@ -4,6 +4,10 @@ description: The Claude Code workers' profile: the service folder, login, onboar
 
 # The Claude Code workers' profile
 
+New Claude Code workers are refused (owner, November 11, 2026); new workers are pi only.
+Existing sessions keep running without migration. This page describes the retained profile
+internals and files, not an available worker launch path; main's launch remains supported.
+
 Every Claude Code launch but main's sets `CLAUDE_CONFIG_DIR` to rewake's service folder and adds
 one `--settings` with what the run alone gets. The profile is the worker role's, not an alias's:
 a worker raised from any alias gets it, and main is exactly the person's Claude Code. Under

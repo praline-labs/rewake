@@ -104,7 +104,7 @@ context = "large"
 	}
 }
 
-// With no write template left, workers says main writes the code itself.
+// With no write template left, main still delegates implementation.
 func TestWorkersSaysWhenNoTemplateWrites(t *testing.T) {
 	workerAliases(t, "[alias.agent-general]\nharness = \"agent\"\n")
 	code, out, errOut := run("workers")
@@ -113,7 +113,7 @@ func TestWorkersSaysWhenNoTemplateWrites(t *testing.T) {
 	}
 	workerAliases(t, "")
 	code, out, errOut = run("workers")
-	if code != ExitOK || strings.Count(out, "No template writes code here") != 1 || !strings.Contains(out, "No worker aliases") {
+	if code != ExitOK || strings.Count(out, "No template writes code here") != 1 || !strings.Contains(out, "No launchable worker templates") {
 		t.Fatalf("an empty catalog: %d %s %s", code, out, errOut)
 	}
 	workerAliases(t, workerAliasesExample)

@@ -23,12 +23,9 @@ first and refuses an older one.
 ## Log in
 
 - **Main on Claude Code** is your own Claude Code, with your own login and settings.
-- **Claude Code workers** have a configuration directory of their own,
-  `~/.config/rewake/claude/worker/`, so their conversations stay out of your `claude --resume`
-  and your login is never touched by a worker. The first Claude Code worker main opens shows
-  "Not logged in · Run /login" in its pane, and main tells you so: focus that pane, type
-  `/login` and log in with your account. That serves every later Claude Code worker. A task
-  sent before the login stays unread until the worker reads it on a later notice.
+- **Existing Claude Code workers** keep their login and configuration in
+  `~/.config/rewake/claude/worker/`. New workers are pi only; nothing ends or migrates an
+  existing session.
 - **pi**, main and workers alike, keeps its login, settings, extensions and sessions in
   `~/.config/rewake/pi/agent`, apart from your own `~/.pi`. Log in there once with `/login` in
   the first pi session.
@@ -58,18 +55,18 @@ in `~/.config/rewake/aliases.toml` (mode `0600`) and change it to taste:
 
 ```toml
 [alias.write]
-harness = "claude"
+harness = "pi"
 role = "write"
 description = "Writes and commits a change in a checkout of its own"
 type = "code"
 worktree = true
-args = ["--permission-mode", "acceptEdits"]
+args = []
 
 [alias.write.launch]
 effort = "high"
 
 [alias.review]
-harness = "claude"
+harness = "pi"
 description = "Reviews a change and reports; edits nothing"
 type = "review"
 
@@ -79,7 +76,9 @@ description = "Answers a question about the code"
 type = "analysis"
 ```
 
-- `harness` is `claude` or `pi`; `role` is `write`, a worker that may commit within its own
+- `harness` is `pi` for new workers; Claude Code still launches main. Old Claude Code aliases
+  stay in your files, but are omitted from `workers` and refused by name on `space open`,
+  even with a `command` wrapper. `role` is `write`, a worker that may commit within its own
   permissions, or `general`, the default.
 - `args` reach the harness as written; `[alias.<name>.launch]` takes `model`, `effort`,
   `context` (Claude Code's auto-compact window, such as `300k`) and `label`. A template with no
@@ -96,9 +95,8 @@ type = "analysis"
 included, are `KEY=VALUE` lines in `~/.config/rewake/settings`, or in `.rewake.env` in a
 project's directory: `REWAKE_CLAUDE_MODEL`, `REWAKE_CLAUDE_EFFORT`, `REWAKE_CLAUDE_CONTEXT`,
 `REWAKE_PI_MODEL`, `REWAKE_PI_EFFORT`. The environment beats both files, and a typed flag beats
-everything. A Claude Code worker keeps auto-compaction to 272k tokens unless
-`REWAKE_CLAUDE_CONTEXT` says otherwise (`auto` is the model's own window); main keeps the
-model's own window unless `REWAKE_CLAUDE_CONTEXT` or a typed `--autocompact` names one.
+everything. A Claude Code main keeps the model's own window unless
+`REWAKE_CLAUDE_CONTEXT` or a typed `--autocompact` names one; `auto` keeps the model's own.
 
 ## A project's `.rewake/`
 
@@ -120,8 +118,8 @@ A project can carry its own catalogue beside its code, read from the directory m
   brief; a barred one a skill links is left out, and the letter says so
   ([briefs.md](briefs.md#skills)).
 - **`[aliases] off = ["helper"]`** in that file hides those of your templates in this project
-  alone. Hide every template with `role = "write"` and main writes the code itself, with a
-  reviewer worker; `rewake workers` says so.
+  alone. With no launchable `write` template left, main remains the orchestrator and asks
+  for a writer template; `rewake workers` says so.
 - **`[types] off = ["process"]`**, in either file, hides built-in types.
 - **`.rewake/types/<type>.md`** — a type of the project's own, which also wins over a built-in
   of the same name; yours go in `~/.config/rewake/types/`. A type file opens with a TOML front
@@ -136,7 +134,7 @@ A project can carry its own catalogue beside its code, read from the directory m
 
 ## The workers' own settings
 
-A Claude Code worker reads `~/.config/rewake/claude/worker/` as its user configuration:
+An existing Claude Code worker reads `~/.config/rewake/claude/worker/` as its user configuration:
 `CLAUDE.md` for instructions every worker gets, and `settings.json`. Skills do not go there: a
 worker gets them with a brief, from your own skill folders (`[skills] never` above). rewake writes its defaults into `settings.json` on the first launch —
 subagents, scheduling and other features an unattended worker should not use, turned off — and

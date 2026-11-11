@@ -15,6 +15,7 @@ import (
 
 type settingsHarness struct{ adapter.Harness }
 
+func (settingsHarness) Offers() adapter.Offer          { return adapter.Offer{} }
 func (settingsHarness) ID() string                     { return "agent" }
 func (settingsHarness) Title() string                  { return "Test agent" }
 func (settingsHarness) SingleUseFlags() []adapter.Flag { return agentLike }
@@ -38,6 +39,7 @@ func (shownHarness) AppliesContext() bool { return false }
 
 type plainHarness struct{ adapter.Harness }
 
+func (plainHarness) Offers() adapter.Offer          { return adapter.Offer{} }
 func (plainHarness) ID() string                     { return "plain" }
 func (plainHarness) Title() string                  { return "Plain" }
 func (plainHarness) SingleUseFlags() []adapter.Flag { return nil }

@@ -164,6 +164,16 @@ type Template struct {
 	Applied struct{ Model, Effort, Context bool }
 }
 
+// MainOnlyTemplateError names an old worker alias whose harness now launches
+// main only. Listings omit it without rejecting the other templates.
+type MainOnlyTemplateError struct {
+	Alias, Harness string
+}
+
+func (e *MainOnlyTemplateError) Error() string {
+	return fmt.Sprintf("alias %q uses %s, whose harness launches main only; choose a worker template from rewake workers", e.Alias, e.Harness)
+}
+
 // Template resolves one alias, refusing one that would start something other
 // than what it says.
 func (s *Set) Template(name string, catalog adapter.Catalog) (Template, error) {
@@ -178,6 +188,9 @@ func (s *Set) Template(name string, catalog adapter.Catalog) (Template, error) {
 		return Template{}, err
 	}
 	h, _ := catalog.Find(value.Harness)
+	if h.Offers().MainOnly {
+		return Template{}, &MainOnlyTemplateError{Alias: name, Harness: h.Title()}
+	}
 	part := role.General
 	if value.Role != "" {
 		part, _ = role.Find(value.Role)

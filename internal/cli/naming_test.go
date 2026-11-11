@@ -28,6 +28,42 @@ func TestLaunchFlowUsesTheAssembledAddress(t *testing.T) {
 	}
 }
 
+type flowOfferHarness struct {
+	adapter.Harness
+	offer adapter.Offer
+}
+
+func (h flowOfferHarness) Offers() adapter.Offer { return h.offer }
+
+// The guide still teaches every main launch, but only raises workers on
+// worker-capable harnesses, regardless of their ability to host spaces.
+func TestGuideFlowOmitsMainOnlyWorkerLaunches(t *testing.T) {
+	main := flowOfferHarness{Harness: mainOnlyHarness{}, offer: adapter.Offer{MainOnly: true, Spaces: true}}
+	worker := flowOfferHarness{Harness: workerSettingsHarness{}, offer: adapter.Offer{Spaces: true}}
+	for _, catalog := range []adapter.Catalog{adapter.NewCatalog(main), adapter.NewCatalog(main, worker)} {
+		steps := flow(catalog)
+		table := newTable(catalog)
+		mainSeen, workerSeen := false, false
+		for _, step := range steps {
+			parsed, err := table.parse(splitExample(step.Command)[1:])
+			if err != nil {
+				t.Fatalf("guide example %q: %v", step.Command, err)
+			}
+			mainSeen = mainSeen || step.Command == "rewake main-agent"
+			workerSeen = workerSeen || step.Command == "rewake space open helper --alias agent-general"
+			if strings.Contains(step.Command, "main-agent-general") || strings.Contains(step.Command, "helper-main-agent") {
+				t.Fatalf("guide teaches a main-only worker: %q", step.Command)
+			}
+			if parsed.Call.Command != nil && parsed.Call.Command.Name == "space" && parsed.Call.Flags["alias"] != "agent-general" {
+				t.Fatalf("unexpected worker template: %q", step.Command)
+			}
+		}
+		if !mainSeen || workerSeen != (len(catalog.All()) > 1) {
+			t.Fatalf("guide lost main or worker examples: %+v", steps)
+		}
+	}
+}
+
 // launchPath is the PATH of a launch these tests expect refused by its name: an
 // empty one, so no harness can start. A harness that refuses an unreadable
 // version before the claim — as a version is read before the name is taken —

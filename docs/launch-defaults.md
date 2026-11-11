@@ -79,6 +79,9 @@ surprise, and the second worst is not knowing where to change it.
 
 ### The context window
 
+New Claude Code launches are main only. The worker defaults below describe retained profile
+internals, not a way to raise another worker.
+
 The one default that lives in the code: a Claude Code worker's launch keeps
 auto-compaction to 272k tokens (`--autocompact 272k`; the owner's decision, October 27, 2026,
 corrected the same day to workers only), so nothing needs configuring for it. Main's launch
@@ -126,24 +129,29 @@ only main's catalogue of workers. `rewake workers` lists them and `rewake space 
 `space open` that opens it. Since October 18 the aliases had been launches and the catalogue at
 once; the `rewake` list, `main = true` and `launch.apply` went with that.
 
+**Owner decision, November 11, 2026:** new workers are pi only. Claude Code's adapter offers
+`MainOnly`: its aliases may stay in the files but `workers` omits them, and `space open`
+refuses one specifically by alias, saying its harness launches main only, before creating a
+space. `command` replaces the executable, not the harness's launch policy. Existing sessions
+are not ended or migrated, and rewake edits no alias file.
+
 ```toml
 # ~/.config/rewake/aliases.toml, or .rewake/aliases.toml in the working directory
-[alias.claude-write]
-harness = "claude"
+[alias.pi-write]
+harness = "pi"
 role = "write"
-args = ["--permission-mode", "acceptEdits"]
-command = "claude-worker"
+args = []
+command = "pi-worker"
 description = "A patch worker"
 type = "code"
-[alias.claude-write.launch]
+[alias.pi-write.launch]
 model = "chosen-model"
 effort = "high"
-context = "400k"
 ```
 
 | Field | Meaning |
 | --- | --- |
-| `harness` | The worker's harness, by its id; required. |
+| `harness` | The worker's harness, by its id; required and must permit workers (pi today). |
 | `role` | `write` or `general`; `general` when absent. User file only. |
 | `args` | Arguments handed to the harness as written. |
 | `command` | The program started in place of the harness, a wrapper that runs it; becomes the worker launch's `--command`. User file only. |
@@ -152,7 +160,7 @@ context = "400k"
 | `[alias.<name>.launch] model` | Applied by the adapter: `--model` on Claude Code and pi. |
 | `launch.effort` | Applied as Claude Code's `--effort` or pi's `--thinking`. |
 | `launch.context` | The auto-compact window, applied on Claude Code as `--autocompact`: `auto`, or 100k–1M tokens such as `300k` or `1M`, any other value refused. Shown only on a harness without such a flag (pi). On Claude Code the strip and `rewake list` show it as the window and measure the fill against it, since the mod reports only the model's. |
-| `launch.label` | How the strip and `rewake list` name the model, such as `Opus 5.5`; kept in the space record's `worker.label` and used only where the harness gives no display name of its own (a Claude Code run's status line gives `model.display_name` once it has run, and that wins, less a trailing parenthesis; pi gives its registry's `name`). Without either, the model's id is shown. |
+| `launch.label` | How the strip and `rewake list` name the model, such as `Patch writer`; kept in the space record's `worker.label` and used only where the harness gives no display name of its own (a Claude Code run's status line gives `model.display_name` once it has run, and that wins, less a trailing parenthesis; pi gives its registry's `name`). Without either, the model's id is shown. |
 
 TOML, because this is a structure rather than a list of names and values; a separate file
 from `settings`, because that one is `KEY=VALUE` and a file cannot be both. **Lists, not
@@ -170,7 +178,7 @@ silently or skipped, either would open workers other than the project says. Noth
 for the person. Either alias file may also hold `[types] off = [...]`, the built-in types it
 turns off ([worker-types.md](worker-types.md)).
 
-**A project turns templates off** (the owner's, October 26, 2026): `[aliases] off = ["opus-high-write"]`
+**A project turns templates off** (the owner's, October 26, 2026): `[aliases] off = ["patch-write"]`
 in `.rewake/aliases.toml` hides those templates of the merged catalogue, the user's included, for
 that project only. A template off is gone from `rewake workers` (lines and `--json`) and from
 main's catalogue, and `space open --alias <it>` refuses: `the alias "x" is turned off in the project
@@ -180,7 +188,7 @@ no alias of the catalog; available: ...`, a typo would leave on what was meant o
 same file defines (`defines [alias.x] and turns it off in [aliases] off; keep one`, a contradiction,
 not hidden); and `[aliases] off` in the user's file (`belongs in a project's .rewake/aliases.toml,
 and to drop a template everywhere delete it from this file`).
-Hiding every `write` template leaves main an orchestrator, not a writer; `rewake workers`
+With no launchable `write` template left, main remains an orchestrator, not a writer; `rewake workers`
 then says `No template writes code here: main remains the orchestrator; ask the owner for a writer template.`
 (`--json`: `noWriter`). It must not substitute its own implementation.
 
@@ -200,10 +208,11 @@ happens to be in should not decide that or what a worker may do. The user file i
 `rewake workers` is a view available to any role, even outside a session. It reads the user
 file and the current directory's `.rewake/aliases.toml`, a project alias replacing the user's of
 the same name and the project's `[aliases] off` removing templates, and shows name, harness, role, command (the harness when none), description, type
-and each setting's value marked applied or shown only, and the label, then the types `space open --type` takes;
+and each setting's value marked applied or shown only, and the label, omitting main-only
+harnesses without rejecting the other templates, then the types `space open --type` takes;
 `--json` returns `workers`, whose `model`, `effort` and `context` each have `value` and
 `applied`, with `label` when one is set, and `types`. rewake ships no templates: an empty
-catalogue answers `No worker aliases: define [alias.<name>] in ...`, and `space open --alias`
+or main-only catalogue answers `No launchable worker templates: define [alias.<name>] for a worker-capable harness in ...`, and `space open --alias`
 with none defined refuses with `no templates are defined; rewake workers --help says where` in
 place of the empty `available:` list. The fields are listed once, on `rewake workers --help`; a
 launch page only points there. Both files are read from the directory the command runs in, not
@@ -212,15 +221,13 @@ catalogue rather than silently omit workers; TOML errors include the source path
 column. An alias that makes no sense — no harness or an unknown one, a role that is not a
 worker's, settings on a harness with no flags for them — refuses it too, naming the alias.
 
-`rewake space open api --alias claude-write -- <more harness args>` starts the alias's harness,
+`rewake space open api --alias pi-write -- <more harness args>` starts the alias's harness,
 role, command, arguments and applied settings; `--alias` is required, since a worker is raised
 only from a template (October 19, 2026), and there is no `--harness` or `--role` beside it. The
 space names the worker, and its room is main's whatever the checkout. Applied
 settings replace older copies in `args`, and flags after `--` replace those in turn; environment
-defaults fill what neither supplied. Under a `command` wrapper whose settings set
-`CLAUDE_CODE_AUTO_COMPACT_WINDOW`, that value wins over `--autocompact`. A Claude Code wrapper
-gets the same worker profile as a direct launch and must preserve its `CLAUDE_CONFIG_DIR` and one
-`--settings` argument ([worker-profile.md](worker-profile.md)). A worktree
+defaults fill what neither supplied. Existing Claude Code worker-profile internals stay in
+place ([worker-profile.md](worker-profile.md)), but no new worker uses them. A worktree
 named in the alias is recorded as the space's checkout; an explicit space `--worktree` replaces
 it. rewake neither reads nor edits the person's wrapper or harness settings.
 

@@ -24,7 +24,8 @@ the requirements on output and failure messages come from (see "Interface").
 ## Scope
 
 In scope: Claude Code and pi; Linux; the command line, `--json` on every command; the shell,
-which main runs in at a terminal ([shell.md](shell.md)).
+which main runs in at a terminal ([shell.md](shell.md)). New workers are pi only; Claude Code
+launches main only, with existing sessions left running (owner, November 11, 2026).
 
 Out of scope: Codex, which does not return soon; opencode, grok; macOS (needs replacements for
 `/proc`); delivery receipts from the recipient beyond what Claude Code's inbound gate reports
@@ -56,7 +57,8 @@ fails, while an adoption holds the harness it has until the harness ends
 
 A launch plan carries one run's capabilities as separate interfaces — a Service for this
 lifecycle, Wake for delivery, TurnBoundary for its turn ends, Telemetry, Control and Spaces — and
-what an adapter offers before any launch is its `Offers()` value
+what an adapter offers before any launch, including `MainOnly` restricting new launches to
+main without affecting adoption or service, is its `Offers()` value
 ([rules/adapter-api.md](rules/adapter-api.md)). The Claude Code adapter delivers straight to the
 session's socket, reports its turns through its mod ([claude-turns.md](claude-turns.md)), and
 its wrapper also listens on a reply socket of its own beside the session's: Claude Code reports

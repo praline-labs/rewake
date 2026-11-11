@@ -4,6 +4,10 @@ description: The Claude Code adapter as one mod — loading it, when it does not
 
 # The Claude Code adapter
 
+New launches are main only (`Offer.MainOnly`, owner, November 11, 2026). Existing workers keep
+running and remain served and adopted; worker-profile, mod, mirror and permission paths below
+are retained internals, not support for raising another Claude Code worker.
+
 Everything on the Claude Code side goes through one official mod, from Claude Code 2.1.287 on.
 The mod is TypeScript embedded in the binary and written for one run; the Go side of the
 adapter launches the harness, answers the mod's requests at the run's endpoint, and reaches the
@@ -22,7 +26,7 @@ is in [research-claude-mod.md](research-claude-mod.md), each record with its ver
 
 | Capability | How | Where |
 |---|---|---|
-| Launch | `claude` with one `--plugin-dir`, the briefing in `--append-system-prompt`, the worker profile for a worker | [launch.md](launch.md#claude-code) |
+| Launch | `claude` with one `--plugin-dir`, the briefing in `--append-system-prompt`, main only for new launches | [launch.md](launch.md#claude-code) |
 | Wake | a line on the session's inbound socket, with the inbound gate's receipts | [delivery-adapters.md](delivery-adapters.md#claude-code) |
 | TurnBoundary | `turn.start` and `turn.complete` of the main loop, reported without holding, proven after the harness starts | [claude-turns.md](claude-turns.md) |
 | Telemetry | native context, the configured model and its name, effort, thinking, compactions, the prompt cache and its life | [below](#telemetry) |

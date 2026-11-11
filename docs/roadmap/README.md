@@ -16,21 +16,22 @@ The next release is 3.0.0, not 2.12.0. It ships this whole feature in working or
 
 1. **A door for plugins.** The parts' contracts and the manifest admit a part that is not rewake's own. A project's main can attach its own part, or a ready one, to rewake: a pane or a strip segment in the shell, a command, a tool for the sessions, a listener of the room's events. The seams stay generic and versioned, so that a plugin is one more client.
 
-rewake's face ([face.md](../face.md)), after its first slice — a dev worker on Claude Code and every
-pi worker, read with a prompt back, the switch and hot reload:
+rewake's face ([face.md](../face.md)), after its first slice — every pi worker and existing
+Claude Code dev workers, read with a prompt back, the switch and hot reload. New workers are
+pi only (owner, November 11, 2026); remaining steps must not require raising a Claude Code worker:
 
 1. Asks in the face, answered there through the run's ask broker.
-2. Abort from the face on a Claude Code dev worker (pi's Esc is in), compaction notices,
-   `dev = true` in a template with `--no-dev`, `rewake list`'s Type cell `code, dev`,
+2. Compaction notices, `dev = true` in a template with `--no-dev`,
+   `rewake list`'s Type cell `code, dev`,
    `rewake screen --face native|rewake`.
 3. A workflow scenario of a dev worker on the fixture harness, once the fixture mirrors.
 4. Later, each its own decision: subagents in the face, main as a drawn session.
 
 ## Not scheduled
 
-- Two live checks left from the owner's looks and logins, which the owner accepted on October 28,
-  2026 as he sees them: `/logout` live (it would sign the owner's account out) and a Claude Code
-  worker raised from a pi main.
+- One live check left from the owner's looks and logins, which the owner accepted on October 28,
+  2026 as he sees them: `/logout` live (it would sign the owner's account out). Raising a Claude
+  Code worker from a pi main is no longer planned: new Claude Code workers are refused.
 - A place for main's questions to the person (the owner, October 31, 2026: "я иногда не вижу что
   ты мне пишешь и очень легко могу прозевать"). main marks a message as one that waits for the
   person's answer, and it lands whole in a panel of the shell beside the conversation; there can be
