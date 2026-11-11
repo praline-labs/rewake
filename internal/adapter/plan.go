@@ -87,6 +87,12 @@ type LaunchRequest struct {
 	// in the briefing.
 	Mode  workmode.Mode
 	Modes workmode.Config
+	// Migrations are the obsolete worker settings the launch skipped rather
+	// than refused, each with its file, its line and what to write instead
+	// (docs/work-modes.md#the-old-worker-types). The briefing carries them so
+	// that main, which starts on what is valid, can repair the configuration
+	// it runs under.
+	Migrations []string
 	// Shell says the run is main's in rewake's shell, drawn on a pane whose
 	// terminal keeps no scrollback before a pane attached: an adapter whose
 	// harness can scroll its own history turns that on (docs/shell.md).
@@ -281,5 +287,5 @@ type Flag struct {
 
 // BriefContext carries identity to the shared text package without assembling prose.
 func (r LaunchRequest) BriefContext() brief.Context {
-	return brief.Context{Name: r.Name, Room: r.Room, Role: r.Role, Reason: r.RoleReason}
+	return brief.Context{Name: r.Name, Room: r.Room, Role: r.Role, Reason: r.RoleReason, Migrations: r.Migrations}
 }

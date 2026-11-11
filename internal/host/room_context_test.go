@@ -76,3 +76,24 @@ func TestEachRoomHasItsOwnMain(t *testing.T) {
 		t.Errorf("independent mains=%+v %+v err=%v", first, second, err)
 	}
 }
+
+// A setting the launch skipped as obsolete reaches the session's briefing, so
+// main — which starts on what is valid — can repair what it runs under
+// (docs/work-modes.md#the-old-worker-types).
+func TestASkippedSettingReachesTheLaunchBriefing(t *testing.T) {
+	dir := stateDir(t)
+	fake := &contextHarness{fakeHarness: fakeHarness{script: "exit 0"}}
+	notice := `the project alias file at /work/.rewake/aliases.toml:3: [alias.w] still has the obsolete type field, so that template is left out until it is fixed`
+	if _, err := Run(context.Background(), Request{Dir: dir, Name: "api", Harness: fake, Intro: true, Migrations: []string{notice}}); err != nil {
+		t.Fatal(err)
+	}
+	if len(fake.launch.Migrations) != 1 || fake.launch.Migrations[0] != notice {
+		t.Fatalf("the launch request: %v", fake.launch.Migrations)
+	}
+	intro := brief.Intro(fake.launch.BriefContext())
+	for _, want := range []string{"skipped as obsolete", notice} {
+		if !strings.Contains(intro, want) {
+			t.Errorf("the briefing lacks %q: %s", want, intro)
+		}
+	}
+}

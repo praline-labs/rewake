@@ -41,6 +41,12 @@ func roleText(c Context) string {
 			lines = append(lines, "- "+line)
 		}
 	}
+	if len(c.Migrations) > 0 {
+		lines = append(lines, "", "Worker settings rewake skipped as obsolete; this session runs on the rest. Repair them when the work allows:")
+		for _, migration := range c.Migrations {
+			lines = append(lines, "- "+migration)
+		}
+	}
 	lines = append(lines, "", "Run `rewake <words>` in the shell.")
 	lines = append(lines, "Run rewake guide for the complete rules, including this list.")
 	return strings.Join(lines, "\n")

@@ -125,6 +125,7 @@ func handleLaunch(h adapter.Harness) func(*Context, Call) error {
 			Mirror:        id.dev,
 			Mode:          mode,
 			Modes:         modes,
+			Migrations:    aliases.Migrations,
 		})
 		if checkout != nil {
 			checkout.settle(err != nil || code != 0)

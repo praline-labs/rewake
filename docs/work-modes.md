@@ -64,8 +64,9 @@ and description; `--json` carries them as `modes`.
 ## The old worker types
 
 The owner's decision, November 3, 2026: the separate worker type is gone. What it carried is the
-work mode. Old syntax is refused with where it goes, never read as if it were a type and never
-rewritten by rewake:
+work mode. Old syntax in the files is skipped with a migration notice saying where it goes, never
+read as if it were a type and never rewritten by rewake; a typed `--type` or `--no-type` is still
+refused, since a call can be made again and a file cannot be rewritten by main's first launch:
 
 | Old | New |
 | --- | --- |
@@ -77,9 +78,27 @@ rewritten by rewake:
 | `space open --type <type>`, `--no-type` | `--work-mode <mode>`, or `start_mode` |
 | `[types] off = [...]` | removed: built-ins are not turned off; a `modes/<name>.md` of a built-in's name replaces its text |
 
-A `types/` directory, an alias `type`, a `[types]` section, `--type` and `--no-type` each refuse
-with that guidance, even when new syntax is present beside them. Personal configuration is never
-rewritten.
+A `types/` directory, an alias `type` and a `[types]` section are each skipped with that guidance,
+even when new syntax is present beside them: refused, they kept every launch in a project that
+still carried one from starting, so main could not start to be told what to fix (met on
+November 11, 2026). A template whose `type` is skipped is left out until it is fixed rather than
+started under advisor or another default — read under a default it would work as something its
+person did not write — so `rewake workers` lists it in no template and `space open --alias` refuses
+it with the notice. The rest of the catalogue runs, and a launch carries the notices into the
+session's briefing, where main reads the file, the line and what to write.
+
+Only the old shape is skipped: a `type` holding a string, and a `[types]` section holding
+`off = ["<name>", ...]` and nothing else. Any other value or field there is malformed and refuses
+the file, as malformed TOML, an unknown field and a malformed current value do — recognizing an
+obsolete key never swallows its value. A definition is checked against the whole current schema
+before it is left out, at the catalogue and again when `rewake workers` lists or `space open` asks
+for it: an obsolete `type` may leave a valid template out, never screen a broken `start_mode`, a
+mode's model or effort, or a launch setting beside it.
+
+The two alias files still replace one another whole, so the definition in force decides: a valid
+project definition replaces an obsolete user one, and an obsolete project definition hides the
+user's valid one until it is fixed. Only the definition in force is left out and named in a notice;
+the other's type is not in force and is not reported. Personal configuration is never rewritten.
 
 ## Selecting the start
 

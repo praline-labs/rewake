@@ -170,25 +170,39 @@ rules. A field rewake does not know is refused, not skipped, and the removed one
 with what replaced them — `rewake` (the role is `role`; the space names the worker and its
 room), `main` (main is started with `rewake <harness>`), `launch.apply` (settings always
 apply; flags that should not go in `args`), under "fields whose place is elsewhere". The whole
-file is refused then, so it is rewritten once.
+file is refused then, so it is rewritten once. The worker type's old settings are the one
+exception: they are recognized as obsolete, skipped with a migration notice, and main starts on
+the rest ([work-modes.md](work-modes.md#the-old-worker-types)). Only the old shape is skipped — a
+`type` holding a string and a `[types]` section holding `off = ["<name>", ...]` — and a definition
+is checked against the current fields before it is left out: a malformed value there, and a broken
+`start_mode`, mode or launch setting beside an old `type`, still refuses the file. A template the
+old `type` leaves out follows the same whole-template rule as any other: the user's and the
+project's definitions replace one another whole, only the definition in force is omitted, and its
+notice names that file.
 
 **The project file's place, since October 21, 2026** (the owner's decision): a project's aliases
 live in `.rewake/aliases.toml`, beside its modes in `.rewake/modes/`. A `.rewake.toml` in the
 working directory, where they lived before, refuses the catalogue, naming the new place: read
 silently or skipped, either would open workers other than the project says. Nothing is moved
-for the person. The old `[types] off = [...]` is refused with where a mode file goes
-([work-modes.md](work-modes.md#the-old-worker-types)); built-in modes are not turned off.
+for the person. The old `[types] off = [...]` and a `types/` directory are skipped with a notice
+saying where a mode file goes ([work-modes.md](work-modes.md#the-old-worker-types)); built-in
+modes are not turned off.
 
 **A project turns templates off** (the owner's, October 26, 2026): `[aliases] off = ["patch-write"]`
 in `.rewake/aliases.toml` hides those templates of the merged catalogue, the user's included, for
 that project only. A template off is gone from `rewake workers` (lines and `--json`) and from
 main's catalogue, and `space open --alias <it>` refuses: `the alias "x" is turned off in the project
-alias file ([aliases] off); available: ...`. Three refusals of the whole catalogue, as an unknown
-field is: a name that is no alias of the merged catalogue (`turns off "x" in [aliases] off, which is
-no alias of the catalog; available: ...`, a typo would leave on what was meant off); a name the
-same file defines (`defines [alias.x] and turns it off in [aliases] off; keep one`, a contradiction,
-not hidden); and `[aliases] off` in the user's file (`belongs in a project's .rewake/aliases.toml,
-and to drop a template everywhere delete it from this file`).
+alias file ([aliases] off); available: ...`. `off` is subtraction from the merged catalogue: a name
+it does not hold is already off, so a project that still lists a template removed later from the
+user's or its own file hides nothing, launches as before, and is told to drop the name (met on
+November 11, 2026, when a project's list kept two obsolete templates and refused every launch
+there; the launch-blocking refusal is gone). Two refusals of the
+whole catalogue remain, as an unknown field is: a name the same file defines (`defines [alias.x] and
+turns it off in [aliases] off; keep one`, a contradiction, not hidden); and `[aliases] off` in the
+user's file (`belongs in a project's .rewake/aliases.toml, and to drop a template everywhere delete
+it from this file`). A migration notice — the name with its file — is printed by every command
+that reads the catalogue, and a launch carries it into the session's briefing, so main can repair
+the file itself.
 With no launchable `write` template left, main remains an orchestrator, not a writer; `rewake workers`
 then says `No template writes code here: main remains the orchestrator; ask the owner for a writer template.`
 (`--json`: `noWriter`). It must not substitute its own implementation.

@@ -30,7 +30,7 @@ func LoadIn(working string) *Set {
 	if home, err := os.UserHomeDir(); err == nil {
 		dir := filepath.Join(home, ".config", userDir)
 		set.readModes(filepath.Join(dir, modesDir), workmode.User)
-		set.refuseModesDir(filepath.Join(dir, typesDir))
+		set.noteModesDir(filepath.Join(dir, typesDir))
 		set.read(filepath.Join(dir, userFile), "the user alias file", true)
 	}
 	if working != "" {
@@ -39,9 +39,10 @@ func LoadIn(working string) *Set {
 		set.refuseMoved(filepath.Join(working, movedProjectFile))
 		dir := filepath.Join(working, projectDir)
 		set.readModes(filepath.Join(dir, modesDir), workmode.Project)
-		set.refuseModesDir(filepath.Join(dir, typesDir))
+		set.noteModesDir(filepath.Join(dir, typesDir))
 		set.read(filepath.Join(dir, userFile), "the project alias file", false)
 	}
+	set.resolveObsolete()
 	set.applyAliasesOff()
 	set.checkModeNames()
 	return set
@@ -55,7 +56,67 @@ func newSet() *Set {
 	return &Set{
 		aliases: map[string]Alias{}, sources: map[string]string{}, paths: map[string]string{},
 		fromProject: map[string]bool{}, modes: map[string]workmode.Mode{}, aliasOff: map[string]string{},
+		obsolete: map[string]obsoleteDef{}, omitted: map[string]obsoleteDef{},
 	}
+}
+
+// decode reads one file, sorting the settings rewake recognizes as obsolete
+// from the rest and refusing what it cannot read. A nil file says the file was
+// refused, its reason recorded; the obsolete map names the templates this file
+// left out, with the notice each would have if its definition is in force.
+func (s *Set) decode(raw []byte, description, path string) (*aliasFile, map[string]string) {
+	file := &aliasFile{}
+	decoder := toml.NewDecoder(bytes.NewReader(raw))
+	// A field rewake does not know is refused, not skipped: a silently
+	// ignored field is a worker that starts as something nobody wrote. The
+	// obsolete settings of the worker type are the exception, skipped with a
+	// migration notice (alias_obsolete.go).
+	decoder.DisallowUnknownFields()
+	err := decoder.Decode(file)
+	if err == nil {
+		return file, nil
+	}
+	var strict *toml.StrictMissingError
+	if errors.As(err, &strict) {
+		// The obsolete settings are sorted out first, so a file that also has
+		// an unknown field is refused for that field alone.
+		var values map[string]any
+		_ = toml.Unmarshal(raw, &values)
+		unknown, obsolete := s.degrade(values, strict.Errors, description, path)
+		if len(unknown) > 0 {
+			s.unreadable(unknownFields(description, path, unknown))
+			return nil, nil
+		}
+		return file, obsolete
+	}
+	// Named, not skipped: a file that is there and unreadable is a mistake
+	// somebody wants to hear about.
+	var decode *toml.DecodeError
+	where := path
+	if errors.As(err, &decode) {
+		line, column := decode.Position()
+		where = fmt.Sprintf("%s:%d:%d", path, line, column)
+	}
+	s.unreadable(fmt.Sprintf("%s at %s could not be read: %v", description, where, err))
+	return nil, nil
+}
+
+// aliasFile is one alias file: its templates, and the sections beside them.
+type aliasFile struct {
+	Alias map[string]Alias `toml:"alias"`
+	Pi    workmode.Config  `toml:"pi"`
+	// Aliases turns templates of the merged catalog off for a project.
+	Aliases struct {
+		Off []string `toml:"off"`
+	} `toml:"aliases"`
+	// Briefs says where new briefs go: a project's choice.
+	Briefs struct {
+		Dir string `toml:"dir"`
+	} `toml:"briefs"`
+	// Skills bars skills from briefs: the person's or the project's.
+	Skills struct {
+		Never []string `toml:"never"`
+	} `toml:"skills"`
 }
 
 // read parses one file into the set. user says whether this is the file in the
@@ -87,41 +148,8 @@ func (s *Set) read(path, description string, user bool) {
 		s.unreadable("not reading " + description + ": " + err.Error())
 		return
 	}
-	var file struct {
-		Alias map[string]Alias `toml:"alias"`
-		Pi    workmode.Config  `toml:"pi"`
-		// Aliases turns templates of the merged catalog off for a project.
-		Aliases struct {
-			Off []string `toml:"off"`
-		} `toml:"aliases"`
-		// Briefs says where new briefs go: a project's choice.
-		Briefs struct {
-			Dir string `toml:"dir"`
-		} `toml:"briefs"`
-		// Skills bars skills from briefs: the person's or the project's.
-		Skills struct {
-			Never []string `toml:"never"`
-		} `toml:"skills"`
-	}
-	decoder := toml.NewDecoder(bytes.NewReader(raw))
-	// A field rewake does not know is refused, not skipped: a silently
-	// ignored field is a worker that starts as something nobody wrote.
-	decoder.DisallowUnknownFields()
-	if err := decoder.Decode(&file); err != nil {
-		var strict *toml.StrictMissingError
-		if errors.As(err, &strict) {
-			s.unreadable(unknownFields(description, path, strict))
-			return
-		}
-		// Named, not skipped: a file that is there and unreadable is a
-		// mistake somebody wants to hear about.
-		var decode *toml.DecodeError
-		where := path
-		if errors.As(err, &decode) {
-			line, column := decode.Position()
-			where = fmt.Sprintf("%s:%d:%d", path, line, column)
-		}
-		s.unreadable(fmt.Sprintf("%s at %s could not be read: %v", description, where, err))
+	file, obsolete := s.decode(raw, description, path)
+	if file == nil {
 		return
 	}
 	if err := file.Pi.Check(); err != nil {
@@ -156,17 +184,20 @@ func (s *Set) read(path, description string, user bool) {
 		s.skillsNever[name] = path
 	}
 	for name, value := range file.Alias {
+		if notice, stale := obsolete[name]; stale {
+			// Kept for its current settings to be checked, then resolved
+			// against the other layer whole (alias_obsolete.go).
+			s.obsolete[name] = obsoleteDef{
+				aliasDef: aliasDef{value: value, source: description, path: path, project: !user},
+				notice:   notice,
+			}
+			continue
+		}
 		s.aliases[name] = value
 		s.sources[name] = description
 		s.paths[name] = path
 		s.fromProject[name] = !user
 	}
-}
-
-// fieldMoves says what a field the file no longer has became, so a file
-// written before is rewritten once rather than guessed at.
-var fieldMoves = map[string]string{
-	"type": `a worker's kind of work is now its runtime work mode: put start_mode = "<mode>" under [alias.<name>.pi], mapping code to build and analysis to advisor (review and process keep their names), and use --work-mode instead of --type on space open`,
 }
 
 // removedFields are the fields aliases lost on October 19, 2026, when they
@@ -180,20 +211,15 @@ var removedFields = map[string]string{
 
 // unknownFields names every field the file has that an alias does not, the
 // removed ones with what took their place.
-func unknownFields(description, path string, strict *toml.StrictMissingError) string {
+func unknownFields(description, path string, fields []toml.DecodeError) string {
 	var removed, unknown []string
-	for _, field := range strict.Errors {
+	for _, field := range fields {
 		key := field.Key()
 		dotted := strings.Join(key, ".")
 		line, _ := field.Position()
 		// A key here is alias.<name>.<field>; the field is what was removed.
 		why, gone := "", false
-		if len(key) == 3 && key[0] == "alias" {
-			why, gone = fieldMoves[key[2]]
-		} else if key[0] == "types" {
-			why, gone = `the [types] section is no longer read: a worker's kind of work is its runtime work mode, a file under modes/<name>.md (built-in: advisor, build, review, process). Move each type file there, keeping its front matter and text; code is now build and analysis is advisor, so a custom code.md or analysis.md needs a name of its own`, true
-		}
-		if len(key) > 2 && key[0] == "alias" && !gone {
+		if len(key) > 2 && key[0] == "alias" {
 			why, gone = removedFields[strings.Join(key[2:], ".")]
 		}
 		if gone {
