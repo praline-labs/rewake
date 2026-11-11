@@ -96,3 +96,34 @@ func TestOverlayAndValidation(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+// An overlay is a copy: a discarded one, or a second template's, leaves the
+// base and every other template as they were. A shared map here would leak
+// one template's effort into the next.
+func TestAnOverlayLeavesItsBaseAlone(t *testing.T) {
+	base := Config{
+		StartMode: Build,
+		Modes:     map[string]Fields{Build: {Model: "p/b", Effort: "high"}},
+		Catalog:   []Mode{{Name: Build, Text: "BUILD"}, {Name: Review, Text: "REVIEW"}},
+	}
+	over := Config{Modes: map[string]Fields{Build: {Effort: "low"}, Review: {Model: "p/r"}}}
+	merged := base.Overlay(over)
+	if merged.Modes[Build] != (Fields{Model: "p/b", Effort: "low"}) || merged.Modes[Review].Model != "p/r" {
+		t.Fatalf("the overlay did not apply: %+v", merged)
+	}
+	for range 2 {
+		_ = base.Overlay(over)
+	}
+	if base.Modes[Build] != (Fields{Model: "p/b", Effort: "high"}) || len(base.Modes) != 1 || base.StartMode != Build {
+		t.Fatalf("a discarded overlay changed the base: %+v", base)
+	}
+	other := base.Overlay(Config{Modes: map[string]Fields{Review: {Effort: "medium"}}})
+	if other.Modes[Build].Effort != "high" || base.Modes[Review].Model != "" {
+		t.Fatalf("a second template inherited another's fields: %+v", other)
+	}
+	merged.Modes[Review] = Fields{Effort: "max"}
+	merged.Catalog[0].Name = "changed"
+	if base.Modes[Review].Model != "" || base.Catalog[0].Name != Build {
+		t.Fatalf("the result shares storage with the base: %+v", base)
+	}
+}

@@ -27,14 +27,13 @@ type workerTemplate struct {
 	// EnterWorktree says the worker may enter one mid-session instead.
 	EnterWorktree bool `json:"enterWorktree"`
 	// StartMode is the runtime work mode space open starts this worker in:
-	// the template's start_mode, else the merged global one, else advisor.
-	// StartProblem is why space open would refuse it, when the mode is not
-	// there.
-	StartMode    string        `json:"startMode"`
-	StartProblem string        `json:"startProblem,omitempty"`
-	Model        workerSetting `json:"model"`
-	Effort       workerSetting `json:"effort"`
-	Context      workerSetting `json:"context"`
+	// the template's start_mode, else the merged global one, else advisor. A
+	// configured mode the catalog does not hold refused the catalog already,
+	// so this one is always there.
+	StartMode string        `json:"startMode"`
+	Model     workerSetting `json:"model"`
+	Effort    workerSetting `json:"effort"`
+	Context   workerSetting `json:"context"`
 	// Label names the model where the harness gives it no name of its own.
 	Label string `json:"label,omitempty"`
 }
@@ -70,7 +69,7 @@ func handleWorkers(ctx *Context, call Call) error {
 	if err := aliases.Err(); err != nil {
 		return &UsageError{Command: call.Command, Message: err.Error()}
 	}
-	out := workersListing{Workers: []workerTemplate{}, Modes: aliases.Catalog()}
+	out := workersListing{Workers: []workerTemplate{}, Modes: modesWithoutText(aliases.Catalog())}
 	for _, name := range aliases.Names() {
 		template, err := aliases.Template(name, ctx.table.catalog)
 		if err != nil {
@@ -82,10 +81,6 @@ func handleWorkers(ctx *Context, call Call) error {
 		}
 		view := workerView(template)
 		view.StartMode = aliases.Modes(template.Name).Start()
-		// Shown, not refused: the template still opens with --work-mode.
-		if _, err := aliases.Mode(view.StartMode); err != nil {
-			view.StartProblem = err.Error()
-		}
 		out.Workers = append(out.Workers, view)
 	}
 	out.NoWriter = true
@@ -132,6 +127,17 @@ func workerView(template launch.Template) workerTemplate {
 	}
 }
 
+// modesWithoutText is the catalog as workers shows it: a mode's name, its
+// source, its path and its description, not the text a session reads.
+func modesWithoutText(catalog []workmode.Mode) []workmode.Mode {
+	out := make([]workmode.Mode, len(catalog))
+	for index, value := range catalog {
+		value.Text = ""
+		out[index] = value
+	}
+	return out
+}
+
 func (l workersListing) lines() []string {
 	lines := l.workerLines()
 	if l.NoWriter {
@@ -165,9 +171,6 @@ func (l workersListing) workerLines() []string {
 			line += " enter_worktree"
 		}
 		line += " start_mode=" + w.StartMode
-		if w.StartProblem != "" {
-			line += " (not available: " + w.StartProblem + ")"
-		}
 		for _, setting := range []struct {
 			name  string
 			value workerSetting

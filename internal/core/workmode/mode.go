@@ -55,8 +55,10 @@ const MaxSize = 32 << 10
 type Mode struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
-	// Text is what the session is told, after the front matter.
-	Text string `json:"-"`
+	// Text is what the session is told, after the front matter. It travels
+	// with the mode: the resolved catalog crosses the wrapper's handover as
+	// JSON, and a mode that lost its text would switch to a bare header.
+	Text string `json:"text,omitempty"`
 	// Source is BuiltIn, User or Project; Path the file, empty for a built-in.
 	Source string `json:"source"`
 	Path   string `json:"path,omitempty"`

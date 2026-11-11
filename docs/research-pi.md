@@ -988,17 +988,27 @@ checkout: `.scratch/pi107-probe.py`, `.scratch/pi107-hold.ts`,
 `.scratch/pi107-observe.ts`, `.scratch/pi107-probe-result.json` and
 `.scratch/pi107-probe.log`.
 
-## No native work-mode registry (November 11, 2026, 1.4.0 installed, 1.5.2 pinned)
+## No native work-mode registry (November 11, 2026, 1.5.2)
 
-Rechecked before consolidating the work types into one runtime work mode (brief 113): pi has no
-native named registry of build/plan/work modes to reuse. `pi --help` of the installed 1.4.0 lists
-`--mode <mode>` as the **output** mode only — `text`, `json` or `rpc` — and no flag selects a
-behavioral stance, so rewake does not pass one. The bundled 1.5.2 pin was checked the same way by
-the design that this brief implements; the 1.4.0 facts in the section above (focused
-`CustomEditor` keyboard path, mutable `systemPromptOptions.sections`, `ctx.ui.setStatus`, native
-model lookup and clamping) are unchanged there. Every rewake work mode is therefore
-extension-owned and equal: Go owns the catalogue, precedence, section text and wording, native pi
-applies model, thinking and section, and no plan-mode example is loaded.
+Read in the pinned package rewake ships, `@earendil-works/pi-coding-agent` 1.5.2 (its
+`package.json` `version`), before consolidating the work types into one runtime work mode (brief
+113). pi has no native registry of named build, plan or work modes to reuse or to emulate:
+
+- `dist/cli/args.js` takes `--mode` and accepts only `text`, `json` and `rpc` — its diagnostic is
+  "--mode requires text, json, or rpc" and its help line reads "Output mode: text (default), json,
+  or rpc". It selects output, not behavior, so rewake never passes it for a work mode.
+- `docs/extensions.md`, "ctx.mode", defines the extension's `ctx.mode` as `"tui"`, `"rpc"`,
+  `"json"` or `"print"`: the same output mode again, guarded as `ctx.mode === "tui"`.
+- `docs/keybindings.md` binds `app.thinking.cycle` to shift+tab, a thinking level and not a mode;
+  nothing in the package's documentation names a work mode, a build mode or a plan mode.
+
+Every rewake work mode is therefore extension-owned and equal, on the route this document already
+records: Go owns the catalog, precedence, section text and wording; native pi applies model,
+thinking and the section (mutable `systemPromptOptions.sections`, `ctx.ui.setStatus`, the focused
+`CustomEditor`), and no plan-mode example is loaded. The 1.4.0 observations above were re-checked
+at 1.5.2 only where this change uses them: `app.thinking.cycle` is still reserved by
+`dist/core/extensions/runner.js`, `setEditorComponent` and the `CustomEditor` subclass are still
+documented, and `systemPromptOptions` and `modelRegistry` are unchanged.
 
 ## Holding a run's end (November 3, 2026, 1.4.0)
 

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/praline-labs/rewake/internal/adapter"
+	"github.com/praline-labs/rewake/internal/core/workmode"
 	"github.com/praline-labs/rewake/internal/infra/state"
 )
 
@@ -94,6 +95,11 @@ context = "large"
 	if writer.Role != "write" || writer.Command != "agent-worker" || writer.Description != "Small patch worker" ||
 		!writer.Model.Applied || !writer.Effort.Applied || writer.Context.Applied || writer.Context.Value != "large" {
 		t.Fatalf("a structured worker: %+v", writer)
+	}
+	// The mode catalog travels whole enough to be chosen from: name, source,
+	// path and description, never the text a session reads.
+	if len(view.Modes) != 4 || view.Modes[0].Name != workmode.Review || view.Modes[0].Text != "" || view.Modes[0].Description == "" {
+		t.Fatalf("the catalog in --json: %+v", view.Modes)
 	}
 	code, out, errOut = runOn(catalog, "workers")
 	if code != ExitOK || !strings.Contains(out, `model="chosen" (applied)`) || !strings.Contains(out, `context="large" (shown only)`) {

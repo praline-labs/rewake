@@ -40,8 +40,9 @@ mode, and a Cache column when some harness reports its prompt cache
 (`internal/cli/session_table.go`). Worker and plain-shell tables leave out every telemetry
 column. Addresses and values are never cropped; quoted paths and settings escape control
 characters, so a value cannot introduce another row. Machine-readable output keeps the full
-model, exact values, field visibility and the empty list's shape. List entries carry optional
-`mode` beside the unchanged `role` and `type`, taken from observed telemetry, not launch intent.
+model, exact values, field visibility and the empty list's shape. List entries carry an optional
+`mode` beside `role`, taken from observed telemetry, not launch intent; a worker type is not part
+of the model any more.
 The snapshot and room view carry that same effective mode; only a verified main sees it.
 It is separate from a harness's permission mode ([work-modes.md](work-modes.md)).
 

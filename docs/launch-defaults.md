@@ -207,10 +207,10 @@ happens to be in should not decide that or what a worker may do. The user file i
 
 `rewake workers` is a view available to any role, even outside a session. It reads the user
 file and the current directory's `.rewake/aliases.toml`, a project alias replacing the user's of
-the same name and the project's `[aliases] off` removing templates, and shows name, harness, role, command (the harness when none), description, its `start_mode`
-and why `space open` would refuse that mode, each setting's value marked applied or shown only,
-and the label, omitting main-only harnesses without rejecting the other templates, then the mode
-catalogue in cycle order with each mode's source and description; `--json` returns `workers`,
+the same name and the project's `[aliases] off` removing templates, and shows name, harness, role, command (the harness when none), description, its `start_mode`,
+each setting's value marked applied or shown only, and the label, omitting main-only harnesses
+without rejecting the other templates, then the mode catalogue in cycle order with each mode's
+name, source and description, never its text; `--json` returns `workers`,
 whose `model`, `effort` and `context` each have `value` and `applied`, with `label` when one is
 set, and `modes`. rewake ships no templates: an empty
 or main-only catalogue answers `No launchable worker templates: define [alias.<name>] for a worker-capable harness in ...`, and `space open --alias`

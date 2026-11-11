@@ -147,15 +147,19 @@ loads.
 
 A worker's memory is Claude Code's own
 auto-memory, `MEMORY.md` loaded into the context and kept by the model as main's is, but
-one per worker template and project:
-`~/.config/rewake/claude/worker/memory/<project>/<template>/`, made 0700 before the launch.
+one per runtime work mode and project:
+`~/.config/rewake/claude/worker/memory/<project>/<mode>/`, made 0700 before the launch.
 `<project>` is the main repository's root, named as a room is named for its directory —
 the last element as a readable slug and 12 hex digits of the SHA-256 of the resolved path
 — so every worktree of one repository, and any directory in it, shares it, as Claude Code
-keys its own; outside Git it is the launch directory. `<template>` is the worker's type for a
-worker raised for one, else the alias the space was opened with, which every space has; an alias that cannot name a
-directory (only letters, digits, dot, dash and underscore, not starting with a dot)
-refuses the launch. Parallel workers of one template share the directory; the last write
+keys its own; outside Git it is the launch directory. `<mode>` is the mode the launch starts
+in; a launch that names no mode, which only a retained run of before this change can, falls
+back to the alias the space was opened with, which every space has; an alias that cannot name
+a directory (only letters, digits, dot, dash and underscore, not starting with a dot)
+refuses the launch. A template named like a mode shares that mode's memory, a known limit.
+New workers are pi only (the owner, November 11, 2026): this memory belongs to Claude Code
+sessions kept running from before that, not to a launch made now. Parallel workers in one mode
+share the directory; the last write
 of a fact wins. The run's `--settings` carries `autoMemoryEnabled: true` and
 `autoMemoryDirectory: <that absolute path>`; Claude Code ignores a relative
 `autoMemoryDirectory` ([research-launch.md](research-launch.md)). A person's own `"autoMemoryEnabled": false` in

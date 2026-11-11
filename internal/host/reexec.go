@@ -44,24 +44,26 @@ const reexecMark = "reexec"
 // Handover is the run as an image of its wrapper hands it to the next: the
 // launch it was asked for, its identity, its harness and its service.
 type Handover struct {
-	Version       int             `json:"version"`
-	Harness       string          `json:"harness"`
-	Dir           string          `json:"dir"`
-	Name          string          `json:"name"`
-	Epoch         string          `json:"epoch"`
-	Args          []string        `json:"args"`
-	Intro         bool            `json:"intro"`
-	Command       string          `json:"command,omitempty"`
-	Role          string          `json:"role"`
-	RoleReason    string          `json:"roleReason,omitempty"`
-	Template      string          `json:"template,omitempty"`
-	WorktreeEntry bool            `json:"worktreeEntry,omitempty"`
-	Mode          workmode.Mode   `json:"mode"`
-	ModeText      string          `json:"modeText,omitempty"`
-	Modes         workmode.Config `json:"modes"`
-	HarnessPID    int             `json:"harnessPid"`
-	HarnessStart  uint64          `json:"harnessStart"`
-	Service       json.RawMessage `json:"service"`
+	Version       int      `json:"version"`
+	Harness       string   `json:"harness"`
+	Dir           string   `json:"dir"`
+	Name          string   `json:"name"`
+	Epoch         string   `json:"epoch"`
+	Args          []string `json:"args"`
+	Intro         bool     `json:"intro"`
+	Command       string   `json:"command,omitempty"`
+	Role          string   `json:"role"`
+	RoleReason    string   `json:"roleReason,omitempty"`
+	Template      string   `json:"template,omitempty"`
+	WorktreeEntry bool     `json:"worktreeEntry,omitempty"`
+	// Mode is the mode the run is in, its text with it; Modes is the resolved
+	// catalog, every mode's text included, so a switch after a handover still
+	// carries a whole discipline.
+	Mode         workmode.Mode   `json:"mode"`
+	Modes        workmode.Config `json:"modes"`
+	HarnessPID   int             `json:"harnessPid"`
+	HarnessStart uint64          `json:"harnessStart"`
+	Service      json.RawMessage `json:"service"`
 	// Files are the descriptors the service handed over, inherited under
 	// these numbers, in its order.
 	Files []int `json:"files"`
@@ -111,12 +113,10 @@ func ReadHandover(spec string) (*Handover, error) {
 // Request is the launch the handover continues; the caller adds its own
 // callbacks.
 func (h *Handover) Request(harness adapter.Harness) Request {
-	mode := h.Mode
-	mode.Text = h.ModeText
 	return Request{
 		Harness: harness, Dir: h.Dir, Name: h.Name, Args: h.Args, Intro: h.Intro, Command: h.Command,
 		Role: role.Of(h.Role), RoleReason: h.RoleReason, Template: h.Template,
-		WorktreeEntry: h.WorktreeEntry, Mode: mode, Modes: h.Modes, Mirror: h.Mirror, Shell: h.Shell, Handover: h,
+		WorktreeEntry: h.WorktreeEntry, Mode: h.Mode, Modes: h.Modes, Mirror: h.Mirror, Shell: h.Shell, Handover: h,
 	}
 }
 
@@ -271,7 +271,7 @@ func (r *reexec) exec(handing adapter.Handover, park *switching.Park, memory del
 	h := Handover{
 		Version: HandoverVersion, Harness: r.request.Harness.ID(), Dir: r.request.Dir, Name: r.session.Name, Epoch: r.session.Epoch(),
 		Args: r.request.Args, Intro: r.request.Intro, Command: r.request.Command, Role: r.session.Role, RoleReason: r.session.RoleReason,
-		Template: r.request.Template, WorktreeEntry: r.request.WorktreeEntry, Mode: r.request.Mode, ModeText: r.request.Mode.Text, Modes: r.request.Modes,
+		Template: r.request.Template, WorktreeEntry: r.request.WorktreeEntry, Mode: r.request.Mode, Modes: r.request.Modes,
 		HarnessPID: r.harness.Pid, HarnessStart: r.start, Service: handed.State, Park: park, Mirror: r.request.Mirror,
 		Shell: r.request.Shell, Notices: notices, Delivery: &memory,
 	}

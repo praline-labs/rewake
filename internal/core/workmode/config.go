@@ -98,17 +98,27 @@ func mergeFields(base, over Fields) Fields {
 	return base
 }
 
-// Overlay merges individual configured fields without inventing defaults. The
-// catalog is not merged: it is resolved once, from the files of this launch.
+// Overlay merges individual configured fields without inventing defaults. It
+// leaves its receiver as it was: the maps and slices are copied before an
+// override lands, so a caller that discards the result keeps the base, and a
+// later template cannot inherit another's settings. The catalog is not
+// merged: it is resolved once, from the files of this launch.
 func (c Config) Overlay(over Config) Config {
 	if over.StartMode != "" {
 		c.StartMode = over.StartMode
 	}
-	if len(over.Modes) > 0 && c.Modes == nil {
-		c.Modes = map[string]Fields{}
+	if len(c.Catalog) > 0 {
+		c.Catalog = append([]Mode(nil), c.Catalog...)
 	}
-	for modeName, fields := range over.Modes {
-		c.Modes[modeName] = mergeFields(c.Modes[modeName], fields)
+	if len(over.Modes) > 0 {
+		merged := make(map[string]Fields, len(c.Modes)+len(over.Modes))
+		for modeName, fields := range c.Modes {
+			merged[modeName] = fields
+		}
+		for modeName, fields := range over.Modes {
+			merged[modeName] = mergeFields(merged[modeName], fields)
+		}
+		c.Modes = merged
 	}
 	return c
 }

@@ -1,6 +1,7 @@
 package pi
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -168,5 +169,51 @@ func TestASwitchLeavesOneSectionAndProcessIsItsOwn(t *testing.T) {
 	}
 	if start := (workmode.Config{StartMode: workmode.Process}).Start(); start != workmode.Process {
 		t.Fatalf("a process start became %q", start)
+	}
+}
+
+// A wrapper handover and a reloaded extension meet the same JSON: the catalog
+// arrives with every mode's text, so hello and a cycle carry a whole
+// discipline rather than a bare header.
+func TestAHelloAndACycleAfterHandoverCarryWholeDisciplines(t *testing.T) {
+	modes := workmode.Config{Catalog: catalog(t), Modes: map[string]workmode.Fields{workmode.Build: {Effort: "high"}}}
+	encoded, err := json.Marshal(modes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var handed workmode.Config
+	if err := json.Unmarshal(encoded, &handed); err != nil {
+		t.Fatal(err)
+	}
+	rig := newRig(t, func(r *run) {
+		r.modes = handed
+		r.mode = workmode.Process
+	})
+	l, greeted := hello(t, rig, func(l *link, got frame) { l.answer(got, frame{OK: true}) })
+	if greeted.Mode == nil || greeted.Mode.Name != workmode.Process {
+		t.Fatalf("hello %+v", greeted.Mode)
+	}
+	process := workmode.BuiltIns()[workmode.Process]
+	if strings.Count(greeted.Mode.Instructions, "Runtime work mode:") != 1 || !strings.Contains(greeted.Mode.Instructions, process.Text) {
+		t.Fatalf("hello after a handover carries no whole process discipline: %q", greeted.Mode.Instructions)
+	}
+	got, err := l.ask(t.Context(), frame{Op: "mode-cycle", Thread: "conversation", State: &sample{Sequence: 2, Idle: true, Native: nativeOf(map[string]any{"workMode": workmode.Process})}})
+	if err != nil || !got.OK || got.Mode == nil {
+		t.Fatalf("%+v %v", got, err)
+	}
+	// process -> the custom name -> review: the custom-only names follow the
+	// built-ins, and each destination brings its own whole text.
+	if got.Mode.Name != "audit" || strings.Count(got.Mode.Instructions, "Runtime work mode:") != 1 || !strings.Contains(got.Mode.Instructions, "AUDIT") {
+		t.Fatalf("the cycle after a handover lost a custom mode's discipline: %+v", got.Mode)
+	}
+	got, err = l.ask(t.Context(), frame{Op: "mode-cycle", Thread: "conversation", State: &sample{Sequence: 3, Idle: true, Native: nativeOf(map[string]any{"workMode": "audit"})}})
+	if err != nil || !got.OK || got.Mode == nil || got.Mode.Name != workmode.Review || !strings.Contains(got.Mode.Instructions, workmode.BuiltIns()[workmode.Review].Text) {
+		t.Fatalf("the cycle back to review lost its discipline: %+v %v", got.Mode, err)
+	}
+	// A custom mode's own text survives the same boundary; it is a mode of the
+	// person's, not a built-in name.
+	audit, ok := workmode.Find(handed.Catalog, "audit")
+	if !ok || audit.Text != "AUDIT" || !strings.Contains(workmode.Instructions(audit, false), "AUDIT") {
+		t.Fatalf("a custom mode lost its text at the handover: %+v", audit)
 	}
 }

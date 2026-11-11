@@ -186,10 +186,11 @@ who proved to be main's shell and only when some session reports one; `--json` c
 ## Compatibility
 
 - pi extension wire: **4**; pi adapter handover: **4**.
-- Host/wrapper handover: **7** (the runtime work mode and its text replace the worker type).
+- Host/wrapper handover: **7** (the runtime work mode and the whole resolved catalogue travel
+  with their texts in place of the worker type).
 - Space host handover: **2** (the worker's mode and its text in the spec).
-- Mirror wire and model handover: **3**, with `workMode` a mode name rather than a three-name
-  enum; the mirror's handed model stays **2**, its shape unchanged.
+- Mirror wire: **3**, `workMode` a mode name rather than a three-name enum.
+- Mirror's handed model: **2**, its shape unchanged by this change.
 - Face/shell messages: **7**; room-view: **3**, advertised by the executable and required by the
   loaded shell.
 

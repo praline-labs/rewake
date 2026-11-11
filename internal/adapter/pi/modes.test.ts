@@ -262,3 +262,21 @@ test("native and face thinking close admission before mutation and cannot overta
   await switching;
   expect(r.values().effort).toBe("low");
 });
+
+test("process and a name of the person's own switch like any other mode", async () => {
+  const r = rig();
+  await r.modes.initialize(plan("process"));
+  expect(r.modes.name).toBe("process");
+  expect(r.status).toEqual(["mode: process"]);
+  // The destination's selections apply; an unset one keeps the native value.
+  expect(await r.select(plan("audit", { provider: "p", model: "second" }))).toEqual({ ok: true });
+  expect(r.modes.name).toBe("audit");
+  expect(r.values().effort).toBe("low");
+  const event = prompt();
+  await r.handlers.get("before_agent_start")?.(event);
+  expect(event.systemPromptOptions.sections.rewake_work_mode).toBe("go-owned audit");
+  // A built-in after a custom name: the cycle is Go's, the bridge only applies it.
+  expect(await r.select(plan("process", { effort: "high" }))).toEqual({ ok: true });
+  expect(r.modes.name).toBe("process");
+  expect(r.values().effort).toBe("high");
+});
